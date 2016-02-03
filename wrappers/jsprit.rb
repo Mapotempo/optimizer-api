@@ -27,7 +27,7 @@ module Wrappers
       true
     end
 
-    def optimize(params)
+    def solve(params)
 puts params.inspect
     end
   end

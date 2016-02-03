@@ -15,23 +15,21 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-ENV['APP_ENV'] ||= 'development'
-require File.expand_path('../config/environments/' + ENV['APP_ENV'], __FILE__)
+require './models/base'
 
-Dir[File.dirname(__FILE__) + '/config/initializers/*.rb'].each {|file| require file }
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].each {|file| require file }
-require './optimizer_wrapper'
-require './api/root'
-require 'rack/cors'
-require 'rack/contrib/locale'
 
-use Rack::Cors do
-  allow do
-    origins '*'
-    resource '*', headers: :any, methods: :get
+module Models
+  class Point < Base
+    field :matrix_index
+
+    validates_numericality_of :matrix_index
+
+    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :points
+    belongs_to :vehicle_start, class_name: 'Models::Vehicle', inverse_of: :start_point
+    belongs_to :vehicle_end, class_name: 'Models::Vehicle', inverse_of: :end_point
+
+    def self.find_by_vehicle_id(*params)
+      find_by_vehicle_start_id(*params) || find_by_vehicle_end_id(*params)
+    end
   end
 end
-
-use Rack::Locale
-
-run Api::Root

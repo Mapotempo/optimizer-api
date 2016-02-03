@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2015
+# Copyright © Mapotempo, 2016
 #
 # This file is part of Mapotempo.
 #
@@ -21,11 +21,13 @@ SimpleCov.start
 ENV['APP_ENV'] ||= 'test'
 require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
 Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].each {|file| require file }
-require './optimizers'
+
+Dir[File.dirname(__FILE__) + '/../models/*.rb'].each {|file| require file }
+require './optimizer_wrapper'
 require './api/root'
 
 
-require "minitest/reporters"
+require 'minitest/reporters'
 Minitest::Reporters.use!
 
 require 'grape'

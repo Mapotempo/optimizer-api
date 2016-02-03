@@ -13,7 +13,8 @@ gem 'grape-swagger'
 gem 'i18n'
 gem 'rack-contrib'
 gem 'rest-client'
-gem 'activesupport'
+gem 'activemodel'
+gem 'active_hash'
 
 group :test do
   gem 'rack-test'

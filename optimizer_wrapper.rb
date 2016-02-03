@@ -29,7 +29,7 @@ module OptimizerWrapper
     if !vrp
       raise UnsupportedProblemError
     else
-      vrp.optimize(params)
+      vrp.solve(params)
     end
   end
 

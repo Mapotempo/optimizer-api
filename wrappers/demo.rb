@@ -27,7 +27,7 @@ module Wrappers
       true # No problemo, I will take care of
     end
 
-    def optimize(params)
+    def solve(params)
       {
         'job': {
           'job_id': 'id0',

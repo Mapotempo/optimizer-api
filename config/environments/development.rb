@@ -26,11 +26,16 @@ require './wrappers/ortools'
 module OptimizerWrapper
   CACHE = ActiveSupport::Cache::FileStore.new(File.join(Dir.tmpdir, 'mapotempo-optimizer-api'), namespace: 'mapotempo-optimizer-api', expires_in: 60*60*24*1)
 
+  DEMO = Wrappers::Demo.new(CACHE)
+  VROOM = Wrappers::Vroom.new(CACHE)
+  JSPRIT = Wrappers::Jsprit.new(CACHE)
+  ORTOOLS = Wrappers::Ortools.new(CACHE)
+
   @@c = {
     product_title: 'Optimizers API',
     product_contact: 'frederic@mapotempo.com',
     services: {
-      vrp: [Wrappers::Demo.new(CACHE), Wrappers::Vroom.new(CACHE), Wrappers::Jsprit.new(CACHE), Wrappers::Ortools.new(CACHE)],
+      vrp: [DEMO, VROOM, JSPRIT, ORTOOLS]
     },
     api_keys: ['demo']
   }

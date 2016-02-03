@@ -37,9 +37,11 @@ module Api
         params {
         }
         post do
-          result = OptimizerWrapper.wrapper_vrp(params)
+          vrp = Models::Vrp.create(params.slice(:vrp))
+          result = OptimizerWrapper.wrapper_vrp(vrp)
           if result
             #present result, with: VrpResult
+            status 200
             result
           else
             error!('500 Internal Server Error', 500)

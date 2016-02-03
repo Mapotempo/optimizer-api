@@ -15,23 +15,19 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-ENV['APP_ENV'] ||= 'development'
-require File.expand_path('../config/environments/' + ENV['APP_ENV'], __FILE__)
+require './test/test_helper'
 
-Dir[File.dirname(__FILE__) + '/config/initializers/*.rb'].each {|file| require file }
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].each {|file| require file }
-require './optimizer_wrapper'
 require './api/root'
-require 'rack/cors'
-require 'rack/contrib/locale'
 
-use Rack::Cors do
-  allow do
-    origins '*'
-    resource '*', headers: :any, methods: :get
+class Api::V01::VrpTest < Minitest::Test
+  include Rack::Test::Methods
+
+  def app
+    Api::Root
+  end
+
+  def test_vrp
+    post '/0.1/vrp', {api_key: 'demo', vrp: {vehicles: []}}
+    assert last_response.ok?, last_response.body
   end
 end
-
-use Rack::Locale
-
-run Api::Root

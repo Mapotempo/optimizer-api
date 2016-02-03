@@ -15,23 +15,21 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-ENV['APP_ENV'] ||= 'development'
-require File.expand_path('../config/environments/' + ENV['APP_ENV'], __FILE__)
+require './models/base'
 
-Dir[File.dirname(__FILE__) + '/config/initializers/*.rb'].each {|file| require file }
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].each {|file| require file }
-require './optimizer_wrapper'
-require './api/root'
-require 'rack/cors'
-require 'rack/contrib/locale'
 
-use Rack::Cors do
-  allow do
-    origins '*'
-    resource '*', headers: :any, methods: :get
+module Models
+  class Rest < Base
+    field :duration, default: 0
+    field :late_multiplicator, default: 1
+    field :exclusion_cost, default: nil
+    validates_numericality_of :duration
+    validates_numericality_of :late_multiplicator
+    validates_numericality_of :exclusion_cost
+
+    belongs_to :point
+    has_many :timewindows, class_name: 'Models::Timewindow'
+
+    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :rests
   end
 end
-
-use Rack::Locale
-
-run Api::Root

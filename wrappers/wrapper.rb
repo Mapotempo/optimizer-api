@@ -19,10 +19,67 @@ module Wrappers
   class Wrapper
     def initialize(cache, hash = {})
       @cache = cache
+      @tmp_dir = hash[:tmp_dir] || Dir.tmpdir
     end
 
     def solve?(param)
       false
+    end
+
+    def assert_vehicles_only_one(vrp)
+      vrp.vehicles.size == 1
+    end
+
+    def assert_vehicles_start(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+        vehicle.start_point.nil?
+      }.nil?
+    end
+
+    def assert_vehicles_no_timewindows(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+        !vehicle.timewindows.empty?
+      }.nil?
+    end
+
+    def assert_vehicles_no_rests(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+        !vehicle.rests.empty?
+      }.nil?
+    end
+
+    def assert_no_shipments(vrp)
+      vrp.shipments.empty?
+    end
+
+    def assert_services_no_quantities(vrp)
+      vrp.services.empty? || vrp.services.find{ |service|
+        service.quantity != 1
+      }.nil?
+    end
+
+    def assert_services_no_skills(vrp)
+      vrp.services.empty? || vrp.services.find{ |service|
+        !service.skills.empty?
+      }.nil?
+    end
+
+    def assert_services_no_timewindows(vrp)
+      vrp.services.empty? || vrp.services.find{ |service|
+        !service.timewindows.empty?
+      }.nil?
+    end
+
+    def assert_services_no_multiple_timewindows(vrp)
+      vrp.services.empty? || vrp.services.find{ |service|
+        service.timewindows.size > 1
+      }.nil?
+    end
+
+    def assert_services_no_exclusion_cost(vrp)
+      vrp.services.empty? || vrp.services.find{ |service|
+        !service.exclusion_cost.nil?
+      }.nil?
     end
   end
 end
