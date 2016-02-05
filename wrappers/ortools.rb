@@ -21,14 +21,140 @@ module Wrappers
   class Ortools < Wrapper
     def initialize(cache, hash = {})
       super(cache, hash)
+      @exec_ortools = hash[:exec_ortools] || '../mapotempo-optimizer/optimizer/tsp_simple'
+      @optimize_time = hash[:optimize_time] || 30000
+      @soft_upper_bound = hash[:soft_upper_bound] || 3
     end
 
-    def solve?(param)
-      true
+    def solve?(vrp)
+      assert_vehicles_only_one(vrp) &&
+      assert_vehicles_start(vrp) &&
+      assert_vehicles_no_timewindows(vrp) &&
+      assert_services_no_skills(vrp) &&
+      assert_services_no_multiple_timewindows(vrp) &&
+      assert_services_no_exclusion_cost(vrp) &&
+      assert_no_shipments(vrp) &&
+      assert_ortools_same_soft_upper_bound(vrp)
     end
 
-    def solve(params)
-puts params.inspect
+    def solve(vrp)
+# FIXME Send two matrix
+# FIXME Send cost coef
+# FIXME or-tools can handle no edn-point itself
+      vehicle = vrp.vehicles.first
+
+      points = Hash[vrp.points.collect{ |point| [point.id, point] }]
+
+      matrix_indices = vrp.services.collect{ |service|
+        points[service.point_id].matrix_index
+      }
+
+      matrix_indices =
+        (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
+        matrix_indices +
+        (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : []) +
+        vehicle.rests.select{ |rest| rest.point }.collect{ |rest| points[rest.point_id].matrix_index }
+
+      quantities = vrp.services.collect(&:quantity) # Not used
+      matrix = vehicle.matrix(matrix_indices)
+      if !vehicle.end_point
+        matrix = matrix.collect{ |row| row + [0] } + [[0] * (matrix.size + 1)]
+      end
+
+      timewindows = [[nil, nil, 0]] + vrp.services.collect{ |service|
+          (service.timewindows.empty? ? [nil, nil] : [service.timewindows[0].begin, service.timewindows[0].end]) + [service.duration]
+        } + vehicle.rests.select{ |rest| rest.point }.collect{ |rest|
+          [rest.start, rest.end, rest.duration]
+        }
+
+      rest_window = vehicle.rests.select{ |rest| rest.point.nil? }.collect{ |rest|
+        [rest.start, rest.end, rest.duration]
+      }
+
+      soft_upper_bound = vrp.services[0].late_multiplicator
+
+      result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound)
+      return if !result
+
+      if vehicle.start_point
+        result = result[1..-1]
+        result = result.collect{ |i| i - 1 }
+      end
+# Always an end_point, we force it at 0 cost
+#      if vehicle.end_point
+        result = result[0..-2]
+#      end
+
+      {
+        solution: {
+#          costs: result['solution_cost'] + vehicle.cost_fixed,
+#          total_travel_distance: 0,
+#          total_travel_time: 0,
+#          total_waiting_time: 0,
+#          start_time: 0,
+#          end_time: 0,
+          routes: [{
+            vehicle_id: vehicle.id,
+            activities:
+              (vehicle.start_point ? [{
+#                point_id: vehicle.start_point.id,
+                activity: :start
+              }] : []) +
+              result.collect{ |i| {
+                service_id: vrp.services[i].id,
+                activity: :service
+#                travel_distance 0,
+#                travel_start_time 0,
+#                waiting_duration 0,
+#                arrival_time 0,
+#                duration 0,
+#                pickup_shipments_id [:id0:],
+#                delivery_shipments_id [:id0:]
+              }} +
+              (vehicle.end_point ? [{
+#                point_id: vehicle.end_point.id,
+                activity: :end
+              }] : [])
+          }]
+        }
+      }
+    end
+
+    private
+
+    def assert_ortools_same_soft_upper_bound(vrp)
+      (vrp.services.empty? || vrp.services.collect(&:late_multiplicator).uniq.size == 1) &&
+      (vrp.vehicles[0].rests.empty? || vrp.vehicles[0].rests.collect(&:late_multiplicator).uniq.size == 1)
+# TODO check services.late_multiplicator = rests.late_multiplicator, or support late_multiplicator in tsp-simple
+    end
+
+    def run_ortools(capacities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound)
+      input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
+      input.write("#{matrix.size}\n")
+      input.write("#{rest_window.size}\n")
+      input.write(matrix.collect{ |a| a.collect{ |b| [b, b].join(" ") }.join(" ") }.join("\n"))
+      input.write("\n")
+      input.write((timewindows + [[0, 2147483647, 0]]).collect{ |a| [a[0] ? a[0]:0, a[1]? a[1]:2147483647, a[2]].join(" ") }.join("\n"))
+      input.write("\n")
+      input.write(rest_window.collect{ |a| [a[0] ? a[0]:0, a[1]? a[1]:2147483647, a[2]].join(" ") }.join("\n"))
+      input.write("\n")
+      input.close
+
+      output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
+      output.close
+
+      cmd = "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` -time_limit_in_ms #{optimize_time || @optimize_time} -soft_upper_bound #{soft_upper_bound || @soft_upper_bound} -instance_file '#{input.path}' > '#{output.path}'"
+      system(cmd)
+
+      if $?.exitstatus == 0
+        result = File.read(output.path)
+        result = result.split("\n")[-1]
+        puts result.inspect
+        result.split(' ').collect{ |i| Integer(i) }
+      end
+    ensure
+      input && input.unlink
+      output && output.unlink
     end
   end
 end
