@@ -34,7 +34,7 @@ module Wrappers
       assert_services_no_multiple_timewindows(vrp) &&
       assert_services_no_exclusion_cost(vrp) &&
       assert_no_shipments(vrp) &&
-      assert_ortools_same_soft_upper_bound(vrp)
+      assert_ortools_uniq_late_multiplicator(vrp)
     end
 
     def solve(vrp)
@@ -107,7 +107,7 @@ module Wrappers
 #                travel_start_time 0,
 #                waiting_duration 0,
 #                arrival_time 0,
-#                duration 0,
+#                departure_time 0,
 #                pickup_shipments_id [:id0:],
 #                delivery_shipments_id [:id0:]
               }} +
@@ -122,13 +122,13 @@ module Wrappers
 
     private
 
-    def assert_ortools_same_soft_upper_bound(vrp)
+    def assert_ortools_uniq_late_multiplicator(vrp)
       (vrp.services.empty? || vrp.services.collect(&:late_multiplicator).uniq.size == 1) &&
       (vrp.vehicles[0].rests.empty? || vrp.vehicles[0].rests.collect(&:late_multiplicator).uniq.size == 1)
 # TODO check services.late_multiplicator = rests.late_multiplicator, or support late_multiplicator in tsp-simple
     end
 
-    def run_ortools(capacities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound)
+    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write("#{matrix.size}\n")
       input.write("#{rest_window.size}\n")
@@ -150,7 +150,7 @@ module Wrappers
         result = File.read(output.path)
         result = result.split("\n")[-1]
         puts result.inspect
-        result.split(' ').collect{ |i| Integer(i) }
+        result.split(' ').collect{ |i| Integer(i) } if result
       end
     ensure
       input && input.unlink

@@ -21,10 +21,10 @@ require './models/base'
 module Models
   class Vehicle < Base
     field :cost_fixed, default: 0
-    field :cost_distance_multiplicator, defulat: 0
+    field :cost_distance_multiplicator, default: 0
     field :cost_time_multiplicator, default: 1
     field :cost_waiting_time_multiplicator, default: 1
-    field :cost_late_multiplicator, default: 0
+    field :cost_late_multiplicator, default: nil
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplicator
     validates_numericality_of :cost_time_multiplicator
@@ -33,12 +33,9 @@ module Models
 
     field :skills, default: []
 
-    field :capacities
-    validates_numericality_of :capacities
-
     belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
-    has_many :capacities, class_name: 'Models::Capacity'
+    has_many :quantities, class_name: 'Models::VehicleQuantity'
     has_many :timewindows, class_name: 'Models::Timewindow'
     has_many :rests, class_name: 'Models::Rest'
 

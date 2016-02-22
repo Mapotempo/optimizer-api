@@ -49,7 +49,7 @@ module Wrappers
               'travel_start_time': 0,
               'waiting_duration': 0,
               'arrival_time': 0,
-              'duration': 0,
+              'departure_time': 0,
               'pickup_shipments_id': shipment['shipment_id'],
               'delivery_shipments_id': shipment['shipment_id']
             }}

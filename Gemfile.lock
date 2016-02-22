@@ -52,6 +52,7 @@ GEM
     ice_nine (0.11.2)
     json (1.8.3)
     mime-types (2.99)
+    mini_portile2 (2.0.0)
     minitest (5.8.4)
     minitest-reporters (1.1.7)
       ansi
@@ -61,6 +62,8 @@ GEM
     multi_json (1.11.2)
     multi_xml (0.5.5)
     netrc (0.11.0)
+    nokogiri (1.6.7.2)
+      mini_portile2 (~> 2.0.0.rc2)
     puma (2.16.0)
     rack (1.5.5)
     rack-accept (0.4.5)
@@ -112,6 +115,7 @@ DEPENDENCIES
   i18n
   minitest
   minitest-reporters
+  nokogiri
   puma
   rack
   rack-contrib

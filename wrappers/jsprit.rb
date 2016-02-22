@@ -17,18 +17,202 @@
 #
 require './wrappers/wrapper'
 
+require 'nokogiri'
+
+
 module Wrappers
   class Jsprit < Wrapper
     def initialize(cache, hash = {})
       super(cache, hash)
+      @exec_jsprit = hash[:exec_jsprit] || 'java -jar ../mapotempo-optimizer-jsprit/target/mapotempo-jsprit-0.0.1-SNAPSHOT-jar-with-dependencies.jar'
     end
 
-    def solve?(param)
-      true
+    def solve?(vrp)
+      assert_units_only_one(vrp) &&
+      assert_vehicles_quantities_only_one(vrp) &&
+      assert_vehicles_timewindows_only_one(vrp) &&
+      assert_services_no_skills(vrp) &&
+      assert_services_no_late_multiplicator(vrp) &&
+      assert_services_no_exclusion_cost(vrp) &&
+      assert_services_quantities_only_one(vrp) &&
+      assert_no_shipments(vrp) &&
+      assert_jsprit_start_or_end(vrp)
     end
 
-    def solve(params)
-puts params.inspect
+    def solve(vrp)
+      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services)
+      if result
+        vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
+        result[:routes].each{ |route|
+          vehicle = vehicles[route[:vehicle_id]]
+          if !vehicle.start_point.nil?
+            route[:activities].insert 0, {
+              point_id: vehicle.start_point.id,
+              activity: :start
+            }
+          end
+          if !vehicle.end_point.nil?
+            route[:activities] << {
+              point_id: vehicle.end_point.id,
+              activity: :end
+            }
+          end
+        }
+        {solution: result}
+      end
+    end
+
+    private
+
+    def assert_jsprit_start_or_end(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+        vehicle.start_point.nil? && vehicle.end_point.nil?
+      }.nil?
+    end
+
+    def run_jsprit(matrix_time, matrix_distance, vehicles, services)
+      builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
+        xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
+          xml.problemType {
+            xml.fleetSize 'FINITE'
+          }
+          xml.vehicles {
+            vehicles.collect do |vehicle|
+              xml.vehicle {
+                xml.id_ vehicle.id
+                xml.typeId vehicle.id
+                if vehicle.start_point
+                  xml.startLocation {
+                    xml.index vehicle.start_point.matrix_index
+                  }
+                end
+                if vehicle.end_point
+                  if vehicle.start_point != vehicle.end_point
+                    xml.endLocation {
+                      xml.id_ vehicle.end_point.id
+                      xml.index vehicle.end_point.matrix_index
+                    }
+                  else
+                    xml.returnToDepot true
+                  end
+                end
+                if vehicle.timewindows.size > 0
+                  vehicle.timewindows do |timewindow|
+                    xml.timeSchedule {
+                      xml.start timewindow.start
+                      xml.end timewindow.end
+                    }
+                  end
+                else
+                  xml.timeSchedule {
+                    xml.start 0
+                    xml.end 2**31
+                  }
+                end
+#        <breaks>
+#            <timeWindows>
+#                <timeWindow>
+#                    <start>0</start>
+#                    <end>2147483647</end>
+#                </timeWindow>
+#            </timeWindows>
+#            <duration>480</duration>
+#        </breaks>
+              }
+            end
+          }
+          xml.vehicleTypes {
+            vehicles.collect do |vehicle|
+              xml.type {
+                xml.id_ vehicle.id
+                xml.method_missing('capacity-dimensions') {
+                  (!vehicle.quantities.empty? ? vehicle.quantities[0].values : [2**30]).each_with_index do |value, index|
+                    xml.dimension value, index: index
+                  end
+                }
+                xml.costs {
+                  (xml.fixed vehicle.cost_fixed)
+                  (xml.distance vehicle.cost_distance_multiplicator)
+                  (xml.time vehicle.cost_time_multiplicator)
+                }
+              }
+            end
+          }
+          xml.services {
+            services.collect do |service|
+              xml.service(id: service.id, type: 'service') {
+                xml.location {
+                  xml.index service.point.matrix_index
+                }
+                service.timewindows do |timewindow|
+                  xml.timeSchedule {
+                    xml.start timewindow.start
+                    xml.end timewindow.end
+                  }
+                end
+                (xml.duration service.duration) if service.duration > 0
+                xml.method_missing('capacity-dimensions') {
+                  (!service.quantities.empty? ? service.quantities[0].values : [1]).each_with_index do |value, index|
+                    xml.dimension value, index: index
+                  end
+                }
+              }
+            end
+          }
+        }
+      end
+
+      input_problem = Tempfile.new('optimize-jsprit-input_problem', tmpdir=@tmp_dir)
+      input_problem.write(builder.to_xml)
+      input_problem.close
+
+      if matrix_time
+        input_time_matrix = Tempfile.new('optimize-jsprit-input_time_matrix', tmpdir=@tmp_dir)
+        input_time_matrix.write(matrix_time.collect{ |a| a.join(" ") }.join("\n"))
+        input_time_matrix.close
+      end
+
+      if matrix_distance
+        input_distance_matrix = Tempfile.new('optimize-jsprit-input_distance_matrix', tmpdir=@tmp_dir)
+        input_distance_matrix.write(matrix_distance.collect{ |a| a.join(" ") }.join("\n"))
+        input_distance_matrix.close
+      end
+
+      output = Tempfile.new(['optimize-jsprit-output', '.xml'], tmpdir=@tmp_dir)
+      output.close
+
+      cmd = "#{@exec_jsprit} " + (input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '') + " " + (input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '') + " --instance '#{input_problem.path}' --solution '#{output.path}'"
+      system(cmd)
+
+      if $?.exitstatus == 0
+        doc = Nokogiri::XML(File.open(output.path))
+        doc.remove_namespaces!
+        solution = doc.at_xpath('/problem/solutions/solution')
+        if solution
+          {
+            cost: solution.at_xpath('cost').content,
+            routes: solution.xpath('routes/route').collect{ |route| {
+              vehicle_id: route.at_xpath('vehicleId').content,
+              start_time: Float(route.at_xpath('start').content),
+              end_time: Float(route.at_xpath('end').content),
+              activities: route.xpath('act').collect{ |act| {
+                service_id: act.at_xpath('serviceId').content,
+                activity: act.attr('type').to_sym,
+                arrival_time: Float(act.at_xpath('arrTime').content),
+                departure_time: Float(act.at_xpath('endTime').content),
+              }}
+            }},
+            unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
+              service_id: job.attr('id')
+            }}
+          }
+        end
+      end
+    ensure
+      input_problem && input_problem.unlink
+      input_time_matrix && input_time_matrix.unlink
+      input_distance_matrix && input_distance_matrix.unlink
+      output && output.unlink
     end
   end
 end

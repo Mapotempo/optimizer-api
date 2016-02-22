@@ -26,8 +26,12 @@ module Wrappers
       false
     end
 
+    def assert_units_only_one(vrp)
+      vrp.units.size <= 1
+    end
+
     def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size == 1
+      vrp.vehicles.size <= 1
     end
 
     def assert_vehicles_start(vrp)
@@ -45,6 +49,18 @@ module Wrappers
     def assert_vehicles_no_rests(vrp)
       vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
         !vehicle.rests.empty?
+      }.nil?
+    end
+
+    def assert_vehicles_quantities_only_one(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicles|
+        vehicles.quantities.size > 1
+      }.nil?
+    end
+
+    def assert_vehicles_timewindows_only_one(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+        vehicle.timewindows.size > 1
       }.nil?
     end
 
@@ -79,6 +95,18 @@ module Wrappers
     def assert_services_no_exclusion_cost(vrp)
       vrp.services.empty? || vrp.services.find{ |service|
         !service.exclusion_cost.nil?
+      }.nil?
+    end
+
+    def assert_services_no_late_multiplicator(vrp)
+      vrp.services.empty? || vrp.services.find{ |service|
+        service.late_multiplicator
+      }.nil?
+    end
+
+    def assert_services_quantities_only_one(vrp)
+      vrp.services.empty? || vrp.services.find{ |service|
+        service.quantities.size > 1
       }.nil?
     end
   end

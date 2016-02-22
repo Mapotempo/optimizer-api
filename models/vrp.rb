@@ -31,6 +31,7 @@ include ActiveHash::Associations
     has_many :shipments, class_name: 'Models::Shipment'
     has_many :rests, class_name: 'Models::Rest'
     has_many :vehicles, class_name: 'Models::Vehicle', inverse_of: :vrp
+    has_many :units, class_name: 'Models::Units'
 
     def initialize(hash)
       super(hash)
@@ -93,6 +94,15 @@ include ActiveHash::Associations
 
     def vehicles
       self.attributes[:vehicles] #|| []
+    end
+
+    def units=(vs)
+     self.attributes[:units] = []
+      vs && vs.each{ |vehicle| self.attributes[:units] << Vehicle.create(vehicle.merge(vrp: self)) }
+    end
+
+    def units
+      self.attributes[:units] || []
     end
   end
 end

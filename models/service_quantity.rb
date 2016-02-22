@@ -19,10 +19,9 @@ require './models/base'
 
 
 module Models
-  class Timewindow < Base
-    field :start
-    field :end
+  class ServiceQuantity < Base
+    field :values
 
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :timewindows
+    belongs_to :service, class_name: 'Models::Service'
   end
 end

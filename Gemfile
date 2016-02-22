@@ -15,6 +15,7 @@ gem 'rack-contrib'
 gem 'rest-client'
 gem 'activemodel'
 gem 'active_hash'
+gem 'nokogiri'
 
 group :test do
   gem 'rack-test'

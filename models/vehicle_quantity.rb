@@ -19,10 +19,12 @@ require './models/base'
 
 
 module Models
-  class Timewindow < Base
-    field :start
-    field :end
+  class VehicleQuantity < Base
+    field :values
+    field :service_unit_multiplicator
+    field :pickup_unit_multiplicator
+    field :delivery_unit_multiplicator
 
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :timewindows
+    belongs_to :vehicle, class_name: 'Models::Vehicle'
   end
 end
