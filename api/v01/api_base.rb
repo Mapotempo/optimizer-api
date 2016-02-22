@@ -15,24 +15,18 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'i18n'
+require 'grape'
+require 'grape-swagger'
 
-module OptimizerWrapper
-  def self.config
-    @@c
-  end
+module Api
+  module V01
+    class APIBase < Grape::API
 
-  def self.wrapper_vrp(services, params)
-    vrp = services[:vrp].find{ |vrp|
-      vrp.solve?(params)
-    }
-    if !vrp
-      raise UnsupportedProblemError
-    else
-      vrp.solve(params)
+      private
+
+      def self.services(api_key)
+        ::OptimizerWrapper::config[:api_keys][api_key]
+      end
     end
-  end
-
-  class UnsupportedProblemError < StandardError
   end
 end

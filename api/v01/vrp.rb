@@ -18,12 +18,13 @@
 require 'grape'
 require 'grape-swagger'
 
+require './api/v01/api_base'
 require './api/v01/entities/vrp_request'
 require './api/v01/entities/vrp_result'
 
 module Api
   module V01
-    class Vrp < Grape::API
+    class Vrp < APIBase
       content_type :json, 'application/json; charset=UTF-8'
       content_type :xml, 'application/xml'
       default_format :json
@@ -38,7 +39,7 @@ module Api
         }
         post do
           vrp = Models::Vrp.create(params.slice(:vrp))
-          result = OptimizerWrapper.wrapper_vrp(vrp)
+          result = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
           if result
             #present result, with: VrpResult
             status 200

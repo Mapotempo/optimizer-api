@@ -34,9 +34,17 @@ module OptimizerWrapper
   @@c = {
     product_title: 'Optimizers API',
     product_contact: 'frederic@mapotempo.com',
-    services: {
-      vrp: [DEMO, VROOM, JSPRIT, ORTOOLS]
-    },
-    api_keys: ['demo']
+    profiles: [{
+      api_keys: ['demo'],
+      services: {
+        vrp: [DEMO, VROOM, JSPRIT, ORTOOLS]
+      }
+    }]
   }
+
+  @@c[:api_keys] = Hash[@@c[:profiles].collect{ |profile|
+    profile[:api_keys].collect{ |api_key|
+      [api_key, profile[:services]]
+    }
+  }.flatten(1)]
 end
