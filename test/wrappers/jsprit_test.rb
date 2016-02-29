@@ -104,7 +104,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.solve?(vrp)
     result = jsprit.solve(vrp)
     assert result
-    assert_equal 1, result[:solution][:routes].size
-    assert_equal problem[:services].size + 2, result[:solution][:routes][0][:activities].size
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
   end
 end

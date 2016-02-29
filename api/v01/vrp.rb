@@ -30,22 +30,83 @@ module Api
       default_format :json
       version '0.1', using: :path
 
-      resource :vrp do
-        desc 'Solve VRP problem', {
-          nickname: 'vrp',
-          entity: VrpResult
-        }
-        params {
-        }
-        post do
-          vrp = Models::Vrp.create(params.slice(:vrp))
-          result = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
-          if result
-            #present result, with: VrpResult
-            status 200
-            result
-          else
-            error!('500 Internal Server Error', 500)
+      namespace :vrp do
+        resource :submit do
+          desc 'Submit VRP problem', {
+            nickname: 'vrp',
+            entity: VrpResult
+          }
+          params {
+          }
+          post do
+            vrp = Models::Vrp.create(params.slice(:vrp))
+            ret = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
+            if ret.is_a?(String)
+              #present result, with: VrpResult
+              status 201
+              {
+                job: {
+                  id: ret,
+                  status: :created,
+                  retry: nil
+                }
+              }
+            elsif ret.is_a?(Hash)
+              status 200
+              {
+                solution: ret
+              }
+            else
+              error!('500 Internal Server Error', 500)
+            end
+          end
+        end
+
+        resource :job do
+          desc 'Fetch vrp job status', {
+            nickname: 'job',
+            entity: VrpResult
+          }
+          params {
+            requires :id, type: String, desc: 'Job id returned by create VRP problem.'
+          }
+          get do
+            id = params[:id]
+            status = Resque::Plugins::Status::Hash.get(id)
+            if status
+              status 201
+              {
+                job: {
+                  id: id,
+                  status: status.queued? ? :queued : status.working? ? :working : nil,
+                  retry: nil,
+                  avancement: status.message
+                }
+              }
+            else
+              result = OptimizerWrapper::Result.get(id)
+              if result
+                status 200
+                redis.set(id, nil)
+                {
+                  solution: result
+                }
+              end
+            end
+          end
+        end
+
+        resource :job do
+          desc 'Fetch vrp job status', {
+            nickname: 'job',
+            entity: VrpResult
+          }
+          params {
+            requires :id, type: String, desc: 'Job id returned by create VRP problem.'
+          }
+          delete do
+            status 204
+            Resque::Plugins::Status::Hash.kill(params[:id])
           end
         end
       end

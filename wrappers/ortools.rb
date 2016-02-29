@@ -37,7 +37,7 @@ module Wrappers
       assert_ortools_uniq_late_multiplicator(vrp)
     end
 
-    def solve(vrp)
+    def solve(vrp, &block)
 # FIXME Send two matrix
 # FIXME Send cost coef
 # FIXME or-tools can handle no edn-point itself
@@ -86,37 +86,35 @@ module Wrappers
 #      end
 
       {
-        solution: {
-#          costs: result['solution_cost'] + vehicle.cost_fixed,
-#          total_travel_distance: 0,
-#          total_travel_time: 0,
-#          total_waiting_time: 0,
-#          start_time: 0,
-#          end_time: 0,
-          routes: [{
-            vehicle_id: vehicle.id,
-            activities:
-              (vehicle.start_point ? [{
-#                point_id: vehicle.start_point.id,
-                activity: :start
-              }] : []) +
-              result.collect{ |i| {
-                service_id: vrp.services[i].id,
-                activity: :service
-#                travel_distance 0,
-#                travel_start_time 0,
-#                waiting_duration 0,
-#                arrival_time 0,
-#                departure_time 0,
-#                pickup_shipments_id [:id0:],
-#                delivery_shipments_id [:id0:]
-              }} +
-              (vehicle.end_point ? [{
-#                point_id: vehicle.end_point.id,
-                activity: :end
-              }] : [])
-          }]
-        }
+#        costs: result['solution_cost'] + vehicle.cost_fixed,
+#        total_travel_distance: 0,
+#        total_travel_time: 0,
+#        total_waiting_time: 0,
+#        start_time: 0,
+#        end_time: 0,
+        routes: [{
+          vehicle_id: vehicle.id,
+          activities:
+            (vehicle.start_point ? [{
+#              point_id: vehicle.start_point.id,
+              activity: :start
+            }] : []) +
+            result.collect{ |i| {
+              service_id: vrp.services[i].id,
+              activity: :service
+#              travel_distance 0,
+#              travel_start_time 0,
+#              waiting_duration 0,
+#              arrival_time 0,
+#              departure_time 0,
+#              pickup_shipments_id [:id0:],
+#              delivery_shipments_id [:id0:]
+            }} +
+            (vehicle.end_point ? [{
+#              point_id: vehicle.end_point.id,
+              activity: :end
+            }] : [])
+        }]
       }
     end
 

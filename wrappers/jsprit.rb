@@ -39,7 +39,7 @@ module Wrappers
       assert_jsprit_start_or_end(vrp)
     end
 
-    def solve(vrp)
+    def solve(vrp, &block)
       result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services)
       if result
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
@@ -58,7 +58,7 @@ module Wrappers
             }
           end
         }
-        {solution: result}
+        result
       end
     end
 

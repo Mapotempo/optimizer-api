@@ -41,7 +41,7 @@ module Wrappers
       assert_vroom_not_start_and_end(vrp)
     end
 
-    def solve(vrp)
+    def solve(vrp, &block)
       if vrp.points.empty? || vrp.services.empty?
         return
       end
@@ -64,7 +64,9 @@ module Wrappers
 
       matrix = vehicle.matrix(matrix_indices)
 
-      result = run_vroom(vehicle_have_start, vehicle_have_end, matrix, @vroom_exec_count)
+      result = run_vroom(vehicle_have_start, vehicle_have_end, matrix, @vroom_exec_count) { |avancement, total|
+        block.call(avancement, total) if block
+      }
       return if !result
 
       if vehicle_loop && vehicle_have_start
@@ -81,37 +83,35 @@ module Wrappers
       end
 
       {
-        solution: {
-          costs: result['solution_cost'] + vehicle.cost_fixed,
-#          total_travel_distance: 0,
-#          total_travel_time: 0,
-#          total_waiting_time: 0,
-#          start_time: 0,
-#          end_time: 0,
-          routes: [{
-            vehicle_id: vehicle.id,
-            activities:
-              (vehicle_have_start ? [{
-#                point_id: vehicle.start_point.id,
-                activity: :start
-              }] : []) +
-              result['tour'].collect{ |i| {
-                service_id: vrp.services[i].id,
-                activity: :service
-#                travel_distance 0,
-#                travel_start_time 0,
-#                waiting_duration 0,
-#                arrival_time 0,
-#                duration 0,
-#                pickup_shipments_id [:id0:],
-#                delivery_shipments_id [:id0:]
-              }} +
-              (vehicle_have_end ? [{
-#                point_id: vehicle.end_point.id,
-                activity: :end
-              }] : [])
-          }]
-        }
+        costs: result['solution_cost'] + vehicle.cost_fixed,
+#        total_travel_distance: 0,
+#        total_travel_time: 0,
+#        total_waiting_time: 0,
+#        start_time: 0,
+#        end_time: 0,
+        routes: [{
+          vehicle_id: vehicle.id,
+          activities:
+            (vehicle_have_start ? [{
+#              point_id: vehicle.start_point.id,
+              activity: :start
+            }] : []) +
+            result['tour'].collect{ |i| {
+              service_id: vrp.services[i].id,
+              activity: :service
+#              travel_distance 0,
+#              travel_start_time 0,
+#              waiting_duration 0,
+#              arrival_time 0,
+#              duration 0,
+#              pickup_shipments_id [:id0:],
+#              delivery_shipments_id [:id0:]
+            }} +
+            (vehicle_have_end ? [{
+#              point_id: vehicle.end_point.id,
+              activity: :end
+            }] : [])
+        }]
       }
     end
 
@@ -139,8 +139,9 @@ module Wrappers
       output.close
 
       cmd = "#{@exec_vroom} -t -i '#{input.path}' -o '#{output.path}' #{have_start && !have_end ? '-s' : ''} #{!have_start && have_end ? '-e' : ''}"
-      count.times.collect{
+      count.times.collect{ |i|
         system(cmd)
+        yield i, count
 
         if $?.exitstatus == 0
           JSON.parse(File.read(output.path))

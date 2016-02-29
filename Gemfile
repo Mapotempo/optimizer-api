@@ -16,6 +16,8 @@ gem 'rest-client'
 gem 'activemodel'
 gem 'active_hash'
 gem 'nokogiri'
+gem 'resque'
+gem 'resque-status'
 
 group :test do
   gem 'rack-test'

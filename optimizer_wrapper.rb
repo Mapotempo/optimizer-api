@@ -16,6 +16,10 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'i18n'
+require 'resque'
+require 'resque-status'
+require 'redis'
+require 'json'
 
 module OptimizerWrapper
   def self.config
@@ -24,15 +28,44 @@ module OptimizerWrapper
 
   def self.wrapper_vrp(services, params)
     vrp = services[:vrp].find{ |vrp|
-      vrp.solve?(params)
+      config[:services][vrp].solve?(params)
     }
     if !vrp
       raise UnsupportedProblemError
     else
-      vrp.solve(params)
+      job_id = Job.create(vrp: vrp, params: params)
+      Result.get(job_id) || job_id
+    end
+  end
+
+  class Job
+    include Resque::Plugins::Status
+
+    def perform
+      vrp, params = options['vrp'].to_sym, options['params']
+      result = OptimizerWrapper.config[:services][vrp].solve(params) { |avancement, total|
+        at(avancement, total, "#{avancement}/#{total}")
+      }
+      Result.set(uuid, result)
     end
   end
 
   class UnsupportedProblemError < StandardError
+  end
+
+  class Result
+    def self.set(key, value)
+      redis = Redis.new
+      redis.set(key, value.to_json)
+    end
+
+    def self.get(key)
+      redis = Redis.new
+      result = redis.get(key)
+      if result
+        redis.set(key, nil)
+        JSON.parse(result)
+      end
+    end
   end
 end

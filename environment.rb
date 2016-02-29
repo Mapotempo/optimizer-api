@@ -15,17 +15,10 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'rack/cors'
-require 'rack/contrib/locale'
+ENV['APP_ENV'] ||= 'development'
+require File.expand_path('../config/environments/' + ENV['APP_ENV'], __FILE__)
 
-use Rack::Cors do
-  allow do
-    origins '*'
-    resource '*', headers: :any, methods: :get
-  end
-end
-
-use Rack::Locale
-
-require './environment'
-run Api::Root
+Dir[File.dirname(__FILE__) + '/config/initializers/*.rb'].each {|file| require file }
+Dir[File.dirname(__FILE__) + '/../models/*.rb'].each {|file| require file }
+require './optimizer_wrapper'
+require './api/root'

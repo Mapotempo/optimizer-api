@@ -34,10 +34,16 @@ module OptimizerWrapper
   @@c = {
     product_title: 'Optimizers API',
     product_contact: 'frederic@mapotempo.com',
+    services: {
+      demo: DEMO,
+      vroom: VROOM,
+      jsprit: JSPRIT,
+      ortools: ORTOOLS,
+    },
     profiles: [{
       api_keys: ['demo'],
       services: {
-        vrp: [DEMO, VROOM, JSPRIT, ORTOOLS]
+        vrp: [:demo, :vroom, :jsprit, :ortools]
       }
     }]
   }
