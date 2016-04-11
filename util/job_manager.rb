@@ -38,6 +38,14 @@ module OptimizerWrapper
       Job.current_job_id = self.uuid
       tick('Starting job') # Important to kill job before any code
 
+      puts "#{self.uuid} - Starting job... " + options['checksum']
+      job_started_at = Time.now
+      Raven.tags_context(vrp_checksum: options['checksum'])
+      key_print = options['api_key'].rpartition('-')[0]
+      key_print = options['api_key'][0..3] if key_print.empty?
+      Raven.tags_context(key_print: key_print)
+      Raven.user_context(api_key: options['api_key']) # Filtered in sentry if user_context
+
       services_vrps = Marshal.load(Base64.decode64(self.options['services_vrps'])) # Get the vrp
       self.options['services_vrps'] = nil # The worker is about to launch the optimization, we can delete the vrp from the job
 
@@ -70,6 +78,7 @@ module OptimizerWrapper
           Result.set(self.uuid, p)
         end
       }
+      puts "#{self.uuid} - Elapsed time: #{(Time.now - job_started_at).round(2)}s Vrp size: #{services_vrps.size} Key print: #{key_print}"
 
       # Add values related to the current solve status
       p = Result.get(self.uuid) || {}
@@ -83,12 +92,14 @@ module OptimizerWrapper
         p[:result].first[:elapsed] = p[:graph].last[:time]
       end
       Result.set(self.uuid, p)
-    rescue Resque::Plugins::Status::Killed, JobKilledError
+    rescue Resque::Plugins::Status::Killed, JobKilledError => e
       log 'Job Killed'
       tick('Job Killed')
+      Raven.capture_exception(e, level: :info)
       nil
     rescue StandardError => e
       log "#{e.class.name}: #{e}\n\t#{e.backtrace.join("\n\t")}", level: :fatal
+      Raven.capture_exception(e)
       raise
     end
 
