@@ -28,6 +28,6 @@ class Api::V01::VrpTest < Minitest::Test
 
   def test_vrp
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: {vehicles: []}}
-    assert last_response.ok?, last_response.body
+    assert_equal 201, last_response.status, last_response.body
   end
 end
