@@ -20,8 +20,10 @@ require './models/base'
 
 module Models
   class Timewindow < Base
-    field :start
-    field :end
+    field :start, default: nil
+    field :end, default: nil
+    validates_numericality_of :start
+    validates_numericality_of :end
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :timewindows
   end

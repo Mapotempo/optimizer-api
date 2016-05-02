@@ -21,7 +21,7 @@ require './models/base'
 module Models
   class Vrp < Base
 include ActiveHash::Associations
-    field :resolution_duration
+    field :resolution_duration, default: nil
     validates_numericality_of :resolution_duration
 
     fields :matrix_time, :matrix_distance
