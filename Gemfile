@@ -1,8 +1,11 @@
 source 'https://rubygems.org'
 
+gem 'require_all'
+
 gem 'rack'
 gem 'rakeup'
 gem 'puma'
+gem 'thin'
 gem 'rack-cors'
 
 gem 'grape'

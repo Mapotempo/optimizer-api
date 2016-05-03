@@ -20,7 +20,6 @@ require './models/base'
 
 module Models
   class Vrp < Base
-include ActiveHash::Associations
     field :preprocessing_cluster_threshold, default: nil
     field :preporcessing_prefer_short_segment, default: false
     field :resolution_duration, default: nil

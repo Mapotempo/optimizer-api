@@ -18,6 +18,9 @@
 require 'grape'
 require 'grape-swagger'
 
+require 'require_all'
+require_all 'models'
+
 module Api
   module V01
     class APIBase < Grape::API

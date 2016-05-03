@@ -33,7 +33,7 @@ module OptimizerWrapper
     if !vrp
       raise UnsupportedProblemError
     else
-      job_id = Job.create(vrp: vrp, params: params)
+      job_id = Job.create(vrp: vrp, params: Marshal.dump(params))
       Result.get(job_id) || job_id
     end
   end
@@ -42,7 +42,7 @@ module OptimizerWrapper
     include Resque::Plugins::Status
 
     def perform
-      vrp, params = options['vrp'].to_sym, options['params']
+      vrp, params = options['vrp'].to_sym, Marshal.load(options['params'])
       result = OptimizerWrapper.config[:services][vrp].solve(params) { |avancement, total|
         at(avancement, total, "#{avancement}/#{total}")
       }

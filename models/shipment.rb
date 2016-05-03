@@ -20,7 +20,6 @@ require './models/base'
 
 module Models
   class Shipment < Base
-
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :shipments
   end
 end

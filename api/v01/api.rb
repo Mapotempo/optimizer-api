@@ -29,22 +29,22 @@ module Api
         end
       end
 
-#      rescue_from :all do |error|
-#        case error
-#        when Grape::Exceptions::ValidationErrors
-#          error!(error.message, 400)
-#        when OptimizerWrapper::UnsupportedProblemError
-#          error!(error.message, 417)
-#        else
-#          message = {error: error.class.name, detail: error.message}
-#          if ['development'].include?(ENV['APP_ENV'])
-#            message[:trace] = error.backtrace
-#            STDERR.puts error.message
-#            STDERR.puts error.backtrace
-#          end
-#          error!(message, 500)
-#        end
-#      end
+      rescue_from :all do |error|
+        case error
+        when Grape::Exceptions::ValidationErrors
+          error!(error.message, 400)
+        when OptimizerWrapper::UnsupportedProblemError
+          error!(error.message, 417)
+        else
+          message = {error: error.class.name, detail: error.message}
+          if ['development'].include?(ENV['APP_ENV'])
+            message[:trace] = error.backtrace
+            STDERR.puts error.message
+            STDERR.puts error.backtrace
+          end
+          error!(message, 500)
+        end
+      end
 
       mount Vrp
     end

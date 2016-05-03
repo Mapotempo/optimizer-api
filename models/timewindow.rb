@@ -24,7 +24,5 @@ module Models
     field :end, default: nil
     validates_numericality_of :start
     validates_numericality_of :end
-
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :timewindows
   end
 end

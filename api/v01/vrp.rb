@@ -39,7 +39,7 @@ module Api
           params {
           }
           post do
-            vrp = Models::Vrp.create(params.slice(:vrp))
+            vrp = ::Models::Vrp.create(params[:vrp])
             ret = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
             if ret.is_a?(String)
               #present result, with: VrpResult
