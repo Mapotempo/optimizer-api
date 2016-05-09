@@ -11,7 +11,7 @@ gem 'rack-cors'
 gem 'grape'
 gem 'grape_logging'
 gem 'grape-entity'
-gem 'grape-swagger'
+gem 'grape-swagger', '< 0.20'
 
 gem 'i18n'
 gem 'rack-contrib'
