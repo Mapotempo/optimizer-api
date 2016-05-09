@@ -70,7 +70,7 @@ module Api
           params {
             requires :id, type: String, desc: 'Job id returned by create VRP problem.'
           }
-          get do
+          get ':id' do
             id = params[:id]
             status = Resque::Plugins::Status::Hash.get(id)
             if status
@@ -94,9 +94,7 @@ module Api
               end
             end
           end
-        end
 
-        resource :job do
           desc 'Fetch vrp job status', {
             nickname: 'job',
             entity: VrpResult
@@ -104,7 +102,7 @@ module Api
           params {
             requires :id, type: String, desc: 'Job id returned by create VRP problem.'
           }
-          delete do
+          delete ':id' do
             status 204
             Resque::Plugins::Status::Hash.kill(params[:id])
           end
