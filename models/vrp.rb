@@ -54,8 +54,7 @@ module Models
     end
 
     def points=(vs)
-      self.attributes[:points] = []
-      vs && vs.each{ |point| self.attributes[:points] << Point.create(point.merge(vrp: self)) }
+      self.attributes[:points] = !vs ? [] : vs.collect{ |point| Point.create(point.merge(vrp: self)) }
     end
 
     def points
@@ -63,8 +62,7 @@ module Models
     end
 
     def services=(vs)
-      self.attributes[:services] = []
-      vs && vs.each{ |service| self.attributes[:services] << Service.create(service.merge(vrp: self)) }
+      self.attributes[:services] = !vs ? [] : vs.collect{ |service| Service.create(service.merge(vrp: self)) }
     end
 
     def services
@@ -72,8 +70,7 @@ module Models
     end
 
     def shipments=(vs)
-      self.attributes[:shipments] = []
-      vs && vs.each{ |shipment| self.attributes[:shipments] << Shipment.create(shipment.merge(vrp: self)) }
+      self.attributes[:shipments] = !vs ? [] : vs.collect{ |shipment| Shipment.create(shipment.merge(vrp: self)) }
     end
 
     def shipments
@@ -81,8 +78,7 @@ module Models
     end
 
     def rests=(vs)
-      self.attributes[:rests] = []
-      vs && vs.each{ |rest| self.attributes[:rests] << Rest.create(rest.merge(vrp: self)) }
+      self.attributes[:rests] = !vs ? [] : vs.collect{ |rest| Rest.create(rest.merge(vrp: self)) }
     end
 
     def rests
@@ -90,8 +86,7 @@ module Models
     end
 
     def vehicles=(vs)
-     self.attributes[:vehicles] = []
-      vs && vs.each{ |vehicle| self.attributes[:vehicles] << Vehicle.create(vehicle.merge(vrp: self)) }
+     self.attributes[:vehicles] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle.merge(vrp: self)) }
     end
 
     def vehicles
@@ -99,8 +94,7 @@ module Models
     end
 
     def units=(vs)
-     self.attributes[:units] = []
-      vs && vs.each{ |vehicle| self.attributes[:units] << Vehicle.create(vehicle.merge(vrp: self)) }
+     self.attributes[:units] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle.merge(vrp: self)) }
     end
 
     def units
