@@ -73,7 +73,7 @@ module Api
           get ':id' do
             id = params[:id]
             status = Resque::Plugins::Status::Hash.get(id)
-            if status
+            if status.status == :completed
               status 201
               {
                 job: {
@@ -84,14 +84,10 @@ module Api
                 }
               }
             else
-              result = OptimizerWrapper::Result.get(id)
-              if result
-                status 200
-                redis.set(id, nil)
-                {
-                  solution: result
-                }
-              end
+              status 200
+              {
+                solution: OptimizerWrapper::Result.get(id)
+              }
             end
           end
 

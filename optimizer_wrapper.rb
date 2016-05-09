@@ -46,7 +46,7 @@ module OptimizerWrapper
       result = OptimizerWrapper.config[:services][vrp].solve(params) { |avancement, total|
         at(avancement, total, "#{avancement}/#{total}")
       }
-      Result.set(uuid, result)
+      Result.set(self.uuid, result)
     end
   end
 

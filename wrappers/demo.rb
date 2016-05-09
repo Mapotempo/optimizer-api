@@ -47,7 +47,7 @@ module Wrappers
             'pickup_shipments_id': shipment['shipment_id'],
             'delivery_shipments_id': shipment['shipment_id']
           }}
-        }}
+        }} || []
       }
     end
   end

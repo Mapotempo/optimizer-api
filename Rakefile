@@ -2,6 +2,7 @@ require 'rubygems'
 require 'bundler/setup'
 require 'rakeup'
 require 'resque/tasks'
+require './environment.rb'
 
 RakeUp::ServerTask.new do |t|
   t.port = 1791
