@@ -25,5 +25,12 @@ module Models
     include ActiveModel::Validations::HelperMethods
 
     include ActiveHash::Associations
+
+    def initialize(hash)
+      super(hash.inject({}) { |memo, (k, v)|
+        memo[k.to_sym] = v
+        memo
+      })
+    end
   end
 end
