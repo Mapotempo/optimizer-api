@@ -25,6 +25,11 @@ And in production mode:
 APP_ENV=production bundle exec rake server
 ```
 
+Start Redis and then start the worker
+```
+QUEUE=statused bundle exec rake resque:work
+```
+
 ## Usage
 
 The API is defined in Swagger format at
