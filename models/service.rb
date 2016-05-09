@@ -36,5 +36,13 @@ module Models
     has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :services
+
+    def timewindows=(vs)
+      self.attributes[:timewindows] = !vs ? [] :vs.collect{ |timewindow| Timewindow.create(timewindow) }
+    end
+
+    def timewindows
+      self.attributes[:timewindows] || []
+    end
   end
 end
