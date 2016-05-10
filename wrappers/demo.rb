@@ -29,23 +29,23 @@ module Wrappers
 
     def solve(params, &block)
       {
-        'costs': 0,
-        'total_travel_distance': 0,
-        'total_travel_time': 0,
-        'total_waiting_time': 0,
-        'start_time': 0,
-        'end_time': 0,
-        'routes': params['vehicles'] && params['vehicles'].collect{ |vehicle| {
-          'vehicle_id': vehicle['vehicle_id'],
-          'activities': params['shipments'] && params['shipments'].collect{ |shipment| {
-            'point_id': shipment['pickup']['point_id'],
-            'travel_distance': 0,
-            'travel_start_time': 0,
-            'waiting_duration': 0,
-            'arrival_time': 0,
-            'departure_time': 0,
-            'pickup_shipments_id': shipment['shipment_id'],
-            'delivery_shipments_id': shipment['shipment_id']
+        'costs' => 0,
+        'total_travel_distance' => 0,
+        'total_travel_time' => 0,
+        'total_waiting_time' => 0,
+        'start_time' => 0,
+        'end_time' => 0,
+        'routes' => params['vehicles'] && params['vehicles'].collect{ |vehicle| {
+          'vehicle_id' => vehicle['vehicle_id'],
+          'activities' => params['shipments'] && params['shipments'].collect{ |shipment| {
+            'point_id' => shipment['pickup']['point_id'],
+            'travel_distance' => 0,
+            'travel_start_time' => 0,
+            'waiting_duration' => 0,
+            'arrival_time' => 0,
+            'departure_time' => 0,
+            'pickup_shipments_id' => shipment['shipment_id'],
+            'delivery_shipments_id' => shipment['shipment_id']
           }}
         }} || []
       }
