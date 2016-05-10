@@ -25,11 +25,15 @@ module Models
     field :cost_time_multiplicator, default: 1
     field :cost_waiting_time_multiplicator, default: 1
     field :cost_late_multiplicator, default: nil
+    field :cost_setup_time_multiplicator, default: 0
+    field :coef_setup, default: 1
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplicator
     validates_numericality_of :cost_time_multiplicator
     validates_numericality_of :cost_waiting_time_multiplicator
     validates_numericality_of :cost_late_multiplicator
+    validates_numericality_of :cost_setup_time_multiplicator
+    validates_numericality_of :coef_setup
 
     field :skills, default: []
 

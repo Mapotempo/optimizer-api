@@ -19,18 +19,21 @@ require './models/base'
 
 
 module Models
-  class Shipment < Base
-    field :late_multiplicator, default: nil
-    field :exclusion_cost, default: nil
-    validates_numericality_of :late_multiplicator
-    validates_numericality_of :exclusion_cost
+  class Activity < Base
+    field :duration, default: 0
+    field :setup_duration, default: 0
+    validates_numericality_of :duration
+    validates_numericality_of :setup_duration
 
-    field :skills, default: []
+    belongs_to :point, class_name: 'Models::Point'
+    has_many :timewindows, class_name: 'Models::Timewindow'
 
-    belongs_to :pickup_activity, class_name: 'Models::Activity'
-    belongs_to :delivery_activity, class_name: 'Models::Activity'
-    has_many :quantities, class_name: 'Models::ServiceQuantity'
+    def timewindows=(vs)
+      self.attributes[:timewindows] = !vs ? [] :vs.collect{ |timewindow| Timewindow.create(timewindow) }
+    end
 
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :shipments
+    def timewindows
+      self.attributes[:timewindows] || []
+    end
   end
 end
