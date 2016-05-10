@@ -109,15 +109,28 @@ module Wrappers
                     xml.end 2**31
                   }
                 end
-#        <breaks>
-#            <timeWindows>
-#                <timeWindow>
-#                    <start>0</start>
-#                    <end>2147483647</end>
-#                </timeWindow>
-#            </timeWindows>
-#            <duration>480</duration>
-#        </breaks>
+              if vehicle.rests
+                  xml.breaks {
+                    xml.duration vehicle.rests.duration
+                    if vehicle.rests.timewindows.size > 0
+                      xml.timewindows {
+                        vehicle.rests.timewindows do |timewindow|
+                          xml.timewindow {
+                            xml.start timewindow.start
+                            xml.end timewindow.end
+                          }
+                        end
+                      }
+                    else
+                      xml.timeWindows {
+                        xml.timewindow {
+                          xml.start 0
+                          xml.end 2**31
+                        }
+                      }
+                    end
+                  }
+                end
               }
             end
           }
@@ -134,31 +147,78 @@ module Wrappers
                   (xml.fixed vehicle.cost_fixed)
                   (xml.distance vehicle.cost_distance_multiplicator)
                   (xml.time vehicle.cost_time_multiplicator)
+                  (xml.setup vehicle.cost_setup_time_multiplicator)
                 }
               }
             end
           }
-          xml.services {
-            services.collect do |service|
-              xml.service(id: service.id, type: 'service') {
-                xml.location {
-                  xml.index service.point.matrix_index
-                }
-                service.timewindows do |timewindow|
-                  xml.timeSchedule {
-                    xml.start timewindow.start
-                    xml.end timewindow.end
+          if services
+            xml.services {
+              services.collect do |service|
+                xml.service(id: service.id, type: 'service') {
+                  xml.location {
+                    xml.index service.activity.point.matrix_index
                   }
-                end
-                (xml.duration service.duration) if service.duration > 0
-                xml.method_missing('capacity-dimensions') {
-                  (!service.quantities.empty? ? service.quantities[0].values : [1]).each_with_index do |value, index|
-                    xml.dimension value, index: index
+                  service.activity.timewindows do |activity_timewindow|
+                    xml.timeSchedule {
+                      xml.start activity_timewindow.start
+                      xml.end activity_timewindow.end
+                    }
                   end
+                  (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration > 0
+                  (xml.duration service.activity.duration) if service.activity.duration > 0
+                  xml.method_missing('capacity-dimensions') {
+                    (!service.quantities.empty? ? service.quantities[0].values : [1]).each_with_index do |value, index|
+                      xml.dimension value, index: index
+                    end
+                  }
                 }
-              }
-            end
-          }
+              end
+            }
+          end
+          if shipments
+            xml.shipments {
+              shipments.collect do |shipment|
+                xml.shipment {
+                  xml.pickup {
+                    xml.location {
+                      xml.index shipment.pickup_activity.point.matrix_index
+                    }
+                    xml.timeWindows {
+                      shipment.pickup_activity.timewindows do |activity_timewindow|
+                        xml.timeWindow {
+                          xml.start activity_timewindow.start
+                          xml.end activity_timewindow.end
+                        }
+                      end
+                    }
+                    (xml.setupDuration shipment.pickup_activity.duration) if shipment.pickup_activity.setup_duration > 0
+                    (xml.duration shipment.pickup_activity.duration) if shipment.pickup_activity.duration > 0
+                  }
+                  xml.delivery {
+                     xml.location {
+                      xml.index shipment.delivery_point.matrix_index
+                    }
+                    xml.timeWindows {
+                      shipment.delivery_activity.timewindows do |activity_timewindow|
+                        xml.timewindow {
+                          xml.start activity_timewindow.start
+                          xml.end activity_timewindow.end
+                        }
+                      end
+                    }
+                    (xml.setupDuration shipment.delivery_activity.setup_duration) if shipment.delivery_activity.setup_duration > 0
+                    (xml.duration shipment.delivery_activity.duration) if shipment.delivery_activity.duration > 0
+                  }
+                  xml.method_missing('capacity-dimensions') {
+                    (!service.quantities.empty? ? service.quantities[0].values : [1]).each_with_index do |value, index|
+                      xml.dimension value, index: index
+                    end
+                  }
+                }
+              end
+            }
+          end
         }
       end
 
