@@ -21,10 +21,10 @@ require './models/base'
 module Models
   class Rest < Base
     field :duration, default: 0
-    field :late_multiplicator, default: 1
+    field :late_multiplier, default: 1
     field :exclusion_cost, default: nil
     validates_numericality_of :duration
-    validates_numericality_of :late_multiplicator
+    validates_numericality_of :late_multiplier
     validates_numericality_of :exclusion_cost
 
     has_many :timewindows, class_name: 'Models::Timewindow'

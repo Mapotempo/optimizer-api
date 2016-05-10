@@ -21,9 +21,9 @@ require './models/base'
 module Models
   class VehicleQuantity < Base
     field :values
-    field :service_unit_multiplicator
-    field :pickup_unit_multiplicator
-    field :delivery_unit_multiplicator
+    field :service_unit_multiplier
+    field :pickup_unit_multiplier
+    field :delivery_unit_multiplier
 
     belongs_to :vehicle, class_name: 'Models::Vehicle'
   end

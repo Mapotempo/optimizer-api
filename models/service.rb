@@ -20,9 +20,9 @@ require './models/base'
 
 module Models
   class Service < Base
-    field :late_multiplicator, default: nil
+    field :late_multiplier, default: nil
     field :exclusion_cost, default: nil
-    validates_numericality_of :late_multiplicator
+    validates_numericality_of :late_multiplier
     validates_numericality_of :exclusion_cost
 
     field :skills, default: []

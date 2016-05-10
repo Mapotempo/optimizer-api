@@ -21,7 +21,7 @@ require './models/base'
 module Models
   class Vrp < Base
     field :preprocessing_cluster_threshold, default: nil
-    field :preporcessing_prefer_short_segment, default: false
+    field :preprocessing_prefer_short_segment, default: false
     field :resolution_duration, default: nil
     validates_numericality_of :preprocessing_cluster_threshold
     validates_numericality_of :resolution_duration

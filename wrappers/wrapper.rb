@@ -22,7 +22,7 @@ module Wrappers
       @tmp_dir = hash[:tmp_dir] || Dir.tmpdir
     end
 
-    def solve?(param)
+    def solve?(vrp)
       false
     end
 
@@ -98,9 +98,9 @@ module Wrappers
       }.nil?
     end
 
-    def assert_services_no_late_multiplicator(vrp)
+    def assert_services_no_late_multiplier(vrp)
       vrp.services.empty? || vrp.services.find{ |service|
-        service.late_multiplicator
+        service.late_multiplier
       }.nil?
     end
 

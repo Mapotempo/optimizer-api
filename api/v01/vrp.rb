@@ -91,8 +91,8 @@ module Api
             end
           end
 
-          desc 'Fetch vrp job status', {
-            nickname: 'job',
+          desc 'Delete vrp job', {
+            nickname: 'deleteJob',
             entity: VrpResult
           }
           params {

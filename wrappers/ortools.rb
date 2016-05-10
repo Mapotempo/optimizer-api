@@ -34,7 +34,7 @@ module Wrappers
       assert_services_no_multiple_timewindows(vrp) &&
       assert_services_no_exclusion_cost(vrp) &&
       assert_no_shipments(vrp) &&
-      assert_ortools_uniq_late_multiplicator(vrp)
+      assert_ortools_uniq_late_multiplier(vrp)
     end
 
     def solve(vrp, &block)
@@ -71,7 +71,7 @@ module Wrappers
         [rest.start, rest.end, rest.duration]
       }
 
-      soft_upper_bound = vrp.services[0].late_multiplicator
+      soft_upper_bound = vrp.services[0].late_multiplier
 
       result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound)
       return if !result
@@ -120,10 +120,10 @@ module Wrappers
 
     private
 
-    def assert_ortools_uniq_late_multiplicator(vrp)
-      (vrp.services.empty? || vrp.services.collect(&:late_multiplicator).uniq.size == 1) &&
-      (vrp.vehicles[0].rests.empty? || vrp.vehicles[0].rests.collect(&:late_multiplicator).uniq.size == 1)
-# TODO check services.late_multiplicator = rests.late_multiplicator, or support late_multiplicator in tsp-simple
+    def assert_ortools_uniq_late_multiplier(vrp)
+      (vrp.services.empty? || vrp.services.collect(&:late_multiplier).uniq.size == 1) &&
+      (vrp.vehicles[0].rests.empty? || vrp.vehicles[0].rests.collect(&:late_multiplier).uniq.size == 1)
+# TODO check services.late_multiplier = rests.late_multiplier, or support late_multiplier in tsp-simple
     end
 
     def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound)

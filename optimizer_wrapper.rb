@@ -26,14 +26,14 @@ module OptimizerWrapper
     @@c
   end
 
-  def self.wrapper_vrp(services, params)
-    vrp = services[:vrp].find{ |vrp|
-      config[:services][vrp].solve?(params)
+  def self.wrapper_vrp(services, vrp)
+    service = services[:vrp].find{ |s|
+      config[:services][s].solve?(vrp)
     }
-    if !vrp
+    if !service
       raise UnsupportedProblemError
     else
-      job_id = Job.create(vrp: vrp, params: Marshal.dump(params))
+      job_id = Job.create(service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
       Result.get(job_id) || job_id
     end
   end
@@ -42,8 +42,8 @@ module OptimizerWrapper
     include Resque::Plugins::Status
 
     def perform
-      vrp, params = options['vrp'].to_sym, Marshal.load(options['params'])
-      result = OptimizerWrapper.config[:services][vrp].solve(params) { |avancement, total|
+      service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
+      result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
         at(avancement, total, "#{avancement}/#{total}")
       }
       Result.set(self.uuid, result)

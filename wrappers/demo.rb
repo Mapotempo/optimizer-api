@@ -23,11 +23,11 @@ module Wrappers
       super(cache, hash)
     end
 
-    def solve?(param)
+    def solve?(vrp)
       true # No problemo, I will take care of
     end
 
-    def solve(params, &block)
+    def solve(vrp, &block)
       {
         'costs' => 0,
         'total_travel_distance' => 0,
@@ -35,17 +35,17 @@ module Wrappers
         'total_waiting_time' => 0,
         'start_time' => 0,
         'end_time' => 0,
-        'routes' => params['vehicles'] && params['vehicles'].collect{ |vehicle| {
-          'vehicle_id' => vehicle['vehicle_id'],
-          'activities' => params['shipments'] && params['shipments'].collect{ |shipment| {
-            'point_id' => shipment['pickup']['point_id'],
+        'routes' => vrp.vehicles && vrp.vehicles.collect{ |vehicle| {
+          'vehicle_id' => vehicle.id,
+          'activities' => vrp.shipments && vrp.shipments.collect{ |shipment| {
+            'point_id' => shipment.pickup.point.id,
             'travel_distance' => 0,
             'travel_start_time' => 0,
             'waiting_duration' => 0,
             'arrival_time' => 0,
             'departure_time' => 0,
-            'pickup_shipments_id' => shipment['shipment_id'],
-            'delivery_shipments_id' => shipment['shipment_id']
+            'pickup_shipments_id' => shipment.id,
+            'delivery_shipments_id' => shipment.id
           }}
         }} || []
       }

@@ -32,7 +32,7 @@ module Wrappers
       assert_vehicles_quantities_only_one(vrp) &&
       assert_vehicles_timewindows_only_one(vrp) &&
       assert_services_no_skills(vrp) &&
-      assert_services_no_late_multiplicator(vrp) &&
+      assert_services_no_late_multiplier(vrp) &&
       assert_services_no_exclusion_cost(vrp) &&
       assert_services_quantities_only_one(vrp) &&
       assert_no_shipments(vrp) &&
@@ -147,9 +147,9 @@ module Wrappers
                 }
                 xml.costs {
                   (xml.fixed vehicle.cost_fixed)
-                  (xml.distance vehicle.cost_distance_multiplicator)
-                  (xml.time vehicle.cost_time_multiplicator)
-                  (xml.setup vehicle.cost_setup_time_multiplicator)
+                  (xml.distance vehicle.cost_distance_multiplier)
+                  (xml.time vehicle.cost_time_multiplier)
+                  (xml.setup vehicle.cost_setup_time_multiplier)
                 }
               }
             end

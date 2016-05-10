@@ -21,18 +21,18 @@ require './models/base'
 module Models
   class Vehicle < Base
     field :cost_fixed, default: 0
-    field :cost_distance_multiplicator, default: 0
-    field :cost_time_multiplicator, default: 1
-    field :cost_waiting_time_multiplicator, default: 1
-    field :cost_late_multiplicator, default: nil
-    field :cost_setup_time_multiplicator, default: 0
+    field :cost_distance_multiplier, default: 0
+    field :cost_time_multiplier, default: 1
+    field :cost_waiting_time_multiplier, default: 1
+    field :cost_late_multiplier, default: nil
+    field :cost_setup_time_multiplier, default: 0
     field :coef_setup, default: 1
     validates_numericality_of :cost_fixed
-    validates_numericality_of :cost_distance_multiplicator
-    validates_numericality_of :cost_time_multiplicator
-    validates_numericality_of :cost_waiting_time_multiplicator
-    validates_numericality_of :cost_late_multiplicator
-    validates_numericality_of :cost_setup_time_multiplicator
+    validates_numericality_of :cost_distance_multiplier
+    validates_numericality_of :cost_time_multiplier
+    validates_numericality_of :cost_waiting_time_multiplier
+    validates_numericality_of :cost_late_multiplier
+    validates_numericality_of :cost_setup_time_multiplier
     validates_numericality_of :coef_setup
 
     field :skills, default: []
@@ -48,8 +48,8 @@ module Models
     def matrix(matrix_indices)
       matrix_indices.collect{ |i|
         matrix_indices.collect{ |j|
-          (vrp.matrix_time ? vrp.matrix_time[i][j] * cost_time_multiplicator : 0) +
-          (vrp.matrix_distance ? vrp.matrix_distance[i][j] * cost_distance_multiplicator : 0)
+          (vrp.matrix_time ? vrp.matrix_time[i][j] * cost_time_multiplier : 0) +
+          (vrp.matrix_distance ? vrp.matrix_distance[i][j] * cost_distance_multiplier : 0)
         }
       }
     end
