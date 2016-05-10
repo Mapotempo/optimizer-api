@@ -52,6 +52,12 @@ module Wrappers
       }.nil?
     end
 
+    def assert_services_no_quantities(vrp)
+        vrp.services.empty? || vrp.services.find{ |service|
+         service.quantities.empty?
+       }.nil?
+    end
+
     def assert_vehicles_quantities_only_one(vrp)
       vrp.vehicles.empty? || vrp.vehicles.find{ |vehicles|
         vehicles.quantities.size > 1

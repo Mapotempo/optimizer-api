@@ -32,5 +32,12 @@ module Models
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :services
 
+    def activity=(activity)
+      self.attributes[:activity] = Activity.create(activity)
+    end
+    def activity
+      self.attributes[:activity] ||= Activity.create
+    end
+
   end
 end

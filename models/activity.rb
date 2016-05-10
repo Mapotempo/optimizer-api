@@ -17,7 +17,6 @@
 #
 require './models/base'
 
-
 module Models
   class Activity < Base
     field :duration, default: 0

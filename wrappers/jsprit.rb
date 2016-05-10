@@ -109,27 +109,29 @@ module Wrappers
                     xml.end 2**31
                   }
                 end
-              if vehicle.rests
-                  xml.breaks {
-                    xml.duration vehicle.rests.duration
-                    if vehicle.rests.timewindows.size > 0
-                      xml.timewindows {
-                        vehicle.rests.timewindows do |timewindow|
-                          xml.timewindow {
-                            xml.start timewindow.start
-                            xml.end timewindow.end
-                          }
-                        end
-                      }
-                    else
-                      xml.timeWindows {
-                        xml.timewindow {
-                          xml.start 0
-                          xml.end 2**31
+                if vehicle.rests.size > 0
+                  vehicle.rests do |rest|
+                    xml.breaks {
+                      xml.duration rest.duration
+                      if rest.timewindows.size > 0
+                        xml.timewindows {
+                          rest.timewindows do |timewindow|
+                            xml.timewindow {
+                              xml.start timewindow.start
+                              xml.end timewindow.end
+                            }
+                          end
                         }
-                      }
-                    end
-                  }
+                      else
+                        xml.timeWindows {
+                          xml.timewindow {
+                            xml.start 0
+                            xml.end 2**31
+                          }
+                        }
+                      end
+                    }
+                  end
                 end
               }
             end
@@ -152,7 +154,7 @@ module Wrappers
               }
             end
           }
-          if services
+          if services.size > 0
             xml.services {
               services.collect do |service|
                 xml.service(id: service.id, type: 'service') {
@@ -176,7 +178,7 @@ module Wrappers
               end
             }
           end
-          if shipments
+          if shipments.size > 0
             xml.shipments {
               shipments.collect do |shipment|
                 xml.shipment {

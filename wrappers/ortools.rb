@@ -46,7 +46,7 @@ module Wrappers
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
 
       matrix_indices = vrp.services.collect{ |service|
-        points[service.point_id].matrix_index
+        points[service.activity.point_id].matrix_index
       }
 
       matrix_indices =

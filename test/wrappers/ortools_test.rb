@@ -42,10 +42,16 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_1',
-        point_id: 'point_1'
+        activity: {
+          id: 'activity_1',
+          point_id: 'point_1'
+        }
       }, {
         id: 'service_2',
-        point_id: 'point_2'
+        activity: {
+          id: 'activity_2',
+          point_id: 'point_2'
+        }
       }],
       vehicles: [{
         id: 'vehicle_0',
@@ -90,16 +96,28 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_1',
-        point_id: 'point_1'
+        activity: {
+          id: 'activity_1',
+          point_id: 'point_1'
+        }
       }, {
         id: 'service_2',
-        point_id: 'point_2'
+        activity: {
+          id: 'activity_2',
+          point_id: 'point_2'
+        }
       }, {
         id: 'service_3',
-        point_id: 'point_3'
+        activity: {
+          id: 'activity_3',
+          point_id: 'point_3'
+        }
       }, {
         id: 'service_4',
-        point_id: 'point_4'
+        activity: {
+          id: 'activity_4',
+          point_id: 'point_4'
+        }
       }],
       vehicles: [{
         id: 'vehicle_0',
