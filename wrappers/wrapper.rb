@@ -68,12 +68,6 @@ module Wrappers
       vrp.shipments.empty?
     end
 
-    def assert_services_no_quantities(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
-        service.quantity != 1
-      }.nil?
-    end
-
     def assert_services_no_skills(vrp)
       vrp.services.empty? || vrp.services.find{ |service|
         !service.skills.empty?
@@ -82,13 +76,13 @@ module Wrappers
 
     def assert_services_no_timewindows(vrp)
       vrp.services.empty? || vrp.services.find{ |service|
-        !service.timewindows.empty?
+        !service.activity.timewindows.empty?
       }.nil?
     end
 
     def assert_services_no_multiple_timewindows(vrp)
       vrp.services.empty? || vrp.services.find{ |service|
-        service.timewindows.size > 1
+        service.activity.timewindows.size > 1
       }.nil?
     end
 
