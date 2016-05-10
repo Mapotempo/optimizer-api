@@ -26,18 +26,18 @@ module Models
     validates_numericality_of :exclusion_cost
 
     field :skills, default: []
-    
-    belongs_to :activity, class_name: 'Models::Activity'
+
+#    belongs_to :activity, class_name: 'Models::Activity'
     has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :services
 
     def activity=(activity)
-      self.attributes[:activity] = Activity.create(activity)
-    end
-    def activity
-      self.attributes[:activity] ||= Activity.create
+      @activity = Activity.create(activity)
     end
 
+    def activity
+      @activity ||= Activity.create
+    end
   end
 end

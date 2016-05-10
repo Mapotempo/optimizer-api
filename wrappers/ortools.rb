@@ -55,7 +55,7 @@ module Wrappers
         (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : []) +
         vehicle.rests.select{ |rest| rest.point }.collect{ |rest| points[rest.point_id].matrix_index }
 
-      quantities = vrp.services.collect(&:quantity) # Not used
+      quantities = vrp.services.collect(&:quantities) # Not used
       matrix = vehicle.matrix(matrix_indices)
       if !vehicle.end_point
         matrix = matrix.collect{ |row| row + [0] } + [[0] * (matrix.size + 1)]
