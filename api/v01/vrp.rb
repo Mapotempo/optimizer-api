@@ -47,7 +47,7 @@ module Api
               {
                 job: {
                   id: ret,
-                  status: :created,
+                  status: :queued,
                   retry: nil
                 }
               }
@@ -72,21 +72,27 @@ module Api
           }
           get ':id' do
             id = params[:id]
-            status = Resque::Plugins::Status::Hash.get(id)
-            if status.status == :completed
+            job = Resque::Plugins::Status::Hash.get(id)
+            if job.status != 'completed'
               status 201
               {
                 job: {
                   id: id,
-                  status: status.queued? ? :queued : status.working? ? :working : nil,
+                  status: job.queued? ? :queued : job.working? ? :working : nil,
                   retry: nil,
-                  avancement: status.message
+                  avancement: job.message
                 }
               }
             else
               status 200
+              solution = OptimizerWrapper::Result.get(id)
               {
-                solution: OptimizerWrapper::Result.get(id)
+                solution: solution,
+                job: {
+                  id: id,
+                  status: :completed,
+                  avancement: job.message
+                }
               }
             end
           end

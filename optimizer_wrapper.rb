@@ -22,6 +22,8 @@ require 'redis'
 require 'json'
 
 module OptimizerWrapper
+  REDIS = Redis.new
+
   def self.config
     @@c
   end
@@ -55,15 +57,13 @@ module OptimizerWrapper
 
   class Result
     def self.set(key, value)
-      redis = Redis.new
-      redis.set(key, value.to_json)
+      OptimizerWrapper::REDIS.set(key, value.to_json)
     end
 
     def self.get(key)
-      redis = Redis.new
-      result = redis.get(key)
+      result = OptimizerWrapper::REDIS.get(key)
       if result
-        redis.set(key, nil)
+        OptimizerWrapper::REDIS.set(key, nil)
         JSON.parse(result)
       end
     end
