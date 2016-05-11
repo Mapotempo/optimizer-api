@@ -37,16 +37,29 @@ module Wrappers
         'end_time' => 0,
         'routes' => vrp.vehicles && vrp.vehicles.collect{ |vehicle| {
           'vehicle_id' => vehicle.id,
-          'activities' => vrp.shipments && vrp.shipments.collect{ |shipment| {
-            'point_id' => shipment.pickup.point.id,
-            'travel_distance' => 0,
-            'travel_start_time' => 0,
-            'waiting_duration' => 0,
-            'arrival_time' => 0,
-            'departure_time' => 0,
-            'pickup_shipments_id' => shipment.id,
-            'delivery_shipments_id' => shipment.id
-          }}
+          'activities' => (vrp.shipments && vrp.shipments.collect{ |shipment|
+            [:pickup, :delivery].collect{ |a|
+              {
+                'point_id' => shipment.send(a).point.id,
+                'travel_distance' => 0,
+                'travel_start_time' => 0,
+                'waiting_duration' => 0,
+                'arrival_time' => 0,
+                'departure_time' => 0,
+                a.to_s + '_shipments_id' => shipment.id
+              } if shipment.send(a)
+            }.compact
+          }.flatten) + (vrp.services && vrp.services.collect{ |service|
+            {
+              'point_id' => service.activity.point.id,
+              'travel_distance' => 0,
+              'travel_start_time' => 0,
+              'waiting_duration' => 0,
+              'arrival_time' => 0,
+              'departure_time' => 0,
+              'service_id' => service.id
+            }
+          })
         }} || []
       }
     end
