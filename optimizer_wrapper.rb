@@ -48,7 +48,13 @@ module OptimizerWrapper
       result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
         at(avancement, total, "#{avancement}/#{total}")
       }
-      Result.set(self.uuid, result)
+      if result.class.name == 'Hash' # result.is_a?(Hash) not working
+        Result.set(self.uuid, result)
+      elsif result.class.name == 'String' # result.is_a?(String) not working
+        raise RuntimeError.new(result)
+      else
+        raise RuntimeError.new('No solution provided')
+      end
     end
   end
 

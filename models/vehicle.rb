@@ -37,8 +37,8 @@ module Models
 
     field :skills, default: []
 
-    belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
-    belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
+#    belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
+#    belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
     has_many :quantities, class_name: 'Models::VehicleQuantity'
     has_many :timewindows, class_name: 'Models::Timewindow'
     has_many :rests, class_name: 'Models::Rest'
@@ -56,6 +56,30 @@ module Models
 
     def vrp
       self.attributes[:vrp]
+    end
+
+    def start_point_id=(start_point_id)
+      @start_point = Point.find start_point_id
+    end
+
+    def start_point
+      @start_point #||= start_point.create
+    end
+
+    def start_point_id
+      @start_point && @start_point.id
+    end
+
+    def end_point_id=(end_point_id)
+      @end_point = Point.find end_point_id
+    end
+
+    def end_point
+      @end_point #||= end_point.create
+    end
+
+    def end_point_id
+      @end_point && @end_point.id
     end
   end
 end

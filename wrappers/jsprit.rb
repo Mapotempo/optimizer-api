@@ -89,7 +89,6 @@ module Wrappers
                 if vehicle.end_point
                   if vehicle.start_point != vehicle.end_point
                     xml.endLocation {
-                      xml.id_ vehicle.end_point.id
                       xml.index vehicle.end_point.matrix_index
                     }
                   else
@@ -244,7 +243,7 @@ module Wrappers
       output.close
 
       cmd = "#{@exec_jsprit} " + (input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '') + " " + (input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '') + " --instance '#{input_problem.path}' --solution '#{output.path}'"
-      system(cmd)
+      out = system(cmd)
 
       if $?.exitstatus == 0
         doc = Nokogiri::XML(File.open(output.path))
@@ -269,6 +268,8 @@ module Wrappers
             }}
           }
         end
+      else
+        out
       end
     ensure
       input_problem && input_problem.unlink

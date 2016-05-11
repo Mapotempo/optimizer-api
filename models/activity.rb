@@ -27,7 +27,7 @@ module Models
     validates_numericality_of :duration
     validates_numericality_of :setup_duration
 
-    belongs_to :point, class_name: 'Models::Point'
+#    belongs_to :point, class_name: 'Models::Point'
     has_many :timewindows, class_name: 'Models::Timewindow'
 
     def timewindows=(vs)
@@ -36,6 +36,18 @@ module Models
 
     def timewindows
       self.attributes[:timewindows] || []
+    end
+
+    def point_id=(point_id)
+      @point = Point.find point_id
+    end
+
+    def point
+      @point #||= Point.create
+    end
+
+    def point_id
+      @point && @point.id
     end
   end
 end
