@@ -19,6 +19,9 @@ require './models/base'
 
 module Models
   class Activity < Base
+    @@id = 0
+    field :id, default: ->{ 'a' + (@@id += 1) }
+
     field :duration, default: 0
     field :setup_duration, default: 0
     validates_numericality_of :duration
