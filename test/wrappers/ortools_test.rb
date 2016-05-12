@@ -43,13 +43,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
       services: [{
         id: 'service_1',
         activity: {
-          id: 'activity_1',
           point_id: 'point_1'
         }
       }, {
         id: 'service_2',
         activity: {
-          id: 'activity_2',
           point_id: 'point_2'
         }
       }],
@@ -58,7 +56,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0'
       }],
       resolution: {
-        duration: 30
+        duration: 1
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -97,25 +95,25 @@ class Wrappers::OrtoolsTest < Minitest::Test
       services: [{
         id: 'service_1',
         activity: {
-          id: 'activity_1',
-          point_id: 'point_1'
+          point_id: 'point_1',
+          timewindows: [{
+            start: 10,
+            end: 20
+          }]
         }
       }, {
         id: 'service_2',
         activity: {
-          id: 'activity_2',
           point_id: 'point_2'
         }
       }, {
         id: 'service_3',
         activity: {
-          id: 'activity_3',
           point_id: 'point_3'
         }
       }, {
         id: 'service_4',
         activity: {
-          id: 'activity_4',
           point_id: 'point_4'
         }
       }],
@@ -125,7 +123,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         end_point_id: 'point_0',
       }],
       resolution: {
-        duration: 30
+        duration: 1
       }
     }
     vrp = Models::Vrp.create(problem)

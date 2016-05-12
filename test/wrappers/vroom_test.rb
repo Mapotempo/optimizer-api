@@ -39,13 +39,11 @@ class Wrappers::VroomTest < Minitest::Test
       services: [{
         id: 'service_0',
         activity: {
-          id: 'activity_0',
           point_id: 'point_0'
         }
       }, {
         id: 'service_1',
         activity: {
-          id: 'activity_1',
           point_id: 'point_1'
         }
       }],
@@ -94,25 +92,21 @@ class Wrappers::VroomTest < Minitest::Test
       services: [{
         id: 'service_1',
         activity: {
-          id: 'activity_1',
           point_id: 'point_1'
         }
       }, {
         id: 'service_2',
         activity: {
-          id: 'activity_2',
           point_id: 'point_2'
         }
       }, {
         id: 'service_3',
         activity: {
-          id: 'activity_3',
           point_id: 'point_3'
         }
       }, {
         id: 'service_4',
         activity: {
-          id: 'activity_4',
           point_id: 'point_4'
         }
       }],

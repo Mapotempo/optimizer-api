@@ -62,7 +62,7 @@ module Wrappers
       end
 
       timewindows = [[nil, nil, 0]] + vrp.services.collect{ |service|
-          (service.activity.timewindows.empty? ? [nil, nil] : [service.activity.timewindows[0].begin, service.activity.timewindows[0].end]) + [service.activity.duration]
+          (service.activity.timewindows.empty? ? [nil, nil] : [service.activity.timewindows[0].start, service.activity.timewindows[0].end]) + [service.activity.duration]
         } + vehicle.rests.select{ |rest| rest.point }.collect{ |rest|
           [rest.start, rest.end, rest.duration]
         }
