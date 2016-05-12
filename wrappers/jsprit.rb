@@ -162,8 +162,8 @@ module Wrappers
                     xml.timeWindows {
                       service.activity.timewindows.each do |activity_timewindow|
                         xml.timeWindow {
-                          xml.start activity_timewindow.start
-                          xml.end activity_timewindow.end
+                          xml.start activity_timewindow.start.nil? ? 0 : activity_timewindow.start
+                          xml.end activity_timewindow.end.nil? ? 2**31 : activity_timewindow.end
                         }
                       end
                     }
