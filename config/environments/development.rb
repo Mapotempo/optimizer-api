@@ -43,7 +43,7 @@ module OptimizerWrapper
     profiles: [{
       api_keys: ['demo'],
       services: {
-        vrp: [:demo, :vroom, :jsprit, :ortools]
+        vrp: [:vroom, :ortools, :jsprit]
       }
     }]
   }

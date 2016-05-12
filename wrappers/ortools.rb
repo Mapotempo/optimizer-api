@@ -140,6 +140,7 @@ module Wrappers
       output.close
 
       cmd = "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` -time_limit_in_ms #{optimize_time || @optimize_time} -soft_upper_bound #{soft_upper_bound || @soft_upper_bound} -instance_file '#{input.path}' > '#{output.path}'"
+      puts cmd
       system(cmd)
 
       if $?.exitstatus == 0

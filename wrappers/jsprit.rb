@@ -245,6 +245,7 @@ module Wrappers
       output.close
 
       cmd = "#{@exec_jsprit} " + (input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '') + " " + (input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '') + " --instance '#{input_problem.path}' --solution '#{output.path}'"
+      puts cmd
       out = system(cmd)
 
       if $?.exitstatus == 0

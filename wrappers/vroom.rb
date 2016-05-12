@@ -138,6 +138,7 @@ module Wrappers
 
       cmd = "#{@exec_vroom} -t -i '#{input.path}' -o '#{output.path}' #{have_start && !have_end ? '-s' : ''} #{!have_start && have_end ? '-e' : ''}"
       count.times.collect{ |i|
+        puts cmd
         system(cmd)
         yield i, count
 
