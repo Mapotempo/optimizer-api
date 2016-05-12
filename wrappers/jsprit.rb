@@ -47,14 +47,12 @@ module Wrappers
           vehicle = vehicles[route[:vehicle_id]]
           if !vehicle.start_point.nil?
             route[:activities].insert 0, {
-              point_id: vehicle.start_point.id,
-              activity: :start
+              point_id: vehicle.start_point.id
             }
           end
           if !vehicle.end_point.nil?
             route[:activities] << {
-              point_id: vehicle.end_point.id,
-              activity: :end
+              point_id: vehicle.end_point.id
             }
           end
         }
@@ -77,7 +75,7 @@ module Wrappers
             xml.fleetSize 'FINITE'
           }
           xml.vehicles {
-            vehicles.collect do |vehicle|
+            vehicles.each do |vehicle|
               xml.vehicle {
                 xml.id_ vehicle.id
                 xml.typeId vehicle.id
@@ -136,7 +134,7 @@ module Wrappers
             end
           }
           xml.vehicleTypes {
-            vehicles.collect do |vehicle|
+            vehicles.each do |vehicle|
               xml.type {
                 xml.id_ vehicle.id
                 xml.method_missing('capacity-dimensions') {
@@ -155,15 +153,19 @@ module Wrappers
           }
           if services.size > 0
             xml.services {
-              services.collect do |service|
+              services.each do |service|
                 xml.service(id: service.id, type: 'service') {
                   xml.location {
                     xml.index service.activity.point.matrix_index
                   }
-                  service.activity.timewindows do |activity_timewindow|
-                    xml.timeSchedule {
-                      xml.start activity_timewindow.start
-                      xml.end activity_timewindow.end
+                  if service.activity.timewindows.size > 0
+                    xml.timeWindows {
+                      service.activity.timewindows.each do |activity_timewindow|
+                        xml.timeWindow {
+                          xml.start activity_timewindow.start
+                          xml.end activity_timewindow.end
+                        }
+                      end
                     }
                   end
                   (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration > 0
@@ -179,7 +181,7 @@ module Wrappers
           end
           if shipments.size > 0
             xml.shipments {
-              shipments.collect do |shipment|
+              shipments.each do |shipment|
                 xml.shipment {
                   xml.pickup {
                     xml.location {
@@ -258,7 +260,7 @@ module Wrappers
               end_time: Float(route.at_xpath('end').content),
               activities: route.xpath('act').collect{ |act| {
                 service_id: act.at_xpath('serviceId').content,
-                activity: act.attr('type').to_sym,
+#                activity: act.attr('type').to_sym,
                 arrival_time: Float(act.at_xpath('arrTime').content),
                 departure_time: Float(act.at_xpath('endTime').content),
               }}

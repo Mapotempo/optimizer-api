@@ -28,14 +28,14 @@ module Models
     validates_numericality_of :setup_duration
 
 #    belongs_to :point, class_name: 'Models::Point'
-    has_many :timewindows, class_name: 'Models::Timewindow'
+#    has_many :timewindows, class_name: 'Models::Timewindow'
 
     def timewindows=(vs)
-      self.attributes[:timewindows] = !vs ? [] :vs.collect{ |timewindow| Timewindow.create(timewindow) }
+      @timewindows = !vs ? [] :vs.collect{ |timewindow| Timewindow.create(timewindow) }
     end
 
     def timewindows
-      self.attributes[:timewindows] || []
+      @timewindows || []
     end
 
     def point_id=(point_id)
