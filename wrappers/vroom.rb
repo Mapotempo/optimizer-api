@@ -49,7 +49,7 @@ module Wrappers
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
 
       matrix_indices = vrp.services.collect{ |service|
-        points[service.point_id].matrix_index
+        points[service.activity.point_id].matrix_index
       }
 
       vehicle = vrp.vehicles.first
@@ -70,7 +70,7 @@ module Wrappers
       return if !result
 
       if vehicle_loop && vehicle_have_start
-        index = result['tour'].index(0)
+        index = result['tour'].index(1)
         result['tour'] = result['tour'].rotate(index).collect{ |i| i }
       end
 
@@ -92,13 +92,12 @@ module Wrappers
         routes: [{
           vehicle_id: vehicle.id,
           activities:
-            (vehicle_have_start ? [{
-#              point_id: vehicle.start_point.id,
-              activity: :start
-            }] : []) +
+            [{
+              point_id: vehicle_have_start ? vehicle.start_point.id : vrp.services[0].activity.point.id
+            }] +
             result['tour'].collect{ |i| {
-              service_id: vrp.services[i].id,
-              activity: :service
+              point_id: vrp.services[i - 1].activity.point.id,
+              service_id: vrp.services[i - 1].id
 #              travel_distance 0,
 #              travel_start_time 0,
 #              waiting_duration 0,
@@ -107,10 +106,9 @@ module Wrappers
 #              pickup_shipments_id [:id0:],
 #              delivery_shipments_id [:id0:]
             }} +
-            (vehicle_have_end ? [{
-#              point_id: vehicle.end_point.id,
-              activity: :end
-            }] : [])
+            [{
+              point_id: vehicle_have_end && !vehicle_loop ? vehicle.end_point.id : vrp.services[-1].activity.point.id
+            }]
         }]
       }
     end

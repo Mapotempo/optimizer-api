@@ -67,7 +67,7 @@ module Wrappers
             }
           }) + [
             {
-              'point_id' => vehicle.end_point ? vehicle.end_point.id : vrp.points[vrp.points.size - 1].id,
+              'point_id' => vehicle.end_point ? vehicle.end_point.id : vrp.points[-1].id,
               'travel_distance' => 0,
               'travel_start_time' => 0
             }
