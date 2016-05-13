@@ -91,7 +91,7 @@ class Wrappers::JspritTest < Minitest::Test
           point_id: 'point_1',
           timewindows: [{
             start: 10,
-            end: 20
+            end: 2000
           }]
         }
       }, {
