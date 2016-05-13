@@ -41,7 +41,7 @@ module Models
 #    belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
     has_many :quantities, class_name: 'Models::VehicleQuantity'
     has_many :timewindows, class_name: 'Models::Timewindow'
-    has_many :rests, class_name: 'Models::Rest'
+#    has_many :rests, class_name: 'Models::Rest'
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :vehicles
 
@@ -80,6 +80,14 @@ module Models
 
     def end_point_id
       @end_point && @end_point.id
+    end
+
+    def rests=(vs)
+      @rests = !vs ? [] : vs.collect{ |rest_id| Rest.find rest_id }
+    end
+
+    def rests
+      @rests || []
     end
   end
 end

@@ -94,7 +94,7 @@ module Wrappers
                   end
                 end
                 if vehicle.timewindows.size > 0
-                  vehicle.timewindows do |timewindow|
+                  vehicle.timewindows.each do |timewindow|
                     xml.timeSchedule {
                       xml.start timewindow.start
                       xml.end timewindow.end
@@ -107,26 +107,17 @@ module Wrappers
                   }
                 end
                 if vehicle.rests.size > 0
-                  vehicle.rests do |rest|
+                  vehicle.rests.each do |rest|
                     xml.breaks {
-                      xml.duration rest.duration
-                      if rest.timewindows.size > 0
-                        xml.timewindows {
-                          rest.timewindows do |timewindow|
-                            xml.timewindow {
-                              xml.start timewindow.start
-                              xml.end timewindow.end
-                            }
-                          end
-                        }
-                      else
-                        xml.timeWindows {
-                          xml.timewindow {
-                            xml.start 0
-                            xml.end 2**31
+                      xml.timeWindows {
+                        rest.timewindows.each do |timewindow|
+                          xml.timeWindow {
+                            xml.start timewindow.start.nil? ? 0 : timewindow.start
+                            xml.end timewindow.end.nil? ? 2**31 : timewindow.end
                           }
-                        }
-                      end
+                        end
+                      }
+                      xml.duration rest.duration
                     }
                   end
                 end
@@ -188,7 +179,7 @@ module Wrappers
                       xml.index shipment.pickup_activity.point.matrix_index
                     }
                     xml.timeWindows {
-                      shipment.pickup_activity.timewindows do |activity_timewindow|
+                      shipment.pickup_activity.timewindows.each do |activity_timewindow|
                         xml.timeWindow {
                           xml.start activity_timewindow.start
                           xml.end activity_timewindow.end
@@ -203,7 +194,7 @@ module Wrappers
                       xml.index shipment.delivery_point.matrix_index
                     }
                     xml.timeWindows {
-                      shipment.delivery_activity.timewindows do |activity_timewindow|
+                      shipment.delivery_activity.timewindows.each do |activity_timewindow|
                         xml.timewindow {
                           xml.start activity_timewindow.start
                           xml.end activity_timewindow.end

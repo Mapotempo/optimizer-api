@@ -27,8 +27,16 @@ module Models
     validates_numericality_of :late_multiplier
     validates_numericality_of :exclusion_cost
 
-    has_many :timewindows, class_name: 'Models::Timewindow'
+#    has_many :timewindows, class_name: 'Models::Timewindow'
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :rests
+
+    def timewindows=(vs)
+      @timewindows = !vs ? [] :vs.collect{ |timewindow| Timewindow.create(timewindow) }
+    end
+
+    def timewindows
+      @timewindows || []
+    end
   end
 end
