@@ -60,7 +60,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.solve?(vrp)
+    assert ortools.inapplicable_solve?(vrp).empty?
     assert ortools.solve(vrp)
   end
 
@@ -127,7 +127,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.solve?(vrp)
+    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size

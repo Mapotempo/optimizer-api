@@ -26,15 +26,17 @@ module Wrappers
       @soft_upper_bound = hash[:soft_upper_bound] || 3
     end
 
-    def solve?(vrp)
-      assert_vehicles_only_one(vrp) &&
-      assert_vehicles_start(vrp) &&
-      assert_vehicles_no_timewindows(vrp) &&
-      assert_services_no_skills(vrp) &&
-      assert_services_no_multiple_timewindows(vrp) &&
-      assert_services_no_exclusion_cost(vrp) &&
-      assert_no_shipments(vrp) &&
-      assert_ortools_uniq_late_multiplier(vrp)
+    def solver_constraints
+      super + [
+        :assert_vehicles_only_one,
+        :assert_vehicles_start,
+        :assert_vehicles_no_timewindows,
+        :assert_services_no_skills,
+        :assert_services_no_multiple_timewindows,
+        :assert_services_no_exclusion_cost,
+        :assert_no_shipments,
+        :assert_ortools_uniq_late_multiplier,
+      ]
     end
 
     def solve(vrp, &block)

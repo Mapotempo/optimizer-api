@@ -29,16 +29,18 @@ module Wrappers
       @vroom_exec_count = hash[:vroom_exec_count] || 3
     end
 
-    def solve?(vrp)
-      assert_vehicles_only_one(vrp) &&
-      assert_vehicles_no_timewindows(vrp) &&
-      assert_vehicles_no_rests(vrp) &&
-      assert_services_no_quantities(vrp) &&
-      assert_services_no_skills(vrp) &&
-      assert_services_no_timewindows(vrp) &&
-      assert_services_no_exclusion_cost(vrp) &&
-      assert_no_shipments(vrp) &&
-      assert_vroom_not_start_and_end(vrp)
+    def solver_constraints
+      super + [
+        :assert_vehicles_only_one,
+        :assert_vehicles_no_timewindows,
+        :assert_vehicles_no_rests,
+        :assert_services_no_quantities,
+        :assert_services_no_skills,
+        :assert_services_no_timewindows,
+        :assert_services_no_exclusion_cost,
+        :assert_no_shipments,
+        :assert_vroom_not_start_and_end,
+      ]
     end
 
     def solve(vrp, &block)

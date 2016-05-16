@@ -22,8 +22,14 @@ module Wrappers
       @tmp_dir = hash[:tmp_dir] || Dir.tmpdir
     end
 
-    def solve?(vrp)
-      false
+    def solver_constraints
+      []
+    end
+
+    def inapplicable_solve?(vrp)
+      solver_constraints.select{ |constraint|
+        !self.send(constraint, vrp)
+      }
     end
 
     def assert_units_only_one(vrp)

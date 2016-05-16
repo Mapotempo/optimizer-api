@@ -24,19 +24,21 @@ module Wrappers
   class Jsprit < Wrapper
     def initialize(cache, hash = {})
       super(cache, hash)
-      @exec_jsprit = hash[:exec_jsprit] || 'java -jar ../mapotempo-optimizer-jsprit/target/mapotempo-jsprit-0.0.1-SNAPSHOT-jar-with-dependencies.jar'
+      @exec_jsprit = hash[:exec_jsprit] || 'java -jar ../optimizer-jsprit/target/mapotempo-jsprit-0.0.1-SNAPSHOT-jar-with-dependencies.jar'
     end
 
-    def solve?(vrp)
-      assert_units_only_one(vrp) &&
-      assert_vehicles_quantities_only_one(vrp) &&
-      assert_vehicles_timewindows_only_one(vrp) &&
-      assert_services_no_skills(vrp) &&
-      assert_services_no_late_multiplier(vrp) &&
-      assert_services_no_exclusion_cost(vrp) &&
-      assert_services_quantities_only_one(vrp) &&
-      assert_no_shipments(vrp) &&
-      assert_jsprit_start_or_end(vrp)
+    def solver_constraints
+      super + [
+        :assert_units_only_one,
+        :assert_vehicles_quantities_only_one,
+        :assert_vehicles_timewindows_only_one,
+        :assert_services_no_skills,
+        :assert_services_no_late_multiplier,
+        :assert_services_no_exclusion_cost,
+        :assert_services_quantities_only_one,
+        :assert_no_shipments,
+        :assert_jsprit_start_or_end,
+      ]
     end
 
     def solve(vrp, &block)

@@ -23,7 +23,7 @@ class Wrappers::DemoTest < Minitest::Test
   def test_demo
     demo = OptimizerWrapper::DEMO
     vrp = Models::Vrp.create
-    assert demo.solve?(vrp)
+    assert demo.inapplicable_solve?(vrp).empty?
     assert demo.solve(vrp)
   end
 end

@@ -23,10 +23,6 @@ module Wrappers
       super(cache, hash)
     end
 
-    def solve?(vrp)
-      true # No problemo, I will take care of
-    end
-
     def solve(vrp, &block)
       {
         'costs' => 0,

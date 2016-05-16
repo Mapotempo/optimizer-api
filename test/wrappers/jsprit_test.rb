@@ -53,7 +53,7 @@ class Wrappers::JspritTest < Minitest::Test
       }]
     }
     vrp = Models::Vrp.create(problem)
-    assert jsprit.solve?(vrp)
+    assert jsprit.inapplicable_solve?(vrp).empty?
     assert jsprit.solve(vrp)
   end
 
@@ -117,7 +117,7 @@ class Wrappers::JspritTest < Minitest::Test
       }]
     }
     vrp = Models::Vrp.create(problem)
-    assert jsprit.solve?(vrp)
+    assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size

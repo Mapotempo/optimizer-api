@@ -30,7 +30,14 @@ module OptimizerWrapper
 
   def self.wrapper_vrp(services, vrp)
     service = services[:vrp].find{ |s|
-      config[:services][s].solve?(vrp)
+      inapplicable = config[:services][s].inapplicable_solve?(vrp)
+      if inapplicable.empty?
+        puts "Select service #{s}"
+        true
+      else
+        puts "Skip inapplicable #{s}: #{inapplicable.join(', ')}"
+        false
+      end
     }
     if !service
       raise UnsupportedProblemError
