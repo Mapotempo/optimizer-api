@@ -54,23 +54,17 @@ module Wrappers
       matrix_indices =
         (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
         matrix_indices +
-        (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : []) +
-        vehicle.rests.select{ |rest| rest.point }.collect{ |rest| points[rest.point_id].matrix_index }
+        (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
 
       quantities = vrp.services.collect(&:quantities) # Not used
       matrix = vehicle.matrix(matrix_indices)
-      if !vehicle.end_point
-        matrix = matrix.collect{ |row| row + [0] } + [[0] * (matrix.size + 1)]
-      end
 
       timewindows = [[nil, nil, 0]] + vrp.services.collect{ |service|
           (service.activity.timewindows.empty? ? [nil, nil] : [service.activity.timewindows[0].start, service.activity.timewindows[0].end]) + [service.activity.duration]
-        } + vehicle.rests.select{ |rest| rest.point }.collect{ |rest|
-          [rest.start, rest.end, rest.duration]
         }
 
-      rest_window = vehicle.rests.select{ |rest| rest.point.nil? }.collect{ |rest|
-        [rest.start, rest.end, rest.duration]
+      rest_window = vehicle.rests.collect{ |rest|
+        [rest.timewindows[0].start, rest.timewindows[0].end, rest.duration]
       }
 
       soft_upper_bound = vrp.services[0].late_multiplier
@@ -82,10 +76,10 @@ module Wrappers
         result = result[1..-1]
         result = result.collect{ |i| i - 1 }
       end
-# Always an end_point, we force it at 0 cost
-#      if vehicle.end_point
+      # Always an end_point, we force it at 0 cost
+      if vehicle.end_point
         result = result[0..-2]
-#      end
+      end
 
       {
 #        costs: result['solution_cost'] + vehicle.cost_fixed,
@@ -100,9 +94,11 @@ module Wrappers
             [{
               point_id: vehicle.start_point ? vehicle.start_point.id : vrp.services[0].activity.point.id
             }] +
-            result.collect{ |i| {
-              point_id: vrp.services[i].activity.point.id,
-              service_id: vrp.services[i].id
+            result.collect{ |i|
+              if i < vrp.services.size
+                {
+                  point_id: vrp.services[i].activity.point.id,
+                  service_id: vrp.services[i].id
 #              travel_distance 0,
 #              travel_start_time 0,
 #              waiting_duration 0,
@@ -110,7 +106,13 @@ module Wrappers
 #              departure_time 0,
 #              pickup_shipments_id [:id0:],
 #              delivery_shipments_id [:id0:]
-            }} +
+                }
+              else
+                {
+                  rest_id: vrp.rests[i - (vrp.services.size + (vehicle.start_point ? 1 : 0) + (vehicle.end_point ? 1 : 0))].id
+                }
+              end
+            } +
             [{
               point_id: vehicle.end_point ? vehicle.end_point.id : vrp.services[-1].activity.point.id
             }]
@@ -149,7 +151,11 @@ module Wrappers
         result = File.read(output.path)
         result = result.split("\n")[-1]
         puts result.inspect
-        result.split(' ').collect{ |i| Integer(i) } if result
+        if result == 'No solution found...'
+          nil
+        else
+          result.split(' ').collect{ |i| Integer(i) } if result
+        end
       end
     ensure
       input && input.unlink

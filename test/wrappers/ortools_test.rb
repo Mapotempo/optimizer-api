@@ -56,12 +56,15 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0'
       }],
       resolution: {
-        duration: 1
+        duration: 10
       }
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    assert ortools.solve(vrp)
+    result = ortools.solve(vrp)
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
   end
 
   def test_loop_problem
@@ -123,7 +126,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         end_point_id: 'point_0',
       }],
       resolution: {
-        duration: 1
+        duration: 10
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -132,5 +135,61 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
+  end
+
+  def test_with_rest
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: {
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      },
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      rests: [{
+        id: 'rest_0',
+        timewindows: [{
+          start: 1,
+          end: 1
+        }],
+        duration: 1
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        rests: ['rest_0']
+      }],
+      resolution: {
+        duration: 10
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp)
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size + problem[:rests].size + 2, result[:routes][0][:activities].size
   end
 end
