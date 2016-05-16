@@ -64,7 +64,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
 
   def test_loop_problem
@@ -134,7 +134,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
 
   def test_with_rest
@@ -190,6 +190,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + problem[:rests].size + 2, result[:routes][0][:activities].size
+    assert_equal problem[:services].size + problem[:rests].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
 end

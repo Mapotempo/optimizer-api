@@ -55,10 +55,13 @@ class Wrappers::VroomTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     assert vroom.inapplicable_solve?(vrp).empty?
     progress = 0
-    assert vroom.solve(vrp) { |avancement, total|
+    result = vroom.solve(vrp) { |avancement, total|
       progress += 1
     }
+    assert result
     assert progress > 0
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
 
   def test_loop_problem
@@ -121,6 +124,6 @@ class Wrappers::VroomTest < Minitest::Test
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
 end
