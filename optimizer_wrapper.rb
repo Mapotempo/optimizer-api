@@ -21,11 +21,18 @@ require 'resque-status'
 require 'redis'
 require 'json'
 
+require './lib/routers/router_wrapper.rb'
+
+
 module OptimizerWrapper
   REDIS = Redis.new
 
   def self.config
     @@c
+  end
+
+  def self.router
+    @router ||= Routers::RouterWrapper.new(ActiveSupport::Cache::NullStore.new, ActiveSupport::Cache::NullStore.new, config[:router][:api_key])
   end
 
   def self.wrapper_vrp(services, vrp)
@@ -52,6 +59,19 @@ module OptimizerWrapper
 
     def perform
       service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
+
+      if (vrp.matrix_time.nil? && vrp.need_matrix_time?) || (vrp.matrix_distance.nil? && vrp.need_matrix_distance?)
+        dimension = [
+          :time,
+          vrp.matrix_distance.nil? && vrp.need_matrix_distance? ? :distance : nil
+        ].compact
+        points = vrp.points.each_with_index.collect{ |point, index|
+          point.matrix_index = index
+          [point.location.lat, point.location.lon]
+        }
+        vrp.matrix_time, vrp.matrix_distance = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:car], :car, dimension, points, points)
+      end
+
       result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
         at(avancement, total, "#{avancement}/#{total}")
       }
@@ -62,6 +82,10 @@ module OptimizerWrapper
       else
         raise RuntimeError.new('No solution provided')
       end
+    rescue Exception => e
+      puts e
+      puts e.backtrace
+      raise
     end
   end
 

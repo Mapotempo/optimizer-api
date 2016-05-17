@@ -45,7 +45,11 @@ module OptimizerWrapper
       services: {
         vrp: [:vroom, :jsprit, :ortools]
       }
-    }]
+    }],
+    router: {
+      api_key: 'demo',
+      car: 'https://router.mapotempo.com'
+    }
   }
 
   @@c[:api_keys] = Hash[@@c[:profiles].collect{ |profile|

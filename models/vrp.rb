@@ -100,5 +100,25 @@ module Models
     def units
       self.attributes[:units] || []
     end
+
+    def need_matrix_time?
+      vehicles.find{ |vehicle|
+        vehicle.cost_time_multiplier || vehicle.cost_waiting_time_multiplier || vehicle.cost_late_multiplier || vehicle.cost_setup_time_multiplier ||
+        !vehicle.rest.empty?
+      } ||
+      services.find{ |service|
+        !service.timewindows.empty? || service.late_multiplier
+      } ||
+      shipments.find{ |shipment|
+        !shipments.pickup.timewindows.empty? || shipments.pickup.late_multiplier ||
+        !shipments.delivery.timewindows.empty? || shipments.delivery.late_multiplier
+      }
+    end
+
+    def need_matrix_distance?
+      vehicles.find{ |vehicle|
+        vehicle.cost_distance_multiplier
+      }
+    end
   end
 end
