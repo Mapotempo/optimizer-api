@@ -19,18 +19,10 @@ require './models/base'
 
 
 module Models
-  class Shipment < Base
-    field :late_multiplier, default: nil
-    field :exclusion_cost, default: nil
-    validates_numericality_of :late_multiplier
-    validates_numericality_of :exclusion_cost
-
-    field :skills, default: []
-
-    belongs_to :pickup, class_name: 'Models::Activity'
-    belongs_to :delivery, class_name: 'Models::Activity'
-    has_many :quantities, class_name: 'Models::ServiceQuantity'
-
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :shipments
+  class Location < Base
+    field :lat, default: nil
+    field :lon, default: nil
+    validates_numericality_of :lat
+    validates_numericality_of :lon
   end
 end
