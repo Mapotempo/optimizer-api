@@ -21,7 +21,7 @@ require 'rack/contrib/locale'
 use Rack::Cors do
   allow do
     origins '*'
-    resource '*', headers: :any, methods: :get
+    resource '*', headers: :any, methods: :any
   end
 end
 
