@@ -90,20 +90,20 @@ module Models
       @rests || []
     end
 
-    def quantities=(quantities)
-      @quantities = quantities
+    def quantities=(vs)
+      self.attributes[:quantities] = !vs ? [] : vs.collect{ |quantitie| Quantitie.create(quantitie.merge(vehicle: self)) }
     end
 
     def quantities
-      @quantities
+      self.attributes[:quantities] || []
     end
 
-    def timewindows=(timewindows)
-      @timewindows = timewindows
+    def timewindows=(vs)
+      self.attributes[:timewindows] = !vs ? [] : vs.collect{ |timewindow| Timewindow.create(timewindow.merge(vehicle: self)) }
     end
 
     def timewindows
-      @timewindows
+      self.attributes[:timewindows] || []
     end
   end
 end
