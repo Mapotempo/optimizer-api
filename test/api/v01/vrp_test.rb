@@ -19,6 +19,7 @@ require './test/test_helper'
 
 require './api/root'
 
+
 class Api::V01::VrpTest < Minitest::Test
   include Rack::Test::Methods
 
@@ -27,7 +28,12 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_vrp
-    post '/0.1/vrp/submit', {api_key: 'demo', vrp: {vehicles: []}}
+    vrp = {
+      vehicles: [{
+        id: 'v1'
+      }]
+    }
+    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
   end
 end
