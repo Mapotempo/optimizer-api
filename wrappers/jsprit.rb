@@ -42,7 +42,7 @@ module Wrappers
     end
 
     def solve(vrp, &block)
-      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments)
+      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration)
       if result
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result[:routes].each{ |route|
@@ -70,7 +70,7 @@ module Wrappers
       }.nil?
     end
 
-    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments)
+    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration)
       builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
         xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
           xml.problemType {
@@ -237,7 +237,14 @@ module Wrappers
       output = Tempfile.new(['optimize-jsprit-output', '.xml'], tmpdir=@tmp_dir)
       output.close
 
-      cmd = "#{@exec_jsprit} " + (input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '') + " " + (input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '') + " --instance '#{input_problem.path}' --solution '#{output.path}'"
+      cmd = ["#{@exec_jsprit} ",
+        input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '',
+        input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '',
+        resolution_duration ? "--ms '#{resolution_duration}'" : '',
+#         ? "--iterations '#{}'" : '',
+#         ? "--stable '#{}'" : '',
+#         ? "--coef '#{}'" : '',
+        "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       puts cmd
       out = system(cmd)
 
