@@ -36,7 +36,6 @@ module Wrappers
         :assert_services_no_late_multiplier,
         :assert_services_no_exclusion_cost,
         :assert_services_quantities_only_one,
-        :assert_no_shipments,
         :assert_jsprit_start_or_end,
       ]
     end
@@ -131,7 +130,7 @@ module Wrappers
               xml.type {
                 xml.id_ vehicle.id
                 xml.method_missing('capacity-dimensions') {
-                  (!vehicle.quantities.empty? ? vehicle.quantities[0].values : [2**30]).each_with_index do |value, index|
+                  (!vehicle.quantities.empty? ? vehicle.quantities[0][:values] : [2**30]).each_with_index do |value, index|
                     xml.dimension value, index: index
                   end
                 }
@@ -164,7 +163,7 @@ module Wrappers
                   (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration > 0
                   (xml.duration service.activity.duration) if service.activity.duration > 0
                   xml.method_missing('capacity-dimensions') {
-                    (!service.quantities.empty? ? service.quantities[0].values : [1]).each_with_index do |value, index|
+                    (!service.quantities.empty? ? service.quantities[0][:values] : [1]).each_with_index do |value, index|
                       xml.dimension value, index: index
                     end
                   }
@@ -175,39 +174,43 @@ module Wrappers
           if shipments.size > 0
             xml.shipments {
               shipments.each do |shipment|
-                xml.shipment {
+                xml.shipment(id: shipment.id) {
                   xml.pickup {
                     xml.location {
-                      xml.index shipment.pickup_activity.point.matrix_index
+                      xml.index shipment.pickup.point.matrix_index
                     }
-                    xml.timeWindows {
-                      shipment.pickup_activity.timewindows.each do |activity_timewindow|
-                        xml.timeWindow {
-                          xml.start activity_timewindow.start
-                          xml.end activity_timewindow.end
-                        }
-                      end
-                    }
-                    (xml.setupDuration shipment.pickup_activity.duration) if shipment.pickup_activity.setup_duration > 0
-                    (xml.duration shipment.pickup_activity.duration) if shipment.pickup_activity.duration > 0
+                    if shipment.pickup.timewindows.size > 0
+                      xml.timeWindows {
+                        shipment.pickup.timewindows.each do |activity_timewindow|
+                          xml.timeWindow {
+                            xml.start activity_timewindow.start || 0
+                            xml.end activity_timewindow.end || 2**31
+                          }
+                        end
+                      }
+                    end
+                    (xml.setupDuration shipment.pickup.duration) if shipment.pickup.setup_duration > 0
+                    (xml.duration shipment.pickup.duration) if shipment.pickup.duration > 0
                   }
                   xml.delivery {
                      xml.location {
-                      xml.index shipment.delivery_point.matrix_index
+                      xml.index shipment.delivery.point.matrix_index
                     }
-                    xml.timeWindows {
-                      shipment.delivery_activity.timewindows.each do |activity_timewindow|
-                        xml.timewindow {
-                          xml.start activity_timewindow.start
-                          xml.end activity_timewindow.end
-                        }
-                      end
-                    }
-                    (xml.setupDuration shipment.delivery_activity.setup_duration) if shipment.delivery_activity.setup_duration > 0
-                    (xml.duration shipment.delivery_activity.duration) if shipment.delivery_activity.duration > 0
+                    if shipment.delivery.timewindows.size > 0
+                      xml.timeWindows {
+                        shipment.delivery.timewindows.each do |activity_timewindow|
+                          xml.timeWindow {
+                            xml.start activity_timewindow.start || 0
+                            xml.end activity_timewindow.end || 2**31
+                          }
+                        end
+                      }
+                    end
+                    (xml.setupDuration shipment.delivery.setup_duration) if shipment.delivery.setup_duration > 0
+                    (xml.duration shipment.delivery.duration) if shipment.delivery.duration > 0
                   }
                   xml.method_missing('capacity-dimensions') {
-                    (!service.quantities.empty? ? service.quantities[0].values : [1]).each_with_index do |value, index|
+                    (!shipment.quantities.empty? ? shipment.quantities[0][:values] : [1]).each_with_index do |value, index|
                       xml.dimension value, index: index
                     end
                   }
@@ -255,17 +258,22 @@ module Wrappers
         if solution
           {
             cost: solution.at_xpath('cost').content,
-            routes: solution.xpath('routes/route').collect{ |route| {
-              vehicle_id: route.at_xpath('vehicleId').content,
-              start_time: Float(route.at_xpath('start').content),
-              end_time: Float(route.at_xpath('end').content),
-              activities: route.xpath('act').collect{ |act| {
-                service_id: act.at_xpath('serviceId').content,
-#                activity: act.attr('type').to_sym,
-                arrival_time: Float(act.at_xpath('arrTime').content),
-                departure_time: Float(act.at_xpath('endTime').content),
-              }}
-            }},
+            routes: solution.xpath('routes/route').collect{ |route|
+              {
+                vehicle_id: route.at_xpath('vehicleId').content,
+                start_time: Float(route.at_xpath('start').content),
+                end_time: Float(route.at_xpath('end').content),
+                activities: route.xpath('act').collect{ |act|
+                  s = act.at_xpath('shipmentId') ? shipments.find{ |s| s.id == act.at_xpath('shipmentId').content } : nil
+                  hash = (s && act['type'] == 'pickupShipment') ? {pickup_shipments_id: [s.id]} : (s && act['type'] == 'deliverShipment') ? {delivery_shipments_id: [s.id]} : act.at_xpath('serviceId') ? {service_id: act.at_xpath('serviceId').content} : {rest_id: act.at_xpath('restId').content}
+                  {
+#                    activity: act.attr('type').to_sym,
+                    arrival_time: Float(act.at_xpath('arrTime').content),
+                    departure_time: Float(act.at_xpath('endTime').content),
+                  }.merge(hash)
+                }
+              }
+            },
             unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
               service_id: job.attr('id')
             }}

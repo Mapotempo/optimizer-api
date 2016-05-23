@@ -89,5 +89,21 @@ module Models
     def rests
       @rests || []
     end
+
+    def quantities=(quantities)
+      @quantities = quantities
+    end
+
+    def quantities
+      @quantities
+    end
+
+    def timewindows=(timewindows)
+      @timewindows = timewindows
+    end
+
+    def timewindows
+      @timewindows
+    end
   end
 end

@@ -27,10 +27,34 @@ module Models
 
     field :skills, default: []
 
-    belongs_to :pickup, class_name: 'Models::Activity'
-    belongs_to :delivery, class_name: 'Models::Activity'
+    # belongs_to :pickup, class_name: 'Models::Activity'
+    # belongs_to :delivery, class_name: 'Models::Activity'
     has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :shipments
+
+    def quantities=(quantities)
+      @quantities = quantities
+    end
+
+    def quantities
+      @quantities
+    end
+
+    def pickup=(activity)
+      @pickup = Activity.create(activity)
+    end
+
+    def pickup
+      @pickup ||= Activity.create
+    end
+
+    def delivery=(activity)
+      @delivery = Activity.create(activity)
+    end
+
+    def delivery
+      @delivery ||= Activity.create
+    end
   end
 end
