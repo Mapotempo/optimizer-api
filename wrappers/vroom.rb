@@ -138,7 +138,7 @@ module Wrappers
       output = Tempfile.new('optimize-vroom-output', tmpdir=@tmp_dir)
       output.close
 
-      cmd = "#{@exec_vroom} -t -i '#{input.path}' -o '#{output.path}' #{have_start && !have_end ? '-s' : ''} #{!have_start && have_end ? '-e' : ''}"
+      cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}' #{have_start && !have_end ? '-s' : ''} #{!have_start && have_end ? '-e' : ''}"
       count.times.collect{ |i|
         puts cmd
         system(cmd)
