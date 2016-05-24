@@ -51,6 +51,8 @@ module Models
 
     def resolution=(resolution)
       self.resolution_duration = resolution[:duration]
+      self.preprocessing_cluster_threshold = resolution[:preprocessing_cluster_threshold]
+      self.preprocessing_prefer_short_segment = resolution[:preprocessing_prefer_short_segment]
     end
 
     def points=(vs)
