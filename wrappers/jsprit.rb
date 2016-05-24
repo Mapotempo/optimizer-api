@@ -254,7 +254,7 @@ module Wrappers
       if $?.exitstatus == 0
         doc = Nokogiri::XML(File.open(output.path))
         doc.remove_namespaces!
-        solution = doc.at_xpath('/problem/solutions/solution')
+        solution = doc.xpath('/problem/solutions/solution').last
         if solution
           {
             cost: solution.at_xpath('cost').content,
@@ -264,21 +264,20 @@ module Wrappers
                 start_time: Float(route.at_xpath('start').content),
                 end_time: Float(route.at_xpath('end').content),
                 activities: route.xpath('act').collect{ |act|
-                  s = Models::Shipment.find(act.at_xpath('shipmentId'))
                   {
 #                    activity: act.attr('type').to_sym,
-                    pickup_shipment_id: s && s.id,
-                    delivery_shipment_id: s && s.id,
+                    pickup_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'pickupShipment' && a.content,
+                    delivery_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'deliverShipment' && a.content,
                     service_id: (a = act.at_xpath('serviceId')) && a.content,
                     rest_id: (a = act.at_xpath('restId')) && a.content,
                     arrival_time: Float(act.at_xpath('arrTime').content),
                     departure_time: Float(act.at_xpath('endTime').content),
-                  }.delete_if { |k, v| v == nil && v == false }
+                  }.delete_if { |k, v| !v }
                 }
               }
             },
             unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
-              (Models::Service.find(job.attr('id')) ? :service_id : Models::Shipment.find(job.attr('id')) ? :shipment_id : nil) => job.attr('id')
+              (services.find{ |s| s.id == job.attr('id')} ? :service_id : shipments.find{ |s| s.id == job.attr('id')} ? :shipment_id : nil) => job.attr('id')
             }}
           }
         end
