@@ -126,4 +126,49 @@ class Wrappers::JspritTest < Minitest::Test
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
+
+  def test_minimal_unassigned
+    jsprit = OptimizerWrapper::JSPRIT
+    problem = {
+      matrices: {
+        time: [
+          [0, 1],
+          [1, 0]
+        ]
+      },
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }],
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_0'
+        }
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindows: [{ # infeasible
+          start: 0,
+          end: 0
+        }],
+      }]
+    }
+    vrp = Models::Vrp.create(problem)
+    assert jsprit.inapplicable_solve?(vrp).empty?
+    result = jsprit.solve(vrp)
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size - 1 + 1, result[:routes][0][:activities].size # always return activities for start/end
+    assert_equal 1, result[:unassigned].size
+  end
 end
