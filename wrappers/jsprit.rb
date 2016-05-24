@@ -272,6 +272,7 @@ module Wrappers
                     rest_id: (a = act.at_xpath('restId')) && a.content,
                     arrival_time: Float(act.at_xpath('arrTime').content),
                     departure_time: Float(act.at_xpath('endTime').content),
+                    ready_time: Float(act.at_xpath('readyTime').content),
                   }.delete_if { |k, v| !v }
                 }
               }
