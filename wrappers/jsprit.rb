@@ -267,13 +267,13 @@ module Wrappers
                   s = Models::Shipment.find(act.at_xpath('shipmentId'))
                   {
 #                    activity: act.attr('type').to_sym,
-                    pickup_shipment_id: s.try(:id),
-                    delivery_shipment_id: s.try(:id),
-                    service_id: act.at_xpath('serviceId').try(:content),
-                    rest_id: act.at_xpath('restId').try(:content),
+                    pickup_shipment_id: s && s.id,
+                    delivery_shipment_id: s && s.id,
+                    service_id: (a = act.at_xpath('serviceId')) && a.content,
+                    rest_id: (a = act.at_xpath('restId')) && a.content,
                     arrival_time: Float(act.at_xpath('arrTime').content),
                     departure_time: Float(act.at_xpath('endTime').content),
-                  }.delete_if { |k, v| v == nil }
+                  }.delete_if { |k, v| v == nil && v == false }
                 }
               }
             },
