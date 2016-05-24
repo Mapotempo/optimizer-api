@@ -20,6 +20,10 @@ require 'active_model/validations/numericality'
 
 
 module Models
+  def self.delete_all
+    Base.descendants.each(&:delete_all)
+  end
+
   class Base < ActiveHash::Base
     include ActiveModel::Validations
     include ActiveModel::Validations::HelperMethods

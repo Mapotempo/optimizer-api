@@ -41,6 +41,7 @@ module Api
           post do
             vrp = ::Models::Vrp.create(params[:vrp])
             ret = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
+            ::Models.delete_all
             if ret.is_a?(String)
               #present result, with: VrpResult
               status 201
