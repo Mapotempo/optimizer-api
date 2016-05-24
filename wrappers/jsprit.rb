@@ -264,13 +264,16 @@ module Wrappers
                 start_time: Float(route.at_xpath('start').content),
                 end_time: Float(route.at_xpath('end').content),
                 activities: route.xpath('act').collect{ |act|
-                  s = act.at_xpath('shipmentId') ? shipments.find{ |s| s.id == act.at_xpath('shipmentId').content } : nil
-                  hash = (s && act['type'] == 'pickupShipment') ? {pickup_shipments_id: [s.id]} : (s && act['type'] == 'deliverShipment') ? {delivery_shipments_id: [s.id]} : act.at_xpath('serviceId') ? {service_id: act.at_xpath('serviceId').content} : {rest_id: act.at_xpath('restId').content}
+                  s = Models::Shipment.find(act.at_xpath('shipmentId'))
                   {
 #                    activity: act.attr('type').to_sym,
+                    pickup_shipment_id: s.try(:id),
+                    delivery_shipment_id: s.try(:id),
+                    service_id: act.at_xpath('serviceId').try(:content),
+                    rest_id: act.at_xpath('restId').try(:content),
                     arrival_time: Float(act.at_xpath('arrTime').content),
                     departure_time: Float(act.at_xpath('endTime').content),
-                  }.merge(hash)
+                  }.delete_if { |k, v| v == nil }
                 }
               }
             },

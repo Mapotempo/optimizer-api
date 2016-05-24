@@ -48,7 +48,7 @@ module Wrappers
                 'waiting_duration' => 0,
                 'arrival_time' => 0,
                 'departure_time' => 0,
-                a.to_s + '_shipments_id' => [shipment.id]
+                a.to_s + '_shipment_id' => shipment.id
               } if shipment.send(a)
             }.compact
           }.flatten) + (vrp.services && vrp.services.collect{ |service|
