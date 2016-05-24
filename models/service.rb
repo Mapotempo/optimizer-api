@@ -28,7 +28,7 @@ module Models
     field :skills, default: []
 
 #    belongs_to :activity, class_name: 'Models::Activity'
-    has_many :quantities, class_name: 'Models::ServiceQuantity'
+#    has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :services
 
@@ -38,6 +38,14 @@ module Models
 
     def activity
       @activity ||= Activity.create
+    end
+
+    def quantities=(vs)
+      @quantities = !vs ? [] :vs.collect{ |quantity| Quantity.create(quantity) }
+    end
+
+    def quantities
+      @quantities || []
     end
   end
 end

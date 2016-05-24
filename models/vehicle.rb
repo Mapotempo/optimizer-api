@@ -39,7 +39,7 @@ module Models
 
 #    belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
 #    belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
-    has_many :quantities, class_name: 'Models::VehicleQuantity'
+#    has_many :quantities, class_name: 'Models::VehicleQuantity'
 #    has_many :timewindows, class_name: 'Models::Timewindow'
 #    has_many :rests, class_name: 'Models::Rest'
 
@@ -88,6 +88,14 @@ module Models
 
     def rests
       @rests || []
+    end
+
+    def quantities=(vs)
+      @quantities = !vs ? [] :vs.collect{ |quantity| Quantity.create(quantity) }
+    end
+
+    def quantities
+      @quantities || []
     end
 
     def timewindows=(vs)

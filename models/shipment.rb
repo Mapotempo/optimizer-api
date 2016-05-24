@@ -29,16 +29,16 @@ module Models
 
     # belongs_to :pickup, class_name: 'Models::Activity'
     # belongs_to :delivery, class_name: 'Models::Activity'
-    has_many :quantities, class_name: 'Models::ServiceQuantity'
+    # has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :shipments
 
-    def quantities=(quantities)
-      @quantities = quantities
+    def quantities=(vs)
+      @quantities = !vs ? [] :vs.collect{ |quantity| Quantity.create(quantity) }
     end
 
     def quantities
-      @quantities
+      @quantities || []
     end
 
     def pickup=(activity)

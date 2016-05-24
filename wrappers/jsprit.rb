@@ -278,7 +278,7 @@ module Wrappers
               }
             },
             unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
-              service_id: job.attr('id')
+              (Models::Service.find(job.attr('id')) ? :service_id : Models::Shipment.find(job.attr('id')) ? :shipment_id : nil) => job.attr('id')
             }}
           }
         end
