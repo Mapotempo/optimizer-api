@@ -91,7 +91,7 @@ module Models
     end
 
     def quantities=(vs)
-      @quantities = !vs ? [] :vs.collect{ |quantity| Quantity.create(quantity) }
+      @quantities = !vs ? [] :vs.collect{ |quantity| VehicleQuantity.create(quantity) }
     end
 
     def quantities

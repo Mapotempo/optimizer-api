@@ -34,7 +34,7 @@ module Models
     belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :shipments
 
     def quantities=(vs)
-      @quantities = !vs ? [] :vs.collect{ |quantity| Quantity.create(quantity) }
+      @quantities = !vs ? [] :vs.collect{ |quantity| ServiceQuantity.create(quantity) }
     end
 
     def quantities

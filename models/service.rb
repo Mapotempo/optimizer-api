@@ -41,7 +41,7 @@ module Models
     end
 
     def quantities=(vs)
-      @quantities = !vs ? [] :vs.collect{ |quantity| Quantity.create(quantity) }
+      @quantities = !vs ? [] :vs.collect{ |quantity| ServiceQuantity.create(quantity) }
     end
 
     def quantities
