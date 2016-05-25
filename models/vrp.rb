@@ -23,6 +23,7 @@ module Models
     field :preprocessing_cluster_threshold, default: nil
     field :preprocessing_prefer_short_segment, default: false
     field :resolution_duration, default: nil
+    field :resolution_iterations, default: nil
     validates_numericality_of :preprocessing_cluster_threshold
     validates_numericality_of :resolution_duration
 
@@ -51,6 +52,7 @@ module Models
 
     def resolution=(resolution)
       self.resolution_duration = resolution[:duration]
+      self.resolution_iterations = resolution[:iterations]
       self.preprocessing_cluster_threshold = resolution[:preprocessing_cluster_threshold]
       self.preprocessing_prefer_short_segment = resolution[:preprocessing_prefer_short_segment]
     end

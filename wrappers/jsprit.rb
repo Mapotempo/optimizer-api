@@ -41,7 +41,7 @@ module Wrappers
     end
 
     def solve(vrp, &block)
-      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, @threads)
+      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, @threads)
       if result
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result[:routes].each{ |route|
@@ -69,7 +69,7 @@ module Wrappers
       }.nil?
     end
 
-    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration, threads)
+    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration, resolution_iterations, threads)
       builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
         xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
           xml.problemType {
@@ -225,6 +225,10 @@ module Wrappers
       input_problem.write(builder.to_xml)
       input_problem.close
 
+      input_algorithm = Tempfile.new('optimize-jsprit-input_algorithm', tmpdir=@tmp_dir)
+      input_algorithm.write(algorithm_config(resolution_iterations))
+      input_algorithm.close
+
       if matrix_time
         input_time_matrix = Tempfile.new('optimize-jsprit-input_time_matrix', tmpdir=@tmp_dir)
         input_time_matrix.write(matrix_time.collect{ |a| a.join(" ") }.join("\n"))
@@ -241,12 +245,10 @@ module Wrappers
       output.close
 
       cmd = ["#{@exec_jsprit} ",
+        "--algorithm '#{input_algorithm.path}'",
         input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '',
         input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '',
         resolution_duration ? "--ms '#{resolution_duration}'" : '',
-#         ? "--iterations '#{}'" : '',
-#         ? "--stable '#{}'" : '',
-#         ? "--coef '#{}'" : '',
         "--threads '#{threads}'",
         "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       puts cmd
@@ -288,9 +290,112 @@ module Wrappers
       end
     ensure
       input_problem && input_problem.unlink
+      input_algorithm && input_algorithm.unlink
       input_time_matrix && input_time_matrix.unlink
       input_distance_matrix && input_distance_matrix.unlink
       output && output.unlink
     end
+
+    def algorithm_config(max_iterations)
+%{<?xml version="1.0" ?>
+<!--
+ Copyright © Mapotempo, 2016
+
+ This file is part of Mapotempo.
+
+ Mapotempo is free software. You can redistribute it and/or
+ modify since you respect the terms of the GNU Affero General
+ Public License as published by the Free Software Foundation,
+ either version 3 of the License, or (at your option) any later version.
+
+ Mapotempo is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE.  See the Licenses for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with Mapotempo. If not, see:
+ <http://www.gnu.org/licenses/agpl.html>
+-->
+<algorithm xmlns="http://www.w3schools.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3schools.com algorithm_schema.xsd">
+
+    <maxIterations>#{max_iterations || 3600000}</maxIterations>
+
+    <construction>
+        <insertion name="regretInsertion"/>
+    </construction>
+    <strategy>
+        <memory>3</memory>
+        <searchStrategies>
+            <searchStrategy name="randomRuinLarge">
+                <selector name="selectBest"/>
+                <acceptor name="schrimpfAcceptance">
+                    <alpha>0.02</alpha>
+                    <warmup>10</warmup>
+                </acceptor>
+                <modules>
+                    <module name="ruin_and_recreate">
+                        <ruin name="randomRuin">
+                                <share>0.5</share>
+                            </ruin>
+                        <insertion name="regretInsertion"/>
+                    </module>
+                </modules>
+                <probability>0.3</probability>
+            </searchStrategy>
+            <searchStrategy name="LargeRadialRuinAndRecreate">
+                <selector name="selectBest"/>
+                <acceptor name="schrimpfAcceptance">
+                    <alpha>0.02</alpha>
+                    <warmup>10</warmup>
+                </acceptor>
+                <modules>
+                    <module name="ruin_and_recreate">
+                        <ruin name="radialRuin">
+                            <share>0.3</share>
+                        </ruin>
+                        <insertion name="bestInsertion" id="1"/>
+                    </module>
+                </modules>
+                <probability>0.2</probability>
+            </searchStrategy>
+            <searchStrategy name="randomRuinSmall">
+                <selector name="selectBest"/>
+                <acceptor name="schrimpfAcceptance">
+                    <alpha>0.02</alpha>
+                    <warmup>10</warmup>
+                </acceptor>
+                <modules>
+                    <module name="ruin_and_recreate">
+                        <ruin name="randomRuin">
+                            <share>0.1</share>
+                        </ruin>
+                        <insertion name="regretInsertion"/>
+                    </module>
+                </modules>
+                <probability>0.3</probability>
+            </searchStrategy>
+            <searchStrategy name="SmallradialRuinAndRecreate">
+                <selector name="selectBest"/>
+                <acceptor name="schrimpfAcceptance">
+                    <alpha>0.02</alpha>
+                    <warmup>10</warmup>
+                    </acceptor>
+                    <modules>
+                        <module name="ruin_and_recreate">
+                            <ruin name="radialRuin">
+                                <share>0.05</share>
+                            </ruin>
+                            <insertion name="bestInsertion" id="1"/>
+                        </module>
+                    </modules>
+                    <probability>0.2</probability>
+            </searchStrategy>
+        </searchStrategies>
+    </strategy>
+</algorithm>
+}
+    end
+
   end
 end

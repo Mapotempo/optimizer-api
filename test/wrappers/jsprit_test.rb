@@ -52,7 +52,8 @@ class Wrappers::JspritTest < Minitest::Test
         start_point_id: 'point_0'
       }],
       resolution: {
-        duration: 1000
+        duration: 1000,
+        iterations: 20
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -122,7 +123,8 @@ class Wrappers::JspritTest < Minitest::Test
         end_point_id: 'point_0',
       }],
       resolution: {
-        duration: 1000
+        duration: 1000,
+        iterations: 20
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -169,7 +171,8 @@ class Wrappers::JspritTest < Minitest::Test
         }],
       }],
       resolution: {
-        duration: 1000
+        duration: 1000,
+        iterations: 20
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -223,7 +226,8 @@ class Wrappers::JspritTest < Minitest::Test
         }],
       }],
       resolution: {
-        duration: 1000
+        duration: 1000,
+        iterations: 20
       }
     }
     vrp = Models::Vrp.create(problem)
