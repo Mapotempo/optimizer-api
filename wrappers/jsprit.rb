@@ -97,8 +97,8 @@ module Wrappers
                 if vehicle.timewindows.size > 0
                   vehicle.timewindows.each do |timewindow|
                     xml.timeSchedule {
-                      xml.start timewindow.start
-                      xml.end timewindow.end
+                      xml.start timewindow.start || 0
+                      xml.end timewindow.end || 2**31
                     }
                   end
                 else
@@ -113,8 +113,8 @@ module Wrappers
                       xml.timeWindows {
                         rest.timewindows.each do |timewindow|
                           xml.timeWindow {
-                            xml.start timewindow.start.nil? ? 0 : timewindow.start
-                            xml.end timewindow.end.nil? ? 2**31 : timewindow.end
+                            xml.start timewindow.start || 0
+                            xml.end timewindow.end || 2**31
                           }
                         end
                       }
@@ -154,8 +154,8 @@ module Wrappers
                     xml.timeWindows {
                       service.activity.timewindows.each do |activity_timewindow|
                         xml.timeWindow {
-                          xml.start activity_timewindow.start.nil? ? 0 : activity_timewindow.start
-                          xml.end activity_timewindow.end.nil? ? 2**31 : activity_timewindow.end
+                          xml.start activity_timewindow.start || 0
+                          xml.end activity_timewindow.end || 2**31
                         }
                       end
                     }
