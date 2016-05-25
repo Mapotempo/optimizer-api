@@ -363,7 +363,7 @@ $(document).ready(function() {
             d ? d.toHHMMSS() : '',
             data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiples
             activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
-            activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.pickup_end || 'pickup_end'],
+            activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
             data.customers[customer_id][mapping.skill || 'skill'], // TODO: gérer les skills multiples
           ]);
         } else if (activity.rest_id) {
