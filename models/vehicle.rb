@@ -43,17 +43,6 @@ module Models
 #    has_many :timewindows, class_name: 'Models::Timewindow'
 #    has_many :rests, class_name: 'Models::Rest'
 
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :vehicles
-
-    def matrix(matrix_indices)
-      matrix_indices.collect{ |i|
-        matrix_indices.collect{ |j|
-          (vrp.matrix_time ? vrp.matrix_time[i][j] * cost_time_multiplier : 0) +
-          (vrp.matrix_distance ? vrp.matrix_distance[i][j] * cost_distance_multiplier : 0)
-        }
-      }
-    end
-
     def vrp
       self.attributes[:vrp]
     end

@@ -56,7 +56,7 @@ module Models
     end
 
     def points=(vs)
-      self.attributes[:points] = !vs ? [] : vs.collect{ |point| Point.create(point.merge(vrp: self)) }
+      self.attributes[:points] = !vs ? [] : vs.collect{ |point| Point.create(point) }
     end
 
     def points
@@ -64,7 +64,7 @@ module Models
     end
 
     def services=(vs)
-      self.attributes[:services] = !vs ? [] : vs.collect{ |service| Service.create(service.merge(vrp: self)) }
+      self.attributes[:services] = !vs ? [] : vs.collect{ |service| Service.create(service) }
     end
 
     def services
@@ -72,7 +72,7 @@ module Models
     end
 
     def shipments=(vs)
-      self.attributes[:shipments] = !vs ? [] : vs.collect{ |shipment| Shipment.create(shipment.merge(vrp: self)) }
+      self.attributes[:shipments] = !vs ? [] : vs.collect{ |shipment| Shipment.create(shipment) }
     end
 
     def shipments
@@ -80,7 +80,7 @@ module Models
     end
 
     def rests=(vs)
-      self.attributes[:rests] = !vs ? [] : vs.collect{ |rest| Rest.create(rest.merge(vrp: self)) }
+      self.attributes[:rests] = !vs ? [] : vs.collect{ |rest| Rest.create(rest) }
     end
 
     def rests
@@ -88,7 +88,7 @@ module Models
     end
 
     def vehicles=(vs)
-     self.attributes[:vehicles] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle.merge(vrp: self)) }
+     self.attributes[:vehicles] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle) }
     end
 
     def vehicles
@@ -96,7 +96,7 @@ module Models
     end
 
     def units=(vs)
-     self.attributes[:units] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle.merge(vrp: self)) }
+     self.attributes[:units] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle) }
     end
 
     def units
@@ -120,6 +120,15 @@ module Models
     def need_matrix_distance?
       vehicles.find{ |vehicle|
         vehicle.cost_distance_multiplier
+      }
+    end
+
+    def matrix(matrix_indices, cost_time_multiplier, cost_distance_multiplier)
+      matrix_indices.collect{ |i|
+        matrix_indices.collect{ |j|
+          (matrix_time ? matrix_time[i][j] * cost_time_multiplier : 0) +
+          (matrix_distance ? matrix_distance[i][j] * cost_distance_multiplier : 0)
+        }
       }
     end
   end

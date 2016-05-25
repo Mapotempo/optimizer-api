@@ -50,7 +50,10 @@ class Wrappers::JspritTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0'
-      }]
+      }],
+      resolution: {
+        duration: 1000
+      }
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
@@ -117,7 +120,10 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
-      }]
+      }],
+      resolution: {
+        duration: 1000
+      }
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
@@ -161,7 +167,10 @@ class Wrappers::JspritTest < Minitest::Test
           start: 0,
           end: 0
         }],
-      }]
+      }],
+      resolution: {
+        duration: 1000
+      }
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
@@ -212,7 +221,10 @@ class Wrappers::JspritTest < Minitest::Test
           start: 0,
           end: 0
         }],
-      }]
+      }],
+      resolution: {
+        duration: 1000
+      }
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?

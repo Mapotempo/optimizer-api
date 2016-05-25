@@ -57,7 +57,7 @@ module Wrappers
         (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
 
       quantities = vrp.services.collect(&:quantities) # Not used
-      matrix = vehicle.matrix(matrix_indices)
+      matrix = vrp.matrix(matrix_indices, vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier)
 
       timewindows = [[nil, nil, 0]] + vrp.services.collect{ |service|
           (service.activity.timewindows.empty? ? [nil, nil] : [service.activity.timewindows[0].start, service.activity.timewindows[0].end]) + [service.activity.duration]

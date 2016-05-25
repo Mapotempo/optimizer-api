@@ -29,8 +29,6 @@ module Models
 
 #    has_many :timewindows, class_name: 'Models::Timewindow'
 
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :rests
-
     def timewindows=(vs)
       @timewindows = !vs ? [] :vs.collect{ |timewindow| Timewindow.create(timewindow) }
     end

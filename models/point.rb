@@ -24,7 +24,6 @@ module Models
 
     validates_numericality_of :matrix_index
 
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :points
     belongs_to :vehicle_start, class_name: 'Models::Vehicle', inverse_of: :start_point
     belongs_to :vehicle_end, class_name: 'Models::Vehicle', inverse_of: :end_point
 

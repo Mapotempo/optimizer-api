@@ -31,8 +31,6 @@ module Models
     # belongs_to :delivery, class_name: 'Models::Activity'
     # has_many :quantities, class_name: 'Models::ServiceQuantity'
 
-    belongs_to :vrp, class_name: 'Models::Vrp', inverse_of: :shipments
-
     def quantities=(vs)
       @quantities = !vs ? [] :vs.collect{ |quantity| ServiceQuantity.create(quantity) }
     end
