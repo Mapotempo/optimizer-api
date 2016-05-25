@@ -189,7 +189,7 @@ module Wrappers
                         end
                       }
                     end
-                    (xml.setupDuration shipment.pickup.duration) if shipment.pickup.setup_duration > 0
+                    (xml.setupDuration shipment.pickup.setup_duration) if shipment.pickup.setup_duration > 0
                     (xml.duration shipment.pickup.duration) if shipment.pickup.duration > 0
                   }
                   xml.delivery {
