@@ -1,0 +1,22 @@
+body {
+  font-family: verdana, arial, helvetica, sans-serif;
+  font-size: 0.9em;
+}
+h1 {
+  margin: 5px;
+  font-variant: small-caps;
+  font-style: italic;
+}
+.block {
+  margin: 5px;
+  padding: 5px;
+}
+
+form {
+  border: 1px solid lightgrey;
+}
+
+input[type=text] {
+  padding-left: 3px;
+  padding-right: 3px;
+}

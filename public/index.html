@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/jquery-1.12.3.min.js"></script>
+  <script src="js/papaparse.min.js"></script>
+  <script src="js/script.js"></script>
+</head>
+<body>
+  <div class="block">
+    <img src="images/logo.png">
+    <h1>Optimizer</h1>
+  </div>
+  <form>
+    <div class="block">
+      <span id="api-key-label"></span> <input type="text" id="api-key" value="demo">
+    </div><div class="block">
+      <span id="file-customers-label"></span> <input type="file" id="file-customers">
+    </div>
+    <div class="block">
+      <span id="file-vehicles-label"></span> <input type="file" id="file-vehicles">
+    </div>
+    <div class="block">
+      <span id="optim-duration-label"></span> <input type="text" id="optim-duration" value="00:10:00" placeholder="hh:mm:ss">
+    </div>
+    <div class="block">
+      <button id="send-files"></button>
+      <span id="optimize-status"></span>
+    </div>
+  </form>
+  <div class="block">
+    <div><span id="result-label"></span> <span id="infos"></span></div>
+    <textarea id="result" style="width: 100%; height: 600px;"></textarea>
+  </div>
+</body>
+</html>

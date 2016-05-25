@@ -18,6 +18,7 @@
 Bundler.require
 require 'rack/cors'
 require 'rack/contrib/locale'
+require 'rack/contrib/try_static'
 
 use Rack::Cors do
   allow do
@@ -30,3 +31,9 @@ use Rack::Locale
 
 require './environment'
 run Api::Root
+
+# Serve files from the public directory
+use Rack::TryStatic,
+  root: 'public',
+  urls: %w[/],
+  try: ['.html', 'index.html', '/index.html']
