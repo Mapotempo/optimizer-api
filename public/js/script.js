@@ -43,6 +43,7 @@ $(document).ready(function() {
     errorFile: function(filename) {
       return 'Une erreur est survenue en lisant le fichier ' + filename + ': ';
     },
+    optimizeQueued: 'En attente d\'un processus disponible...',
     optimizeLoading: 'Traitement et optimisation en cours...',
     failureCallOptim: function(error) {
       return 'Erreur interne en lançant le service d\'optimisation : ' + error;
@@ -122,7 +123,7 @@ $(document).ready(function() {
   var initForm = function() {
     clearInterval(window.optimInterval);
     $('#send-files').attr('disabled', false);
-    $('#optimize-status').html('');
+    $('#optim-infos').html('');
   };
 
   var buildVRP = function() {
@@ -295,7 +296,13 @@ $(document).ready(function() {
               // beforeSend: beforeSendWaiting,
               success: function(job) {
                 nbError = 0;
-                if (job.job.status == 'completed') {
+                if (job.job.status == 'queued') {
+                  if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
+                }
+                else if (job.job.status == 'working') {
+                  if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
+                }
+                else if (job.job.status == 'completed') {
                   delay = 0;
                   if (debug) console.log('Job completed: ' + JSON.stringify(job));
                   callback(job.solution);
@@ -489,7 +496,7 @@ $(document).ready(function() {
     var filesVehicles = $('#file-vehicles')[0].files;
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
       $('#send-files').attr('disabled', true);
-      $('#optimize-status').html(i18n.optimizeLoading + ' <span id="timer"></span>');
+      $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="timer"></span>');
       var start = new Date();
       var displayTimer = function() {
         $('#timer').html(((new Date() - start) / 1000).toHHMMSS());
