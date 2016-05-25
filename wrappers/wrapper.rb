@@ -20,6 +20,7 @@ module Wrappers
     def initialize(cache, hash = {})
       @cache = cache
       @tmp_dir = hash[:tmp_dir] || Dir.tmpdir
+      @threads = hash[:threads] || 1
     end
 
     def solver_constraints
