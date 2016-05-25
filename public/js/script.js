@@ -277,7 +277,7 @@ $(document).ready(function() {
       type: 'post',
       contentType: 'application/json',
       data: JSON.stringify({vrp: vrp}),
-      url: 'http://localhost:1791/0.1/vrp/submit.json?api_key=' + $('#api-key').val(),
+      url: '/0.1/vrp/submit.json?api_key=' + $('#api-key').val(),
       // beforeSend: beforeSendWaiting,
       success: function(result) {
         if (debug) console.log("Calling optimization... ", result);
@@ -291,7 +291,7 @@ $(document).ready(function() {
             $.ajax({
               type: 'get',
               contentType: 'application/json',
-              url: 'http://localhost:1791/0.1/vrp/job/' + result.job.id + '.json?api_key=' + $('#api-key').val(),
+              url: '/0.1/vrp/job/' + result.job.id + '.json?api_key=' + $('#api-key').val(),
               // beforeSend: beforeSendWaiting,
               success: function(job) {
                 nbError = 0;
