@@ -414,25 +414,44 @@ $(document).ready(function() {
         if (activity.pickup_shipment_id || activity.delivery_shipment_id) {
           var ref = activity.pickup_shipment_id ? activity.pickup_shipment_id : activity.delivery_shipment_id;
           var customer_id = customers.indexOf(ref);
+          var lat = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
+          var lon = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
           var d = (activity.ready_time - activity.arrival_time + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0));
-          // TODO: group pickup/delivery with direct previous stop only on same points
-          stops.push([
-            activity.pickup_shipment_id ? ref + ' pickup' : ref,
-            i,
-            route.vehicle_id,
-            'visite',
-            activity.pickup_shipment_id ? ref + ' pickup' : ref, // name
-            '', // street
-            '', // postalcode
-            '', // country
-            activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
-            activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
-            d ? d.toHHMMSS() : '',
-            data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiples
-            activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
-            activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
-            data.customers[customer_id][mapping.skill || 'skill'], // TODO: gérer les skills multiples
-          ]);
+          var start = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
+          var end = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
+          // group pickup/delivery with direct previous stop only on same points
+          var lastStop = stops[stops.length - 1];
+          if (lastStop && lastStop[8] == lat && lastStop[9] == lon) {
+            if (d)
+              lastStop[10] = lastStop[10] ? (duration(lastStop[10]) + d).toHHMMSS() : d.toHHMMSS();
+            if (data.customers[customer_id][mapping.quantity || 'quantity'])
+              lastStop[11] = Number(lastStop[11] || 0) + Number(data.customers[customer_id][mapping.quantity || 'quantity'] || 0);
+            if (duration(start))
+              lastStop[12] = lastStop[12] ? (Math.max(duration(lastStop[12]), duration(start)) - (activity.ready_time - activity.arrival_time)).toHHMMSS() : start; // start: le plus tard - setup
+            if (duration(end))
+              lastStop[13] = lastStop[13] ? Math.min(duration(lastStop[13]), duration(end)).toHHMMSS() : end; // end: le plus tôt
+            if (data.customers[customer_id][mapping.skill || 'skill'])
+              lastStop[14] = lastStop[14].split(',').concat(data.customers[customer_id][mapping.skill || 'skill'].split(',')).join(',');
+          }
+          else {
+            stops.push([
+              activity.pickup_shipment_id ? ref + ' pickup' : ref,
+              i,
+              route.vehicle_id,
+              'visite',
+              activity.pickup_shipment_id ? ref + ' pickup' : ref, // name
+              '', // street
+              '', // postalcode
+              '', // country
+              lat,
+              lon,
+              d ? d.toHHMMSS() : '',
+              data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiples
+              start,
+              end,
+              data.customers[customer_id][mapping.skill || 'skill'], // TODO: gérer les skills multiples
+            ]);
+          }
         } else if (activity.rest_id) {
           stops.push([
             '',
