@@ -24,7 +24,8 @@ $(document).ready(function() {
       'api-key-label': 'Votre clé d\'api :',
       'file-customers-label': 'Votre fichier clients csv :',
       'file-vehicles-label': 'Votre fichier véhicules csv :',
-      'optim-duration-label': 'Durée de l\'optimisation :',
+      'optim-duration-label': 'Durée maximale de l\'optimisation :',
+      'optim-iterations-label': 'Nombre d\'itérations de l\'optimisation :',
       'send-files': 'Envoyer',
       'result-label': 'Résultat de votre optimisation :'
     },
@@ -194,7 +195,8 @@ $(document).ready(function() {
       var vrp = {points: [], shipments: [], vehicles: [], resolution: {
         preprocessing_cluster_threshold: 0,
         preprocessing_prefer_short_segment: true,
-        duration: duration($('#optim-duration').val()) * 1000 || 1000
+        duration: duration($('#optim-duration').val()) * 1000 || 1000,
+        iterations: $('#optim-iterations').val() || undefined,
       }};
 
       // points

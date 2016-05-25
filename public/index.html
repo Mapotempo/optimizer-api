@@ -24,6 +24,7 @@
       <span id="file-vehicles-label"></span> <input type="file" id="file-vehicles">
     </div>
     <div class="block">
+      <span id="optim-iterations-label"></span> <input type="number" id="optim-iterations" step="1">
       <span id="optim-duration-label"></span> <input type="text" id="optim-duration" value="00:10:00" placeholder="hh:mm:ss">
     </div>
     <div class="block">
@@ -43,7 +44,12 @@
         <li>Entrez votre clé d'api</li>
         <li>Sélectionnez votre fichier clients</li>
         <li>Sélectionnez votre fichier véhicules</li>
-        <li>Paramétrez la durée de votre optimisation</li>
+        <li>Paramétrez votre optimisation :
+          <ul>
+            <li>le nombre d'itérations de l'optimisation : ce nombre dépend des données du problème.</li>
+            <li>la durée maximale de votre optimisation après quoi un résultat vous sera retourné quelque soit le nombre d'itérations (notez que le résulat de l'optimisation après cette durée peut varier en fonction de la charge courante du serveur d'optimisation...)</li>
+          </ul>
+        </li>
         <li>Cliquez sur « Envoyer »
           <ul>
             <li>Une nouvelle soumission est alors envoyée au moteur d'optimisation (ne pas fermer la fenêtre de votre navigateur)</li>
