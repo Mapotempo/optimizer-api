@@ -14,6 +14,7 @@
     <h1>Optimizer</h1>
   </div>
   <form>
+    <a id="doc-link" href="#documentation">documentation</a>
     <div class="block">
       <span id="api-key-label"></span> <input type="text" id="api-key" value="demo">
     </div><div class="block">
@@ -33,6 +34,50 @@
   <div class="block">
     <div><span id="result-label"></span> <span id="infos"></span></div>
     <textarea id="result" style="width: 100%; height: 600px;"></textarea>
+  </div>
+  <div class="block">
+    <a name="documentation"></a>
+    <h2>Documentation</h2>
+    <div id="documentation">
+      <ol>
+        <li>Entrez votre clé d'api</li>
+        <li>Sélectionnez votre fichier clients</li>
+        <li>Sélectionnez votre fichier véhicules</li>
+        <li>Paramétrez la durée de votre optimisation</li>
+        <li>Cliquez sur « Envoyer »
+          <ul>
+            <li>Une nouvelle soumission est alors envoyée au moteur d'optimisation (ne pas fermer la fenêtre de votre navigateur)</li>
+            <li>Chaque nouvelle soumission est mise à la suite d'une file d'attente de processus</li>
+            <li>Chaque processus se décompose en plusieurs temps : calcul du distancier, optimisation...</li>
+          </ul>
+        </li>
+        <li>Une fois l'optimisation terminée, le résultat de celle-ci apparaît dans un bloc sur la page (un lien au dessus du bloc permet également de télécharger le csv correspondant)</li>
+        <li>Importez ce fichier csv dans Mapotempo-web (les informations de dépôts de départ et d'arrivée ne sont pas importées : pensez à les définir dans Mapotempo-web)</li>
+        <li>Un planning se crée lors de l'import, accessible depuis le menu « Planning » de Mapotempo-web</li>
+      </ol>
+      <p>
+        Votre fichier clients doit contenir les colonnes suivantes :
+        <table id="file-customers-help" class="file-table-help">
+          <tr class="column-name"></tr>
+          <tr class="column-value"></tr>
+        </table>
+        <ul>
+          <li>pickup_setup/delivery_setup : durée de préparation par défaut, elle n'est effective que pour la première activité lors de l'arrivée à la destination liée.</li>
+        </ul>
+      </p>
+      <p>
+        Votre fichier véhicules doit contenir les colonnes suivantes :
+        <table id="file-vehicles-help" class="file-table-help">
+          <tr class="column-name"></tr>
+          <tr class="column-value"></tr>
+        </table>
+        <ul>
+          <li>setup_multiplier : coefficient multiplicateur des durées pickup_setup ou delivery_setup associée au véhicule (Ex : pickup_setup = 00:10:00 & setup_multiplier = 1,5 --> durée de préparation : 00:15:00)</li>
+          <li>setup_cost : coût associé à la durée de préparation.</li>
+        </ul>
+      </p>
+      Les colonnes en gras sont obligatoires.
+    </div>
   </div>
 </body>
 </html>

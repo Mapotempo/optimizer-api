@@ -20,3 +20,25 @@ input[type=text] {
   padding-left: 3px;
   padding-right: 3px;
 }
+
+#doc-link {
+  float: right;
+  margin: 5px;
+  padding: 5px;
+}
+
+.file-table-help {
+  border-collapse: collapse;
+}
+.file-table-help td {
+  border: 1px solid lightgrey;
+  padding: 3px;
+}
+
+.required {
+  font-weight: bold;
+}
+
+#documentation li {
+  margin: 5px;
+}

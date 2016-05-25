@@ -104,6 +104,68 @@ $(document).ready(function() {
     end_time: 'end_time'
   };
 
+  $('#file-customers-help .column-name').append('<td class="required">' + mapping.reference + '</td>');
+  $('#file-customers-help .column-value').append('<td class="required">ref</td>');
+  $('#file-customers-help .column-name').append('<td class="required">' + mapping.pickup_lat + '</td>');
+  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-customers-help .column-name').append('<td class="required">' + mapping.pickup_lon + '</td>');
+  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.pickup_start + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.pickup_end + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.pickup_duration + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.pickup_setup + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td class="required">' + mapping.delivery_lat + '</td>');
+  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-customers-help .column-name').append('<td class="required">' + mapping.delivery_lon + '</td>');
+  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.delivery_start + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.delivery_end + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.delivery_duration + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.delivery_setup + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.quantity + '</td>');
+  $('#file-customers-help .column-value').append('<td>1.234</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.skill + '</td>');
+  $('#file-customers-help .column-value').append('<td>"tag1, tag2"</td>');
+
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.reference + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>ref</td>');
+  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.start_lat + '</td>');
+  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.start_lon + '</td>');
+  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.end_lat + '</td>');
+  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.end_lon + '</td>');
+  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.cost_fixed + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>1</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.cost_distance_multiplier + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>2</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.cost_time_multiplier + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>3</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.cost_waiting_time_multiplier + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>4</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.cost_setup_time_multiplier + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>5</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.coef_setup + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>1.5</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.start_time + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.end_time + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.quantity + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>1.234</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.skill + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>"tag1, tag2"</td>');
+
   var filterInt = function(value) {
     if (/^(\-|\+)?([0-9]+|Infinity)$/.test(value))
       return Number(value);
@@ -181,31 +243,36 @@ $(document).ready(function() {
         }
       });
       data.vehicles.forEach(function(vehicle) {
-        if (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lon || 'start_lon']) {
-          var refStart = vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.');
-          if (points.indexOf(refStart) === -1) {
-            points.push(refStart);
-            vrp.points.push({
-              id: refStart,
-              location: {
-                lat: vehicle[mapping.start_lat || 'start_lat'].replace(',', '.'),
-                lon: vehicle[mapping.start_lon || 'start_lon'].replace(',', '.')
-              }
-            });
-          }
+        if (!vehicle[mapping.start_lat || 'start_lat'])
+          throw i18n.missingColumn(mapping.start_lat || 'start_lat');
+        else if (!vehicle[mapping.start_lon || 'start_lon'])
+          throw i18n.missingColumn(mapping.start_lon || 'start_lon');
+        else if (!vehicle[mapping.end_lat || 'end_lat'])
+          throw i18n.missingColumn(mapping.end_lat || 'end_lat');
+        else if (!vehicle[mapping.end_lon || 'end_lon'])
+          throw i18n.missingColumn(mapping.end_lon || 'end_lon');
+
+        var refStart = vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.');
+        if (points.indexOf(refStart) === -1) {
+          points.push(refStart);
+          vrp.points.push({
+            id: refStart,
+            location: {
+              lat: vehicle[mapping.start_lat || 'start_lat'].replace(',', '.'),
+              lon: vehicle[mapping.start_lon || 'start_lon'].replace(',', '.')
+            }
+          });
         }
-        if (vehicle[mapping.end_lat || 'end_lat'] && vehicle[mapping.end_lon || 'end_lon']) {
-          var refEnd = vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.');
-          if (points.indexOf(refEnd) === -1) {
-            points.push(refEnd);
-            vrp.points.push({
-              id: refEnd,
-              location: {
-                lat: vehicle[mapping.end_lat || 'end_lat'].replace(',', '.'),
-                lon: vehicle[mapping.end_lon || 'end_lon'].replace(',', '.')
-              }
-            });
-          }
+        var refEnd = vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.');
+        if (points.indexOf(refEnd) === -1) {
+          points.push(refEnd);
+          vrp.points.push({
+            id: refEnd,
+            location: {
+              lat: vehicle[mapping.end_lat || 'end_lat'].replace(',', '.'),
+              lon: vehicle[mapping.end_lon || 'end_lon'].replace(',', '.')
+            }
+          });
         }
       });
 
