@@ -27,7 +27,7 @@ APP_ENV=production bundle exec rake server
 
 Start Redis and then start the worker
 ```
-QUEUE=statused bundle exec rake resque:work
+APP_ENV=production COUNT=5 QUEUE=statused bundle exec rake resque:work
 ```
 
 ## Usage
