@@ -70,6 +70,10 @@ module Wrappers
 
       matrix = vrp.matrix(matrix_indices, vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier)
 
+      if vrp.preprocessing_prefer_short_segment
+        matrix = matrix.collect{ |a| a.collect{ |b| b + 20 * Math.sqrt(b) } }
+      end
+
       result = run_vroom(vehicle_have_start, vehicle_have_end, matrix, @vroom_exec_count) { |avancement, total|
         block.call(avancement, total, nil, nil) if block
       }
