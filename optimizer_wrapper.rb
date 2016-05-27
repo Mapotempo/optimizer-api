@@ -61,6 +61,7 @@ module OptimizerWrapper
       service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
 
       if (vrp.matrix_time.nil? && vrp.need_matrix_time?) || (vrp.matrix_distance.nil? && vrp.need_matrix_distance?)
+        at(nil, [vrp.need_matrix_time?, vrp.need_matrix_distance?].count{ |m| m }.to_s, "compute matrix")
         dimension = [
           :time,
           vrp.matrix_distance.nil? && vrp.need_matrix_distance? ? :distance : nil
@@ -72,8 +73,9 @@ module OptimizerWrapper
         vrp.matrix_time, vrp.matrix_distance = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:car], :car, dimension, points, points)
       end
 
+      OptimizerWrapper.config[:services][service].job = self.uuid
       result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
-        at(avancement, total, "#{avancement}/#{total}")
+        at(avancement, total, "solve iterations #{avancement}/#{total}")
       }
       if result.class.name == 'Hash' # result.is_a?(Hash) not working
         Result.set(self.uuid, result)

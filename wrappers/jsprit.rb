@@ -41,7 +41,7 @@ module Wrappers
     end
 
     def solve(vrp, &block)
-      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, @threads)
+      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, @threads, &block)
       if result
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result[:routes].each{ |route|
@@ -69,7 +69,7 @@ module Wrappers
       }.nil?
     end
 
-    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration, resolution_iterations, threads)
+    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration, resolution_iterations, threads, &block)
       builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
         xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
           xml.problemType {
@@ -252,15 +252,30 @@ module Wrappers
         "--threads '#{threads}'",
         "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       puts cmd
-      out = system(cmd)
+      stdin, stdout_and_stderr, thread = Open3.popen2e(cmd)
 
-      if $?.exitstatus == 0
+      iterations = 0
+      iterations_start = 0
+      # read of stdout_and_stderr stops at the end oh process
+      stdout_and_stderr.each_line { |line|
+        puts @job + ' - ' + line
+        out = out ? out + "\n" + line : line
+        iterations_start += 1 if /\- iterations start/.match(line)
+        if iterations_start == 2
+          r = /\- iterations ([0-9]+)/.match(line)
+          r && iterations = r[1]
+        end
+        block.call iterations, resolution_iterations
+      }
+
+      if thread.value == 0
         doc = Nokogiri::XML(File.open(output.path))
         doc.remove_namespaces!
         solution = doc.xpath('/problem/solutions/solution').last
         if solution
           {
             cost: solution.at_xpath('cost').content,
+            iterations: iterations,
             routes: solution.xpath('routes/route').collect{ |route|
               {
                 vehicle_id: route.at_xpath('vehicleId').content,
