@@ -365,6 +365,7 @@ $(document).ready(function() {
               // beforeSend: beforeSendWaiting,
               success: function(job) {
                 nbError = 0;
+                $('#avancement').html(job.job.avancement);
                 if (job.job.status == 'queued') {
                   if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
                 }
@@ -554,7 +555,7 @@ $(document).ready(function() {
         if (vrp) {
           if (debug) { console.log("Input json for optim: ", vrp); console.log(JSON.stringify(vrp)); }
           callOptimization(vrp, function(solution) {
-            $('#infos').html('cost: ' + solution.cost);
+            $('#infos').html('cost: ' + solution.cost + ' iterations: ' + solution.iterations);
             if (result) {
               csv = createCSV(solution);
               $('#infos').append(' - <a href="data:application/octet-stream,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
@@ -584,7 +585,7 @@ $(document).ready(function() {
     var filesVehicles = $('#file-vehicles')[0].files;
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
       $('#send-files').attr('disabled', true);
-      $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="timer"></span>');
+      $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> <span id="timer"></span>');
       var start = new Date();
       var displayTimer = function() {
         $('#timer').html(((new Date() - start) / 1000).toHHMMSS());
