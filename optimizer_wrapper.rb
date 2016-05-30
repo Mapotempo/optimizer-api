@@ -78,6 +78,24 @@ module OptimizerWrapper
         at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : ''))
       }
       if result.class.name == 'Hash' # result.is_a?(Hash) not working
+        result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)
+        result[:total_distance] = result[:routes].collect{ |r|
+          previous = nil
+          r[:activities].collect{ |a|
+            point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
+              s.id == a[:service_id]
+            }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
+              s.id == a[:pickup_shipment_id]
+            }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
+              s.id == a[:delivery_shipment_id]
+            }.delivery.point_id : nil
+            vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
+          }.compact.inject(0){ |sum, item|
+            sum = sum + vrp.matrix_distance[previous][item] if (previous)
+            previous = item
+            sum
+          }
+        }.reduce(:+)
         Result.set(self.uuid, result)
       elsif result.class.name == 'String' # result.is_a?(String) not working
         raise RuntimeError.new(result)
