@@ -22,6 +22,7 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_minimal_problem
     jsprit = OptimizerWrapper::JSPRIT
+    jsprit.job = 'test'
     problem = {
       matrices: {
         time: [
@@ -66,6 +67,7 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_loop_problem
     jsprit = OptimizerWrapper::JSPRIT
+    jsprit.job = 'test'
     problem = {
       matrices: {
         time: [
@@ -137,6 +139,7 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_minimal_unassigned_service
     jsprit = OptimizerWrapper::JSPRIT
+    jsprit.job = 'test'
     problem = {
       matrices: {
         time: [
@@ -186,6 +189,7 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_minimal_unassigned_shipment
     jsprit = OptimizerWrapper::JSPRIT
+    jsprit.job = 'test'
     problem = {
       matrices: {
         time: [

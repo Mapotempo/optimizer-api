@@ -254,6 +254,7 @@ module Wrappers
       puts cmd
       stdin, stdout_and_stderr, thread = Open3.popen2e(cmd)
 
+      out = nil
       iterations = 0
       iterations_start = 0
       # read of stdout_and_stderr stops at the end oh process
@@ -265,7 +266,7 @@ module Wrappers
           r = /\- iterations ([0-9]+)/.match(line)
           r && iterations = r[1]
         end
-        block.call iterations, resolution_iterations
+        block.call iterations, resolution_iterations if block
       }
 
       if thread.value == 0
@@ -274,7 +275,7 @@ module Wrappers
         solution = doc.xpath('/problem/solutions/solution').last
         if solution
           {
-            cost: solution.at_xpath('cost').content,
+            cost: Float(solution.at_xpath('cost').content),
             iterations: iterations,
             routes: solution.xpath('routes/route').collect{ |route|
               {
