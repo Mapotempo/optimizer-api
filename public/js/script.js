@@ -555,7 +555,7 @@ $(document).ready(function() {
         if (vrp) {
           if (debug) { console.log("Input json for optim: ", vrp); console.log(JSON.stringify(vrp)); }
           callOptimization(vrp, function(solution) {
-            $('#infos').html('cost: ' + solution.cost + ' iterations: ' + solution.iterations);
+            $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + solution.total_time.toHHMMSS() + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
             if (result) {
               csv = createCSV(solution);
               $('#infos').append(' - <a href="data:application/octet-stream,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
@@ -585,7 +585,7 @@ $(document).ready(function() {
     var filesVehicles = $('#file-vehicles')[0].files;
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
       $('#send-files').attr('disabled', true);
-      $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> <span id="timer"></span>');
+      $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> - <span id="timer"></span>');
       var start = new Date();
       var displayTimer = function() {
         $('#timer').html(((new Date() - start) / 1000).toHHMMSS());
