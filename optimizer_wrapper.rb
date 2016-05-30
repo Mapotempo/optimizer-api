@@ -75,7 +75,7 @@ module OptimizerWrapper
 
       OptimizerWrapper.config[:services][service].job = self.uuid
       result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
-        at(avancement, total, "solve iterations #{avancement}/#{total}")
+        at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : ''))
       }
       if result.class.name == 'Hash' # result.is_a?(Hash) not working
         Result.set(self.uuid, result)
