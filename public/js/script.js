@@ -1,3 +1,5 @@
+'use_strict';
+
 Number.prototype.toHHMMSS = function () {
   var sec_num = parseInt(this, 10); // don't forget the second param
   var hours   = Math.floor(sec_num / 3600);
@@ -40,6 +42,12 @@ $(document).ready(function() {
     },
     invalidDuration: function(value) {
       return 'Durée invalide : ' + value;
+    },
+    invalidRouterMode: function(value) {
+      return 'Mode de calcul d\'itinéraire non autorisé : ' + value;
+    },
+    notSameRouter: function(values) {
+      return 'Valeurs distinctes non autorisées pour vos véhicules : ' + values.join(', ');
     },
     errorFile: function(filename) {
       return 'Une erreur est survenue en lisant le fichier ' + filename + ': ';
@@ -102,7 +110,10 @@ $(document).ready(function() {
     cost_setup_time_multiplier: 'setup_cost',
     coef_setup: 'setup_multiplier',
     start_time: 'start_time',
-    end_time: 'end_time'
+    end_time: 'end_time',
+    speed_multiplier: 'speed_multiplier',
+    router_mode: 'router_mode',
+    router_dimension: 'router_dimension'
   };
 
   $('#file-customers-help .column-name').append('<td class="required">' + mapping.reference + '</td>');
@@ -166,6 +177,12 @@ $(document).ready(function() {
   $('#file-vehicles-help .column-value').append('<td>1.234</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.skill + '</td>');
   $('#file-vehicles-help .column-value').append('<td>"tag1, tag2"</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.router_mode + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>car</i></td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.router_dimension + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>time | distance <i>(défaut : time)</i></td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.speed_multiplier + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>0.9 <i>(défaut : 1.0)</i></td>');
 
   var filterInt = function(value) {
     if (/^(\-|\+)?([0-9]+|Infinity)$/.test(value))
@@ -244,6 +261,9 @@ $(document).ready(function() {
           });
         }
       });
+      var router_modes = [];
+      var router_dimensions = [];
+      var speed_multipliers = [];
       data.vehicles.forEach(function(vehicle) {
         if (!vehicle[mapping.start_lat || 'start_lat'])
           throw i18n.missingColumn(mapping.start_lat || 'start_lat');
@@ -253,6 +273,17 @@ $(document).ready(function() {
           throw i18n.missingColumn(mapping.end_lat || 'end_lat');
         else if (!vehicle[mapping.end_lon || 'end_lon'])
           throw i18n.missingColumn(mapping.end_lon || 'end_lon');
+        else if (vehicle[mapping.router_mode || 'router_mode'] && vehicle[mapping.router_mode || 'router_mode'] != 'car')
+          throw i18n.invalidRouterMode(vehicle[mapping.router_mode || 'router_mode']);
+        if (router_modes.indexOf(vehicle[mapping.router_mode || 'router_mode']) == -1) router_modes.push(vehicle[mapping.router_mode || 'router_mode']);
+        if (router_modes.length > 1)
+          throw i18n.notSameRouter(router_modes);
+        if (router_dimensions.indexOf(vehicle[mapping.router_dimension || 'router_dimension']) == -1) router_dimensions.push(vehicle[mapping.router_dimension || 'router_dimension']);
+        if (router_dimensions.length > 1)
+          throw i18n.notSameRouter(router_dimensions);
+        if (speed_multipliers.indexOf(vehicle[mapping.speed_multiplier || 'speed_multiplier']) == -1) speed_multipliers.push(vehicle[mapping.speed_multiplier || 'speed_multiplier']);
+        if (speed_multipliers.length > 1)
+          throw i18n.notSameRouter(speed_multipliers);
 
         var refStart = vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.');
         if (points.indexOf(refStart) === -1) {
@@ -304,7 +335,7 @@ $(document).ready(function() {
           // TODO: gérer les quantités multiples
           quantities: [{
             id: 'unit',
-            values: [parseInt(customer[mapping.quantity || 'quantity'].replace(',', '.') * 1000)] // quantities are rounded for jsprit
+            values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
           }],
           // TODO: gérer les skills multiples
           skills: [customer[mapping.skill || 'skill'] || null]
@@ -315,17 +346,17 @@ $(document).ready(function() {
           id: vehicle[mapping.reference || 'reference'],
           start_point_id: vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.'),
           end_point_id: vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.'),
-          cost_fixed: vehicle[mapping.cost_fixed|| 'cost_fixed'],
-          cost_distance_multiplier: vehicle[mapping.cost_distance_multiplier|| 'cost_distance_multiplier'],
-          cost_time_multiplier: vehicle[mapping.cost_time_multiplier|| 'cost_time_multiplier'],
-          cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier|| 'cost_waiting_time_multiplier'],
-          cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier|| 'cost_setup_time_multiplier'],
-          coef_setup: vehicle[mapping.coef_setup|| 'coef_setup'],
+          cost_fixed: vehicle[mapping.cost_fixed || 'cost_fixed'],
+          cost_distance_multiplier: vehicle[mapping.cost_distance_multiplier || 'cost_distance_multiplier'],
+          cost_time_multiplier: vehicle[mapping.cost_time_multiplier || 'cost_time_multiplier'],
+          cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'],
+          cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'],
+          coef_setup: vehicle[mapping.coef_setup || 'coef_setup'],
           // TODO: gérer les quantités multiples
           quantities: [{
             id: 'unit',
             values: [
-              parseInt(vehicle[mapping.quantity || 'quantity'].replace(',', '.') * 1000) // quantities are rounded for jsprit
+              parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
             ]
           }],
           // TODO: gérer les skills multiples
@@ -335,7 +366,10 @@ $(document).ready(function() {
           timewindows: [{
             start: duration(vehicle[mapping.start_time || 'start_time']) || null,
             end: duration(vehicle[mapping.end_time || 'end_time']) || null
-          }]
+          }],
+          router_mode: vehicle[mapping.router_mode || 'router_mode'] || 'car',
+          router_dimension: vehicle[mapping.router_dimension || 'router_dimension'] || 'time',
+          speed_multiplier: (vehicle[mapping.speed_multiplier || 'speed_multiplier'] || '').replace(',', '.') || 1,
         });
       });
       return vrp;
@@ -555,7 +589,7 @@ $(document).ready(function() {
         if (vrp) {
           if (debug) { console.log("Input json for optim: ", vrp); console.log(JSON.stringify(vrp)); }
           callOptimization(vrp, function(solution) {
-            $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + solution.total_time.toHHMMSS() + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
+            $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
             if (result) {
               csv = createCSV(solution);
               $('#infos').append(' - <a href="data:application/octet-stream,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
