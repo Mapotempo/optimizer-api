@@ -592,7 +592,7 @@ $(document).ready(function() {
             $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
             if (result) {
               csv = createCSV(solution);
-              $('#infos').append(' - <a href="data:application/octet-stream,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
+              $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
               $('#result').html(csv);
             }
             initForm();
