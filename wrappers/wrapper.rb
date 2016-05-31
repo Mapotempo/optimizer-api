@@ -70,8 +70,8 @@ module Wrappers
     end
 
     def assert_vehicles_quantities_only_one(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicles|
-        vehicles.quantities.size > 1
+      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+        vehicle.quantities.size > 1
       }.nil?
     end
 
@@ -119,6 +119,14 @@ module Wrappers
       vrp.services.empty? || vrp.services.find{ |service|
         service.quantities.size > 1
       }.nil?
+    end
+
+    def assert_vehicles_same_router_params(vrp)
+      vrp.vehicles.empty? || (
+        vrp.vehicles.map{ |v| v.router_mode }.uniq.size <= 1 &&
+        vrp.vehicles.map{ |v| v.router_dimension }.uniq.size <= 1 &&
+        vrp.vehicles.map{ |v| v.speed_multiplier }.uniq.size <= 1
+      )
     end
   end
 end

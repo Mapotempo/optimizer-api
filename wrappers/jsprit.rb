@@ -37,6 +37,7 @@ module Wrappers
         :assert_services_no_exclusion_cost,
         :assert_services_quantities_only_one,
         :assert_jsprit_start_or_end,
+        :assert_vehicles_same_router_params
       ]
     end
 

@@ -62,15 +62,18 @@ module OptimizerWrapper
 
       if (vrp.matrix_time.nil? && vrp.need_matrix_time?) || (vrp.matrix_distance.nil? && vrp.need_matrix_distance?)
         at(nil, [vrp.need_matrix_time?, vrp.need_matrix_distance?].count{ |m| m }.to_s, "compute matrix")
-        dimension = [
-          :time,
-          vrp.matrix_distance.nil? && vrp.need_matrix_distance? ? :distance : nil
-        ].compact
+        mode = vrp.vehicles[0].router_mode.to_sym || :car
+        d = [:time, :distance]
+        dimensions = [d.delete(vrp.vehicles[0].router_dimension.to_sym)]
+        dimensions << d[0] if vrp.send('matrix_' + d[0].to_s).nil? && vrp.send('need_matrix_' + d[0].to_s + '?')
         points = vrp.points.each_with_index.collect{ |point, index|
           point.matrix_index = index
           [point.location.lat, point.location.lon]
         }
-        vrp.matrix_time, vrp.matrix_distance = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:car], :car, dimension, points, points)
+        # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
+        matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: vrp.vehicles[0].speed_multiplier || 1)
+        vrp.matrix_time = matrices[dimensions.index(:time)] if dimensions.index(:time)
+        vrp.matrix_distance = matrices[dimensions.index(:distance)] if dimensions.index(:distance)
       end
 
       OptimizerWrapper.config[:services][service].job = self.uuid
