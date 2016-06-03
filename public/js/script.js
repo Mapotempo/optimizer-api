@@ -462,7 +462,7 @@ $(document).ready(function() {
             if (d)
               lastStop[10] = lastStop[10] ? (duration(lastStop[10]) + d).toHHMMSS() : d.toHHMMSS();
             if (data.customers[customer_id][mapping.quantity || 'quantity'])
-              lastStop[11] = Number(lastStop[11] || 0) + Number(data.customers[customer_id][mapping.quantity || 'quantity'] || 0);
+              lastStop[11] = Number(lastStop[11] || 0) + Number(data.customers[customer_id][mapping.quantity || 'quantity'].replace(',', '.') || 0);
             if (duration(start))
               lastStop[12] = lastStop[12] ? (Math.max(duration(lastStop[12]), duration(start)) - (activity.ready_time - activity.arrival_time)).toHHMMSS() : start; // start: le plus tard - setup
             if (duration(end))
@@ -483,7 +483,7 @@ $(document).ready(function() {
               lat,
               lon,
               d ? d.toHHMMSS() : '',
-              data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiples
+              data.customers[customer_id][mapping.quantity || 'quantity'].replace(',', '.'), // TODO: gérer les quantités multiples
               start,
               end,
               data.customers[customer_id][mapping.skill || 'skill'], // TODO: gérer les skills multiples
