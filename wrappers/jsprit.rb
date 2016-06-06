@@ -131,6 +131,7 @@ module Wrappers
                     end
                   }
                 end
+                (xml.duration vehicle.duration) if vehicle.duration
               }
             end
           }

@@ -30,6 +30,7 @@ module Models
     field :router_mode, default: :car
     field :router_dimension, default: :time
     field :speed_multiplier, default: 1
+    field :duration, default: nil
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
     validates_numericality_of :cost_time_multiplier

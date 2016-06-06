@@ -364,6 +364,66 @@ class Wrappers::JspritTest < Minitest::Test
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
 
+  def test_route_duration_limit
+    jsprit = OptimizerWrapper::JSPRIT
+    problem = {
+      matrices: {
+        time: [
+          [0, 10, 20],
+          [10, 0, 20],
+          [20, 20, 0]
+
+        ]
+      },
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_0'
+        }
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindows: [{
+          start: 0,
+          end: 100
+        }],
+        duration: 10
+      }],
+      resolution: {
+        duration: 1000,
+        iterations: 20
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert jsprit.inapplicable_solve?(vrp).empty?
+    result = jsprit.solve(vrp)
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size - 2 + 1, result[:routes][0][:activities].size # always return activities for start/end
+    assert_equal 1, result[:unassigned].size
+  end
+
   def test_shipment_with_exclusive_skills
     jsprit = OptimizerWrapper::JSPRIT
     problem = {
