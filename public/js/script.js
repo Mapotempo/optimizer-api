@@ -111,6 +111,7 @@ $(document).ready(function() {
     coef_setup: 'setup_multiplier',
     start_time: 'start_time',
     end_time: 'end_time',
+    route_duration: 'duration',
     speed_multiplier: 'speed_multiplier',
     router_mode: 'router_mode',
     router_dimension: 'router_dimension'
@@ -172,6 +173,8 @@ $(document).ready(function() {
   $('#file-vehicles-help .column-name').append('<td>' + mapping.start_time + '</td>');
   $('#file-vehicles-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.end_time + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>HH:MM:SS</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.route_duration + '</td>');
   $('#file-vehicles-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.quantity + '</td>');
   $('#file-vehicles-help .column-value').append('<td>1.234</td>');
@@ -367,6 +370,7 @@ $(document).ready(function() {
             start: duration(vehicle[mapping.start_time || 'start_time']) || null,
             end: duration(vehicle[mapping.end_time || 'end_time']) || null
           }],
+          duration: duration(vehicle[mapping.route_duration || 'duration']) || null,
           router_mode: vehicle[mapping.router_mode || 'router_mode'] || 'car',
           router_dimension: vehicle[mapping.router_dimension || 'router_dimension'] || 'time',
           speed_multiplier: (vehicle[mapping.speed_multiplier || 'speed_multiplier'] || '').replace(',', '.') || 1,
