@@ -96,7 +96,7 @@ $(document).ready(function() {
     delivery_end: 'delivery_end',
     delivery_duration: 'delivery_duration',
     delivery_setup: 'delivery_setup',
-    skill: 'skill 1', // TODO: gérer les skills multiples
+    skills: 'skills',
     quantity: 'quantity 1', // TODO: gérer les quantités multiples
     start_lat: 'start_lat',
     start_lon: 'start_lng',
@@ -144,8 +144,8 @@ $(document).ready(function() {
   $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.quantity + '</td>');
   $('#file-customers-help .column-value').append('<td>1.234</td>');
-  $('#file-customers-help .column-name').append('<td>' + mapping.skill + '</td>');
-  $('#file-customers-help .column-value').append('<td>"tag1, tag2"</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.skills + '</td>');
+  $('#file-customers-help .column-value').append('<td>"tag1,tag2"</td>');
 
   $('#file-vehicles-help .column-name').append('<td>' + mapping.reference + '</td>');
   $('#file-vehicles-help .column-value').append('<td>ref</td>');
@@ -175,8 +175,10 @@ $(document).ready(function() {
   $('#file-vehicles-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.quantity + '</td>');
   $('#file-vehicles-help .column-value').append('<td>1.234</td>');
-  $('#file-vehicles-help .column-name').append('<td>' + mapping.skill + '</td>');
-  $('#file-vehicles-help .column-value').append('<td>"tag1, tag2"</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.skills + ' 1</td>');
+  $('#file-vehicles-help .column-value').append('<td>"tag1,tag2"</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.skills + ' 2</td>');
+  $('#file-vehicles-help .column-value').append('<td>"tag1,tag3"</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.router_mode + '</td>');
   $('#file-vehicles-help .column-value').append('<td>car</i></td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.router_dimension + '</td>');
@@ -337,8 +339,11 @@ $(document).ready(function() {
             id: 'unit',
             values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
           }],
-          // TODO: gérer les skills multiples
-          skills: [customer[mapping.skill || 'skill'] || null]
+          skills: $.map(customer, function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+          }).join(',').split(',').filter(function(el) {
+            return el;
+          })
         });
       });
       data.vehicles.forEach(function(vehicle) {
@@ -359,10 +364,11 @@ $(document).ready(function() {
               parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
             ]
           }],
-          // TODO: gérer les skills multiples
-          skills: [
-            vehicle[mapping.skill || 'skill'] || null
-          ],
+          skills: $.map(vehicle, function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
+          }).filter(function(el) {
+            return el && el.length > 0;
+          }),
           timewindows: [{
             start: duration(vehicle[mapping.start_time || 'start_time']) || null,
             end: duration(vehicle[mapping.end_time || 'end_time']) || null
@@ -456,6 +462,11 @@ $(document).ready(function() {
           var d = (activity.ready_time - activity.arrival_time + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0));
           var start = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
           var end = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
+          var skills = $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+          }).filter(function(el) {
+            return el;
+          }).join(',');
           // group pickup/delivery with direct previous stop only on same points
           var lastStop = stops[stops.length - 1];
           if (lastStop && lastStop[8] == lat && lastStop[9] == lon) {
@@ -464,11 +475,11 @@ $(document).ready(function() {
             if (data.customers[customer_id][mapping.quantity || 'quantity'])
               lastStop[11] = Number(lastStop[11] || 0) + Number(data.customers[customer_id][mapping.quantity || 'quantity'].replace(',', '.') || 0);
             if (duration(start))
-              lastStop[12] = lastStop[12] ? (Math.max(duration(lastStop[12]), duration(start)) - (activity.ready_time - activity.arrival_time)).toHHMMSS() : start; // start: le plus tard - setup
+              lastStop[12] = lastStop[12] ? (Math.max(duration(lastStop[12]), duration(start)) - (activity.ready_time - activity.arrival_time)).toHHMMSS() : start;
             if (duration(end))
-              lastStop[13] = lastStop[13] ? Math.min(duration(lastStop[13]), duration(end)).toHHMMSS() : end; // end: le plus tôt
-            if (data.customers[customer_id][mapping.skill || 'skill'])
-              lastStop[14] = lastStop[14].split(',').concat(data.customers[customer_id][mapping.skill || 'skill'].split(',')).join(',');
+              lastStop[13] = lastStop[13] ? Math.max(duration(lastStop[13]), duration(end)).toHHMMSS() : end;
+            if (skills && skills != lastStop[14])
+              lastStop[14] = $.unique(lastStop[14].split(',').concat(skills.split(','))).join(',');
           }
           else {
             stops.push([
@@ -486,7 +497,7 @@ $(document).ready(function() {
               data.customers[customer_id][mapping.quantity || 'quantity'].replace(',', '.'), // TODO: gérer les quantités multiples
               start,
               end,
-              data.customers[customer_id][mapping.skill || 'skill'], // TODO: gérer les skills multiples
+              skills
             ]);
           }
         } else if (activity.rest_id) {
@@ -545,7 +556,11 @@ $(document).ready(function() {
         data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiples
         data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
         data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
-        data.customers[customer_id][mapping.skill || 'skill'], // TODO: gérer les skills multiples
+        $.map(data.customers[customer_id], function(val, key) {
+          if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+        }).filter(function(el) {
+          return el;
+        }).join(',')
       ]);
     });
     return Papa.unparse({
