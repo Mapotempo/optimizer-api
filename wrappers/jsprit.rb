@@ -32,7 +32,7 @@ module Wrappers
         :assert_units_only_one,
         :assert_vehicles_quantities_only_one,
         :assert_vehicles_timewindows_only_one,
-        :assert_services_no_skills,
+        # :assert_services_no_skills,
         :assert_services_no_late_multiplier,
         :assert_services_no_exclusion_cost,
         :assert_services_quantities_only_one,
@@ -43,7 +43,7 @@ module Wrappers
 
     def solve(vrp, &block)
       result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, @threads, &block)
-      if result
+      if result && result.is_a?(Hash)
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result[:routes].each{ |route|
           vehicle = vehicles[route[:vehicle_id]]
@@ -59,6 +59,9 @@ module Wrappers
           end
         }
         result
+      else
+        m = /Exception: (.+)\n/.match(result) if result
+        raise RuntimeError.new((m && m[1]) || 'Unexpected exception')
       end
     end
 
@@ -123,6 +126,13 @@ module Wrappers
                     }
                   end
                 end
+                if vehicle.skills.size > 0
+                  xml.alternativeSkills {
+                    vehicle.skills.each do |skills|
+                      xml.skillList skills.join(",") if skills.size > 0
+                    end
+                  }
+                end
               }
             end
           }
@@ -163,6 +173,7 @@ module Wrappers
                   end
                   (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration > 0
                   (xml.duration service.activity.duration) if service.activity.duration > 0
+                  (xml.requiredSkills service.skills.join(",")) if service.skills.size > 0
                   xml.method_missing('capacity-dimensions') {
                     (!service.quantities.empty? ? service.quantities[0][:values] : [1]).each_with_index do |value, index|
                       xml.dimension value, index: index
@@ -210,6 +221,7 @@ module Wrappers
                     (xml.setupDuration shipment.delivery.setup_duration) if shipment.delivery.setup_duration > 0
                     (xml.duration shipment.delivery.duration) if shipment.delivery.duration > 0
                   }
+                  (xml.requiredSkills shipment.skills.join(",")) if shipment.skills.size > 0
                   xml.method_missing('capacity-dimensions') {
                     (!shipment.quantities.empty? ? shipment.quantities[0][:values] : [1]).each_with_index do |value, index|
                       xml.dimension value, index: index
@@ -265,6 +277,8 @@ module Wrappers
         iterations_start += 1 if /\- iterations start/.match(line)
         if iterations_start == 2
           r = /\- iterations ([0-9]+)/.match(line)
+          r && iterations = r[1]
+          r = /\- iterations end at ([0-9]+) iterations/.match(line)
           r && iterations = r[1]
         end
         block.call iterations, resolution_iterations if block
