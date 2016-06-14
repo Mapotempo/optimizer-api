@@ -34,3 +34,7 @@ group :test do
   gem 'minitest-reporters'
   gem 'simplecov', require: false
 end
+
+group :production do
+  gem 'redis-activesupport'
+end
