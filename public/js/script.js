@@ -149,14 +149,14 @@ $(document).ready(function() {
 
   $('#file-vehicles-help .column-name').append('<td>' + mapping.reference + '</td>');
   $('#file-vehicles-help .column-value').append('<td>ref</td>');
-  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.start_lat + '</td>');
-  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
-  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.start_lon + '</td>');
-  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
-  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.end_lat + '</td>');
-  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
-  $('#file-vehicles-help .column-name').append('<td class="required">' + mapping.end_lon + '</td>');
-  $('#file-vehicles-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.start_lat + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.start_lon + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.end_lat + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>0.123</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.end_lon + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>0.123</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.cost_fixed + '</td>');
   $('#file-vehicles-help .column-value').append('<td>1</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.cost_distance_multiplier + '</td>');
@@ -250,7 +250,6 @@ $(document).ready(function() {
         }
       });
       data.customers.forEach(function(customer) {
-        // var refDelivery = customer[mapping.reference || 'reference'];
         var refDelivery = customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.');
         if (points.indexOf(refDelivery) === -1) {
           points.push(refDelivery);
@@ -267,15 +266,7 @@ $(document).ready(function() {
       var router_dimensions = [];
       var speed_multipliers = [];
       data.vehicles.forEach(function(vehicle) {
-        if (!vehicle[mapping.start_lat || 'start_lat'])
-          throw i18n.missingColumn(mapping.start_lat || 'start_lat');
-        else if (!vehicle[mapping.start_lon || 'start_lon'])
-          throw i18n.missingColumn(mapping.start_lon || 'start_lon');
-        else if (!vehicle[mapping.end_lat || 'end_lat'])
-          throw i18n.missingColumn(mapping.end_lat || 'end_lat');
-        else if (!vehicle[mapping.end_lon || 'end_lon'])
-          throw i18n.missingColumn(mapping.end_lon || 'end_lon');
-        else if (vehicle[mapping.router_mode || 'router_mode'] && vehicle[mapping.router_mode || 'router_mode'] != 'car' && vehicle[mapping.router_mode || 'router_mode'] != 'truck')
+        if (vehicle[mapping.router_mode || 'router_mode'] && vehicle[mapping.router_mode || 'router_mode'] != 'car' && vehicle[mapping.router_mode || 'router_mode'] != 'truck')
           throw i18n.invalidRouterMode(vehicle[mapping.router_mode || 'router_mode']);
         if (router_modes.indexOf(vehicle[mapping.router_mode || 'router_mode']) == -1) router_modes.push(vehicle[mapping.router_mode || 'router_mode']);
         if (router_modes.length > 1)
@@ -287,27 +278,31 @@ $(document).ready(function() {
         if (speed_multipliers.length > 1)
           throw i18n.notSameRouter(speed_multipliers);
 
-        var refStart = vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.');
-        if (points.indexOf(refStart) === -1) {
-          points.push(refStart);
-          vrp.points.push({
-            id: refStart,
-            location: {
-              lat: vehicle[mapping.start_lat || 'start_lat'].replace(',', '.'),
-              lon: vehicle[mapping.start_lon || 'start_lon'].replace(',', '.')
-            }
-          });
+        if (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lon || 'start_lon']) {
+          var refStart = vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.');
+          if (points.indexOf(refStart) === -1) {
+            points.push(refStart);
+            vrp.points.push({
+              id: refStart,
+              location: {
+                lat: vehicle[mapping.start_lat || 'start_lat'].replace(',', '.'),
+                lon: vehicle[mapping.start_lon || 'start_lon'].replace(',', '.')
+              }
+            });
+          }
         }
-        var refEnd = vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.');
-        if (points.indexOf(refEnd) === -1) {
-          points.push(refEnd);
-          vrp.points.push({
-            id: refEnd,
-            location: {
-              lat: vehicle[mapping.end_lat || 'end_lat'].replace(',', '.'),
-              lon: vehicle[mapping.end_lon || 'end_lon'].replace(',', '.')
-            }
-          });
+        if (vehicle[mapping.end_lat || 'end_lat'] && vehicle[mapping.end_lon || 'end_lon']) {
+          var refEnd = vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.');
+          if (points.indexOf(refEnd) === -1) {
+            points.push(refEnd);
+            vrp.points.push({
+              id: refEnd,
+              location: {
+                lat: vehicle[mapping.end_lat || 'end_lat'].replace(',', '.'),
+                lon: vehicle[mapping.end_lon || 'end_lon'].replace(',', '.')
+              }
+            });
+          }
         }
       });
 
@@ -325,7 +320,6 @@ $(document).ready(function() {
             duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
           },
           delivery: {
-            //point_id: customer[mapping.reference || 'reference'],
             point_id: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.'),
             timewindows: [{
               start: duration(customer[mapping.delivery_start || 'delivery_start']) || null,
@@ -349,8 +343,8 @@ $(document).ready(function() {
       data.vehicles.forEach(function(vehicle) {
         vrp.vehicles.push({
           id: vehicle[mapping.reference || 'reference'],
-          start_point_id: vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.'),
-          end_point_id: vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.'),
+          start_point_id: (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lat || 'start_lon']) ? vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.') : null,
+          end_point_id: (vehicle[mapping.end_lat || 'end_lat'] && vehicle[mapping.end_lat || 'end_lon']) ? vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.') : null,
           cost_fixed: vehicle[mapping.cost_fixed || 'cost_fixed'],
           cost_distance_multiplier: vehicle[mapping.cost_distance_multiplier || 'cost_distance_multiplier'],
           cost_time_multiplier: vehicle[mapping.cost_time_multiplier || 'cost_time_multiplier'],
@@ -388,7 +382,6 @@ $(document).ready(function() {
       contentType: 'application/json',
       data: JSON.stringify({vrp: vrp}),
       url: '/0.1/vrp/submit.json?api_key=' + $('#api-key').val(),
-      // beforeSend: beforeSendWaiting,
       success: function(result) {
         if (debug) console.log("Calling optimization... ", result);
         var delay = 2000;
@@ -402,7 +395,6 @@ $(document).ready(function() {
               type: 'get',
               contentType: 'application/json',
               url: '/0.1/vrp/job/' + result.job.id + '.json?api_key=' + $('#api-key').val(),
-              // beforeSend: beforeSendWaiting,
               success: function(job) {
                 nbError = 0;
                 $('#avancement').html(job.job.avancement);
@@ -424,7 +416,6 @@ $(document).ready(function() {
                   initForm();
                 }
               },
-              // complete: completeAjax,
               error: function(xhr, status) {
                 nbError++;
                 if (nbError > 2) {
@@ -440,7 +431,6 @@ $(document).ready(function() {
         }
         checkResponse();
       },
-      // complete: completeAjax,
       error: function(xhr, status) {
         alert(i18n.failureCallOptim(status));
         initForm();
