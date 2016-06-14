@@ -32,11 +32,9 @@ module Wrappers
         :assert_units_only_one,
         :assert_vehicles_quantities_only_one,
         :assert_vehicles_timewindows_only_one,
-        # :assert_services_no_skills,
         :assert_services_no_late_multiplier,
         :assert_services_no_exclusion_cost,
         :assert_services_quantities_only_one,
-        :assert_jsprit_start_or_end,
         :assert_vehicles_same_router_params
       ]
     end
