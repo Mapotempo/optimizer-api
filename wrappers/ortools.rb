@@ -69,7 +69,7 @@ module Wrappers
 
       soft_upper_bound = vrp.services[0].late_multiplier
 
-      result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound)
+      result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment)
       return if !result
 
       if vehicle.start_point
@@ -128,7 +128,7 @@ module Wrappers
 # TODO check services.late_multiplier = rests.late_multiplier, or support late_multiplier in tsp-simple
     end
 
-    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound)
+    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound, nearby)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write("#{matrix.size}\n")
       input.write("#{rest_window.size}\n")
@@ -143,7 +143,7 @@ module Wrappers
       output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
       output.close
 
-      cmd = "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` -time_limit_in_ms #{optimize_time || @optimize_time} -soft_upper_bound #{soft_upper_bound || @soft_upper_bound} -instance_file '#{input.path}' > '#{output.path}'"
+      cmd = "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` -time_limit_in_ms #{optimize_time || @optimize_time} -soft_upper_bound #{soft_upper_bound || @soft_upper_bound} #{nearby ? '-nearby' : ''} -instance_file '#{input.path}' > '#{output.path}'"
       puts cmd
       system(cmd)
 
