@@ -449,8 +449,8 @@ $(document).ready(function() {
       i++;
       route.activities.forEach(function(activity) {
         if (activity.pickup_shipment_id || activity.delivery_shipment_id) {
-          var ref = activity.pickup_shipment_id ? activity.pickup_shipment_id : activity.delivery_shipment_id;
-          var customer_id = customers.indexOf(ref);
+          var customer_id = customers.indexOf(activity.pickup_shipment_id ? activity.pickup_shipment_id : activity.delivery_shipment_id);
+          var ref = activity.pickup_shipment_id ? (activity.pickup_shipment_id + ' pickup') : activity.delivery_shipment_id;
           var lat = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
           var lon = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
           var d = (activity.ready_time - activity.arrival_time + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0));
@@ -461,9 +461,9 @@ $(document).ready(function() {
           }).filter(function(el) {
             return el;
           }).join(',');
-          // group pickup/delivery with direct previous stop only on same points
+          // group only pickup with direct previous pickup on same points
           var lastStop = stops[stops.length - 1];
-          if (lastStop && lastStop[8] == lat && lastStop[9] == lon) {
+          if (lastStop && lastStop[0] == ref && activity.pickup_shipment_id) {
             if (d)
               lastStop[10] = lastStop[10] ? (duration(lastStop[10]) + d).toHHMMSS() : d.toHHMMSS();
             if (data.customers[customer_id][mapping.quantity || 'quantity'])
@@ -477,11 +477,11 @@ $(document).ready(function() {
           }
           else {
             stops.push([
-              activity.pickup_shipment_id ? ref + ' pickup' : ref,
+              ref,
               i,
               route.vehicle_id,
               'visite',
-              activity.pickup_shipment_id ? ref + ' pickup' : ref, // name
+              ref, // name
               '', // street
               '', // postalcode
               '', // country
