@@ -24,8 +24,15 @@ module Models
     field :preprocessing_prefer_short_segment, default: false
     field :resolution_duration, default: nil
     field :resolution_iterations, default: nil
+    field :resolution_iterations_without_improvment, default: 100
+    field :resolution_stable_iterations, default: nil
+    field :resolution_stable_coefficient, default: nil
     validates_numericality_of :preprocessing_cluster_threshold
     validates_numericality_of :resolution_duration
+    validates_numericality_of :resolution_iterations
+    validates_numericality_of :resolution_iterations_without_improvment
+    validates_numericality_of :resolution_stable_iterations
+    validates_numericality_of :resolution_stable_coefficient
 
     fields :matrix_time, :matrix_distance
 
@@ -53,6 +60,9 @@ module Models
     def resolution=(resolution)
       self.resolution_duration = resolution[:duration]
       self.resolution_iterations = resolution[:iterations]
+      self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
+      self.resolution_stable_iterations = resolution[:stable_iterations]
+      self.resolution_stable_coefficient = resolution[:stable_coefficient]
       self.preprocessing_cluster_threshold = resolution[:preprocessing_cluster_threshold]
       self.preprocessing_prefer_short_segment = resolution[:preprocessing_prefer_short_segment]
     end

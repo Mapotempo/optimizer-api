@@ -40,7 +40,7 @@ module Wrappers
     end
 
     def solve(vrp, &block)
-      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, vrp.preprocessing_prefer_short_segment, @threads, &block)
+      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, vrp.resolution_iterations_without_improvment, vrp.resolution_stable_iterations, vrp.resolution_stable_coefficient, vrp.preprocessing_prefer_short_segment, @threads, &block)
       if result && result.is_a?(Hash)
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result[:routes].each{ |route|
@@ -92,7 +92,7 @@ module Wrappers
       }.nil?
     end
 
-    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration, resolution_iterations, nearby ,threads, &block)
+    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration, resolution_iterations, resolution_iterations_without_improvment, resolution_stable_iterations, resolution_stable_coefficient, nearby, threads, &block)
       builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
         xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
           xml.problemType {
@@ -283,6 +283,8 @@ module Wrappers
         input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '',
         resolution_duration ? "--ms '#{resolution_duration}'" : '',
         nearby ? "--nearby" : '',
+        resolution_iterations_without_improvment ? "--no_improvment_iterations '#{resolution_iterations_without_improvment}'" : '',
+        resolution_stable_iterations && resolution_stable_coefficient ? "--stable_iterations '#{resolution_stable_iterations}' --stable_coef '#{resolution_stable_coefficient}'" : '',
         "--threads '#{threads}'",
         "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       puts cmd
