@@ -81,7 +81,7 @@ module OptimizerWrapper
         at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : ''))
       }
       if result.class.name == 'Hash' # result.is_a?(Hash) not working
-        result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)
+        (result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)) if result[:total_time]
         result[:total_distance] = result[:routes].collect{ |r|
           previous = nil
           r[:activities].collect{ |a|

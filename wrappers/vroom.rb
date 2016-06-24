@@ -71,15 +71,17 @@ module Wrappers
       }
       return if !result
 
-      if vehicle_loop && vehicle_have_start
-        index = result['tour'].index(1)
-        result['tour'] = result['tour'].rotate(index).collect{ |i| i }
+      if vehicle_loop
+        index = result['tour'].index(0)
+        result['tour'] = result['tour'].rotate(index)
       end
 
       if vehicle_loop || vehicle_have_start
         result['tour'] = result['tour'][1..-1]
-        result['tour'] = result['tour'].collect{ |i| i - 1 }
+      else
+        result['tour'] = result['tour'].collect{ |i| i + 1 }
       end
+
       if !vehicle_loop && vehicle_have_end
         result['tour'] = result['tour'][0..-2]
       end
@@ -95,7 +97,7 @@ module Wrappers
           vehicle_id: vehicle.id,
           activities:
             [{
-              point_id: vehicle_have_start ? vehicle.start_point.id : vrp.services[0].activity.point.id
+              point_id: vehicle_have_start ? vehicle.start_point.id : vrp.services[result['tour'][0] - 1].activity.point.id
             }] +
             result['tour'].collect{ |i| {
               point_id: vrp.services[i - 1].activity.point.id,
@@ -109,7 +111,7 @@ module Wrappers
 #              delivery_shipments_id [:id0:]
             }} +
             [{
-              point_id: vehicle_have_end && !vehicle_loop ? vehicle.end_point.id : vrp.services[-1].activity.point.id
+              point_id: vehicle_have_end ? vehicle.end_point.id : !vehicle_loop ? vrp.services[result['tour'][-1] - 1].activity.point.id : vrp.services[result['tour'][0] - 1].activity.point.id
             }]
         }]
       }
