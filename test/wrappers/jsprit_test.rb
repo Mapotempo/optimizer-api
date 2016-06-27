@@ -292,6 +292,7 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_service_with_skills
     jsprit = OptimizerWrapper::JSPRIT
+    jsprit.job = 'test'
     problem = {
       matrices: {
         time: [
@@ -366,6 +367,7 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_route_duration_limit
     jsprit = OptimizerWrapper::JSPRIT
+    jsprit.job = 'test'
     problem = {
       matrices: {
         time: [
@@ -426,6 +428,7 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_shipment_with_exclusive_skills
     jsprit = OptimizerWrapper::JSPRIT
+    jsprit.job = 'test'
     problem = {
       matrices: {
         time: [
