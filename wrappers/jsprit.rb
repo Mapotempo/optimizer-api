@@ -271,7 +271,7 @@ module Wrappers
       iterations_start = 0
       # read of stdout_and_stderr stops at the end oh process
       stdout_and_stderr.each_line { |line|
-        puts @job + ' - ' + line
+        puts (@job ? @job + ' - ' : '') + line
         out = out ? out + "\n" + line : line
         iterations_start += 1 if /\- iterations start/.match(line)
         if iterations_start == 2
