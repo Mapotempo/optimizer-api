@@ -43,6 +43,10 @@ module Wrappers
       ]
     end
 
+    def solve_synchronous?(vrp)
+      true
+    end
+
     def solve(vrp, &block)
       if vrp.points.empty? || vrp.services.empty?
         return

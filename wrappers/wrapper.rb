@@ -128,5 +128,9 @@ module Wrappers
         vrp.vehicles.map{ |v| v.speed_multiplier }.uniq.size <= 1
       )
     end
+
+    def solve_synchronous?(vrp)
+      false
+    end
   end
 end

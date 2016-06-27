@@ -34,6 +34,6 @@ class Api::V01::VrpTest < Minitest::Test
       }]
     }
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
-    assert_equal 201, last_response.status, last_response.body
+    assert_equal 200, last_response.status, last_response.body
   end
 end

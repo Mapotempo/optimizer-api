@@ -103,6 +103,10 @@ module Routers
     end
 
     def matrix(url, mode, dimensions, row, column, options = {})
+      if row.empty? || column.empty?
+        return [[] * row.size] * column.size
+      end
+
       key = ['m', url, mode, row, column, Digest::MD5.hexdigest(Marshal.dump(options.to_a.sort_by{ |i| i[0].to_s }))]
 
       request = @cache_request.read(key)

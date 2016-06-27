@@ -49,19 +49,24 @@ module OptimizerWrapper
     if !service
       raise UnsupportedProblemError
     else
-      job_id = Job.create(service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
-      Result.get(job_id) || job_id
+      if config[:services][service].solve_synchronous?(vrp)
+        solve(service, vrp)
+      else
+        job_id = Job.create(service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
+        Result.get(job_id) || job_id
+      end
     end
   end
 
-  class Job
-    include Resque::Plugins::Status
-
-    def perform
-      service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
-
+  def self.solve(service, vrp, &block)
+    result = if vrp.services.empty? && vrp.shipments.empty?
+      {
+        costs: 0,
+        routes: []
+      }
+    else
       if (vrp.matrix_time.nil? && vrp.need_matrix_time?) || (vrp.matrix_distance.nil? && vrp.need_matrix_distance?)
-        at(nil, [vrp.need_matrix_time?, vrp.need_matrix_distance?].count{ |m| m }.to_s, "compute matrix")
+        block.call(nil, [vrp.need_matrix_time?, vrp.need_matrix_distance?].count{ |m| m }.to_s, "compute matrix") if block
         mode = vrp.vehicles[0].router_mode.to_sym || :car
         d = [:time, :distance]
         dimensions = [d.delete(vrp.vehicles[0].router_dimension.to_sym)]
@@ -76,39 +81,54 @@ module OptimizerWrapper
         vrp.matrix_distance = matrices[dimensions.index(:distance)] if dimensions.index(:distance)
       end
 
+      OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
+        block.call(avancement, total) if block
+      }
+    end
+
+    if result.class.name == 'Hash' # result.is_a?(Hash) not working
+      (result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)) if result[:total_time]
+      result[:total_distance] = result[:routes].collect{ |r|
+        previous = nil
+        r[:activities].collect{ |a|
+          point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
+            s.id == a[:service_id]
+          }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
+            s.id == a[:pickup_shipment_id]
+          }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
+            s.id == a[:delivery_shipment_id]
+          }.delivery.point_id : nil
+          vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
+        }.compact.inject(0){ |sum, item|
+          sum = sum + vrp.matrix_distance[previous][item] if (previous)
+          previous = item
+          sum
+        }
+      }.reduce(:+)
+      result
+    elsif result.class.name == 'String' # result.is_a?(String) not working
+      raise RuntimeError.new(result)
+    else
+      raise RuntimeError.new('No solution provided')
+    end
+  rescue Exception => e
+    puts e
+    puts e.backtrace
+    raise
+  end
+
+  class Job
+    include Resque::Plugins::Status
+
+    def perform
+      service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
+
       OptimizerWrapper.config[:services][service].job = self.uuid
-      result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
+      result = OptimizerWrapper.solve(service, vrp) { |avancement, total|
         at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : ''))
       }
-      if result.class.name == 'Hash' # result.is_a?(Hash) not working
-        (result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)) if result[:total_time]
-        result[:total_distance] = result[:routes].collect{ |r|
-          previous = nil
-          r[:activities].collect{ |a|
-            point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
-              s.id == a[:service_id]
-            }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
-              s.id == a[:pickup_shipment_id]
-            }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
-              s.id == a[:delivery_shipment_id]
-            }.delivery.point_id : nil
-            vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
-          }.compact.inject(0){ |sum, item|
-            sum = sum + vrp.matrix_distance[previous][item] if (previous)
-            previous = item
-            sum
-          }
-        }.reduce(:+)
-        Result.set(self.uuid, result)
-      elsif result.class.name == 'String' # result.is_a?(String) not working
-        raise RuntimeError.new(result)
-      else
-        raise RuntimeError.new('No solution provided')
-      end
-    rescue Exception => e
-      puts e
-      puts e.backtrace
-      raise
+
+      Result.set(self.uuid, result)
     end
   end
 

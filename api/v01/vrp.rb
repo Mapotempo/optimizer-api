@@ -77,7 +77,9 @@ module Api
           get ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
-            if job.killed? || job.failed?
+            if !job
+              status 404
+            elsif job.killed? || job.failed?
               status 202
               {
                 job: {
