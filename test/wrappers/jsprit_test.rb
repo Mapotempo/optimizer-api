@@ -62,7 +62,7 @@ class Wrappers::JspritTest < Minitest::Test
     result = jsprit.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + 1, result[:routes][0][:activities].size # always return activities for start/end
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
   end
 
   def test_invalid_timewindow
@@ -231,7 +231,7 @@ class Wrappers::JspritTest < Minitest::Test
     result = jsprit.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size - 1 + 1, result[:routes][0][:activities].size # always return activities for start/end
+    assert_equal problem[:services].size - 1 + 2, result[:routes][0][:activities].size # always return activities for start/end
     assert_equal 1, result[:unassigned].size
   end
 
@@ -422,8 +422,8 @@ class Wrappers::JspritTest < Minitest::Test
     result = jsprit.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size - 2 + 1, result[:routes][0][:activities].size # always return activities for start/end
-    assert_equal 1, result[:unassigned].size
+    assert_equal problem[:services].size - 2 + 2, result[:routes][0][:activities].size # always return activities for start/end
+    assert_equal 2, result[:unassigned].size
   end
 
   def test_shipment_with_exclusive_skills

@@ -45,16 +45,37 @@ module Wrappers
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result[:routes].each{ |route|
           vehicle = vehicles[route[:vehicle_id]]
+          # always return activities for start and end
           if !vehicle.start_point.nil?
-            route[:activities].insert 0, {
-              point_id: vehicle.start_point.id
-            }
+            start_point = vehicle.start_point
+          else
+            first_activity = route[:activities].find{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }
+            start_point = first_activity[:service_id] ?
+              vrp.services.find{ |s| s.id == first_activity[:service_id] }.activity.point :
+              first_activity[:pickup_shipment_id] ?
+              vrp.shipments.find{ |s| s.id == first_activity[:pickup_shipment_id] }.pickup.point :
+              first_activity[:delivery_shipment_id] ?
+              vrp.shipments.find{ |s| s.id == first_activity[:delivery_shipment_id] }.delivery.point :
+              nil
           end
+          route[:activities].insert 0, {
+            point_id: start_point.id
+          }
           if !vehicle.end_point.nil?
-            route[:activities] << {
-              point_id: vehicle.end_point.id
-            }
+            end_point = vehicle.end_point
+          else
+            last_activity = route[:activities].reverse.find{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }
+            end_point = last_activity[:service_id] ?
+              vrp.services.find{ |s| s.id == last_activity[:service_id] }.activity.point :
+              last_activity[:pickup_shipment_id] ?
+              vrp.shipments.find{ |s| s.id == last_activity[:pickup_shipment_id] }.pickup.point :
+              last_activity[:delivery_shipment_id] ?
+              vrp.shipments.find{ |s| s.id == last_activity[:delivery_shipment_id] }.delivery.point :
+              nil
           end
+          route[:activities] << {
+            point_id: end_point.id
+          }
         }
         result
       else
