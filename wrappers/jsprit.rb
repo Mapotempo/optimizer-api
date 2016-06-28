@@ -291,6 +291,7 @@ module Wrappers
       iterations = 0
       iterations_start = 0
       cost = nil
+      fresh_output = nil
       # read of stdout_and_stderr stops at the end oh process
       stdout_and_stderr.each_line { |line|
         puts (@job ? @job + ' - ' : '') + line
@@ -305,42 +306,14 @@ module Wrappers
           r && (iterations = Integer(r[1]))
           r = / Cost : ([0-9.eE]+)/.match(line)
           r && (cost = Float(r[1]))
+          r && (fresh_output = true)
         end
-        block.call(iterations, resolution_iterations, cost) if block
+        block.call(iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, services, shipments)) if block
+        fresh_output = nil
       }
 
       if thread.value == 0
-        doc = Nokogiri::XML(File.open(output.path))
-        doc.remove_namespaces!
-        solution = doc.xpath('/problem/solutions/solution').last
-        if solution
-          {
-            cost: Float(solution.at_xpath('cost').content),
-            iterations: iterations,
-            routes: solution.xpath('routes/route').collect{ |route|
-              {
-                vehicle_id: route.at_xpath('vehicleId').content,
-                start_time: Float(route.at_xpath('start').content),
-                end_time: Float(route.at_xpath('end').content),
-                activities: route.xpath('act').collect{ |act|
-                  {
-#                    activity: act.attr('type').to_sym,
-                    pickup_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'pickupShipment' && a.content,
-                    delivery_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'deliverShipment' && a.content,
-                    service_id: (a = act.at_xpath('serviceId')) && a.content,
-                    rest_id: (a = act.at_xpath('restId')) && a.content,
-                    arrival_time: Float(act.at_xpath('arrTime').content),
-                    departure_time: Float(act.at_xpath('endTime').content),
-                    ready_time: Float(act.at_xpath('readyTime').content),
-                  }.delete_if { |k, v| !v }
-                }
-              }
-            },
-            unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
-              (services.find{ |s| s.id == job.attr('id')} ? :service_id : shipments.find{ |s| s.id == job.attr('id')} ? :shipment_id : nil) => job.attr('id')
-            }}
-          }
-        end
+        parse_output(output.path, iterations, services, shipments)
       else
         out
       end
@@ -350,6 +323,40 @@ module Wrappers
       input_time_matrix && input_time_matrix.unlink
       input_distance_matrix && input_distance_matrix.unlink
       output && output.unlink
+    end
+
+    def parse_output(path, iterations, services, shipments)
+      doc = Nokogiri::XML(File.open(path))
+      doc.remove_namespaces!
+      solution = doc.xpath('/problem/solutions/solution').last
+      if solution
+        {
+          cost: Float(solution.at_xpath('cost').content),
+          iterations: iterations,
+          routes: solution.xpath('routes/route').collect{ |route|
+            {
+              vehicle_id: route.at_xpath('vehicleId').content,
+              start_time: Float(route.at_xpath('start').content),
+              end_time: Float(route.at_xpath('end').content),
+              activities: route.xpath('act').collect{ |act|
+                {
+#                  activity: act.attr('type').to_sym,
+                  pickup_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'pickupShipment' && a.content,
+                  delivery_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'deliverShipment' && a.content,
+                  service_id: (a = act.at_xpath('serviceId')) && a.content,
+                  rest_id: (a = act.at_xpath('restId')) && a.content,
+                  arrival_time: Float(act.at_xpath('arrTime').content),
+                  departure_time: Float(act.at_xpath('endTime').content),
+                  ready_time: Float(act.at_xpath('readyTime').content),
+                }.delete_if { |k, v| !v }
+              }
+            }
+          },
+          unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
+            (services.find{ |s| s.id == job.attr('id')} ? :service_id : shipments.find{ |s| s.id == job.attr('id')} ? :shipment_id : nil) => job.attr('id')
+          }}
+        }
+      end
     end
 
     def algorithm_config(max_iterations)

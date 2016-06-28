@@ -87,30 +87,12 @@ module OptimizerWrapper
       end
 
       cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
-        result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total, cost|
-          block.call(avancement, total, cost) if block
+        result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total, cost, solution|
+          block.call(avancement, total, cost, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
         }
 
         if result.class.name == 'Hash' # result.is_a?(Hash) not working
-          (result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)) if result[:total_time]
-          result[:total_distance] = result[:routes].collect{ |r|
-            previous = nil
-            r[:activities].collect{ |a|
-              point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
-                s.id == a[:service_id]
-              }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
-                s.id == a[:pickup_shipment_id]
-              }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
-                s.id == a[:delivery_shipment_id]
-              }.delivery.point_id : nil
-              vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
-            }.compact.inject(0){ |sum, item|
-              sum = sum + vrp.matrix_distance[previous][item] if (previous)
-              previous = item
-              sum
-            }
-          }.reduce(:+)
-          result
+          parse_result(vrp, result)
         elsif result.class.name == 'String' # result.is_a?(String) not working
           raise RuntimeError.new(result)
         else
@@ -125,6 +107,28 @@ module OptimizerWrapper
   end
 
   private
+
+  def self.parse_result(vrp, result)
+    (result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)) if result[:total_time]
+    result[:total_distance] = result[:routes].collect{ |r|
+      previous = nil
+      r[:activities].collect{ |a|
+        point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
+          s.id == a[:service_id]
+        }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
+          s.id == a[:pickup_shipment_id]
+        }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
+          s.id == a[:delivery_shipment_id]
+        }.delivery.point_id : nil
+        vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
+      }.compact.inject(0){ |sum, item|
+        sum = sum + vrp.matrix_distance[previous][item] if (previous)
+        previous = item
+        sum
+      }
+    }.reduce(:+)
+    result
+  end
 
   def self.cluster(vrp, cluster_threshold)
     if vrp.shipments.size == 0 && cluster_threshold
@@ -262,11 +266,16 @@ module OptimizerWrapper
       service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
       OptimizerWrapper.config[:services][service].job = self.uuid
 
-      result = OptimizerWrapper.solve(service, vrp) { |avancement, total, cost|
+      result = OptimizerWrapper.solve(service, vrp) { |avancement, total, cost, solution|
         at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         if avancement && cost
           p = Result.get(self.uuid) || {'graph' => {}}
           p['graph'][avancement.to_s] = cost
+          Result.set(self.uuid, p)
+        end
+        if solution
+          p = Result.get(self.uuid) || {}
+          p['result'] = solution
           Result.set(self.uuid, p)
         end
       }

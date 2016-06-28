@@ -84,6 +84,7 @@ module Api
               if job.killed? || job.failed?
                 status 202
                 {
+                  solution: solution['result'],
                   job: {
                     id: id,
                     status: job.killed? ? :killed : :failed,
@@ -94,6 +95,7 @@ module Api
               elsif !job.completed?
                 status 201
                 {
+                  solution: solution['result'],
                   job: {
                     id: id,
                     status: job.queued? ? :queued : job.working? ? :working : nil,
