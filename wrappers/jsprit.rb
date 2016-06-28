@@ -290,18 +290,23 @@ module Wrappers
       out = nil
       iterations = 0
       iterations_start = 0
+      cost = nil
       # read of stdout_and_stderr stops at the end oh process
       stdout_and_stderr.each_line { |line|
         puts (@job ? @job + ' - ' : '') + line
         out = out ? out + "\n" + line : line
         iterations_start += 1 if /\- iterations start/.match(line)
         if iterations_start == 2
-          r = /\- iterations ([0-9]+)/.match(line)
-          r && iterations = r[1]
-          r = /\- iterations end at ([0-9]+) iterations/.match(line)
-          r && iterations = r[1]
+          r = /- iterations ([0-9]+)/.match(line)
+          r && (iterations = Integer(r[1]))
+          r = /- iterations end at ([0-9]+) iterations/.match(line)
+          r && (iterations = Integer(r[1]))
+          r = /Iteration : ([0-9]+) .*/.match(line)
+          r && (iterations = Integer(r[1]))
+          r = / Cost : ([0-9.eE]+)/.match(line)
+          r && (cost = Float(r[1]))
         end
-        block.call iterations, resolution_iterations if block
+        block.call(iterations, resolution_iterations, cost) if block
       }
 
       if thread.value == 0

@@ -71,7 +71,7 @@ module Wrappers
       matrix = vrp.matrix(matrix_indices, vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier)
 
       result = run_vroom(vehicle_have_start, vehicle_have_end, matrix, @vroom_exec_count) { |avancement, total|
-        block.call(avancement, total) if block
+        block.call(avancement, total, nil) if block
       }
       return if !result
 

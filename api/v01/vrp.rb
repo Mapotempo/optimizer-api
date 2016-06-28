@@ -79,36 +79,41 @@ module Api
             job = Resque::Plugins::Status::Hash.get(id)
             if !job
               status 404
-            elsif job.killed? || job.failed?
-              status 202
-              {
-                job: {
-                  id: id,
-                  status: job.killed? ? :killed : :failed,
-                  avancement: job.message
-                }
-              }
-            elsif !job.completed?
-              status 201
-              {
-                job: {
-                  id: id,
-                  status: job.queued? ? :queued : job.working? ? :working : nil,
-                  retry: nil,
-                  avancement: job.message
-                }
-              }
             else
-              status 200
-              solution = OptimizerWrapper::Result.get(id)
-              {
-                solution: solution,
-                job: {
-                  id: id,
-                  status: :completed,
-                  avancement: job.message
+              solution = OptimizerWrapper::Result.get(id) || {}
+              if job.killed? || job.failed?
+                status 202
+                {
+                  job: {
+                    id: id,
+                    status: job.killed? ? :killed : :failed,
+                    avancement: job.message,
+                    graph: solution['graph']
+                  }
                 }
-              }
+              elsif !job.completed?
+                status 201
+                {
+                  job: {
+                    id: id,
+                    status: job.queued? ? :queued : job.working? ? :working : nil,
+                    retry: nil,
+                    avancement: job.message,
+                    graph: solution['graph']
+                  }
+                }
+              else
+                status 200
+                {
+                  solution: solution['result'],
+                  job: {
+                    id: id,
+                    status: :completed,
+                    avancement: job.message,
+                    graph: solution['graph']
+                  }
+                }
+              end
             end
           end
 

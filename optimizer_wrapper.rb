@@ -87,8 +87,8 @@ module OptimizerWrapper
       end
 
       cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
-        result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total|
-          block.call(avancement, total) if block
+        result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total, cost|
+          block.call(avancement, total, cost) if block
         }
 
         if result.class.name == 'Hash' # result.is_a?(Hash) not working
@@ -262,11 +262,18 @@ module OptimizerWrapper
       service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
       OptimizerWrapper.config[:services][service].job = self.uuid
 
-      result = OptimizerWrapper.solve(service, vrp) { |avancement, total|
-        at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : ''))
+      result = OptimizerWrapper.solve(service, vrp) { |avancement, total, cost|
+        at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
+        if avancement && cost
+          p = Result.get(self.uuid) || {'graph' => {}}
+          p['graph'][avancement.to_s] = cost
+          Result.set(self.uuid, p)
+        end
       }
 
-      Result.set(self.uuid, result)
+      p = Result.get(self.uuid) || {}
+      p['result'] = result
+      Result.set(self.uuid, p)
     end
   end
 
@@ -281,7 +288,6 @@ module OptimizerWrapper
     def self.get(key)
       result = OptimizerWrapper::REDIS.get(key)
       if result
-        OptimizerWrapper::REDIS.set(key, nil)
         JSON.parse(result)
       end
     end
