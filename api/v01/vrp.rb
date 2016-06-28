@@ -120,8 +120,13 @@ module Api
             requires :id, type: String, desc: 'Job id returned by create VRP problem.'
           }
           delete ':id' do
-            status 204
-            Resque::Plugins::Status::Hash.kill(params[:id])
+            job = Resque::Plugins::Status::Hash.get(params[:id])
+            if !job
+              status 404
+            else
+              Resque::Plugins::Status::Hash.kill(params[:id])
+              status 204
+            end
           end
         end
       end
