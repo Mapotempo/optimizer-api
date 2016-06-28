@@ -12,6 +12,7 @@ GEM
       minitest (~> 5.1)
       thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
+    ai4r (1.13)
     ansi (1.5.0)
     axiom-types (0.1.1)
       descendants_tracker (~> 0.0.4)
@@ -103,6 +104,7 @@ GEM
       mime-types (>= 1.16, < 3.0)
       netrc (~> 0.7)
     ruby-progressbar (1.8.0)
+    sim_annealing (0.0.2)
     simplecov (0.11.2)
       docile (~> 1.1.0)
       json (~> 1.8)
@@ -137,6 +139,7 @@ PLATFORMS
 DEPENDENCIES
   active_hash
   activemodel
+  ai4r
   grape
   grape-entity
   grape-swagger (< 0.20)
@@ -155,6 +158,7 @@ DEPENDENCIES
   resque
   resque-status
   rest-client
+  sim_annealing
   simplecov
   thin
 

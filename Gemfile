@@ -22,6 +22,9 @@ gem 'nokogiri'
 gem 'resque'
 gem 'resque-status'
 
+gem 'ai4r'
+gem 'sim_annealing'
+
 group :test do
   gem 'rack-test'
   gem 'minitest'

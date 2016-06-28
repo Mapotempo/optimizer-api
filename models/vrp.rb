@@ -66,7 +66,7 @@ module Models
     end
 
     def services=(vs)
-      self.attributes[:services] = !vs ? [] : vs.collect{ |service| Service.create(service) }
+      self.attributes[:services] = !vs ? [] : vs.collect{ |service| service.is_a?(Service) ? service : Service.create(service) }
     end
 
     def services
