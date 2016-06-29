@@ -380,6 +380,20 @@ $(document).ready(function() {
     }
   };
 
+  var displayGraph = function(data) {
+    $('#result-graph').show();
+    var values = data ? $.map(data, function(v, k) { return {x: k, y: v}; }) : [];
+    if (values && values.length > 0) {
+      var ctx = document.getElementById('result-graph').getContext('2d');
+      new Chart(ctx).Scatter([{
+        label: 'Iterations/Cost',
+        data: values
+      }], {
+        bezierCurve: false
+      });
+    }
+  };
+
   var lastSolution = null;
   var callOptimization = function(vrp, callback) {
     lastSolution = null;
@@ -429,10 +443,16 @@ $(document).ready(function() {
                 else if (job.job.status == 'working') {
                   if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
                   if (job.solution) lastSolution = job.solution;
+                  if (job.job.graph) {
+                    displayGraph(job.job.graph);
+                  }
                 }
                 else if (job.job.status == 'completed') {
                   delay = 0;
                   if (debug) console.log('Job completed: ' + JSON.stringify(job));
+                  if (job.job.graph) {
+                    displayGraph(job.job.graph);
+                  }
                   callback(job.solution);
                 }
                 else if (job.job.status == 'failed' || job.job.status == 'killed') {
@@ -661,6 +681,7 @@ $(document).ready(function() {
       window.optimInterval = setInterval(displayTimer, 1000);
       $('#infos').html('');
       $('#result').html('');
+      $('#result-graph').hide();
       $('#file-customers').parse({
         config: configParse,
         before: beforeFn

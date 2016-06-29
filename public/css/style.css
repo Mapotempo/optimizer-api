@@ -42,3 +42,18 @@ input[type=text] {
 #documentation li {
   margin: 5px;
 }
+
+#result-graph {
+  float: right;
+  width: 300px;
+  height: 200px;
+  margin-left: 10px;
+  margin-top: 10px;
+}
+
+#result {
+  width: calc(100% - 320px);
+  height: 600px;
+  margin-top: 5px;
+  min-width: 300px;
+}
