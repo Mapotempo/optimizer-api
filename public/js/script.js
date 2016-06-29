@@ -380,7 +380,9 @@ $(document).ready(function() {
     }
   };
 
+  var lastSolution = null;
   var callOptimization = function(vrp, callback) {
+    lastSolution = null;
     $.ajax({
       type: 'post',
       contentType: 'application/json',
@@ -393,6 +395,25 @@ $(document).ready(function() {
         var nbInterval = 0;
         var nbError = 0;
         var checkResponse = function() {
+          if (!interval) {
+            $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">Arrêter l\'optimisation</button>');
+            $('#optim-kill').click(function(e) {
+              $.ajax({
+                type: 'delete',
+                url: '/0.1/vrp/job/' + $('#optim-job-uid').val() + '.json?api_key=' + $('#api-key').val()
+              }).done(function(result) {
+                clearInterval(window.optimInterval);
+                $('#optim-infos').html('');
+                if (lastSolution) {
+                  displaySolution(lastSolution);
+                }
+              }).fail(function(jqXHR, textStatus) {
+                alert(textStatus);
+              });
+              e.preventDefault();
+              return false;
+            });
+          }
           clearInterval(interval);
           if (delay) {
             $.ajax({
@@ -407,6 +428,7 @@ $(document).ready(function() {
                 }
                 else if (job.job.status == 'working') {
                   if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
+                  if (job.solution) lastSolution = job.solution;
                 }
                 else if (job.job.status == 'completed') {
                   delay = 0;
@@ -579,6 +601,16 @@ $(document).ready(function() {
     });
   };
 
+  var displaySolution = function(solution) {
+    $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
+    // if (result) {
+      csv = createCSV(solution);
+      $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
+      $('#result').html(csv);
+    // }
+    initForm();
+  };
+
   var configParse = {
     delimiter: "",  // auto-detect
     newline: "",  // auto-detect
@@ -597,15 +629,7 @@ $(document).ready(function() {
         var vrp = buildVRP();
         if (vrp) {
           if (debug) { console.log("Input json for optim: ", vrp); console.log(JSON.stringify(vrp)); }
-          callOptimization(vrp, function(solution) {
-            $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
-            if (result) {
-              csv = createCSV(solution);
-              $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
-              $('#result').html(csv);
-            }
-            initForm();
-          });
+          callOptimization(vrp, displaySolution);
         }
       }
       catch(e) {
@@ -623,7 +647,7 @@ $(document).ready(function() {
     data[inputElem.id.replace('file-', '')] = [];
   };
 
-  $('#send-files').click(function() {
+  $('#send-files').click(function(e) {
     var filesCustomers = $('#file-customers')[0].files;
     var filesVehicles = $('#file-vehicles')[0].files;
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
@@ -649,6 +673,7 @@ $(document).ready(function() {
     else {
       alert(i18n.missingFile);
     }
+    e.preventDefault();
     return false;
   });
 });
