@@ -109,7 +109,7 @@ module OptimizerWrapper
   private
 
   def self.parse_result(vrp, result)
-    (result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+)) if result[:total_time]
+    result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+) if result[:routes].all?{ |r| r[:end_time] && r[:start_time] }
     result[:total_distance] = result[:routes].collect{ |r|
       previous = nil
       r[:activities].collect{ |a|
@@ -126,7 +126,7 @@ module OptimizerWrapper
         previous = item
         sum
       }
-    }.reduce(:+)
+    }.reduce(:+) if vrp.matrix_distance
     result
   end
 
@@ -139,6 +139,8 @@ module OptimizerWrapper
     if vrp.shipments.size == 0 && cluster_threshold
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
+    else
+      result
     end
   end
 
