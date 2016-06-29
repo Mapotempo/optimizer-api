@@ -71,7 +71,7 @@ module OptimizerWrapper
       }
     else
       if (vrp.matrix_time.nil? && vrp.need_matrix_time?) || (vrp.matrix_distance.nil? && vrp.need_matrix_distance?)
-        block.call(nil, [vrp.need_matrix_time?, vrp.need_matrix_distance?].count{ |m| m }.to_s, "compute matrix") if block
+        block.call(nil, [vrp.need_matrix_time?, vrp.need_matrix_distance?].count{ |m| m }.to_s, 'compute matrix') if block
         mode = vrp.vehicles[0].router_mode.to_sym || :car
         d = [:time, :distance]
         dimensions = [d.delete(vrp.vehicles[0].router_dimension.to_sym)]
@@ -88,7 +88,7 @@ module OptimizerWrapper
 
       cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
         result = OptimizerWrapper.config[:services][service].solve(vrp) { |avancement, total, cost, solution|
-          block.call(avancement, total, cost, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
+          block.call(avancement, total, 'solve iterations', cost, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
         }
 
         if result.class.name == 'Hash' # result.is_a?(Hash) not working
@@ -266,8 +266,8 @@ module OptimizerWrapper
       service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
       OptimizerWrapper.config[:services][service].job = self.uuid
 
-      result = OptimizerWrapper.solve(service, vrp) { |avancement, total, cost, solution|
-        at(avancement, total || 1, "solve iterations #{avancement}" + (total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
+      result = OptimizerWrapper.solve(service, vrp) { |avancement, total, message, cost, solution|
+        at(avancement, total || 1, message + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         if avancement && cost
           p = Result.get(self.uuid) || {'graph' => {}}
           p['graph'][avancement.to_s] = cost
