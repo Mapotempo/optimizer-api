@@ -55,7 +55,10 @@ module Api
               elsif ret.is_a?(Hash)
                 status 200
                 {
-                  solution: ret
+                  solution: ret,
+                  job: {
+                    status: :completed,
+                  }
                 }
               else
                 error!('500 Internal Server Error', 500)
