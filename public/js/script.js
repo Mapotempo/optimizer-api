@@ -60,6 +60,8 @@ $(document).ready(function() {
     failureOptim: function(attempts, error) {
       return 'Impossible de maintenir la connexion avec le service d\'optimisation (' + attempts + ' tentatives) : ' + error;
     },
+    killOptim: 'Arrêter l\'optimisation',
+    displaySolution: 'Afficher la solution intermédiaire',
     downloadCSV: 'Télécharger le fichier CSV',
     reference: 'référence',
     route: 'tournée',
@@ -410,7 +412,7 @@ $(document).ready(function() {
         var nbError = 0;
         var checkResponse = function() {
           if (!interval) {
-            $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">Arrêter l\'optimisation</button>');
+            $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
             $('#optim-kill').click(function(e) {
               $.ajax({
                 type: 'delete',
@@ -419,7 +421,7 @@ $(document).ready(function() {
                 clearInterval(window.optimInterval);
                 $('#optim-infos').html('');
                 if (lastSolution) {
-                  displaySolution(lastSolution);
+                  displaySolution(lastSolution, {initForm: true});
                 }
               }).fail(function(jqXHR, textStatus) {
                 alert(textStatus);
@@ -442,7 +444,16 @@ $(document).ready(function() {
                 }
                 else if (job.job.status == 'working') {
                   if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
-                  if (job.solution) lastSolution = job.solution;
+                  if (job.solution) {
+                    if (!lastSolution)
+                      $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
+                    lastSolution = job.solution;
+                    $('#display-solution').click(function(e) {
+                      displaySolution(lastSolution);
+                      e.preventDefault();
+                      return false;
+                    });
+                  }
                   if (job.job.graph) {
                     displayGraph(job.job.graph);
                   }
@@ -621,14 +632,15 @@ $(document).ready(function() {
     });
   };
 
-  var displaySolution = function(solution) {
+  var displaySolution = function(solution, options) {
     $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
     // if (result) {
       csv = createCSV(solution);
       $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
       $('#result').html(csv);
     // }
-    initForm();
+    if (options && options.initForm)
+      initForm();
   };
 
   var configParse = {
@@ -649,7 +661,9 @@ $(document).ready(function() {
         var vrp = buildVRP();
         if (vrp) {
           if (debug) { console.log("Input json for optim: ", vrp); console.log(JSON.stringify(vrp)); }
-          callOptimization(vrp, displaySolution);
+          callOptimization(vrp, function(solution) {
+            displaySolution(solution, {initForm: true})
+          });
         }
       }
       catch(e) {
