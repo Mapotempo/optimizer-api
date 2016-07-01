@@ -21,6 +21,20 @@ input[type=text] {
   padding-right: 3px;
 }
 
+fieldset {
+  border: #E8E8E8 1px solid;
+}
+
+fieldset div {
+  margin: 5px;
+  margin-right: 10px;
+  display: inline-block;
+}
+
+#optim-options input {
+  width: 8em;
+}
+
 #doc-link {
   float: right;
   margin: 5px;

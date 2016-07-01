@@ -23,13 +23,15 @@ $(document).ready(function() {
   var i18n = {
     title: 'Optimisez vos fichiers CSV',
     form: {
-      'api-key-label': 'Votre clé d\'api :',
-      'file-customers-label': 'Votre fichier clients csv :',
-      'file-vehicles-label': 'Votre fichier véhicules csv :',
-      'optim-duration-label': 'Durée maximale de l\'optimisation :',
-      'optim-iterations-label': 'Nombre d\'itérations de l\'optimisation :',
+      'api-key-label': 'Votre clé d\'api :',
+      'file-customers-label': 'Votre fichier clients csv :',
+      'file-vehicles-label': 'Votre fichier véhicules csv :',
+      'optim-options-legend': 'Options de l\'optimisation :',
+      'optim-duration-label': 'Durée maximale :',
+      'optim-iterations-label': 'Nombre maximum d\'itérations :',
+      'optim-iterations-without-improvment-label': 'Itérations sans amélioration (arrêt automatique) :',
       'send-files': 'Envoyer',
-      'result-label': 'Résultat de votre optimisation :'
+      'result-label': 'Résultat de votre optimisation :'
     },
     customers: 'clients',
     vehicles: 'véhicules',
@@ -221,6 +223,7 @@ $(document).ready(function() {
         preprocessing_prefer_short_segment: true,
         duration: duration($('#optim-duration').val()) * 1000 || 1000,
         iterations: $('#optim-iterations').val() || undefined,
+        iterations_without_improvment: $('#optim-iterations-without-improvment').val() || undefined
       }};
 
       // points
