@@ -27,27 +27,27 @@ module Models
     validates_numericality_of :duration
     validates_numericality_of :setup_duration
 
-#    belongs_to :point, class_name: 'Models::Point'
-#    has_many :timewindows, class_name: 'Models::Timewindow'
+    belongs_to :point, class_name: 'Models::Point'
+    has_many :timewindows, class_name: 'Models::Timewindow'
 
     def timewindows=(vs)
-      @timewindows = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
+      self[:timewindows] = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
     end
 
     def timewindows
-      @timewindows || []
+      self[:timewindows] || []
     end
 
     def point_id=(point_id)
-      @point = Point.find point_id
+      self[:point] = Point.find point_id
     end
 
     def point
-      @point #||= Point.create
+      self[:point]
     end
 
     def point_id
-      @point && @point.id
+      self[:point] && self[:point].id
     end
   end
 end

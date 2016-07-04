@@ -27,32 +27,32 @@ module Models
 
     field :skills, default: []
 
-    # belongs_to :pickup, class_name: 'Models::Activity'
-    # belongs_to :delivery, class_name: 'Models::Activity'
-    # has_many :quantities, class_name: 'Models::ServiceQuantity'
+    belongs_to :pickup, class_name: 'Models::Activity'
+    belongs_to :delivery, class_name: 'Models::Activity'
+    has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     def quantities=(vs)
-      @quantities = vs && vs.collect{ |quantity| ServiceQuantity.create(quantity) }
+      self[:quantities] = vs && vs.collect{ |quantity| ServiceQuantity.create(quantity) }
     end
 
     def quantities
-      @quantities || []
+      self[:quantities] || []
     end
 
     def pickup=(activity)
-      @pickup = Activity.create(activity)
+      self[:pickup] = Activity.create(activity)
     end
 
     def pickup
-      @pickup ||= Activity.create
+      self[:pickup] ||= Activity.create
     end
 
     def delivery=(activity)
-      @delivery = Activity.create(activity)
+      self[:delivery] = Activity.create(activity)
     end
 
     def delivery
-      @delivery ||= Activity.create
+      self[:delivery] ||= Activity.create
     end
   end
 end

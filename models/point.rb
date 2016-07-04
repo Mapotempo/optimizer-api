@@ -28,11 +28,11 @@ module Models
     belongs_to :vehicle_end, class_name: 'Models::Vehicle', inverse_of: :end_point
 
     def location=(location)
-      @location = Location.create(location)
+      self[:location] = Location.create(location)
     end
 
     def location
-      @location ||= Location.create
+      self[:location] ||= Location.create
     end
 
     def self.find_by_vehicle_id(*params)

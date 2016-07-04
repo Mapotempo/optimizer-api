@@ -27,23 +27,23 @@ module Models
 
     field :skills, default: []
 
-#    belongs_to :activity, class_name: 'Models::Activity'
-#    has_many :quantities, class_name: 'Models::ServiceQuantity'
+    belongs_to :activity, class_name: 'Models::Activity'
+    has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     def activity=(activity)
-      @activity = Activity.create(activity)
+      self[:activity] = Activity.create(activity)
     end
 
     def activity
-      @activity ||= Activity.create
+      self[:activity] ||= Activity.create
     end
 
     def quantities=(vs)
-      @quantities = vs && vs.collect{ |quantity| ServiceQuantity.create(quantity) }
+      self[:quantities] = vs && vs.collect{ |quantity| ServiceQuantity.create(quantity) }
     end
 
     def quantities
-      @quantities || []
+      self[:quantities] || []
     end
   end
 end

@@ -43,58 +43,66 @@ module Models
     validates_numericality_of :speed_multiplier
     field :skills, default: []
 
-#    belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
-#    belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
-#    has_many :quantities, class_name: 'Models::VehicleQuantity'
-#    has_many :timewindows, class_name: 'Models::Timewindow'
-#    has_many :rests, class_name: 'Models::Rest'
+    belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
+    belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
+    has_many :quantities, class_name: 'Models::VehicleQuantity'
+    has_many :timewindows, class_name: 'Models::Timewindow'
+    has_many :rests, class_name: 'Models::Rest'
 
     def start_point_id=(start_point_id)
-      @start_point = Point.find start_point_id
-    end
-
-    def start_point
-      @start_point #||= start_point.create
+      self[:start_point] = Point.find(start_point_id)
     end
 
     def start_point_id
-      @start_point && @start_point.id
+      self[:start_point] && self[:start_point].id
+    end
+
+    def start_point=(start_point)
+      self[:start_point] = start_point && Point.create(start_point)
+    end
+
+    def start_point
+      self[:start_point]
     end
 
     def end_point_id=(end_point_id)
-      @end_point = Point.find end_point_id
-    end
-
-    def end_point
-      @end_point #||= end_point.create
+      self[:end_point] = Point.find(end_point_id)
     end
 
     def end_point_id
-      @end_point && @end_point.id
+      self[:end_point] && self[:end_point].id
+    end
+
+    def end_point=(end_point)
+      self[:end_point] = end_point && Point.create(end_point)
+    end
+
+    def end_point
+      self[:end_point]
     end
 
     def rests=(vs)
-      @rests = vs && vs.collect{ |rest_id| Rest.find rest_id }
+      self[:rests] = vs && vs.collect{ |rest_id| Rest.find rest_id }
     end
 
     def rests
-      @rests || []
+      self[:rests] || []
     end
 
     def quantities=(vs)
-      @quantities = vs && vs.collect{ |quantity| VehicleQuantity.create(quantity) }
+      self[:quantities] = vs && vs.collect{ |quantity| VehicleQuantity.create(quantity) }
     end
 
     def quantities
-      @quantities || []
+      self[:quantities] || []
     end
 
     def timewindows=(vs)
-      @timewindows = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
+      self[:timewindows] = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
     end
 
     def timewindows
-      @timewindows || []
+      self[:timewindows] || []
     end
   end
 end
