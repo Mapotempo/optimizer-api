@@ -40,7 +40,7 @@ module Models
     has_many :services, class_name: 'Models::Service'
     has_many :shipments, class_name: 'Models::Shipment'
     has_many :rests, class_name: 'Models::Rest'
-    has_many :vehicles, class_name: 'Models::Vehicle', inverse_of: :vrp
+    has_many :vehicles, class_name: 'Models::Vehicle'
     has_many :units, class_name: 'Models::Units'
 
     def initialize(hash)

@@ -49,10 +49,6 @@ module Models
 #    has_many :timewindows, class_name: 'Models::Timewindow'
 #    has_many :rests, class_name: 'Models::Rest'
 
-    def vrp
-      self.attributes[:vrp]
-    end
-
     def start_point_id=(start_point_id)
       @start_point = Point.find start_point_id
     end
