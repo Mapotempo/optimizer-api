@@ -32,7 +32,7 @@ module Models
     # has_many :quantities, class_name: 'Models::ServiceQuantity'
 
     def quantities=(vs)
-      @quantities = !vs ? [] :vs.collect{ |quantity| ServiceQuantity.create(quantity) }
+      @quantities = vs && vs.collect{ |quantity| ServiceQuantity.create(quantity) }
     end
 
     def quantities

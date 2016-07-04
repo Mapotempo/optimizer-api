@@ -129,7 +129,7 @@ module Wrappers
 
     def assert_vroom_not_start_and_end(vrp)
       vehicle = vrp.vehicles.first
-      vehicle.start_point == vehicle.end_point || !(vehicle.start_point && vehicle.end_point)
+      !vehicle || (vehicle.start_point == vehicle.end_point || !(vehicle.start_point && vehicle.end_point))
     end
 
     def run_vroom(have_start, have_end, matrix, count = 1)

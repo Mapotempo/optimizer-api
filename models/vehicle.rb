@@ -74,7 +74,7 @@ module Models
     end
 
     def rests=(vs)
-      @rests = !vs ? [] : vs.collect{ |rest_id| Rest.find rest_id }
+      @rests = vs && vs.collect{ |rest_id| Rest.find rest_id }
     end
 
     def rests
@@ -82,7 +82,7 @@ module Models
     end
 
     def quantities=(vs)
-      @quantities = !vs ? [] :vs.collect{ |quantity| VehicleQuantity.create(quantity) }
+      @quantities = vs && vs.collect{ |quantity| VehicleQuantity.create(quantity) }
     end
 
     def quantities
@@ -90,7 +90,7 @@ module Models
     end
 
     def timewindows=(vs)
-      @timewindows = !vs ? [] :vs.collect{ |timewindow| Timewindow.create(timewindow) }
+      @timewindows = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
     end
 
     def timewindows

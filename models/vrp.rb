@@ -68,7 +68,7 @@ module Models
     end
 
     def points=(vs)
-      self.attributes[:points] = !vs ? [] : vs.collect{ |point| Point.create(point) }
+      self.attributes[:points] = vs && vs.collect{ |point| Point.create(point) }
     end
 
     def points
@@ -76,7 +76,7 @@ module Models
     end
 
     def services=(vs)
-      self.attributes[:services] = !vs ? [] : vs.collect{ |service| service.is_a?(Service) ? service : Service.create(service) }
+      self.attributes[:services] = vs && vs.collect{ |service| service.is_a?(Service) ? service : Service.create(service) }
     end
 
     def services
@@ -84,7 +84,7 @@ module Models
     end
 
     def shipments=(vs)
-      self.attributes[:shipments] = !vs ? [] : vs.collect{ |shipment| Shipment.create(shipment) }
+      self.attributes[:shipments] = vs && vs.collect{ |shipment| Shipment.create(shipment) }
     end
 
     def shipments
@@ -92,7 +92,7 @@ module Models
     end
 
     def rests=(vs)
-      self.attributes[:rests] = !vs ? [] : vs.collect{ |rest| Rest.create(rest) }
+      self.attributes[:rests] = vs && vs.collect{ |rest| Rest.create(rest) }
     end
 
     def rests
@@ -100,15 +100,15 @@ module Models
     end
 
     def vehicles=(vs)
-     self.attributes[:vehicles] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle) }
+      self.attributes[:vehicles] = vs && vs.collect{ |vehicle| Vehicle.create(vehicle) }
     end
 
     def vehicles
-      self.attributes[:vehicles] #|| []
+      self.attributes[:vehicles] || []
     end
 
     def units=(vs)
-     self.attributes[:units] = !vs ? [] : vs.collect{ |vehicle| Vehicle.create(vehicle) }
+     self.attributes[:units] = vs & vs.collect{ |vehicle| Vehicle.create(vehicle) }
     end
 
     def units

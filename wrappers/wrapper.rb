@@ -42,7 +42,11 @@ module Wrappers
     end
 
     def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size <= 1
+      vrp.vehicles.size == 1
+    end
+
+    def assert_vehicles_at_least_one(vrp)
+      vrp.vehicles.size >= 1
     end
 
     def assert_vehicles_start(vrp)
