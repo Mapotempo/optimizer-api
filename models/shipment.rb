@@ -31,14 +31,6 @@ module Models
     belongs_to :delivery, class_name: 'Models::Activity'
     has_many :quantities, class_name: 'Models::ServiceQuantity'
 
-    def quantities=(vs)
-      self[:quantities] = vs && vs.collect{ |quantity| ServiceQuantity.create(quantity) }
-    end
-
-    def quantities
-      self[:quantities] || []
-    end
-
     def pickup=(activity)
       self[:pickup] = Activity.create(activity)
     end

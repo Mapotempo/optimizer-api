@@ -28,13 +28,5 @@ module Models
     validates_numericality_of :exclusion_cost
 
     has_many :timewindows, class_name: 'Models::Timewindow'
-
-    def timewindows=(vs)
-      self[:timewindows] = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
-    end
-
-    def timewindows
-      self[:timewindows] || []
-    end
   end
 end

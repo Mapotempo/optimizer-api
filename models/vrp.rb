@@ -43,15 +43,6 @@ module Models
     has_many :vehicles, class_name: 'Models::Vehicle'
     has_many :units, class_name: 'Models::Units'
 
-    def initialize(hash)
-      super(hash)
-#      hash[:points] && hash[:points].each{ |point| self.points << Point.create(point) }
-#      hash[:services] && hash[:services].each{ |service| self.services << Service.create(service) }
-#      hash[:shipments] && hash[:shipments].each{ |shipment| self.shipment << Shipment.create(shipment) }
-#      hash[:rests] && hash[:rests].each{ |rest| self.rests << Rest.create(rest) }
-#      hash[:vehicles] && hash[:vehicles].each{ |vehicle| self.vehicles << Vehicle.create(vehicle) }
-    end
-
     def matrices=(matrices)
       self.matrix_time = matrices[:time]
       self.matrix_distance = matrices[:distance]
@@ -65,54 +56,6 @@ module Models
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
       self.preprocessing_cluster_threshold = resolution[:preprocessing_cluster_threshold]
       self.preprocessing_prefer_short_segment = resolution[:preprocessing_prefer_short_segment]
-    end
-
-    def points=(vs)
-      self[:points] = vs && vs.collect{ |point| Point.create(point) }
-    end
-
-    def points
-      self[:points] || []
-    end
-
-    def services=(vs)
-      self[:services] = vs && vs.collect{ |service| service.is_a?(Service) ? service : Service.create(service) }
-    end
-
-    def services
-      self[:services] || []
-    end
-
-    def shipments=(vs)
-      self[:shipments] = vs && vs.collect{ |shipment| Shipment.create(shipment) }
-    end
-
-    def shipments
-      self[:shipments] || []
-    end
-
-    def rests=(vs)
-      self[:rests] = vs && vs.collect{ |rest| Rest.create(rest) }
-    end
-
-    def rests
-      self[:rests] || []
-    end
-
-    def vehicles=(vs)
-      self[:vehicles] = vs && vs.collect{ |vehicle| Vehicle.create(vehicle) }
-    end
-
-    def vehicles
-      self[:vehicles] || []
-    end
-
-    def units=(vs)
-     self[:units] = vs & vs.collect{ |vehicle| Vehicle.create(vehicle) }
-    end
-
-    def units
-      self[:units] || []
     end
 
     def need_matrix_time?

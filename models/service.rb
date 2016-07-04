@@ -37,13 +37,5 @@ module Models
     def activity
       self[:activity] ||= Activity.create
     end
-
-    def quantities=(vs)
-      self[:quantities] = vs && vs.collect{ |quantity| ServiceQuantity.create(quantity) }
-    end
-
-    def quantities
-      self[:quantities] || []
-    end
   end
 end

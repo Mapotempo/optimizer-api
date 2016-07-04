@@ -84,25 +84,5 @@ module Models
     def rests=(vs)
       self[:rests] = vs && vs.collect{ |rest_id| Rest.find rest_id }
     end
-
-    def rests
-      self[:rests] || []
-    end
-
-    def quantities=(vs)
-      self[:quantities] = vs && vs.collect{ |quantity| VehicleQuantity.create(quantity) }
-    end
-
-    def quantities
-      self[:quantities] || []
-    end
-
-    def timewindows=(vs)
-      self[:timewindows] = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
-    end
-
-    def timewindows
-      self[:timewindows] || []
-    end
   end
 end

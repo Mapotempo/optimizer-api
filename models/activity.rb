@@ -30,14 +30,6 @@ module Models
     belongs_to :point, class_name: 'Models::Point'
     has_many :timewindows, class_name: 'Models::Timewindow'
 
-    def timewindows=(vs)
-      self[:timewindows] = vs && vs.collect{ |timewindow| Timewindow.create(timewindow) }
-    end
-
-    def timewindows
-      self[:timewindows] || []
-    end
-
     def point_id=(point_id)
       self[:point] = Point.find point_id
     end

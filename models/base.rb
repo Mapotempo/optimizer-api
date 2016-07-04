@@ -36,5 +36,32 @@ module Models
         memo
       })
     end
+
+    def self.has_many(name, options = {})
+      super(name, options)
+
+      define_method(name) do
+        self[name] || []
+      end
+
+      define_method("#{name}=") do |vals|
+        self[name] = (vals && vals.collect{ |val|
+          c = class_from_string(options[:class_name])
+          if val.is_a?(c)
+            val
+          else
+            c.create(val)
+          end
+        }) || []
+      end
+    end
+
+    private
+
+    def class_from_string(str)
+      str.split('::').inject(Object) do |mod, class_name|
+        mod.const_get(class_name)
+      end
+    end
   end
 end
