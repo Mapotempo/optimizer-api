@@ -48,9 +48,5 @@ module Models
     has_many :quantities, class_name: 'Models::VehicleQuantity'
     has_many :timewindows, class_name: 'Models::Timewindow'
     has_many :rests, class_name: 'Models::Rest'
-
-    def rests=(vs)
-      self[:rests] = vs && vs.collect{ |rest_id| Rest.find rest_id }
-    end
   end
 end

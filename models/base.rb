@@ -54,6 +54,11 @@ module Models
           end
         }) || []
       end
+
+      define_method("#{name[0..-2]}_ids=") do |vals|
+        c = class_from_string(options[:class_name])
+        self[name] = vals && vals.collect{ |val_id| c.find(val_id) }.compact
+      end
     end
 
     def self.belongs_to(name, options = {})

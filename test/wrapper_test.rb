@@ -68,7 +68,7 @@ class WrapperTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
-        rests: ['rest_0']
+        rest_ids: ['rest_0']
       }],
       resolution: {
         duration: 10,
@@ -172,7 +172,7 @@ class WrapperTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
-        rests: ['rest_0']
+        rest_ids: ['rest_0']
       }],
       resolution: {
         duration: 10,
@@ -430,7 +430,7 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_' + (size - 1).to_s,
-        rests: ['rest_0']
+        rest_ids: ['rest_0']
       }],
       resolution: {
         duration: 10,
