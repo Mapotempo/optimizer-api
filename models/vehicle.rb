@@ -49,38 +49,6 @@ module Models
     has_many :timewindows, class_name: 'Models::Timewindow'
     has_many :rests, class_name: 'Models::Rest'
 
-    def start_point_id=(start_point_id)
-      self[:start_point] = Point.find(start_point_id)
-    end
-
-    def start_point_id
-      self[:start_point] && self[:start_point].id
-    end
-
-    def start_point=(start_point)
-      self[:start_point] = start_point && Point.create(start_point)
-    end
-
-    def start_point
-      self[:start_point]
-    end
-
-    def end_point_id=(end_point_id)
-      self[:end_point] = Point.find(end_point_id)
-    end
-
-    def end_point_id
-      self[:end_point] && self[:end_point].id
-    end
-
-    def end_point=(end_point)
-      self[:end_point] = end_point && Point.create(end_point)
-    end
-
-    def end_point
-      self[:end_point]
-    end
-
     def rests=(vs)
       self[:rests] = vs && vs.collect{ |rest_id| Rest.find rest_id }
     end

@@ -30,21 +30,5 @@ module Models
     belongs_to :pickup, class_name: 'Models::Activity'
     belongs_to :delivery, class_name: 'Models::Activity'
     has_many :quantities, class_name: 'Models::ServiceQuantity'
-
-    def pickup=(activity)
-      self[:pickup] = Activity.create(activity)
-    end
-
-    def pickup
-      self[:pickup] ||= Activity.create
-    end
-
-    def delivery=(activity)
-      self[:delivery] = Activity.create(activity)
-    end
-
-    def delivery
-      self[:delivery] ||= Activity.create
-    end
   end
 end

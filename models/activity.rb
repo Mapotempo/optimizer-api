@@ -29,17 +29,5 @@ module Models
 
     belongs_to :point, class_name: 'Models::Point'
     has_many :timewindows, class_name: 'Models::Timewindow'
-
-    def point_id=(point_id)
-      self[:point] = Point.find point_id
-    end
-
-    def point
-      self[:point]
-    end
-
-    def point_id
-      self[:point] && self[:point].id
-    end
   end
 end

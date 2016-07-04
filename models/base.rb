@@ -38,7 +38,7 @@ module Models
     end
 
     def self.has_many(name, options = {})
-      super(name, options)
+      super
 
       define_method(name) do
         self[name] || []
@@ -53,6 +53,28 @@ module Models
             c.create(val)
           end
         }) || []
+      end
+    end
+
+    def self.belongs_to(name, options = {})
+      super
+
+      define_method(name) do
+        self[name]
+      end
+
+      define_method("#{name}=") do |val|
+        c = class_from_string(options[:class_name])
+        self[name] = val && c.create(val)
+      end
+
+      define_method("#{name}_id") do
+        self[name] && self[name].id
+      end
+
+      define_method("#{name}_id=") do |val_id|
+        c = class_from_string(options[:class_name])
+        self[name] = c.find(val_id)
       end
     end
 

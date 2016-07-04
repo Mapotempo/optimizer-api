@@ -29,13 +29,5 @@ module Models
 
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :quantities, class_name: 'Models::ServiceQuantity'
-
-    def activity=(activity)
-      self[:activity] = Activity.create(activity)
-    end
-
-    def activity
-      self[:activity] ||= Activity.create
-    end
   end
 end

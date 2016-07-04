@@ -26,14 +26,7 @@ module Models
 
     belongs_to :vehicle_start, class_name: 'Models::Vehicle', inverse_of: :start_point
     belongs_to :vehicle_end, class_name: 'Models::Vehicle', inverse_of: :end_point
-
-    def location=(location)
-      self[:location] = Location.create(location)
-    end
-
-    def location
-      self[:location] ||= Location.create
-    end
+    belongs_to :location, class_name: 'Models::Location'
 
     def self.find_by_vehicle_id(*params)
       find_by_vehicle_start_id(*params) || find_by_vehicle_end_id(*params)
