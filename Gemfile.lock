@@ -1,8 +1,13 @@
-GEM
-  remote: https://rubygems.org/
+GIT
+  remote: git://github.com/Mapotempo/active_hash.git
+  revision: 907de1c970c32bd8054724e095717045cfb04c88
   specs:
     active_hash (1.4.1)
       activesupport (>= 2.2.2)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
     activemodel (4.2.6)
       activesupport (= 4.2.6)
       builder (~> 3.1)
@@ -57,7 +62,7 @@ GEM
     json (1.8.3)
     mime-types (2.99.1)
     mini_portile2 (2.0.0)
-    minitest (5.8.4)
+    minitest (5.9.0)
     minitest-reporters (1.1.9)
       ansi
       builder
@@ -137,7 +142,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  active_hash
+  active_hash!
   activemodel
   ai4r
   grape
