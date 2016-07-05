@@ -220,7 +220,6 @@ $(document).ready(function() {
       if (debug) console.log('Build json from csv: ', data);
       var vrp = {points: [], shipments: [], vehicles: [], resolution: {
         preprocessing_cluster_threshold: 0,
-        preprocessing_prefer_short_segment: true,
         duration: duration($('#optim-duration').val()) * 1000 || 1000,
         iterations: $('#optim-iterations').val() || undefined,
         iterations_without_improvment: $('#optim-iterations-without-improvment').val() || undefined
