@@ -18,6 +18,7 @@
 require './wrappers/wrapper'
 
 require 'nokogiri'
+require 'thread'
 
 
 module Wrappers
@@ -25,6 +26,8 @@ module Wrappers
     def initialize(cache, hash = {})
       super(cache, hash)
       @exec_jsprit = hash[:exec_jsprit] || 'java -jar ../optimizer-jsprit/target/mapotempo-jsprit-0.0.1-SNAPSHOT-jar-with-dependencies.jar'
+
+      @semaphore = Mutex.new
     end
 
     def solver_constraints
@@ -83,6 +86,13 @@ module Wrappers
         m = /Exception: (.+)\n/.match(result) if result
         raise RuntimeError.new((m && m[1]) || 'Unexpected exception')
       end
+    end
+
+    def kill
+      @semaphore.synchronize {
+        Process.kill("KILL", @thread.pid)
+        @killed = true
+      }
     end
 
     private
@@ -278,6 +288,7 @@ module Wrappers
       output = Tempfile.new(['optimize-jsprit-output', '.xml'], tmpdir=@tmp_dir)
       output.close
 
+
       cmd = ["#{@exec_jsprit} ",
         "--algorithm '#{input_algorithm.path}'",
         input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '',
@@ -289,7 +300,10 @@ module Wrappers
         "--threads '#{threads}'",
         "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       puts cmd
-      stdin, stdout_and_stderr, thread = Open3.popen2e(cmd)
+      stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
+        Open3.popen2e(cmd) if !@killed
+      }
+      return if !@thread
 
       out = nil
       iterations = 0
@@ -312,11 +326,11 @@ module Wrappers
           r && (cost = Float(r[1]))
           r && (fresh_output = true)
         end
-        block.call(iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, services, shipments)) if block
+        block.call(self, iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, services, shipments)) if block
         fresh_output = nil
       }
 
-      if thread.value == 0
+      if @thread.value == 0
         parse_output(output.path, iterations, services, shipments)
       else
         out

@@ -75,7 +75,7 @@ module Wrappers
       end
 
       result = run_vroom(vehicle_have_start, vehicle_have_end, matrix, @vroom_exec_count) { |avancement, total|
-        block.call(avancement, total, nil, nil) if block
+        block.call(self, avancement, total, nil, nil) if block
       }
       return if !result
 

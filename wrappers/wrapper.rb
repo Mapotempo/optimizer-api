@@ -136,5 +136,8 @@ module Wrappers
     def solve_synchronous?(vrp)
       false
     end
+
+    def kill
+    end
   end
 end
