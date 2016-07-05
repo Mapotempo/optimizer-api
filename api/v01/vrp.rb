@@ -79,12 +79,13 @@ module Api
                 optional(:late_multiplier, type: Float)
                 optional(:exclusion_cost, type: Float)
                 optional(:skills, type: Array[String])
+                requires(:type, type: Symbol)
                 requires(:activity, type: Hash) do
                   Vrp.vrp_request_activity(self)
                 end
                 optional(:quantities, type: Array) do
                   requires(:id, type: String)
-                  requires(:values, type: Array[Float])
+                  requires(:value, type: Float)
                 end
               end
               optional(:shipments, type: Array) do
@@ -100,7 +101,7 @@ module Api
                 end
                 optional(:quantities, type: Array) do
                   requires(:id, type: String)
-                  requires(:values, type: Array[Float])
+                  requires(:value, type: Float)
                 end
               end
               at_least_one_of :services, :shipments
@@ -134,7 +135,8 @@ module Api
                 optional(:end_point_id, type: String)
                 optional(:quantities, type: Array) do
                   requires(:id, type: String)
-                  requires(:values, type: Array[Float])
+                  requires(:limit, type: Float)
+                  optional(:initial, type: Float)
                 end
                 optional(:timewindows, type: Array) do
                   Vrp.vrp_request_timewindow(self)

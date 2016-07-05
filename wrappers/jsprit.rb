@@ -147,6 +147,11 @@ module Wrappers
                     end
                   }
                 end
+                if(vehicle.quantities[0][:initial])
+                  xml.method_missing('initial-capacity') {
+                    xml.dimension (vehicle.quantities[0][:initial] * 1000).to_i, index: 0
+                  }
+                end
                 (xml.duration vehicle.duration) if vehicle.duration
               }
             end
@@ -155,12 +160,12 @@ module Wrappers
             vehicles.each do |vehicle|
               xml.type {
                 xml.id_ vehicle.id
-                xml.method_missing('capacity-dimensions') {
-                  # Jsprit accepts only integers
-                  (!vehicle.quantities.empty? ? vehicle.quantities[0][:values].map{ |v| (v * 1000).to_i } : [2**30]).each_with_index do |value, index|
-                    xml.dimension value, index: index
-                  end
-                }
+                if vehicle.quantities
+                  xml.method_missing('capacity-dimensions') {
+                    # Jsprit accepts only integers
+                    xml.dimension (vehicle.quantities[0][:limit] * 1000).to_i, index: 0
+                  }
+                end
                 xml.costs {
                   (xml.fixed vehicle.cost_fixed)
                   (xml.distance vehicle.cost_distance_multiplier)
@@ -173,7 +178,7 @@ module Wrappers
           if services.size > 0
             xml.services {
               services.each do |service|
-                xml.service(id: service.id, type: 'service') {
+                xml.service(id: service.id, type: service.type) {
                   xml.location {
                     xml.index service.activity.point.matrix_index
                   }
@@ -190,12 +195,13 @@ module Wrappers
                   (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration > 0
                   (xml.duration service.activity.duration) if service.activity.duration > 0
                   (xml.requiredSkills service.skills.join(",")) if service.skills.size > 0
-                  xml.method_missing('capacity-dimensions') {
-                    # Jsprit accepts only integers
-                    (!service.quantities.empty? ? service.quantities[0][:values].map{ |v| (v * 1000).to_i } : [1]).each_with_index do |value, index|
-                      xml.dimension value, index: index
-                    end
-                  }
+
+                  if service.quantities
+                    xml.method_missing('capacity-dimensions') {
+                      # Jsprit accepts only integers
+                      xml.dimension (service.quantities[0][:value] * 1000).to_i, index: 0
+                    }
+                  end
                 }
               end
             }
@@ -239,12 +245,13 @@ module Wrappers
                     (xml.duration shipment.delivery.duration) if shipment.delivery.duration > 0
                   }
                   (xml.requiredSkills shipment.skills.join(",")) if shipment.skills.size > 0
-                  xml.method_missing('capacity-dimensions') {
-                    # Jsprit accepts only integers
-                    (!shipment.quantities.empty? ? shipment.quantities[0][:values].map{ |v| (v * 1000).to_i } : [1]).each_with_index do |value, index|
-                      xml.dimension value, index: index
-                    end
-                  }
+
+                  if shipment.quantities
+                    xml.method_missing('capacity-dimensions') {
+                      # Jsprit accepts only integers
+                      xml.dimension (shipment.quantities[0][:value] * 1000).to_i, index: 0
+                    }
+                  end
                 }
               end
             }

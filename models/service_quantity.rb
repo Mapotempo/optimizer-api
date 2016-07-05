@@ -20,7 +20,8 @@ require './models/base'
 
 module Models
   class ServiceQuantity < Base
-    field :values
+    field :value
+    validates_numericality_of :value
 
     belongs_to :service, class_name: 'Models::Service'
   end

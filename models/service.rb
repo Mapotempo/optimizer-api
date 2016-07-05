@@ -24,6 +24,10 @@ module Models
     field :exclusion_cost, default: nil
     validates_numericality_of :late_multiplier, allow_nil: true
     validates_numericality_of :exclusion_cost, allow_nil: true
+    field :type, default: :service
+    validates_numericality_of :late_multiplier, allow_nil: true
+    validates_numericality_of :exclusion_cost, allow_nil: true
+    validates_inclusion_of :type, :in => %i(service pickup delivery)
 
     field :skills, default: []
 
