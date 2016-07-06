@@ -50,7 +50,7 @@ module Models
 
     def configuration=(configuration)
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
-      self.resolution = configuration[:resolustion] if configuration[:resolustion]
+      self.resolution = configuration[:resolution] if configuration[:resolution]
     end
 
     def resolution=(resolution)
