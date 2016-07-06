@@ -218,11 +218,15 @@ $(document).ready(function() {
   var buildVRP = function() {
     if (data.customers.length > 0 && data.vehicles.length > 0) {
       if (debug) console.log('Build json from csv: ', data);
-      var vrp = {points: [], shipments: [], vehicles: [], resolution: {
-        preprocessing_cluster_threshold: 0,
-        duration: duration($('#optim-duration').val()) * 1000 || 1000,
-        iterations: $('#optim-iterations').val() || undefined,
-        iterations_without_improvment: $('#optim-iterations-without-improvment').val() || undefined
+      var vrp = {points: [], shipments: [], vehicles: [], configuration: {
+        preprocessing: {
+          cluster_threshold: 0
+        },
+        resolution: {
+          duration: duration($('#optim-duration').val()) * 1000 || 1000,
+          iterations: parseInt($('#optim-iterations').val()) || undefined,
+          iterations_without_improvment: parseInt($('#optim-iterations-without-improvment').val()) || undefined
+        }
       }};
 
       // points
@@ -490,8 +494,8 @@ $(document).ready(function() {
         }
         checkResponse();
       },
-      error: function(xhr, status) {
-        alert(i18n.failureCallOptim(status));
+      error: function(xhr, status, message) {
+        alert(i18n.failureCallOptim(status + " " + message + " " + xhr.responseText));
         initForm();
       }
     });
