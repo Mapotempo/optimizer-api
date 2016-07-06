@@ -19,8 +19,12 @@ require 'grape'
 require 'grape-swagger'
 
 require './api/v01/api_base'
-require './api/v01/entities/vrp_request'
 require './api/v01/entities/vrp_result'
+require './api/v01/entities/vrp_request_point'
+require './api/v01/entities/vrp_request_service'
+require './api/v01/entities/vrp_request_shipment'
+require './api/v01/entities/vrp_request_rest'
+require './api/v01/entities/vrp_request_vehicle'
 
 module Api
   module V01
@@ -34,9 +38,36 @@ module Api
         resource :submit do
           desc 'Submit VRP problem', {
             nickname: 'vrp',
-            entity: VrpResult
+            success: VrpResult,
+            entity: [VrpResult, VrpRequestPoint, VrpRequestService, VrpRequestShipment, VrpRequestRest, VrpRequestVehicle]
           }
           params {
+            requires(:vrp, type: Hash) do
+              optional(:matrix_time, type: Array[Array[Float]])
+              optional(:matrix_distance, type: Array[Array[Float]])
+
+              optional(:points, type: VrpRequestPoint)
+              optional(:services, type: VrpRequestService)
+              optional(:shipments, type: VrpRequestShipment)
+              at_least_one_of :services, :shipments
+              optional(:rests, type: VrpRequestRest)
+              requires(:vehicles, type: VrpRequestVehicle)
+              optional(:units, type: Array[String])
+
+              optional(:configuration, type: Hash) do
+                optional(:preprocessing, type: Hash) do
+                  optional(:cluster_threshold, type: Float)
+                  optional(:prefer_short_segment, type: Boolean)
+                end
+                optional(:resolution, type: Hash) do
+                  optional(:duration, type: Float)
+                  optional(:iterations, type: Integer)
+                  optional(:iterations_without_improvment, type: Integer)
+                  optional(:stable_iterations, type: Integer)
+                  optional(:stable_coefficient, type: Float)
+                end
+              end
+            end
           }
           post do
             begin
@@ -72,6 +103,7 @@ module Api
         resource :job do
           desc 'Fetch vrp job status', {
             nickname: 'job',
+            success: VrpResult,
             entity: VrpResult
           }
           params {

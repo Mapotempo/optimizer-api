@@ -48,14 +48,22 @@ module Models
       self.matrix_distance = matrices[:distance]
     end
 
+    def configuration=(configuration)
+      self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
+      self.resolution = configuration[:resolustion] if configuration[:resolustion]
+    end
+
     def resolution=(resolution)
       self.resolution_duration = resolution[:duration]
       self.resolution_iterations = resolution[:iterations]
       self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
       self.resolution_stable_iterations = resolution[:stable_iterations]
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
-      self.preprocessing_cluster_threshold = resolution[:preprocessing_cluster_threshold]
-      self.preprocessing_prefer_short_segment = resolution[:preprocessing_prefer_short_segment]
+    end
+
+    def preprocessing=(preprocessing)
+      self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
+      self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
     end
 
     def need_matrix_time?
