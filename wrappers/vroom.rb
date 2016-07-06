@@ -71,7 +71,7 @@ module Wrappers
       matrix = vrp.matrix(matrix_indices, vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier)
 
       if vrp.preprocessing_prefer_short_segment
-        matrix = matrix.collect{ |a| a.collect{ |b| b + 20 * Math.sqrt(b) } }
+        matrix = matrix.collect{ |a| a.collect{ |b| (b + 20 * Math.sqrt(b)).round } }
       end
 
       result = run_vroom(vehicle_have_start, vehicle_have_end, matrix, @vroom_exec_count) { |avancement, total|
@@ -129,7 +129,10 @@ module Wrappers
 
     def assert_vroom_not_start_and_end(vrp)
       vehicle = vrp.vehicles.first
-      !vehicle || (vehicle.start_point == vehicle.end_point || !(vehicle.start_point && vehicle.end_point))
+      !vehicle ||
+        (vehicle.start_point && vehicle.start_point == vehicle.end_point) ||
+        (vehicle.start_point && !vehicle.end_point) ||
+        (!vehicle.start_point && vehicle.end_point)
     end
 
     def run_vroom(have_start, have_end, matrix, count = 1)
