@@ -102,6 +102,7 @@ $(document).ready(function() {
     delivery_setup: 'delivery_setup',
     skills: 'skills',
     quantity: 'quantity 1', // TODO: gérer les quantités multiples
+    initial_quantity: 'initial quantity 1',
     start_lat: 'start_lat',
     start_lon: 'start_lng',
     end_lat: 'end_lat',
@@ -123,10 +124,10 @@ $(document).ready(function() {
 
   $('#file-customers-help .column-name').append('<td class="required">' + mapping.reference + '</td>');
   $('#file-customers-help .column-value').append('<td class="required">ref</td>');
-  $('#file-customers-help .column-name').append('<td class="required">' + mapping.pickup_lat + '</td>');
-  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
-  $('#file-customers-help .column-name').append('<td class="required">' + mapping.pickup_lon + '</td>');
-  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.pickup_lat + '</td>');
+  $('#file-customers-help .column-value').append('<td>0.123</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.pickup_lon + '</td>');
+  $('#file-customers-help .column-value').append('<td>0.123</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.pickup_start + '</td>');
   $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.pickup_end + '</td>');
@@ -135,10 +136,10 @@ $(document).ready(function() {
   $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.pickup_setup + '</td>');
   $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
-  $('#file-customers-help .column-name').append('<td class="required">' + mapping.delivery_lat + '</td>');
-  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
-  $('#file-customers-help .column-name').append('<td class="required">' + mapping.delivery_lon + '</td>');
-  $('#file-customers-help .column-value').append('<td class="required">0.123</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.delivery_lat + '</td>');
+  $('#file-customers-help .column-value').append('<td>0.123</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.delivery_lon + '</td>');
+  $('#file-customers-help .column-value').append('<td>0.123</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.delivery_start + '</td>');
   $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.delivery_end + '</td>');
@@ -182,6 +183,8 @@ $(document).ready(function() {
   $('#file-vehicles-help .column-value').append('<td>HH:MM:SS</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.quantity + '</td>');
   $('#file-vehicles-help .column-value').append('<td>1.234</td>');
+  $('#file-vehicles-help .column-name').append('<td>' + mapping.initial_quantity + '</td>');
+  $('#file-vehicles-help .column-value').append('<td>1.234</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.skills + ' 1</td>');
   $('#file-vehicles-help .column-value').append('<td>"tag1,tag2"</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.skills + ' 2</td>');
@@ -218,7 +221,7 @@ $(document).ready(function() {
   var buildVRP = function() {
     if (data.customers.length > 0 && data.vehicles.length > 0) {
       if (debug) console.log('Build json from csv: ', data);
-      var vrp = {points: [], shipments: [], vehicles: [], configuration: {
+      var vrp = {points: [], shipments: [], services: [], vehicles: [], configuration: {
         preprocessing: {
           cluster_threshold: 0
         },
@@ -234,43 +237,45 @@ $(document).ready(function() {
       data.customers.forEach(function(customer) {
         if (!customer[mapping.reference || 'reference'])
           throw i18n.missingColumn(mapping.reference || 'reference');
-        else if (!customer[mapping.pickup_lat || 'pickup_lat'])
-          throw i18n.missingColumn(mapping.pickup_lat || 'pickup_lat');
-        else if (!customer[mapping.pickup_lon || 'pickup_lon'])
-          throw i18n.missingColumn(mapping.pickup_lon || 'pickup_lon');
-        else if (!customer[mapping.delivery_lat || 'delivery_lat'])
-          throw i18n.missingColumn(mapping.delivery_lat || 'delivery_lat');
-        else if (!customer[mapping.delivery_lon || 'delivery_lon'])
-          throw i18n.missingColumn(mapping.delivery_lon || 'delivery_lon');
+        else if(!customer[mapping.pickup_lat || 'pickup_lat'] && !customer[mapping.pickup_lon || 'pickup_lon'] && !customer[mapping.delivery_lat || 'delivery_lat'] && !customer[mapping.delivery_lon || 'delivery_lon'])
+          throw i18n.missingColumn('pickup/delivery coordinates');
+        else if (!customer[mapping.pickup_lat || 'pickup_lat'] ^ !customer[mapping.pickup_lon || 'pickup_lon'])
+          throw i18n.missingColumn('pickup coordinates');
+        else if (!customer[mapping.delivery_lat || 'delivery_lat'] ^ !customer[mapping.delivery_lon || 'delivery_lon'])
+          throw i18n.missingColumn('delivery coordinates');
 
         if (customers.indexOf(customer[mapping.reference || 'reference']) === -1)
           customers.push(customer[mapping.reference || 'reference']);
         else
           throw i18n.sameReference(customer[mapping.reference || 'reference']);
 
-        var refPickup = customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.');
-        if (points.indexOf(refPickup) === -1) {
-          points.push(refPickup);
-          vrp.points.push({
-            id: refPickup,
-            location: {
-              lat: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.'),
-              lon: customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.')
-            }
-          });
+        if(customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon']) {
+          var refPickup = customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.');
+          if (points.indexOf(refPickup) === -1) {
+            points.push(refPickup);
+            vrp.points.push({
+              id: refPickup,
+              location: {
+                lat: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.'),
+                lon: customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.')
+              }
+            });
+          }
         }
       });
       data.customers.forEach(function(customer) {
-        var refDelivery = customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.');
-        if (points.indexOf(refDelivery) === -1) {
-          points.push(refDelivery);
-          vrp.points.push({
-            id: refDelivery,
-            location: {
-              lat: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.'),
-              lon: customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.')
-            }
-          });
+        if(customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
+          var refDelivery = customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.');
+          if (points.indexOf(refDelivery) === -1) {
+            points.push(refDelivery);
+            vrp.points.push({
+              id: refDelivery,
+              location: {
+                lat: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.'),
+                lon: customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.')
+              }
+            });
+          }
         }
       });
       var router_modes = [];
@@ -319,37 +324,89 @@ $(document).ready(function() {
 
       // shipments
       data.customers.forEach(function(customer) {
-        vrp.shipments.push({
-          id: customer[mapping.reference || 'reference'],
-          pickup: {
-            point_id: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.'),
-            timewindows: [{
-              start: duration(customer[mapping.pickup_start || 'pickup_start']) || null,
-              end: duration(customer[mapping.pickup_end || 'pickup_end']) || null
+        if(customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon'] && customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
+          vrp.shipments.push({
+            id: customer[mapping.reference || 'reference'],
+            pickup: {
+              point_id: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.'),
+              timewindows: [{
+                start: duration(customer[mapping.pickup_start || 'pickup_start']) || null,
+                end: duration(customer[mapping.pickup_end || 'pickup_end']) || null
+              }],
+              setup_duration: duration(customer[mapping.pickup_setup || 'pickup_setup']) || null,
+              duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
+            },
+            delivery: {
+              point_id: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.'),
+              timewindows: [{
+                start: duration(customer[mapping.delivery_start || 'delivery_start']) || null,
+                end: duration(customer[mapping.delivery_end || 'delivery_end']) || null
+              }],
+              setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
+              duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
+            },
+            // TODO: gérer les quantités multiples
+            quantities: [{
+              id: 'unit',
+              values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
             }],
-            setup_duration: duration(customer[mapping.pickup_setup || 'pickup_setup']) || null,
-            duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
-          },
-          delivery: {
-            point_id: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.'),
-            timewindows: [{
-              start: duration(customer[mapping.delivery_start || 'delivery_start']) || null,
-              end: duration(customer[mapping.delivery_end || 'delivery_end']) || null
+            skills: $.map(customer, function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).join(',').split(',').filter(function(el) {
+              return el;
+            })
+          });
+          // Service : Pickup
+        } else if (customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon']) {
+          vrp.services.push({
+            id: customer[mapping.reference || 'reference'],
+            type: 'pickup',
+            activity: {
+              point_id: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.'),
+              timewindows: [{
+                start: duration(customer[mapping.pickup_start || 'pickup_start']) || null,
+                end: duration(customer[mapping.pickup_end || 'pickup_end']) || null
+              }],
+              setup_duration: duration(customer[mapping.pickup_setup || 'pickup_setup']) || null,
+              duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
+            },
+            // TODO: gérer les quantités multiples
+            quantities: [{
+              id: 'unit',
+              values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
             }],
-            setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
-            duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
-          },
-          // TODO: gérer les quantités multiples
-          quantities: [{
-            id: 'unit',
-            values: [(customer[mapping.quantity || 'quantity'] || '').replace(',', '.')]
-          }],
-          skills: $.map(customer, function(val, key) {
-            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
-          }).join(',').split(',').filter(function(el) {
-            return el;
-          })
-        });
+            skills: $.map(customer, function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).join(',').split(',').filter(function(el) {
+              return el;
+            })
+          });
+          // Service : Delivery
+        } else if (customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
+          vrp.services.push({
+            id: customer[mapping.reference || 'reference'],
+            type: 'delivery',
+            activity: {
+              point_id: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.'),
+              timewindows: [{
+                start: duration(customer[mapping.delivery_start || 'delivery_start']) || null,
+                end: duration(customer[mapping.delivery_end || 'delivery_end']) || null
+              }],
+              setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
+              duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
+            },
+            // TODO: gérer les quantités multiples
+            quantities: [{
+              id: 'unit',
+              values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
+            }],
+            skills: $.map(customer, function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).join(',').split(',').filter(function(el) {
+              return el;
+            })
+          });
+        }
       });
       data.vehicles.forEach(function(vehicle) {
         vrp.vehicles.push({
@@ -365,7 +422,12 @@ $(document).ready(function() {
           // TODO: gérer les quantités multiples
           quantities: [{
             id: 'unit',
-            values: [(vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.')]
+            values: [
+              parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
+            ],
+            inital_values: [
+              (vehicle[mapping.initial_quantity || 'initial_quantity'] ? parseInt((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.') * 1000) : null) // quantities are rounded for jsprit
+            ]
           }],
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
@@ -551,6 +613,36 @@ $(document).ready(function() {
               skills
             ]);
           }
+        } else if (activity.service_id) {
+            var customer_id = customers.indexOf(activity.service_id);
+            var ref = activity.service_id;
+            var lat = data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
+            var lon = data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
+            var d = (activity.ready_time - activity.arrival_time + (duration(data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0));
+            var start = data.customers[customer_id][mapping.pickup_start || 'pickup_start'] ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
+            var end = data.customers[customer_id][mapping.pickup_end || 'pickup_end'] ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
+            var skills = $.map(data.customers[customer_id], function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).filter(function(el) {
+              return el;
+            }).join(',');
+            stops.push([
+              ref,
+              i,
+              route.vehicle_id,
+              'visite',
+              ref, // name
+              '', // street
+              '', // postalcode
+              '', // country
+              lat,
+              lon,
+              d ? d.toHHMMSS() : '',
+              data.customers[customer_id][mapping.quantity || 'quantity'].replace(',', '.'), // TODO: gérer les quantités multiples
+              start,
+              end,
+              skills
+            ]);
         } else if (activity.rest_id) {
           stops.push([
             '',
@@ -591,28 +683,77 @@ $(document).ready(function() {
       });
     });
     solution.unassigned.forEach(function(job) {
-      var customer_id = customers.indexOf(job.shipment_id);
-      stops.push([
-        job.shipment_id,
-        '',
-        '',
-        'visite',
-        job.shipment_id, // name
-        '', // street
-        '', // postalcode
-        '', // country
-        data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
-        data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
-        data.customers[customer_id][mapping.delivery_duration || 'delivery_duration'],
-        data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiples
-        data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
-        data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
-        $.map(data.customers[customer_id], function(val, key) {
-          if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
-        }).filter(function(el) {
-          return el;
-        }).join(',')
-      ]);
+      if (job.shipment_id) {
+        var customer_id = customers.indexOf(job.shipment_id);
+        stops.push([
+          job.shipment_id,
+          '',
+          '',
+          'visite',
+          job.shipment_id, // name
+          '', // street
+          '', // postalcode
+          '', // country
+          data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
+          data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
+          data.customers[customer_id][mapping.delivery_duration || 'delivery_duration'],
+          data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiples
+          data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
+          data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
+          $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+          }).filter(function(el) {
+            return el;
+          }).join(',')
+        ]);
+      } else {
+        var customer_id = customers.indexOf(job.service_id);
+        if (data.customers[customer_id][mapping.pickup_lat || 'pickup_lat']) {
+          stops.push([
+            job.service_id,
+            '',
+            '',
+            'visite',
+            job.service_id, // name
+            '', // street
+            '', // postalcode
+            '', // country
+            data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'],
+            data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'],
+            data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'],
+            data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiplesvar
+            data.customers[customer_id][mapping.pickup_start || 'pickup_start'],
+            data.customers[customer_id][mapping.pickup_end || 'pickup_end'],
+            $.map(data.customers[customer_id], function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).filter(function(el) {
+              return el;
+            }).join(',')
+          ]);
+        } else if (data.customers[customer_id][mapping.delivery_lat || 'delivery_lat']){ // delivery
+          stops.push([
+            job.service_id,
+            '',
+            '',
+            'visite',
+            job.service_id, // name
+            '', // street
+            '', // postalcode
+            '', // country
+            data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
+            data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
+            data.customers[customer_id][mapping.delivery_duration || 'delivery_duration'],
+            data.customers[customer_id][mapping.quantity || 'quantity'], // TODO: gérer les quantités multiplesvar
+            data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
+            data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
+            $.map(data.customers[customer_id], function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).filter(function(el) {
+              return el;
+            }).join(',')
+          ]);
+        }
+      }
     });
     return Papa.unparse({
       fields: [
