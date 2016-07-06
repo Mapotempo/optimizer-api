@@ -60,7 +60,7 @@ module Api
                   optional(:prefer_short_segment, type: Boolean)
                 end
                 optional(:resolution, type: Hash) do
-                  optional(:duration, type: Float)
+                  optional(:duration, type: Integer)
                   optional(:iterations, type: Integer)
                   optional(:iterations_without_improvment, type: Integer)
                   optional(:stable_iterations, type: Integer)
