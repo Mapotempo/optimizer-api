@@ -70,9 +70,13 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         rest_ids: ['rest_0']
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 5
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
@@ -115,9 +119,13 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0'
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 5
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
@@ -174,9 +182,13 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         rest_ids: ['rest_0']
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 5
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
@@ -222,9 +234,13 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_1',
         start_point_id: 'point_0'
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 5
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     assert_nil OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5)
@@ -268,9 +284,13 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_' + (size - 1).to_s
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 5
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     assert_equal 3, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
@@ -308,9 +328,13 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_' + (size - 1).to_s
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 5
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
@@ -353,9 +377,13 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0'
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 5
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -432,9 +460,13 @@ class WrapperTest < Minitest::Test
         end_point_id: 'point_' + (size - 1).to_s,
         rest_ids: ['rest_0']
       }],
-      resolution: {
-        duration: 10,
-        preprocessing_cluster_threshold: 6
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 6
+        },
+        resolution: {
+          duration: 10
+        }
       }
     }
     original_stdout = $stdout

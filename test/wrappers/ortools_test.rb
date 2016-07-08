@@ -55,8 +55,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0'
       }],
-      resolution: {
-        duration: 10
+      configuration: {
+        resolution: {
+          duration: 10
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -125,8 +127,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_0',
       }],
-      resolution: {
-        duration: 10
+      configuration: {
+        resolution: {
+          duration: 10
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -181,8 +185,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0',
         rest_ids: ['rest_0']
       }],
-      resolution: {
-        duration: 10
+      configuration: {
+        resolution: {
+          duration: 10
+        }
       }
     }
     vrp = Models::Vrp.create(problem)

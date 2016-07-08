@@ -52,9 +52,11 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0'
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -101,9 +103,11 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0'
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -172,9 +176,11 @@ class Wrappers::JspritTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_0',
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -221,9 +227,11 @@ class Wrappers::JspritTest < Minitest::Test
           end: 0
         }],
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -277,9 +285,11 @@ class Wrappers::JspritTest < Minitest::Test
           end: 0
         }],
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -288,6 +298,9 @@ class Wrappers::JspritTest < Minitest::Test
     assert result
     assert_equal 0, result[:routes].size
     assert_equal 2, result[:unassigned].size
+  end
+
+  def test_service_with_rest
   end
 
   def test_service_with_skills
@@ -352,9 +365,11 @@ class Wrappers::JspritTest < Minitest::Test
         end_point_id: 'point_0',
         skills: [['a', 'b', 'c']],
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -412,9 +427,11 @@ class Wrappers::JspritTest < Minitest::Test
         }],
         duration: 10
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
@@ -496,9 +513,11 @@ class Wrappers::JspritTest < Minitest::Test
         end_point_id: 'point_0',
         skills: [['a', 'c'], ['b', 'c']],
       }],
-      resolution: {
-        duration: 1000,
-        iterations: 20
+      configuration: {
+        resolution: {
+          duration: 1000,
+          iterations: 20
+        }
       }
     }
     vrp = Models::Vrp.create(problem)
