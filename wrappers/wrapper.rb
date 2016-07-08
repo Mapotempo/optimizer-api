@@ -50,39 +50,39 @@ module Wrappers
     end
 
     def assert_vehicles_start(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.start_point.nil?
-      }.nil?
+      }
     end
 
     def assert_vehicles_no_timewindows(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         !vehicle.timewindows.empty?
-      }.nil?
+      }
     end
 
     def assert_vehicles_no_rests(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         !vehicle.rests.empty?
-      }.nil?
+      }
     end
 
     def assert_services_no_quantities(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
+      vrp.services.empty? || vrp.services.none?{ |service|
         !service.quantities.empty?
-      }.nil?
+      }
     end
 
     def assert_vehicles_quantities_only_one(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.quantities.size > 1
-      }.nil?
+      }
     end
 
     def assert_vehicles_timewindows_only_one(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.timewindows.size > 1
-      }.nil?
+      }
     end
 
     def assert_no_shipments(vrp)
@@ -90,39 +90,41 @@ module Wrappers
     end
 
     def assert_services_no_skills(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
+      vrp.services.empty? || vrp.services.none?{ |service|
         !service.skills.empty?
-      }.nil?
+      }
     end
 
     def assert_services_no_timewindows(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
+      vrp.services.empty? || vrp.services.none?{ |service|
         !service.activity.timewindows.empty?
-      }.nil?
+      }
     end
 
     def assert_services_no_multiple_timewindows(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
+      vrp.services.empty? || vrp.services.none?{ |service|
         service.activity.timewindows.size > 1
-      }.nil?
+      }
     end
 
     def assert_services_no_exclusion_cost(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
+      vrp.services.empty? || vrp.services.none?{ |service|
         !service.exclusion_cost.nil?
-      }.nil?
+      }
     end
 
     def assert_services_no_late_multiplier(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
+      (vrp.services.empty? || vrp.services.none?{ |service|
         service.late_multiplier
-      }.nil?
+      }) && (vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        vehicle.cost_late_multiplier
+      })
     end
 
     def assert_services_quantities_only_one(vrp)
-      vrp.services.empty? || vrp.services.find{ |service|
+      vrp.services.empty? || vrp.services.none?{ |service|
         service.quantities.size > 1
-      }.nil?
+      }
     end
 
     def assert_vehicles_same_router_params(vrp)

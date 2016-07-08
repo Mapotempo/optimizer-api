@@ -23,7 +23,6 @@ module Wrappers
       super(cache, hash)
       @exec_ortools = hash[:exec_ortools] || '../mapotempo-optimizer/optimizer/tsp_simple'
       @optimize_time = hash[:optimize_time] || 30000
-      @soft_upper_bound = hash[:soft_upper_bound] || 3
     end
 
     def solver_constraints
@@ -67,7 +66,7 @@ module Wrappers
         [rest.timewindows[0].start, rest.timewindows[0].end, rest.duration]
       }
 
-      soft_upper_bound = !vrp.services.empty? && vrp.services[0].late_multiplier
+      soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
 
       result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment)
       return if !result
@@ -123,10 +122,11 @@ module Wrappers
     private
 
     def assert_ortools_uniq_late_multiplier(vrp)
-      (vrp.services.empty? || vrp.services.collect(&:late_multiplier).uniq.size == 1) &&
-      vehicle = vrp.vehicles[0]
-      !vehicle || (vehicle.rests.empty? || vehicle.rests.collect(&:late_multiplier).uniq.size == 1)
-# TODO check services.late_multiplier = rests.late_multiplier, or support late_multiplier in tsp-simple
+# TODO services.late_multiplier != rests.late_multiplier could be supported in tsp-simple
+      late_multipliers = []
+      late_multipliers |= vrp.services.collect(&:late_multiplier).compact.uniq if !vrp.services.empty?
+      late_multipliers |= vrp.vehicles[0].rests.collect(&:late_multiplier).compact.uniq if vrp.vehicles[0] && !vrp.vehicles[0].rests.empty?
+      late_multipliers.size <= 1
     end
 
     def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound, nearby)
@@ -144,7 +144,7 @@ module Wrappers
       output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
       output.close
 
-      cmd = "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` -time_limit_in_ms #{optimize_time || @optimize_time} -soft_upper_bound #{soft_upper_bound || @soft_upper_bound} #{nearby ? '-nearby' : ''} -instance_file '#{input.path}' > '#{output.path}'"
+      cmd = "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` -time_limit_in_ms #{optimize_time || @optimize_time} #{soft_upper_bound ? '-soft_upper_bound ' + soft_upper_bound.to_s : ''} #{nearby ? '-nearby' : ''} -instance_file '#{input.path}' > '#{output.path}'"
       puts cmd
       system(cmd)
 
