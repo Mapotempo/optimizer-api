@@ -68,7 +68,7 @@ module Wrappers
 
       soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
 
-      result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment)
+      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment)
       return if !result
 
       if vehicle.start_point
@@ -81,7 +81,7 @@ module Wrappers
       end
 
       {
-#        costs: result['solution_cost'] + vehicle.cost_fixed,
+        costs: cost,
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,
@@ -150,12 +150,17 @@ module Wrappers
 
       if $?.exitstatus == 0
         result = File.read(output.path)
+        cost_line = result.split("\n")[-2]
         result = result.split("\n")[-1]
         puts result.inspect
         if result == 'No solution found...'
           nil
         else
-          result.split(' ').collect{ |i| Integer(i) } if result
+          cost = if cost_line.start_with?('Cost: ')
+            cost_line.split(' ')[1].to_i
+          end
+          result = result.split(' ').collect{ |i| Integer(i) } if result
+          [cost, result]
         end
       end
     ensure
