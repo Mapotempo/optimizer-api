@@ -22,7 +22,7 @@ module Models
   class Timewindow < Base
     field :start, default: nil
     field :end, default: nil
-    validates_numericality_of :start
-    validates_numericality_of :end
+    validates_numericality_of :start, allow_nil: true
+    validates_numericality_of :end, allow_nil: true
   end
 end

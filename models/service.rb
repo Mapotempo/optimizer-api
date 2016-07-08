@@ -22,8 +22,8 @@ module Models
   class Service < Base
     field :late_multiplier, default: nil
     field :exclusion_cost, default: nil
-    validates_numericality_of :late_multiplier
-    validates_numericality_of :exclusion_cost
+    validates_numericality_of :late_multiplier, allow_nil: true
+    validates_numericality_of :exclusion_cost, allow_nil: true
 
     field :skills, default: []
 

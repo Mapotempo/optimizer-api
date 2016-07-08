@@ -72,27 +72,32 @@ module Api
           post do
             begin
               vrp = ::Models::Vrp.create(params[:vrp])
-              ret = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
-              if ret.is_a?(String)
-                #present result, with: VrpResult
-                status 201
-                {
-                  job: {
-                    id: ret,
-                    status: :queued,
-                    retry: nil
-                  }
-                }
-              elsif ret.is_a?(Hash)
-                status 200
-                {
-                  solution: ret,
-                  job: {
-                    status: :completed,
-                  }
-                }
+              if !vrp.valid?
+                status 400
+                vrp.errors
               else
-                error!('500 Internal Server Error', 500)
+                ret = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
+                if ret.is_a?(String)
+                  #present result, with: VrpResult
+                  status 201
+                  {
+                    job: {
+                      id: ret,
+                      status: :queued,
+                      retry: nil
+                    }
+                  }
+                elsif ret.is_a?(Hash)
+                  status 200
+                  {
+                    solution: ret,
+                    job: {
+                      status: :completed,
+                    }
+                  }
+                else
+                  error!('500 Internal Server Error', 500)
+                end
               end
             ensure
               ::Models.delete_all
@@ -128,7 +133,7 @@ module Api
                   }
                 }
               elsif !job.completed?
-                status 201
+                status 200
                 {
                   solution: solution['result'],
                   job: {

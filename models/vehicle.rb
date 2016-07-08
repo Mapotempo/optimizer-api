@@ -30,12 +30,12 @@ module Models
     field :router_mode, default: :car
     field :router_dimension, default: :time
     field :speed_multiplier, default: 1
-    field :duration, default: nil
+    field :duration, default: 0
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
     validates_numericality_of :cost_time_multiplier
     validates_numericality_of :cost_waiting_time_multiplier
-    validates_numericality_of :cost_late_multiplier
+    validates_numericality_of :cost_late_multiplier, allow_nil: true
     validates_numericality_of :cost_setup_time_multiplier
     validates_numericality_of :coef_setup
     validates_inclusion_of :router_mode, in: %w( car car_urban truck pedestrian cycle public_transport )

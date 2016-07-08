@@ -25,7 +25,7 @@ module Models
     field :exclusion_cost, default: nil
     validates_numericality_of :duration
     validates_numericality_of :late_multiplier
-    validates_numericality_of :exclusion_cost
+    validates_numericality_of :exclusion_cost, allow_nil: true
 
     has_many :timewindows, class_name: 'Models::Timewindow'
   end

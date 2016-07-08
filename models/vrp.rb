@@ -27,12 +27,12 @@ module Models
     field :resolution_iterations_without_improvment, default: 100
     field :resolution_stable_iterations, default: nil
     field :resolution_stable_coefficient, default: nil
-    validates_numericality_of :preprocessing_cluster_threshold
-    validates_numericality_of :resolution_duration
-    validates_numericality_of :resolution_iterations
-    validates_numericality_of :resolution_iterations_without_improvment
-    validates_numericality_of :resolution_stable_iterations
-    validates_numericality_of :resolution_stable_coefficient
+    validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
+    validates_numericality_of :resolution_duration, allow_nil: true
+    validates_numericality_of :resolution_iterations, allow_nil: true
+    validates_numericality_of :resolution_iterations_without_improvment, allow_nil: true
+    validates_numericality_of :resolution_stable_iterations, allow_nil: true
+    validates_numericality_of :resolution_stable_coefficient, allow_nil: true
 
     fields :matrix_time, :matrix_distance
 
@@ -68,29 +68,29 @@ module Models
 
     def need_matrix_time?
       vehicles.find{ |vehicle|
-        vehicle.cost_time_multiplier || vehicle.cost_waiting_time_multiplier || vehicle.cost_late_multiplier || vehicle.cost_setup_time_multiplier ||
+        vehicle.cost_time_multiplier != 0 || vehicle.cost_waiting_time_multiplier != 0 || vehicle.cost_late_multiplier != 0 || vehicle.cost_setup_time_multiplier != 0 ||
         !vehicle.rest.empty?
       } ||
       services.find{ |service|
-        !service.timewindows.empty? || service.late_multiplier
+        !service.timewindows.empty? || service.late_multiplier != 0
       } ||
       shipments.find{ |shipment|
-        !shipments.pickup.timewindows.empty? || shipments.pickup.late_multiplier ||
-        !shipments.delivery.timewindows.empty? || shipments.delivery.late_multiplier
+        !shipments.pickup.timewindows.empty? || shipments.pickup.late_multiplier != 0 ||
+        !shipments.delivery.timewindows.empty? || shipments.delivery.late_multiplier != 0
       }
     end
 
     def need_matrix_distance?
       vehicles.find{ |vehicle|
-        vehicle.cost_distance_multiplier
+        vehicle.cost_distance_multiplier != 0
       }
     end
 
     def matrix(matrix_indices, cost_time_multiplier, cost_distance_multiplier)
       matrix_indices.collect{ |i|
         matrix_indices.collect{ |j|
-          (matrix_time ? matrix_time[i][j] * cost_time_multiplier : 0) +
-          (matrix_distance ? matrix_distance[i][j] * cost_distance_multiplier : 0)
+          (matrix_time && cost_time_multiplier != 0 ? matrix_time[i][j] * cost_time_multiplier : 0) +
+          (matrix_distance && cost_distance_multiplier != 0 ? matrix_distance[i][j] * cost_distance_multiplier : 0)
         }
       }
     end
