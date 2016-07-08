@@ -24,7 +24,7 @@ require './wrappers/jsprit'
 require './wrappers/ortools'
 
 module OptimizerWrapper
-  CACHE = ActiveSupport::Cache::FileStore.new(File.join(Dir.tmpdir, 'mapotempo-optimizer-api'), namespace: 'mapotempo-optimizer-api', expires_in: 60*60*24*1)
+  CACHE = ActiveSupport::Cache::NullStore.new
 
   DEMO = Wrappers::Demo.new(CACHE)
   VROOM = Wrappers::Vroom.new(CACHE)
