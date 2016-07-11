@@ -89,11 +89,13 @@ module OptimizerWrapper
       block.call(nil, nil, nil, 'process clustering') if vrp.preprocessing_cluster_threshold
       cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
         block.call(nil, 0, nil, 'run optimization')
+        time_start = Time.now
         result = OptimizerWrapper.config[:services][service].solve(vrp) { |wrapper, avancement, total, cost, solution|
           block.call(wrapper, avancement, total, 'run optimization, iterations', cost, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
         }
 
         if result.class.name == 'Hash' # result.is_a?(Hash) not working
+          result[:elapsed] = Time.now - time_start
           parse_result(vrp, result)
         elsif result.class.name == 'String' # result.is_a?(String) not working
           raise RuntimeError.new(result)
