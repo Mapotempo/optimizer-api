@@ -65,6 +65,7 @@ module Api
                   optional(:iterations_without_improvment, type: Integer)
                   optional(:stable_iterations, type: Integer)
                   optional(:stable_coefficient, type: Float)
+                  at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient
                 end
               end
             end

@@ -24,7 +24,7 @@ module Models
     field :preprocessing_prefer_short_segment, default: false
     field :resolution_duration, default: nil
     field :resolution_iterations, default: nil
-    field :resolution_iterations_without_improvment, default: 100
+    field :resolution_iterations_without_improvment, default: nil
     field :resolution_stable_iterations, default: nil
     field :resolution_stable_coefficient, default: nil
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
