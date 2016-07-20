@@ -359,13 +359,13 @@ module Wrappers
               activities: route.xpath('act').collect{ |act|
                 {
 #                  activity: act.attr('type').to_sym,
-                  pickup_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'pickupShipment' && a.content,
-                  delivery_shipment_id: (a = act.at_xpath('shipmentId')) && act['type'] == 'deliverShipment' && a.content,
-                  service_id: (a = act.at_xpath('serviceId')) && a.content,
-                  rest_id: (a = act.at_xpath('restId')) && a.content,
-                  arrival_time: Float(act.at_xpath('arrTime').content),
-                  departure_time: Float(act.at_xpath('endTime').content),
-                  ready_time: Float(act.at_xpath('readyTime').content),
+                  pickup_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'pickupShipment' && a.content,
+                  delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
+                  service_id: (a = act.at_xpath('serviceId')) && a && a.content,
+                  rest_id: (a = act.at_xpath('restId')) && a && a.content,
+                  arrival_time: (a = act.at_xpath('arrTime')) && a && Float(a.content),
+                  departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
+                  ready_time: (a = act.at_xpath('readyTime')) && a && Float(a.content),
                 }.delete_if { |k, v| !v }
               }
             }
