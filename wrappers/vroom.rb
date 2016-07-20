@@ -95,7 +95,7 @@ module Wrappers
       end
 
       {
-        costs: result['solution_cost'] + vehicle.cost_fixed,
+        cost: result['solution_cost'] + vehicle.cost_fixed,
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,

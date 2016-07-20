@@ -81,7 +81,7 @@ module Wrappers
       end
 
       {
-        costs: cost,
+        cost: cost,
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,
@@ -156,8 +156,8 @@ module Wrappers
         if result == 'No solution found...'
           nil
         else
-          cost = if cost_line.start_with?('Cost: ')
-            cost_line.split(' ')[1].to_i
+          cost = if cost_line.include?('Cost: ')
+            cost_line.split(' ')[-1].to_i
           end
           result = result.split(' ').collect{ |i| Integer(i) } if result
           [cost, result]

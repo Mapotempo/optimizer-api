@@ -95,7 +95,7 @@ module OptimizerWrapper
         }
 
         if result.class.name == 'Hash' # result.is_a?(Hash) not working
-          result[:elapsed] = Time.now - time_start
+          result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
           parse_result(vrp, result)
         elsif result.class.name == 'String' # result.is_a?(String) not working
           raise RuntimeError.new(result)
