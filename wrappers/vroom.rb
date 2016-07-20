@@ -26,7 +26,6 @@ module Wrappers
     def initialize(cache, hash = {})
       super(cache, hash)
       @exec_vroom = hash[:exec_vroom] || '../vroom/bin/vroom'
-      @vroom_exec_count = hash[:vroom_exec_count] || 3
     end
 
     def solver_constraints
@@ -74,7 +73,7 @@ module Wrappers
         matrix = matrix.collect{ |a| a.collect{ |b| (b + 20 * Math.sqrt(b)).round } }
       end
 
-      result = run_vroom(vehicle_have_start, vehicle_have_end, matrix, @vroom_exec_count) { |avancement, total|
+      result = run_vroom(vehicle_have_start, vehicle_have_end, matrix) { |avancement, total|
         block.call(self, avancement, total, nil, nil) if block
       }
       return if !result
@@ -135,7 +134,7 @@ module Wrappers
         (!vehicle.start_point && vehicle.end_point)
     end
 
-    def run_vroom(have_start, have_end, matrix, count = 1)
+    def run_vroom(have_start, have_end, matrix)
       input = Tempfile.new('optimize-vroom-input', tmpdir=@tmp_dir)
       input.write("NAME: vroom\n")
       input.write("TYPE: ATSP\n")
@@ -152,17 +151,12 @@ module Wrappers
       output.close
 
       cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}' #{have_start && !have_end ? '-s' : ''} #{!have_start && have_end ? '-e' : ''}"
-      count.times.collect{ |i|
-        puts cmd
-        system(cmd)
-        yield i, count
+      puts cmd
+      system(cmd)
 
-        if $?.exitstatus == 0
-          JSON.parse(File.read(output.path))
-        end
-      }.min_by{ |json|
-        json['solution_cost']
-      }
+      if $?.exitstatus == 0
+        JSON.parse(File.read(output.path))
+      end
     ensure
       input && input.unlink
       output && output.unlink
