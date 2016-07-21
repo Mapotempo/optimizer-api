@@ -22,7 +22,8 @@ module Wrappers
     def initialize(cache, hash = {})
       super(cache, hash)
       @exec_ortools = hash[:exec_ortools] || '../mapotempo-optimizer/optimizer/tsp_simple'
-      @optimize_time = hash[:optimize_time] || 30000
+      @optimize_time = hash[:optimize_time]
+      @resolution_stable_iterations = hash[:optimize_time]
     end
 
     def solver_constraints
@@ -68,7 +69,7 @@ module Wrappers
 
       soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
 
-      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment)
+      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment, vrp.resolution_iterations_without_improvment)
       return if !result
 
       if vehicle.start_point
@@ -129,7 +130,7 @@ module Wrappers
       late_multipliers.size <= 1
     end
 
-    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound, nearby)
+    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound, nearby, iterations_without_improvment)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write("#{matrix.size}\n")
       input.write("#{rest_window.size}\n")
@@ -144,7 +145,13 @@ module Wrappers
       output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
       output.close
 
-      cmd = "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` -time_limit_in_ms #{optimize_time || @optimize_time} #{soft_upper_bound ? '-soft_upper_bound ' + soft_upper_bound.to_s : ''} #{nearby ? '-nearby' : ''} -instance_file '#{input.path}' > '#{output.path}'"
+      cmd = [
+        "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` ",
+        (optimize_time || @optimize_time) && '-time_limit_in_ms ' + (optimize_time || @optimize_time).to_s,
+        soft_upper_bound && '-soft_upper_bound ' + soft_upper_bound.to_s,
+        nearby ? '-nearby' : nil,
+        (iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (iterations_without_improvment || @iterations_without_improvment).to_s,
+        "-instance_file '#{input.path}' > '#{output.path}'"].compact.join(' ')
       puts cmd
       system(cmd)
 
