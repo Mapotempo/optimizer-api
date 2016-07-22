@@ -310,7 +310,7 @@ module Wrappers
       iterations_start = 0
       cost = nil
       fresh_output = nil
-      # read of stdout_and_stderr stops at the end oh process
+      # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
         puts (@job ? @job + ' - ' : '') + line
         out = out ? out + "\n" + line : line

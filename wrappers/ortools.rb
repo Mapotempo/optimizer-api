@@ -160,7 +160,6 @@ module Wrappers
         (iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (iterations_without_improvment || @iterations_without_improvment).to_s,
         "-instance_file '#{input.path}'"].compact.join(' ')
       puts cmd
-      system(cmd)
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
@@ -169,14 +168,14 @@ module Wrappers
       out = ''
       iterations = 0
       cost = nil
-      # read of stdout_and_stderr stops at the end oh process
+      # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
         puts (@job ? @job + ' - ' : '') + line
         out = out + line
-          r = /Iteration : ([0-9]+)/.match(line)
-          r && (iterations = Integer(r[1]))
-          r = / Cost : ([0-9.eE]+)/.match(line)
-          r && (cost = Float(r[1]))
+        r = /Iteration : ([0-9]+)/.match(line)
+        r && (iterations = Integer(r[1]))
+        r = / Cost : ([0-9.eE+]+)/.match(line)
+        r && (cost = Float(r[1]))
         block.call(self, iterations, nil, cost, nil) if block
       }
 
