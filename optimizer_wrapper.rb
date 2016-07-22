@@ -91,7 +91,7 @@ module OptimizerWrapper
         block.call(nil, 0, nil, 'run optimization') if block
         time_start = Time.now
         result = OptimizerWrapper.config[:services][service].solve(vrp) { |wrapper, avancement, total, cost, solution|
-          block.call(wrapper, avancement, total, 'run optimization, iterations', cost, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
+          block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
         }
 
         if result.class.name == 'Hash' # result.is_a?(Hash) not working
@@ -281,13 +281,13 @@ module OptimizerWrapper
       service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
       OptimizerWrapper.config[:services][service].job = self.uuid
 
-      result = OptimizerWrapper.solve(service, vrp) { |wrapper, avancement, total, message, cost, solution|
+      result = OptimizerWrapper.solve(service, vrp) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         if avancement && cost
           p = Result.get(self.uuid) || {'graph' => {}}
-          p['graph'][avancement.to_s] = cost
+          p['graph'][avancement.to_s] = {cost: cost, time: time}
           Result.set(self.uuid, p)
         end
         if solution

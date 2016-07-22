@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './wrappers/wrapper'
+require 'thread'
 
 module Wrappers
   class Ortools < Wrapper
@@ -24,6 +25,8 @@ module Wrappers
       @exec_ortools = hash[:exec_ortools] || '../mapotempo-optimizer/optimizer/tsp_simple'
       @optimize_time = hash[:optimize_time]
       @resolution_stable_iterations = hash[:optimize_time]
+
+      @semaphore = Mutex.new
     end
 
     def solver_constraints
@@ -69,7 +72,7 @@ module Wrappers
 
       soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
 
-      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment, vrp.resolution_iterations_without_improvment)
+      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment, vrp.resolution_iterations_without_improvment, &block)
       return if !result
 
       if vehicle.start_point
@@ -120,6 +123,13 @@ module Wrappers
       }
     end
 
+    def kill
+      @semaphore.synchronize {
+        Process.kill("KILL", @thread.pid)
+        @killed = true
+      }
+    end
+
     private
 
     def assert_ortools_uniq_late_multiplier(vrp)
@@ -130,7 +140,7 @@ module Wrappers
       late_multipliers.size <= 1
     end
 
-    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound, nearby, iterations_without_improvment)
+    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound, nearby, iterations_without_improvment, &block)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write("#{matrix.size}\n")
       input.write("#{rest_window.size}\n")
@@ -142,24 +152,37 @@ module Wrappers
       input.write("\n")
       input.close
 
-      output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
-      output.close
-
       cmd = [
         "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` ",
         (optimize_time || @optimize_time) && '-time_limit_in_ms ' + (optimize_time || @optimize_time).to_s,
         soft_upper_bound && '-soft_upper_bound ' + soft_upper_bound.to_s,
         nearby ? '-nearby' : nil,
         (iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (iterations_without_improvment || @iterations_without_improvment).to_s,
-        "-instance_file '#{input.path}' > '#{output.path}'"].compact.join(' ')
+        "-instance_file '#{input.path}'"].compact.join(' ')
       puts cmd
       system(cmd)
+      stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
+        Open3.popen2e(cmd) if !@killed
+      }
+      return if !@thread
 
-      if $?.exitstatus == 0
-        result = File.read(output.path)
-        cost_line = result.split("\n")[-2]
-        result = result.split("\n")[-1]
-        puts result.inspect
+      out = ''
+      iterations = 0
+      cost = nil
+      # read of stdout_and_stderr stops at the end oh process
+      stdout_and_stderr.each_line { |line|
+        puts (@job ? @job + ' - ' : '') + line
+        out = out + line
+          r = /Iteration : ([0-9]+)/.match(line)
+          r && (iterations = Integer(r[1]))
+          r = / Cost : ([0-9.eE]+)/.match(line)
+          r && (cost = Float(r[1]))
+        block.call(self, iterations, nil, cost, nil) if block
+      }
+
+      if @thread.value == 0
+        cost_line = out.split("\n")[-2]
+        result = out.split("\n")[-1]
         if result == 'No solution found...'
           nil
         else
@@ -169,10 +192,11 @@ module Wrappers
           result = result.split(' ').collect{ |i| Integer(i) } if result
           [cost, result]
         end
+      else
+        out
       end
     ensure
       input && input.unlink
-      output && output.unlink
     end
   end
 end
