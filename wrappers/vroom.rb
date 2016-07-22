@@ -93,8 +93,11 @@ module Wrappers
         result['tour'] = result['tour'][0..-2]
       end
 
+      cost = result['solution_cost'] + vehicle.cost_fixed
+      block.call(self, 1, 1, cost, nil) if block
+
       {
-        cost: result['solution_cost'] + vehicle.cost_fixed,
+        cost: cost,
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,
