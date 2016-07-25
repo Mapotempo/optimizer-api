@@ -43,16 +43,16 @@ module Api
           }
           params {
             requires(:vrp, type: Hash) do
-              optional(:matrix_time, type: Array[Array[Float]])
-              optional(:matrix_distance, type: Array[Array[Float]])
+              optional(:matrix_time, type: Array[Array[Float]], documentation: {param_type: 'form'})
+              optional(:matrix_distance, type: Array[Array[Float]], documentation: {param_type: 'form'})
 
-              optional(:points, type: VrpRequestPoint)
-              optional(:services, type: VrpRequestService)
-              optional(:shipments, type: VrpRequestShipment)
+              optional(:points, type: VrpRequestPoint, documentation: {param_type: 'form'})
+              optional(:services, type: VrpRequestService, documentation: {param_type: 'form'})
+              optional(:shipments, type: VrpRequestShipment, documentation: {param_type: 'form'})
               at_least_one_of :services, :shipments
-              optional(:rests, type: VrpRequestRest)
-              requires(:vehicles, type: VrpRequestVehicle)
-              optional(:units, type: Array[String])
+              optional(:rests, type: VrpRequestRest, documentation: {param_type: 'form'})
+              requires(:vehicles, type: VrpRequestVehicle, documentation: {param_type: 'form'})
+              optional(:units, type: Array[String], documentation: {param_type: 'form'})
 
               optional(:configuration, type: Hash) do
                 optional(:preprocessing, type: Hash) do
