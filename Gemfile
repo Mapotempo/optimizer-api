@@ -17,7 +17,7 @@ gem 'grape-swagger-entity'
 gem 'i18n'
 gem 'rack-contrib'
 gem 'rest-client'
-gem 'activemodel'
+gem 'activemodel', '<5' # Ruby 2.1
 gem 'active_hash', github: 'Mapotempo/active_hash'
 gem 'nokogiri'
 gem 'resque'
