@@ -342,7 +342,7 @@ $(document).ready(function() {
           // TODO: gérer les quantités multiples
           quantities: [{
             id: 'unit',
-            values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
+            values: [(customer[mapping.quantity || 'quantity'] || '').replace(',', '.')]
           }],
           skills: $.map(customer, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -365,9 +365,7 @@ $(document).ready(function() {
           // TODO: gérer les quantités multiples
           quantities: [{
             id: 'unit',
-            values: [
-              parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
-            ]
+            values: [(vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.')]
           }],
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
@@ -390,7 +388,7 @@ $(document).ready(function() {
 
   var displayGraph = function(data) {
     $('#result-graph').show();
-    var values = data ? $.map(data, function(v, k) { return {x: k, y: v}; }) : [];
+    var values = data ? $.map(data, function(v, k) { return {x: v.iteration, y: v.cost}; }) : [];
     if (values && values.length > 0) {
       var ctx = document.getElementById('result-graph').getContext('2d');
       new Chart(ctx).Scatter([{
@@ -450,10 +448,10 @@ $(document).ready(function() {
                 }
                 else if (job.job.status == 'working') {
                   if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
-                  if (job.solution) {
+                  if (job.solutions && job.solutions[0]) {
                     if (!lastSolution)
                       $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
-                    lastSolution = job.solution;
+                    lastSolution = job.solutions[0];
                     $('#display-solution').click(function(e) {
                       displaySolution(lastSolution);
                       e.preventDefault();
@@ -470,7 +468,7 @@ $(document).ready(function() {
                   if (job.job.graph) {
                     displayGraph(job.job.graph);
                   }
-                  callback(job.solution);
+                  callback(job.solutions[0]);
                 }
                 else if (job.job.status == 'failed' || job.job.status == 'killed') {
                   delay = 0;
