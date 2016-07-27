@@ -39,7 +39,10 @@ module Api
         this.optional(:duration, type: Float)
         this.optional(:setup_duration, type: Float)
         this.requires(:point_id, type: String)
-        this.optional(:quantities, type: Array[Array[Float]])
+        this.optional(:quantities, type: Array) do
+          requires(:id, type: String)
+          requires(:values, type: Array[Float])
+        end
         this.optional(:timewindows, type: Array) do
           Vrp.vrp_request_timewindow(self)
         end
@@ -90,7 +93,10 @@ module Api
                 requires(:delivery, type: Hash) do
                   Vrp.vrp_request_activity(self)
                 end
-                optional(:quantities, type: Array[Array[Float]])
+                optional(:quantities, type: Array) do
+                  requires(:id, type: String)
+                  requires(:values, type: Array[Float])
+                end
               end
               at_least_one_of :services, :shipments
 
@@ -162,10 +168,9 @@ module Api
                   present({
                     job: {
                       id: ret,
-                      status: :queued,
-                      retry: nil
+                      status: :queued
                     }
-                  }, with: VrpResult)
+                  }, with: Grape::Presenters::Presenter)
                 elsif ret.is_a?(Hash)
                   status 200
                   present({
@@ -173,7 +178,7 @@ module Api
                     job: {
                       status: :completed,
                     }
-                  }, with: VrpResult)
+                  }, with: Grape::Presenters::Presenter)
                 else
                   error!({error: 'Internal Server Error'}, 500)
                 end
@@ -212,7 +217,7 @@ module Api
                     avancement: job.message,
                     graph: solution['graph']
                   }
-                }, with: VrpResult)
+                }, with: Grape::Presenters::Presenter)
               elsif !job.completed?
                 status 200
                 present({
@@ -223,7 +228,7 @@ module Api
                     avancement: job.message,
                     graph: solution['graph']
                   }
-                }, with: VrpResult)
+                }, with: Grape::Presenters::Presenter)
               else
                 status 200
                 present({
@@ -234,7 +239,7 @@ module Api
                     avancement: job.message,
                     graph: solution['graph']
                   }
-                }, with: VrpResult)
+                }, with: Grape::Presenters::Presenter)
               end
             end
           end
