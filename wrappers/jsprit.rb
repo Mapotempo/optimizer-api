@@ -32,6 +32,7 @@ module Wrappers
 
     def solver_constraints
       super + [
+        :assert_end_optimization,
         :assert_vehicles_at_least_one,
         :assert_units_only_one,
         :assert_vehicles_quantities_only_one,
@@ -96,6 +97,10 @@ module Wrappers
     end
 
     private
+
+    def assert_end_optimization(vrp)
+      vrp.resolution_duration || vrp.resolution_iterations || vrp.resolution_iterations_without_improvment
+    end
 
     def assert_jsprit_start_or_end(vrp)
       vrp.vehicles.empty? || vrp.vehicles.find{ |vehicle|

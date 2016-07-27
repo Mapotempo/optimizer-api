@@ -31,6 +31,7 @@ module Wrappers
 
     def solver_constraints
       super + [
+        :assert_end_optimization,
         :assert_vehicles_only_one,
         :assert_vehicles_start,
         :assert_vehicles_no_timewindows,
@@ -131,6 +132,10 @@ module Wrappers
     end
 
     private
+
+    def assert_end_optimization(vrp)
+      vrp.resolution_duration || vrp.resolution_iterations_without_improvment
+    end
 
     def assert_ortools_uniq_late_multiplier(vrp)
 # TODO services.late_multiplier != rests.late_multiplier could be supported in tsp-simple

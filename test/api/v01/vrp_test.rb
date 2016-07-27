@@ -44,7 +44,12 @@ class Api::V01::VrpTest < Minitest::Test
       }],
       vehicles: [{
         id: 'v1'
-      }]
+      }],
+      configuration: {
+        resolution: {
+          duration: 1
+        }
+      }
     }
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
