@@ -48,9 +48,11 @@ module Api
       namespace :vrp do
         resource :submit do
           desc 'Submit VRP problem', {
-            nickname: 'vrp',
+            named: 'vrp',
             success: VrpResult,
-            entity: VrpResult
+            failure: [
+              [400, 'Bad Request', 'API::V01::Error']
+            ]
           }
           params {
             requires(:vrp, type: Hash) do
@@ -151,8 +153,7 @@ module Api
             begin
               vrp = ::Models::Vrp.create(params[:vrp])
               if !vrp.valid?
-                status 400
-                vrp.errors
+                error!({error: 'Model Validation Error', detail: vrp.errors}, 400)
               else
                 ret = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
                 if ret.is_a?(String)
@@ -174,7 +175,7 @@ module Api
                     }
                   }
                 else
-                  error!('500 Internal Server Error', 500)
+                  error!({error: 'Internal Server Error'}, 500)
                 end
               end
             ensure
@@ -185,9 +186,11 @@ module Api
 
         resource :job do
           desc 'Fetch vrp job status', {
-            nickname: 'job',
+            named: 'job',
             success: VrpResult,
-            entity: VrpResult
+            failure: [
+              [404, 'Not Found', 'API::V01::Error']
+            ]
           }
           params {
             requires :id, type: String, desc: 'Job id returned by create VRP problem.'
@@ -196,7 +199,7 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             if !job
-              status 404
+              error!({error: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
             else
               solution = OptimizerWrapper::Result.get(id) || {}
               if job.killed? || job.failed?
@@ -238,16 +241,20 @@ module Api
           end
 
           desc 'Delete vrp job', {
-            nickname: 'deleteJob',
-            entity: VrpResult
+            named: 'deleteJob',
+            failure: [
+              [404, 'Not Found', 'API::V01::Error']
+            ]
           }
           params {
             requires :id, type: String, desc: 'Job id returned by create VRP problem.'
           }
           delete ':id' do
-            job = Resque::Plugins::Status::Hash.get(params[:id])
+            id = params[:id]
+            job = Resque::Plugins::Status::Hash.get(id)
             if !job
               status 404
+              error!({error: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
             else
               Resque::Plugins::Status::Hash.kill(params[:id])
               status 204
