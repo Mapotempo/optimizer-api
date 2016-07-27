@@ -348,7 +348,7 @@ $(document).ready(function() {
             // TODO: gérer les quantités multiples
             quantities: [{
               id: 'unit',
-              value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
+              value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.'))
             }],
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -373,7 +373,7 @@ $(document).ready(function() {
             // TODO: gérer les quantités multiples
             quantities: [{
               id: 'unit',
-              value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
+              value: ((customer[mapping.quantity || 'quantity'] || '').replace(',', '.'))
             }],
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -398,7 +398,7 @@ $(document).ready(function() {
             // TODO: gérer les quantités multiples
             quantities: [{
               id: 'unit',
-              value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
+              value: ((customer[mapping.quantity || 'quantity'] || '').replace(',', '.'))
             }],
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -424,13 +424,13 @@ $(document).ready(function() {
             (vehicle[mapping.initial_quantity || 'initial_quantity']) ?
               [{
                 id: 'unit',
-                limit: parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000), // quantities are rounded for jsprit
-                initial: parseInt((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.') * 1000) // quantities are rounded for jspri
+                limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.')),
+                initial: ((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.'))
               }]
             :
               [{
                 id: 'unit',
-                limit: parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
+                limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.'))
               }],
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
