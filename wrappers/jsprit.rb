@@ -177,7 +177,8 @@ module Wrappers
               xml.type {
                 xml.id_ vehicle.id
                 xml.method_missing('capacity-dimensions') {
-                  (!vehicle.quantities.empty? ? vehicle.quantities[0][:values] : [2**30]).each_with_index do |value, index|
+                  # Jsprit accepts only integers
+                  (!vehicle.quantities.empty? ? vehicle.quantities[0][:values].map{ |v| (v * 1000).to_i } : [2**30]).each_with_index do |value, index|
                     xml.dimension value, index: index
                   end
                 }
@@ -211,7 +212,8 @@ module Wrappers
                   (xml.duration service.activity.duration) if service.activity.duration > 0
                   (xml.requiredSkills service.skills.join(",")) if service.skills.size > 0
                   xml.method_missing('capacity-dimensions') {
-                    (!service.quantities.empty? ? service.quantities[0][:values] : [1]).each_with_index do |value, index|
+                    # Jsprit accepts only integers
+                    (!service.quantities.empty? ? service.quantities[0][:values].map{ |v| (v * 1000).to_i } : [1]).each_with_index do |value, index|
                       xml.dimension value, index: index
                     end
                   }
@@ -259,7 +261,8 @@ module Wrappers
                   }
                   (xml.requiredSkills shipment.skills.join(",")) if shipment.skills.size > 0
                   xml.method_missing('capacity-dimensions') {
-                    (!shipment.quantities.empty? ? shipment.quantities[0][:values] : [1]).each_with_index do |value, index|
+                    # Jsprit accepts only integers
+                    (!shipment.quantities.empty? ? shipment.quantities[0][:values].map{ |v| (v * 1000).to_i } : [1]).each_with_index do |value, index|
                       xml.dimension value, index: index
                     end
                   }
