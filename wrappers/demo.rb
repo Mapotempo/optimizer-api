@@ -25,47 +25,47 @@ module Wrappers
 
     def solve(vrp, &block)
       {
-        'costs' => 0,
-        'total_travel_distance' => 0,
-        'total_travel_time' => 0,
-        'total_waiting_time' => 0,
-        'start_time' => 0,
-        'end_time' => 0,
-        'routes' => vrp.vehicles && vrp.vehicles.collect{ |vehicle| {
-          'vehicle_id' => vehicle.id,
-          'activities' => [
+        cost: 0,
+        total_travel_distance: 0,
+        total_travel_time: 0,
+        total_waiting_time: 0,
+        start_time: 0,
+        end_time: 0,
+        routes: vrp.vehicles && vrp.vehicles.collect{ |vehicle| {
+          vehicle_id: vehicle.id,
+          activities: [
             {
-              'point_id' => vehicle.start_point ? vehicle.start_point.id : vrp.points[0].id,
-              'travel_distance' => 0,
-              'travel_start_time' => 0
+              point_id: vehicle.start_point ? vehicle.start_point.id : vrp.points[0].id,
+              travel_distance: 0,
+              travel_start_time: 0
             }
           ] + (vrp.shipments && vrp.shipments.collect{ |shipment|
             [:pickup, :delivery].collect{ |a|
               {
-                'point_id' => shipment.send(a).point.id,
-                'travel_distance' => 0,
-                'travel_start_time' => 0,
-                'waiting_duration' => 0,
-                'arrival_time' => 0,
-                'departure_time' => 0,
+                point_id: shipment.send(a).point.id,
+                travel_distance: 0,
+                travel_start_time: 0,
+                waiting_duration: 0,
+                arrival_time: 0,
+                departure_time: 0,
                 a.to_s + '_shipment_id' => shipment.id
               } if shipment.send(a)
             }.compact
           }.flatten) + (vrp.services && vrp.services.collect{ |service|
             {
-              'point_id' => service.activity.point.id,
-              'travel_distance' => 0,
-              'travel_start_time' => 0,
-              'waiting_duration' => 0,
-              'arrival_time' => 0,
-              'departure_time' => 0,
-              'service_id' => service.id
+              point_id: service.activity.point.id,
+              travel_distance: 0,
+              travel_start_time: 0,
+              waiting_duration: 0,
+              arrival_time: 0,
+              departure_time: 0,
+              service_id: service.id
             }
           }) + [
             {
-              'point_id' => vehicle.end_point ? vehicle.end_point.id : vrp.points[-1].id,
-              'travel_distance' => 0,
-              'travel_start_time' => 0
+              point_id: vehicle.end_point ? vehicle.end_point.id : vrp.points[-1].id,
+              travel_distance: 0,
+              travel_start_time: 0
             }
           ]
         }} || []
