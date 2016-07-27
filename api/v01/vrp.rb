@@ -19,6 +19,7 @@ require 'grape'
 require 'grape-swagger'
 
 require './api/v01/api_base'
+require './api/v01/entities/error'
 require './api/v01/entities/vrp_result'
 
 module Api
@@ -54,11 +55,11 @@ module Api
             named: 'vrp',
             success: VrpResult,
             failure: [
-              [400, 'Bad Request', 'API::V01::Error']
+              [400, 'Bad Request', ::Api::V01::Error]
             ]
           }
           params {
-            requires(:vrp, type: Hash) do
+            requires(:vrp, type: Hash, documentation: {param_type: 'body'}) do
               optional(:matrix_time, type: Array[Array[Float]])
               optional(:matrix_distance, type: Array[Array[Float]])
 
@@ -194,7 +195,7 @@ module Api
             named: 'job',
             success: VrpResult,
             failure: [
-              [404, 'Not Found', 'API::V01::Error']
+              [404, 'Not Found', ::Api::V01::Error]
             ]
           }
           params {
@@ -247,7 +248,7 @@ module Api
           desc 'Delete vrp job', {
             named: 'deleteJob',
             failure: [
-              [404, 'Not Found', 'API::V01::Error']
+              [404, 'Not Found', ::Api::V01::Error]
             ]
           }
           params {

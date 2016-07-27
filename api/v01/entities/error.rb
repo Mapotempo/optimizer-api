@@ -18,10 +18,6 @@
 module Api
   module V01
     class Error < Grape::Entity
-      def self.entity_name
-        'Error'
-      end
-
       expose(:error, documentation: { type: String, desc: 'Error title.' })
       expose(:detail, documentation: { type: String, desc: 'Error detail.' })
     end

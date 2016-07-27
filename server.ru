@@ -15,6 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+Bundler.require
 require 'rack/cors'
 require 'rack/contrib/locale'
 
