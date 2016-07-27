@@ -20,11 +20,6 @@ require 'grape-swagger'
 
 require './api/v01/api_base'
 require './api/v01/entities/vrp_result'
-require './api/v01/entities/vrp_request_point'
-require './api/v01/entities/vrp_request_service'
-require './api/v01/entities/vrp_request_shipment'
-require './api/v01/entities/vrp_request_rest'
-require './api/v01/entities/vrp_request_vehicle'
 
 module Api
   module V01
@@ -34,25 +29,107 @@ module Api
       default_format :json
       version '0.1', using: :path
 
+      def self.vrp_request_timewindow(this)
+        this.optional(:start, type: Integer)
+        this.optional(:end, type: Integer)
+        this.at_least_one_of :start, :end
+      end
+
+      def self.vrp_request_activity(this)
+        this.optional(:duration, type: Float)
+        this.optional(:setup_duration, type: Float)
+        this.requires(:point_id, type: String)
+        this.optional(:quantities, type: Array[Array[Float]])
+        this.optional(:timewindows, type: Array) do
+          Vrp.vrp_request_timewindow(self)
+        end
+      end
+
       namespace :vrp do
         resource :submit do
           desc 'Submit VRP problem', {
             nickname: 'vrp',
             success: VrpResult,
-            entity: [VrpResult, VrpRequestPoint, VrpRequestService, VrpRequestShipment, VrpRequestRest, VrpRequestVehicle]
+            entity: VrpResult
           }
           params {
             requires(:vrp, type: Hash) do
-              optional(:matrix_time, type: Array[Array[Float]], documentation: {param_type: 'form'})
-              optional(:matrix_distance, type: Array[Array[Float]], documentation: {param_type: 'form'})
+              optional(:matrix_time, type: Array[Array[Float]])
+              optional(:matrix_distance, type: Array[Array[Float]])
 
-              optional(:points, type: VrpRequestPoint, documentation: {param_type: 'form'})
-              optional(:services, type: VrpRequestService, documentation: {param_type: 'form'})
-              optional(:shipments, type: VrpRequestShipment, documentation: {param_type: 'form'})
+              optional(:points, type: Array) do
+                requires(:id, type: String)
+                optional(:matrix_index, type: Integer)
+                optional(:location, type: Hash) do
+                  requires(:lat, type: Float)
+                  requires(:lon, type: Float)
+                end
+                at_least_one_of :matrix_index, :location
+              end
+
+              optional(:services, type: Array) do
+                requires(:id, type: String)
+                optional(:late_multiplier, type: Float)
+                optional(:exclusion_cost, type: Float)
+                optional(:skills, type: Array[String])
+                requires(:activity, type: Hash) do
+                  Vrp.vrp_request_activity(self)
+                end
+                optional(:quantities, type: Array[Array[Float]])
+              end
+              optional(:shipments, type: Array) do
+                requires(:id, type: String)
+                optional(:late_multiplier, type: Float)
+                optional(:exclusion_cost, type: Float)
+                optional(:skills, type: Array[String])
+                requires(:pickup, type: Hash) do
+                  Vrp.vrp_request_activity(self)
+                end
+                requires(:delivery, type: Hash) do
+                  Vrp.vrp_request_activity(self)
+                end
+                optional(:quantities, type: Array[Array[Float]])
+              end
               at_least_one_of :services, :shipments
-              optional(:rests, type: VrpRequestRest, documentation: {param_type: 'form'})
-              requires(:vehicles, type: VrpRequestVehicle, documentation: {param_type: 'form'})
-              optional(:units, type: Array[String], documentation: {param_type: 'form'})
+
+              optional(:rests, type: Array) do
+                requires(:id, type: String)
+                requires(:duration, type: Float)
+                optional(:late_multiplier, type: Float)
+                optional(:exclusion_cost, type: Float)
+              end
+
+              requires(:vehicles, type: Array) do
+                requires(:id, type: String)
+                optional(:cost, type: Hash) do
+                  optional(:fixed, type: Float)
+                  optional(:distance_multiplier, type: Float)
+                  optional(:time_multiplier, type: Float)
+                  optional(:waiting_time_multiplier, type: Float)
+                  optional(:late_multiplier, type: Float)
+                  optional(:setup_time_multiplier, type: Float)
+                  optional(:setup, type: Float)
+                end
+
+                optional(:router_mode, type: String)
+                optional(:router_dimension, type: String, values: ['time', 'distance'])
+                optional(:speed_multiplier, type: Float)
+                optional(:duration, type: Float)
+                optional(:skills, type: Array[Array[String]])
+
+                optional(:start_point_id, type: String)
+                optional(:end_point_id, type: String)
+                optional(:quantities, type: Array) do
+                  requires(:id, type: String)
+                  requires(:values, type: Array[Float])
+                end
+                optional(:timewindows, type: Array) do
+                  Vrp.vrp_request_timewindow(self)
+                end
+                optional(:rest_ids, type: Array[String])
+              end
+
+              optional(:units, type: Array[String])
 
               optional(:configuration, type: Hash) do
                 optional(:preprocessing, type: Hash) do

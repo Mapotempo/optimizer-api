@@ -29,11 +29,24 @@ class Api::V01::VrpTest < Minitest::Test
 
   def test_vrp
     vrp = {
+      points: [{
+        id: 'p1',
+        location: {
+          lat: 1,
+          lon: 2
+        }
+      }],
+      services: [{
+        id: 's1',
+        activity: {
+          point_id: 'p1'
+        }
+      }],
       vehicles: [{
         id: 'v1'
       }]
     }
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
-    assert_equal 200, last_response.status, last_response.body
+    assert_equal 201, last_response.status, last_response.body
   end
 end
