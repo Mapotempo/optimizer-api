@@ -56,7 +56,8 @@ module Api
             success: VrpResult,
             failure: [
               [400, 'Bad Request', ::Api::V01::Error]
-            ]
+            ],
+            detail: ''
           }
           params {
             requires(:vrp, type: Hash, documentation: {param_type: 'body'}) do
@@ -196,7 +197,8 @@ module Api
             success: VrpResult,
             failure: [
               [404, 'Not Found', ::Api::V01::Error]
-            ]
+            ],
+            detail: 'Get the Job status and details, contains progress avancement. Returns the best actual solutions currently found.'
           }
           params {
             requires :id, type: String, desc: 'Job id returned by create VRP problem.'
@@ -249,7 +251,8 @@ module Api
             named: 'deleteJob',
             failure: [
               [404, 'Not Found', ::Api::V01::Error]
-            ]
+            ],
+            detail: 'Kill the job. This operation may have delay.'
           }
           params {
             requires :id, type: String, desc: 'Job id returned by create VRP problem.'
