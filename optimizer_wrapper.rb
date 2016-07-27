@@ -207,8 +207,7 @@ module OptimizerWrapper
             end
 
             if activities[idx_a + j] && activities[idx_a + j][:service_id]
-              index = original_vrp.services.index{ |s| s.id == activities[idx_a + j][:service_id] }
-              stop_index = zip_key[index].data_items[0][0]
+              stop_index = original_vrp.services.index{ |s| s.id == activities[idx_a + j][:service_id] }
             else
               stop_index = original_vrp.services.length - 1
             end
