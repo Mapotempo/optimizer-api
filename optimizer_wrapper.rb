@@ -286,8 +286,8 @@ module OptimizerWrapper
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         if avancement && cost
-          p = Result.get(self.uuid) || {'graph' => {}}
-          p['graph'][avancement.to_s] = {cost: cost, time: time}
+          p = Result.get(self.uuid) || {'graph' => []}
+          p['graph'] << {iteration: avancement, cost: cost, time: time}
           Result.set(self.uuid, p)
         end
         if solution

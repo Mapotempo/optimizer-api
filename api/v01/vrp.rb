@@ -159,21 +159,21 @@ module Api
                 if ret.is_a?(String)
                   #present result, with: VrpResult
                   status 201
-                  {
+                  present({
                     job: {
                       id: ret,
                       status: :queued,
                       retry: nil
                     }
-                  }
+                  }, with: VrpResult)
                 elsif ret.is_a?(Hash)
                   status 200
-                  {
-                    solution: ret,
+                  present({
+                    solutions: [ret],
                     job: {
                       status: :completed,
                     }
-                  }
+                  }, with: VrpResult)
                 else
                   error!({error: 'Internal Server Error'}, 500)
                 end
@@ -204,38 +204,37 @@ module Api
               solution = OptimizerWrapper::Result.get(id) || {}
               if job.killed? || job.failed?
                 status 202
-                {
-                  solution: solution['result'],
+                present({
+                  solutions: [solution['result']],
                   job: {
                     id: id,
                     status: job.killed? ? :killed : :failed,
                     avancement: job.message,
                     graph: solution['graph']
                   }
-                }
+                }, with: VrpResult)
               elsif !job.completed?
                 status 200
-                {
-                  solution: solution['result'],
+                present({
+                  solutions: [solution['result']],
                   job: {
                     id: id,
                     status: job.queued? ? :queued : job.working? ? :working : nil,
-                    retry: nil,
                     avancement: job.message,
                     graph: solution['graph']
                   }
-                }
+                }, with: VrpResult)
               else
                 status 200
-                {
-                  solution: solution['result'],
+                present({
+                  solutions: [solution['result']],
                   job: {
                     id: id,
                     status: :completed,
                     avancement: job.message,
                     graph: solution['graph']
                   }
-                }
+                }, with: VrpResult)
               end
             end
           end
