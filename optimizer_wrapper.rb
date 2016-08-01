@@ -251,13 +251,13 @@ module OptimizerWrapper
             last_index = start_index
             new_activities += min_order.collect{ |index|
               a = {
-                point_id: original_vrp.services[index].activity.point_id,
+                point_id: (original_vrp.services[index].activity.point_id if original_vrp.services[index].id),
                 travel_distance: original_vrp.matrix_distance ? original_vrp.matrix_distance[original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
                 # travel_start_time: 0, # TODO: from matrix_time
                 # arrival_time: 0, # TODO: from matrix_time
                 # departure_time: 0, # TODO: from matrix_time
                 service_id: original_vrp.services[index].id
-              }
+              }.delete_if { |k, v| !v }
               last_index = index
               a
             }

@@ -61,7 +61,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert result
     assert progress > 0
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
+    assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
   end
 
   def test_loop_problem
@@ -124,9 +124,7 @@ class Wrappers::VroomTest < Minitest::Test
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
-    assert_equal problem[:vehicles][0][:start_point_id], result[:routes][0][:activities][0][:point_id]
-    assert_equal problem[:vehicles][0][:end_point_id], result[:routes][0][:activities][-1][:point_id]
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
     assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.sort
   end
 
@@ -189,9 +187,7 @@ class Wrappers::VroomTest < Minitest::Test
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size # always return activities for start/end
-    assert_equal problem[:vehicles][0][:start_point_id], result[:routes][0][:activities][0][:point_id]
-    assert_equal result[:routes][0][:activities][-2][:point_id], result[:routes][0][:activities][-1][:point_id]
-    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.sort
+    assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
+    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-1].collect{ |a| a[:point_id] }.sort
   end
 end

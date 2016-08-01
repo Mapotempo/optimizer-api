@@ -95,8 +95,8 @@ module Wrappers
         routes: [{
           vehicle_id: vehicle.id,
           activities:
-            [{
-              point_id: vehicle.start_point ? vehicle.start_point.id : vrp.services[0].activity.point.id
+            ([vehicle.start_point && {
+              point_id: vehicle.start_point.id
             }] +
             result.collect{ |i|
               if i < vrp.services.size
@@ -117,9 +117,9 @@ module Wrappers
                 }
               end
             } +
-            [{
-              point_id: vehicle.end_point ? vehicle.end_point.id : vrp.services[-1].activity.point.id
-            }]
+            [vehicle.end_point && {
+              point_id: vehicle.end_point.id
+            }]).compact
         }]
       }
     end

@@ -106,9 +106,9 @@ module Wrappers
         routes: [{
           vehicle_id: vehicle.id,
           activities:
-            [{
-              point_id: vehicle_have_start ? vehicle.start_point.id : vrp.services[result['tour'][0] - 1].activity.point.id
-            }] +
+            ([vehicle_have_start ? {
+              point_id: vehicle.start_point.id
+            } : nil] +
             result['tour'].collect{ |i| {
               point_id: vrp.services[i - 1].activity.point.id,
               service_id: vrp.services[i - 1].id
@@ -120,9 +120,9 @@ module Wrappers
 #              pickup_shipments_id [:id0:],
 #              delivery_shipments_id [:id0:]
             }} +
-            [{
-              point_id: vehicle_have_end ? vehicle.end_point.id : !vehicle_loop ? vrp.services[result['tour'][-1] - 1].activity.point.id : vrp.services[result['tour'][0] - 1].activity.point.id
-            }]
+            [vehicle_have_end ? {
+              point_id: vehicle.end_point.id
+            } : nil]).compact
         }]
       }
     end

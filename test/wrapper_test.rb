@@ -389,14 +389,13 @@ class WrapperTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     [:ortools, :jsprit, :vroom].each{ |o|
       result = OptimizerWrapper.solve(o, vrp)
-      assert_equal size + 1, result[:routes][0][:activities].size, "[#{o}] " # always return activities for start/end
+      assert_equal size - 1 + 1, result[:routes][0][:activities].size, "[#{o}] "
       services = result[:routes][0][:activities].collect{ |a| a[:service_id] }
-      (size - 1).times.each{ |i|
-        assert_includes services, "service_#{i + 1}", "[#{o}] Service missing: #{i + 1}"
+      1.upto(size - 1).each{ |i|
+        assert_includes services, "service_#{i}", "[#{o}] Service missing: #{i}"
       }
       points = result[:routes][0][:activities].collect{ |a| a[:point_id] }
       assert_includes points, "point_0", "[#{o}] Point missing: 0"
-      assert_includes points, "point_#{size - 2}", "[#{o}] Point missing: #{size - 1}"
     }
   end
 
