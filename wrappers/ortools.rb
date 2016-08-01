@@ -33,7 +33,6 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_only_one,
-        :assert_vehicles_start,
         :assert_vehicles_no_timewindows,
         :assert_services_no_skills,
         :assert_services_no_multiple_timewindows,
@@ -63,6 +62,18 @@ module Wrappers
       quantities = vrp.services.collect(&:quantities) # Not used
       matrix = vrp.matrix(matrix_indices, vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier)
 
+      if !vehicle.start_point
+        matrix_indices = [0] + matrix_indices.collect{ |i| i + 1 }
+        matrix = [[0] * matrix.length] + matrix
+        matrix.collect!{ |x| [0] + x }
+      end
+
+      if !vehicle.end_point
+        matrix_indices << [matrix_indices.size]
+        matrix += [[0] * matrix.length]
+        matrix.collect!{ |x| x + [0] }
+      end
+
       timewindows = [[nil, nil, 0]] + vrp.services.collect{ |service|
           (service.activity.timewindows.empty? ? [nil, nil] : [service.activity.timewindows[0].start, service.activity.timewindows[0].end]) + [service.activity.duration]
         }
@@ -76,14 +87,8 @@ module Wrappers
       cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment, vrp.resolution_iterations_without_improvment, &block)
       return if !result
 
-      if vehicle.start_point
-        result = result[1..-1]
-        result = result.collect{ |i| i - 1 }
-      end
-      # Always an end_point, we force it at 0 cost
-      if vehicle.end_point
-        result = result[0..-2]
-      end
+      result = result[1..-2]
+      result = result.collect{ |i| i - 1 }
 
       {
         cost: cost,

@@ -141,6 +141,72 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
   end
 
+  def test_without_start_end_probleme
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: {
+        time: [
+          [0, 655, 1948, 5231, 2971],
+          [603, 0, 1692, 4977, 2715],
+          [1861, 1636, 0, 6143, 1532],
+          [5184, 4951, 6221, 0, 7244],
+          [2982, 2758, 1652, 7264, 0],
+        ]
+      },
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }, {
+        id: 'point_4',
+        matrix_index: 4
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_4'
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp)
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size, result[:routes][0][:activities].size
+  end
+
   def test_with_rest
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
