@@ -23,6 +23,6 @@ module Models
     field :start, default: nil
     field :end, default: nil
     validates_numericality_of :start, allow_nil: true
-    validates_numericality_of :end, allow_nil: true
+    validates_numericality_of :end, allow_nil: true, greater_than: :start, if: :start
   end
 end

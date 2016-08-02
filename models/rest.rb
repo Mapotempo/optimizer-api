@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
+require './models/concerns/validate_timewindows'
 
 
 module Models
@@ -28,5 +29,6 @@ module Models
     validates_numericality_of :exclusion_cost, allow_nil: true
 
     has_many :timewindows, class_name: 'Models::Timewindow'
+    include ValidateTimewindows
   end
 end

@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
+require './models/concerns/validate_timewindows'
 
 
 module Models
@@ -47,6 +48,7 @@ module Models
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
     has_many :quantities, class_name: 'Models::VehicleQuantity'
     has_many :timewindows, class_name: 'Models::Timewindow'
+    include ValidateTimewindows
     has_many :rests, class_name: 'Models::Rest'
   end
 end

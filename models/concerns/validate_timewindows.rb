@@ -15,22 +15,30 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './models/base'
-require './models/concerns/validate_timewindows'
+require 'active_support/concern'
 
 
-module Models
-  class Activity < Base
-    @@id = 0
-    field :id, default: ->{ 'a' + (@@id += 1) }
+module ValidateTimewindows
+  extend ActiveSupport::Concern
 
-    field :duration, default: 0
-    field :setup_duration, default: 0
-    validates_numericality_of :duration
-    validates_numericality_of :setup_duration
+  included do
+    validate :validate_timewindows
+  end
 
-    belongs_to :point, class_name: 'Models::Point'
-    has_many :timewindows, class_name: 'Models::Timewindow'
-    include ValidateTimewindows
+  private
+
+  def validate_timewindows
+    t = timewindows.collect{ |timewindow|
+      [timewindow.start, timewindow.end]
+    }
+
+  t.flatten!
+    if t.size > 2 && !t[1..-2].all?
+      errors.add(:timewindows, 'only start of first or end of last timewindow can be left blank')
+    end
+    t.compact!
+    if t != t.sort
+      errors.add(:timewindows, 'timewindows start and end must be in ascending order')
+    end
   end
 end
