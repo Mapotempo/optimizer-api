@@ -107,6 +107,12 @@ module Wrappers
       }
     end
 
+    def assert_services_at_most_two_timewindows(vrp)
+      vrp.services.empty? || vrp.services.none?{ |service|
+        service.activity.timewindows.size > 2
+      }
+    end
+
     def assert_services_no_exclusion_cost(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         !service.exclusion_cost.nil?

@@ -35,7 +35,7 @@ module Wrappers
         :assert_vehicles_only_one,
         :assert_vehicles_no_timewindows,
         :assert_services_no_skills,
-        :assert_services_no_multiple_timewindows,
+        :assert_services_at_most_two_timewindows,
         :assert_services_no_exclusion_cost,
         :assert_no_shipments,
         :assert_ortools_uniq_late_multiplier,
@@ -74,12 +74,16 @@ module Wrappers
         matrix.collect!{ |x| x + [0] }
       end
 
-      timewindows = [[nil, nil, 0]] + vrp.services.collect{ |service|
-          (service.activity.timewindows.empty? ? [nil, nil] : [service.activity.timewindows[0].start, service.activity.timewindows[0].end]) + [service.activity.duration]
+      timewindows = [[nil, nil, nil, nil, 0]] + vrp.services.collect{ |service|
+          (service.activity.timewindows.size >= 1 ? [service.activity.timewindows[0].start, service.activity.timewindows[0].end] : [nil, nil]) +
+          (service.activity.timewindows.size >= 2 ? [service.activity.timewindows[1].start, service.activity.timewindows[1].end] : [nil, nil]) +
+          [service.activity.duration]
         }
 
       rest_window = vehicle.rests.collect{ |rest|
-        [rest.timewindows[0].start, rest.timewindows[0].end, rest.duration]
+        [rest.timewindows[0].start, rest.timewindows[0].end] +
+        (rest.timewindows.size >= 2 ? [rest.timewindows[1].start, rest.timewindows[1].end] : [nil, nil]) +
+        [rest.duration]
       }
 
       soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
@@ -156,9 +160,9 @@ module Wrappers
       input.write("#{rest_window.size}\n")
       input.write(matrix.collect{ |a| a.collect{ |b| [b, b].join(" ") }.join(" ") }.join("\n"))
       input.write("\n")
-      input.write((timewindows + [[-2147483648, 2147483647, 0]]).collect{ |a| [a[0] ? a[0]:-2147483648, a[1]? a[1]:2147483647, a[2]].join(" ") }.join("\n"))
+      input.write((timewindows + [[0, 2147483647, -2147483648, 2147483647, 0]]).collect{ |a| [a[0] ? a[0]:-2147483648, a[1]? a[1]:2147483647, a[2] ? a[2]:-2147483648, a[3]? a[3]:2147483647, a[4]].join(" ") }.join("\n"))
       input.write("\n")
-      input.write(rest_window.collect{ |a| [a[0] ? a[0]:-2147483648, a[1]? a[1]:2147483647, a[2]].join(" ") }.join("\n"))
+      input.write(rest_window.collect{ |a| [a[0] ? a[0]:-2147483648, a[1]? a[1]:2147483647, a[2] ? a[2]:-2147483648, a[3]? a[3]:2147483647, a[4]].join(" ") }.join("\n"))
       input.write("\n")
       input.close
 
