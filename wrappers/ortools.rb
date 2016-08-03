@@ -91,8 +91,7 @@ module Wrappers
       cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment, vrp.resolution_iterations_without_improvment, &block)
       return if !result
 
-      result = result[1..-2]
-      result = result.collect{ |i| i - 1 }
+      result = result[1..-2].collect{ |i| i - 1 }
 
       {
         cost: cost,
@@ -122,7 +121,7 @@ module Wrappers
                 }
               else
                 {
-                  rest_id: vrp.rests[i - (vrp.services.size + (vehicle.start_point ? 1 : 0) + (vehicle.end_point ? 1 : 0))].id
+                  rest_id: vrp.rests[i - (vrp.services.size + 1 + (vehicle.end_point ? 1 : 0))].id
                 }
               end
             } +
