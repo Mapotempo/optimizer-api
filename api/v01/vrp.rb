@@ -82,7 +82,10 @@ module Api
                 requires(:activity, type: Hash) do
                   Vrp.vrp_request_activity(self)
                 end
-                optional(:quantities, type: Array[Array[Float]])
+                optional(:quantities, type: Array) do
+                  requires(:id, type: String)
+                  requires(:values, type: Array[Float])
+                end
               end
               optional(:shipments, type: Array) do
                 requires(:id, type: String)
