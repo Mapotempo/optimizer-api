@@ -24,5 +24,6 @@ module Models
     validates_numericality_of :value
 
     belongs_to :service, class_name: 'Models::Service'
+    belongs_to :unit, class_name: 'Models::Unit'
   end
 end

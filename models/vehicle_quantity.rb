@@ -30,5 +30,6 @@ module Models
     validates_numericality_of :initial
 
     belongs_to :vehicle, class_name: 'Models::Vehicle'
+    belongs_to :unit, class_name: 'Models::Unit'
   end
 end

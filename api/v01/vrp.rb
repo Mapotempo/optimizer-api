@@ -41,7 +41,7 @@ module Api
         this.optional(:setup_duration, type: Float)
         this.requires(:point_id, type: String)
         this.optional(:quantities, type: Array) do
-          requires(:id, type: String)
+          requires(:unit_id, type: String)
           requires(:values, type: Array[Float])
         end
         this.optional(:timewindows, type: Array) do
@@ -74,6 +74,11 @@ module Api
                 at_least_one_of :matrix_index, :location
               end
 
+              optional(:units, type: Array) do
+                requires(:id, type: String)
+                requires(:label, type: String)
+              end
+
               optional(:services, type: Array) do
                 requires(:id, type: String)
                 optional(:late_multiplier, type: Float)
@@ -84,7 +89,7 @@ module Api
                   Vrp.vrp_request_activity(self)
                 end
                 optional(:quantities, type: Array) do
-                  requires(:id, type: String)
+                  requires(:unit_id, type: String)
                   requires(:value, type: Float)
                 end
               end
@@ -100,7 +105,7 @@ module Api
                   Vrp.vrp_request_activity(self)
                 end
                 optional(:quantities, type: Array) do
-                  requires(:id, type: String)
+                  requires(:unit_id, type: String)
                   requires(:value, type: Float)
                 end
               end
@@ -134,7 +139,7 @@ module Api
                 optional(:start_point_id, type: String)
                 optional(:end_point_id, type: String)
                 optional(:quantities, type: Array) do
-                  requires(:id, type: String)
+                  requires(:unit_id, type: String)
                   requires(:limit, type: Float)
                   optional(:initial, type: Float)
                 end
@@ -143,8 +148,6 @@ module Api
                 end
                 optional(:rest_ids, type: Array[String])
               end
-
-              optional(:units, type: Array[String])
 
               optional(:configuration, type: Hash) do
                 optional(:preprocessing, type: Hash) do
