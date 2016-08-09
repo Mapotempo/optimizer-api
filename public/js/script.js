@@ -348,7 +348,7 @@ $(document).ready(function() {
             // TODO: gérer les quantités multiples
             quantities: [{
               id: 'unit',
-              values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
+              value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
             }],
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -373,7 +373,7 @@ $(document).ready(function() {
             // TODO: gérer les quantités multiples
             quantities: [{
               id: 'unit',
-              values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
+              value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
             }],
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -398,7 +398,7 @@ $(document).ready(function() {
             // TODO: gérer les quantités multiples
             quantities: [{
               id: 'unit',
-              values: [parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000)] // quantities are rounded for jsprit
+              value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
             }],
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -420,15 +420,18 @@ $(document).ready(function() {
           cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'],
           coef_setup: vehicle[mapping.coef_setup || 'coef_setup'],
           // TODO: gérer les quantités multiples
-          quantities: [{
-            id: 'unit',
-            values: [
-              parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
-            ],
-            inital_values: [
-              (vehicle[mapping.initial_quantity || 'initial_quantity'] ? parseInt((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.') * 1000) : null) // quantities are rounded for jsprit
-            ]
-          }],
+          quantities:
+            (vehicle[mapping.initial_quantity || 'initial_quantity']) ?
+              [{
+                id: 'unit',
+                limit: parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000), // quantities are rounded for jsprit
+                initial: parseInt((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.') * 1000) // quantities are rounded for jspri
+              }]
+            :
+              [{
+                id: 'unit',
+                limit: parseInt((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.') * 1000) // quantities are rounded for jsprit
+              }],
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
           }).filter(function(el) {
