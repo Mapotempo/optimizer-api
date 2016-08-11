@@ -48,19 +48,6 @@ module Wrappers
       result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, vrp.resolution_iterations_without_improvment, vrp.resolution_stable_iterations, vrp.resolution_stable_coefficient, vrp.preprocessing_prefer_short_segment, @threads, &block)
       if result && result.is_a?(Hash)
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
-        result[:routes].each{ |route|
-          vehicle = vehicles[route[:vehicle_id]]
-          if vehicle.start_point
-            route[:activities].insert 0, {
-              point_id: vehicle.start_point.id
-            }
-          end
-          if vehicle.end_point
-            route[:activities] << {
-              point_id: vehicle.end_point.id
-            }
-          end
-        }
         result
       else
         m = /Exception: (.+)\n/.match(result) if result
@@ -88,6 +75,7 @@ module Wrappers
     end
 
     def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, resolution_duration, resolution_iterations, resolution_iterations_without_improvment, resolution_stable_iterations, resolution_stable_coefficient, nearby, threads, &block)
+      fleet = Hash[vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
       builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
         xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
           xml.problemType {
@@ -320,12 +308,12 @@ module Wrappers
           r && (cost = Float(r[1]))
           r && (fresh_output = true)
         end
-        block.call(self, iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, services, shipments)) if block
+        block.call(self, iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, fleet, services, shipments)) if block
         fresh_output = nil
       }
 
       if @thread.value == 0
-        parse_output(output.path, iterations, services, shipments)
+        parse_output(output.path, iterations, fleet, services, shipments)
       else
         out
       end
@@ -337,7 +325,7 @@ module Wrappers
       output && output.unlink
     end
 
-    def parse_output(path, iterations, services, shipments)
+    def parse_output(path, iterations, fleet, services, shipments)
       doc = Nokogiri::XML(File.open(path))
       doc.remove_namespaces!
       solution = doc.xpath('/problem/solutions/solution').last
@@ -350,7 +338,8 @@ module Wrappers
               vehicle_id: route.at_xpath('vehicleId').content,
               start_time: Float(route.at_xpath('start').content),
               end_time: Float(route.at_xpath('end').content),
-              activities: route.xpath('act').collect{ |act|
+              activities: (fleet[route.at_xpath('vehicleId').content].start_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].start_point.id }] : []) +
+              route.xpath('act').collect{ |act|
                 {
 #                  activity: act.attr('type').to_sym,
                   pickup_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'pickupShipment' && a.content,
@@ -361,7 +350,7 @@ module Wrappers
                   departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
                   ready_time: (a = act.at_xpath('readyTime')) && a && Float(a.content),
                 }.delete_if { |k, v| !v }
-              }
+              } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].end_point.id }] : [])
             }
           },
           unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
