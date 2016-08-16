@@ -42,7 +42,7 @@ module OptimizerWrapper
   end
 
   def self.wrapper_vrp(api_key, services, vrp)
-    service = services[:vrp].find{ |s|
+    service = services[:services][:vrp].find{ |s|
       inapplicable = config[:services][s].inapplicable_solve?(vrp)
       if inapplicable.empty?
         puts "Select service #{s}"
@@ -58,7 +58,7 @@ module OptimizerWrapper
       if config[:services][service].solve_synchronous?(vrp)
         solve(service, vrp)
       else
-        job_id = Job.create(service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
+        job_id = Job.enqueue_to(services[:queue], Job, service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
         JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end

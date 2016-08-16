@@ -42,6 +42,7 @@ module OptimizerWrapper
     },
     profiles: [{
       api_keys: ['demo'],
+      queue: 'DEFAULT',
       services: {
         vrp: [:demo, :vroom, :jsprit, :ortools]
       }
@@ -54,7 +55,10 @@ module OptimizerWrapper
 
   @@c[:api_keys] = Hash[@@c[:profiles].collect{ |profile|
     profile[:api_keys].collect{ |api_key|
-      [api_key, profile[:services]]
+      [api_key, {
+        queue: profile[:queue],
+        services: profile[:services]
+      }]
     }
   }.flatten(1)]
 end
