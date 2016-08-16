@@ -420,7 +420,7 @@ $(document).ready(function() {
             $('#optim-kill').click(function(e) {
               $.ajax({
                 type: 'delete',
-                url: '/0.1/vrp/job/' + $('#optim-job-uid').val() + '.json?api_key=' + $('#api-key').val()
+                url: '/0.1/vrp/jobs/' + $('#optim-job-uid').val() + '.json?api_key=' + $('#api-key').val()
               }).done(function(result) {
                 clearInterval(window.optimInterval);
                 $('#optim-infos').html('');
@@ -439,7 +439,7 @@ $(document).ready(function() {
             $.ajax({
               type: 'get',
               contentType: 'application/json',
-              url: '/0.1/vrp/job/' + result.job.id + '.json?api_key=' + $('#api-key').val(),
+              url: '/0.1/vrp/jobs/' + result.job.id + '.json?api_key=' + $('#api-key').val(),
               success: function(job) {
                 nbError = 0;
                 $('#avancement').html(job.job.avancement);
