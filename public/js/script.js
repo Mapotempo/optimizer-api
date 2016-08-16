@@ -221,7 +221,7 @@ $(document).ready(function() {
   var buildVRP = function() {
     if (data.customers.length > 0 && data.vehicles.length > 0) {
       if (debug) console.log('Build json from csv: ', data);
-      var vrp = {points: [], shipments: [], services: [], vehicles: [], configuration: {
+      var vrp = {points: [], units: [], shipments: [], services: [], vehicles: [], configuration: {
         preprocessing: {
           cluster_threshold: 0
         },
@@ -231,6 +231,12 @@ $(document).ready(function() {
           iterations_without_improvment: parseInt($('#optim-iterations-without-improvment').val()) || undefined
         }
       }};
+
+      // units
+      vrp.units.push({
+        id: 'unit',
+        label: 'kg'
+      });
 
       // points
       var points = []; customers = [];
@@ -347,7 +353,7 @@ $(document).ready(function() {
             },
             // TODO: gérer les quantités multiples
             quantities: [{
-              id: 'unit',
+              unit_id: 'unit',
               value: parseInt((customer[mapping.quantity || 'quantity'] || '').replace(',', '.'))
             }],
             skills: $.map(customer, function(val, key) {
@@ -372,7 +378,7 @@ $(document).ready(function() {
             },
             // TODO: gérer les quantités multiples
             quantities: [{
-              id: 'unit',
+              unit_id: 'unit',
               value: ((customer[mapping.quantity || 'quantity'] || '').replace(',', '.'))
             }],
             skills: $.map(customer, function(val, key) {
@@ -397,7 +403,7 @@ $(document).ready(function() {
             },
             // TODO: gérer les quantités multiples
             quantities: [{
-              id: 'unit',
+              unit_id: 'unit',
               value: ((customer[mapping.quantity || 'quantity'] || '').replace(',', '.'))
             }],
             skills: $.map(customer, function(val, key) {
@@ -423,13 +429,13 @@ $(document).ready(function() {
           quantities:
             (vehicle[mapping.initial_quantity || 'initial_quantity']) ?
               [{
-                id: 'unit',
+                unit_id: 'unit',
                 limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.')),
                 initial: ((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.'))
               }]
             :
               [{
-                id: 'unit',
+                unit_id: 'unit',
                 limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.'))
               }],
           skills: $.map(vehicle, function(val, key) {
@@ -447,6 +453,7 @@ $(document).ready(function() {
           speed_multiplier: (vehicle[mapping.speed_multiplier || 'speed_multiplier'] || '').replace(',', '.') || 1,
         });
       });
+
       return vrp;
     }
   };
