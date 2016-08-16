@@ -166,7 +166,7 @@ module Api
               if !vrp.valid?
                 error!({error: 'Model Validation Error', detail: vrp.errors}, 400)
               else
-                ret = OptimizerWrapper.wrapper_vrp(APIBase.services(params[:api_key]), vrp)
+                ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp)
                 if ret.is_a?(String)
                   #present result, with: VrpResult
                   status 201
@@ -194,7 +194,7 @@ module Api
           end
         end
 
-        resource :job do
+        resource :jobs do
           desc 'Fetch vrp job status', {
             named: 'job',
             success: VrpResult,
@@ -248,6 +248,21 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             end
+          end
+
+          desc 'List vrp jobs', {
+            named: 'ListJobs',
+            success: VrpJobsList,
+            detail: 'List running or queued jobs.'
+          }
+          get do
+            jobs = OptimizerWrapper::JobList.get(params[:api_key]).collect{ |job| {
+              time: job['time'],
+              status: job['status'],
+              id: job['uuid']
+            } }
+            status 201
+            present({jobs: jobs}, with: Grape::Presenters::Presenter)
           end
 
           desc 'Delete vrp job', {

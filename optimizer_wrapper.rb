@@ -20,6 +20,7 @@ require 'resque'
 require 'resque-status'
 require 'redis'
 require 'json'
+require 'thread'
 
 require './lib/routers/router_wrapper.rb'
 
@@ -40,7 +41,7 @@ module OptimizerWrapper
     @router ||= Routers::RouterWrapper.new(ActiveSupport::Cache::NullStore.new, ActiveSupport::Cache::NullStore.new, config[:router][:api_key])
   end
 
-  def self.wrapper_vrp(services, vrp)
+  def self.wrapper_vrp(api_key, services, vrp)
     service = services[:vrp].find{ |s|
       inapplicable = config[:services][s].inapplicable_solve?(vrp)
       if inapplicable.empty?
@@ -58,6 +59,7 @@ module OptimizerWrapper
         solve(service, vrp)
       else
         job_id = Job.create(service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
+        JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end
     end
@@ -108,6 +110,10 @@ module OptimizerWrapper
     puts e
     puts e.backtrace
     raise
+  end
+
+  def self.list_job(api_key)
+    JobList.list
   end
 
   private
@@ -319,6 +325,32 @@ module OptimizerWrapper
       result = OptimizerWrapper::REDIS.get(key)
       if result
         JSON.parse(result)
+      end
+    end
+
+    def self.exist(key)
+      OptimizerWrapper::REDIS.exists(key)
+    end
+  end
+
+  class JobList
+    MUTEX = Mutex.new
+
+    def self.add(api_key, job_id)
+      MUTEX.synchronize {
+        list = self.get(api_key) || []
+        list << job_id
+        OptimizerWrapper::REDIS.set(api_key, list.to_json)
+      }
+    end
+
+    def self.get(api_key)
+      result = OptimizerWrapper::REDIS.get(api_key)
+      if result
+        list = JSON.parse(result)
+        list.collect{ |e|
+          Resque::Plugins::Status::Hash.get(e)
+        }
       end
     end
   end

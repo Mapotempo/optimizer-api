@@ -64,5 +64,9 @@ module Api
       expose :solutions, using: VrpResultSolution, documentation: { is_array: true, desc: 'The current best solution.' }
       expose :job, using: VrpResultJob, documentation: { desc: 'The Job status.' }
     end
+
+    class VrpJobsList < Grape::Entity
+      expose :jobs, using: VrpResultJob, documentation: { is_array: true, desc: 'The Jobs.' }
+    end
   end
 end

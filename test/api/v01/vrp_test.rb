@@ -55,4 +55,10 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 201, last_response.status, last_response.body
     assert JSON.parse(last_response.body)['job']['id']
   end
+
+  def test_vrp
+    get '/0.1/vrp/jobs', {api_key: 'demo'}
+    assert_equal 201, last_response.status, last_response.body
+    assert JSON.parse(last_response.body)['jobs'][0]
+  end
 end
