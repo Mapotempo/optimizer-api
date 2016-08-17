@@ -348,7 +348,7 @@ module Wrappers
                   rest_id: (a = act.at_xpath('restId')) && a && a.content,
                   arrival_time: (a = act.at_xpath('arrTime')) && a && Float(a.content),
                   departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
-                  ready_time: (a = act.at_xpath('readyTime')) && a && Float(a.content),
+                  setup_time: (a = act.at_xpath('setTime')) && a && Float(a.content),
                 }.delete_if { |k, v| !v }
               } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].end_point.id }] : [])
             }
