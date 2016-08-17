@@ -582,7 +582,7 @@ $(document).ready(function() {
           var ref = activity.pickup_shipment_id ? (activity.pickup_shipment_id + ' pickup') : activity.delivery_shipment_id;
           var lat = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
           var lon = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
-          var d = activity.ready_time - activity.arrival_time + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
+          var d = (activity.setup_time < duration(start) && activity.arrival_time > duration(start) ? duration(start) - activity.setup_time + activity.arrival_time : activity.arrival_time - activity.setup_time ) + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
           var start = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
           var end = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
           var skills = $.map(data.customers[customer_id], function(val, key) {
@@ -628,7 +628,7 @@ $(document).ready(function() {
             var ref = activity.service_id;
             var lat = data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
             var lon = data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
-            var d = activity.ready_time - activity.arrival_time + (duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
+            var d = (activity.setup_time < duration(start) && activity.arrival_time > duration(start) ? duration(start) - activity.setup_time + activity.arrival_time : activity.arrival_time - activity.setup_time ) + (duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
             var start = data.customers[customer_id][mapping.pickup_start || 'pickup_start'] ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
             var end = data.customers[customer_id][mapping.pickup_end || 'pickup_end'] ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
             var skills = $.map(data.customers[customer_id], function(val, key) {
@@ -665,7 +665,7 @@ $(document).ready(function() {
             '',
             '', // lat
             '', // lon
-            (activity.ready_time - activity.arrival_time).toHHMMSS(),
+            (activity.end_time - activity.arrival_time).toHHMMSS(),
             '',
             '', // start
             '', // end
