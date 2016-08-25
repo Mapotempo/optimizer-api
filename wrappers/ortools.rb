@@ -88,7 +88,7 @@ module Wrappers
 
       soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
 
-      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, vrp.resolution_duration, soft_upper_bound, vrp.preprocessing_prefer_short_segment, vrp.resolution_iterations_without_improvment, &block)
+      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, soft_upper_bound, vrp, &block)
       return if !result
 
       result = result[1..-2].collect{ |i| i - 1 }
@@ -153,7 +153,7 @@ module Wrappers
       late_multipliers.size <= 1
     end
 
-    def run_ortools(quantities, matrix, timewindows, rest_window, optimize_time, soft_upper_bound, nearby, iterations_without_improvment, &block)
+    def run_ortools(quantities, matrix, timewindows, rest_window, soft_upper_bound, vrp, &block)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write("#{matrix.size}\n")
       input.write("#{rest_window.size}\n")
@@ -167,10 +167,12 @@ module Wrappers
 
       cmd = [
         "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` ",
-        (optimize_time || @optimize_time) && '-time_limit_in_ms ' + (optimize_time || @optimize_time).to_s,
+        (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
         soft_upper_bound && '-soft_upper_bound ' + soft_upper_bound.to_s,
-        nearby ? '-nearby' : nil,
-        (iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (iterations_without_improvment || @iterations_without_improvment).to_s,
+        vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
+        (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,
+        (vrp.resolution_initial_time_out || @initial_time_out) && '-initial_time_out_no_solution_improvement ' + (vrp.resolution_initial_time_out || @initial_time_out).to_s,
+        (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
         "-instance_file '#{input.path}'"].compact.join(' ')
       puts cmd
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {

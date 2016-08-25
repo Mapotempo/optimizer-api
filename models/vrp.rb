@@ -27,12 +27,16 @@ module Models
     field :resolution_iterations_without_improvment, default: nil
     field :resolution_stable_iterations, default: nil
     field :resolution_stable_coefficient, default: nil
+    field :resolution_initial_time_out, default: nil
+    field :resolution_time_out_multiplier, default: nil
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
     validates_numericality_of :resolution_duration, allow_nil: true
     validates_numericality_of :resolution_iterations, allow_nil: true
     validates_numericality_of :resolution_iterations_without_improvment, allow_nil: true
     validates_numericality_of :resolution_stable_iterations, allow_nil: true
     validates_numericality_of :resolution_stable_coefficient, allow_nil: true
+    validates_numericality_of :resolution_initial_time_out, allow_nil: true
+    validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
 
     fields :matrix_time, :matrix_distance
 
@@ -59,6 +63,8 @@ module Models
       self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
       self.resolution_stable_iterations = resolution[:stable_iterations]
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
+      self.resolution_initial_time_out = resolution[:initial_time_out]
+      self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
     end
 
     def preprocessing=(preprocessing)
