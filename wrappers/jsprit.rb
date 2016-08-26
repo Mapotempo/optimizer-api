@@ -25,7 +25,7 @@ module Wrappers
   class Jsprit < Wrapper
     def initialize(cache, hash = {})
       super(cache, hash)
-      @exec_jsprit = hash[:exec_jsprit] || 'java -jar ../optimizer-jsprit/target/mapotempo-jsprit-0.0.1-SNAPSHOT-jar-with-dependencies.jar'
+      @exec_jsprit = hash[:exec_jsprit] || 'java -jar ../optimizer-jsprit/target/optimizer-jsprit-0.0.1-SNAPSHOT-jar-with-dependencies.jar'
 
       @semaphore = Mutex.new
     end
