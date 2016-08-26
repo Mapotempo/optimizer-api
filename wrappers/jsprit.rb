@@ -135,7 +135,7 @@ module Wrappers
                     end
                   }
                 end
-                if(vehicle.quantities[0][:initial])
+                if(vehicle.quantities.size > 0 && vehicle.quantities[0][:initial])
                   xml.method_missing('initial-capacity') {
                     xml.dimension (vehicle.quantities[0][:initial] * 1000).to_i, index: 0
                   }
@@ -148,10 +148,14 @@ module Wrappers
             vehicles.each do |vehicle|
               xml.type {
                 xml.id_ vehicle.id
-                if vehicle.quantities
+                if vehicle.quantities.size > 0
                   xml.method_missing('capacity-dimensions') {
                     # Jsprit accepts only integers
                     xml.dimension (vehicle.quantities[0][:limit] * 1000).to_i, index: 0
+                  }
+                else
+                  xml.method_missing('capacity-dimensions') {
+                    xml.dimension 0, index: 0
                   }
                 end
                 xml.costs {
@@ -184,10 +188,15 @@ module Wrappers
                   (xml.duration service.activity.duration) if service.activity.duration > 0
                   (xml.requiredSkills service.skills.join(",")) if service.skills.size > 0
 
-                  if service.quantities
+                  if service.quantities.size > 0
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
                       xml.dimension (service.quantities[0][:value] * 1000).to_i, index: 0
+                    }
+                  else
+                    xml.method_missing('capacity-dimensions') {
+                      # Jsprit accepts only integers
+                      xml.dimension 0, index: 0
                     }
                   end
                 }
@@ -234,10 +243,15 @@ module Wrappers
                   }
                   (xml.requiredSkills shipment.skills.join(",")) if shipment.skills.size > 0
 
-                  if shipment.quantities
+                  if shipment.quantities.size > 0
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
                       xml.dimension (shipment.quantities[0][:value] * 1000).to_i, index: 0
+                    }
+                  else
+                    xml.method_missing('capacity-dimensions') {
+                      # Jsprit accepts only integers
+                      xml.dimension 0, index: 0
                     }
                   end
                 }
