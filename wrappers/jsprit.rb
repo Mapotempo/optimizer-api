@@ -311,7 +311,7 @@ module Wrappers
         puts (@job ? @job + ' - ' : '') + line
         out = out ? out + "\n" + line : line
         iterations_start += 1 if /\- iterations start/.match(line)
-        if iterations_start == 2
+        if iterations_start == 1
           r = /- iterations ([0-9]+)/.match(line)
           r && (iterations = Integer(r[1]))
           r = /- iterations end at ([0-9]+) iterations/.match(line)
@@ -407,7 +407,7 @@ module Wrappers
         <searchStrategies>
             <searchStrategy name="randomRuinLarge">
                 <selector name="selectBest"/>
-                <acceptor name="schrimpfAcceptance">
+                <acceptor name="acceptNewRemoveWorst">
                     <alpha>0.02</alpha>
                     <warmup>10</warmup>
                 </acceptor>
@@ -423,7 +423,7 @@ module Wrappers
             </searchStrategy>
             <searchStrategy name="LargeRadialRuinAndRecreate">
                 <selector name="selectBest"/>
-                <acceptor name="schrimpfAcceptance">
+                <acceptor name="acceptNewRemoveWorst">
                     <alpha>0.02</alpha>
                     <warmup>10</warmup>
                 </acceptor>
@@ -439,7 +439,7 @@ module Wrappers
             </searchStrategy>
             <searchStrategy name="randomRuinSmall">
                 <selector name="selectBest"/>
-                <acceptor name="schrimpfAcceptance">
+                <acceptor name="acceptNewRemoveWorst">
                     <alpha>0.02</alpha>
                     <warmup>10</warmup>
                 </acceptor>
@@ -455,7 +455,7 @@ module Wrappers
             </searchStrategy>
             <searchStrategy name="SmallradialRuinAndRecreate">
                 <selector name="selectBest"/>
-                <acceptor name="schrimpfAcceptance">
+                <acceptor name="acceptNewRemoveWorst">
                     <alpha>0.02</alpha>
                     <warmup>10</warmup>
                     </acceptor>
