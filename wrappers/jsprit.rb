@@ -403,7 +403,7 @@ module Wrappers
         <insertion name="regretInsertion"/>
     </construction>
     <strategy>
-        <memory>3</memory>
+        <memory>10</memory>
         <searchStrategies>
             <searchStrategy name="randomRuinLarge">
                 <selector name="selectBest"/>
