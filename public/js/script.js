@@ -72,11 +72,14 @@ $(document).ready(function() {
         })
         .done(function(data) {
           jobsManager.shouldUpdate(data);
+        })
+        .fail(function(jqXHR, textStatus, errorThrown){
+          clearInterval(window.AjaxGetRequestInterval);
         });
       };
       if (timeinterval) {
         ajaxload();
-        window.AjaxGetRequestInterval = setInterval(ajaxload, 1000);
+        window.AjaxGetRequestInterval = setInterval(ajaxload, 5000);
       }
       else{
         ajaxload();

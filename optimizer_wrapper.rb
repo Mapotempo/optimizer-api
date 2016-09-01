@@ -346,7 +346,7 @@ module OptimizerWrapper
 
     def self.get(api_key)
       result = OptimizerWrapper::REDIS.get(api_key)
-      result = JSON.parse(result)
+      JSON.parse(result) if result
     end
   end
 end
