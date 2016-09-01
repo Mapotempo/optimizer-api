@@ -23,12 +23,12 @@ input[type=text] {
 
 fieldset {
   border: #E8E8E8 1px solid;
+  margin-bottom: 10px;
 }
 
 fieldset div {
   margin: 5px;
   margin-right: 10px;
-  display: inline-block;
 }
 
 #optim-options input {
@@ -70,4 +70,11 @@ fieldset div {
   height: 600px;
   margin-top: 5px;
   min-width: 300px;
+}
+#jobs-list{
+  height: 155px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: scroll;
+  display: inline-block;
 }

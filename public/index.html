@@ -8,6 +8,7 @@
   <script src="js/papaparse.min.js"></script>
   <script src="js/Chart.Core.min.js"></script>
   <script src="js/Chart.Scatter.min.js"></script>
+  <script type="text/javascript" src="js/conf.js"></script>
   <script src="js/script.js"></script>
 </head>
 <body>
@@ -15,11 +16,15 @@
     <img src="images/logo.png">
     <h1>Optimizer</h1>
   </div>
+  <fieldset>
+    <legend id="title_optim"></legend>
+    <div id="jobs-list" class="block">
+      
+    </div>
+  </fieldset>
   <form>
     <a id="doc-link" href="#documentation">documentation</a>
     <div class="block">
-      <span id="api-key-label"></span> <input type="text" id="api-key" value="demo">
-    </div><div class="block">
       <span id="file-customers-label"></span> <input type="file" id="file-customers">
     </div>
     <div class="block">

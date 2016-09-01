@@ -12,6 +12,14 @@ Number.prototype.toHHMMSS = function () {
   return hours+':'+minutes+':'+seconds;
 }
 
+var getParams = function() {
+  var parameters = {};
+  var parts = window.location.search.replace(/[?&]+([^=&]+)=?([^&#]*)/gi, function(match, key, value, offset) {
+  parameters[key] = value;
+  });
+  return parameters;
+}
+
 $(document).ready(function() {
   var debug = (window.location.search.search('debug') != -1) ? true : false;
   var data = {
@@ -20,108 +28,100 @@ $(document).ready(function() {
   };
   var customers = [];
 
-  var i18n = {
-    title: 'Optimisez vos fichiers CSV',
-    form: {
-      'api-key-label': 'Votre clé d\'api :',
-      'file-customers-label': 'Votre fichier clients csv :',
-      'file-vehicles-label': 'Votre fichier véhicules csv :',
-      'optim-options-legend': 'Options de l\'optimisation :',
-      'optim-duration-label': 'Durée maximale :',
-      'optim-iterations-label': 'Nombre maximum d\'itérations :',
-      'optim-iterations-without-improvment-label': 'Itérations sans amélioration (arrêt automatique) :',
-      'send-files': 'Envoyer',
-      'result-label': 'Résultat de votre optimisation :'
+  var jobsManager = {
+    jobs: {},
+    htmlElements: {
+      builder: function(jobs) {
+        $(jobs).each(function() {
+          $('#jobs-list').append($(jobsManager.htmlElements.container('block deleter')).addClass('block deleter')
+            .append($(jobsManager.htmlElements.span('Job N° ' + $(this)[0]['uuid'] + ' ', 'text_jobs_field'))
+            .append($(jobsManager.htmlElements.button($(this)[0]['uuid'], i18n.killOptim + ' (status: ' + $(this)[0]['status'] + ')', $(this)[0]['uuid'], 'deleter')))
+            )
+          )
+        });
+        $('#jobs-list button').on('click', function() {
+          jobsManager.roleDispatcher(this);
+        });
+      },
+      container: function() { return document.createElement('div') },
+      button: function(id, content, value, data_role) {
+        return button = "<button id='" + id + "' value=" + value + " data-role=" + data_role + ">" + content + "</button>"; 
+      },
+      span: function(content = null, cssclass = null) {
+        return "<span class=" + cssclass + ">" + content + "</span>"
+      },
     },
-    customers: 'clients',
-    vehicles: 'véhicules',
-    missingFile: 'Veuillez renseigner un fichier clients et un fichier véhicles.',
-    missingColumn: function(columnName) {
-      return 'Colonne manquante ou donnée nulle : ' + columnName;
+    roleDispatcher: function(object) {
+      switch($(object).data('role')) {
+        case 'RestartJob':
+          //actually in building, create to apply different behavior to the button object RestartJob, actually not set. #TODO
+        break;
+        case 'deleter':
+          this.ajaxDeleteJob(object.id);
+          $(object).fadeOut(500, function() { object.closest('.deleter').remove(); });
+        break;
+      }
     },
-    sameReference: function(value) {
-      return 'Référence identique détectée : ' + value;
+    ajaxGetJobs: function(timeinterval = false) {
+      var ajaxload = function() {
+        $.ajax( {
+          url: '/0.1/vrp/jobs',
+          type: 'get',
+          dataType: 'json',
+          data: { api_key: getParams()['api_key'] },
+        })
+        .done(function(data) {
+          jobsManager.shouldUpdate(data);
+        });
+      };
+      if (timeinterval) {
+        ajaxload();
+        window.AjaxGetRequestInterval = setInterval(ajaxload, 1000);
+      }
+      else{
+        ajaxload();
+      }
     },
-    invalidDuration: function(value) {
-      return 'Durée invalide : ' + value;
+    ajaxDeleteJob:function(uuid) {
+      $.ajax( {
+        url: '/0.1/vrp/jobs/' + uuid + '.json',
+        type: 'delete',
+        dataType: 'json',
+        data: {
+          api_key: getParams()['api_key']
+        },
+      })
+      .done(function(data) {
+        if (debug) { console.log("the uuid have been deleted from the jobs queue & the DB"); }
+      });
     },
-    invalidRouterMode: function(value) {
-      return 'Mode de calcul d\'itinéraire non autorisé : ' + value;
-    },
-    notSameRouter: function(values) {
-      return 'Valeurs distinctes non autorisées pour vos véhicules : ' + values.join(', ');
-    },
-    errorFile: function(filename) {
-      return 'Une erreur est survenue en lisant le fichier ' + filename + ': ';
-    },
-    optimizeQueued: 'En attente d\'un processus disponible...',
-    optimizeLoading: 'Traitement et optimisation en cours...',
-    failureCallOptim: function(error) {
-      return 'Erreur interne en lançant le service d\'optimisation : ' + error;
-    },
-    failureOptim: function(attempts, error) {
-      return 'Impossible de maintenir la connexion avec le service d\'optimisation (' + attempts + ' tentatives) : ' + error;
-    },
-    killOptim: 'Arrêter l\'optimisation',
-    displaySolution: 'Afficher la solution intermédiaire',
-    downloadCSV: 'Télécharger le fichier CSV',
-    reference: 'référence',
-    route: 'tournée',
-    vehicle: 'véhicule',
-    stop_type: 'type arrêt',
-    name: 'nom',
-    street: 'voie',
-    postalcode: 'code postal',
-    city: 'ville',
-    lat: 'lat',
-    lng: 'lng',
-    take_over: 'durée visite',
-    quantity: 'quantité',
-    open: 'horaire début',
-    close: 'horaire fin',
-    tags: 'libellés',
+    shouldUpdate: function(data) {
+      //check if chagements occurs in the data api. #TODO, update if more params are needed.
+      $(data).each(function(index, object) {
+        if(jobsManager.jobs.length > 0) {
+          if (object.status != jobsManager.jobs[index].status || jobsManager.jobs.length != data.length) {
+            jobsManager.jobs = data;
+            $('#jobs-list .deleter').remove();
+            jobsManager.htmlElements.builder(jobsManager.jobs);
+          }
+        }
+        else {
+          jobsManager.jobs = data;
+          $('#jobs-list .deleter').remove();
+          jobsManager.htmlElements.builder(jobsManager.jobs);
+        }
+      });
+    }
   };
+
+  jobsManager.ajaxGetJobs(true);
+
   $('head title').html(i18n.title);
   for (id in i18n.form) {
     $('#' + id).html(i18n.form[id]);
   }
 
-  var mapping = {
-    reference: 'reference',
-    pickup_lat: 'pickup_lat',
-    pickup_lon: 'pickup_lng',
-    pickup_start: 'pickup_start',
-    pickup_end: 'pickup_end',
-    pickup_duration: 'pickup_duration',
-    pickup_setup: 'pickup_setup',
-    delivery_lat: 'delivery_lat',
-    delivery_lon: 'delivery_lng',
-    delivery_start: 'delivery_start',
-    delivery_end: 'delivery_end',
-    delivery_duration: 'delivery_duration',
-    delivery_setup: 'delivery_setup',
-    skills: 'skills',
-    quantity: 'quantity 1', // TODO: gérer les quantités multiples
-    initial_quantity: 'initial quantity 1',
-    start_lat: 'start_lat',
-    start_lon: 'start_lng',
-    end_lat: 'end_lat',
-    end_lon: 'end_lng',
-    cost_fixed: 'fix_cost',
-    cost_distance_multiplier: 'distance_cost',
-    cost_time_multiplier: 'time_cost',
-    cost_waiting_time_multiplier: 'wait_cost',
-    cost_late_multiplier: '',
-    cost_setup_time_multiplier: 'setup_cost',
-    coef_setup: 'setup_multiplier',
-    start_time: 'start_time',
-    end_time: 'end_time',
-    route_duration: 'duration',
-    speed_multiplier: 'speed_multiplier',
-    router_mode: 'router_mode',
-    router_dimension: 'router_dimension'
-  };
-
+  $('#title_optim').html(i18n.currents_jobs);
   $('#file-customers-help .column-name').append('<td class="required">' + mapping.reference + '</td>');
   $('#file-customers-help .column-value').append('<td class="required">ref</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.pickup_lat + '</td>');
@@ -479,7 +479,7 @@ $(document).ready(function() {
       type: 'post',
       contentType: 'application/json',
       data: JSON.stringify({vrp: vrp}),
-      url: '/0.1/vrp/submit.json?api_key=' + $('#api-key').val(),
+      url: '/0.1/vrp/submit.json?api_key=' + getParams()["api_key"],
       success: function(result) {
         if (debug) console.log("Calling optimization... ", result);
         var delay = 2000;
@@ -492,7 +492,7 @@ $(document).ready(function() {
             $('#optim-kill').click(function(e) {
               $.ajax({
                 type: 'delete',
-                url: '/0.1/vrp/jobs/' + $('#optim-job-uid').val() + '.json?api_key=' + $('#api-key').val()
+                url: '/0.1/vrp/jobs/' + $('#optim-job-uid').val() + '.json?api_key=' + getParams()["api_key"]
               }).done(function(result) {
                 clearInterval(window.optimInterval);
                 $('#optim-infos').html('');
@@ -511,7 +511,7 @@ $(document).ready(function() {
             $.ajax({
               type: 'get',
               contentType: 'application/json',
-              url: '/0.1/vrp/jobs/' + result.job.id + '.json?api_key=' + $('#api-key').val(),
+              url: '/0.1/vrp/jobs/' + result.job.id + '.json?api_key=' + getParams()["api_key"],
               success: function(job) {
                 nbError = 0;
                 $('#avancement').html(job.job.avancement);
@@ -740,7 +740,7 @@ $(document).ready(function() {
               return el;
             }).join(',')
           ]);
-        } else if (data.customers[customer_id][mapping.delivery_lat || 'delivery_lat']){ // delivery
+        } else if (data.customers[customer_id][mapping.delivery_lat || 'delivery_lat']) { // delivery
           stops.push([
             job.service_id,
             '',
