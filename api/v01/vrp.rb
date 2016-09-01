@@ -127,6 +127,7 @@ module Api
                 requires(:id, type: String)
                 optional(:late_multiplier, type: Float)
                 optional(:exclusion_cost, type: Float)
+                optional(:sticky_vehicle_ids, type: Array[String])
                 optional(:skills, type: Array[String])
                 requires(:type, type: Symbol)
                 requires(:activity, type: Hash) do
@@ -141,6 +142,7 @@ module Api
                 requires(:id, type: String)
                 optional(:late_multiplier, type: Float)
                 optional(:exclusion_cost, type: Float)
+                optional(:sticky_vehicle_ids, type: Array[String])
                 optional(:skills, type: Array[String])
                 requires(:pickup, type: Hash) do
                   Vrp.vrp_request_activity(self)

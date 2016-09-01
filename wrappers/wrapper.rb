@@ -137,6 +137,23 @@ module Wrappers
       vrp.matrices.size == 1
     end
 
+    def assert_one_sticky_at_most(vrp)
+      (vrp.services.empty? || vrp.services.none?{ |service|
+        service.sticky_vehicles.size > 1
+      }) && (vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
+        shipment.sticky_vehicles.size > 1
+      })
+    end
+
+    def assert_one_vehicle_only_or_no_sticky_vehicle(vrp)
+      vrp.vehicles.size <= 1 ||
+      (vrp.services.empty? || vrp.services.none?{ |service|
+        service.sticky_vehicles.size > 0
+      }) && (vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
+        shipment.sticky_vehicle.size > 0
+      })
+    end
+
     def solve_synchronous?(vrp)
       false
     end

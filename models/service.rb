@@ -32,6 +32,7 @@ module Models
     field :skills, default: []
 
     belongs_to :activity, class_name: 'Models::Activity'
+    has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::ServiceQuantity'
   end
 end

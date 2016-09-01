@@ -29,6 +29,7 @@ module Models
 
     belongs_to :pickup, class_name: 'Models::Activity'
     belongs_to :delivery, class_name: 'Models::Activity'
+    has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::ServiceQuantity'
   end
 end

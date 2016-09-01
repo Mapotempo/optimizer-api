@@ -42,6 +42,7 @@ module Wrappers
         :assert_services_no_exclusion_cost,
         :assert_services_quantities_only_one,
         :assert_matrices_only_one,
+        :assert_one_sticky_at_most,
       ]
     end
 
@@ -129,13 +130,16 @@ module Wrappers
                     }
                   end
                 end
-                if vehicle.skills.size > 0
-                  xml.alternativeSkills {
+                xml.alternativeSkills {
+                  sticky = "__internal_sticky_vehicle_#{vehicle.id}"
+                  if vehicle.skills.size > 0
                     vehicle.skills.each do |skills|
-                      xml.skillList skills.join(",") if skills.size > 0
+                      xml.skillList ([sticky] + skills).join(",") if skills.size > 0
                     end
-                  }
-                end
+                  else
+                    xml.skillList sticky
+                  end
+                }
                 if(vehicle.quantities.size > 0 && vehicle.quantities[0][:initial])
                   xml.method_missing('initial-capacity') {
                     xml.dimension (vehicle.quantities[0][:initial] * 1000).to_i, index: 0
@@ -187,7 +191,9 @@ module Wrappers
                   end
                   (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration > 0
                   (xml.duration service.activity.duration) if service.activity.duration > 0
-                  (xml.requiredSkills service.skills.join(",")) if service.skills.size > 0
+                  if service.sticky_vehicles.size > 0 || service.skills.size > 0
+                    xml.requiredSkills ((service.sticky_vehicles.size > 0 ? ["__internal_sticky_vehicle_#{service.sticky_vehicles[0].id}"]: []) + service.skills).join(",")
+                  end
 
                   if service.quantities.size > 0
                     xml.method_missing('capacity-dimensions') {
@@ -242,7 +248,9 @@ module Wrappers
                     (xml.setupDuration shipment.delivery.setup_duration) if shipment.delivery.setup_duration > 0
                     (xml.duration shipment.delivery.duration) if shipment.delivery.duration > 0
                   }
-                  (xml.requiredSkills shipment.skills.join(",")) if shipment.skills.size > 0
+                  if shipment.sticky_vehicles.size > 0 || shipment.skills.size > 0
+                    xml.requiredSkills ((shipment.sticky_vehicles.size > 0 ? ["__internal_sticky_vehicle_#{service.sticky_vehicles[0].id}"]: []) + shipment.skills).join(",")
+                  end
 
                   if shipment.quantities.size > 0
                     xml.method_missing('capacity-dimensions') {

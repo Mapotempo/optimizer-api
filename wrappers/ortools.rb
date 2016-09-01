@@ -42,6 +42,7 @@ module Wrappers
         :assert_no_shipments,
         :assert_ortools_uniq_late_multiplier,
         :assert_matrices_only_one,
+        :assert_one_vehicle_only_or_no_sticky_vehicle
       ]
     end
 
