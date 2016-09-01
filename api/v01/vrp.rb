@@ -263,13 +263,11 @@ module Api
             detail: 'List running or queued jobs.'
           }
           get do
-            jobs = OptimizerWrapper::JobList.get(params[:api_key]).collect{ |job| {
-              time: job['time'],
-              status: job['status'],
-              id: job['uuid']
-            } }
+            jobs = OptimizerWrapper::JobList.get(params[:api_key]).collect do |e| 
+              Resque::Plugins::Status::Hash.get(e)
+            end
             status 201
-            present({jobs: jobs}, with: Grape::Presenters::Presenter)
+            present(jobs, with: Grape::Presenters::Presenter)
           end
 
           desc 'Delete vrp job', {

@@ -346,12 +346,7 @@ module OptimizerWrapper
 
     def self.get(api_key)
       result = OptimizerWrapper::REDIS.get(api_key)
-      if result
-        list = JSON.parse(result)
-        list.collect{ |e|
-          Resque::Plugins::Status::Hash.get(e)
-        }
-      end
+      result = JSON.parse(result)
     end
   end
 end
