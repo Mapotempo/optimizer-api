@@ -22,7 +22,8 @@ class WrapperTest < Minitest::Test
   def test_zip_cluster
     size = 5
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [ 0,  1,  1, 10,  0],
           [ 1,  0,  1, 10,  1],
@@ -37,7 +38,7 @@ class WrapperTest < Minitest::Test
           [10, 10, 10,  0, 10],
           [ 0,  1,  1, 10,  0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -68,6 +69,7 @@ class WrapperTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
       }],
       configuration: {
@@ -85,7 +87,8 @@ class WrapperTest < Minitest::Test
   def test_no_zip_cluster
     size = 5
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [ 0, 10, 20, 30,  0],
           [10,  0, 30, 40, 10],
@@ -100,7 +103,7 @@ class WrapperTest < Minitest::Test
           [30, 40, 50,  0, 30],
           [ 0, 10, 20, 30,  0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -117,7 +120,8 @@ class WrapperTest < Minitest::Test
       },
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         preprocessing: {
@@ -134,7 +138,8 @@ class WrapperTest < Minitest::Test
   def test_no_zip_cluster_tws
     size = 5
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [ 0,  1,  1, 10,  0],
           [ 1,  0,  1, 10,  1],
@@ -149,7 +154,7 @@ class WrapperTest < Minitest::Test
           [10, 10, 10,  0, 10],
           [ 0,  1,  1, 10,  0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -180,6 +185,7 @@ class WrapperTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
       }],
       configuration: {
@@ -197,7 +203,8 @@ class WrapperTest < Minitest::Test
   def test_no_zip_cluster_with_multiple_vehicles
     size = 5
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [ 0,  1,  1, 10,  0],
           [ 1,  0,  1, 10,  1],
@@ -212,7 +219,7 @@ class WrapperTest < Minitest::Test
           [10, 10, 10,  0, 10],
           [ 0,  1,  1, 10,  0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -229,10 +236,12 @@ class WrapperTest < Minitest::Test
       },
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }, {
         id: 'vehicle_1',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         preprocessing: {
@@ -249,7 +258,8 @@ class WrapperTest < Minitest::Test
   def test_zip_cluster_with_real_matrix
     size = 6
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 693, 655, 1948, 693, 0],
           [609, 0, 416, 2070, 0, 609],
@@ -258,7 +268,7 @@ class WrapperTest < Minitest::Test
           [609, 0, 416, 2070, 0, 609],
           [0, 693, 655, 1948, 693, 0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -282,7 +292,8 @@ class WrapperTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
-        end_point_id: 'point_' + (size - 1).to_s
+        end_point_id: 'point_' + (size - 1).to_s,
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         preprocessing: {
@@ -299,7 +310,8 @@ class WrapperTest < Minitest::Test
   def test_no_zip_cluster_with_real_matrix
     size = 6
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971, 0],
           [603, 0, 1692, 4977, 2715, 603],
@@ -308,7 +320,7 @@ class WrapperTest < Minitest::Test
           [2982, 2758, 1652, 7264, 0, 2982],
           [0, 655, 1948, 5231, 2971, 0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -326,7 +338,8 @@ class WrapperTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
-        end_point_id: 'point_' + (size - 1).to_s
+        end_point_id: 'point_' + (size - 1).to_s,
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         preprocessing: {
@@ -343,7 +356,8 @@ class WrapperTest < Minitest::Test
   def test_with_cluster
     size = 5
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [ 0,  1,  1, 10,  0],
           [ 1,  0,  1, 10,  1],
@@ -358,7 +372,7 @@ class WrapperTest < Minitest::Test
           [10, 10, 10,  0, 10],
           [ 0,  1,  1, 10,  0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -375,7 +389,8 @@ class WrapperTest < Minitest::Test
       },
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         preprocessing: {
@@ -402,7 +417,8 @@ class WrapperTest < Minitest::Test
   def test_with_large_size_cluster
     size = 9
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1, 2, 3, 4, 5, 6, 7, 8],
           [1, 0, 2, 3, 4, 5, 6, 7, 8],
@@ -425,7 +441,7 @@ class WrapperTest < Minitest::Test
           [1, 2, 3, 4, 5, 6, 7, 0, 8],
           [1, 2, 3, 4, 5, 6, 7, 8, 0]
         ]
-      },
+      }],
       points: (0..(size - 1)).collect{ |i|
         {
           id: "point_#{i}",
@@ -457,6 +473,7 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_' + (size - 1).to_s,
+        matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
       }],
       configuration: {
@@ -479,5 +496,117 @@ class WrapperTest < Minitest::Test
     size.times.each{ |i|
       assert_includes points, "point_#{i}", "Point missing: #{i}"
     }
+  end
+
+  def test_multiple_matrices
+    size = 5
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ],
+        distance: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ]
+      }, {
+        id: 'matrix_1',
+        time: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ],
+        distance: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}"
+          }
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_1'
+      }],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+  end
+
+  def test_multiple_matrices_not_provided
+    size = 5
+    problem = {
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          location: {
+            lat: 45,
+            lon: Float(i)/10
+          }
+        }
+      },
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}"
+          }
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 0.9,
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        speed_multiplier: 0.8,
+      }],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
   end
 end

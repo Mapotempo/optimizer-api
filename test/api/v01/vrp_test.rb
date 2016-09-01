@@ -51,13 +51,13 @@ class Api::V01::VrpTest < Minitest::Test
         }
       }
     }
-    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
+    post '/0.1/vrp/submit', {api_key: 'demo2', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
     assert JSON.parse(last_response.body)['job']['id']
   end
 
   def test_vrp
-    get '/0.1/vrp/jobs.json', {api_key: 'demo'}
+    get '/0.1/vrp/jobs.json', {api_key: 'demo2'}
     assert_equal 201, last_response.status, last_response.body
     assert_not_nil last_response.body, last_response.body
   end

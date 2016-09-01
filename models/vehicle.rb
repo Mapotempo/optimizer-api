@@ -44,11 +44,45 @@ module Models
     validates_numericality_of :speed_multiplier
     field :skills, default: []
 
+    belongs_to :matrix, class_name: 'Models::Matrix'
     belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
     has_many :quantities, class_name: 'Models::VehicleQuantity'
     has_many :timewindows, class_name: 'Models::Timewindow'
     include ValidateTimewindows
     has_many :rests, class_name: 'Models::Rest'
+
+    def need_matrix_time?
+      cost_time_multiplier != 0 || cost_waiting_time_multiplier != 0 || cost_late_multiplier != 0 || cost_setup_time_multiplier != 0 ||
+      !rest.empty?
+    end
+
+    def need_matrix_distance?
+      cost_distance_multiplier != 0
+    end
+
+    def matrix_time
+      matrix && matrix.time
+    end
+
+    def matrix_distance
+      matrix && matrix.distance
+    end
+
+    def matrix_blend(matrix_indices)
+      matrix_indices.collect{ |i|
+        matrix_indices.collect{ |j|
+          (matrix.time && cost_time_multiplier != 0 ? matrix.time[i][j] * cost_time_multiplier : 0) +
+          (matrix.distance && cost_distance_multiplier != 0 ? matrix.distance[i][j] * cost_distance_multiplier : 0)
+        }
+      }
+    end
+
+    def dimensions
+      d = [:time, :distance]
+      dimensions = [d.delete(router_dimension.to_sym)]
+      dimensions << d[0] if send('need_matrix_' + d[0].to_s + '?')
+      dimensions
+    end
   end
 end

@@ -16,6 +16,8 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './wrappers/wrapper'
+
+require 'open3'
 require 'thread'
 
 module Wrappers
@@ -39,6 +41,7 @@ module Wrappers
         :assert_services_no_exclusion_cost,
         :assert_no_shipments,
         :assert_ortools_uniq_late_multiplier,
+        :assert_matrices_only_one,
       ]
     end
 
@@ -60,7 +63,7 @@ module Wrappers
         (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
 
       quantities = vrp.services.collect(&:quantities) # Not used
-      matrix = vrp.matrix(matrix_indices, vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier)
+      matrix = vehicle.matrix_blend(matrix_indices)
 
       if !vehicle.start_point
         matrix_indices = [0] + matrix_indices.collect{ |i| i + 1 }

@@ -23,12 +23,13 @@ class Wrappers::VroomTest < Minitest::Test
   def test_minimal_problem
     vroom = OptimizerWrapper::VROOM
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1],
           [1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -49,7 +50,8 @@ class Wrappers::VroomTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }]
     }
     vrp = Models::Vrp.create(problem)
@@ -67,7 +69,8 @@ class Wrappers::VroomTest < Minitest::Test
   def test_loop_problem
     vroom = OptimizerWrapper::VROOM
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971],
           [603, 0, 1692, 4977, 2715],
@@ -75,7 +78,7 @@ class Wrappers::VroomTest < Minitest::Test
           [5184, 4951, 6221, 0, 7244],
           [2982, 2758, 1652, 7264, 0],
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -117,6 +120,7 @@ class Wrappers::VroomTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }]
     }
     vrp = Models::Vrp.create(problem)
@@ -131,7 +135,8 @@ class Wrappers::VroomTest < Minitest::Test
   def test_no_end_problem
     vroom = OptimizerWrapper::VROOM
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971],
           [603, 0, 1692, 4977, 2715],
@@ -139,7 +144,7 @@ class Wrappers::VroomTest < Minitest::Test
           [5184, 4951, 6221, 0, 7244],
           [2982, 2758, 1652, 7264, 0],
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -180,6 +185,7 @@ class Wrappers::VroomTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }]
     }
     vrp = Models::Vrp.create(problem)

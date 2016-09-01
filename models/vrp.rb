@@ -38,8 +38,7 @@ module Models
     validates_numericality_of :resolution_initial_time_out, allow_nil: true
     validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
 
-    fields :matrix_time, :matrix_distance
-
+    has_many :matrices, class_name: 'Models::Matrix'
     has_many :points, class_name: 'Models::Point'
     has_many :services, class_name: 'Models::Service'
     has_many :shipments, class_name: 'Models::Shipment'
@@ -47,9 +46,9 @@ module Models
     has_many :vehicles, class_name: 'Models::Vehicle'
     has_many :units, class_name: 'Models::Unit'
 
-    def matrices=(matrices)
-      self.matrix_time = matrices[:time]
-      self.matrix_distance = matrices[:distance]
+    def self.create(*args)
+      Models.delete_all
+      super(*args)
     end
 
     def configuration=(configuration)
@@ -73,12 +72,8 @@ module Models
     end
 
     def need_matrix_time?
-      vehicles.find{ |vehicle|
-        vehicle.cost_time_multiplier != 0 || vehicle.cost_waiting_time_multiplier != 0 || vehicle.cost_late_multiplier != 0 || vehicle.cost_setup_time_multiplier != 0 ||
-        !vehicle.rest.empty?
-      } ||
       services.find{ |service|
-        !service.timewindows.empty? || service.late_multiplier != 0
+        !service.activity.timewindows.empty? || service.late_multiplier != 0
       } ||
       shipments.find{ |shipment|
         !shipments.pickup.timewindows.empty? || shipments.pickup.late_multiplier != 0 ||
@@ -87,18 +82,7 @@ module Models
     end
 
     def need_matrix_distance?
-      vehicles.find{ |vehicle|
-        vehicle.cost_distance_multiplier != 0
-      }
-    end
-
-    def matrix(matrix_indices, cost_time_multiplier, cost_distance_multiplier)
-      matrix_indices.collect{ |i|
-        matrix_indices.collect{ |j|
-          (matrix_time && cost_time_multiplier != 0 ? matrix_time[i][j] * cost_time_multiplier : 0) +
-          (matrix_distance && cost_distance_multiplier != 0 ? matrix_distance[i][j] * cost_distance_multiplier : 0)
-        }
-      }
+      false
     end
   end
 end

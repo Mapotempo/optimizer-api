@@ -46,6 +46,12 @@ module OptimizerWrapper
       services: {
         vrp: [:demo, :vroom, :jsprit, :ortools]
       }
+    }, {
+      api_keys: ['demo2'],
+      queue: 'DEFAULT',
+      services: {
+        vrp: [:ortools]
+      }
     }],
     router: {
       api_key: 'demo',

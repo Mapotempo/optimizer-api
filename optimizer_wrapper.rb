@@ -72,20 +72,45 @@ module OptimizerWrapper
         routes: []
       }
     else
-      if (vrp.matrix_time.nil? && vrp.need_matrix_time?) || (vrp.matrix_distance.nil? && vrp.need_matrix_distance?)
-        block.call(nil, nil, [vrp.need_matrix_time?, vrp.need_matrix_distance?].count{ |m| m }.to_s, 'compute matrix') if block
-        mode = vrp.vehicles[0].router_mode.to_sym || :car
-        d = [:time, :distance]
-        dimensions = [d.delete(vrp.vehicles[0].router_dimension.to_sym)]
-        dimensions << d[0] if vrp.send('matrix_' + d[0].to_s).nil? && vrp.send('need_matrix_' + d[0].to_s + '?')
-        points = vrp.points.each_with_index.collect{ |point, index|
-          point.matrix_index = index
-          [point.location.lat, point.location.lon]
+      vrp_need_matrix = {
+        time: vrp.need_matrix_time?,
+        distance: vrp.need_matrix_distance?
+      }
+
+      need_matrix = vrp.vehicles.collect{ |vehicle|
+        [vehicle, vehicle.dimensions]
+      }.select{ |vehicle, dimensions|
+        dimensions.find{ |dimension|
+          vrp_need_matrix[dimension] && (vehicle.matrix.nil? || vehicle.matrix.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
         }
-        # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
-        matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: vrp.vehicles[0].speed_multiplier || 1)
-        vrp.matrix_time = matrices[dimensions.index(:time)] if dimensions.index(:time)
-        vrp.matrix_distance = matrices[dimensions.index(:distance)] if dimensions.index(:distance)
+      }
+
+      if need_matrix.size > 0
+          points = vrp.points.each_with_index.collect{ |point, index|
+            point.matrix_index = index
+            [point.location.lat, point.location.lon]
+          }
+
+          uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
+            [vehicle, vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
+          }.uniq
+
+          i = 0
+          uniq_need_matrix = Hash[uniq_need_matrix.collect{ |vehicle, mode, dimensions, speed_multiplicator|
+            block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
+            # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
+            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: vehicle.speed_multiplier || 1)
+            m = Models::Matrix.create({
+              time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
+              distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
+            })
+            vrp.matrices += [m]
+            [[mode, dimensions, speed_multiplicator], m]
+          }]
+
+          uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
+            vehicle.matrix = uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]]
+          }
       end
 
       block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
@@ -130,34 +155,52 @@ module OptimizerWrapper
   private
 
   def self.parse_result(vrp, result)
-    result[:total_time] = result[:routes].collect{ |r| r[:end_time] - r[:start_time] }.reduce(:+) if result[:routes].all?{ |r| r[:end_time] && r[:start_time] }
-    result[:total_distance] = result[:routes].collect{ |r|
-      previous = nil
-      r[:activities].collect{ |a|
-        point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
-          s.id == a[:service_id]
-        }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
-          s.id == a[:pickup_shipment_id]
-        }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
-          s.id == a[:delivery_shipment_id]
-        }.delivery.point_id : nil
-        vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
-      }.compact.inject(0){ |sum, item|
-        sum = sum + vrp.matrix_distance[previous][item] if (previous)
-        previous = item
-        sum
-      }
-    }.reduce(:+) if vrp.matrix_distance
+    result[:routes].each{ |r|
+      if r[:end_time] && r[:start_time]
+        r[:total_time] = r[:end_time] - r[:start_time]
+      end
+      v = Models::Vehicle.find(r[:vehicle_id])
+      if v.matrix.distance # vrp.vehicles.find does not exist
+        previous = nil
+        r[:total_distance] = r[:activities].collect{ |a|
+          point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
+            s.id == a[:service_id]
+          }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
+            s.id == a[:pickup_shipment_id]
+          }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
+            s.id == a[:delivery_shipment_id]
+          }.delivery.point_id : nil
+          vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
+        }.compact.inject(0){ |sum, item|
+          sum = sum + v.matrix.distance[previous][item] if (previous)
+          previous = item
+          sum
+        }
+      end
+    }
+
+    if result[:routes].all?{ |r| r[:total_time] }
+      result[:total_time] = result[:routes].collect{ |r|
+        r[:total_time]
+      }.reduce(:+)
+    end
+
+    if result[:routes].all?{ |r| r[:total_distance] }
+      result[:total_distance] = result[:routes].collect{ |r|
+        r[:total_distance]
+      }.reduce(:+)
+    end
+
     result
   end
 
   def self.cluster(vrp, cluster_threshold)
-    if vrp.shipments.size == 0 && cluster_threshold
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold)
     end
     result = yield(vrp)
-    if vrp.shipments.size == 0 && cluster_threshold
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else
@@ -170,7 +213,7 @@ module OptimizerWrapper
 
     data_set = DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
     c = CompleteLinkageMaxDistance.new
-    matrix = vrp.vehicles[0].router_dimension.to_sym == :time ? vrp.matrix_time : vrp.matrix_distance
+    matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym] # FIXME not all vehicle have the same dimension
     c.distance_function = lambda do |a, b|
       aa = vrp.services[a[0]]
       bb = vrp.services[b[0]]
@@ -212,7 +255,7 @@ module OptimizerWrapper
           idx_z = zip_key.index{ |z| z.data_items.flatten.include? idx_s }
           if idx_z && idx_z < zip_key.length && zip_key[idx_z].data_items.length > 1
             sub = zip_key[idx_z].data_items.collect{ |i| i[0] }
-            matrix = original_vrp.vehicles[0].router_dimension.to_sym == :time ? original_vrp.matrix_time : original_vrp.matrix_distance
+            matrix = original_vrp.matrices[0][original_vrp.vehicles[0].router_dimension.to_sym]
 
             # Cluster start: Last non rest-without-location stop before current cluster
             start = new_activities.reverse.find{ |r| r[:service_id] }
@@ -269,7 +312,7 @@ module OptimizerWrapper
             new_activities += min_order.collect{ |index|
               a = {
                 point_id: (original_vrp.services[index].activity.point_id if original_vrp.services[index].id),
-                travel_distance: original_vrp.matrix_distance ? original_vrp.matrix_distance[original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
+                travel_distance: original_vrp.matrices[0].distance ? original_vrp.matrices[0].distance[original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
                 # travel_start_time: 0, # TODO: from matrix_time
                 # arrival_time: 0, # TODO: from matrix_time
                 # departure_time: 0, # TODO: from matrix_time

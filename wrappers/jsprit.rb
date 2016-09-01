@@ -18,6 +18,7 @@
 require './wrappers/wrapper'
 
 require 'nokogiri'
+require 'open3'
 require 'thread'
 
 
@@ -40,12 +41,12 @@ module Wrappers
         :assert_services_no_late_multiplier,
         :assert_services_no_exclusion_cost,
         :assert_services_quantities_only_one,
-        :assert_vehicles_same_router_params
+        :assert_matrices_only_one,
       ]
     end
 
     def solve(vrp, &block)
-      result = run_jsprit(vrp.matrix_time, vrp.matrix_distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, vrp.resolution_iterations_without_improvment, vrp.resolution_stable_iterations, vrp.resolution_stable_coefficient, vrp.preprocessing_prefer_short_segment, @threads, &block)
+      result = run_jsprit(vrp.matrices[0].time, vrp.matrices[0].distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, vrp.resolution_iterations_without_improvment, vrp.resolution_stable_iterations, vrp.resolution_stable_coefficient, vrp.preprocessing_prefer_short_segment, @threads, &block)
       if result && result.is_a?(Hash)
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result

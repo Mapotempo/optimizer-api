@@ -24,12 +24,13 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1],
           [1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -50,7 +51,8 @@ class Wrappers::JspritTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -71,12 +73,13 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1],
           [1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -101,7 +104,8 @@ class Wrappers::JspritTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -121,7 +125,8 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971],
           [603, 0, 1692, 4977, 2715],
@@ -129,7 +134,7 @@ class Wrappers::JspritTest < Minitest::Test
           [5184, 4951, 6221, 0, 7244],
           [2982, 2758, 1652, 7264, 0],
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -175,6 +180,7 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -195,12 +201,13 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1],
           [1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -222,6 +229,7 @@ class Wrappers::JspritTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         timewindows: [{ # infeasible
           start: 0,
           end: 0
@@ -247,12 +255,13 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1],
           [1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -280,6 +289,7 @@ class Wrappers::JspritTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         timewindows: [{ # infeasible
           start: 0,
           end: 0
@@ -307,7 +317,8 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971],
           [603, 0, 1692, 4977, 2715],
@@ -315,7 +326,7 @@ class Wrappers::JspritTest < Minitest::Test
           [5184, 4951, 6221, 0, 7244],
           [2982, 2758, 1652, 7264, 0],
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -363,6 +374,7 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         skills: [['a', 'b', 'c']],
       }],
       configuration: {
@@ -384,14 +396,15 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 10, 20],
           [10, 0, 20],
           [20, 20, 0]
 
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -421,6 +434,7 @@ class Wrappers::JspritTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         timewindows: [{
           start: 0,
           end: 100
@@ -447,7 +461,8 @@ class Wrappers::JspritTest < Minitest::Test
     jsprit = OptimizerWrapper::JSPRIT
     jsprit.job = 'test'
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971],
           [603, 0, 1692, 4977, 2715],
@@ -455,7 +470,7 @@ class Wrappers::JspritTest < Minitest::Test
           [5184, 4951, 6221, 0, 7244],
           [2982, 2758, 1652, 7264, 0],
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -511,6 +526,7 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         skills: [['a', 'c'], ['b', 'c']],
       }],
       configuration: {

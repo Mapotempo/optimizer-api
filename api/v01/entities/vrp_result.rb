@@ -35,13 +35,16 @@ module Api
     class VrpResultSolutionRoute < Grape::Entity
       expose :vehicle_id, documentation: { type: String, desc: '' }
       expose :activities, using: VrpResultSolutionRouteActivities, documentation: { is_array: true, desc: '' }
+      expose :total_distance, documentation: { type: Integer, desc: '' }
+      expose :total_time, documentation: { type: Integer, desc: '' }
+      expose :start_time, documentation: { type: Integer, desc: '' }
+      expose :end_time, documentation: { type: Integer, desc: '' }
     end
 
     class VrpResultSolution < Grape::Entity
       expose :cost, documentation: { type: Float, desc: '' }
-      expose :total_travel_distance, documentation: { type: Integer, desc: '' }
-      expose :total_travel_time, documentation: { type: Integer, desc: '' }
-      expose :total_waiting_time, documentation: { type: Integer, desc: '' }
+      expose :total_distance, documentation: { type: Integer, desc: '' }
+      expose :total_time, documentation: { type: Integer, desc: '' }
       expose :start_time, documentation: { type: Integer, desc: '' }
       expose :end_time, documentation: { type: Integer, desc: '' }
       expose :routes, using: VrpResultSolutionRoute, documentation: { is_array: true, desc: '' }

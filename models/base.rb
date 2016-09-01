@@ -70,7 +70,7 @@ module Models
 
       define_method("#{name}=") do |val|
         c = class_from_string(options[:class_name])
-        self[name] = val && c.create(val)
+        self[name] = val && (val.is_a?(Hash) ? c.create(val) : val)
       end
 
       define_method("#{name}_id") do

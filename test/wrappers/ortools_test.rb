@@ -23,13 +23,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
   def test_minimal_problem
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1, 1],
           [1, 0, 1],
           [1, 1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -53,7 +54,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -72,13 +74,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
     def test_alternative_stop_conditions
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1, 1],
           [1, 0, 1],
           [1, 1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -102,7 +105,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -123,7 +127,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
   def test_loop_problem
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971],
           [603, 0, 1692, 4977, 2715],
@@ -131,7 +136,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           [5184, 4951, 6221, 0, 7244],
           [2982, 2758, 1652, 7264, 0],
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -177,6 +182,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -195,7 +201,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
   def test_without_start_end_probleme
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 655, 1948, 5231, 2971],
           [603, 0, 1692, 4977, 2715],
@@ -203,7 +210,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           [5184, 4951, 6221, 0, 7244],
           [2982, 2758, 1652, 7264, 0],
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -243,6 +250,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -261,13 +269,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
   def test_with_rest
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1, 1],
           [1, 0, 1],
           [1, 1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -300,6 +309,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
       }],
       configuration: {
@@ -319,13 +329,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
   def test_negative_time_windows_problem
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
-      matrices: {
+      matrices: [{
+        id: 'matrix_0',
         time: [
           [0, 1, 1],
           [1, 0, 1],
           [1, 1, 0]
         ]
-      },
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -357,7 +368,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0'
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {

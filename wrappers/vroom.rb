@@ -39,6 +39,7 @@ module Wrappers
         :assert_services_no_exclusion_cost,
         :assert_no_shipments,
         :assert_vroom_not_start_and_end,
+        :assert_matrices_only_one,
       ]
     end
 
@@ -67,7 +68,7 @@ module Wrappers
         matrix_indices +
         (!vehicle_loop && vehicle_have_end ? [points[vehicle.end_point_id].matrix_index] : [])
 
-      matrix = vrp.matrix(matrix_indices, vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier)
+      matrix = vehicle.matrix_blend(matrix_indices)
 
       if vrp.preprocessing_prefer_short_segment
         matrix = matrix.collect{ |a| a.collect{ |b| (b + 20 * Math.sqrt(b)).round } }

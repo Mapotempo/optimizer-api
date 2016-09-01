@@ -61,8 +61,11 @@ module Api
           }
           params {
             requires(:vrp, type: Hash, documentation: {param_type: 'body'}) do
-              optional(:matrix_time, type: Array[Array[Float]])
-              optional(:matrix_distance, type: Array[Array[Float]])
+              optional(:matrices, type: Array) do
+                requires(:id, type: String)
+                optional(:matrix_time, type: Array[Array[Float]])
+                optional(:matrix_distance, type: Array[Array[Float]])
+              end
 
               optional(:points, type: Array) do
                 requires(:id, type: String)
@@ -130,9 +133,12 @@ module Api
                   optional(:setup, type: Float)
                 end
 
+                optional(:matrix_id, type: Integer)
                 optional(:router_mode, type: String)
                 optional(:router_dimension, type: String, values: ['time', 'distance'])
                 optional(:speed_multiplier, type: Float)
+                exactly_one_of :matrix_id, :router_mode
+
                 optional(:duration, type: Float)
                 optional(:skills, type: Array[Array[String]])
 
