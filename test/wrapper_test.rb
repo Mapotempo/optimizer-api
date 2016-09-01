@@ -45,19 +45,6 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: 1,
-              end: 2
-            }]
-          },
-          skills: ['A']
-        }
-      },
       rests: [{
         id: 'rest_0',
         timewindows: [{
@@ -72,6 +59,19 @@ class WrapperTest < Minitest::Test
         matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
       }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+            timewindows: [{
+              start: 1,
+              end: 2
+            }]
+          },
+          skills: ['A']
+        }
+      },
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -110,6 +110,11 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: (1..(size - 1)).collect{ |i|
         {
           id: "service_#{i}",
@@ -118,11 +123,6 @@ class WrapperTest < Minitest::Test
           }
         }
       },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -161,19 +161,6 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: 1,
-              end: 2
-            }],
-            duration: 1
-          }
-        }
-      },
       rests: [{
         id: 'rest_0',
         timewindows: [{
@@ -188,6 +175,19 @@ class WrapperTest < Minitest::Test
         matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
       }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+            timewindows: [{
+              start: 1,
+              end: 2
+            }],
+            duration: 1
+          }
+        }
+      },
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -226,14 +226,6 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}"
-          }
-        }
-      },
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
@@ -243,6 +235,14 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         matrix_id: 'matrix_0'
       }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}"
+          }
+        }
+      },
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -275,6 +275,12 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_' + (size - 1).to_s,
+        matrix_id: 'matrix_0'
+      }],
       services: (1..(size - 2)).collect{ |i|
         {
           id: "service_#{i}",
@@ -289,12 +295,6 @@ class WrapperTest < Minitest::Test
           skills: ['A']
         }
       },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_' + (size - 1).to_s,
-        matrix_id: 'matrix_0'
-      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -327,6 +327,12 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_' + (size - 1).to_s,
+        matrix_id: 'matrix_0'
+      }],
       services: (1..(size - 2)).collect{ |i|
         {
           id: "service_#{i}",
@@ -335,12 +341,6 @@ class WrapperTest < Minitest::Test
           }
         }
       },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_' + (size - 1).to_s,
-        matrix_id: 'matrix_0'
-      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -379,6 +379,11 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: (1..(size - 1)).collect{ |i|
         {
           id: "service_#{i}",
@@ -387,11 +392,6 @@ class WrapperTest < Minitest::Test
           }
         }
       },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -448,19 +448,6 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
-      services: (1..(size - 2)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: 1,
-              end: 2
-            }]
-          },
-          skills: ['A']
-        }
-      },
       rests: [{
         id: 'rest_0',
         timewindows: [{
@@ -476,6 +463,19 @@ class WrapperTest < Minitest::Test
         matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
       }],
+      services: (1..(size - 2)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+            timewindows: [{
+              start: 1,
+              end: 2
+            }]
+          },
+          skills: ['A']
+        }
+      },
       configuration: {
         preprocessing: {
           cluster_threshold: 6
@@ -540,14 +540,6 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}"
-          }
-        }
-      },
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
@@ -557,6 +549,14 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         matrix_id: 'matrix_1'
       }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}"
+          }
+        }
+      },
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -581,14 +581,6 @@ class WrapperTest < Minitest::Test
           }
         }
       },
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}"
-          }
-        }
-      },
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
@@ -598,6 +590,14 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         speed_multiplier: 0.8,
       }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}"
+          }
+        }
+      },
       configuration: {
         preprocessing: {
           cluster_threshold: 5

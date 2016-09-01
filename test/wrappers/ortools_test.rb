@@ -41,6 +41,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'point_2',
         matrix_index: 2
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -51,11 +56,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         activity: {
           point_id: 'point_2'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -92,6 +92,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'point_2',
         matrix_index: 2
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -102,11 +107,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         activity: {
           point_id: 'point_2'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -153,6 +153,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'point_4',
         matrix_index: 4
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -177,12 +183,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         activity: {
           point_id: 'point_4'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -227,6 +227,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'point_4',
         matrix_index: 4
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -247,10 +251,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         activity: {
           point_id: 'point_4'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -287,17 +287,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'point_2',
         matrix_index: 2
       }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
       rests: [{
         id: 'rest_0',
         timewindows: [{
@@ -311,6 +300,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
         rest_ids: ['rest_0']
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
       }],
       configuration: {
         resolution: {
@@ -347,6 +347,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'point_2',
         matrix_index: 2
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -365,11 +370,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
             end: -5
           }]
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {

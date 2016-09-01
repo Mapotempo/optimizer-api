@@ -331,6 +331,47 @@ $(document).ready(function() {
         }
       });
 
+      // vehicles
+      data.vehicles.forEach(function(vehicle) {
+        vrp.vehicles.push({
+          id: vehicle[mapping.reference || 'reference'],
+          start_point_id: (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lat || 'start_lon']) ? vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.') : null,
+          end_point_id: (vehicle[mapping.end_lat || 'end_lat'] && vehicle[mapping.end_lat || 'end_lon']) ? vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.') : null,
+          cost_fixed: vehicle[mapping.cost_fixed || 'cost_fixed'],
+          cost_distance_multiplier: vehicle[mapping.cost_distance_multiplier || 'cost_distance_multiplier'],
+          cost_time_multiplier: vehicle[mapping.cost_time_multiplier || 'cost_time_multiplier'],
+          cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'],
+          cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'],
+          coef_setup: vehicle[mapping.coef_setup || 'coef_setup'],
+          // TODO: gérer les quantités multiples
+          quantities:
+            (vehicle[mapping.initial_quantity || 'initial_quantity']) ?
+              [{
+                unit_id: 'unit',
+                limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.')),
+                initial: ((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.'))
+              }]
+            :
+              [{
+                unit_id: 'unit',
+                limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.'))
+              }],
+          skills: $.map(vehicle, function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
+          }).filter(function(el) {
+            return el && el.length > 0;
+          }),
+          timewindows: [{
+            start: duration(vehicle[mapping.start_time || 'start_time']) || null,
+            end: duration(vehicle[mapping.end_time || 'end_time']) || null
+          }],
+          duration: duration(vehicle[mapping.route_duration || 'duration']) || null,
+          router_mode: vehicle[mapping.router_mode || 'router_mode'] || 'car',
+          router_dimension: vehicle[mapping.router_dimension || 'router_dimension'] || 'time',
+          speed_multiplier: (vehicle[mapping.speed_multiplier || 'speed_multiplier'] || '').replace(',', '.') || 1,
+        });
+      });
+
       // shipments
       data.customers.forEach(function(customer) {
         if(customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon'] && customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
@@ -416,45 +457,6 @@ $(document).ready(function() {
             })
           });
         }
-      });
-      data.vehicles.forEach(function(vehicle) {
-        vrp.vehicles.push({
-          id: vehicle[mapping.reference || 'reference'],
-          start_point_id: (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lat || 'start_lon']) ? vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.') : null,
-          end_point_id: (vehicle[mapping.end_lat || 'end_lat'] && vehicle[mapping.end_lat || 'end_lon']) ? vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.') : null,
-          cost_fixed: vehicle[mapping.cost_fixed || 'cost_fixed'],
-          cost_distance_multiplier: vehicle[mapping.cost_distance_multiplier || 'cost_distance_multiplier'],
-          cost_time_multiplier: vehicle[mapping.cost_time_multiplier || 'cost_time_multiplier'],
-          cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'],
-          cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'],
-          coef_setup: vehicle[mapping.coef_setup || 'coef_setup'],
-          // TODO: gérer les quantités multiples
-          quantities:
-            (vehicle[mapping.initial_quantity || 'initial_quantity']) ?
-              [{
-                unit_id: 'unit',
-                limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.')),
-                initial: ((vehicle[mapping.initial_quantity || 'initial_quantity']).replace(',', '.'))
-              }]
-            :
-              [{
-                unit_id: 'unit',
-                limit: ((vehicle[mapping.quantity || 'quantity'] || '').replace(',', '.'))
-              }],
-          skills: $.map(vehicle, function(val, key) {
-            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
-          }).filter(function(el) {
-            return el && el.length > 0;
-          }),
-          timewindows: [{
-            start: duration(vehicle[mapping.start_time || 'start_time']) || null,
-            end: duration(vehicle[mapping.end_time || 'end_time']) || null
-          }],
-          duration: duration(vehicle[mapping.route_duration || 'duration']) || null,
-          router_mode: vehicle[mapping.router_mode || 'router_mode'] || 'car',
-          router_dimension: vehicle[mapping.router_dimension || 'router_dimension'] || 'time',
-          speed_multiplier: (vehicle[mapping.speed_multiplier || 'speed_multiplier'] || '').replace(',', '.') || 1,
-        });
       });
 
       return vrp;

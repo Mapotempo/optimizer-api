@@ -82,38 +82,6 @@ module Api
                 requires(:label, type: String)
               end
 
-              optional(:services, type: Array) do
-                requires(:id, type: String)
-                optional(:late_multiplier, type: Float)
-                optional(:exclusion_cost, type: Float)
-                optional(:skills, type: Array[String])
-                requires(:type, type: Symbol)
-                requires(:activity, type: Hash) do
-                  Vrp.vrp_request_activity(self)
-                end
-                optional(:quantities, type: Array) do
-                  requires(:unit_id, type: String)
-                  requires(:value, type: Float)
-                end
-              end
-              optional(:shipments, type: Array) do
-                requires(:id, type: String)
-                optional(:late_multiplier, type: Float)
-                optional(:exclusion_cost, type: Float)
-                optional(:skills, type: Array[String])
-                requires(:pickup, type: Hash) do
-                  Vrp.vrp_request_activity(self)
-                end
-                requires(:delivery, type: Hash) do
-                  Vrp.vrp_request_activity(self)
-                end
-                optional(:quantities, type: Array) do
-                  requires(:unit_id, type: String)
-                  requires(:value, type: Float)
-                end
-              end
-              at_least_one_of :services, :shipments
-
               optional(:rests, type: Array) do
                 requires(:id, type: String)
                 requires(:duration, type: Float)
@@ -154,6 +122,38 @@ module Api
                 end
                 optional(:rest_ids, type: Array[String])
               end
+
+              optional(:services, type: Array) do
+                requires(:id, type: String)
+                optional(:late_multiplier, type: Float)
+                optional(:exclusion_cost, type: Float)
+                optional(:skills, type: Array[String])
+                requires(:type, type: Symbol)
+                requires(:activity, type: Hash) do
+                  Vrp.vrp_request_activity(self)
+                end
+                optional(:quantities, type: Array) do
+                  requires(:unit_id, type: String)
+                  requires(:value, type: Float)
+                end
+              end
+              optional(:shipments, type: Array) do
+                requires(:id, type: String)
+                optional(:late_multiplier, type: Float)
+                optional(:exclusion_cost, type: Float)
+                optional(:skills, type: Array[String])
+                requires(:pickup, type: Hash) do
+                  Vrp.vrp_request_activity(self)
+                end
+                requires(:delivery, type: Hash) do
+                  Vrp.vrp_request_activity(self)
+                end
+                optional(:quantities, type: Array) do
+                  requires(:unit_id, type: String)
+                  requires(:value, type: Float)
+                end
+              end
+              at_least_one_of :services, :shipments
 
               optional(:configuration, type: Hash) do
                 optional(:preprocessing, type: Hash) do

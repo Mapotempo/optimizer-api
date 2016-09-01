@@ -36,14 +36,14 @@ class Api::V01::VrpTest < Minitest::Test
           lon: 2
         }
       }],
+      vehicles: [{
+        id: 'v1'
+      }],
       services: [{
         id: 's1',
         activity: {
           point_id: 'p1'
         }
-      }],
-      vehicles: [{
-        id: 'v1'
       }],
       configuration: {
         resolution: {

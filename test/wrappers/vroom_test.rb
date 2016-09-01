@@ -37,6 +37,11 @@ class Wrappers::VroomTest < Minitest::Test
         id: 'point_1',
         matrix_index: 1
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_0',
         activity: {
@@ -48,11 +53,6 @@ class Wrappers::VroomTest < Minitest::Test
           point_id: 'point_1'
         }
       }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }]
     }
     vrp = Models::Vrp.create(problem)
     assert vroom.inapplicable_solve?(vrp).empty?
@@ -95,6 +95,12 @@ class Wrappers::VroomTest < Minitest::Test
         id: 'point_4',
         matrix_index: 4
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -116,12 +122,6 @@ class Wrappers::VroomTest < Minitest::Test
           point_id: 'point_4'
         }
       }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }]
     }
     vrp = Models::Vrp.create(problem)
     assert vroom.inapplicable_solve?(vrp).empty?
@@ -161,6 +161,11 @@ class Wrappers::VroomTest < Minitest::Test
         id: 'point_4',
         matrix_index: 4
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -182,11 +187,6 @@ class Wrappers::VroomTest < Minitest::Test
           point_id: 'point_4'
         }
       }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }]
     }
     vrp = Models::Vrp.create(problem)
     assert vroom.inapplicable_solve?(vrp).empty?

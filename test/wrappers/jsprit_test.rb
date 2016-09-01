@@ -38,6 +38,11 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_1',
         matrix_index: 1
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_0',
         activity: {
@@ -48,11 +53,6 @@ class Wrappers::JspritTest < Minitest::Test
         activity: {
           point_id: 'point_1'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -87,6 +87,11 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_1',
         matrix_index: 1
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_0',
         activity: {
@@ -101,11 +106,6 @@ class Wrappers::JspritTest < Minitest::Test
         activity: {
           point_id: 'point_1'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -151,6 +151,12 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_4',
         matrix_index: 4
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -175,12 +181,6 @@ class Wrappers::JspritTest < Minitest::Test
         activity: {
           point_id: 'point_4'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0'
       }],
       configuration: {
         resolution: {
@@ -215,6 +215,15 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_1',
         matrix_index: 1
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindows: [{ # infeasible
+          start: 0,
+          end: 0
+        }],
+      }],
       services: [{
         id: 'service_0',
         activity: {
@@ -225,15 +234,6 @@ class Wrappers::JspritTest < Minitest::Test
         activity: {
           point_id: 'point_1'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        timewindows: [{ # infeasible
-          start: 0,
-          end: 0
-        }],
       }],
       configuration: {
         resolution: {
@@ -269,6 +269,15 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_1',
         matrix_index: 1
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindows: [{ # infeasible
+          start: 0,
+          end: 0
+        }],
+      }],
       shipments: [{
         id: 'service_0',
         pickup: {
@@ -285,15 +294,6 @@ class Wrappers::JspritTest < Minitest::Test
         delivery: {
           point_id: 'point_0'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        timewindows: [{ # infeasible
-          start: 0,
-          end: 0
-        }],
       }],
       configuration: {
         resolution: {
@@ -343,6 +343,13 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_4',
         matrix_index: 4
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        skills: [['a', 'b', 'c']],
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -369,13 +376,6 @@ class Wrappers::JspritTest < Minitest::Test
           point_id: 'point_4'
         },
         skills: ['a']
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        skills: [['a', 'b', 'c']],
       }],
       configuration: {
         resolution: {
@@ -415,6 +415,16 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_2',
         matrix_index: 2
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindows: [{
+          start: 0,
+          end: 100
+        }],
+        duration: 10
+      }],
       services: [{
         id: 'service_0',
         activity: {
@@ -430,16 +440,6 @@ class Wrappers::JspritTest < Minitest::Test
         activity: {
           point_id: 'point_2'
         }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        timewindows: [{
-          start: 0,
-          end: 100
-        }],
-        duration: 10
       }],
       configuration: {
         resolution: {
@@ -487,6 +487,13 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'point_4',
         matrix_index: 4
       }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        skills: [['a', 'c'], ['b', 'c']],
+      }],
       shipments: [{
         id: 'shipment_1',
         pickup: {
@@ -521,13 +528,6 @@ class Wrappers::JspritTest < Minitest::Test
           point_id: 'point_4'
         },
         skills: ['a']
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        skills: [['a', 'c'], ['b', 'c']],
       }],
       configuration: {
         resolution: {
