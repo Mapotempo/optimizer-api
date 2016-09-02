@@ -159,8 +159,8 @@ module OptimizerWrapper
       if r[:end_time] && r[:start_time]
         r[:total_time] = r[:end_time] - r[:start_time]
       end
-      v = Models::Vehicle.find(r[:vehicle_id])
-      if v.matrix.distance # vrp.vehicles.find does not exist
+      v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
+      if v.matrix.distance
         previous = nil
         r[:total_distance] = r[:activities].collect{ |a|
           point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
