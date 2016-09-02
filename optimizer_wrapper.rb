@@ -92,14 +92,14 @@ module OptimizerWrapper
           }
 
           uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            [vehicle, vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
+            [vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
           }.uniq
 
           i = 0
-          uniq_need_matrix = Hash[uniq_need_matrix.collect{ |vehicle, mode, dimensions, speed_multiplicator|
+          uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
             block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
             # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
-            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: vehicle.speed_multiplier || 1)
+            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
             m = Models::Matrix.create({
               time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
               distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
