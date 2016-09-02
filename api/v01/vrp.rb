@@ -101,7 +101,7 @@ module Api
                   optional(:setup, type: Float)
                 end
 
-                optional(:matrix_id, type: Integer)
+                optional(:matrix_id, type: String)
                 optional(:router_mode, type: String)
                 optional(:router_dimension, type: String, values: ['time', 'distance'])
                 optional(:speed_multiplier, type: Float)
