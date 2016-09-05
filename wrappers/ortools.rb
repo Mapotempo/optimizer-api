@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './wrappers/wrapper'
+require './wrappers/ortools_vrp_pb'
 
 require 'open3'
 require 'thread'
@@ -158,15 +159,31 @@ module Wrappers
     end
 
     def run_ortools(quantities, matrix, timewindows, rest_window, soft_upper_bound, vrp, &block)
+      services = timewindows.collect{ |tw|
+        OrtoolsVrp::Service.new(
+          time_windows: [OrtoolsVrp::TimeWindow.new(start: tw[0] || -2147483648, end: tw[1] || 2147483647), OrtoolsVrp::TimeWindow.new(start: tw[2] || -2147483648, end: tw[3] || 2147483647)],
+          quantities: 0,
+          duration: tw[4],
+        )
+      }
+
+      rests = rest_window.collect{ |r|
+        OrtoolsVrp::Rest.new(
+          time_windows: [OrtoolsVrp::TimeWindow.new(start: r[0] || -2147483648, end: r[1] || 2147483647), OrtoolsVrp::TimeWindow.new(start: r[2] || -2147483648, end: r[3] || 2147483647)],
+          duration: r[4],
+        )
+      }
+
+      problem = OrtoolsVrp::Problem.new(
+        time_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
+        distance_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
+        vehicles: [OrtoolsVrp::Vehicle.new(capacities: 2147483647, time_windows: [])],
+        services: services,
+        rests: rests,
+      )
+
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
-      input.write("#{matrix.size}\n")
-      input.write("#{rest_window.size}\n")
-      input.write(matrix.collect{ |a| a.collect{ |b| [b, b].join(" ") }.join(" ") }.join("\n"))
-      input.write("\n")
-      input.write((timewindows + [[0, 2147483647, -2147483648, 2147483647, 0]]).collect{ |a| [a[0] ? a[0]:-2147483648, a[1]? a[1]:2147483647, a[2] ? a[2]:-2147483648, a[3]? a[3]:2147483647, a[4]].join(" ") }.join("\n"))
-      input.write("\n")
-      input.write(rest_window.collect{ |a| [a[0] ? a[0]:-2147483648, a[1]? a[1]:2147483647, a[2] ? a[2]:-2147483648, a[3]? a[3]:2147483647, a[4]].join(" ") }.join("\n"))
-      input.write("\n")
+      input.write(OrtoolsVrp::Problem.encode(problem))
       input.close
 
       cmd = [

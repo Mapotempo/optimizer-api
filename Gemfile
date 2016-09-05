@@ -26,6 +26,8 @@ gem 'resque-status'
 gem 'ai4r'
 gem 'sim_annealing'
 
+gem 'google-protobuf', '>=3'
+
 group :test do
   gem 'rack-test'
   gem 'minitest'
