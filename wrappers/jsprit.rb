@@ -35,13 +35,9 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_at_least_one,
-        :assert_units_only_one,
-        :assert_vehicles_quantities_only_one,
         :assert_vehicles_timewindows_only_one,
         :assert_services_no_late_multiplier,
         :assert_services_no_exclusion_cost,
-        :assert_services_quantities_only_one,
-        :assert_matrices_only_one,
         :assert_one_sticky_at_most,
       ]
     end
@@ -140,9 +136,19 @@ module Wrappers
                     xml.skillList sticky
                   end
                 }
-                if(vehicle.quantities.size > 0 && vehicle.quantities[0][:initial])
+                initial = false
+                vehicle.quantities.each do |quantity|
+                  if(quantity[:initial])
+                    initial = true
+                  end
+                end
+                if(vehicle.quantities.size > 0 && initial)
                   xml.method_missing('initial-capacity') {
-                    xml.dimension (vehicle.quantities[0][:initial] * 1000).to_i, index: 0
+                    vehicle.quantities.each_with_index do |quantity, index|
+                      if(quantity[:initial])
+                        xml.dimension (quantity[:initial] * 1000).to_i, index: index
+                      end
+                    end
                   }
                 end
                 (xml.duration vehicle.duration) if vehicle.duration
@@ -156,7 +162,9 @@ module Wrappers
                 if vehicle.quantities.size > 0
                   xml.method_missing('capacity-dimensions') {
                     # Jsprit accepts only integers
-                    xml.dimension (vehicle.quantities[0][:limit] * 1000).to_i, index: 0
+                    vehicle.quantities.each_with_index do |quantity, index|
+                      xml.dimension (quantity[:limit] * 1000).to_i, index: index
+                    end
                   }
                 else
                   xml.method_missing('capacity-dimensions') {
@@ -198,7 +206,9 @@ module Wrappers
                   if service.quantities.size > 0
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
-                      xml.dimension (service.quantities[0][:value] * 1000).to_i, index: 0
+                      service.quantities.each_with_index do |quantity, index|
+                        xml.dimension (quantity[:value] * 1000).to_i, index: index
+                      end
                     }
                   else
                     xml.method_missing('capacity-dimensions') {
@@ -255,7 +265,9 @@ module Wrappers
                   if shipment.quantities.size > 0
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
-                      xml.dimension (shipment.quantities[0][:value] * 1000).to_i, index: 0
+                      service.quantities.each_with_index do |quantity, index|
+                        xml.dimension (quantity[:value] * 1000).to_i, index: index
+                      end
                     }
                   else
                     xml.method_missing('capacity-dimensions') {
