@@ -23,7 +23,7 @@ module Api
     class VrpResultSolutionRouteActivities < Grape::Entity
       expose :point_id, documentation: { type: String, desc: '' }
       expose :travel_distance, documentation: { type: Integer, desc: '' }
-      expose :travel_start_time, documentation: { type: Integer, desc: '' }
+      expose :travel_duration, documentation: { type: Integer, desc: '' }
       expose :waiting_duration, documentation: { type: Integer, desc: '' }
       expose :arrival_time, documentation: { type: Integer, desc: '' }
       expose :departure_time, documentation: { type: Integer, desc: '' }

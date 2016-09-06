@@ -162,7 +162,7 @@ module OptimizerWrapper
       v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
       if v.matrix.distance
         previous = nil
-        r[:total_distance] = r[:activities].collect{ |a|
+        r[:total_distance] = r[:activities].inject(0){ |sum, a|
           point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
             s.id == a[:service_id]
           }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
@@ -170,10 +170,14 @@ module OptimizerWrapper
           }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
             s.id == a[:delivery_shipment_id]
           }.delivery.point_id : nil
-          vrp.points.find{ |p| p.id == point_id }.matrix_index if point_id
-        }.compact.inject(0){ |sum, item|
-          sum = sum + v.matrix.distance[previous][item] if (previous)
-          previous = item
+          if point_id
+            point = vrp.points.find{ |p| p.id == point_id }.matrix_index
+            if previous && point
+              a[:travel_distance] = v.matrix.distance[previous][point]
+              sum = sum + a[:travel_distance]
+            end
+          end
+          previous = point
           sum
         }
       end
