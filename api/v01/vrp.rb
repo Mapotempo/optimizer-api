@@ -179,7 +179,7 @@ module Api
             begin
               vrp = ::Models::Vrp.create({})
               [:matrices, :points, :units, :rests, :vehicles, :services, :configuration].each{ |key|
-                vrp.send "#{key}=", params[:vrp].send(key)
+                (vrp.send "#{key}=", params[:vrp].send(key)) if !params[:vrp].send(key).nil?
               }
               if !vrp.valid?
                 error!({error: 'Model Validation Error', detail: vrp.errors}, 400)
