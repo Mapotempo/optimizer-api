@@ -134,7 +134,9 @@ module Wrappers
     end
 
     def assert_matrices_only_one(vrp)
-      vrp.matrices.size == 1
+      vrp.vehicles.collect{ |vehicle|
+        vehicle.matrix_id || [vehicle.router_mode.to_sym, vehicle.router_dimension, vehicle.speed_multiplier]
+      }.uniq.size == 1
     end
 
     def assert_one_sticky_at_most(vrp)
