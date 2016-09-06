@@ -86,31 +86,31 @@ module OptimizerWrapper
       }
 
       if need_matrix.size > 0
-          points = vrp.points.each_with_index.collect{ |point, index|
-            point.matrix_index = index
-            [point.location.lat, point.location.lon]
-          }
+        points = vrp.points.each_with_index.collect{ |point, index|
+          point.matrix_index = index
+          [point.location.lat, point.location.lon]
+        }
 
-          uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            [vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
-          }.uniq
+        uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
+          [vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
+        }.uniq
 
-          i = 0
-          uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
-            block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
-            # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
-            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
-            m = Models::Matrix.create({
-              time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
-              distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
-            })
-            vrp.matrices += [m]
-            [[mode, dimensions, speed_multiplicator], m]
-          }]
+        i = 0
+        uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
+          block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
+          # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
+          matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
+          m = Models::Matrix.create({
+            time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
+            distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
+          })
+          vrp.matrices += [m]
+          [[mode, dimensions, speed_multiplicator], m]
+        }]
 
-          uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            vehicle.matrix = uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]]
-          }
+        uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
+          vehicle.matrix = uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]]
+        }
       end
 
       block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
