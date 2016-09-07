@@ -35,7 +35,6 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_at_least_one,
-        :assert_vehicles_timewindows_only_one,
         :assert_services_no_late_multiplier,
         :assert_services_no_exclusion_cost,
         :assert_one_sticky_at_most,
@@ -98,19 +97,10 @@ module Wrappers
                     xml.returnToDepot true
                   end
                 end
-                if vehicle.timewindows.size > 0
-                  vehicle.timewindows.each do |timewindow|
-                    xml.timeSchedule {
-                      xml.start timewindow.start || 0
-                      xml.end timewindow.end || 2**31
-                    }
-                  end
-                else
-                  xml.timeSchedule {
-                    xml.start 0
-                    xml.end 2**31
-                  }
-                end
+                xml.timeSchedule {
+                  xml.start (vehicle.timewindow && vehicle.timewindow.start) || 0
+                  xml.end (vehicle.timewindow && vehicle.timewindow.end) || 2**31
+                }
                 if vehicle.rests.size > 0
                   vehicle.rests.each do |rest|
                     xml.breaks {

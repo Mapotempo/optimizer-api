@@ -36,7 +36,7 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_only_one,
-        :assert_vehicles_no_timewindows,
+        :assert_vehicles_no_timewindow,
         :assert_services_no_skills,
         :assert_services_at_most_two_timewindows,
         :assert_services_no_exclusion_cost,
@@ -79,21 +79,44 @@ module Wrappers
         matrix.collect!{ |x| x + [0] }
       end
 
-      timewindows = [[nil, nil, nil, nil, 0]] + vrp.services.collect{ |service|
-          (service.activity.timewindows.size >= 1 ? [service.activity.timewindows[0].start, service.activity.timewindows[0].end] : [nil, nil]) +
-          (service.activity.timewindows.size >= 2 ? [service.activity.timewindows[1].start, service.activity.timewindows[1].end] : [nil, nil]) +
-          [service.activity.duration]
-        }
-
-      rest_window = vehicle.rests.collect{ |rest|
-        [rest.timewindows[0].start, rest.timewindows[0].end] +
-        (rest.timewindows.size >= 2 ? [rest.timewindows[1].start, rest.timewindows[1].end] : [nil, nil]) +
-        [rest.duration]
+      services = vrp.services.collect{ |service|
+        OrtoolsVrp::Service.new(
+          time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(start: tw.start || -2147483648, end: tw.end || 2147483647) },
+          quantities: vrp.units.collect{ |unit|
+            q = service.quantities.find{ |quantity| quantity.unit == unit }
+            (q && q.value) || 0
+          },
+          duration: service.activity.duration,
+        )
       }
 
+      vehicles = vrp.vehicles.collect{ |vehicle|
+        rests = vehicle.rests.collect{ |rest|
+          OrtoolsVrp::Rest.new(
+            time_windows: rest.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(start: tw.start || -2147483648, end: tw.end || 2147483647) },
+            duration: rest.duration,
+          )
+        }
+
+        OrtoolsVrp::Vehicle.new(
+          capacities: vrp.units.collect{ |unit|
+            q = vehicle.capacities.find{ |quantity| quantity.unit == unit }
+            (q && q.value) || 0
+          },
+          time_window: OrtoolsVrp::TimeWindow.new(start: (vehicle.timewindow && vehicle.timewindow.start) || 0, end: (vehicle.timewindow && vehicle.timewindow.end) || 2147483647),
+          rests: rests,
+        )
+      }
+
+      problem = OrtoolsVrp::Problem.new(
+        time_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
+        distance_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
+        vehicles: vehicles,
+        services: services,
+      )
       soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
 
-      cost, result = run_ortools(quantities, matrix, timewindows, rest_window, soft_upper_bound, vrp, &block)
+      cost, result = run_ortools(problem, soft_upper_bound, vrp, &block)
       return if !result
 
       result = result[1..-2].collect{ |i| i - 1 }
@@ -158,30 +181,7 @@ module Wrappers
       late_multipliers.size <= 1
     end
 
-    def run_ortools(quantities, matrix, timewindows, rest_window, soft_upper_bound, vrp, &block)
-      services = timewindows.collect{ |tw|
-        OrtoolsVrp::Service.new(
-          time_windows: [OrtoolsVrp::TimeWindow.new(start: tw[0] || -2147483648, end: tw[1] || 2147483647), OrtoolsVrp::TimeWindow.new(start: tw[2] || -2147483648, end: tw[3] || 2147483647)],
-          quantities: 0,
-          duration: tw[4],
-        )
-      }
-
-      rests = rest_window.collect{ |r|
-        OrtoolsVrp::Rest.new(
-          time_windows: [OrtoolsVrp::TimeWindow.new(start: r[0] || -2147483648, end: r[1] || 2147483647), OrtoolsVrp::TimeWindow.new(start: r[2] || -2147483648, end: r[3] || 2147483647)],
-          duration: r[4],
-        )
-      }
-
-      problem = OrtoolsVrp::Problem.new(
-        time_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
-        distance_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
-        vehicles: [OrtoolsVrp::Vehicle.new(capacities: 2147483647, time_windows: [])],
-        services: services,
-        rests: rests,
-      )
-
+    def run_ortools(problem, soft_upper_bound, vrp, &block)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close

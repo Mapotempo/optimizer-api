@@ -47,8 +47,8 @@ module Models
     belongs_to :matrix, class_name: 'Models::Matrix'
     belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
+    belongs_to :timewindow, class_name: 'Models::Timewindow'
     has_many :quantities, class_name: 'Models::VehicleQuantity'
-    has_many :timewindows, class_name: 'Models::Timewindow'
     include ValidateTimewindows
     has_many :rests, class_name: 'Models::Rest'
 

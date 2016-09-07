@@ -219,10 +219,10 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        timewindows: [{ # infeasible
+        timewindow: { # infeasible
           start: 0,
           end: 0
-        }],
+        },
       }],
       services: [{
         id: 'service_0',
@@ -273,10 +273,10 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        timewindows: [{ # infeasible
+        timewindow: { # infeasible
           start: 0,
           end: 0
-        }],
+        },
       }],
       shipments: [{
         id: 'service_0',
@@ -419,10 +419,10 @@ class Wrappers::JspritTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        timewindows: [{
+        timewindow: {
           start: 0,
           end: 100
-        }],
+        },
         duration: 10
       }],
       services: [{

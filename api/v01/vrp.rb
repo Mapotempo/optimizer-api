@@ -117,7 +117,7 @@ module Api
                   requires(:limit, type: Float)
                   optional(:initial, type: Float)
                 end
-                optional(:timewindows, type: Array) do
+                optional(:timewindow, type: Hash) do
                   Vrp.vrp_request_timewindow(self)
                 end
                 optional(:rest_ids, type: Array[String])

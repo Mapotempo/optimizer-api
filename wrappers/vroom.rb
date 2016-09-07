@@ -31,7 +31,7 @@ module Wrappers
     def solver_constraints
       super + [
         :assert_vehicles_only_one,
-        :assert_vehicles_no_timewindows,
+        :assert_vehicles_no_timewindow,
         :assert_vehicles_no_rests,
         :assert_services_no_quantities,
         :assert_services_no_skills,

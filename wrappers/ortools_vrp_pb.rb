@@ -13,23 +13,24 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   end
   add_message "ortools_vrp.Service" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
-    optional :quantities, :uint32, 2
+    repeated :quantities, :uint32, 2
     optional :duration, :uint32, 3
+    optional :vehicle_index, :uint32, 4
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
     optional :duration, :uint32, 2
   end
   add_message "ortools_vrp.Vehicle" do
-    optional :capacities, :uint32, 1
-    repeated :time_windows, :message, 2, "ortools_vrp.TimeWindow"
+    repeated :capacities, :uint32, 1
+    optional :time_window, :message, 2, "ortools_vrp.TimeWindow"
+    repeated :rests, :message, 5, "ortools_vrp.Rest"
   end
   add_message "ortools_vrp.Problem" do
     optional :time_matrix, :message, 1, "ortools_vrp.Matrix"
     optional :distance_matrix, :message, 2, "ortools_vrp.Matrix"
     repeated :vehicles, :message, 3, "ortools_vrp.Vehicle"
     repeated :services, :message, 4, "ortools_vrp.Service"
-    repeated :rests, :message, 5, "ortools_vrp.Rest"
   end
 end
 

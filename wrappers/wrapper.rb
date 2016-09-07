@@ -55,9 +55,9 @@ module Wrappers
       }
     end
 
-    def assert_vehicles_no_timewindows(vrp)
+    def assert_vehicles_no_timewindow(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        !vehicle.timewindows.empty?
+        !vehicle.timewindow.nil?
       }
     end
 
@@ -76,12 +76,6 @@ module Wrappers
     def assert_vehicles_quantities_only_one(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.quantities.size > 1
-      }
-    end
-
-    def assert_vehicles_timewindows_only_one(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        vehicle.timewindows.size > 1
       }
     end
 
