@@ -16,10 +16,12 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :quantities, :uint32, 2
     optional :duration, :uint32, 3
     optional :vehicle_index, :uint32, 4
+    optional :late_multiplier, :uint32, 5
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
     optional :duration, :uint32, 2
+    optional :late_multiplier, :uint32, 5
   end
   add_message "ortools_vrp.Vehicle" do
     repeated :capacities, :uint32, 1

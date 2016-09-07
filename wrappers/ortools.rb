@@ -37,13 +37,13 @@ module Wrappers
         :assert_end_optimization,
         :assert_vehicles_only_one,
         :assert_vehicles_no_timewindow,
+        :assert_vehicles_no_late_multiplier,
         :assert_services_no_skills,
         :assert_services_at_most_two_timewindows,
         :assert_services_no_exclusion_cost,
         :assert_no_shipments,
         :assert_ortools_uniq_late_multiplier,
         :assert_matrices_only_one,
-        :assert_one_vehicle_only_or_no_sticky_vehicle
       ]
     end
 
@@ -87,6 +87,7 @@ module Wrappers
             (q && q.value) || 0
           },
           duration: service.activity.duration,
+          late_multiplier: service.late_multiplier || 0,
         )
       }
 
@@ -114,9 +115,8 @@ module Wrappers
         vehicles: vehicles,
         services: services,
       )
-      soft_upper_bound = (!vrp.services.empty? && vrp.services[0].late_multiplier) || (!vrp.vehicles.empty? && vrp.vehicles[0].cost_late_multiplier)
 
-      cost, result = run_ortools(problem, soft_upper_bound, vrp, &block)
+      cost, result = run_ortools(problem, vrp, &block)
       return if !result
 
       result = result[1..-2].collect{ |i| i - 1 }
@@ -181,7 +181,7 @@ module Wrappers
       late_multipliers.size <= 1
     end
 
-    def run_ortools(problem, soft_upper_bound, vrp, &block)
+    def run_ortools(problem, vrp, &block)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close
@@ -189,7 +189,6 @@ module Wrappers
       cmd = [
         "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` ",
         (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
-        soft_upper_bound && '-soft_upper_bound ' + soft_upper_bound.to_s,
         vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
         (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,
         (vrp.resolution_initial_time_out || @initial_time_out) && '-initial_time_out_no_solution_improvement ' + (vrp.resolution_initial_time_out || @initial_time_out).to_s,

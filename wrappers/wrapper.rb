@@ -113,12 +113,16 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_no_late_multiplier(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        vehicle.cost_late_multiplier && vehicle.cost_late_multiplier != 0
+      }
+    end
+
     def assert_services_no_late_multiplier(vrp)
-      (vrp.services.empty? || vrp.services.none?{ |service|
-        service.late_multiplier
-      }) && (vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        vehicle.cost_late_multiplier
-      })
+      vrp.services.empty? || vrp.services.none?{ |service|
+        service.late_multiplier && service.late_multiplier != 0
+      }
     end
 
     def assert_services_quantities_only_one(vrp)
