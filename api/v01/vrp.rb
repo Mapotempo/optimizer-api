@@ -112,7 +112,7 @@ module Api
 
                 optional(:start_point_id, type: String)
                 optional(:end_point_id, type: String)
-                optional(:quantities, type: Array) do
+                optional(:capacities, type: Array) do
                   requires(:unit_id, type: String)
                   requires(:limit, type: Float)
                   optional(:initial, type: Float)

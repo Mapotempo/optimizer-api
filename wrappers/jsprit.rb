@@ -128,16 +128,16 @@ module Wrappers
                   end
                 }
                 initial = false
-                vehicle.quantities.each do |quantity|
-                  if(quantity[:initial])
+                vehicle.capacities.each do |capacity|
+                  if(capacity[:initial])
                     initial = true
                   end
                 end
-                if(vehicle.quantities.size > 0 && initial)
+                if(vehicle.capacities.size > 0 && initial)
                   xml.method_missing('initial-capacity') {
-                    vehicle.quantities.each_with_index do |quantity, index|
-                      if(quantity[:initial])
-                        xml.dimension (quantity[:initial] * 1000).to_i, index: index
+                    vehicle.capacities.each_with_index do |capacity, index|
+                      if(capacity[:initial])
+                        xml.dimension (capacity[:initial] * 1000).to_i, index: index
                       end
                     end
                   }
@@ -150,11 +150,11 @@ module Wrappers
             vehicles.each do |vehicle|
               xml.type {
                 xml.id_ vehicle.id
-                if vehicle.quantities.size > 0
+                if vehicle.capacities.size > 0
                   xml.method_missing('capacity-dimensions') {
                     # Jsprit accepts only integers
-                    vehicle.quantities.each_with_index do |quantity, index|
-                      xml.dimension (quantity[:limit] * 1000).to_i, index: index
+                    vehicle.capacities.each_with_index do |capacity, index|
+                      xml.dimension (capacity[:limit] * 1000).to_i, index: index
                     end
                   }
                 else

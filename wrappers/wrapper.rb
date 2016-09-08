@@ -73,9 +73,9 @@ module Wrappers
       }
     end
 
-    def assert_vehicles_quantities_only_one(vrp)
+    def assert_vehicles_capacities_only_one(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        vehicle.quantities.size > 1
+        vehicle.capacities.size > 1
       }
     end
 

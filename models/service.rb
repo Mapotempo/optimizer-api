@@ -33,6 +33,6 @@ module Models
 
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
-    has_many :quantities, class_name: 'Models::ServiceQuantity'
+    has_many :quantities, class_name: 'Models::Quantity'
   end
 end

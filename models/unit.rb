@@ -22,7 +22,7 @@ module Models
   class Unit < Base
     field :label
 
-    has_many :vehicle_unit, class_name: 'Models::VehicleQuantity'
-    has_many :service_unit, class_name: 'Models::ServiceQuantity'
+    has_many :vehicle_unit, class_name: 'Models::Capacity'
+    has_many :service_unit, class_name: 'Models::Quantity'
   end
 end

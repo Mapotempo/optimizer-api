@@ -19,11 +19,17 @@ require './models/base'
 
 
 module Models
-  class ServiceQuantity < Base
-    field :value
-    validates_numericality_of :value
+  class Capacity < Base
+    field :limit
+    field :initial
+    field :service_unit_multiplier
+    field :pickup_unit_multiplier
+    field :delivery_unit_multiplier
 
-    belongs_to :service, class_name: 'Models::Service'
+    validates_numericality_of :limit
+    validates_numericality_of :initial
+
+    belongs_to :vehicle, class_name: 'Models::Vehicle'
     belongs_to :unit, class_name: 'Models::Unit'
   end
 end
