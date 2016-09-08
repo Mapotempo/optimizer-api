@@ -38,6 +38,7 @@ module Wrappers
         :assert_vehicles_only_one,
         :assert_vehicles_no_timewindow,
         :assert_vehicles_no_late_multiplier,
+        :assert_vehicles_no_capacity_initial,
         :assert_services_no_skills,
         :assert_services_at_most_two_timewindows,
         :assert_services_no_exclusion_cost,
@@ -102,7 +103,7 @@ module Wrappers
         OrtoolsVrp::Vehicle.new(
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
-            (q && q.value) || 0
+            (q && q.limit) || 0
           },
           time_window: OrtoolsVrp::TimeWindow.new(start: (vehicle.timewindow && vehicle.timewindow.start) || 0, end: (vehicle.timewindow && vehicle.timewindow.end) || 2147483647),
           rests: rests,
@@ -156,7 +157,8 @@ module Wrappers
             [vehicle.end_point && {
               point_id: vehicle.end_point.id
             }]).compact
-        }]
+        }],
+        unassigned: vrp.services.collect(&:id) - result.collect{ |i| i < vrp.services.size && vrp.services[i].id }
       }
     end
 

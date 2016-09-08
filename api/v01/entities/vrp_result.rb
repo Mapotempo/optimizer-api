@@ -48,6 +48,7 @@ module Api
       expose :start_time, documentation: { type: Integer, desc: '' }
       expose :end_time, documentation: { type: Integer, desc: '' }
       expose :routes, using: VrpResultSolutionRoute, documentation: { is_array: true, desc: '' }
+      expose :unassigned, documentation: { type: String, is_array: true, desc: '' }
     end
 
     class VrpResultJobGraphItem < Grape::Entity

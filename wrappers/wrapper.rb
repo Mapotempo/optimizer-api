@@ -79,6 +79,12 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_no_capacity_initial(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        vehicle.capacities.find{ |c| c.initial && c.initial != 0 }
+      }
+    end
+
     def assert_no_shipments(vrp)
       vrp.shipments.empty?
     end
