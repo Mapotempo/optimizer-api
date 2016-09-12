@@ -80,22 +80,24 @@ module Wrappers
       }
       return if !result
 
+      tour = result['routes'][0]['steps'].collect{ |step| step['job'] }
+
       if vehicle_loop
-        index = result['tour'].index(0)
-        result['tour'] = result['tour'].rotate(index)
+        index = tour.index(0)
+        tour = tour.rotate(index)
       end
 
       if vehicle_loop || vehicle_have_start
-        result['tour'] = result['tour'][1..-1]
+        tour = tour[1..-1]
       else
-        result['tour'] = result['tour'].collect{ |i| i + 1 }
+        tour = tour.collect{ |i| i + 1 }
       end
 
-      if !vehicle_loop && vehicle_have_end
-        result['tour'] = result['tour'][0..-2]
+      if vehicle_loop || vehicle_have_end
+        tour = tour[0..-2]
       end
 
-      cost = result['solution_cost'] + vehicle.cost_fixed
+      cost = (result['solution']['cost'] / 100) + vehicle.cost_fixed
       block.call(self, 1, 1, cost, nil) if block
 
       {
@@ -111,7 +113,7 @@ module Wrappers
             ([vehicle_have_start ? {
               point_id: vehicle.start_point.id
             } : nil] +
-            result['tour'].collect{ |i| {
+            tour.collect{ |i| {
               point_id: vrp.services[i - 1].activity.point.id,
               service_id: vrp.services[i - 1].id
 #              travel_distance 0,
@@ -143,11 +145,16 @@ module Wrappers
       input = Tempfile.new('optimize-vroom-input', tmpdir=@tmp_dir)
       input.write("NAME: vroom\n")
       input.write("TYPE: ATSP\n")
+      if !have_end || !have_start
+        input.write("OPEN_TRIP: TRUE\n")
+        input.write("START: #{0}\n") if have_start
+        input.write("END: #{matrix.size - 1}\n") if have_end
+      end
       input.write("DIMENSION: #{matrix.size}\n")
       input.write("EDGE_WEIGHT_TYPE: EXPLICIT\n")
       input.write("EDGE_WEIGHT_FORMAT: FULL_MATRIX\n")
       input.write("EDGE_WEIGHT_SECTION\n")
-      input.write(matrix.collect{ |a| a.join(" ") }.join("\n"))
+      input.write(matrix.collect{ |a| a.collect{ |f| (f * 100).to_i }.join(" ") }.join("\n"))
       input.write("\n")
       input.write("EOF\n")
       input.close
@@ -155,7 +162,7 @@ module Wrappers
       output = Tempfile.new('optimize-vroom-output', tmpdir=@tmp_dir)
       output.close
 
-      cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}' #{have_start && !have_end ? '-s' : ''} #{!have_start && have_end ? '-e' : ''}"
+      cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}'"
       puts cmd
       system(cmd)
 
