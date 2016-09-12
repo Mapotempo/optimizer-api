@@ -47,10 +47,22 @@ module OptimizerWrapper
         vrp: [:demo, :vroom, :jsprit, :ortools]
       }
     }, {
-      api_keys: ['demo2'],
+      api_keys: ['vroom'],
+      queue: 'DEFAULT',
+      services: {
+        vrp: [:vroom]
+      }
+    }, {
+      api_keys: ['ortools'],
       queue: 'DEFAULT',
       services: {
         vrp: [:ortools]
+      }
+    }, {
+      api_keys: ['jsprit'],
+      queue: 'DEFAULT',
+      services: {
+        vrp: [:jsprit]
       }
     }],
     router: {
