@@ -79,7 +79,7 @@ module Api
 
               optional(:units, type: Array) do
                 requires(:id, type: String)
-                requires(:label, type: String)
+                optional(:label, type: String)
               end
 
               optional(:rests, type: Array) do
@@ -177,7 +177,7 @@ module Api
           post do
             begin
               vrp = ::Models::Vrp.create({})
-              [:matrices, :points, :units, :rests, :vehicles, :services, :configuration].each{ |key|
+              [:matrices, :units, :points, :units, :rests, :vehicles, :services, :configuration].each{ |key|
                 (vrp.send "#{key}=", params[:vrp].send(key)) if !params[:vrp].send(key).nil?
               }
               if !vrp.valid?

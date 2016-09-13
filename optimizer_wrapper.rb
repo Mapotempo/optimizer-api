@@ -97,6 +97,7 @@ module OptimizerWrapper
 
         i = 0
         uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
+          raise UnsupportedRouterModeError unless OptimizerWrapper.config[:router][mode]
           block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
           # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
           matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
@@ -370,8 +371,8 @@ module OptimizerWrapper
     end
   end
 
-  class UnsupportedProblemError < StandardError
-  end
+  class UnsupportedProblemError < StandardError; end
+  class UnsupportedRouterModeError < StandardError; end
 
   class Result
     def self.set(key, value)

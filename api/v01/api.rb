@@ -33,6 +33,8 @@ module Api
         case error
         when Grape::Exceptions::ValidationErrors
           error!(error.message, 400)
+        when OptimizerWrapper::UnsupportedRouterModeError
+          error!(error.message, 400)
         when OptimizerWrapper::UnsupportedProblemError
           error!(error.message, 417)
         else
