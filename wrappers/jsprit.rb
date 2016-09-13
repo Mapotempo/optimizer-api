@@ -36,6 +36,7 @@ module Wrappers
         :assert_end_optimization,
         :assert_vehicles_at_least_one,
         :assert_vehicles_no_late_multiplier,
+        :assert_vehicles_no_overload_multiplier,
         :assert_services_no_late_multiplier,
         :assert_services_no_exclusion_cost,
         :assert_one_sticky_at_most,

@@ -125,6 +125,14 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_no_overload_multiplier(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        vehicle.capacities.find{ |capacity|
+          capacity.cost_overload_multiplier && capacity.cost_overload_multiplier != 0
+        }
+      }
+    end
+
     def assert_services_no_late_multiplier(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         service.late_multiplier && service.late_multiplier != 0

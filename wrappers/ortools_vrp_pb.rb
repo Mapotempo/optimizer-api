@@ -23,8 +23,12 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :duration, :uint32, 2
     optional :late_multiplier, :uint32, 5
   end
+  add_message "ortools_vrp.Capacity" do
+    optional :limit, :uint32, 1
+    optional :cost_overload_multiplier, :float, 2
+  end
   add_message "ortools_vrp.Vehicle" do
-    repeated :capacities, :uint32, 1
+    repeated :capacities, :message, 1, "ortools_vrp.Capacity"
     optional :time_window, :message, 2, "ortools_vrp.TimeWindow"
     repeated :rests, :message, 5, "ortools_vrp.Rest"
   end
@@ -41,6 +45,7 @@ module OrtoolsVrp
   TimeWindow = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.TimeWindow").msgclass
   Service = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Service").msgclass
   Rest = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Rest").msgclass
+  Capacity = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Capacity").msgclass
   Vehicle = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Vehicle").msgclass
   Problem = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Problem").msgclass
 end

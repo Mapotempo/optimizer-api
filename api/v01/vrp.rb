@@ -114,6 +114,7 @@ module Api
                   requires(:unit_id, type: String)
                   requires(:limit, type: Float)
                   optional(:initial, type: Float)
+                  optional(:cost_overload_multiplier, type: Float)
                 end
                 optional(:timewindow, type: Hash) do
                   Vrp.vrp_request_timewindow(self)

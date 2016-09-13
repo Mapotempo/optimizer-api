@@ -103,7 +103,10 @@ module Wrappers
         OrtoolsVrp::Vehicle.new(
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
-            (q && q.limit) || 0
+            OrtoolsVrp::Capacity.new(
+              limit: (q && q.limit) || 0,
+              cost_overload_multiplier: q.cost_overload_multiplier || 0,
+            )
           },
           time_window: OrtoolsVrp::TimeWindow.new(start: (vehicle.timewindow && vehicle.timewindow.start) || 0, end: (vehicle.timewindow && vehicle.timewindow.end) || 2147483647),
           rests: rests,
