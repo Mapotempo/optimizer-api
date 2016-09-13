@@ -91,15 +91,13 @@ module Api
 
               requires(:vehicles, type: Array) do
                 requires(:id, type: String)
-                optional(:cost, type: Hash) do
-                  optional(:fixed, type: Float)
-                  optional(:distance_multiplier, type: Float)
-                  optional(:time_multiplier, type: Float)
-                  optional(:waiting_time_multiplier, type: Float)
-                  optional(:late_multiplier, type: Float)
-                  optional(:setup_time_multiplier, type: Float)
-                  optional(:setup, type: Float)
-                end
+                optional(:cost_fixed, type: Float)
+                optional(:cost_distance_multiplier, type: Float)
+                optional(:cost_time_multiplier, type: Float)
+                optional(:cost_waiting_time_multiplier, type: Float)
+                optional(:cost_late_multiplier, type: Float)
+                optional(:cost_setup_time_multiplier, type: Float)
+                optional(:cost_setup, type: Float)
 
                 optional(:matrix_id, type: String)
                 optional(:router_mode, type: String)
