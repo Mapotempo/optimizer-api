@@ -31,7 +31,7 @@ module Wrappers
     def solver_constraints
       super + [
         :assert_vehicles_only_one,
-        :assert_vehicles_no_timewindow,
+        :assert_vehicles_no_end_time_or_late_multiplier,
         :assert_vehicles_no_rests,
         :assert_services_no_quantities,
         :assert_services_no_skills,
@@ -139,6 +139,12 @@ module Wrappers
         (vehicle.start_point && vehicle.start_point == vehicle.end_point) ||
         (vehicle.start_point && !vehicle.end_point) ||
         (!vehicle.start_point && vehicle.end_point)
+    end
+
+    def assert_vehicles_no_end_time_or_late_multiplier(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.all?{ |vehicle|
+        !vehicle.timewindow || (vehicle.cost_late_multiplier && vehicle.cost_late_multiplier > 0)
+      }
     end
 
     def run_vroom(have_start, have_end, matrix)

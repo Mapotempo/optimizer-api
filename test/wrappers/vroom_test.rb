@@ -196,4 +196,51 @@ class Wrappers::VroomTest < Minitest::Test
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
     assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-1].collect{ |a| a[:point_id] }.sort
   end
+
+  def test_vehicle_time_window
+    vroom = OptimizerWrapper::VROOM
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1],
+          [1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 1,
+          end: 10
+        },
+        cost_late_multiplier: 1
+      }],
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_0'
+        }
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+    }
+    vrp = Models::Vrp.create(problem)
+    assert vroom.inapplicable_solve?(vrp).empty?
+    result = vroom.solve(vrp)
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
+  end
 end
