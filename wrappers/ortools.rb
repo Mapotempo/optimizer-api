@@ -36,8 +36,6 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_only_one,
-        :assert_vehicles_no_timewindow,
-        :assert_vehicles_no_late_multiplier,
         :assert_vehicles_no_capacity_initial,
         :assert_services_no_skills,
         :assert_services_at_most_two_timewindows,
@@ -82,24 +80,20 @@ module Wrappers
 
       services = vrp.services.collect{ |service|
         OrtoolsVrp::Service.new(
-          time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(start: tw.start || -2147483648, end: tw.end || 2147483647) },
+          time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
+            start: tw.start || -2147483648,
+            end: tw.end || 2147483647,
+            late_multiplier: service.late_multiplier || 0,
+          ) },
           quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
             (q && q.value) || 0
           },
           duration: service.activity.duration,
-          late_multiplier: service.late_multiplier || 0,
         )
       }
 
       vehicles = vrp.vehicles.collect{ |vehicle|
-        rests = vehicle.rests.collect{ |rest|
-          OrtoolsVrp::Rest.new(
-            time_windows: rest.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(start: tw.start || -2147483648, end: tw.end || 2147483647) },
-            duration: rest.duration,
-          )
-        }
-
         OrtoolsVrp::Vehicle.new(
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
@@ -108,8 +102,21 @@ module Wrappers
               cost_overload_multiplier: q.cost_overload_multiplier || 0,
             )
           },
-          time_window: OrtoolsVrp::TimeWindow.new(start: (vehicle.timewindow && vehicle.timewindow.start) || 0, end: (vehicle.timewindow && vehicle.timewindow.end) || 2147483647),
-          rests: rests,
+          time_window: OrtoolsVrp::TimeWindow.new(
+            start: (vehicle.timewindow && vehicle.timewindow.start) || 0,
+            end: (vehicle.timewindow && vehicle.timewindow.end) || 2147483647,
+            late_multiplier: vehicle.cost_late_multiplier || 0,
+          ),
+          rests: vehicle.rests.collect{ |rest|
+            OrtoolsVrp::Rest.new(
+              time_windows: rest.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
+                start: tw.start || -2147483648,
+                end: tw.end || 2147483647,
+                late_multiplier: rest.late_multiplier || 0,
+              ) },
+              duration: rest.duration,
+            )
+          },
         )
       }
 

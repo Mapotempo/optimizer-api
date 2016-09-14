@@ -10,6 +10,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "ortools_vrp.TimeWindow" do
     optional :start, :int32, 1
     optional :end, :int32, 2
+    optional :late_multiplier, :uint32, 3
   end
   add_message "ortools_vrp.Service" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
@@ -21,7 +22,6 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
     optional :duration, :uint32, 2
-    optional :late_multiplier, :uint32, 5
   end
   add_message "ortools_vrp.Capacity" do
     optional :limit, :uint32, 1
