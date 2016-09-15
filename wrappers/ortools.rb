@@ -35,22 +35,17 @@ module Wrappers
     def solver_constraints
       super + [
         :assert_end_optimization,
-        :assert_vehicles_only_one,
         :assert_vehicles_no_capacity_initial,
         :assert_services_no_skills,
         :assert_services_at_most_two_timewindows,
         :assert_services_no_exclusion_cost,
         :assert_no_shipments,
-        :assert_ortools_uniq_late_multiplier,
         :assert_matrices_only_one,
       ]
     end
 
     def solve(vrp, &block)
-# FIXME Send two matrix
-# FIXME Send cost coef
-# FIXME or-tools can handle no edn-point itself
-      vehicle = vrp.vehicles.first
+# FIXME or-tools can handle no end-point itself
 
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
 
@@ -58,25 +53,28 @@ module Wrappers
         points[service.activity.point_id].matrix_index
       }
 
-      matrix_indices =
-        (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
-        matrix_indices +
-        (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
+      vrp.vehicles.each{ |vehicle|
+        matrix_indices +=
+          (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
+          (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
+      }
 
-      quantities = vrp.services.collect(&:quantities) # Not used
-      matrix = vehicle.matrix_blend(matrix_indices)
+      # TODO Daels with multiple matrix
+      matrix = vrp.vehicles.first.matrix_blend(matrix_indices)
 
-      if !vehicle.start_point
-        matrix_indices = [0] + matrix_indices.collect{ |i| i + 1 }
-        matrix = [[0] * matrix.length] + matrix
-        matrix.collect!{ |x| [0] + x }
-      end
+      vrp.vehicles.each{ |vehicle|
+        if !vehicle.start_point
+          matrix_indices << [matrix_indices.size]
+          matrix += [[0] * matrix.length]
+          matrix.collect!{ |x| x + [0] }
+        end
 
-      if !vehicle.end_point
-        matrix_indices << [matrix_indices.size]
-        matrix += [[0] * matrix.length]
-        matrix.collect!{ |x| x + [0] }
-      end
+        if !vehicle.end_point
+          matrix_indices << [matrix_indices.size]
+          matrix += [[0] * matrix.length]
+          matrix.collect!{ |x| x + [0] }
+        end
+      }
 
       services = vrp.services.collect{ |service|
         OrtoolsVrp::Service.new(
@@ -130,7 +128,7 @@ module Wrappers
       cost, result = run_ortools(problem, vrp, &block)
       return if !result
 
-      result = result[1..-2].collect{ |i| i - 1 }
+      result = result.collect{ |r| r[1..-2] }
 
       {
         cost: cost,
@@ -139,14 +137,16 @@ module Wrappers
 #        total_waiting_time: 0,
 #        start_time: 0,
 #        end_time: 0,
-        routes: [{
+        routes: result.each_with_index.collect{ |route, index|
+          vehicle = vrp.vehicles[index]
+          {
           vehicle_id: vehicle.id,
           activities:
             ([vehicle.start_point && {
               point_id: vehicle.start_point.id
             }] +
-            result.collect{ |i|
-              if i < vrp.services.size
+            route.collect{ |i|
+              if i < matrix_indices.size
                 {
                   point_id: vrp.services[i].activity.point.id,
                   service_id: vrp.services[i].id
@@ -160,15 +160,15 @@ module Wrappers
                 }
               else
                 {
-                  rest_id: vrp.rests[i - (vrp.services.size + 1 + (vehicle.end_point ? 1 : 0))].id
+                  rest_id: vrp.rests[i - matrix_indices.size].id
                 }
               end
             } +
             [vehicle.end_point && {
               point_id: vehicle.end_point.id
             }]).compact
-        }],
-        unassigned: vrp.services.collect(&:id) - result.collect{ |i| i < vrp.services.size && vrp.services[i].id }
+        }},
+        unassigned: vrp.services.collect(&:id) - result.flatten.collect{ |i| i < vrp.services.size && vrp.services[i].id }
       }
     end
 
@@ -183,14 +183,6 @@ module Wrappers
 
     def assert_end_optimization(vrp)
       vrp.resolution_duration || vrp.resolution_iterations_without_improvment
-    end
-
-    def assert_ortools_uniq_late_multiplier(vrp)
-# TODO services.late_multiplier != rests.late_multiplier could be supported in tsp-simple
-      late_multipliers = []
-      late_multipliers |= vrp.services.collect(&:late_multiplier).compact.uniq if !vrp.services.empty?
-      late_multipliers |= vrp.vehicles[0].rests.collect(&:late_multiplier).compact.uniq if vrp.vehicles[0] && !vrp.vehicles[0].rests.empty?
-      late_multipliers.size <= 1
     end
 
     def run_ortools(problem, vrp, &block)
@@ -235,7 +227,7 @@ module Wrappers
           cost = if cost_line.include?('Cost: ')
             cost_line.split(' ')[-1].to_i
           end
-          result = result.split(' ').collect{ |i| Integer(i) } if result
+          result = result.split(';').collect{ |r| r.split(',').collect{ |i| Integer(i) } }.select{ |r| r.size > 0 } if result
           [cost, result]
         end
       else
