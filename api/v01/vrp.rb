@@ -231,6 +231,7 @@ module Api
                     graph: solution['graph']
                   }
                 }, with: Grape::Presenters::Presenter)
+                OptimizerWrapper.job_remove(params[:api_key], id)
               elsif !job.completed?
                 status 200
                 present({
@@ -242,6 +243,7 @@ module Api
                     graph: solution['graph']
                   }
                 }, with: Grape::Presenters::Presenter)
+                OptimizerWrapper.job_remove(params[:api_key], id)
               else
                 status 200
                 present({
@@ -253,6 +255,7 @@ module Api
                     graph: solution['graph']
                   }
                 }, with: Grape::Presenters::Presenter)
+                OptimizerWrapper.job_remove(params[:api_key], id)
               end
             end
           end
@@ -263,16 +266,8 @@ module Api
             detail: 'List running or queued jobs.'
           }
           get do
-            if !OptimizerWrapper::JobList.get(params[:api_key]).is_a?(NilClass)
-              jobs = OptimizerWrapper::JobList.get(params[:api_key]).collect do |e|
-                Resque::Plugins::Status::Hash.get(e)
-              end
-              status 201
-              present(jobs, with: Grape::Presenters::Presenter)
-            else
-              status 204
-              present 'No optimizations', Grape::Presenters::Presenter
-            end
+            status 201
+            present OptimizerWrapper.job_list(params[:api_key]), with: Grape::Presenters::Presenter
           end
 
           desc 'Delete vrp job', {
@@ -292,7 +287,7 @@ module Api
               status 404
               error!({error: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
             else
-              Resque::Plugins::Status::Hash.kill(params[:id])
+              OptimizerWrapper.job_kill(params[:api_key], id)
               status 204
             end
           end

@@ -112,8 +112,19 @@ module OptimizerWrapper
     raise
   end
 
-  def self.list_job(api_key)
-    JobList.list
+  def self.job_list(api_key)
+    jobs = (JobList.get(api_key) || []).collect{ |e|
+      Resque::Plugins::Status::Hash.get(e)
+    }
+  end
+
+  def self.job_kill(api_key, id)
+    Result.remove(api_key, id)
+    Resque::Plugins::Status::Hash.kill(id)
+  end
+
+  def self.job_remove(api_key, id)
+    Result.remove(api_key, id)
   end
 
   private
@@ -331,22 +342,20 @@ module OptimizerWrapper
     def self.exist(key)
       OptimizerWrapper::REDIS.exists(key)
     end
+
+    def self.remove(api_key, key)
+      OptimizerWrapper::REDIS.del(key)
+      OptimizerWrapper::REDIS.lrem(api_key, 0, key)
+    end
   end
 
   class JobList
-    MUTEX = Mutex.new
-
     def self.add(api_key, job_id)
-      MUTEX.synchronize {
-        list = self.get(api_key) || []
-        list << job_id
-        OptimizerWrapper::REDIS.set(api_key, list.to_json)
-      }
+      OptimizerWrapper::REDIS.rpush(api_key, job_id)
     end
 
     def self.get(api_key)
-      result = OptimizerWrapper::REDIS.get(api_key)
-      JSON.parse(result) if result
+      OptimizerWrapper::REDIS.lrange(api_key, 0, -1)
     end
   end
 end
