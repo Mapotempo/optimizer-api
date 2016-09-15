@@ -25,11 +25,11 @@ module Models
     field :service_unit_multiplier
     field :pickup_unit_multiplier
     field :delivery_unit_multiplier
-    field :cost_overload_multiplier
+    field :overload_multiplier
 
     validates_numericality_of :limit
     validates_numericality_of :initial
-    validates_numericality_of :cost_overload_multiplier, allow_nil: true
+    validates_numericality_of :overload_multiplier, allow_nil: true
 
     belongs_to :vehicle, class_name: 'Models::Vehicle'
     belongs_to :unit, class_name: 'Models::Unit'

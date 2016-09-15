@@ -412,6 +412,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         capacities: [{
           unit_id: 'unit_0',
           limit: 10,
+          overload_multiplier: 0,
         }]
       }],
       services: [{

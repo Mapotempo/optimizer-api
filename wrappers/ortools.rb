@@ -99,7 +99,7 @@ module Wrappers
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
               limit: (q && q.limit) || 0,
-              cost_overload_multiplier: q.cost_overload_multiplier || 0,
+              overload_multiplier: q.overload_multiplier || 0,
             )
           },
           time_window: OrtoolsVrp::TimeWindow.new(
