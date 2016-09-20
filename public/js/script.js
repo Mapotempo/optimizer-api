@@ -361,16 +361,16 @@ $(document).ready(function() {
           cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'],
           coef_setup: vehicle[mapping.coef_setup || 'coef_setup'],
           // TODO: gérer les quantités multiples
-          quantities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
+          capacities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
           }).filter(function(el) {
             return el && el.length > 0;
           }),
-          timewindows: [{
+          timewindow: {
             start: duration(vehicle[mapping.start_time || 'start_time']) || null,
             end: duration(vehicle[mapping.end_time || 'end_time']) || null
-          }],
+          },
           duration: duration(vehicle[mapping.route_duration || 'duration']) || null,
           router_mode: vehicle[mapping.router_mode || 'router_mode'] || 'car',
           router_dimension: vehicle[mapping.router_dimension || 'router_dimension'] || 'time',
