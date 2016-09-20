@@ -47,35 +47,6 @@ module Wrappers
     def solve(vrp, &block)
 # FIXME or-tools can handle no end-point itself
 
-      points = Hash[vrp.points.collect{ |point| [point.id, point] }]
-
-      matrix_indices = vrp.services.collect{ |service|
-        points[service.activity.point_id].matrix_index
-      }
-
-      vrp.vehicles.each{ |vehicle|
-        matrix_indices +=
-          (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
-          (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
-      }
-
-      # TODO Daels with multiple matrix
-      matrix = vrp.vehicles.first.matrix_blend(matrix_indices)
-
-      vrp.vehicles.each{ |vehicle|
-        if !vehicle.start_point
-          matrix_indices << [matrix_indices.size]
-          matrix += [[0] * matrix.length]
-          matrix.collect!{ |x| x + [0] }
-        end
-
-        if !vehicle.end_point
-          matrix_indices << [matrix_indices.size]
-          matrix += [[0] * matrix.length]
-          matrix.collect!{ |x| x + [0] }
-        end
-      }
-
       services = vrp.services.collect{ |service|
         OrtoolsVrp::Service.new(
           time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
@@ -91,8 +62,34 @@ module Wrappers
         )
       }
 
+      points = Hash[vrp.points.collect{ |point| [point.id, point] }]
+
+      matrix_indices = vrp.services.collect{ |service|
+        points[service.activity.point_id].matrix_index
+      }
+
       vehicles = vrp.vehicles.collect{ |vehicle|
+        mi = matrix_indices +
+          (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
+          (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
+
+        matrix = vehicle.matrix_blend(mi)
+
+        if !vehicle.start_point
+          mi << [matrix_indices.size]
+          matrix += [[0] * matrix.length]
+          matrix.collect!{ |x| x + [0] }
+        end
+
+        if !vehicle.end_point
+          mi << [matrix_indices.size]
+          matrix += [[0] * matrix.length]
+          matrix.collect!{ |x| x + [0] }
+        end
+
         OrtoolsVrp::Vehicle.new(
+          time_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
+          distance_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
@@ -119,8 +116,6 @@ module Wrappers
       }
 
       problem = OrtoolsVrp::Problem.new(
-        time_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
-        distance_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
         vehicles: vehicles,
         services: services,
       )
@@ -146,7 +141,7 @@ module Wrappers
               point_id: vehicle.start_point.id
             }] +
             route.collect{ |i|
-              if i < matrix_indices.size
+              if i < matrix_indices.size + 2
                 {
                   point_id: vrp.services[i].activity.point.id,
                   service_id: vrp.services[i].id
@@ -160,7 +155,7 @@ module Wrappers
                 }
               else
                 {
-                  rest_id: vrp.rests[i - matrix_indices.size].id
+                  rest_id: vrp.rests[i - matrix_indices.size - 2].id
                 }
               end
             } +
