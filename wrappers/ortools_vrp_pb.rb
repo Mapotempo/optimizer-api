@@ -23,7 +23,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :duration, :uint32, 2
   end
   add_message "ortools_vrp.Capacity" do
-    optional :limit, :uint32, 1
+    optional :limit, :int32, 1
     optional :overload_multiplier, :float, 2
   end
   add_message "ortools_vrp.Vehicle" do

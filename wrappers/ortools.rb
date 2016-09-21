@@ -94,7 +94,7 @@ module Wrappers
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
-              limit: (q && q.limit) || 0,
+              limit: (q && q.limit) || -2147483648,
               overload_multiplier: (q && q.overload_multiplier) || 0,
             )
           },
