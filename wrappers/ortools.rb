@@ -164,7 +164,7 @@ module Wrappers
               point_id: vehicle.end_point.id
             }]).compact
         }},
-        unassigned: vrp.services.collect(&:id) - result.flatten.collect{ |i| i < vrp.services.size && vrp.services[i].id }
+        unassigned: (vrp.services.collect(&:id) - result.flatten.collect{ |i| i < vrp.services.size && vrp.services[i].id }).collect{ |service_id| {service_id: service_id} }
       }
     end
 
