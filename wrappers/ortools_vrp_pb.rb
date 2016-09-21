@@ -32,8 +32,6 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :capacities, :message, 3, "ortools_vrp.Capacity"
     optional :time_window, :message, 4, "ortools_vrp.TimeWindow"
     repeated :rests, :message, 5, "ortools_vrp.Rest"
-    optional :start_index, :uint32, 6
-    optional :stop_index, :uint32, 7
   end
   add_message "ortools_vrp.Problem" do
     repeated :vehicles, :message, 3, "ortools_vrp.Vehicle"
