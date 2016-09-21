@@ -59,6 +59,7 @@ module Wrappers
             (q && q.value) || 0
           },
           duration: service.activity.duration,
+          vehicle_indices: service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }
         )
       }
 

@@ -16,7 +16,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
     repeated :quantities, :uint32, 2
     optional :duration, :uint32, 3
-    optional :vehicle_index, :uint32, 4
+    repeated :vehicle_indices, :uint32, 4
     optional :late_multiplier, :uint32, 5
   end
   add_message "ortools_vrp.Rest" do
