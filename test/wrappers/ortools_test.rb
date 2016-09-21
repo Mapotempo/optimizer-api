@@ -494,7 +494,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 100
+          duration: 10
         }
       }
     }
@@ -552,7 +552,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 100
+          duration: 10
         }
       }
     }
@@ -620,7 +620,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 100
+          duration: 10
         }
       }
     }
