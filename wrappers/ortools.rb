@@ -187,7 +187,7 @@ module Wrappers
       input.close
 
       cmd = [
-        "cd `dirname #{@exec_ortools}` && ./`basename #{@exec_ortools}` ",
+        "#{@exec_ortools} ",
         (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
         vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
         (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,

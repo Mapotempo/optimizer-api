@@ -29,7 +29,8 @@ module OptimizerWrapper
   DEMO = Wrappers::Demo.new(CACHE, threads: 4)
   VROOM = Wrappers::Vroom.new(CACHE, threads: 4)
   JSPRIT = Wrappers::Jsprit.new(CACHE, threads: 4)
-  ORTOOLS = Wrappers::Ortools.new(CACHE, threads: 4)
+  # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
+  ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../mapotempo-optimizer/optimizer/tsp_simple', threads: 4)
 
   @@c = {
     product_title: 'Optimizers API',
