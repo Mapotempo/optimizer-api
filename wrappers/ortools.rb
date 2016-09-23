@@ -40,7 +40,6 @@ module Wrappers
         :assert_services_at_most_two_timewindows,
         :assert_services_no_exclusion_cost,
         :assert_no_shipments,
-        :assert_matrices_only_one,
       ]
     end
 

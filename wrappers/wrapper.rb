@@ -128,7 +128,7 @@ module Wrappers
     def assert_vehicles_no_overload_multiplier(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |capacity|
-          capacity.cost_overload_multiplier && capacity.cost_overload_multiplier != 0
+          capacity.overload_multiplier && capacity.overload_multiplier != 0
         }
       }
     end
