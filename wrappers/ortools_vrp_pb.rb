@@ -8,8 +8,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :data, :uint32, 2
   end
   add_message "ortools_vrp.TimeWindow" do
-    optional :start, :int32, 1
-    optional :end, :int32, 2
+    optional :start, :int64, 1
+    optional :end, :int64, 2
     optional :late_multiplier, :uint32, 3
   end
   add_message "ortools_vrp.Service" do
