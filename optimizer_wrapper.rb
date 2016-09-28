@@ -55,7 +55,7 @@ module OptimizerWrapper
     if !service
       raise UnsupportedProblemError
     else
-      if config[:services][service].solve_synchronous?(vrp)
+      if config[:solve_synchronously] || config[:services][service].solve_synchronous?(vrp)
         solve(service, vrp)
       else
         job_id = Job.enqueue_to(services[:queue], Job, service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
@@ -113,6 +113,8 @@ module OptimizerWrapper
           vehicle.matrix = uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]]
         }
       end
+
+      File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
       block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
       cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|

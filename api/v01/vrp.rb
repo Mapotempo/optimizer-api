@@ -176,6 +176,7 @@ module Api
           }
           post do
             begin
+              File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.json', {vrp: params[:vrp]}.to_json) if ENV['DUMP_VRP']
               vrp = ::Models::Vrp.create({})
               [:matrices, :units, :points, :units, :rests, :vehicles, :services, :configuration].each{ |key|
                 (vrp.send "#{key}=", params[:vrp].send(key)) if !params[:vrp].send(key).nil?

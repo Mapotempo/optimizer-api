@@ -68,8 +68,11 @@ module OptimizerWrapper
     }],
     router: {
       api_key: 'demo',
-      car: 'https://router.mapotempo.com'
-    }
+      car: 'https://router.mapotempo.com',
+      car_urban: 'http://router.mapotempo.com',
+      truck: 'http://router.mapotempo.com'
+    },
+    solve_synchronously: true
   }
 
   @@c[:api_keys] = Hash[@@c[:profiles].collect{ |profile|
