@@ -73,23 +73,25 @@ module Wrappers
           (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
           (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
 
-        matrix = vehicle.matrix_blend(mi)
+        matrix_time = vehicle.matrix_blend(mi, [:time])
+        matrix_distance = vehicle.matrix_blend(mi, [:distance])
 
         if !vehicle.start_point
-          mi << [matrix_indices.size]
-          matrix += [[0] * matrix.length]
-          matrix.collect!{ |x| x + [0] }
+          [matrix_time, matrix_distance].each{ |matrix|
+            matrix += [[0] * matrix.length]
+            matrix.collect!{ |x| x + [0] }
+          }
         end
-
         if !vehicle.end_point
-          mi << [matrix_indices.size]
-          matrix += [[0] * matrix.length]
-          matrix.collect!{ |x| x + [0] }
+          [matrix_time, matrix_distance].each{ |matrix|
+            matrix += [[0] * matrix.length]
+            matrix.collect!{ |x| x + [0] }
+          }
         end
 
         OrtoolsVrp::Vehicle.new(
-          time_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
-          distance_matrix: OrtoolsVrp::Matrix.new(data: matrix.flatten),
+          time_matrix: OrtoolsVrp::Matrix.new(data: matrix_time.flatten),
+          distance_matrix: OrtoolsVrp::Matrix.new(data: matrix_distance.flatten),
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(

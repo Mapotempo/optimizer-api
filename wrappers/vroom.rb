@@ -69,7 +69,7 @@ module Wrappers
         matrix_indices +
         (!vehicle_loop && vehicle_have_end ? [points[vehicle.end_point_id].matrix_index] : [])
 
-      matrix = vehicle.matrix_blend(matrix_indices)
+      matrix = vehicle.matrix_blend(matrix_indices, [:time, :distance])
 
       if vrp.preprocessing_prefer_short_segment
         matrix = matrix.collect{ |a| a.collect{ |b| (b + 20 * Math.sqrt(b)).round } }
