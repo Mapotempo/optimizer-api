@@ -49,8 +49,8 @@ module Wrappers
       services = vrp.services.collect{ |service|
         OrtoolsVrp::Service.new(
           time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
-            start: tw.start || -2147483648,
-            end: tw.end || 2147483647,
+            start: tw.start || -2**56,
+            end: tw.end || 2**56,
             late_multiplier: service.late_multiplier || 0,
           ) },
           quantities: vrp.units.collect{ |unit|
@@ -94,8 +94,8 @@ module Wrappers
           rests: vehicle.rests.collect{ |rest|
             OrtoolsVrp::Rest.new(
               time_windows: rest.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
-                start: tw.start || -2147483648,
-                end: tw.end || 2147483647,
+                start: tw.start || -2**56,
+                end: tw.end || 2**56,
                 late_multiplier: rest.late_multiplier || 0,
               ) },
               duration: rest.duration,
