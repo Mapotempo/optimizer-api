@@ -79,6 +79,9 @@ module Wrappers
         OrtoolsVrp::Vehicle.new(
           time_matrix: OrtoolsVrp::Matrix.new(data: matrix_time.flatten),
           distance_matrix: OrtoolsVrp::Matrix.new(data: matrix_distance.flatten),
+          cost_fixed: vehicle.cost_fixed,
+          cost_distance_multiplier: vehicle.cost_distance_multiplier,
+          cost_time_multiplier: vehicle.cost_time_multiplier,
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
