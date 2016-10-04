@@ -43,6 +43,11 @@ curl -X POST --header "Content-Type:application/json" --data '{"vrp":{vehicles":
 
 ## Test
 
+Run tests :
+```
+APP_ENV=test bundle exec rake test
+```
+
 You can add your own tests on specific Vehicle Routing Problem (for instance data from real cases). Let's see how to create a new test called "new_test".
 You will find template for test in `test/real_cases_test.rb`
 
@@ -60,7 +65,7 @@ Now to create your test, just copy-paste test template in `test/wrappers/real_ca
 
 If you create a test by using `.dump`, your test will fail as soon as vrp model is changed. Just run following task to update fixtures:
 ```
-DUMP_VRP=my_test bundle exec rake test TEST=test/real_cases_test.rb
+DUMP_VRP=my_test APP_ENV=test bundle exec rake test TEST=test/real_cases_test.rb
 ```
 TODO: create a task to update all fixtures once
 
@@ -73,5 +78,5 @@ curl -X POST --header "Content-Type:application/json" --data @test/fixtures/my_t
 
 If you don't want to run real cases tests you can deactive them:
 ```
-SKIP_REAL_CASES=true bundle exec rake test
+SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
 ```

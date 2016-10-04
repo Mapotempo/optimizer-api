@@ -30,6 +30,8 @@ module Api
       end
 
       rescue_from :all do |error|
+        puts error.message
+        puts error.backtrace.join("\n")
         case error
         when Grape::Exceptions::ValidationErrors
           error!(error.message, 400)
