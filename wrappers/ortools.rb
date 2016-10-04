@@ -70,24 +70,11 @@ module Wrappers
 
       vehicles = vrp.vehicles.collect{ |vehicle|
         mi = matrix_indices +
-          (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : []) +
-          (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [])
+          (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : [nil]) +
+          (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [nil])
 
         matrix_time = vehicle.matrix_blend(mi, [:time])
         matrix_distance = vehicle.matrix_blend(mi, [:distance])
-
-        if !vehicle.start_point
-          [matrix_time, matrix_distance].each{ |matrix|
-            matrix += [[0] * matrix.length]
-            matrix.collect!{ |x| x + [0] }
-          }
-        end
-        if !vehicle.end_point
-          [matrix_time, matrix_distance].each{ |matrix|
-            matrix += [[0] * matrix.length]
-            matrix.collect!{ |x| x + [0] }
-          }
-        end
 
         OrtoolsVrp::Vehicle.new(
           time_matrix: OrtoolsVrp::Matrix.new(data: matrix_time.flatten),
