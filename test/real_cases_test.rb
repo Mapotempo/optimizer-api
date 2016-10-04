@@ -56,7 +56,7 @@ class RealCasesTest < Minitest::Test
       assert result[:total_distance] < 150000, "Too long distance: #{result[:total_distance]}"
 
       # Check elapsed time
-      assert result[:elapsed] < 3000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 3150, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     def test_ortools_one_route_with_rest
