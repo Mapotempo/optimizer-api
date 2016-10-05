@@ -69,12 +69,12 @@ module Models
       matrix && matrix.distance
     end
 
-    def matrix_blend(matrix_indices, dimensions)
+    def matrix_blend(matrix_indices, dimensions, options = {})
       matrix_indices.collect{ |i|
         matrix_indices.collect{ |j|
           if i && j
-            (dimensions.include?(:time) && matrix.time && cost_time_multiplier != 0 ? matrix.time[i][j] * cost_time_multiplier : 0) +
-            (dimensions.include?(:distance) && matrix.distance && cost_distance_multiplier != 0 ? matrix.distance[i][j] * cost_distance_multiplier : 0)
+            (dimensions.include?(:time) && matrix.time ? matrix.time[i][j] * (options[:cost_time_multiplier] || 1): 0) +
+            (dimensions.include?(:distance) && matrix.distance ? matrix.distance[i][j] * (options[:cost_distance_multiplier] || 1) : 0)
           else
             0
           end
