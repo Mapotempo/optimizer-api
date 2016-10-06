@@ -119,6 +119,23 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 100000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    def test_ortools_global_six_routes_without_rest
+      vrp = ENV['DUMP_VRP'] ? 
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
+      assert result
+
+      # Check activities
+      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+
+      # Check routes
+      assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+
+      # Check elapsed time
+      assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
+    end
+
     def test_ortools_global_ten_routes_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -133,7 +150,7 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check elapsed time
-      assert result[:elapsed] < 300000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 50000, "Too long elapsed time: #{result[:elapsed]}"
     end
   end
 
