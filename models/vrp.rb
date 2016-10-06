@@ -46,9 +46,9 @@ module Models
     has_many :services, class_name: 'Models::Service'
     has_many :shipments, class_name: 'Models::Shipment'
 
-    def self.create(*args)
-      Models.delete_all
-      super(*args)
+    def self.create(hash, delete = true)
+      Models.delete_all if delete
+      super(hash)
     end
 
     def configuration=(configuration)

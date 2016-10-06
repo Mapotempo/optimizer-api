@@ -194,7 +194,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
   end
 
-  def test_without_start_end_probleme
+  def test_without_start_end_problem
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       matrices: [{

@@ -66,78 +66,119 @@ module OptimizerWrapper
   end
 
   def self.solve(service, vrp, &block)
-    if vrp.services.empty? && vrp.shipments.empty?
-      {
-        costs: 0,
-        routes: []
-      }
-    else
-      vrp_need_matrix = {
-        time: vrp.need_matrix_time?,
-        distance: vrp.need_matrix_distance?
-      }
-
-      need_matrix = vrp.vehicles.collect{ |vehicle|
-        [vehicle, vehicle.dimensions]
-      }.select{ |vehicle, dimensions|
-        dimensions.find{ |dimension|
-          vrp_need_matrix[dimension] && (vehicle.matrix.nil? || vehicle.matrix.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
+    split_vrp(vrp, block) { |vrp, block|
+      if vrp.services.empty? && vrp.shipments.empty?
+        {
+          costs: 0,
+          routes: []
         }
-      }
-
-      if need_matrix.size > 0
-        points = vrp.points.each_with_index.collect{ |point, index|
-          point.matrix_index = index
-          [point.location.lat, point.location.lon]
+      else
+        vrp_need_matrix = {
+          time: vrp.need_matrix_time?,
+          distance: vrp.need_matrix_distance?
         }
 
-        uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-          [vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
-        }.uniq
-
-        i = 0
-        uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
-          raise UnsupportedRouterModeError unless OptimizerWrapper.config[:router][mode]
-          block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
-          # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
-          matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
-          m = Models::Matrix.create({
-            time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
-            distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
-          })
-          vrp.matrices += [m]
-          [[mode, dimensions, speed_multiplicator], m]
-        }]
-
-        uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-          vehicle.matrix = uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]]
-        }
-      end
-
-      File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
-
-      block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
-      cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
-        block.call(nil, 0, nil, 'run optimization') if block
-        time_start = Time.now
-        result = OptimizerWrapper.config[:services][service].solve(vrp) { |wrapper, avancement, total, cost, solution|
-          block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
+        need_matrix = vrp.vehicles.collect{ |vehicle|
+          [vehicle, vehicle.dimensions]
+        }.select{ |vehicle, dimensions|
+          dimensions.find{ |dimension|
+            vrp_need_matrix[dimension] && (vehicle.matrix.nil? || vehicle.matrix.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
+          }
         }
 
-        if result.class.name == 'Hash' # result.is_a?(Hash) not working
-          result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-          parse_result(vrp, result)
-        elsif result.class.name == 'String' # result.is_a?(String) not working
-          raise RuntimeError.new(result)
-        else
-          raise RuntimeError.new('No solution provided')
+        if need_matrix.size > 0
+          points = vrp.points.each_with_index.collect{ |point, index|
+            point.matrix_index = index
+            [point.location.lat, point.location.lon]
+          }
+
+          uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
+            [vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
+          }.uniq
+
+          i = 0
+          uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
+            raise UnsupportedRouterModeError unless OptimizerWrapper.config[:router][mode]
+            block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
+            # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
+            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
+            m = Models::Matrix.create({
+              time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
+              distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
+            })
+            vrp.matrices += [m]
+            [[mode, dimensions, speed_multiplicator], m]
+          }]
+
+          uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
+            vehicle.matrix = uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]]
+          }
+        end
+
+        File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
+
+        block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
+        cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
+          block.call(nil, 0, nil, 'run optimization') if block
+          time_start = Time.now
+          result = OptimizerWrapper.config[:services][service].solve(vrp) { |wrapper, avancement, total, cost, solution|
+            block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
+          }
+
+          if result.class.name == 'Hash' # result.is_a?(Hash) not working
+            result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+            parse_result(vrp, result)
+          elsif result.class.name == 'String' # result.is_a?(String) not working
+            raise RuntimeError.new(result)
+          else
+            raise RuntimeError.new('No solution provided')
+          end
         end
       end
-    end
+    }
   rescue Exception => e
     puts e
     puts e.backtrace
     raise
+  end
+
+  def self.split_vrp(vrp, callback)
+    vrps = (!ENV['DUMP_VRP'] && vrp.vehicles.size > 1 && vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }) ? vrp.vehicles.map{ |vehicle|
+      sub_vrp = ::Models::Vrp.create({}, false)
+      [:matrices, :units, :points].each{ |key|
+        (sub_vrp.send "#{key}=", vrp.send(key)) if vrp.send(key)
+      }
+      sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
+      sub_vrp.vehicles = vrp.vehicles.select{ |v| v.id == vehicle.id }
+      sub_vrp.services = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle.id] }
+      sub_vrp.configuration = {
+        preprocessing: {
+          cluster_threshold: vrp.preprocessing_cluster_threshold,
+          prefer_short_segment: vrp.preprocessing_prefer_short_segment
+        },
+        resolution: {
+          duration: vrp.resolution_duration / vrp.vehicles.size,
+          iterations: vrp.resolution_iterations,
+          iterations_without_improvment: vrp.resolution_iterations_without_improvment,
+          stable_iterations: vrp.resolution_stable_iterations,
+          initial_time_out: vrp.resolution_initial_time_out / vrp.vehicles.size,
+          time_out_multiplier: vrp.resolution_time_out_multiplier
+        }
+      }
+      sub_vrp
+    } : [vrp]
+
+    results = vrps.map{ |vrp|
+      yield(vrp, vrps.size == 1 && callback)
+    }
+
+    vrps.size == 1 ? results[0] : {
+      cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
+      routes: results.map{ |r| r[:routes][0] }.compact,
+      unassigned: results.flat_map{ |r| r[:unassigned] },
+      elapsed: results.map{ |r| r[:elapsed] }.reduce(&:+),
+      total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+)
+    }
   end
 
   def self.job_list(api_key)

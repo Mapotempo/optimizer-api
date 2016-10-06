@@ -73,7 +73,7 @@ module Models
       matrix_indices.collect{ |i|
         matrix_indices.collect{ |j|
           if i && j
-            (dimensions.include?(:time) && matrix.time ? matrix.time[i][j] * (options[:cost_time_multiplier] || 1): 0) +
+            (dimensions.include?(:time) && matrix.time ? matrix.time[i][j] * (options[:cost_time_multiplier] || 1) : 0) +
             (dimensions.include?(:distance) && matrix.distance ? matrix.distance[i][j] * (options[:cost_distance_multiplier] || 1) : 0)
           else
             0
