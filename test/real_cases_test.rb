@@ -39,6 +39,23 @@ class RealCasesTest < Minitest::Test
     #   assert result[:total_distance] < ***, "Too long distance: #{result[:total_distance]}"
     # end
 
+    def test_ortools_one_route_with_rest_and_waiting_time
+      vrp = ENV['DUMP_VRP'] ?
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
+      assert result
+
+      # Check routes
+      assert_equal 1, result[:routes].size
+
+      # Check activities
+      assert_equal vrp.services.size + 2 + 1, result[:routes][0][:activities].size
+
+      # Check elapsed time
+      assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
+    end
+
     def test_ortools_one_route_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -92,7 +109,7 @@ class RealCasesTest < Minitest::Test
 
       # Check rest position
       rest_position = result[:routes][0][:activities].index{ |a| a[:rest_id] }
-      assert rest_position > 10 && rest_position < 20, "Bad rest position"
+      assert rest_position > 10 && rest_position < 50, "Bad rest position"
 
       # Check elapsed time
       assert result[:elapsed] < 4000, "Too long elapsed time: #{result[:elapsed]}"
