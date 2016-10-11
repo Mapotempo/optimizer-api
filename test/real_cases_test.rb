@@ -39,23 +39,6 @@ class RealCasesTest < Minitest::Test
     #   assert result[:total_distance] < ***, "Too long distance: #{result[:total_distance]}"
     # end
 
-    def test_ortools_one_route_with_rest_and_waiting_time
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
-      assert result
-
-      # Check routes
-      assert_equal 1, result[:routes].size
-
-      # Check activities
-      assert_equal vrp.services.size + 2 + 1, result[:routes][0][:activities].size
-
-      # Check elapsed time
-      assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
-    end
-
     def test_ortools_one_route_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -74,6 +57,26 @@ class RealCasesTest < Minitest::Test
 
       # Check elapsed time
       assert result[:elapsed] < 3150, "Too long elapsed time: #{result[:elapsed]}"
+    end
+
+    def test_ortools_one_route_many_stops
+      vrp = ENV['DUMP_VRP'] ? 
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
+      assert result
+
+      # Check routes
+      assert_equal 1, result[:routes].size
+
+      # Check activities
+      assert_equal vrp.services.size + 2, result[:routes][0][:activities].size
+
+      # Check total distance
+      assert result[:total_distance] < 180000, "Too long distance: #{result[:total_distance]}"
+
+      # Check elapsed time
+      assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     def test_ortools_one_route_with_rest
@@ -109,10 +112,27 @@ class RealCasesTest < Minitest::Test
 
       # Check rest position
       rest_position = result[:routes][0][:activities].index{ |a| a[:rest_id] }
-      assert rest_position > 10 && rest_position < 50, "Bad rest position"
+      assert rest_position > 10 && rest_position < vrp.services.size - 10, "Bad rest position: #{rest_position}"
 
       # Check elapsed time
       assert result[:elapsed] < 4000, "Too long elapsed time: #{result[:elapsed]}"
+    end
+
+    def test_ortools_one_route_with_rest_and_waiting_time
+      vrp = ENV['DUMP_VRP'] ?
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
+      assert result
+
+      # Check routes
+      assert_equal 1, result[:routes].size
+
+      # Check activities
+      assert_equal vrp.services.size + 2 + 1, result[:routes][0][:activities].size
+
+      # Check elapsed time
+      assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     def test_ortools_ten_routes_with_rest
@@ -143,11 +163,12 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
       assert result
 
-      # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-
       # Check routes
       assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+
+      # Check activities
+      activities = result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert 117 <= activities, "Not enough activities: #{activities}"
 
       # Check elapsed time
       assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
@@ -164,7 +185,7 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
-      assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 4, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check elapsed time
       assert result[:elapsed] < 50000, "Too long elapsed time: #{result[:elapsed]}"
