@@ -105,6 +105,8 @@ module Routers
     def matrix(url, mode, dimensions, row, column, options = {})
       if row.empty? || column.empty?
         return [[] * row.size] * column.size
+      elsif row.size == 1 && row == column
+        return dimensions.map{ |d| [[0]] }
       end
 
       key = ['m', url, dimensions, mode, row, column, Digest::MD5.hexdigest(Marshal.dump(options.to_a.sort_by{ |i| i[0].to_s }))]
