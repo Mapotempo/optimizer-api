@@ -143,7 +143,7 @@ module OptimizerWrapper
   end
 
   def self.split_vrp(vrp, callback)
-    vrps = (!ENV['DUMP_VRP'] && vrp.vehicles.size > 1 && vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }) ? vrp.vehicles.map{ |vehicle|
+    vrps = (!ENV['DUMP_VRP'] && vrp.vehicles.size > 1 && vrp.services.size > 1 && vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }) ? vrp.vehicles.map{ |vehicle|
       sub_vrp = ::Models::Vrp.create({}, false)
       [:matrices, :units, :points].each{ |key|
         (sub_vrp.send "#{key}=", vrp.send(key)) if vrp.send(key)
@@ -157,19 +157,21 @@ module OptimizerWrapper
           prefer_short_segment: vrp.preprocessing_prefer_short_segment
         },
         resolution: {
-          duration: vrp.resolution_duration / vrp.vehicles.size,
+          duration: vrp.resolution_duration && vrp.resolution_duration / vrp.vehicles.size,
           iterations: vrp.resolution_iterations,
           iterations_without_improvment: vrp.resolution_iterations_without_improvment,
           stable_iterations: vrp.resolution_stable_iterations,
-          initial_time_out: vrp.resolution_initial_time_out / vrp.vehicles.size,
+          initial_time_out: vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size,
           time_out_multiplier: vrp.resolution_time_out_multiplier
         }
       }
       sub_vrp
     } : [vrp]
 
-    results = vrps.map{ |vrp|
-      yield(vrp, vrps.size == 1 && callback)
+    results = vrps.each_with_index.map{ |vrp, i|
+      yield(vrp, vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
+        callback.call(wrapper, avancement, total, "process #{i+1}/#{vrps.size} - " + message, cost, time, solution)
+      } : nil)
     }
 
     vrps.size == 1 ? results[0] : {
