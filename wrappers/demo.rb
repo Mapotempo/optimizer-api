@@ -23,10 +23,6 @@ module Wrappers
       super(cache, hash)
     end
 
-    def solve_synchronous?(vrp)
-      true
-    end
-
     def solve(vrp, &block)
       {
         cost: 0,
