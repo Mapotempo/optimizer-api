@@ -257,7 +257,7 @@ module Wrappers
                   if shipment.quantities.size > 0
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
-                      service.quantities.each_with_index do |quantity, index|
+                      shipment.quantities.each_with_index do |quantity, index|
                         xml.dimension (quantity[:value] * 1000).to_i, index: index
                       end
                     }

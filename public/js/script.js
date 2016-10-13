@@ -1,6 +1,6 @@
-'use_strict';
+'use strict';
 
-Number.prototype.toHHMMSS = function () {
+Number.prototype.toHHMMSS = function() {
   var sec_num = parseInt(this, 10); // don't forget the second param
   var hours   = Math.floor(sec_num / 3600);
   var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
@@ -15,7 +15,7 @@ Number.prototype.toHHMMSS = function () {
 var getParams = function() {
   var parameters = {};
   var parts = window.location.search.replace(/[?&]+([^=&]+)=?([^&#]*)/gi, function(match, key, value, offset) {
-  parameters[key] = value;
+    parameters[key] = value;
   });
   return parameters;
 }
@@ -33,7 +33,7 @@ $(document).ready(function() {
     htmlElements: {
       builder: function(jobs) {
         $(jobs).each(function() {
-          $('#jobs-list').append($(jobsManager.htmlElements.container('block deleter')).addClass('block deleter')
+          $('#jobs-list').append($(jobsManager.htmlElements.container()).addClass('block deleter')
             .append($(jobsManager.htmlElements.span('Job N° ' + $(this)[0]['uuid'] + ' ', 'text_jobs_field'))
             .append($(jobsManager.htmlElements.button($(this)[0]['uuid'], i18n.killOptim + ' (status: ' + $(this)[0]['status'] + ')', $(this)[0]['uuid'], 'deleter')))
             )
@@ -45,21 +45,21 @@ $(document).ready(function() {
       },
       container: function() { return document.createElement('div') },
       button: function(id, content, value, data_role) {
-        return button = "<button id='" + id + "' value=" + value + " data-role=" + data_role + ">" + content + "</button>"; 
+        return "<button id='" + id + "' value=" + value + " data-role=" + data_role + ">" + content + "</button>";
       },
       span: function(content = null, cssclass = null) {
         return "<span class=" + cssclass + ">" + content + "</span>"
       },
     },
     roleDispatcher: function(object) {
-      switch($(object).data('role')) {
+      switch ($(object).data('role')) {
         case 'RestartJob':
           //actually in building, create to apply different behavior to the button object RestartJob, actually not set. #TODO
-        break;
+          break;
         case 'deleter':
           this.ajaxDeleteJob(object.id);
           $(object).fadeOut(500, function() { object.closest('.deleter').remove(); });
-        break;
+          break;
       }
     },
     ajaxGetJobs: function(timeinterval = false) {
@@ -75,6 +75,10 @@ $(document).ready(function() {
         })
         .fail(function(jqXHR, textStatus, errorThrown){
           clearInterval(window.AjaxGetRequestInterval);
+          if (jqXHR.status == 401) {
+            $('#optim-list-status').prepend('<div class="error">' + i18n.unauthorizedError + '</div>');
+            $('form input, form button').prop('disabled', true);
+          }
         });
       };
       if (timeinterval) {
@@ -101,7 +105,7 @@ $(document).ready(function() {
     shouldUpdate: function(data) {
       //check if chagements occurs in the data api. #TODO, update if more params are needed.
       $(data).each(function(index, object) {
-        if(jobsManager.jobs.length > 0) {
+        if (jobsManager.jobs.length > 0) {
           if (object.status != jobsManager.jobs[index].status || jobsManager.jobs.length != data.length) {
             jobsManager.jobs = data;
             $('#jobs-list .deleter').remove();
@@ -120,11 +124,11 @@ $(document).ready(function() {
   jobsManager.ajaxGetJobs(true);
 
   $('head title').html(i18n.title);
-  for (id in i18n.form) {
+  for (var id in i18n.form) {
     $('#' + id).html(i18n.form[id]);
   }
+  $('#optim-list-legend').html(i18n.currentJobs);
 
-  $('#title_optim').html(i18n.currents_jobs);
   $('#file-customers-help .column-name').append('<td class="required">' + mapping.reference + '</td>');
   $('#file-customers-help .column-value').append('<td class="required">ref</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.pickup_lat + '</td>');
@@ -251,11 +255,11 @@ $(document).ready(function() {
       });
 
       // points
-      var points = []; customers = [];
+      var points = [], customers = [];
       data.customers.forEach(function(customer) {
         if (!customer[mapping.reference || 'reference'])
           throw i18n.missingColumn(mapping.reference || 'reference');
-        else if(!customer[mapping.pickup_lat || 'pickup_lat'] && !customer[mapping.pickup_lon || 'pickup_lon'] && !customer[mapping.delivery_lat || 'delivery_lat'] && !customer[mapping.delivery_lon || 'delivery_lon'])
+        else if (!customer[mapping.pickup_lat || 'pickup_lat'] && !customer[mapping.pickup_lon || 'pickup_lon'] && !customer[mapping.delivery_lat || 'delivery_lat'] && !customer[mapping.delivery_lon || 'delivery_lon'])
           throw i18n.missingColumn('pickup/delivery coordinates');
         else if (!customer[mapping.pickup_lat || 'pickup_lat'] ^ !customer[mapping.pickup_lon || 'pickup_lon'])
           throw i18n.missingColumn('pickup coordinates');
@@ -267,7 +271,7 @@ $(document).ready(function() {
         else
           throw i18n.sameReference(customer[mapping.reference || 'reference']);
 
-        if(customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon']) {
+        if (customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon']) {
           var refPickup = customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.');
           if (points.indexOf(refPickup) === -1) {
             points.push(refPickup);
@@ -282,7 +286,7 @@ $(document).ready(function() {
         }
       });
       data.customers.forEach(function(customer) {
-        if(customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
+        if (customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
           var refDelivery = customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.');
           if (points.indexOf(refDelivery) === -1) {
             points.push(refDelivery);
@@ -360,7 +364,6 @@ $(document).ready(function() {
           cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'],
           cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'],
           coef_setup: vehicle[mapping.coef_setup || 'coef_setup'],
-          // TODO: gérer les quantités multiples
           capacities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
@@ -380,7 +383,7 @@ $(document).ready(function() {
 
       // shipments
       data.customers.forEach(function(customer) {
-        if(customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon'] && customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
+        if (customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon'] && customer[mapping.delivery_lat || 'delivery_lat'] && customer[mapping.delivery_lon || 'delivery_lon']) {
           var quantities = [];
           $.each(customer, function(key, val) {
             var regexp = '\\s([0-9]+)$';
@@ -407,7 +410,6 @@ $(document).ready(function() {
               setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
               duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
             },
-            // TODO: gérer les quantités multiples
             quantities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -435,7 +437,6 @@ $(document).ready(function() {
               setup_duration: duration(customer[mapping.pickup_setup || 'pickup_setup']) || null,
               duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
             },
-            // TODO: gérer les quantités multiples
             quantities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -463,7 +464,6 @@ $(document).ready(function() {
               setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
               duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
             },
-            // TODO: gérer les quantités multiples
             quantities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
@@ -841,7 +841,7 @@ $(document).ready(function() {
   };
 
   var displaySolution = function(solution, options) {
-    $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: '+ Math.round(solution.total_distance / 1000) + ')');
+    $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: ' + Math.round(solution.total_distance / 1000) + ')');
     // if (result) {
       csv = createCSV(solution);
       $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
@@ -852,8 +852,8 @@ $(document).ready(function() {
   };
 
   var configParse = {
-    delimiter: "",  // auto-detect
-    newline: "",  // auto-detect
+    delimiter: "", // auto-detect
+    newline: "", // auto-detect
     header: true,
     skipEmptyLines: true,
     error: function(err, file, inputElem, reason)

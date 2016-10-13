@@ -164,7 +164,7 @@ module Wrappers
       (vrp.services.empty? || vrp.services.none?{ |service|
         service.sticky_vehicles.size > 0
       }) && (vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
-        shipment.sticky_vehicle.size > 0
+        shipment.sticky_vehicles.size > 0
       })
     end
 

@@ -23,15 +23,14 @@ input[type=text] {
 
 fieldset {
   border: #E8E8E8 1px solid;
-  margin-bottom: 10px;
 }
-
 fieldset div {
   margin: 5px;
   margin-right: 10px;
+  display: inline-block;
 }
 
-#optim-options input {
+form #optim-options input {
   width: 8em;
 }
 
@@ -41,20 +40,18 @@ fieldset div {
   padding: 5px;
 }
 
-.file-table-help {
+#documentation li {
+  margin: 5px;
+}
+#documentation .file-table-help {
   border-collapse: collapse;
 }
-.file-table-help td {
+#documentation .file-table-help td {
   border: 1px solid lightgrey;
   padding: 3px;
 }
-
-.required {
+#documentation .required {
   font-weight: bold;
-}
-
-#documentation li {
-  margin: 5px;
 }
 
 #result-graph {
@@ -71,10 +68,15 @@ fieldset div {
   margin-top: 5px;
   min-width: 300px;
 }
+
 #jobs-list{
   height: 155px;
   width: 100%;
   box-sizing: border-box;
   overflow-y: scroll;
   display: inline-block;
+}
+.error {
+  font-weight: bold;
+  color: red;
 }

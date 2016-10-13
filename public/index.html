@@ -8,7 +8,7 @@
   <script src="js/papaparse.min.js"></script>
   <script src="js/Chart.Core.min.js"></script>
   <script src="js/Chart.Scatter.min.js"></script>
-  <script type="text/javascript" src="js/conf.js"></script>
+  <script src="js/conf.js"></script>
   <script src="js/script.js"></script>
 </head>
 <body>
@@ -16,12 +16,14 @@
     <img src="images/logo.png">
     <h1>Optimizer</h1>
   </div>
-  <fieldset>
-    <legend id="title_optim"></legend>
-    <div id="jobs-list" class="block">
-      
-    </div>
-  </fieldset>
+  <div class="block">
+    <fieldset id="optim-list-status">
+      <legend id="optim-list-legend"></legend>
+      <div id="jobs-list">
+        
+      </div>
+    </fieldset>
+  </div>
   <form>
     <a id="doc-link" href="#documentation">documentation</a>
     <div class="block">
@@ -54,26 +56,26 @@
     <h2>Documentation</h2>
     <div id="documentation">
       <ol>
-        <li>Entrez votre clé d'api</li>
         <li>Sélectionnez votre fichier clients</li>
         <li>Sélectionnez votre fichier véhicules</li>
         <li>Paramétrez votre optimisation :
           <ul>
-            <li>le nombre maximal d'itérations de l'optimisation : ce nombre dépend des données du problème.</li>
-            <li>la durée maximale de votre optimisation après quoi un résultat vous sera retourné quelque soit le nombre d'itérations (notez que le résulat de l'optimisation après cette durée peut varier en fonction de la charge courante du serveur d'optimisation...)</li>
-            <li>le nombre maximal d'itérations sans amélioration : après quoi l'optimisation s'arrête. Ce nombre dépend des données du problème.</li>
+            <li>(a) (facultatif) le nombre maximal d'itérations sans amélioration : après quoi l'optimisation s'arrête. Ce nombre dépend des données du problème.</li>
+            <li>(b) (facultatif) le nombre maximal d'itérations de l'optimisation : ce nombre dépend des données du problème.</li>
+            <li>(c) (facultatif) la durée maximale de votre optimisation après quoi un résultat vous sera retourné quelque soit le nombre d'itérations (notez que le résulat de l'optimisation après cette durée peut varier en fonction de la charge courante du serveur d'optimisation...)</li>
+            L'une des conditions d'arrêts (a), (b), (c) au moins doit être renseignée.
           </ul>
         </li>
         <li>Cliquez sur « Envoyer »
           <ul>
-            <li>Une nouvelle soumission est alors envoyée au moteur d'optimisation (ne pas fermer la fenêtre de votre navigateur)</li>
+            <li>Une nouvelle soumission est alors envoyée au moteur d'optimisation</li>
             <li>Chaque nouvelle soumission est mise à la suite d'une file d'attente de processus</li>
             <li>Chaque processus se décompose en plusieurs temps : calcul du distancier, optimisation...</li>
           </ul>
         </li>
         <li>Une fois l'optimisation terminée, le résultat de celle-ci apparaît dans un bloc sur la page (un lien au dessus du bloc permet également de télécharger le csv correspondant)
           <ul>
-            <li>Le coût sur lequel a été optimisé la solution est alors affiché : il vous permet de visualiser en un simple coup d'oeil (par comparaison) si la solution actuelle est meilleure ou non qu'une autre (seulement dans le cas où vous ne changez pas les données du problème en entrée)</li>
+            <li>Le coût sur lequel a été optimisé la solution est alors affiché : il vous permet de visualiser en un simple coup d'oeil (par comparaison) si la solution actuelle est meilleure ou non qu'une autre (dans le cas où vous ne changez pas les données du problème en entrée)</li>
           </ul>
         </li>
         <li>Importez ce fichier csv dans Mapotempo-web (les informations de dépôts de départ et d'arrivée ne sont pas importées : pensez à les définir dans Mapotempo-web)</li>

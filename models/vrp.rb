@@ -76,8 +76,8 @@ module Models
         !service.activity.timewindows.empty? || service.late_multiplier != 0
       } ||
       shipments.find{ |shipment|
-        !shipments.pickup.timewindows.empty? || shipments.pickup.late_multiplier != 0 ||
-        !shipments.delivery.timewindows.empty? || shipments.delivery.late_multiplier != 0
+        !shipment.pickup.timewindows.empty? || shipment.pickup.late_multiplier != 0 ||
+        !shipment.delivery.timewindows.empty? || shipment.delivery.late_multiplier != 0
       }
     end
 
