@@ -242,7 +242,6 @@ module Api
                     graph: solution['graph']
                   }
                 }, with: Grape::Presenters::Presenter)
-                OptimizerWrapper.job_remove(params[:api_key], id)
               elsif !job.completed?
                 status 200
                 present({
@@ -254,7 +253,6 @@ module Api
                     graph: solution['graph']
                   }
                 }, with: Grape::Presenters::Presenter)
-                OptimizerWrapper.job_remove(params[:api_key], id)
               else
                 status 200
                 present({
@@ -277,7 +275,7 @@ module Api
             detail: 'List running or queued jobs.'
           }
           get do
-            status 201
+            status 200
             present OptimizerWrapper.job_list(params[:api_key]), with: Grape::Presenters::Presenter
           end
 
