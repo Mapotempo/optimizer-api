@@ -39,9 +39,10 @@ var i18n = {
   failureOptim: function(attempts, error) {
     return 'Impossible de maintenir la connexion avec le service d\'optimisation (' + attempts + ' tentatives) : ' + error;
   },
-  currentJobs: 'Optimisations en cours',
+  currentJobs: 'Vos optimisations',
   unauthorizedError: 'Vous n\'êtes pas autorisé',
   killOptim: 'Arrêter l\'optimisation',
+  deleteOptim: 'Supprimer',
   displaySolution: 'Afficher la solution intermédiaire',
   downloadCSV: 'Télécharger le fichier CSV',
   reference: 'référence',

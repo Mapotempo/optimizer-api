@@ -7,7 +7,7 @@ h1 {
   font-variant: small-caps;
   font-style: italic;
 }
-.block {
+.block, .job {
   margin: 5px;
   padding: 5px;
 }
@@ -27,6 +27,8 @@ fieldset {
 fieldset div {
   margin: 5px;
   margin-right: 10px;
+}
+#optim-options fieldset > div {
   display: inline-block;
 }
 
@@ -76,6 +78,13 @@ form #optim-options input {
   overflow-y: scroll;
   display: inline-block;
 }
+.job_title {
+  font-family: Courier New, Courier, Lucida Sans Typewriter, Lucida Typewriter, monospace;
+}
+.job button {
+  vertical-align: bottom;
+}
+
 .error {
   font-weight: bold;
   color: red;

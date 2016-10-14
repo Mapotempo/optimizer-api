@@ -33,36 +33,28 @@ $(document).ready(function() {
     htmlElements: {
       builder: function(jobs) {
         $(jobs).each(function() {
-          $('#jobs-list').append($(jobsManager.htmlElements.container()).addClass('block deleter')
-            .append($(jobsManager.htmlElements.span('Job N° ' + $(this)[0]['uuid'] + ' ', 'text_jobs_field'))
-            .append($(jobsManager.htmlElements.button($(this)[0]['uuid'], i18n.killOptim + ' (status: ' + $(this)[0]['status'] + ')', $(this)[0]['uuid'], 'deleter')))
-            )
-          )
+          $('#jobs-list').append('<div class="job">' +
+            '<span class="job_title">' + 'Job N° ' + $(this)[0]['uuid'] + '</span> ' +
+            '<button value=' + $(this)[0]['uuid'] + ' data-role="delete">' + (($(this)[0]['status'] == 'queued' || $(this)[0]['status'] == 'working') ? i18n.killOptim : i18n.deleteOptim) + '</button>' +
+            ' (Status: ' + $(this)[0]['status'] + ')' +
+            '</div>');
         });
         $('#jobs-list button').on('click', function() {
           jobsManager.roleDispatcher(this);
         });
-      },
-      container: function() { return document.createElement('div') },
-      button: function(id, content, value, data_role) {
-        return "<button id='" + id + "' value=" + value + " data-role=" + data_role + ">" + content + "</button>";
-      },
-      span: function(content = null, cssclass = null) {
-        return "<span class=" + cssclass + ">" + content + "</span>"
-      },
+      }
     },
     roleDispatcher: function(object) {
       switch ($(object).data('role')) {
-        case 'RestartJob':
-          //actually in building, create to apply different behavior to the button object RestartJob, actually not set. #TODO
+        case 'focus':
+          //actually in building, create to apply different behavior to the button object restartJob, actually not set. #TODO
           break;
-        case 'deleter':
-          this.ajaxDeleteJob(object.id);
-          $(object).fadeOut(500, function() { object.closest('.deleter').remove(); });
+        case 'delete':
+          this.ajaxDeleteJob($(object).val());
           break;
       }
     },
-    ajaxGetJobs: function(timeinterval = false) {
+    ajaxGetJobs: function(timeinterval) {
       var ajaxload = function() {
         $.ajax( {
           url: '/0.1/vrp/jobs',
@@ -100,6 +92,7 @@ $(document).ready(function() {
       })
       .done(function(data) {
         if (debug) { console.log("the uuid have been deleted from the jobs queue & the DB"); }
+        $('button[data-role="delete"][value="' + uuid + '"]').fadeOut(500, function() { object.closest('.job').remove(); });
       });
     },
     shouldUpdate: function(data) {
@@ -108,13 +101,13 @@ $(document).ready(function() {
         if (jobsManager.jobs.length > 0) {
           if (object.status != jobsManager.jobs[index].status || jobsManager.jobs.length != data.length) {
             jobsManager.jobs = data;
-            $('#jobs-list .deleter').remove();
+            $('#jobs-list').empty();
             jobsManager.htmlElements.builder(jobsManager.jobs);
           }
         }
         else {
           jobsManager.jobs = data;
-          $('#jobs-list .deleter').remove();
+          $('#jobs-list').empty();
           jobsManager.htmlElements.builder(jobsManager.jobs);
         }
       });
@@ -231,6 +224,8 @@ $(document).ready(function() {
     $('#optim-infos').html('');
   };
 
+  var customers = []
+
   var buildVRP = function() {
     if (data.customers.length > 0 && data.vehicles.length > 0) {
       if (debug) console.log('Build json from csv: ', data);
@@ -255,7 +250,7 @@ $(document).ready(function() {
       });
 
       // points
-      var points = [], customers = [];
+      var points = [];
       data.customers.forEach(function(customer) {
         if (!customer[mapping.reference || 'reference'])
           throw i18n.missingColumn(mapping.reference || 'reference');
@@ -843,7 +838,7 @@ $(document).ready(function() {
   var displaySolution = function(solution, options) {
     $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: ' + Math.round(solution.total_distance / 1000) + ')');
     // if (result) {
-      csv = createCSV(solution);
+      var csv = createCSV(solution);
       $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
       $('#result').html(csv);
     // }
