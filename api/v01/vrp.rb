@@ -61,114 +61,116 @@ module Api
           }
           params {
             requires(:vrp, type: Hash, documentation: {param_type: 'body'}) do
-              optional(:matrices, type: Array) do
+              optional(:matrices, type: Array, desc: 'Define all the "distances" between each point of problem') do
                 requires(:id, type: String)
-                optional(:matrix_time, type: Array[Array[Float]])
-                optional(:matrix_distance, type: Array[Array[Float]])
+                optional(:matrix_time, type: Array[Array[Float]], desc: 'Matrix of time, travel duration between each pair of point in the problem')
+                optional(:matrix_distance, type: Array[Array[Float]], desc: 'Matrix of distance, travel distance between each pair of point in the problem')
               end
 
-              optional(:points, type: Array) do
+              optional(:points, type: Array, desc: 'Particular place in the map') do
                 requires(:id, type: String)
-                optional(:matrix_index, type: Integer)
-                optional(:location, type: Hash) do
-                  requires(:lat, type: Float)
-                  requires(:lon, type: Float)
+                optional(:matrix_index, type: Integer, desc: 'Index within the matrices')
+                optional(:location, type: Hash, desc: 'Location of the point if the matrices are not already defined') do
+                  requires(:lat, type: Float, desc: 'Latitude coordinate')
+                  requires(:lon, type: Float, desc: 'Longitude coordinate')
                 end
                 at_least_one_of :matrix_index, :location
               end
 
-              optional(:units, type: Array) do
+              optional(:units, type: Array, desc: 'The name of a Capacity/Quantity') do
                 requires(:id, type: String)
-                optional(:label, type: String)
+                optional(:label, type: String, desc: 'Name of the unit')
               end
 
-              optional(:rests, type: Array) do
+              optional(:rests, type: Array, desc: 'Break within a vehicle tour') do
                 requires(:id, type: String)
-                requires(:duration, type: Float)
-                optional(:late_multiplier, type: Float)
-                optional(:exclusion_cost, type: Float)
+                requires(:duration, type: Float, desc: 'Duration of the vehicle rest')
+                optional(:late_multiplier, type: Float, desc: '(not used)')
+                optional(:exclusion_cost, type: Float, desc: '(not used)')
               end
 
-              requires(:vehicles, type: Array) do
+              requires(:vehicles, type: Array, desc: '') do
                 requires(:id, type: String)
-                optional(:cost_fixed, type: Float)
-                optional(:cost_distance_multiplier, type: Float)
-                optional(:cost_time_multiplier, type: Float)
-                optional(:cost_waiting_time_multiplier, type: Float)
-                optional(:cost_late_multiplier, type: Float)
-                optional(:cost_setup_time_multiplier, type: Float)
-                optional(:cost_setup, type: Float)
+                optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
+                optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
+                optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools)')
+                optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting in the route (Jsprit Only)')
+                optional(:cost_late_multiplier, type: Float, desc: 'Cost applied once a point is deliver late (ORtools only)')
+                optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration')
+                optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour')
 
-                optional(:matrix_id, type: String)
-                optional(:router_mode, type: String)
-                optional(:router_dimension, type: String, values: ['time', 'distance'])
-                optional(:speed_multiplier, type: Float)
+                optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
+                optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
+                optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
+                optional(:speed_multiplier, type: Float, desc: 'Custom the vehicle speed')
                 exactly_one_of :matrix_id, :router_mode
 
-                optional(:duration, type: Float)
-                optional(:skills, type: Array[Array[String]])
+                optional(:duration, type: Float, desc: 'Maximum tour duration')
+                optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
 
-                optional(:start_point_id, type: String)
-                optional(:end_point_id, type: String)
-                optional(:capacities, type: Array) do
-                  requires(:unit_id, type: String)
-                  requires(:limit, type: Float)
-                  optional(:initial, type: Float)
-                  optional(:overload_multiplier, type: Float)
+                optional(:start_point_id, type: String, desc: 'Begin of the tour')
+                optional(:end_point_id, type: String, desc: 'End of the tour')
+                optional(:capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry') do
+                  requires(:unit_id, type: String, desc: 'Unit of the capacity')
+                  requires(:limit, type: Float, desc: 'Maximum capacity which could be take away')
+                  optional(:initial, type: Float, desc: 'Initial amout in the vehicle')
+                  optional(:overload_multiplier, type: Float, desc: 'Allow to exceed the limit against this cost (ORtools only)')
                 end
-                optional(:timewindow, type: Hash) do
+                optional(:timewindow, type: Hash, desc: 'Time window whithin the vehicle could work') do
                   Vrp.vrp_request_timewindow(self)
                 end
-                optional(:rest_ids, type: Array[String])
+
+                optional(:rest_ids, type: Array[String], desc: 'Breaks whithin the tour')
               end
 
-              optional(:services, type: Array) do
+              optional(:services, type: Array, desc: 'Independant activity, which does not require a context') do
                 requires(:id, type: String)
-                optional(:late_multiplier, type: Float)
-                optional(:exclusion_cost, type: Float)
-                optional(:sticky_vehicle_ids, type: Array[String])
-                optional(:skills, type: Array[String])
-                requires(:type, type: Symbol)
-                requires(:activity, type: Hash) do
+                optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
+                optional(:exclusion_cost, type: Float, desc: 'Cost applied to exclude the service in the solution (currently not used)')
+                optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
+                optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
+                
+                requires(:type, type: Symbol, desc: 'service, pickup or delivery')
+                requires(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
                   Vrp.vrp_request_activity(self)
                 end
-                optional(:quantities, type: Array) do
-                  requires(:unit_id, type: String)
-                  requires(:value, type: Float)
+                optional(:quantities, type: Array, desc: 'Define the entities which are taken or dropped') do
+                  requires(:unit_id, type: String, desc: 'Unit related to this quantity')
+                  requires(:value, type: Float, desc: 'Value of the current quantity')
                 end
               end
-              optional(:shipments, type: Array) do
-                requires(:id, type: String)
-                optional(:late_multiplier, type: Float)
-                optional(:exclusion_cost, type: Float)
-                optional(:sticky_vehicle_ids, type: Array[String])
-                optional(:skills, type: Array[String])
-                requires(:pickup, type: Hash) do
+              optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off') do
+                requires(:id, type: String, desc: '')
+                optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
+                optional(:exclusion_cost, type: Float, desc: 'Cost applied to exclude the service in the solution (currently not used)')
+                optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned')
+                optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this shipment')
+                requires(:pickup, type: Hash, desc: 'Activity of collection') do
                   Vrp.vrp_request_activity(self)
                 end
-                requires(:delivery, type: Hash) do
+                requires(:delivery, type: Hash, desc: 'Activity of drop off') do
                   Vrp.vrp_request_activity(self)
                 end
-                optional(:quantities, type: Array) do
-                  requires(:unit_id, type: String)
-                  requires(:value, type: Float)
+                optional(:quantities, type: Array, desc: 'Define the entities which are taken and dropped') do
+                  requires(:unit_id, type: String, desc: 'Unit related to this quantity')
+                  requires(:value, type: Float, desc: 'Value of the current quantity')
                 end
               end
               at_least_one_of :services, :shipments
 
-              optional(:configuration, type: Hash) do
-                optional(:preprocessing, type: Hash) do
-                  optional(:cluster_threshold, type: Float)
-                  optional(:prefer_short_segment, type: Boolean)
+              optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation') do
+                optional(:preprocessing, type: Hash, desc: 'Parameters independant from the search') do
+                  optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
+                  optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
                 end
-                optional(:resolution, type: Hash) do
-                  optional(:duration, type: Integer)
-                  optional(:iterations, type: Integer)
-                  optional(:iterations_without_improvment, type: Integer)
-                  optional(:stable_iterations, type: Integer)
-                  optional(:stable_coefficient, type: Float)
-                  optional(:initial_time_out, type: Integer)
-                  optional(:time_out_multiplier, type: Integer)
+                optional(:resolution, type: Hash, desc: 'Parameters used to stop the search') do
+                  optional(:duration, type: Integer, desc: 'Maximum duration of resolution')
+                  optional(:iterations, type: Integer, desc: 'Maximum number of iterations (Jsprit only)')
+                  optional(:iterations_without_improvment, type: Integer, desc: 'Maximum number of iterations without improvment from the best solution already found')
+                  optional(:stable_iterations, type: Integer, desc: 'maximum number of iterations without variation in the solve bigger than the defined coefficient (Jsprit only)')
+                  optional(:stable_coefficient, type: Float, desc: 'variation coefficient related to stable_iterations (Jsprit only)')
+                  optional(:initial_time_out, type: Integer, desc: 'minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
+                  optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
                   at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
                 end
               end
