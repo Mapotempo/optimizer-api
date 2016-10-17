@@ -33,7 +33,7 @@ module Wrappers
         :assert_vehicles_only_one,
         :assert_vehicles_no_end_time_or_late_multiplier,
         :assert_vehicles_no_rests,
-        :assert_services_no_quantities,
+        :assert_services_no_capacities,
         :assert_services_no_skills,
         :assert_services_no_timewindows,
         :assert_services_no_exclusion_cost,

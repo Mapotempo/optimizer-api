@@ -67,9 +67,9 @@ module Wrappers
       }
     end
 
-    def assert_services_no_quantities(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
-        !service.quantities.empty?
+    def assert_services_no_capacities(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        !vehicle.capacities.empty?
       }
     end
 
