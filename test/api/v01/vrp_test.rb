@@ -143,6 +143,6 @@ class Api::V01::VrpTest < Minitest::Test
 
     post '/0.1/vrp/submit', {api_key: 'vroom', vrp: vrp}
     assert_equal 200, last_response.status, last_response.body
-    assert_equal 1.upto(6).collect{ |i| "point_#{i}"}, JSON.parse(last_response.body)['solutions'][0]['routes'][0]['activities'][1..-2].collect{ |p| p['point_id'] }
+    assert_equal 1.upto(6).collect{ |i| "point_#{i}"}, JSON.parse(last_response.body)['solutions'][0]['routes'][0]['activities'][1..-2].collect{ |p| p['point_id'] }.sort_by{ |p| p[-1].to_i }
   end
 end

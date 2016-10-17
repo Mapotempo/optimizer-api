@@ -473,6 +473,7 @@ class WrapperTest < Minitest::Test
               end: 2
             }]
           },
+          late_multiplier: 3,
           skills: ['A']
         }
       },
@@ -490,6 +491,7 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.solve(:ortools, Models::Vrp.create(problem))
     traces = $stdout.string
     $stdout = original_stdout
+    puts traces
     assert_match /> iter /, traces, "Missing /> iter / in:\n " + traces
     assert_equal size + 1, result[:routes][0][:activities].size # always return activities for start/end
     points = result[:routes][0][:activities].collect{ |a| a[:point_id] }
