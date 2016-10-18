@@ -62,7 +62,7 @@ module Wrappers
       vehicle = vrp.vehicles.first
       vehicle_have_start = !vehicle.start_point_id.nil?
       vehicle_have_end = !vehicle.end_point_id.nil?
-      vehicle_loop = vehicle.start_point_id == vehicle.end_point_id
+      vehicle_loop = vehicle.start_point_id == vehicle.end_point_id || (vehicle.start_point.location.lat == vehicle.end_point.location.lat && vehicle.start_point.location.lon == vehicle.end_point.location.lon)
 
       matrix_indices =
         (vehicle_have_start ? [points[vehicle.start_point_id].matrix_index] : []) +
@@ -137,6 +137,7 @@ module Wrappers
       vehicle = vrp.vehicles.first
       !vehicle ||
         (vehicle.start_point && vehicle.start_point == vehicle.end_point) ||
+        (vehicle.start_point && vehicle.end_point && vehicle.start_point.location.lat == vehicle.end_point.location.lat && vehicle.start_point.location.lon == vehicle.end_point.location.lon) ||
         (vehicle.start_point && !vehicle.end_point) ||
         (!vehicle.start_point && vehicle.end_point)
     end
