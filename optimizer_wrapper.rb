@@ -60,7 +60,7 @@ module OptimizerWrapper
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError
     else
-      if services_vrps.size == 1 && (config[:solve_synchronously] || config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
+      if services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && (config[:solve_synchronously] || config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         solve(services_vrps)
       else
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)))
@@ -270,13 +270,15 @@ module OptimizerWrapper
 
     data_set = DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
     c = CompleteLinkageMaxDistance.new
-    matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym] # FIXME not all vehicle have the same dimension
+    matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym]
+    cost_late_multiplier = vrp.vehicles.all?{ |v| v.cost_late_multiplier && v.cost_late_multiplier != 0 }
+    no_capacities = vrp.vehicles.all?{ |v| v.capacities.size == 0 }
     c.distance_function = lambda do |a, b|
       aa = vrp.services[a[0]]
       bb = vrp.services[b[0]]
       (aa.activity.timewindows.collect{ |t| [t[:start], t[:end]]} == bb.activity.timewindows.collect{ |t| [t[:start], t[:end]]} && 
-        aa.activity.duration == 0 && bb.activity.duration == 0 &&
-        aa.quantities.size == 0 && bb.quantities.size == 0 &&
+        ((cost_late_multiplier && aa.late_multiplier.to_f > 0 && bb.late_multiplier.to_f > 0) || (aa.activity.duration == 0 && bb.activity.duration == 0)) &&
+        (no_capacities || (aa.quantities.size == 0 && bb.quantities.size == 0)) &&
         aa.skills == bb.skills) ?
         matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
         Float::INFINITY
@@ -288,8 +290,8 @@ module OptimizerWrapper
     # Build replacement list
     new_services = Array.new(new_size)
     clusterer.clusters.each_with_index do |cluster, i|
-      oi = cluster.data_items[0][0]
-      new_services[i] = vrp.services[oi]
+      new_services[i] = vrp.services[cluster.data_items[0][0]]
+      new_services[i].activity.duration = cluster.data_items.map{ |di| vrp.services[di[0]].activity.duration }.reduce(&:+)
     end
 
     # Fill new vrp
