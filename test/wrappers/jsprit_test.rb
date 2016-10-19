@@ -22,7 +22,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_minimal_problem
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -63,7 +62,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
@@ -71,7 +70,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_invalid_timewindow
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -117,13 +115,12 @@ class Wrappers::JspritTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
     assert_raises do
-      jsprit.solve(vrp)
+      jsprit.solve(vrp, 'test')
     end
   end
 
   def test_loop_problem
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -191,7 +188,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
@@ -199,7 +196,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_minimal_unassigned_service
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -244,7 +240,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size - 1 + 1, result[:routes][0][:activities].size
@@ -253,7 +249,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_minimal_unassigned_shipment
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -304,7 +299,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:routes].size
     assert_equal 2, result[:unassigned].size
@@ -315,7 +310,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_service_with_skills
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -386,7 +380,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
@@ -394,7 +388,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_route_duration_limit
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -450,7 +443,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size - 2 + 1, result[:routes][0][:activities].size
@@ -459,7 +452,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_shipment_with_exclusive_skills
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -538,7 +530,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:shipments].size * 2 + 2, result[:routes][0][:activities].size # activities for start/end and return to start for skills
@@ -546,7 +538,6 @@ class Wrappers::JspritTest < Minitest::Test
 
   def test_service_sticky_vehicle
     jsprit = OptimizerWrapper::JSPRIT
-    jsprit.job = 'test'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -622,7 +613,7 @@ class Wrappers::JspritTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert jsprit.inapplicable_solve?(vrp).empty?
-    result = jsprit.solve(vrp)
+    result = jsprit.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
     rv0 = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0' }

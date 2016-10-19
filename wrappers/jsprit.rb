@@ -43,7 +43,8 @@ module Wrappers
       ]
     end
 
-    def solve(vrp, &block)
+    def solve(vrp, job, &block)
+      @job = job
       result = run_jsprit(vrp.matrices[0].time, vrp.matrices[0].distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.resolution_duration, vrp.resolution_iterations, vrp.resolution_iterations_without_improvment, vrp.resolution_stable_iterations, vrp.resolution_stable_coefficient, vrp.preprocessing_prefer_short_segment, @threads, &block)
       if result && result.is_a?(Hash)
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]

@@ -42,31 +42,36 @@ module OptimizerWrapper
   end
 
   def self.wrapper_vrp(api_key, services, vrp)
-    service = services[:services][:vrp].find{ |s|
-      inapplicable = config[:services][s].inapplicable_solve?(vrp)
-      if inapplicable.empty?
-        puts "Select service #{s}"
-        true
-      else
-        puts "Skip inapplicable #{s}: #{inapplicable.join(', ')}"
-        false
-      end
+    services_vrps = split_vrp(vrp).map{ |vrp|
+      {
+        service: services[:services][:vrp].find{ |s|
+          inapplicable = config[:services][s].inapplicable_solve?(vrp)
+          if inapplicable.empty?
+            puts "Select service #{s}"
+            true
+          else
+            puts "Skip inapplicable #{s}: #{inapplicable.join(', ')}"
+            false
+          end
+        },
+        vrp: vrp
+      }
     }
-    if !service
+    if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError
     else
-      if config[:solve_synchronously] || config[:services][service].solve_synchronous?(vrp)
-        solve(service, vrp)
+      if services_vrps.size == 1 && (config[:solve_synchronously] || config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
+        solve(services_vrps)
       else
-        job_id = Job.enqueue_to(services[:queue], Job, service: service, vrp: Base64.encode64(Marshal::dump(vrp)))
+        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)))
         JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end
     end
   end
 
-  def self.solve(service, vrp, &block)
-    split_vrp(vrp, block) { |vrp, block|
+  def self.solve(services_vrps, job = nil, &block)
+    join_vrps(services_vrps, block) { |service, vrp, block|
       if vrp.services.empty? && vrp.shipments.empty?
         {
           costs: 0,
@@ -121,7 +126,7 @@ module OptimizerWrapper
         cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
           block.call(nil, 0, nil, 'run optimization') if block
           time_start = Time.now
-          result = OptimizerWrapper.config[:services][service].solve(vrp) { |wrapper, avancement, total, cost, solution|
+          result = OptimizerWrapper.config[:services][service].solve(vrp, job) { |wrapper, avancement, total, cost, solution|
             block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
           }
 
@@ -142,8 +147,9 @@ module OptimizerWrapper
     raise
   end
 
-  def self.split_vrp(vrp, callback)
-    vrps = (!ENV['DUMP_VRP'] && vrp.vehicles.size > 1 && vrp.services.size > 1 && vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }) ? vrp.vehicles.map{ |vehicle|
+  def self.split_vrp(vrp)
+    # Don't split vrp in case of dump to compute matrix if needed
+    (!ENV['DUMP_VRP'] && vrp.vehicles.size > 1 && vrp.services.size > 1 && vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }) ? vrp.vehicles.map{ |vehicle|
       sub_vrp = ::Models::Vrp.create({}, false)
       [:matrices, :units, :points].each{ |key|
         (sub_vrp.send "#{key}=", vrp.send(key)) if vrp.send(key)
@@ -167,17 +173,19 @@ module OptimizerWrapper
       }
       sub_vrp
     } : [vrp]
+  end
 
-    results = vrps.each_with_index.map{ |vrp, i|
-      yield(vrp, vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-        callback.call(wrapper, avancement, total, "process #{i+1}/#{vrps.size} - " + message, cost, time, solution)
+  def self.join_vrps(services_vrps, callback)
+    results = services_vrps.each_with_index.map{ |sv, i|
+      yield(sv[:service], sv[:vrp], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
+        callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
       } : nil)
     }
 
-    vrps.size == 1 ? results[0] : {
+    services_vrps.size == 1 ? results[0] : {
       cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
       routes: results.map{ |r| r[:routes][0] }.compact,
-      unassigned: results.flat_map{ |r| r[:unassigned] },
+      unassigned: results.flat_map{ |r| r[:unassigned] }.compact,
       elapsed: results.map{ |r| r[:elapsed] }.reduce(&:+),
       total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+)
     }
@@ -386,10 +394,9 @@ module OptimizerWrapper
     include Resque::Plugins::Status
 
     def perform
-      service, vrp = options['service'].to_sym, Marshal.load(Base64.decode64(options['vrp']))
-      OptimizerWrapper.config[:services][service].job = self.uuid
+      services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
 
-      result = OptimizerWrapper.solve(service, vrp) { |wrapper, avancement, total, message, cost, time, solution|
+      result = OptimizerWrapper.solve(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))

@@ -23,10 +23,6 @@ module Wrappers
       @threads = hash[:threads] || 1
     end
 
-    def job=(id)
-      @job = id
-    end
-
     def solver_constraints
       []
     end

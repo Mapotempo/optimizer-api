@@ -65,7 +65,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
@@ -118,7 +118,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
@@ -188,7 +188,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
@@ -256,7 +256,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size, result[:routes][0][:activities].size
@@ -316,7 +316,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + problem[:rests].size + 1, result[:routes][0][:activities].size
@@ -375,7 +375,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
@@ -442,7 +442,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1 - 1, result[:routes][0][:activities].size
@@ -500,7 +500,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
@@ -558,7 +558,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2 - 1, result[:routes][0][:activities].size
@@ -626,7 +626,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
     assert_equal problem[:services].size + 2 - 1, result[:routes][0][:activities].size
@@ -695,7 +695,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
@@ -762,7 +762,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp)
+    result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size , result[:routes][0][:activities].size

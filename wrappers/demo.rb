@@ -23,7 +23,7 @@ module Wrappers
       super(cache, hash)
     end
 
-    def solve(vrp, &block)
+    def solve(vrp, job = nil, &block)
       {
         cost: 0,
         total_travel_distance: 0,

@@ -43,8 +43,9 @@ module Wrappers
       ]
     end
 
-    def solve(vrp, &block)
+    def solve(vrp, job, &block)
 # FIXME or-tools can handle no end-point itself
+      @job = job
 
       services = vrp.services.collect{ |service|
         OrtoolsVrp::Service.new(

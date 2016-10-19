@@ -403,7 +403,7 @@ class WrapperTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     [:ortools, :jsprit, :vroom].each{ |o|
-      result = OptimizerWrapper.solve(o, vrp)
+      result = OptimizerWrapper.solve([service: o, vrp: vrp])
       assert_equal size - 1 + 1, result[:routes][0][:activities].size, "[#{o}] "
       services = result[:routes][0][:activities].collect{ |a| a[:service_id] }
       1.upto(size - 1).each{ |i|
@@ -488,7 +488,7 @@ class WrapperTest < Minitest::Test
     }
     original_stdout = $stdout
     $stdout = StringIO.new('','w')
-    result = OptimizerWrapper.solve(:ortools, Models::Vrp.create(problem))
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
     traces = $stdout.string
     $stdout = original_stdout
     puts traces
