@@ -353,12 +353,12 @@ $(document).ready(function() {
           id: vehicle[mapping.reference || 'reference'],
           start_point_id: (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lat || 'start_lon']) ? vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.') : null,
           end_point_id: (vehicle[mapping.end_lat || 'end_lat'] && vehicle[mapping.end_lat || 'end_lon']) ? vehicle[mapping.end_lat || 'end_lat'].replace(',', '.') + ',' + vehicle[mapping.end_lon || 'end_lon'].replace(',', '.') : null,
-          cost_fixed: vehicle[mapping.cost_fixed || 'cost_fixed'],
-          cost_distance_multiplier: vehicle[mapping.cost_distance_multiplier || 'cost_distance_multiplier'],
-          cost_time_multiplier: vehicle[mapping.cost_time_multiplier || 'cost_time_multiplier'],
-          cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'],
-          cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'],
-          coef_setup: vehicle[mapping.coef_setup || 'coef_setup'],
+          cost_fixed: vehicle[mapping.cost_fixed || 'cost_fixed'] && vehicle[mapping.cost_fixed || 'cost_fixed'].replace(',', '.'),
+          cost_distance_multiplier: vehicle[mapping.cost_distance_multiplier || 'cost_distance_multiplier'] && vehicle[mapping.cost_distance_multiplier || 'cost_distance_multiplier'].replace(',', '.'),
+          cost_time_multiplier: vehicle[mapping.cost_time_multiplier || 'cost_time_multiplier'] && vehicle[mapping.cost_time_multiplier || 'cost_time_multiplier'].replace(',', '.'),
+          cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'] && vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'].replace(',', '.'),
+          cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'] && vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'].replace(',', '.'),
+          coef_setup: vehicle[mapping.coef_setup || 'coef_setup'] && vehicle[mapping.coef_setup || 'coef_setup'].replace(',', '.'),
           capacities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
