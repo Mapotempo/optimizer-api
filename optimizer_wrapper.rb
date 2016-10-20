@@ -60,7 +60,7 @@ module OptimizerWrapper
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError
     else
-      if services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && (config[:solve_synchronously] || config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
+      if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         solve(services_vrps)
       else
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)))
