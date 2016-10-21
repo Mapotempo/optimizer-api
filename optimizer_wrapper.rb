@@ -208,31 +208,37 @@ module OptimizerWrapper
 
   private
 
+  def self.route_total_dimension(vrp, route, vehicle, dimension)
+    previous = nil
+    route[:activities].sum{ |a|
+      point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
+        s.id == a[:service_id]
+      }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
+        s.id == a[:pickup_shipment_id]
+      }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
+        s.id == a[:delivery_shipment_id]
+      }.delivery.point_id : nil
+      if point_id
+        point = vrp.points.find{ |p| p.id == point_id }.matrix_index
+        if previous && point
+          a[('travel_' + dimension.to_s).to_sym] = vehicle.matrix.send(dimension)[previous][point]
+        end
+      end
+      previous = point
+      a[('travel_' + dimension.to_s).to_sym] || 0
+    }
+  end
+
   def self.parse_result(vrp, result)
     result[:routes].each{ |r|
+      v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
       if r[:end_time] && r[:start_time]
         r[:total_time] = r[:end_time] - r[:start_time]
+      elsif v.matrix.time
+        r[:total_travel_time] = route_total_dimension(vrp, r, v, :time)
       end
-      v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
       if v.matrix.distance
-        previous = nil
-        r[:total_distance] = r[:activities].sum{ |a|
-          point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
-            s.id == a[:service_id]
-          }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
-            s.id == a[:pickup_shipment_id]
-          }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
-            s.id == a[:delivery_shipment_id]
-          }.delivery.point_id : nil
-          if point_id
-            point = vrp.points.find{ |p| p.id == point_id }.matrix_index
-            if previous && point
-              a[:travel_distance] = v.matrix.distance[previous][point]
-            end
-          end
-          previous = point
-          a[:travel_distance] || 0
-        }
+        r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
       end
     }
 
@@ -252,12 +258,12 @@ module OptimizerWrapper
   end
 
   def self.cluster(vrp, cluster_threshold)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold.to_f > 0
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold)
     end
     result = yield(vrp)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold.to_f > 0
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else

@@ -22,6 +22,9 @@ include Hashie::Extensions::SymbolizeKeys
 class RealCasesTest < Minitest::Test
 
   if !ENV['SKIP_REAL_CASES']
+    # ##################################
+    # ########## TEST PATTERN
+    # ##################################
     # def test_***
     #   vrp = ENV['DUMP_VRP'] ? 
     #     Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -35,10 +38,14 @@ class RealCasesTest < Minitest::Test
     #   # Check activities
     #   assert_equal vrp.services.size + ***, result[:routes][0][:activities].size
 
-    #   # Check total distance
+    #   # Either check total travel time
+    #   assert result[:routes][0][:total_travel_time] < ***, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
+
+    #   # Or check distance
     #   assert result[:total_distance] < ***, "Too long distance: #{result[:total_distance]}"
     # end
 
+    # Bordeaux - 25 services with time window - dimension distance car - no late for vehicle
     def test_ortools_one_route_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -56,9 +63,10 @@ class RealCasesTest < Minitest::Test
       assert result[:total_distance] < 150000, "Too long distance: #{result[:total_distance]}"
 
       # Check elapsed time
-      assert result[:elapsed] < 3150, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Béziers - 203 services with time window - dimension time car - late for services & vehicles
     def test_ortools_one_route_many_stops
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -72,13 +80,14 @@ class RealCasesTest < Minitest::Test
       # Check activities
       assert_equal vrp.services.size + 2, result[:routes][0][:activities].size
 
-      # Check total distance
-      assert result[:total_distance] < 180000, "Too long distance: #{result[:total_distance]}"
+      # Check total travel time
+      assert result[:routes][0][:total_travel_time] < 16000, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
 
       # Check elapsed time
       assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Lyon - 65 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_one_route_with_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -92,23 +101,8 @@ class RealCasesTest < Minitest::Test
       # Check activities
       assert_equal vrp.services.size + 2 + 1, result[:routes][0][:activities].size
 
-      # Check total time
-      v = vrp.vehicles.find{ |v| v.id == result[:routes][0][:vehicle_id] }
-      previous = nil
-      total_travel_time = result[:routes][0][:activities].sum{ |a|
-        point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
-          s.id == a[:service_id]
-        }.activity.point_id : nil
-        if point_id
-          point = vrp.points.find{ |p| p.id == point_id }.matrix_index
-          if previous && point
-            a[:travel_time] = v.matrix.time[previous][point]
-          end
-        end
-        previous = point
-        a[:travel_time] || 0
-      }
-      assert total_travel_time < 25000, "Too long travel time: #{total_travel_time}"
+      # Check total travel time
+      assert result[:routes][0][:total_travel_time] < 25000, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
 
       # Check rest position
       rest_position = result[:routes][0][:activities].index{ |a| a[:rest_id] }
@@ -118,6 +112,7 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 4000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Mont-de-Marsan - 61 services with time window + rest - dimension time car - late for services & vehicles
     def test_ortools_one_route_with_rest_and_waiting_time
       vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -135,6 +130,7 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Lyon - 769 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_ten_routes_with_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -153,9 +149,10 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check elapsed time
-      assert result[:elapsed] < 100000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 420000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Lille - 141 services with time window and quantity - no late for services
     def test_ortools_global_six_routes_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -174,6 +171,7 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Bordeaux - 81 services with time window - late for services & vehicles
     def test_ortools_global_ten_routes_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -188,7 +186,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 4, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check elapsed time
-      assert result[:elapsed] < 50000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 20000, "Too long elapsed time: #{result[:elapsed]}"
     end
   end
 
