@@ -92,7 +92,7 @@ $(document).ready(function() {
       })
       .done(function(data) {
         if (debug) { console.log("the uuid have been deleted from the jobs queue & the DB"); }
-        $('button[data-role="delete"][value="' + uuid + '"]').fadeOut(500, function() { object.closest('.job').remove(); });
+        $('button[data-role="delete"][value="' + uuid + '"]').fadeOut(500, function() { $(this).closest('.job').remove(); });
       });
     },
     shouldUpdate: function(data) {
