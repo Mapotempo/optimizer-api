@@ -57,19 +57,19 @@ DUMP_VRP=new_test bundle exec rake server
 DUMP_VRP=new_test COUNT=5 QUEUE=* bundle exec rake resque:workers
 ```
 
-Run simply the original scenario to record it. 2 files are created in `test/fixtures` after running scenario:
-- `new_test.json` file corresponding to original vrp get by api
+Just run the original scenario to record it. Then two files are created in `test/fixtures` after running scenario:
+- `new_test.json` file corresponding to original vrp sent by api
 - `new_test.dump` file corresponding to complete vrp (for instance containing matrices if they are not provided in original vrp)
 
-Now to create your test, just copy-paste test template in `test/wrappers/real_cases_test.rb` with either `.json` or `.dump` depending your data (for instance if your vrp sent to api contains matrices you can use `.json` file, in other case use `.dump` file).
+Now to create your test, just copy test template in `test/wrappers/real_cases_test.rb` with either `.json` or `.dump` depending on your data (e.g. if your vrp sent to api contains matrices you can use `.json` file, in other case use `.dump` file.)
 
 If you create a test by using `.dump`, your test will fail as soon as vrp model is changed. Just run following task to update fixtures:
 ```
 DUMP_VRP=my_test APP_ENV=test bundle exec rake test TEST=test/real_cases_test.rb
 ```
-TODO: create a task to update all fixtures once
+TODO: create a task to update all fixtures at once.
 
-Note you can update a test and run its modified scenario with new `.json` vrp:
+Note: you can update a test and run the modified scenario with new vrp `.json`:
 ```
 bundle exec rake server
 COUNT=5 QUEUE=* bundle exec rake resque:workers
