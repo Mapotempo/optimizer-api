@@ -593,12 +593,6 @@ $(document).ready(function() {
       i++;
       route.activities.forEach(function(activity) {
         if (activity.pickup_shipment_id || activity.delivery_shipment_id) {
-          var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {
-            if (key.replace(/ 1$/, '') == (mapping.quantity || 'quantity')) return val;
-          });
-          var quantity1_2 = $.map(data.customers[customer_id], function(val, key) {
-            if (key.replace(/ 2$/, '') == (mapping.quantity || 'quantity')) return val;
-          });
           var customer_id = customers.indexOf(activity.pickup_shipment_id ? activity.pickup_shipment_id : activity.delivery_shipment_id);
           var ref = activity.pickup_shipment_id ? (activity.pickup_shipment_id + ' pickup') : activity.delivery_shipment_id;
           var lat = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
@@ -606,11 +600,18 @@ $(document).ready(function() {
           var start = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
           var d = (activity.setup_time < duration(start) && activity.arrival_time > duration(start) ? activity.arrival_time - duration(start) : activity.arrival_time - activity.setup_time ) + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
           var end = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
+          var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ 1$/, '') == (mapping.quantity || 'quantity')) return val;
+          });
+          var quantity1_2 = $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ 2$/, '') == (mapping.quantity || 'quantity')) return val;
+          });
           var skills = $.map(data.customers[customer_id], function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
           }).filter(function(el) {
             return el;
           }).join(',');
+
           // group only pickup with direct previous pickup on same points
           var lastStop = stops[stops.length - 1];
           if (lastStop && lastStop[0] == ref && activity.pickup_shipment_id) {
