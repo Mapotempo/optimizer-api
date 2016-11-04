@@ -65,8 +65,8 @@ module Routers
             when 417 # OutOfSupportedAreaError
               ''
             else
-              # response.return!(request, result, &block)
-              raise RouterError.new(result.message)
+              response = (response && response.size > 1) ? JSON.parse(response) : nil
+              raise RouterError.new(result.message + (response ? ' - ' + response['error'] + ' ' + response['detail'] : ''))
             end
           }
           if request != ''
@@ -109,7 +109,7 @@ module Routers
         return dimensions.map{ |d| [[0]] }
       end
 
-      key = ['m', url, dimensions, mode, row, column, Digest::MD5.hexdigest(Marshal.dump(options.to_a.sort_by{ |i| i[0].to_s }))]
+      key = ['m', url, mode, dimensions, row, column, Digest::MD5.hexdigest(Marshal.dump(options.to_a.sort_by{ |i| i[0].to_s }))]
 
       request = @cache_request.read(key)
       if !request
@@ -131,7 +131,8 @@ module Routers
           when 417
             ''
           else
-            response.return!(request, result, &block)
+            response = (response && response.size > 1) ? JSON.parse(response) : nil
+            raise RouterError.new(result.message + (response ? ' - ' + response['error'] + ' ' + response['detail'] : ''))
           end
         }
 
@@ -177,7 +178,8 @@ module Routers
           when 417
             ''
           else
-            response.return!(request, result, &block)
+            response = (response && response.size > 1) ? JSON.parse(response) : nil
+            raise RouterError.new(result.message + (response ? ' - ' + response['error'] + ' ' + response['detail'] : ''))
           end
         }
 
