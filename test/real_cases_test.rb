@@ -81,7 +81,7 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.services.size + 2, result[:routes][0][:activities].size
 
       # Check total travel time
-      assert result[:routes][0][:total_travel_time] < 16000, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
+      assert result[:routes][0][:total_travel_time] < 15000, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
 
       # Check elapsed time
       assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
@@ -161,7 +161,7 @@ class RealCasesTest < Minitest::Test
       assert result
 
       # Check routes
-      assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal (vrp.vehicles.size - 1), result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check activities
       activities = result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
@@ -183,7 +183,7 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
-      assert_equal 4, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 3, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check elapsed time
       assert result[:elapsed] < 20000, "Too long elapsed time: #{result[:elapsed]}"
