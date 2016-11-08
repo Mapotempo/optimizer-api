@@ -109,7 +109,7 @@ module Routers
         return dimensions.map{ |d| [[0]] }
       end
 
-      key = ['m', url, mode, dimensions, row, column, Digest::MD5.hexdigest(Marshal.dump(options.to_a.sort_by{ |i| i[0].to_s }))]
+      key = ['m', url, mode, dimensions, Digest::MD5.hexdigest(Marshal.dump([row, column, options.to_a.sort_by{ |i| i[0].to_s }]))]
 
       request = @cache_request.read(key)
       if !request
@@ -156,7 +156,7 @@ module Routers
     end
 
     def isoline(url, mode, dimension, lat, lng, size, options = {})
-      key = ['i', url, mode, dimension, lat, lng, size, Digest::MD5.hexdigest(Marshal.dump(options.to_a.sort_by{ |i| i[0].to_s }))]
+      key = ['i', url, mode, dimension, Digest::MD5.hexdigest(Marshal.dump([lat, lng, size, options.to_a.sort_by{ |i| i[0].to_s }]))]
 
       request = @cache_request.read(key)
       if !request
