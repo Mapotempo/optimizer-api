@@ -51,6 +51,12 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_start_or_end(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        vehicle.start_point.nil? && vehicle.end_point.nil?
+      }
+    end
+
     def assert_vehicles_no_timewindow(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         !vehicle.timewindow.nil?

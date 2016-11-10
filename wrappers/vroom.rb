@@ -31,6 +31,7 @@ module Wrappers
     def solver_constraints
       super + [
         :assert_vehicles_only_one,
+        :assert_vehicles_start_or_end,
         :assert_vehicles_no_end_time_or_late_multiplier,
         :assert_vehicles_no_rests,
         :assert_services_no_capacities,
@@ -38,7 +39,6 @@ module Wrappers
         :assert_services_no_timewindows,
         :assert_services_no_exclusion_cost,
         :assert_no_shipments,
-        :assert_vroom_not_start_and_end,
         :assert_matrices_only_one,
         :assert_one_vehicle_only_or_no_sticky_vehicle
       ]
@@ -62,7 +62,8 @@ module Wrappers
       vehicle = vrp.vehicles.first
       vehicle_have_start = !vehicle.start_point_id.nil?
       vehicle_have_end = !vehicle.end_point_id.nil?
-      vehicle_loop = vehicle.start_point_id == vehicle.end_point_id || (vehicle.start_point && vehicle.end_point && vehicle.start_point.location.lat == vehicle.end_point.location.lat && vehicle.start_point.location.lon == vehicle.end_point.location.lon)
+      vehicle_loop = vehicle.start_point_id == vehicle.end_point_id ||
+        (vehicle.start_point && vehicle.end_point && vehicle.start_point.location && vehicle.end_point.location && vehicle.start_point.location.lat == vehicle.end_point.location.lat && vehicle.start_point.location.lon == vehicle.end_point.location.lon)
 
       matrix_indices =
         (vehicle_have_start ? [points[vehicle.start_point_id].matrix_index] : []) +
@@ -75,7 +76,7 @@ module Wrappers
         matrix = matrix.collect{ |a| a.collect{ |b| (b + 20 * Math.sqrt(b)).round } }
       end
 
-      result = run_vroom(vehicle_have_start, vehicle_have_end, matrix) { |avancement, total|
+      result = run_vroom(vehicle_have_start, vehicle_have_end, vehicle_loop, matrix) { |avancement, total|
         block.call(self, avancement, total, nil, nil) if block
       }
       return if !result
@@ -133,27 +134,17 @@ module Wrappers
 
     private
 
-    def assert_vroom_not_start_and_end(vrp)
-      vehicle = vrp.vehicles.first
-      !vehicle ||
-        (vehicle.start_point && vehicle.start_point == vehicle.end_point) ||
-        (vehicle.start_point && vehicle.end_point && vehicle.start_point.location.lat == vehicle.end_point.location.lat && vehicle.start_point.location.lon == vehicle.end_point.location.lon) ||
-        (vehicle.start_point && !vehicle.end_point) ||
-        (!vehicle.start_point && vehicle.end_point)
-    end
-
     def assert_vehicles_no_end_time_or_late_multiplier(vrp)
       vrp.vehicles.empty? || vrp.vehicles.all?{ |vehicle|
         !vehicle.timewindow || (vehicle.cost_late_multiplier && vehicle.cost_late_multiplier > 0)
       }
     end
 
-    def run_vroom(have_start, have_end, matrix)
+    def run_vroom(have_start, have_end, is_loop, matrix)
       input = Tempfile.new('optimize-vroom-input', tmpdir=@tmp_dir)
       input.write("NAME: vroom\n")
       input.write("TYPE: ATSP\n")
-      if !have_end || !have_start
-        input.write("OPEN_TRIP: TRUE\n")
+      if !is_loop
         input.write("START: #{0}\n") if have_start
         input.write("END: #{matrix.size - 1}\n") if have_end
       end
