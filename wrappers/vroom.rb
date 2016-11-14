@@ -33,7 +33,6 @@ module Wrappers
         :assert_vehicles_only_one,
         :assert_vehicles_start_or_end,
         :assert_vehicles_no_end_time_or_late_multiplier,
-        :assert_vehicles_no_rests,
         :assert_services_no_capacities,
         :assert_services_no_skills,
         :assert_services_no_timewindows,
@@ -101,6 +100,39 @@ module Wrappers
       cost = (result['solution']['cost'] / 100) + vehicle.cost_fixed
       block.call(self, 1, 1, cost, nil) if block
 
+      activities = ([vehicle_have_start ? {
+          point_id: vehicle.start_point.id
+        } : nil] +
+        tour.collect{ |i| {
+          point_id: vrp.services[i - 1].activity.point.id,
+          service_id: vrp.services[i - 1].id
+#          travel_distance 0,
+#          travel_start_time 0,
+#          waiting_duration 0,
+#          arrival_time 0,
+#          duration 0,
+#          pickup_shipments_id [:id0:],
+#          delivery_shipments_id [:id0:]
+        }} +
+        [vehicle_have_end ? {
+          point_id: vehicle.end_point.id
+        } : nil]).compact
+
+      rests = vehicle.rests
+      if vehicle.timewindow && vehicle.timewindow.start
+        rests.sort_by!{ |rest| rest.timewindows[0].end ? -rest.timewindows[0].end : -2**31 }.each{ |rest|
+          time = vehicle.timewindow.start
+          time += vehicle.matrix.time[vehicle.start_point.matrix_index][vrp.services[tour[0]-1].activity.point.matrix_index] + vrp.services[tour[0]-1].activity.duration if vehicle_have_start
+          i = 0
+          while i < activities.size - 1 && (!rest.timewindows[0].end || (time += vehicle.matrix.time[vrp.services[tour[i]-1].activity.point.matrix_index][vrp.services[tour[i+1]-1].activity.point.matrix_index] + vrp.services[tour[i+1]-1].activity.duration) < rest.timewindows[0].end) do
+            i += 1
+          end
+          activities.insert(i + (vehicle_have_start ? 1 : 0), {rest_id: rest.id})
+        }
+      else
+        rests.each{ |rest| activities.insert(vehicle_have_end ? -2 : -1, {rest_id: rest.id}) }
+      end
+
       {
         cost: cost,
 #        total_travel_distance: 0,
@@ -110,24 +142,7 @@ module Wrappers
 #        end_time: 0,
         routes: [{
           vehicle_id: vehicle.id,
-          activities:
-            ([vehicle_have_start ? {
-              point_id: vehicle.start_point.id
-            } : nil] +
-            tour.collect{ |i| {
-              point_id: vrp.services[i - 1].activity.point.id,
-              service_id: vrp.services[i - 1].id
-#              travel_distance 0,
-#              travel_start_time 0,
-#              waiting_duration 0,
-#              arrival_time 0,
-#              duration 0,
-#              pickup_shipments_id [:id0:],
-#              delivery_shipments_id [:id0:]
-            }} +
-            [vehicle_have_end ? {
-              point_id: vehicle.end_point.id
-            } : nil]).compact
+          activities: activities
         }]
       }
     end

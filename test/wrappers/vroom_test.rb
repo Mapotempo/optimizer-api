@@ -304,4 +304,85 @@ class Wrappers::VroomTest < Minitest::Test
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
   end
+
+  def test_with_rest
+    vroom = OptimizerWrapper::VROOM
+    problem = {
+      matrices: [{
+        id: 'matrix',
+        time: [
+          [0, 655, 1948, 5231, 2971],
+          [603, 0, 1692, 4977, 2715],
+          [1861, 1636, 0, 6143, 1532],
+          [5184, 4951, 6221, 0, 7244],
+          [2982, 2758, 1652, 7264, 0],
+        ]
+      }],
+      points: [{
+        id: 'point_a',
+        matrix_index: 0
+      }, {
+        id: 'point_b',
+        matrix_index: 1
+      }, {
+        id: 'point_c',
+        matrix_index: 2
+      }, {
+        id: 'point_d',
+        matrix_index: 3
+      }, {
+        id: 'point_e',
+        matrix_index: 4
+      }],
+      rests: [{
+        id: 'rest_a',
+        timewindows: [{
+          start: 11000,
+          end: 12000
+        }],
+        duration: 1000
+      }],
+      vehicles: [{
+        id: 'vehicle_a',
+        start_point_id: 'point_a',
+        end_point_id: 'point_a',
+        matrix_id: 'matrix',
+        timewindow: {
+          start: 100,
+          end: 20000
+        },
+        rest_ids: ['rest_a'],
+        cost_late_multiplier: 1
+      }],
+      services: [{
+        id: 'service_b',
+        activity: {
+          point_id: 'point_e'
+        }
+      }, {
+        id: 'service_c',
+        activity: {
+          point_id: 'point_d'
+        }
+      }, {
+        id: 'service_d',
+        activity: {
+          point_id: 'point_c'
+        }
+      }, {
+        id: 'service_e',
+        activity: {
+          point_id: 'point_b'
+        }
+      }],
+    }
+    vrp = Models::Vrp.create(problem)
+    assert vroom.inapplicable_solve?(vrp).empty?
+    result = vroom.solve(vrp)
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size + 2 + problem[:vehicles][0][:rest_ids].size, result[:routes][0][:activities].size
+    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.compact.sort
+    assert_equal 3, result[:routes][0][:activities].index{ |a| a[:rest_id] }
+  end
 end
