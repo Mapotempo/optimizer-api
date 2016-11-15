@@ -151,12 +151,15 @@ module OptimizerWrapper
     # Don't split vrp in case of dump to compute matrix if needed
     (!ENV['DUMP_VRP'] && vrp.vehicles.size > 1 && vrp.services.size > 1 && vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }) ? vrp.vehicles.map{ |vehicle|
       sub_vrp = ::Models::Vrp.create({}, false)
-      [:matrices, :units, :points].each{ |key|
+      services = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle.id] }
+      [:matrices, :units].each{ |key|
         (sub_vrp.send "#{key}=", vrp.send(key)) if vrp.send(key)
       }
+      point_ids = services.map{ |s| s.activity.point.id } + [vehicle.start_point_id, vehicle.end_point_id].uniq.compact
+      sub_vrp.points = vrp.points.select{ |p| point_ids.include? p.id }
       sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
       sub_vrp.vehicles = vrp.vehicles.select{ |v| v.id == vehicle.id }
-      sub_vrp.services = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle.id] }
+      sub_vrp.services = services
       sub_vrp.configuration = {
         preprocessing: {
           cluster_threshold: vrp.preprocessing_cluster_threshold,
