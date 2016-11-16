@@ -81,6 +81,7 @@ module Wrappers
       return if !result
 
       tour = result['routes'][0]['steps'].collect{ |step| step['job'] }
+      puts tour.inspect
 
       if vehicle_loop
         index = tour.index(0)
@@ -121,13 +122,20 @@ module Wrappers
       rests = vehicle.rests
       if vehicle.timewindow && vehicle.timewindow.start
         rests.sort_by!{ |rest| rest.timewindows[0].end ? -rest.timewindows[0].end : -2**31 }.each{ |rest|
-          time = vehicle.timewindow.start
-          time += vehicle.matrix.time[vehicle.start_point.matrix_index][vrp.services[tour[0]-1].activity.point.matrix_index] + vrp.services[tour[0]-1].activity.duration if vehicle_have_start
-          i = 0
-          while i < activities.size - 1 && (!rest.timewindows[0].end || (time += vehicle.matrix.time[vrp.services[tour[i]-1].activity.point.matrix_index][vrp.services[tour[i+1]-1].activity.point.matrix_index] + vrp.services[tour[i+1]-1].activity.duration) < rest.timewindows[0].end) do
-            i += 1
+          time = vehicle.timewindow.start + vrp.services[tour[0]-1].activity.duration
+          i = pos_rest = 0
+          if vehicle_have_start
+            time += vehicle.matrix.time[vehicle.start_point.matrix_index][vrp.services[tour[0]-1].activity.point.matrix_index]
+            pos_rest += 1
           end
-          activities.insert(i + (vehicle_have_start ? 1 : 0), {rest_id: rest.id})
+          if !rest.timewindows[0].end || time < rest.timewindows[0].end
+            pos_rest += 1
+            while i < tour.size - 1 && (!rest.timewindows[0].end || (time += vehicle.matrix.time[vrp.services[tour[i]-1].activity.point.matrix_index][vrp.services[tour[i+1]-1].activity.point.matrix_index] + vrp.services[tour[i+1]-1].activity.duration) < rest.timewindows[0].end) do
+              i += 1
+            end
+            pos_rest += i
+          end
+          activities.insert(pos_rest, {rest_id: rest.id})
         }
       else
         rests.each{ |rest| activities.insert(vehicle_have_end ? -2 : -1, {rest_id: rest.id}) }
