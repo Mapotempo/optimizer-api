@@ -123,9 +123,11 @@ class RealCasesTest < Minitest::Test
       # Check routes
       assert_equal 1, result[:routes].size
 
+      # Check total travel time
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 2300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+
       # Check activities
       assert_equal vrp.services.size + 2 + 1, result[:routes][0][:activities].size
-
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
     end
@@ -137,7 +139,6 @@ class RealCasesTest < Minitest::Test
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
       assert result
-
       # Check activities
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
@@ -147,6 +148,9 @@ class RealCasesTest < Minitest::Test
 
       # Check routes
       assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+
+      # Check total travel time
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 32300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 420000, "Too long elapsed time: #{result[:elapsed]}"
@@ -163,6 +167,9 @@ class RealCasesTest < Minitest::Test
       # Check routes
       assert_equal (vrp.vehicles.size - 1), result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
+      # Check total travel time
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 34800, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+
       # Check activities
       activities = result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       assert 117 <= activities, "Not enough activities: #{activities}"
@@ -178,12 +185,14 @@ class RealCasesTest < Minitest::Test
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
       assert result
-
       # Check activities
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
       assert_equal 3, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+
+      # Check total travel time
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 13600, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 20000, "Too long elapsed time: #{result[:elapsed]}"
