@@ -178,7 +178,12 @@ module Api
           }
           post do
             begin
-              File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.json', {vrp: params[:vrp]}.to_json) if ENV['DUMP_VRP']
+              if ENV['DUMP_VRP'] || OptimizerWrapper::DUMP_VRP
+                path = ENV['DUMP_VRP'] ?
+                  'test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') :
+                  'tmp/vrp_' + Time.now.strftime("%Y-%m-%d_%H-%M-%S")
+                File.write(path + '.json', {vrp: params[:vrp]}.to_json)
+              end
               vrp = ::Models::Vrp.create({})
               [:matrices, :units, :points, :rests, :vehicles, :services, :shipments, :configuration].each{ |key|
                 (vrp.send "#{key}=", params[:vrp][key]) if params[:vrp][key]

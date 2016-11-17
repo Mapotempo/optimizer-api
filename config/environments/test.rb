@@ -83,4 +83,6 @@ module OptimizerWrapper
       }]
     }
   }.flatten(1)]
+
+  DUMP_VRP = false
 end
