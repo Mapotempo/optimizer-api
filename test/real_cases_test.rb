@@ -66,6 +66,27 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Strasbourg - 107 services with few time windows - dimension distance car - late for services & vehicles
+    def test_ortools_one_route_without_rest_2
+      vrp = ENV['DUMP_VRP'] ? 
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
+      assert result
+
+      # Check routes
+      assert_equal 1, result[:routes].size
+
+      # Check activities
+      assert_equal vrp.services.size + 2, result[:routes][0][:activities].size
+
+      # Check total distance
+      assert result[:total_distance] < 245000, "Too long distance: #{result[:total_distance]}"
+
+      # Check elapsed time
+      assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
+    end
+
     # Béziers - 203 services with time window - dimension time car - late for services & vehicles
     def test_ortools_one_route_many_stops
       vrp = ENV['DUMP_VRP'] ? 
