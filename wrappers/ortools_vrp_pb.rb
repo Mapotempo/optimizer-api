@@ -5,7 +5,7 @@ require 'google/protobuf'
 
 Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "ortools_vrp.Matrix" do
-    repeated :data, :uint32, 2
+    repeated :data, :float, 2
   end
   add_message "ortools_vrp.TimeWindow" do
     optional :start, :int64, 1
