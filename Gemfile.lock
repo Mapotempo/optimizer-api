@@ -62,6 +62,7 @@ GEM
     i18n (0.7.0)
     ice_nine (0.11.2)
     json (1.8.3)
+    kramdown (1.13.1)
     mime-types (3.1)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2016.0521)
@@ -161,6 +162,7 @@ DEPENDENCIES
   grape-swagger-entity
   grape_logging
   i18n
+  kramdown
   minitest
   minitest-reporters
   nokogiri
