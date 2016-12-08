@@ -24,6 +24,7 @@ require 'thread'
 
 require './lib/routers/router_wrapper.rb'
 require './lib/interpreters/periodic_visits.rb'
+require './lib/interpreters/split_clustering.rb'
 
 require 'ai4r'
 include Ai4r::Data
@@ -222,9 +223,10 @@ module OptimizerWrapper
         callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
       } : nil)
     }
+
     services_vrps.size == 1 ? results[0] : {
       cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
-      routes: results.map{ |r| r[:routes][0] }.compact,
+      routes: results.flat_map{ |r| r[:routes] }.compact,
       unassigned: results.flat_map{ |r| r[:unassigned] }.compact,
       elapsed: results.map{ |r| r[:elapsed] || 0 }.reduce(&:+),
       total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+)
@@ -731,8 +733,9 @@ module OptimizerWrapper
 
     def perform
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
-
-      result = OptimizerWrapper.solve(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+      split_lib = Interpreters::SplitClustering.new
+      complete_services_vrp = split_lib.split_clusters(services_vrps, self.uuid)
+      result = OptimizerWrapper.solve(complete_services_vrp, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))

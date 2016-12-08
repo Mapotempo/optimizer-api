@@ -20,6 +20,7 @@ require './models/base'
 
 module Models
   class Vrp < Base
+    field :preprocessing_max_split_size, default: nil
     field :preprocessing_cluster_threshold, default: nil
     field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
@@ -42,6 +43,7 @@ module Models
     field :schedule_unavailable_indices, default: nil
     field :schedule_unavailable_date, default: nil
 
+    validates_numericality_of :preprocessing_max_split_size, allow_nil: true
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
     validates_numericality_of :resolution_duration, allow_nil: true
     validates_numericality_of :resolution_iterations, allow_nil: true
@@ -97,6 +99,7 @@ module Models
 
     def preprocessing=(preprocessing)
       self.preprocessing_force_cluster = preprocessing[:force_cluster]
+      self.preprocessing_max_split_size = preprocessing[:max_split_size]
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
     end
