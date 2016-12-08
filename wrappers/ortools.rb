@@ -25,7 +25,7 @@ module Wrappers
   class Ortools < Wrapper
     def initialize(cache, hash = {})
       super(cache, hash)
-      @exec_ortools = hash[:exec_ortools] || '../mapotempo-optimizer/optimizer/tsp_simple'
+      @exec_ortools = hash[:exec_ortools] || 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'
       @optimize_time = hash[:optimize_time]
       @resolution_stable_iterations = hash[:optimize_time]
 
