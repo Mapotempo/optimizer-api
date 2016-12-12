@@ -27,11 +27,26 @@ module Api
   class ApiV01 < Grape::API
     version '0.1', using: :path
 
+    content_type :json, 'application/json; charset=UTF-8'
+    content_type :xml, 'application/xml'
+
     mount V01::Api
 
-    documentation_class = add_swagger_documentation hide_documentation_path: true, markdown: GrapeSwagger::Markdown::KramdownAdapter.new, info: {
-      title: ::OptimizerWrapper::config[:product_title],
-      description: ('
+    documentation_class = add_swagger_documentation(
+      hide_documentation_path: true,
+      consumes: [
+        'application/json; charset=UTF-8',
+        'application/xml',
+      ],
+      produces: [
+        'application/json; charset=UTF-8',
+        'application/xml',
+      ],
+      markdown: GrapeSwagger::Markdown::KramdownAdapter.new,
+      info: {
+        title: ::OptimizerWrapper::config[:product_title],
+        contact: ::OptimizerWrapper::config[:product_contact],
+        description: '
 ## Overview
 
 The API has been build in order to call multiple VRP solver in order to cover a large panel of constraints.
@@ -58,8 +73,8 @@ Some Structures are related to the above ones, in order to describe the API beha
 The Vrp model carry its own parameters, which could be used depending on the called solver or the targeted result.
 *   **VROOM**: It requires no parameters and stops by itself.
 *   **ORtools**: Could take a maximum solve duration, or can stop by itself depending on the solve state as a time-out between two new best solution, or a number of iterations without improvement.
-*   **Jsprit**: Could take a maximum solve duration, a number of iterations wihtout improvment or a number of iteration without variation in the neighborhood search.'),
-      contact: ::OptimizerWrapper::config[:product_contact]
-    }
+*   **Jsprit**: Could take a maximum solve duration, a number of iterations wihtout improvment or a number of iteration without variation in the neighborhood search.'
+      }
+    )
   end
 end

@@ -129,7 +129,7 @@ module Api
                 optional(:exclusion_cost, type: Float, desc: 'Cost applied to exclude the service in the solution (currently not used)')
                 optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
                 optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
-                
+
                 requires(:type, type: Symbol, desc: 'service, pickup or delivery')
                 requires(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
                   Vrp.vrp_request_activity(self)
