@@ -19,7 +19,7 @@ require 'grape'
 require 'grape-swagger'
 
 require './api/v01/api_base'
-require './api/v01/entities/error'
+require './api/v01/entities/status'
 require './api/v01/entities/vrp_result'
 
 module Api
@@ -55,7 +55,7 @@ module Api
             nickname: 'vrp',
             success: VrpResult,
             failure: [
-              [400, 'Bad Request', ::Api::V01::Error]
+              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
             ],
             detail: ''
           }
@@ -189,7 +189,7 @@ module Api
                 (vrp.send "#{key}=", params[:vrp][key]) if params[:vrp][key]
               }
               if !vrp.valid?
-                error!({error: 'Model Validation Error', detail: vrp.errors}, 400)
+                error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
                 ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp)
                 if ret.is_a?(String)
@@ -210,7 +210,7 @@ module Api
                     }
                   }, with: Grape::Presenters::Presenter)
                 else
-                  error!({error: 'Internal Server Error'}, 500)
+                  error!({status: 'Internal Server Error'}, 500)
                 end
               end
             ensure
@@ -224,7 +224,7 @@ module Api
             nickname: 'job',
             success: VrpResult,
             failure: [
-              [404, 'Not Found', ::Api::V01::Error]
+              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
             ],
             detail: 'Get the Job status and details, contains progress avancement. Returns the best actual solutions currently found.'
           }
@@ -235,7 +235,7 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             if !job
-              error!({error: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
+              error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
             else
               solution = OptimizerWrapper::Result.get(id) || {}
               if job.killed? || job.failed?
@@ -288,8 +288,9 @@ module Api
 
           desc 'Delete vrp job', {
             nickname: 'deleteJob',
+            success: {code: 204},
             failure: [
-              [404, 'Not Found', ::Api::V01::Error]
+              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
             ],
             detail: 'Kill the job. This operation may have delay.'
           }
@@ -301,7 +302,7 @@ module Api
             job = Resque::Plugins::Status::Hash.get(id)
             if !job
               status 404
-              error!({error: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
+              error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
               status 204
