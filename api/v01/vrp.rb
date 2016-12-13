@@ -52,7 +52,7 @@ module Api
       namespace :vrp do
         resource :submit do
           desc 'Submit VRP problem', {
-            named: 'vrp',
+            nickname: 'vrp',
             success: VrpResult,
             failure: [
               [400, 'Bad Request', ::Api::V01::Error]
@@ -221,7 +221,7 @@ module Api
 
         resource :jobs do
           desc 'Fetch vrp job status', {
-            named: 'job',
+            nickname: 'job',
             success: VrpResult,
             failure: [
               [404, 'Not Found', ::Api::V01::Error]
@@ -277,7 +277,7 @@ module Api
           end
 
           desc 'List vrp jobs', {
-            named: 'ListJobs',
+            nickname: 'listJobs',
             success: VrpJobsList,
             detail: 'List running or queued jobs.'
           }
@@ -287,7 +287,7 @@ module Api
           end
 
           desc 'Delete vrp job', {
-            named: 'deleteJob',
+            nickname: 'deleteJob',
             failure: [
               [404, 'Not Found', ::Api::V01::Error]
             ],
