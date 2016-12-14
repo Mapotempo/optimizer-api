@@ -47,6 +47,8 @@ module Wrappers
 # FIXME or-tools can handle no end-point itself
       @job = job
 
+      points = Hash[vrp.points.collect{ |point| [point.id, point] }]
+
       services = vrp.services.collect{ |service|
         OrtoolsVrp::Service.new(
           time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
@@ -59,27 +61,23 @@ module Wrappers
             (q && (q.value*1000+0.5).to_i) || 0
           },
           duration: service.activity.duration,
+          matrix_index: points[service.activity.point_id].matrix_index,
           vehicle_indices: service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }
         )
       }
-
-      points = Hash[vrp.points.collect{ |point| [point.id, point] }]
 
       matrix_indices = vrp.services.collect{ |service|
         points[service.activity.point_id].matrix_index
       }
 
+      matrices = vrp.matrices.collect{ |matrix|
+        OrtoolsVrp::Matrix.new(
+          time: matrix[:time] ? matrix[:time].flatten : [],
+          distance: matrix[:distance] ? matrix[:distance].flatten : []
+        )
+      }
       vehicles = vrp.vehicles.collect{ |vehicle|
-        mi = matrix_indices +
-          (vehicle.start_point ? [points[vehicle.start_point_id].matrix_index] : [nil]) +
-          (vehicle.end_point ? [points[vehicle.end_point_id].matrix_index] : [nil])
-
-        matrix_time = vehicle.matrix_blend(mi, [:time])
-        matrix_distance = vehicle.matrix_blend(mi, [:distance])
-
         OrtoolsVrp::Vehicle.new(
-          time_matrix: OrtoolsVrp::Matrix.new(data: matrix_time.flatten),
-          distance_matrix: OrtoolsVrp::Matrix.new(data: matrix_distance.flatten),
           cost_fixed: vehicle.cost_fixed,
           cost_distance_multiplier: vehicle.cost_distance_multiplier,
           cost_time_multiplier: vehicle.cost_time_multiplier,
@@ -105,12 +103,16 @@ module Wrappers
               duration: rest.duration,
             )
           },
+          matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.matrix_id },
+          start_index: vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
+          end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
         )
       }
 
       problem = OrtoolsVrp::Problem.new(
         vehicles: vehicles,
         services: services,
+        matrices: matrices,
       )
 
       cost, result = run_ortools(problem, vrp, &block)

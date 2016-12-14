@@ -32,6 +32,7 @@ module Models
     field :router_dimension, default: :time
     field :speed_multiplier, default: 1
     field :duration, default: nil
+    field :matrix_id, default: nil
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
     validates_numericality_of :cost_time_multiplier
@@ -44,7 +45,6 @@ module Models
     validates_numericality_of :speed_multiplier
     field :skills, default: []
 
-    belongs_to :matrix, class_name: 'Models::Matrix'
     belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
     belongs_to :timewindow, class_name: 'Models::Timewindow'

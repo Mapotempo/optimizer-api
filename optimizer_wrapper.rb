@@ -87,7 +87,7 @@ module OptimizerWrapper
           [vehicle, vehicle.dimensions]
         }.select{ |vehicle, dimensions|
           dimensions.find{ |dimension|
-            vrp_need_matrix[dimension] && (vehicle.matrix.nil? || vehicle.matrix.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
+            vrp_need_matrix[dimension] && (vehicle.matrix_id.nil? || vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
           }
         }
 
@@ -102,12 +102,14 @@ module OptimizerWrapper
           }.uniq
 
           i = 0
+          id = 0
           uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
             raise UnsupportedRouterModeError unless OptimizerWrapper.config[:router][mode]
             block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
             # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
             matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
             m = Models::Matrix.create({
+              id: 'm' + (id+=1).to_s,
               time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
               distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
             })
@@ -116,7 +118,7 @@ module OptimizerWrapper
           }]
 
           uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            vehicle.matrix = uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]]
+            vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]] }.id
           }
         end
 
@@ -224,7 +226,7 @@ module OptimizerWrapper
       if point_id
         point = vrp.points.find{ |p| p.id == point_id }.matrix_index
         if previous && point
-          a[('travel_' + dimension.to_s).to_sym] = vehicle.matrix.send(dimension)[previous][point]
+          a[('travel_' + dimension.to_s).to_sym] = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension)[previous][point]
         end
       end
       previous = point
@@ -237,10 +239,10 @@ module OptimizerWrapper
       v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
       if r[:end_time] && r[:start_time]
         r[:total_time] = r[:end_time] - r[:start_time]
-      elsif v.matrix.time
+      elsif vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.time
         r[:total_travel_time] = route_total_dimension(vrp, r, v, :time)
       end
-      if v.matrix.distance
+      if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.distance
         r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
       end
     }

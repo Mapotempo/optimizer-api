@@ -5,7 +5,8 @@ require 'google/protobuf'
 
 Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "ortools_vrp.Matrix" do
-    repeated :data, :float, 2
+    repeated :time, :float, 2
+    repeated :distance, :float, 3
   end
   add_message "ortools_vrp.TimeWindow" do
     optional :start, :int64, 1
@@ -17,6 +18,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :quantities, :uint32, 2
     optional :duration, :uint32, 3
     repeated :vehicle_indices, :uint32, 4
+    optional :matrix_index, :uint32, 5
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
@@ -27,18 +29,20 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :overload_multiplier, :float, 2
   end
   add_message "ortools_vrp.Vehicle" do
-    optional :time_matrix, :message, 1, "ortools_vrp.Matrix"
-    optional :distance_matrix, :message, 2, "ortools_vrp.Matrix"
     repeated :capacities, :message, 3, "ortools_vrp.Capacity"
     optional :time_window, :message, 4, "ortools_vrp.TimeWindow"
     repeated :rests, :message, 5, "ortools_vrp.Rest"
     optional :cost_fixed, :float, 6
     optional :cost_distance_multiplier, :float, 7
     optional :cost_time_multiplier, :float, 8
+    optional :matrix_index, :uint32, 9
+    optional :start_index, :int32, 10
+    optional :end_index, :int32, 11
   end
   add_message "ortools_vrp.Problem" do
     repeated :vehicles, :message, 3, "ortools_vrp.Vehicle"
     repeated :services, :message, 4, "ortools_vrp.Service"
+    repeated :matrices, :message, 5, "ortools_vrp.Matrix"
   end
 end
 
