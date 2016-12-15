@@ -69,7 +69,7 @@ module Wrappers
         matrix_indices +
         (!vehicle_loop && vehicle_have_end ? [points[vehicle.end_point_id].matrix_index] : [])
 
-      matrix = vehicle.matrix_blend(matrix_indices, [:time, :distance], {cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier})
+      matrix = vehicle.matrix_blend(vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }, matrix_indices, [:time, :distance], {cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier})
 
       if vrp.preprocessing_prefer_short_segment
         matrix = matrix.collect{ |a| a.collect{ |b| (b + 20 * Math.sqrt(b)).round } }
@@ -125,12 +125,12 @@ module Wrappers
           time = vehicle.timewindow.start + vrp.services[tour[0]-1].activity.duration
           i = pos_rest = 0
           if vehicle_have_start
-            time += vehicle.matrix.time[vehicle.start_point.matrix_index][vrp.services[tour[0]-1].activity.point.matrix_index]
+            time += vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.time[vehicle.start_point.matrix_index][vrp.services[tour[0]-1].activity.point.matrix_index]
             pos_rest += 1
           end
           if !rest.timewindows[0].end || time < rest.timewindows[0].end
             pos_rest += 1
-            while i < tour.size - 1 && (!rest.timewindows[0].end || (time += vehicle.matrix.time[vrp.services[tour[i]-1].activity.point.matrix_index][vrp.services[tour[i+1]-1].activity.point.matrix_index] + vrp.services[tour[i+1]-1].activity.duration) < rest.timewindows[0].end) do
+            while i < tour.size - 1 && (!rest.timewindows[0].end || (time += vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.time[vrp.services[tour[i]-1].activity.point.matrix_index][vrp.services[tour[i+1]-1].activity.point.matrix_index] + vrp.services[tour[i+1]-1].activity.duration) < rest.timewindows[0].end) do
               i += 1
             end
             pos_rest += i

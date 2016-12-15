@@ -69,7 +69,7 @@ module Models
       matrix && matrix.distance
     end
 
-    def matrix_blend(matrix_indices, dimensions, options = {})
+    def matrix_blend(matrix, matrix_indices, dimensions, options = {})
       matrix_indices.collect{ |i|
         matrix_indices.collect{ |j|
           if i && j
