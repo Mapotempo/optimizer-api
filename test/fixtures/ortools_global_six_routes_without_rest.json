@@ -940,7 +940,7 @@
             "cost_distance_multiplier": 0.0,
             "cost_time_multiplier": 1.0,
             "cost_waiting_time_multiplier": 1.0,
-            "cost_late_multiplier": 3.0,
+            "cost_late_multiplier": 0.3,
             "rest_ids": [],
             "capacities": [{
                 "unit_id": "unit1",
@@ -961,7 +961,7 @@
             "cost_distance_multiplier": 0.0,
             "cost_time_multiplier": 1.0,
             "cost_waiting_time_multiplier": 1.0,
-            "cost_late_multiplier": 3.0,
+            "cost_late_multiplier": 0.3,
             "rest_ids": [],
             "capacities": [{
                 "unit_id": "unit1",
@@ -982,7 +982,7 @@
             "cost_distance_multiplier": 0.0,
             "cost_time_multiplier": 1.0,
             "cost_waiting_time_multiplier": 1.0,
-            "cost_late_multiplier": 3.0,
+            "cost_late_multiplier": 0.3,
             "rest_ids": [],
             "capacities": [{
                 "unit_id": "unit1",
@@ -1003,7 +1003,7 @@
             "cost_distance_multiplier": 0.0,
             "cost_time_multiplier": 1.0,
             "cost_waiting_time_multiplier": 1.0,
-            "cost_late_multiplier": 3.0,
+            "cost_late_multiplier": 0.3,
             "rest_ids": [],
             "capacities": [{
                 "unit_id": "unit1",
@@ -1024,7 +1024,7 @@
             "cost_distance_multiplier": 0.0,
             "cost_time_multiplier": 1.0,
             "cost_waiting_time_multiplier": 1.0,
-            "cost_late_multiplier": 3.0,
+            "cost_late_multiplier": 0.3,
             "rest_ids": [],
             "capacities": [{
                 "unit_id": "unit1",
@@ -1045,7 +1045,7 @@
             "cost_distance_multiplier": 0.0,
             "cost_time_multiplier": 1.0,
             "cost_waiting_time_multiplier": 1.0,
-            "cost_late_multiplier": 3.0,
+            "cost_late_multiplier": 0.3,
             "rest_ids": [],
             "capacities": [{
                 "unit_id": "unit1",

@@ -407,7 +407,7 @@
    "cost_distance_multiplier": 0.0,
    "cost_time_multiplier": 1.0,
    "cost_waiting_time_multiplier": 1.0,
-   "cost_late_multiplier": 3.0,
+   "cost_late_multiplier": 0.3,
    "rest_ids": ["r13223"],
    "capacities": [{
     "unit_id": "unit1",
@@ -430,7 +430,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13225",
    "type": "service",
@@ -444,7 +444,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13260",
    "type": "service",
@@ -458,7 +458,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13259",
    "type": "service",
@@ -472,7 +472,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13262",
    "type": "service",
@@ -489,7 +489,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13263",
    "type": "service",
@@ -506,7 +506,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13264",
    "type": "service",
@@ -520,7 +520,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13265",
    "type": "service",
@@ -537,7 +537,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13266",
    "type": "service",
@@ -554,7 +554,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13267",
    "type": "service",
@@ -568,7 +568,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13269",
    "type": "service",
@@ -582,7 +582,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13268",
    "type": "service",
@@ -596,7 +596,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13238",
    "type": "service",
@@ -613,7 +613,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13239",
    "type": "service",
@@ -627,7 +627,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13234",
    "type": "service",
@@ -641,7 +641,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13235",
    "type": "service",
@@ -655,7 +655,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13237",
    "type": "service",
@@ -669,7 +669,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13236",
    "type": "service",
@@ -683,7 +683,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13233",
    "type": "service",
@@ -700,7 +700,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13270",
    "type": "service",
@@ -714,7 +714,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13229",
    "type": "service",
@@ -728,7 +728,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13232",
    "type": "service",
@@ -742,7 +742,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13230",
    "type": "service",
@@ -759,7 +759,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13231",
    "type": "service",
@@ -773,7 +773,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13228",
    "type": "service",
@@ -787,7 +787,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13226",
    "type": "service",
@@ -801,7 +801,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13227",
    "type": "service",
@@ -815,7 +815,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13255",
    "type": "service",
@@ -829,7 +829,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13256",
    "type": "service",
@@ -843,7 +843,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13257",
    "type": "service",
@@ -857,7 +857,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13258",
    "type": "service",
@@ -871,7 +871,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13261",
    "type": "service",
@@ -885,7 +885,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13251",
    "type": "service",
@@ -899,7 +899,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13252",
    "type": "service",
@@ -913,7 +913,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13253",
    "type": "service",
@@ -930,7 +930,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13254",
    "type": "service",
@@ -947,7 +947,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13250",
    "type": "service",
@@ -964,7 +964,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13245",
    "type": "service",
@@ -978,7 +978,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13246",
    "type": "service",
@@ -995,7 +995,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13247",
    "type": "service",
@@ -1009,7 +1009,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13249",
    "type": "service",
@@ -1023,7 +1023,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13248",
    "type": "service",
@@ -1037,7 +1037,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13241",
    "type": "service",
@@ -1054,7 +1054,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13242",
    "type": "service",
@@ -1068,7 +1068,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13243",
    "type": "service",
@@ -1082,7 +1082,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13244",
    "type": "service",
@@ -1096,7 +1096,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13240",
    "type": "service",
@@ -1110,7 +1110,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13271",
    "type": "service",
@@ -1124,7 +1124,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13272",
    "type": "service",
@@ -1138,7 +1138,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13273",
    "type": "service",
@@ -1152,7 +1152,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13274",
    "type": "service",
@@ -1166,7 +1166,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13275",
    "type": "service",
@@ -1180,7 +1180,7 @@
     "unit_id": "unit1",
     "value": 2.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13276",
    "type": "service",
@@ -1194,7 +1194,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13277",
    "type": "service",
@@ -1208,7 +1208,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13278",
    "type": "service",
@@ -1222,7 +1222,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13279",
    "type": "service",
@@ -1236,7 +1236,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13280",
    "type": "service",
@@ -1250,7 +1250,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13281",
    "type": "service",
@@ -1264,7 +1264,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13282",
    "type": "service",
@@ -1278,7 +1278,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13284",
    "type": "service",
@@ -1292,7 +1292,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }, {
    "id": "s13283",
    "type": "service",
@@ -1306,7 +1306,7 @@
     "unit_id": "unit1",
     "value": 1.0
    }],
-   "late_multiplier": 3.0
+   "late_multiplier": 0.3
   }],
   "configuration": {
    "preprocessing": {

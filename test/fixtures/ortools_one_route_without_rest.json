@@ -244,7 +244,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33808",
@@ -268,7 +268,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33827",
@@ -292,7 +292,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33828",
@@ -316,7 +316,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33829",
@@ -340,7 +340,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33830",
@@ -364,7 +364,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33831",
@@ -388,7 +388,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33832",
@@ -412,7 +412,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33809",
@@ -436,7 +436,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33810",
@@ -460,7 +460,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33811",
@@ -484,7 +484,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33812",
@@ -503,7 +503,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33813",
@@ -527,7 +527,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33814",
@@ -551,7 +551,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33815",
@@ -575,7 +575,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33816",
@@ -599,7 +599,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33817",
@@ -623,7 +623,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33818",
@@ -647,7 +647,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33819",
@@ -666,7 +666,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33820",
@@ -690,7 +690,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33821",
@@ -714,7 +714,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33822",
@@ -733,7 +733,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33823",
@@ -752,7 +752,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33824",
@@ -776,7 +776,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       },
       {
         "id": "s33825",
@@ -800,7 +800,7 @@
             "value": 1
           }
         ],
-        "late_multiplier": 3
+        "late_multiplier": 0.3
       }
     ],
     "configuration": {

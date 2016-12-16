@@ -200,6 +200,7 @@ class RealCasesTest < Minitest::Test
     end
 
     # Bordeaux - 81 services with time window - late for services & vehicles
+    # Test to update/replace
     def test_ortools_global_ten_routes_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
