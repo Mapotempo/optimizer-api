@@ -105,7 +105,6 @@ module Wrappers
           point_id: vehicle.start_point.id
         } : nil] +
         tour.collect{ |i| {
-          point_id: vrp.services[i - 1].activity.point.id,
           service_id: vrp.services[i - 1].id
 #          travel_distance 0,
 #          travel_start_time 0,

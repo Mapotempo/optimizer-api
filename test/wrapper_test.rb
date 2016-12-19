@@ -494,9 +494,10 @@ class WrapperTest < Minitest::Test
     puts traces
     assert_match /> iter /, traces, "Missing /> iter / in:\n " + traces
     assert_equal size + 1, result[:routes][0][:activities].size # always return activities for start/end
-    points = result[:routes][0][:activities].collect{ |a| a[:point_id] }
-    size.times.each{ |i|
-      assert_includes points, "point_#{i}", "Point missing: #{i}"
+    points = result[:routes][0][:activities].collect{ |a| a[:service_id] || a[:point_id] || a[:rest_id] }
+    services_size = problem[:services].size
+    services_size.times.each{ |i|
+      assert_includes points, "service_#{i+1}", "Element missing: #{i+1}"
     }
   end
 

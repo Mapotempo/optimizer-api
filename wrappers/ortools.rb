@@ -138,7 +138,6 @@ module Wrappers
             route.collect{ |i|
               if i < matrix_indices.size + 2
                 {
-                  point_id: vrp.services[i].activity.point.id,
                   service_id: vrp.services[i].id
 #              travel_distance 0,
 #              travel_start_time 0,

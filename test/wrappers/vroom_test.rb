@@ -129,7 +129,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
-    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.sort
+    assert_equal problem[:services].collect{ |s| s[:id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:service_id] }.sort
   end
 
   def test_no_end_problem
@@ -194,7 +194,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
-    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-1].collect{ |a| a[:point_id] }.sort
+    assert_equal problem[:services].collect{ |s| s[:id] }.sort, result[:routes][0][:activities][1..-1].collect{ |a| a[:service_id] }.sort
   end
 
   def test_start_different_end_problem
@@ -255,7 +255,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
-    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.sort
+    assert_equal problem[:services].collect{ |s| s[:id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:service_id] }.sort
   end
 
   def test_vehicle_time_window
@@ -382,7 +382,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2 + problem[:vehicles][0][:rest_ids].size, result[:routes][0][:activities].size
-    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.compact.sort
+    assert_equal problem[:services].collect{ |s| s[:id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:service_id] }.compact.sort
     assert_equal 3, result[:routes][0][:activities].index{ |a| a[:rest_id] }
   end
 
@@ -463,7 +463,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2 + problem[:vehicles][0][:rest_ids].size, result[:routes][0][:activities].size
-    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.compact.sort
+    assert_equal problem[:services].collect{ |s| s[:id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:service_id] }.compact.sort
     assert_equal 5, result[:routes][0][:activities].index{ |a| a[:rest_id] }
   end
 
@@ -544,7 +544,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert result
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 2 + problem[:vehicles][0][:rest_ids].size, result[:routes][0][:activities].size
-    assert_equal problem[:services].collect{ |s| s[:activity][:point_id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:point_id] }.compact.sort
+    assert_equal problem[:services].collect{ |s| s[:id] }.sort, result[:routes][0][:activities][1..-2].collect{ |a| a[:service_id] }.compact.sort
     assert_equal 1, result[:routes][0][:activities].index{ |a| a[:rest_id] }
   end
 end
