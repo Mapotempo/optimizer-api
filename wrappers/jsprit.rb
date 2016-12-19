@@ -361,25 +361,43 @@ module Wrappers
         {
           cost: Float(solution.at_xpath('cost').content),
           iterations: iterations,
-          routes: solution.xpath('routes/route').collect{ |route|
-            {
-              vehicle_id: route.at_xpath('vehicleId').content,
-              start_time: Float(route.at_xpath('start').content),
-              end_time: Float(route.at_xpath('end').content),
-              activities: (fleet[route.at_xpath('vehicleId').content].start_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].start_point.id }] : []) +
-              route.xpath('act').collect{ |act|
-                {
-#                  activity: act.attr('type').to_sym,
-                  pickup_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'pickupShipment' && a.content,
-                  delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
-                  service_id: (a = act.at_xpath('serviceId')) && a && a.content,
-                  rest_id: (a = act.at_xpath('restId')) && a && a.content,
-                  arrival_time: (a = act.at_xpath('arrTime')) && a && Float(a.content),
-                  departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
-                  setup_time: (a = act.at_xpath('setTime')) && a && Float(a.content),
-                }.delete_if { |k, v| !v }
-              } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].end_point.id }] : [])
-            }
+          routes: fleet.collect { |id, vehicle|
+            route_index = solution.xpath('routes/route').find_index{ |route| route.at_xpath('vehicleId').content == id }
+            if route_index
+              route = solution.xpath('routes/route')[route_index]
+              {
+                vehicle_id: route.at_xpath('vehicleId').content,
+                start_time: Float(route.at_xpath('start').content),
+                end_time: Float(route.at_xpath('end').content),
+                activities: (fleet[route.at_xpath('vehicleId').content].start_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].start_point.id }] : []) +
+                route.xpath('act').collect{ |act|
+                  {
+  #                  activity: act.attr('type').to_sym,
+                    pickup_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'pickupShipment' && a.content,
+                    delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
+                    service_id: (a = act.at_xpath('serviceId')) && a && a.content,
+                    rest_id: (a = act.at_xpath('restId')) && a && a.content,
+                    arrival_time: (a = act.at_xpath('arrTime')) && a && Float(a.content),
+                    departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
+                    setup_time: (a = act.at_xpath('setTime')) && a && Float(a.content),
+                  }.delete_if { |k, v| !v }
+                } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].end_point.id }] : [])
+              }
+            else
+              {
+                vehicle_id: vehicle.id,
+                activities:
+                  ([vehicle.start_point && {
+                    point_id: vehicle.start_point.id
+                  }] +
+                  (vehicle.rests.empty? ? [nil] : [{
+                    rest_id: vehicle.rests[0].id
+                  }]) +
+                  [vehicle.end_point && {
+                    point_id: vehicle.end_point.id
+                  }]).compact
+              }
+            end
           },
           unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
             (services.find{ |s| s.id == job.attr('id')} ? :service_id : shipments.find{ |s| s.id == job.attr('id')} ? :shipment_id : nil) => job.attr('id')

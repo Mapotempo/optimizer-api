@@ -64,7 +64,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 1, result[:routes].size
+    assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
   end
 
@@ -190,7 +190,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 1, result[:routes].size
+    assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
   end
 
@@ -242,7 +242,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 1, result[:routes].size
+    assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
     assert_equal problem[:services].size - 1 + 1, result[:routes][0][:activities].size
     assert_equal 1, result[:unassigned].size
   end
@@ -301,7 +301,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 0, result[:routes].size
+    assert_equal 0, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
     assert_equal 2, result[:unassigned].size
   end
 
@@ -382,7 +382,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 1, result[:routes].size
+    assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
   end
 
@@ -445,7 +445,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 1, result[:routes].size
+    assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
     assert_equal problem[:services].size - 2 + 1, result[:routes][0][:activities].size
     assert_equal 2, result[:unassigned].size
   end
@@ -532,7 +532,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 1, result[:routes].size
+    assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:pickup_shipment_id] }.size > 0 || r[:activities].select{ |a| a[:delivery_shipment_id] }.size > 0 }.size
     assert_equal problem[:shipments].size * 2 + 2, result[:routes][0][:activities].size # activities for start/end and return to start for skills
   end
 
@@ -615,7 +615,7 @@ class Wrappers::JspritTest < Minitest::Test
     assert jsprit.inapplicable_solve?(vrp).empty?
     result = jsprit.solve(vrp, 'test')
     assert result
-    assert_equal 2, result[:routes].size
+    assert_equal 2, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
     rv0 = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0' }
     assert rv0[:activities].collect{ |a| a[:service_id] }.include?('service_1')
     assert rv0[:activities].collect{ |a| a[:service_id] }.include?('service_2')
