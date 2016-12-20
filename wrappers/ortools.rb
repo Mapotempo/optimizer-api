@@ -58,7 +58,7 @@ module Wrappers
           ) },
           quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
-            (q && (q.value*1000+0.5).to_i) || 0
+            q && q.value ? (q.value*1000+0.5).to_i : 0
           },
           duration: service.activity.duration,
           matrix_index: points[service.activity.point_id].matrix_index,
@@ -84,7 +84,7 @@ module Wrappers
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
-              limit: (q && (q.limit*1000+0.5).to_i) || -2147483648,
+              limit: q && q.limit ? (q.limit*1000+0.5).to_i : -2147483648,
               overload_multiplier: (q && q.overload_multiplier) || 0,
             )
           },
