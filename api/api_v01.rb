@@ -57,16 +57,16 @@ The currently integreted solvers are:
 *   **[Jsprit](https://github.com/graphhopper/jsprit)** handle multiple vehicles, timewindows, quantities, skills and setup duration.
 
 Before calling those libraries, a VRP model must be defined, which is decomposed in a few main principles.
-*   **Vehicles**: Describe the features of the existing or supposed vehicles.
+*   **Vehicles**: Describe the features of the existing or supposed vehicles. It should be taken in every sense, it could represent a work day of a particular driver/vehicle, or a planning over long period of time. It represent the entity which must travel between points.
 *   **Services and Shipments**: Describe the activities to be performed into the VRP, its special features.
 *   **Points**: Represent a point in space, it could call a matrix index or be self defined as latitude and longitude coordinates.
 
 Some Structures are related to the above ones, in order to describe the API behavior.
-*   **Matrices**: Describe the topology of the problem, could of time or distance, depending of the constraints, could be build using the router wrapper.
-*   **Units**: Describe the dimension used by the good carried.
-*   **Capacities**: Define the limit of place allow for a unit into the vehicle.
-*   **Quantities**: Give the place taken by a package into the vehicle capacity.
-*   **Activities**: Describe where take place an activity, when it could be performed and how long it last.
+*   **Matrices**: Describe the topology of the problem, it represent travel time or distance, if not defined those are calculated using the router wrapper with the data hold by the points.
+*   **Units**: Describe the dimension used for the goods. ie : kgs, litres, pallets...etc
+*   **Capacities**: Define the limit allowed for a defined unit into the vehicle.
+*   **Quantities**: Inform on the size taken by a package into the vehicle capacities.
+*   **Activities**: Describe where an activity take place , when it could be performed and how long it last.
 *   **Rests**: Inform about the in route break of the vehicles.
 *   **TimeWindows**: Define a time interval where activities could be performed.
 

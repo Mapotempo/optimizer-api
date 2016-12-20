@@ -18,6 +18,7 @@
 require 'grape'
 require 'grape-swagger'
 
+
 require './api/v01/api_base'
 require './api/v01/entities/status'
 require './api/v01/entities/vrp_result'
@@ -31,20 +32,16 @@ module Api
       version '0.1', using: :path
 
       def self.vrp_request_timewindow(this)
-        this.optional(:start, type: Integer)
-        this.optional(:end, type: Integer)
+        this.optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds')
+        this.optional(:end, type: Integer, desc: 'End of the current timewindow in seconds')
         this.at_least_one_of :start, :end
       end
 
       def self.vrp_request_activity(this)
-        this.optional(:duration, type: Float)
-        this.optional(:setup_duration, type: Float)
-        this.requires(:point_id, type: String)
-        this.optional(:quantities, type: Array) do
-          requires(:unit_id, type: String)
-          requires(:values, type: Array[Float])
-        end
-        this.optional(:timewindows, type: Array) do
+        this.optional(:duration, type: Float, desc: 'time in seconds while the current activity stand until it\'s over')
+        this.optional(:setup_duration, type: Float, desc: 'time at destination before the proper activity is effectively performed')
+        this.requires(:point_id, type: String, desc: 'reference to the associated point')
+        this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may be performed') do
           Vrp.vrp_request_timewindow(self)
         end
       end
@@ -61,7 +58,7 @@ module Api
           }
           params {
             requires(:vrp, type: Hash, documentation: {param_type: 'body'}) do
-              optional(:matrices, type: Array, desc: 'Define all the "distances" between each point of problem') do
+              optional(:matrices, type: Array, desc: 'Define all the distances between each point of problem') do
                 requires(:id, type: String)
                 optional(:matrix_time, type: Array[Array[Float]], desc: 'Matrix of time, travel duration between each pair of point in the problem')
                 optional(:matrix_distance, type: Array[Array[Float]], desc: 'Matrix of distance, travel distance between each pair of point in the problem')
@@ -69,8 +66,8 @@ module Api
 
               optional(:points, type: Array, desc: 'Particular place in the map') do
                 requires(:id, type: String)
-                optional(:matrix_index, type: Integer, desc: 'Index within the matrices')
-                optional(:location, type: Hash, desc: 'Location of the point if the matrices are not already defined') do
+                optional(:matrix_index, type: Integer, desc: 'Index within the matrices, required if the matrices are already given')
+                optional(:location, type: Hash, desc: 'Location of the point if the matrices are not given') do
                   requires(:lat, type: Float, desc: 'Latitude coordinate')
                   requires(:lon, type: Float, desc: 'Longitude coordinate')
                 end
@@ -89,7 +86,7 @@ module Api
                 optional(:exclusion_cost, type: Float, desc: '(not used)')
               end
 
-              requires(:vehicles, type: Array, desc: '') do
+              requires(:vehicles, type: Array, desc: 'Usually represent a work day of a particular driver/vehicle') do
                 requires(:id, type: String)
                 optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
                 optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
@@ -102,7 +99,7 @@ module Api
                 optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
                 optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
                 optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
-                optional(:speed_multiplier, type: Float, desc: 'Custom the vehicle speed')
+                optional(:speed_multiplier, type: Float, desc: 'multiply the vehicle speed, default : 1.0')
                 exactly_one_of :matrix_id, :router_mode
 
                 optional(:duration, type: Float, desc: 'Maximum tour duration')
@@ -113,10 +110,10 @@ module Api
                 optional(:capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry') do
                   requires(:unit_id, type: String, desc: 'Unit of the capacity')
                   requires(:limit, type: Float, desc: 'Maximum capacity which could be take away')
-                  optional(:initial, type: Float, desc: 'Initial amout in the vehicle')
+                  optional(:initial, type: Float, desc: 'Initial quantity value in the vehicle')
                   optional(:overload_multiplier, type: Float, desc: 'Allow to exceed the limit against this cost (ORtools only)')
                 end
-                optional(:timewindow, type: Hash, desc: 'Time window whithin the vehicle could work') do
+                optional(:timewindow, type: Hash, desc: 'Time window whithin the vehicle may be on route') do
                   Vrp.vrp_request_timewindow(self)
                 end
 
