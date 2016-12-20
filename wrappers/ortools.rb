@@ -115,13 +115,14 @@ module Wrappers
         matrices: matrices,
       )
 
-      cost, result = run_ortools(problem, vrp, &block)
+      cost, iterations, result = run_ortools(problem, vrp, &block)
       return if !result
 
       result = result.collect{ |r| r[1..-2] }
 
       {
         cost: cost,
+        iterations: iterations,
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,
@@ -213,11 +214,14 @@ module Wrappers
         if result == 'No solution found...'
           nil
         else
-          cost = if cost_line.include?('Cost: ')
-            cost_line.split(' ')[-1].to_i
+          cost = if cost_line.include?('Cost : ')
+            cost_line.split(' ')[-4].to_i
+          end
+          iterations = if cost_line.include?('Final Iteration : ')
+            cost_line.split(' ')[3].to_i
           end
           result = result.split(';').collect{ |r| r.split(',').collect{ |i| Integer(i) } }.select{ |r| r.size > 0 } if result
-          [cost, result]
+          [cost, iterations, result]
         end
       else
         out
