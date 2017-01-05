@@ -44,7 +44,10 @@ module Api
       ],
       info: {
         title: ::OptimizerWrapper::config[:product_title],
-        contact: ::OptimizerWrapper::config[:product_contact],
+        contact_email: ::OptimizerWrapper::config[:product_contact_email],
+        contact_url: ::OptimizerWrapper::config[:product_contact_url],
+        license: 'GNU Affero General Public License 3',
+        license_url: 'https://raw.githubusercontent.com/Mapotempo/optimizer-api/master/LICENSE',
         description: '
 ## Overview
 

@@ -34,7 +34,8 @@ module OptimizerWrapper
 
   @@c = {
     product_title: 'Optimizers API',
-    product_contact: 'frederic@mapotempo.com',
+    product_contact_email: 'tech@mapotempo.com',
+    product_contact_url: 'https://github.com/Mapotempo/optimizer-api',
     services: {
       demo: DEMO,
       vroom: VROOM,
