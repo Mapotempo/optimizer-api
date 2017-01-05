@@ -42,7 +42,6 @@ module Api
         'application/json; charset=UTF-8',
         'application/xml',
       ],
-      markdown: GrapeSwagger::Markdown::KramdownAdapter.new,
       info: {
         title: ::OptimizerWrapper::config[:product_title],
         contact: ::OptimizerWrapper::config[:product_contact],
