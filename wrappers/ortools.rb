@@ -130,6 +130,7 @@ module Wrappers
 #        end_time: 0,
         routes: result.each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
+          previous = nil
           {
           vehicle_id: vehicle.id,
           activities:
@@ -138,8 +139,11 @@ module Wrappers
             }] +
             route.collect{ |i|
               if i < matrix_indices.size + 2
-                {
-                  service_id: vrp.services[i].id
+                point = services[i].matrix_index
+                current_activity = {
+                  service_id: vrp.services[i].id,
+                  travel_time: (previous && point && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous][point] : 0),
+                  travel_distance: (previous && point && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous][point] : 0)
 #              travel_distance 0,
 #              travel_start_time 0,
 #              waiting_duration 0,
@@ -148,6 +152,8 @@ module Wrappers
 #              pickup_shipments_id [:id0:],
 #              delivery_shipments_id [:id0:]
                 }
+                previous = point
+                current_activity
               else
                 {
                   rest_id: vrp.rests[i - matrix_indices.size - 2].id

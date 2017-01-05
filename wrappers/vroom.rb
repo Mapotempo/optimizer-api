@@ -100,12 +100,16 @@ module Wrappers
 
       cost = (result['solution']['cost'] / 100) + vehicle.cost_fixed
       block.call(self, 1, 1, cost, nil) if block
-
+      previous = vehicle_have_start ? vehicle.start_point.matrix_index : nil
       activities = ([vehicle_have_start ? {
           point_id: vehicle.start_point.id
         } : nil] +
-        tour.collect{ |i| {
-          service_id: vrp.services[i - 1].id
+        tour.collect{ |i|
+          point = vrp.services[i - 1].activity.point[:matrix_index]
+          current_activity = {
+            service_id: vrp.services[i - 1].id,
+            travel_time: (previous && point && vrp.matrices[0][:time] ? vrp.matrices[0][:time][previous][point] : 0),
+            travel_distance: (previous && point && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][previous][point] : 0)
 #          travel_distance 0,
 #          travel_start_time 0,
 #          waiting_duration 0,
@@ -113,7 +117,10 @@ module Wrappers
 #          duration 0,
 #          pickup_shipments_id [:id0:],
 #          delivery_shipments_id [:id0:]
-        }} +
+          }
+          previous = point
+          current_activity
+        } +
         [vehicle_have_end ? {
           point_id: vehicle.end_point.id
         } : nil]).compact

@@ -336,12 +336,12 @@ module Wrappers
           r && (cost = Float(r[1]))
           r && (fresh_output = true)
         end
-        block.call(self, iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, fleet, services, shipments)) if block
+        block.call(self, iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, fleet, services, shipments, matrix_time, matrix_distance)) if block
         fresh_output = nil
       }
 
       if @thread.value == 0
-        parse_output(output.path, iterations, fleet, services, shipments)
+        parse_output(output.path, iterations, fleet, services, shipments, matrix_time, matrix_distance)
       else
         out
       end
@@ -353,7 +353,7 @@ module Wrappers
       output && output.unlink
     end
 
-    def parse_output(path, iterations, fleet, services, shipments)
+    def parse_output(path, iterations, fleet, services, shipments, matrix_time, matrix_distance)
       doc = Nokogiri::XML(File.open(path))
       doc.remove_namespaces!
       solution = doc.xpath('/problem/solutions/solution').last
@@ -363,15 +363,27 @@ module Wrappers
           iterations: iterations,
           routes: fleet.collect { |id, vehicle|
             route_index = solution.xpath('routes/route').find_index{ |route| route.at_xpath('vehicleId').content == id }
+
             if route_index
               route = solution.xpath('routes/route')[route_index]
+              previous = fleet[route.at_xpath('vehicleId').content].start_point ? fleet[route.at_xpath('vehicleId').content].start_point.matrix_index : nil
               {
                 vehicle_id: route.at_xpath('vehicleId').content,
                 start_time: Float(route.at_xpath('start').content),
                 end_time: Float(route.at_xpath('end').content),
                 activities: (fleet[route.at_xpath('vehicleId').content].start_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].start_point.id }] : []) +
                 route.xpath('act').collect{ |act|
-                  {
+                  point = case act['type']
+                  when ('delivery' || 'service' || 'pickup')
+                    services.find{ |service| service[:id] == act.at_xpath('serviceId') }.activity.matrix_index
+                  when 'pickupShipment'
+                    shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup[:matrix_index]
+                  when 'deliverShipment'
+                    shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.delivery[:matrix_index]
+                  else
+                    previous
+                  end
+                  current_activity = {
   #                  activity: act.attr('type').to_sym,
                     pickup_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'pickupShipment' && a.content,
                     delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
@@ -380,7 +392,11 @@ module Wrappers
                     arrival_time: (a = act.at_xpath('arrTime')) && a && Float(a.content),
                     departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
                     setup_time: (a = act.at_xpath('setTime')) && a && Float(a.content),
+                    travel_time: (previous && point && matrix_time ? matrix_time[previous][point] : 0),
+                    travel_distance: (previous && point && matrix_distance ? matrix_distance[previous][point] : 0)
                   }.delete_if { |k, v| !v }
+                  previous = point
+                  current_activity
                 } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].end_point.id }] : [])
               }
             else
