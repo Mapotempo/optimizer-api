@@ -116,6 +116,7 @@ module Wrappers
                         end
                       }
                       xml.duration rest.duration
+                      xml.id rest.id
                     }
                   end
                 end
