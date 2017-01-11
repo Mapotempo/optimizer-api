@@ -376,7 +376,7 @@ module Wrappers
                 route.xpath('act').collect{ |act|
                   point = case act['type']
                   when ('delivery' || 'service' || 'pickup')
-                    services.find{ |service| service[:id] == act.at_xpath('serviceId') }.activity.matrix_index
+                    services.find{ |service| service[:id] == act.at_xpath('serviceId').content }.activity[:matrix_index]
                   when 'pickupShipment'
                     shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup[:matrix_index]
                   when 'deliverShipment'
