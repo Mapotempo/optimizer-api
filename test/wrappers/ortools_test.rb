@@ -767,4 +767,116 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size , result[:routes][0][:activities].size
   end
+
+  def test_nearby_specific_ordder
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 6, 10, 127, 44, 36, 42, 219, 219],
+          [64, 0, 4, 122, 38, 31, 36, 214, 214],
+          [60, 44, 0, 117, 34, 27, 32, 209, 209],
+          [68, 53, 8, 0, 42, 35, 40, 218, 218],
+          [53, 38, 42, 111, 0, 20, 25, 203, 203],
+          [61, 18, 22, 118, 7, 0, 5, 210, 210],
+          [77, 12, 17, 134, 50, 43, 0, 226, 226],
+          [180, 184, 188, 244, 173, 166, 171, 0, 0],
+          [180, 184, 188, 244, 173, 166, 171, 0, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }, {
+        id: 'point_4',
+        matrix_index: 4
+      }, {
+        id: 'point_5',
+        matrix_index: 5
+      }, {
+        id: 'point_6',
+        matrix_index: 6
+      }, {
+        id: 'point_7',
+        matrix_index: 7
+      }, {
+        id: 'point_8',
+        matrix_index: 8
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_7',
+        end_point_id: 'point_8',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_0',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_0',
+        }
+      }, {
+        id: 'service_1',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_1',
+        }
+      }, {
+        id: 'service_2',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_2',
+        }
+      }, {
+        id: 'service_3',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_3',
+        }
+      }, {
+        id: 'service_4',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_4',
+        }
+      }, {
+        id: 'service_5',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_5',
+        }
+      }, {
+        id: 'service_6',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_6',
+        }
+      }],
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
+        },
+        resolution: {
+          duration: 100
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 0, result[:unassigned].size
+    assert result[:routes][0][:activities][1..-2].collect.with_index{ |activity, index| activity[:service_id] == "service_#{index}" }.all?
+    assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
+  end
 end
