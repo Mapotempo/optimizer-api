@@ -879,4 +879,97 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result[:routes][0][:activities][1..-2].collect.with_index{ |activity, index| activity[:service_id] == "service_#{index}" }.all?
     assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
   end
+
+  def test_two_vehicles_one_matrix_each
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 3, 3, 3000],
+          [3, 0, 3, 3000],
+          [3, 3, 0, 3000],
+          [3000, 3000, 3000, 0]
+        ]
+      }, {
+        id: 'matrix_1',
+        time: [
+          [0, 1, 1, 1000],
+          [1, 0, 1, 1000],
+          [1, 1, 0, 1000],
+          [1000, 1000, 1000, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_1'
+      }],
+      services: [{
+        id: 'service_0',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_1',
+          timewindows: [{
+            start: 2980,
+            end: 3020
+          }]
+        }
+      }, {
+        id: 'service_1',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_2',
+          timewindows: [{
+            start: 2980,
+            end: 3020
+          }]
+        }
+      }, {
+        id: 'service_2',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_3',
+          timewindows: [{
+            start: 2980,
+            end: 3020
+          }]
+        }
+      }],
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
+        },
+        resolution: {
+          duration: 100
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 0, result[:unassigned].size
+    assert_equal 4, result[:routes][0][:activities].size
+    assert_equal 3, result[:routes][1][:activities].size
+  end
 end
