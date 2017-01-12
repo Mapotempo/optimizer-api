@@ -200,7 +200,6 @@ class RealCasesTest < Minitest::Test
     end
 
     # Bordeaux - 81 services with time window - late for services & vehicles
-    # Test to update/replace
     def test_ortools_global_ten_routes_without_rest
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -211,10 +210,10 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
-      assert_equal 3, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 4, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 13600, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 15100, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 20000, "Too long elapsed time: #{result[:elapsed]}"
