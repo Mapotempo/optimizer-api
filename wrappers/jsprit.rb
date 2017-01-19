@@ -389,7 +389,7 @@ module Wrappers
                     pickup_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'pickupShipment' && a.content,
                     delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
                     service_id: (a = act.at_xpath('serviceId')) && a && a.content,
-                    rest_id: (a = act.at_xpath('restId')) && a && a.content,
+                    rest_id: (a = act.at_xpath('breakId')) && a && a.content,
                     arrival_time: (a = act.at_xpath('arrTime')) && a && Float(a.content),
                     departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
                     setup_time: (a = act.at_xpath('setTime')) && a && Float(a.content),
