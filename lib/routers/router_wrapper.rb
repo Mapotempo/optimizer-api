@@ -76,7 +76,7 @@ module Routers
                 data = datas['features'][i]
                 if data
                   key_segment = ['c', url, mode, dimension, Digest::MD5.hexdigest(Marshal.dump([s, options.to_a.sort_by{ |i| i[0].to_s }]))]
-                  @cache_request.write(key_segment, String.new(data.to_json)) # String.new workaround waiting for RestClient 2.0
+                  @cache_request.write(key_segment, data.to_json)
                   results[s] = data
                 end
               }
@@ -136,7 +136,7 @@ module Routers
           end
         }
 
-        @cache_request.write(key, request && String.new(request)) # String.new workaround waiting for RestClient 2.0
+        @cache_request.write(key, request && request.to_s)
       end
 
       if request == ''
@@ -183,7 +183,7 @@ module Routers
           end
         }
 
-        @cache_request.write(key, request && String.new(request)) # String.new workaround waiting for RestClient 2.0
+        @cache_request.write(key, request && request.to_s)
       end
 
       if request == ''
