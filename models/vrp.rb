@@ -21,6 +21,7 @@ require './models/base'
 module Models
   class Vrp < Base
     field :preprocessing_cluster_threshold, default: nil
+    field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
     field :resolution_duration, default: nil
     field :resolution_iterations, default: nil
@@ -67,6 +68,7 @@ module Models
     end
 
     def preprocessing=(preprocessing)
+      self.preprocessing_force_cluster = preprocessing[:force_cluster]
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
     end

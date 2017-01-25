@@ -81,7 +81,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_no_zip_cluster
@@ -132,7 +132,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_no_zip_cluster_tws
@@ -181,8 +181,8 @@ class WrapperTest < Minitest::Test
           activity: {
             point_id: "point_#{i}",
             timewindows: [{
-              start: 1,
-              end: 2
+              start: i*10,
+              end: i*10+1
             }],
             duration: 1
           }
@@ -197,10 +197,251 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
   end
 
-  def test_no_zip_cluster_with_multiple_vehicles
+  def test_force_zip_cluster_with_quantities
+    size = 5
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ],
+        distance: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ]
+      }],
+      "units": [{
+          "id": "unit0",
+          "label": "kg"
+      }, {
+          "id": "unit1",
+          "label": "kg"
+      }, {
+          "id": "unit2",
+          "label": "kg"
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        capacities: [{
+          unit_id: "unit0",
+          limit: 5
+        },{
+          unit_id: "unit1",
+          limit: 5
+        },{
+          unit_id: "unit2",
+          limit: 5
+        }]
+      }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          quantities: [{
+            unit_id: "unit#{i%3}",
+            value: 1
+          }],
+          activity: {
+            point_id: "point_#{i}"
+          }
+        }
+      },
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, true).size
+  end
+
+  def test_force_zip_cluster_with_timewindows
+    size = 5
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ],
+        distance: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+            timewindows: [{
+              start: i*10,
+              end: i*10 + 10
+            }]
+          }
+        }
+      },
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, true).size
+  end
+
+  def test_zip_cluster_with_timewindows
+    size = 5
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ],
+        distance: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+            timewindows: [{
+              start: i*10,
+              end: i*10 + 10
+            }]
+          }
+        }
+      },
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size
+  end
+
+  def test_zip_cluster_with_multiple_vehicles_and_duration
+    size = 5
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ],
+        distance: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+            duration: 1
+          }
+        }
+      },
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size
+  end
+
+  def test_zip_cluster_with_multiple_vehicles_without_duration
     size = 5
     problem = {
       matrices: [{
@@ -252,7 +493,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_nil OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5)
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size
   end
 
   def test_zip_cluster_with_real_matrix
@@ -304,7 +545,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 3, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_no_zip_cluster_with_real_matrix
@@ -350,7 +591,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5).size # without start/end/rest
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_with_cluster

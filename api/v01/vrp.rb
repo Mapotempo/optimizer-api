@@ -157,6 +157,7 @@ module Api
               optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation') do
                 optional(:preprocessing, type: Hash, desc: 'Parameters independant from the search') do
                   optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
+                  optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
                   optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
                 end
                 optional(:resolution, type: Hash, desc: 'Parameters used to stop the search') do

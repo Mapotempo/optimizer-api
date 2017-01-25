@@ -125,7 +125,7 @@ module OptimizerWrapper
         File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
         block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
-        cluster(vrp, vrp.preprocessing_cluster_threshold) do |vrp|
+        cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |vrp|
           block.call(nil, 0, nil, 'run optimization') if block
           time_start = Time.now
           result = OptimizerWrapper.config[:services][service].solve(vrp, job) { |wrapper, avancement, total, cost, solution|
@@ -262,13 +262,13 @@ module OptimizerWrapper
     result
   end
 
-  def self.cluster(vrp, cluster_threshold)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold.to_f > 0
+  def self.cluster(vrp, cluster_threshold, force_cluster)
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster)
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
-      zip_key = zip_cluster(vrp, cluster_threshold)
+      zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && cluster_threshold.to_f > 0
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster)
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else
@@ -276,23 +276,33 @@ module OptimizerWrapper
     end
   end
 
-  def self.zip_cluster(vrp, cluster_threshold)
-    return nil unless vrp.services.length > 0 && vrp.vehicles.length == 1
+  def self.zip_cluster(vrp, cluster_threshold, force_cluster)
+    return nil unless vrp.services.length > 0
 
     data_set = DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
     c = CompleteLinkageMaxDistance.new
     matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym]
     cost_late_multiplier = vrp.vehicles.all?{ |v| v.cost_late_multiplier && v.cost_late_multiplier != 0 }
     no_capacities = vrp.vehicles.all?{ |v| v.capacities.size == 0 }
-    c.distance_function = lambda do |a, b|
-      aa = vrp.services[a[0]]
-      bb = vrp.services[b[0]]
-      (aa.activity.timewindows.collect{ |t| [t[:start], t[:end]]} == bb.activity.timewindows.collect{ |t| [t[:start], t[:end]]} && 
-        ((cost_late_multiplier && aa.late_multiplier.to_f > 0 && bb.late_multiplier.to_f > 0) || (aa.activity.duration == 0 && bb.activity.duration == 0)) &&
-        (no_capacities || (aa.quantities.size == 0 && bb.quantities.size == 0)) &&
-        aa.skills == bb.skills) ?
-        matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
-        Float::INFINITY
+    if force_cluster
+      c.distance_function = lambda do |a, b|
+        aa = vrp.services[a[0]]
+        bb = vrp.services[b[0]]
+        aa.activity.timewindows.empty? && bb.activity.timewindows.empty? || aa.activity.timewindows.any?{ |twa| bb.activity.timewindows.any?{ |twb| twa[:start] <= twb[:end] && twb[:start] <= twa[:end] } } ?
+          matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
+          Float::INFINITY
+      end
+    else
+      c.distance_function = lambda do |a, b|
+        aa = vrp.services[a[0]]
+        bb = vrp.services[b[0]]
+        (aa.activity.timewindows.collect{ |t| [t[:start], t[:end]]} == bb.activity.timewindows.collect{ |t| [t[:start], t[:end]]} &&
+          ((cost_late_multiplier && aa.late_multiplier.to_f > 0 && bb.late_multiplier.to_f > 0) || (aa.activity.duration == 0 && bb.activity.duration == 0)) &&
+          (no_capacities || (aa.quantities.size == 0 && bb.quantities.size == 0)) &&
+          aa.skills == bb.skills) ?
+          matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
+          Float::INFINITY
+      end
     end
     clusterer = c.build(data_set, cluster_threshold)
 
@@ -303,6 +313,50 @@ module OptimizerWrapper
     clusterer.clusters.each_with_index do |cluster, i|
       new_services[i] = vrp.services[cluster.data_items[0][0]]
       new_services[i].activity.duration = cluster.data_items.map{ |di| vrp.services[di[0]].activity.duration }.reduce(&:+)
+      if force_cluster
+        new_quantities = []
+        type = []
+        services_quantities = cluster.data_items.map{ |di|
+          di.collect{ |index|
+            type << vrp.services[index].type
+            vrp.services[index].quantities
+          }.flatten
+        }
+        services_quantities.each_with_index{ |service_quantity, index|
+          if new_quantities.empty?
+            new_quantities = service_quantity
+          else
+            service_quantity.each{ |sub_quantity|
+              new_quantities.one?{ |new_quantity| new_quantity[:unit_id] == sub_quantity[:unit_id] } ? new_quantities.find{ |new_quantity| new_quantity[:unit_id] == sub_quantity[:unit_id] }[:value] += type[index] == "delivery" ? -sub_quantity[:value] : sub_quantity[:value] : new_quantities << sub_quantity
+            }
+          end
+        }
+        new_services[i].quantities = new_quantities
+
+        new_tws = []
+        service_tws = cluster.data_items.map{ |di|
+          di.collect{ |index|
+            vrp.services[index].activity.timewindows
+          }.flatten
+        }
+        service_tws.each{ |service_tw|
+          if new_tws.empty?
+            new_tws = service_tw
+          else
+            new_tws.each{ |new_tw|
+              service_tw.each{ |sub_tw|
+                if new_tw[:start] <= sub_tw[:end] && sub_tw[:start] <= new_tw[:end]
+                  new_tw[:start] = [new_tw[:start], sub_tw[:start]].max
+                  new_tw[:end] = [new_tw[:end], sub_tw[:end]].min
+                else
+                  new_tw = nil
+                end
+              }
+            }
+          end
+        }
+        new_services[i].activity.timewindows = new_tws.compact
+      end
     end
 
     # Fill new vrp
@@ -313,93 +367,103 @@ module OptimizerWrapper
 
   def self.unzip_cluster(result, zip_key, original_vrp)
     return result unless zip_key
-
     activities = []
-    activities << result[:unassigned]
-    activities << result[:routes][0][:activities] if result[:routes].size > 0
-    activities = activities.collect{ |activities|
-      if activities
-        new_activities = []
-        activities.each_with_index{ |activity, idx_a|
-          idx_s = original_vrp.services.index{ |s| s.id == activity[:service_id] }
-          idx_z = zip_key.index{ |z| z.data_items.flatten.include? idx_s }
-          if idx_z && idx_z < zip_key.length && zip_key[idx_z].data_items.length > 1
-            sub = zip_key[idx_z].data_items.collect{ |i| i[0] }
-            matrix = original_vrp.matrices[0][original_vrp.vehicles[0].router_dimension.to_sym]
 
-            # Cluster start: Last non rest-without-location stop before current cluster
-            start = new_activities.reverse.find{ |r| r[:service_id] }
-            start_index = start ? original_vrp.services.index{ |s| s.id == start[:service_id] } : 0
+    if result[:unassigned] && !result[:unassigned].empty?
+      result[:routes] << {
+        vehicle_id: "unassigned",
+        activities: result[:unassigned]
+      }
+    end
 
-            j = 0
-            while(activities[idx_a + j] && !activities[idx_a + j][:service_id]) do # Next non rest-without-location stop after current cluster
-              j += 1
-            end
+    routes = result[:routes].collect{ |route|
+      new_route = []
+      vehicle = original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } ? original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } : original_vrp.vehicles[0] 
+      new_activities = []
+      activities = route[:activities].collect.with_index{ |activity, idx_a|
+        idx_s = original_vrp.services.index{ |s| s.id == activity[:service_id] }
+        idx_z = zip_key.index{ |z| z.data_items.flatten.include? idx_s }
+        if idx_z && idx_z < zip_key.length && zip_key[idx_z].data_items.length > 1
+          sub = zip_key[idx_z].data_items.collect{ |i| i[0] }
+          matrix = original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[original_vrp.vehicles[0].router_dimension.to_sym]
 
-            if activities[idx_a + j] && activities[idx_a + j][:service_id]
-              stop_index = original_vrp.services.index{ |s| s.id == activities[idx_a + j][:service_id] }
-            else
-              stop_index = original_vrp.services.length - 1
-            end
+          # Cluster start: Last non rest-without-location stop before current cluster
+          start = new_activities.reverse.find{ |r| r[:service_id] }
+          start_index = start ? original_vrp.services.index{ |s| s.id == start[:service_id] } : 0
 
-            sub_size = sub.length
-            min_order = if sub_size <= 5
-              # Test all permutations inside cluster
-              sub.permutation.collect{ |p|
-                last = start_index
-                sum = p.sum { |s|
-                  a, last = last, s
-                  matrix[original_vrp.services[a].activity.point.matrix_index][original_vrp.services[s].activity.point.matrix_index]
-                } + matrix[original_vrp.services[p[-1]].activity.point.matrix_index][original_vrp.services[stop_index].activity.point.matrix_index]
-                [sum, p]
-              }.min_by{ |a| a[0] }[1]
-            else
-              # Run local optimization inside cluster
-              sim_annealing = SimAnnealing::SimAnnealingVrp.new
-              sim_annealing.start = start_index
-              sim_annealing.stop = stop_index
-              sim_annealing.matrix = matrix
-              sim_annealing.vrp = original_vrp
-              fact = (1..[sub_size, 8].min).reduce(1, :*) # Yes, compute factorial
-              initial_order = [start_index] + sub + [stop_index]
-              sub_size += 2
-              r = sim_annealing.search(initial_order, fact, 100000.0, 0.999)[:vector]
-              r = r.collect{ |i| initial_order[i] }
-              index = r.index(start_index)
-              if r[(index + 1) % sub_size] != stop_index && r[(index - 1) % sub_size] != stop_index
-                # Not stop and start following
-                sub
-              else
-                if r[(index + 1) % sub_size] == stop_index
-                  r.reverse!
-                  index = sub_size - 1 - index
-                end
-                r = index == 0 ? r : r[index..-1] + r[0..index - 1] # shift to replace start at beginning
-                r[1..-2] # remove start and stop from cluster
-              end
-            end
-            last_index = start_index
-            new_activities += min_order.collect{ |index|
-              a = {
-                point_id: (original_vrp.services[index].activity.point_id if original_vrp.services[index].id),
-                travel_distance: original_vrp.matrices[0].distance ? original_vrp.matrices[0].distance[original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
-                # travel_start_time: 0, # TODO: from matrix_time
-                # arrival_time: 0, # TODO: from matrix_time
-                # departure_time: 0, # TODO: from matrix_time
-                service_id: original_vrp.services[index].id
-              }.delete_if { |k, v| !v }
-              last_index = index
-              a
-            }
-          else
-            new_activities << activity
+          j = 0
+          while(route[:activities][idx_a + j] && !route[:activities][idx_a + j][:service_id]) do # Next non rest-without-location stop after current cluster
+            j += 1
           end
-        }.flatten
-        new_activities
-      end
+
+          if route[:activities][idx_a + j] && route[:activities][idx_a + j][:service_id]
+            stop_index = original_vrp.services.index{ |s| s.id == route[:activities][idx_a + j][:service_id] }
+          else
+            stop_index = original_vrp.services.length - 1
+          end
+
+          sub_size = sub.length
+          min_order = if sub_size <= 5
+            # Test all permutations inside cluster
+            sub.permutation.collect{ |p|
+              last = start_index
+              sum = p.sum { |s|
+                a, last = last, s
+                matrix[original_vrp.services[a].activity.point.matrix_index][original_vrp.services[s].activity.point.matrix_index]
+              } + matrix[original_vrp.services[p[-1]].activity.point.matrix_index][original_vrp.services[stop_index].activity.point.matrix_index]
+              [sum, p]
+            }.min_by{ |a| a[0] }[1]
+          else
+            # Run local optimization inside cluster
+            sim_annealing = SimAnnealing::SimAnnealingVrp.new
+            sim_annealing.start = start_index
+            sim_annealing.stop = stop_index
+            sim_annealing.matrix = matrix
+            sim_annealing.vrp = original_vrp
+            fact = (1..[sub_size, 8].min).reduce(1, :*) # Yes, compute factorial
+            initial_order = [start_index] + sub + [stop_index]
+            sub_size += 2
+            r = sim_annealing.search(initial_order, fact, 100000.0, 0.999)[:vector]
+            r = r.collect{ |i| initial_order[i] }
+            index = r.index(start_index)
+            if r[(index + 1) % sub_size] != stop_index && r[(index - 1) % sub_size] != stop_index
+              # Not stop and start following
+              sub
+            else
+              if r[(index + 1) % sub_size] == stop_index
+                r.reverse!
+                index = sub_size - 1 - index
+              end
+              r = index == 0 ? r : r[index..-1] + r[0..index - 1] # shift to replace start at beginning
+              r[1..-2] # remove start and stop from cluster
+            end
+          end
+          last_index = start_index
+          new_activities += min_order.collect{ |index|
+            a = {
+              point_id: (original_vrp.services[index].activity.point_id if original_vrp.services[index].id),
+              travel_time: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0,
+              travel_distance: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance]  ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
+              # travel_start_time: 0, # TODO: from matrix_time
+              # arrival_time: 0, # TODO: from matrix_time
+              # departure_time: 0, # TODO: from matrix_time
+              service_id: original_vrp.services[index].id
+            }.delete_if { |k, v| !v }
+            last_index = index
+            a
+          }
+        else
+          new_activities << activity
+        end
+
+      }.flatten.uniq
+      {
+        vehicle_id: route[:vehicle_id],
+        activities: activities
+      }
     }
-    result[:unassigned] = activities[0]
-    result[:routes][0][:activities] = activities[1] if activities.size > 1
+    result[:unassigned] = routes.find{ |route| route[:vehicle_id] == "unassigned" } ? routes.find{ |route| route[:vehicle_id] == "unassigned" }[:activities] : []
+    result[:routes] = routes.select{ |route| route[:vehicle_id] != "unassigned" }
     result
   end
 
