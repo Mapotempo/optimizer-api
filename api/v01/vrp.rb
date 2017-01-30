@@ -29,7 +29,6 @@ module Api
       content_type :json, 'application/json; charset=UTF-8'
       content_type :xml, 'application/xml'
       default_format :json
-      version '0.1', using: :path
 
       def self.vrp_request_timewindow(this)
         this.optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds')
