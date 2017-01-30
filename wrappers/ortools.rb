@@ -38,7 +38,6 @@ module Wrappers
         :assert_vehicles_no_capacity_initial,
         :assert_services_no_skills,
         :assert_services_at_most_two_timewindows,
-        :assert_services_no_exclusion_cost,
         :assert_no_shipments,
       ]
     end
@@ -61,6 +60,7 @@ module Wrappers
             q && q.value ? (q.value*1000+0.5).to_i : 0
           },
           duration: service.activity.duration,
+          priority: service.priority,
           matrix_index: points[service.activity.point_id].matrix_index,
           vehicle_indices: service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }
         )

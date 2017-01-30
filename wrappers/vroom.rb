@@ -36,7 +36,7 @@ module Wrappers
         :assert_services_no_capacities,
         :assert_services_no_skills,
         :assert_services_no_timewindows,
-        :assert_services_no_exclusion_cost,
+        :assert_services_no_priority,
         :assert_no_shipments,
         :assert_matrices_only_one,
         :assert_one_vehicle_only_or_no_sticky_vehicle

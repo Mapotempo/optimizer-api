@@ -122,7 +122,21 @@ module Api
               optional(:services, type: Array, desc: 'Independant activity, which does not require a context') do
                 requires(:id, type: String)
                 optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
-                optional(:exclusion_cost, type: Float, desc: 'Cost applied to exclude the service in the solution (currently not used)')
+                optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
+
+                optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule')
+                optional(:visits_range_days_number, type: Integer, desc: '')
+
+                optional(:static_interval_indices, type: Array[Array[Integer]], desc: '')
+                optional(:static_interval_date, type: Array, desc: '') do
+                  Vrp.vrp_request_date_range(self)
+                end
+                mutually_exclusive :static_interval_indices, :static_interval_date
+
+                optional(:particular_unavailable_indices, type: Array[Array[Integer]], desc: 'Express the exceptionnals indices of unavailabilty')
+                optional(:particular_unavailable_date, type: Array, desc: 'Express the exceptionnals days of unavailability')
+                mutually_exclusive :particular_unavailable_indices, :particular_unavailable_date
+
                 optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
                 optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
 
@@ -138,7 +152,7 @@ module Api
               optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off') do
                 requires(:id, type: String, desc: '')
                 optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
-                optional(:exclusion_cost, type: Float, desc: 'Cost applied to exclude the service in the solution (currently not used)')
+                optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
                 optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned')
                 optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this shipment')
                 requires(:pickup, type: Hash, desc: 'Activity of collection') do

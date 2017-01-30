@@ -21,9 +21,9 @@ require './models/base'
 module Models
   class Service < Base
     field :late_multiplier, default: nil
-    field :exclusion_cost, default: nil
+    field :priority, default: 4
     validates_numericality_of :late_multiplier, allow_nil: true
-    validates_numericality_of :exclusion_cost, allow_nil: true
+    validates_numericality_of :priority
     field :type, default: :service
     validates_inclusion_of :type, :in => %i(service pickup delivery)
 

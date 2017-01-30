@@ -115,9 +115,9 @@ module Wrappers
       }
     end
 
-    def assert_services_no_exclusion_cost(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
-        !service.exclusion_cost.nil?
+    def assert_services_no_priority(vrp)
+      vrp.services.empty? || vrp.services.all?{ |service|
+        service.priority == 4
       }
     end
 

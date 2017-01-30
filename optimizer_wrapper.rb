@@ -332,6 +332,7 @@ module OptimizerWrapper
           end
         }
         new_services[i].quantities = new_quantities
+        new_services[i].priority = cluster.data_items.map{ |di| vrp.services[di[0]].priority }.min
 
         new_tws = []
         service_tws = cluster.data_items.map{ |di|

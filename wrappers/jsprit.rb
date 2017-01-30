@@ -38,7 +38,7 @@ module Wrappers
         :assert_vehicles_no_late_multiplier,
         :assert_vehicles_no_overload_multiplier,
         :assert_services_no_late_multiplier,
-        :assert_services_no_exclusion_cost,
+        :assert_services_no_priority,
         :assert_one_sticky_at_most,
       ]
     end

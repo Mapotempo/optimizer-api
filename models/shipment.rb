@@ -21,9 +21,9 @@ require './models/base'
 module Models
   class Shipment < Base
     field :late_multiplier, default: nil
-    field :exclusion_cost, default: nil
+    field :priority, default: nil
     validates_numericality_of :late_multiplier, allow_nil: true
-    validates_numericality_of :exclusion_cost, allow_nil: true
+    validates_numericality_of :priority, allow_nil: true
 
     field :skills, default: []
 
