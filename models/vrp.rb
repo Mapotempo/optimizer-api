@@ -30,6 +30,12 @@ module Models
     field :resolution_stable_coefficient, default: nil
     field :resolution_initial_time_out, default: nil
     field :resolution_time_out_multiplier, default: nil
+
+    field :schedule_range_indices, default: nil
+    field :schedule_range_date, default: nil
+    field :schedule_unavailable_indices, default: nil
+    field :schedule_unavailable_date, default: nil
+
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
     validates_numericality_of :resolution_duration, allow_nil: true
     validates_numericality_of :resolution_iterations, allow_nil: true
@@ -71,6 +77,13 @@ module Models
       self.preprocessing_force_cluster = preprocessing[:force_cluster]
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
+    end
+
+    def schedule=(schedule)
+      self.schedule_range_indices = preprocessing[:range_indices]
+      self.schedule_range_date = preprocessing[:range_date]
+      self.schedule_unavailable_indices = preprocessing[:unavailable_indices]
+      self.schedule_unavailable_date = preprocessing[:unavailable_date]
     end
 
     def need_matrix_time?

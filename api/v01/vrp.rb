@@ -17,6 +17,7 @@
 #
 require 'grape'
 require 'grape-swagger'
+require 'date'
 
 
 require './api/v01/api_base'
@@ -33,12 +34,18 @@ module Api
       def self.vrp_request_timewindow(this)
         this.optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds')
         this.optional(:end, type: Integer, desc: 'End of the current timewindow in seconds')
-        this.at_least_one_of :start, :end
+        # this.at_least_one_of :start, :end
+      end
+
+      def self.vrp_request_date_range(this)
+        this.optional(:start, type: Date, desc: '')
+        this.optional(:end, type: Date, desc: '')
       end
 
       def self.vrp_request_activity(this)
         this.optional(:duration, type: Float, desc: 'time in seconds while the current activity stand until it\'s over')
         this.optional(:setup_duration, type: Float, desc: 'time at destination before the proper activity is effectively performed')
+        this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '')
         this.requires(:point_id, type: String, desc: 'reference to the associated point')
         this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may be performed') do
           Vrp.vrp_request_timewindow(self)
@@ -104,6 +111,18 @@ module Api
                 optional(:duration, type: Float, desc: 'Maximum tour duration')
                 optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
 
+                optional(:static_interval_indices, type: Array[Array[Integer]], desc: 'Describe the schedule intervals of availability')
+                optional(:static_interval_date, type: Array, desc: 'Describe the schedule date of availability') do
+                  Vrp.vrp_request_date_range(self)
+                end
+                mutually_exclusive :static_interval_indices, :static_interval_date
+
+                optional(:particular_unavailable_indices, type: Array[Integer], desc: 'Express the exceptionnals indices of unavailabilty')
+                optional(:particular_unavailable_date, type: Array, desc: 'Express the exceptionnals days of unavailability')
+                mutually_exclusive :particular_unavailable_indices, :particular_unavailable_date
+
+                optional(:sequence_timewindow_start_index, type: Integer, desc: '')
+
                 optional(:start_point_id, type: String, desc: 'Begin of the tour')
                 optional(:end_point_id, type: String, desc: 'End of the tour')
                 optional(:capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry') do
@@ -112,9 +131,14 @@ module Api
                   optional(:initial, type: Float, desc: 'Initial quantity value in the vehicle')
                   optional(:overload_multiplier, type: Float, desc: 'Allow to exceed the limit against this cost (ORtools only)')
                 end
+
+                optional(:sequence_timewindows, type: Array, desc: '') do
+                  Vrp.vrp_request_timewindow(self)
+                end
                 optional(:timewindow, type: Hash, desc: 'Time window whithin the vehicle may be on route') do
                   Vrp.vrp_request_timewindow(self)
                 end
+                mutually_exclusive :sequence_timewindows, :timewindow
 
                 optional(:rest_ids, type: Array[String], desc: 'Breaks whithin the tour')
               end
@@ -183,6 +207,14 @@ module Api
                   optional(:initial_time_out, type: Integer, desc: 'minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
                   optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
                   at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
+                end
+                optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
+                  optional(:range_indices, type: Array[Float], desc: '')
+                  optional(:range_date, type: Array[Date], desc: '')
+                  mutually_exclusive :range_indices, :range_date
+                  optional(:unavailable_indices, type: Array[Float], desc: '')
+                  optional(:unavailable_date, type: Array[Date], desc: '')
+                  mutually_exclusive :unavailable_indices, :unavailable_date
                 end
               end
             end

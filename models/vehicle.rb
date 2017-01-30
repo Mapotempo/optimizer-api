@@ -33,6 +33,16 @@ module Models
     field :speed_multiplier, default: 1
     field :duration, default: nil
     field :matrix_id, default: nil
+    field :day_index, default: nil
+
+    field :static_interval_indices, default: nil
+    field :static_interval_date, default: nil
+
+    field :particular_unavailable_indices, default: nil
+    field :particular_unavailable_date, default:nil
+
+    field :sequence_timewindow_start_index, default: 0
+
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
     validates_numericality_of :cost_time_multiplier
@@ -44,6 +54,8 @@ module Models
     validates_inclusion_of :router_dimension, in: %w( time distance )
     validates_numericality_of :speed_multiplier
     field :skills, default: []
+
+    has_many :sequence_timewindows, class_name: 'Models::Timewindow'
 
     belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end

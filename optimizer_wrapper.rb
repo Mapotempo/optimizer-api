@@ -23,6 +23,7 @@ require 'json'
 require 'thread'
 
 require './lib/routers/router_wrapper.rb'
+require './lib/interpreters/periodic_visits.rb'
 
 require 'ai4r'
 include Ai4r::Data
@@ -121,6 +122,7 @@ module OptimizerWrapper
             vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]] }.id
           }
         end
+        vrp = Interpreters::PeriodicVisits.expand(vrp)
 
         File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 

@@ -26,6 +26,7 @@ module Models
 
     field :duration, default: 0
     field :setup_duration, default: 0
+    field :timewindow_start_day_shift_number, default: 0
     validates_numericality_of :duration
     validates_numericality_of :setup_duration
 

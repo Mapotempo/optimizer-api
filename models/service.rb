@@ -25,10 +25,24 @@ module Models
     validates_numericality_of :late_multiplier, allow_nil: true
     validates_numericality_of :priority
     field :type, default: :service
+
+    # field :visits_minimal_interval, default: nil
+    # field :visits_maximal_interval, default: nil
+
+    field :visits_number, default: 1
+    field :visits_range_days_number, default: 0
+
+    field :static_interval_indices, default: nil
+    field :static_interval_date, default: nil
+
+    field :particular_unavailable_indices, default: []
+    field :particular_unavailable_date, default: nil
+
     validates_inclusion_of :type, :in => %i(service pickup delivery)
 
     field :skills, default: []
 
+    ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
