@@ -460,7 +460,10 @@ module OptimizerWrapper
       }.flatten.uniq
       {
         vehicle_id: route[:vehicle_id],
-        activities: activities
+        activities: activities,
+        total_distance: route[:total_distance] ? route[:total_distance] : 0,
+        total_time: route[:total_time] ? route[:total_time] : 0,
+        total_travel_time: route[:total_travel_time] ? route[:total_travel_time] : 0
       }
     }
     result[:unassigned] = routes.find{ |route| route[:vehicle_id] == "unassigned" } ? routes.find{ |route| route[:vehicle_id] == "unassigned" }[:activities] : []
