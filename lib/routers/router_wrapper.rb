@@ -65,7 +65,7 @@ module Routers
             when 417 # OutOfSupportedAreaError
               ''
             else
-              response = (response && response.size > 1) ? JSON.parse(response) : nil
+              response = (response && /json/.match(response.headers[:content_type]) && response.size > 1) ? JSON.parse(response) : nil
               raise RouterError.new(result.message + (response ? ' - ' + response['error'] + ' ' + (response['detail'] || '') : ''))
             end
           }
@@ -131,7 +131,7 @@ module Routers
           when 417
             ''
           else
-            response = (response && response.size > 1) ? JSON.parse(response) : nil
+            response = (response && /json/.match(response.headers[:content_type]) && response.size > 1) ? JSON.parse(response) : nil
             raise RouterError.new(result.message + (response ? ' - ' + response['error'] + ' ' + (response['detail'] || '') : ''))
           end
         }
@@ -178,7 +178,7 @@ module Routers
           when 417
             ''
           else
-            response = (response && response.size > 1) ? JSON.parse(response) : nil
+            response = (response && /json/.match(response.headers[:content_type]) && response.size > 1) ? JSON.parse(response) : nil
             raise RouterError.new(result.message + (response ? ' - ' + response['error'] + ' ' + (response['detail'] || '') : ''))
           end
         }
