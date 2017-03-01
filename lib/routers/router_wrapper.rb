@@ -45,18 +45,10 @@ module Routers
       }
       if nocache_segments.size > 0
         nocache_segments.each_slice(50){ |slice_segments|
-          params = {
-            api_key: @api_key,
-            mode: mode,
-            dimension: dimension,
-            speed_multiplicator: options[:speed_multiplicator] == 1 ? nil : options[:speed_multiplicator],
-            locs: slice_segments.collect{ |segment| segment.join(',') }.join(';'),
-            geometry: options[:geometry],
-            area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:area].join(',') }.join(';') : nil,
-            speed_multiplicator_area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:speed_multiplicator_area] }.join(';') : nil
-          }.compact
           resource = RestClient::Resource.new(url + '/0.1/routes.json', timeout: nil)
-          request = resource.post(params) { |response, request, result, &block|
+          request = resource.post(params(mode, dimension, options).merge({
+            locs: slice_segments.collect{ |segment| segment.join(',') }.join(';')
+          })) { |response, request, result, &block|
             case response.code
             when 200
               response
@@ -113,18 +105,11 @@ module Routers
 
       request = @cache_request.read(key)
       if !request
-        params = {
-          api_key: @api_key,
-          mode: mode,
-          dimension: dimensions.join('_'),
+        resource = RestClient::Resource.new(url + '/0.1/matrix.json', timeout: nil)
+        request = resource.post(params(mode, dimensions.join('_'), options).merge({
           src: row.flatten.join(','),
           dst: row != column ? column.flatten.join(',') : nil,
-          speed_multiplicator: options[:speed_multiplicator] == 1 ? nil : options[:speed_multiplicator],
-          area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:area].join(',') }.join(';') : nil,
-          speed_multiplicator_area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:speed_multiplicator_area] }.join(';') : nil
-        }.compact
-        resource = RestClient::Resource.new(url + '/0.1/matrix.json', timeout: nil)
-        request = resource.post(params) { |response, request, result, &block|
+        }.compact)) { |response, request, result, &block|
           case response.code
           when 200
             response
@@ -160,18 +145,11 @@ module Routers
 
       request = @cache_request.read(key)
       if !request
-        params = {
-          api_key: @api_key,
-          mode: mode,
-          dimension: dimension,
+        resource = RestClient::Resource.new(url + '/0.1/isoline.json', timeout: nil)
+        request = resource.post(params(mode, dimension, options).merge({
           loc: [lat, lng].join(','),
           size: size,
-          speed_multiplicator: options[:speed_multiplicator] == 1 ? nil : options[:speed_multiplicator],
-          area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:area].join(',') }.join(';') : nil,
-          speed_multiplicator_area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:speed_multiplicator_area] }.join(';') : nil
-        }.compact
-        resource = RestClient::Resource.new(url + '/0.1/isoline.json', timeout: nil)
-        request = resource.post(params) { |response, request, result, &block|
+        })) { |response, request, result, &block|
           case response.code
           when 200
             response
@@ -204,6 +182,28 @@ module Routers
           nil
         end
       end
+    end
+
+    private
+
+    def params(mode, dimension, options)
+      {
+        api_key: @api_key,
+        mode: mode,
+        dimension: dimension,
+        speed_multiplicator: options[:speed_multiplicator] == 1 ? nil : options[:speed_multiplicator],
+        area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:area].join(',') }.join(';') : nil,
+        speed_multiplicator_area: options[:speed_multiplicator_areas] ? options[:speed_multiplicator_areas].collect{ |a| a[:speed_multiplicator_area] }.join(';') : nil,
+        motorway: options[:motorway],
+        toll: options[:toll],
+        trailers: options[:trailers],
+        weight: options[:weight],
+        weight_per_axle: options[:weight_per_axle],
+        height: options[:height],
+        width: options[:width],
+        length: options[:length],
+        hazardous_goods: options[:hazardous_goods],
+      }.compact
     end
   end
 end

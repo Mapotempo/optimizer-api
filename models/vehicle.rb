@@ -28,9 +28,22 @@ module Models
     field :cost_late_multiplier, default: nil
     field :cost_setup_time_multiplier, default: 0
     field :coef_setup, default: 1
+
     field :router_mode, default: :car
     field :router_dimension, default: :time
     field :speed_multiplier, default: 1
+    field :area, default: []
+    field :speed_multiplier_area, default: []
+    field :motorway, default: true
+    field :toll, default: true
+    field :trailers, default: nil
+    field :weight, default: nil
+    field :weight_per_axle, default: nil
+    field :height, default: nil
+    field :width, default: nil
+    field :length, default: nil
+    field :hazardous_goods, default: nil
+
     field :duration, default: nil
     field :matrix_id, default: nil
     field :day_index, default: nil
@@ -99,6 +112,22 @@ module Models
       dimensions = [d.delete(router_dimension.to_sym)]
       dimensions << d[0] if send('need_matrix_' + d[0].to_s + '?')
       dimensions
+    end
+
+    def router_options
+      {
+        speed_multiplicator: speed_multiplier,
+        speed_multiplicator_areas: Hash[area.zip(speed_multiplier_area)],
+        motorway: motorway,
+        toll: toll,
+        trailers: trailers,
+        weight: weight,
+        weight_per_axle: weight_per_axle,
+        height: height,
+        width: width,
+        length: length,
+        hazardous_goods: hazardous_goods,
+      }
     end
   end
 end

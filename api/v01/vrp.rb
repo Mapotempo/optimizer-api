@@ -104,9 +104,20 @@ module Api
 
                 optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
                 optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
+                exactly_one_of :matrix_id, :router_mode
                 optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
                 optional(:speed_multiplier, type: Float, desc: 'multiply the vehicle speed, default : 1.0')
-                exactly_one_of :matrix_id, :router_mode
+                optional :area, type: Array, coerce_with: ->(c) { c.split(';').collect{ |b| b.split(',').collect{ |f| Float(f) }}}, desc: 'List of latitudes and longitudes separated with commas. Areas separated with semicolons (only available for truck mode at this time).'
+                optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.split(';').collect{ |f| Float(f) }}, desc: 'Speed multiplier per area, 0 avoid area. Areas separated with semicolons (only available for truck mode at this time).'
+                optional :motorway, type: Boolean, default: true, desc: 'Use motorway or not.'
+                optional :toll, type: Boolean, default: true, desc: 'Use toll section or not.'
+                optional :trailers, type: Integer, desc: 'Number of trailers.'
+                optional :weight, type: Float, desc: 'Vehicle weight including trailers and shipped goods, in tons.'
+                optional :weight_per_axle, type: Float, desc: 'Weight per axle, in tons.'
+                optional :height, type: Float, desc: 'Height in meters.'
+                optional :width, type: Float, desc: 'Width in meters.'
+                optional :length, type: Float, desc: 'Length in meters.'
+                optional :hazardous_goods, type: Symbol, values: [:explosive, :gas, :flammable, :combustible, :organic, :poison, :radioActive, :corrosive, :poisonousInhalation, :harmfulToWater, :other], desc: 'List of hazardous materials in the vehicle.'
 
                 optional(:duration, type: Float, desc: 'Maximum tour duration')
                 optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')

@@ -99,27 +99,27 @@ module OptimizerWrapper
           }
 
           uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            [vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]
+            [vehicle.router_mode.to_sym, dimensions, vehicle.router_options]
           }.uniq
 
           i = 0
           id = 0
-          uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, speed_multiplicator|
+          uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
             raise UnsupportedRouterModeError unless OptimizerWrapper.config[:router][mode]
             block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
             # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
-            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, speed_multiplicator: speed_multiplicator || 1)
+            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, options)
             m = Models::Matrix.create({
               id: 'm' + (id+=1).to_s,
               time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
               distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
             })
             vrp.matrices += [m]
-            [[mode, dimensions, speed_multiplicator], m]
+            [[mode, dimensions, options], m]
           }]
 
           uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.speed_multiplier]] }.id
+            vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.router_options]] }.id
           }
         end
         vrp = Interpreters::PeriodicVisits.expand(vrp)
