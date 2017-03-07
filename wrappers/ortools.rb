@@ -36,7 +36,7 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_no_capacity_initial,
-        :assert_services_no_skills,
+        :assert_vehicles_no_alternative_skills,
         :assert_services_at_most_two_timewindows,
         :assert_no_shipments,
       ]
@@ -49,6 +49,14 @@ module Wrappers
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
 
       services = vrp.services.collect{ |service|
+        vehicles_indices = vrp.vehicles.collect.with_index{ |vehicle, index|
+          if !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size)
+            index
+          else
+            nil
+          end
+        }.compact
+
         OrtoolsVrp::Service.new(
           time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
@@ -62,7 +70,7 @@ module Wrappers
           duration: service.activity.duration,
           priority: service.priority,
           matrix_index: points[service.activity.point_id].matrix_index,
-          vehicle_indices: service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }
+          vehicle_indices: service.sticky_vehicles.size > 0 ? service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices
         )
       }
 

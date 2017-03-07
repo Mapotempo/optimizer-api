@@ -1039,4 +1039,89 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 4, result[:routes][0][:activities].size
     assert_equal 3, result[:routes][1][:activities].size
   end
+
+  def test_skills
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        distance: [
+          [0, 3, 3, 3],
+          [3, 0, 3, 3],
+          [3, 3, 0, 3],
+          [3, 3, 3, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        skills: [["frozen"]]
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        skills: [["cool"]]
+      }],
+      services: [{
+        id: 'service_0',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_1'
+        },
+        skills: ["frozen"]
+      }, {
+        id: 'service_1',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_2'
+        },
+        skills: ["cool"]
+      }, {
+        id: 'service_2',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_3'
+        },
+        skills: ["frozen"]
+      }, {
+        id: 'service_3',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_3'
+        },
+        skills: ["cool"]
+      }],
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
+        },
+        resolution: {
+          duration: 100
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 0, result[:unassigned].size
+    assert_equal 4, result[:routes][0][:activities].size
+    assert_equal 4, result[:routes][1][:activities].size
+  end
 end

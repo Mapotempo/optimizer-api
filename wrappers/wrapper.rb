@@ -87,6 +87,12 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_no_alternative_skills(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        !vehicle.skills || vehicle.skills.size > 1
+      }
+    end
+
     def assert_no_shipments(vrp)
       vrp.shipments.empty?
     end
