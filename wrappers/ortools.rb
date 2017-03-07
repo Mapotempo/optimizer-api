@@ -66,6 +66,7 @@ module Wrappers
             q = service.quantities.find{ |quantity| quantity.unit == unit }
             q && q.value ? (q.value*1000+0.5).to_i : 0
           },
+          type: service.type.to_s,
           duration: service.activity.duration,
           priority: service.priority,
           matrix_index: points[service.activity.point_id].matrix_index,
