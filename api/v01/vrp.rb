@@ -88,6 +88,9 @@ module Api
               optional(:rests, type: Array, desc: 'Break within a vehicle tour') do
                 requires(:id, type: String)
                 requires(:duration, type: Float, desc: 'Duration of the vehicle rest')
+                optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
+                  Vrp.vrp_request_timewindow(self)
+                end
                 optional(:late_multiplier, type: Float, desc: '(not used)')
                 optional(:exclusion_cost, type: Float, desc: '(not used)')
               end
