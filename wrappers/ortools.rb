@@ -70,7 +70,8 @@ module Wrappers
           duration: service.activity.duration,
           priority: service.priority,
           matrix_index: points[service.activity.point_id].matrix_index,
-          vehicle_indices: service.sticky_vehicles.size > 0 ? service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices
+          vehicle_indices: service.sticky_vehicles.size > 0 ? service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
+          setup_duration: service.activity.setup_duration
         )
       }
 

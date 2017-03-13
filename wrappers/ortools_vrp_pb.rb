@@ -20,6 +20,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :priority, :uint32, 4
     repeated :vehicle_indices, :uint32, 5
     optional :matrix_index, :uint32, 6
+    optional :setup_duration, :uint32, 7
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
