@@ -37,9 +37,10 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :cost_fixed, :float, 6
     optional :cost_distance_multiplier, :float, 7
     optional :cost_time_multiplier, :float, 8
-    optional :matrix_index, :uint32, 9
-    optional :start_index, :int32, 10
-    optional :end_index, :int32, 11
+    optional :cost_waiting_time_multiplier, :float, 9
+    optional :matrix_index, :uint32, 10
+    optional :start_index, :int32, 11
+    optional :end_index, :int32, 12
   end
   add_message "ortools_vrp.Problem" do
     repeated :vehicles, :message, 3, "ortools_vrp.Vehicle"

@@ -90,6 +90,7 @@ module Wrappers
           cost_fixed: vehicle.cost_fixed,
           cost_distance_multiplier: vehicle.cost_distance_multiplier,
           cost_time_multiplier: vehicle.cost_time_multiplier,
+          cost_waiting_time_multiplier: vehicle.cost_waiting_time_multiplier,
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
