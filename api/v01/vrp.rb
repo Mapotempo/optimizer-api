@@ -111,7 +111,7 @@ module Api
                 optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
                 optional(:speed_multiplier, type: Float, desc: 'multiply the vehicle speed, default : 1.0')
                 optional :area, type: Array, coerce_with: ->(c) { c.split(';').collect{ |b| b.split(',').collect{ |f| Float(f) }}}, desc: 'List of latitudes and longitudes separated with commas. Areas separated with semicolons (only available for truck mode at this time).'
-                optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.split(';').collect{ |f| Float(f) }}, desc: 'Speed multiplier per area, 0 avoid area. Areas separated with semicolons (only available for truck mode at this time).'
+                optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c ? c.split(';').collect{ |f| Float(f) } : []}, desc: 'Speed multiplier per area, 0 avoid area. Areas separated with semicolons (only available for truck mode at this time).'
                 optional :motorway, type: Boolean, default: true, desc: 'Use motorway or not.'
                 optional :toll, type: Boolean, default: true, desc: 'Use toll section or not.'
                 optional :trailers, type: Integer, desc: 'Number of trailers.'

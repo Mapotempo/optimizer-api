@@ -116,8 +116,9 @@ module Models
 
     def router_options
       {
-        speed_multiplicator: speed_multiplier,
-        speed_multiplicator_areas: Hash[area.zip(speed_multiplier_area)],
+        speed_multiplier: speed_multiplier,
+        area: area,
+        speed_multiplier_area: speed_multiplier_area,
         motorway: motorway,
         toll: toll,
         trailers: trailers,
