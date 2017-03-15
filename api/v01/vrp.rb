@@ -120,7 +120,7 @@ module Api
                 optional :height, type: Float, desc: 'Height in meters.'
                 optional :width, type: Float, desc: 'Width in meters.'
                 optional :length, type: Float, desc: 'Length in meters.'
-                optional :hazardous_goods, type: Symbol, values: [:explosive, :gas, :flammable, :combustible, :organic, :poison, :radioActive, :corrosive, :poisonousInhalation, :harmfulToWater, :other], desc: 'List of hazardous materials in the vehicle.'
+                optional :hazardous_goods, type: Symbol, values: [:explosive, :gas, :flammable, :combustible, :organic, :poison, :radio_active, :corrosive, :poisonous_inhalation, :harmful_to_water, :other], desc: 'List of hazardous materials in the vehicle.'
 
                 optional(:duration, type: Float, desc: 'Maximum tour duration')
                 optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
