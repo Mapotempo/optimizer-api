@@ -142,6 +142,7 @@ module Wrappers
           vehicle = vrp.vehicles[index]
           previous = nil
           route_start = vehicle.timewindow && vehicle.timewindow[:start] ? vehicle.timewindow[:start] : 0
+          earliest_start = route_start
           {
           vehicle_id: vehicle.id,
           activities:
@@ -156,7 +157,7 @@ module Wrappers
             route.collect{ |i|
               if i.first < matrix_indices.size + 2
                 point = services[i.first].matrix_index
-                earliest_start = i.size > 1 ? i.last : nil
+                earliest_start = i.size > 1 ? i.last : earliest_start
                 current_activity = {
                   service_id: vrp.services[i.first].id,
                   travel_time: (previous && point && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous][point] : 0),
@@ -166,12 +167,18 @@ module Wrappers
 #              pickup_shipments_id [:id0:],
 #              delivery_shipments_id [:id0:]
                 }
+                earliest_start += vrp.services[i.first].activity[:duration].to_i
                 previous = point
                 current_activity
               else
-                {
-                  rest_id: vrp.rests[i.first - matrix_indices.size - 2].id
+                earliest_start = closest_rest_start(vrp.rests[i.first - matrix_indices.size - 2][:timewindows], earliest_start)
+                current_rest = {
+                  rest_id: vrp.rests[i.first - matrix_indices.size - 2].id,
+                  begin_time: earliest_start,
+                  departure_time: earliest_start + vrp.rests[i.first - matrix_indices.size - 2][:duration]
                 }
+                earliest_start += vrp.rests[i.first - matrix_indices.size - 2][:duration]
+                current_rest
               end
             } +
             [vehicle.end_point && {
@@ -180,6 +187,11 @@ module Wrappers
         }},
         unassigned: (vrp.services.collect(&:id) - result.flatten(1).collect{ |i| i.first < vrp.services.size && vrp.services[i.first].id }).collect{ |service_id| {service_id: service_id} }
       }
+    end
+
+    def closest_rest_start(timewindows, current_start)
+      timewindows.size == 0 || timewindows.one?{ |tw| current_start >= tw[:start] && current_start <= tw[:end] } ? current_start :
+        timewindows.sort_by {|tw_start, tw_end| tw_end }.find{ |tw| tw[:start] > current_start}[:start]
     end
 
     def kill
