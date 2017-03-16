@@ -45,12 +45,14 @@ class Wrappers::JspritTest < Minitest::Test
       services: [{
         id: 'service_0',
         activity: {
-          point_id: 'point_0'
+          point_id: 'point_0',
+          duration: 5
         }
       }, {
         id: 'service_1',
         activity: {
-          point_id: 'point_1'
+          point_id: 'point_1',
+          duration: 5
         }
       }],
       configuration: {
