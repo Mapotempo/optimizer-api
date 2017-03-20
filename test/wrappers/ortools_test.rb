@@ -634,7 +634,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, result[:unassigned].size
   end
 
-  def test_multiple_soft_time_windows_problem
+  def test_double_soft_time_windows_problem
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       matrices: [{
@@ -701,7 +701,80 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
   end
 
-  def test_multiple_hard_time_windows_problem
+  def test_triple_soft_time_windows_problem
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 5, 5],
+          [5, 0, 5],
+          [5, 5, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        late_multiplier: 1,
+        activity: {
+          point_id: 'point_1',
+          timewindows: [{
+            start: 3,
+            end: 4
+          }, {
+            start: 7,
+            end: 8
+          }, {
+            start: 11,
+            end: 12
+          }],
+        }
+      }, {
+        id: 'service_2',
+        late_multiplier: 1,
+        activity: {
+          point_id: 'point_2',
+          timewindows: [{
+            start: 5,
+            end: 6
+          },{
+            start: 10,
+            end: 11
+          },{
+            start: 15,
+            end: 16
+          }],
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
+  end
+
+  def test_double_hard_time_windows_problem
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       matrices: [{
@@ -751,6 +824,79 @@ class Wrappers::OrtoolsTest < Minitest::Test
           },{
             start: 10,
             end: 11
+          }],
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size , result[:routes][0][:activities].size
+  end
+
+  def test_triple_hard_time_windows_problem
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 9, 9],
+          [9, 0, 9],
+          [9, 9, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_1',
+          timewindows: [{
+            start: 3,
+            end: 4
+          }, {
+            start: 7,
+            end: 8
+          }, {
+            start: 11,
+            end: 12
+          }],
+        }
+      }, {
+        id: 'service_2',
+        late_multiplier: 0,
+        activity: {
+          point_id: 'point_2',
+          timewindows: [{
+            start: 5,
+            end: 6
+          },{
+            start: 10,
+            end: 11
+          },{
+            start: 15,
+            end: 16
           }],
         }
       }],

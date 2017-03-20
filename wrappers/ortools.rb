@@ -37,7 +37,6 @@ module Wrappers
         :assert_end_optimization,
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
-        :assert_services_at_most_two_timewindows,
         :assert_no_shipments,
       ]
     end
