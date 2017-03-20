@@ -125,10 +125,32 @@ module Wrappers
         matrices: matrices,
       )
 
-      cost, iterations, result = run_ortools(problem, vrp, &block)
+      cost, iterations, result = run_ortools(problem, vrp, services, points, matrix_indices, &block)
       return if !result
 
-      result = result.collect{ |r| r[1..-2] }
+      parse_output(vrp, services, points, matrix_indices, cost, iterations, result)
+    end
+
+    def closest_rest_start(timewindows, current_start)
+      timewindows.size == 0 || timewindows.one?{ |tw| current_start >= tw[:start] && current_start <= tw[:end] } ? current_start :
+        timewindows.sort_by {|tw_start, tw_end| tw_end }.find{ |tw| tw[:start] > current_start}[:start]
+    end
+
+    def kill
+      @semaphore.synchronize {
+        Process.kill("KILL", @thread.pid)
+        @killed = true
+      }
+    end
+
+    private
+
+    def assert_end_optimization(vrp)
+      vrp.resolution_duration || vrp.resolution_iterations_without_improvment
+    end
+
+    def parse_output(vrp, services, points, matrix_indices, cost, iterations, result)
+      result = result.split(';').collect{ |r| r.split(',').collect{ |i| i.scan(/[0-9]+/).collect{ |j| Integer(j) } }[1..-2] }
 
       {
         cost: cost,
@@ -189,25 +211,7 @@ module Wrappers
       }
     end
 
-    def closest_rest_start(timewindows, current_start)
-      timewindows.size == 0 || timewindows.one?{ |tw| current_start >= tw[:start] && current_start <= tw[:end] } ? current_start :
-        timewindows.sort_by {|tw_start, tw_end| tw_end }.find{ |tw| tw[:start] > current_start}[:start]
-    end
-
-    def kill
-      @semaphore.synchronize {
-        Process.kill("KILL", @thread.pid)
-        @killed = true
-      }
-    end
-
-    private
-
-    def assert_end_optimization(vrp)
-      vrp.resolution_duration || vrp.resolution_iterations_without_improvment
-    end
-
-    def run_ortools(problem, vrp, &block)
+    def run_ortools(problem, vrp, services, points, matrix_indices, &block)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close
@@ -237,7 +241,8 @@ module Wrappers
         r && (iterations = Integer(r[1]))
         r = / Cost : ([0-9.eE+]+)/.match(line)
         r && (cost = Float(r[1]))
-        block.call(self, iterations, nil, cost, nil) if block
+        r = /(([0-9]+(,[0-9]+(\[[0-9]+\])*)*;)+)+/.match(line)
+        block.call(self, iterations, nil, cost, r && parse_output(vrp, services, points, matrix_indices, cost, iterations, r[1])) if block
       }
 
       if @thread.value == 0
@@ -252,7 +257,6 @@ module Wrappers
           iterations = if cost_line.include?('Final Iteration : ')
             cost_line.split(' ')[3].to_i
           end
-          result = result.split(';').collect{ |r| r.split(',').collect{ |i| i.scan(/[0-9]+/).collect{ |j| Integer(j) } } }.select{ |r| r.size > 0 } if result
           [cost, iterations, result]
         end
       else
