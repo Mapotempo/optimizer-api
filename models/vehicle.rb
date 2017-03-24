@@ -49,13 +49,10 @@ module Models
     field :matrix_id, default: nil
     field :day_index, default: nil
 
-    field :static_interval_indices, default: nil
-    field :static_interval_date, default: nil
+    field :work_period_days_number, default: 1
 
-    field :particular_unavailable_indices, default: nil
-    field :particular_unavailable_date, default:nil
-
-    field :sequence_timewindow_start_index, default: 0
+    field :unavailable_work_day_indices, default: nil
+    field :unavailable_work_date, default: nil
 
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier

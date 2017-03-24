@@ -61,6 +61,7 @@ module Models
     def configuration=(configuration)
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
       self.resolution = configuration[:resolution] if configuration[:resolution]
+      self.schedule = configuration[:schedule] if configuration[:schedule]
     end
 
     def resolution=(resolution)
@@ -80,10 +81,10 @@ module Models
     end
 
     def schedule=(schedule)
-      self.schedule_range_indices = preprocessing[:range_indices]
-      self.schedule_range_date = preprocessing[:range_date]
-      self.schedule_unavailable_indices = preprocessing[:unavailable_indices]
-      self.schedule_unavailable_date = preprocessing[:unavailable_date]
+      self.schedule_range_indices = schedule[:range_indices]
+      self.schedule_range_date = schedule[:range_date]
+      self.schedule_unavailable_indices = schedule[:unavailable_indices]
+      self.schedule_unavailable_date = schedule[:unavailable_date]
     end
 
     def need_matrix_time?

@@ -30,13 +30,12 @@ module Models
     # field :visits_maximal_interval, default: nil
 
     field :visits_number, default: 1
-    field :visits_range_days_number, default: 0
+    field :visits_period_days_number, default: 1
 
-    field :static_interval_indices, default: nil
-    field :static_interval_date, default: nil
+    field :unavailable_visit_indices, default: nil
 
-    field :particular_unavailable_indices, default: []
-    field :particular_unavailable_date, default: nil
+    field :unavailable_visit_day_indices, default: nil
+    field :unavailable_visit_day_date, default: nil
 
     validates_inclusion_of :type, :in => %i(service pickup delivery)
 

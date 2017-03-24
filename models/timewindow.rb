@@ -22,7 +22,9 @@ module Models
   class Timewindow < Base
     field :start, default: nil
     field :end, default: nil
+    field :day_index, default: nil
     validates_numericality_of :start, allow_nil: true
     validates_numericality_of :end, allow_nil: true, greater_than: :start, if: :start
+    validates_numericality_of :day_index, allow_nil: true
   end
 end

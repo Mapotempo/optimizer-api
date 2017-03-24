@@ -22,47 +22,47 @@ module Interpreters
     def self.expand(vrp)
       if vrp.schedule_range_indices || vrp.schedule_range_date
         epoch = Date.new(1970,1,1)
-        schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[0] : (vrp.schedule_range_date[:start] - epoch).to_i
-        schedule_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[1] : (vrp.schedule_range_date[:end] - epoch).to_i
+        real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start] - epoch).to_i
+        real_schedule_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : (vrp.schedule_range_date[:end] - epoch).to_i
+        shift = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : 0
+        schedule_end = real_schedule_end - real_schedule_start
+        schedule_start = 0
 
         unavailable_indices = if vrp.schedule_unavailable_indices
-          schedule_unavailable_indices
+          vrp.schedule_unavailable_indices
         elsif vrp.schedule_unavailable_date
           vrp.schedule_unavailable_date.collect{ |date|
-            (date - epoch).to_i if (date - epoch).to_i >= schedule_start
+            (date - epoch).to_i - real_schedule_start if (date - epoch).to_i >= real_schedule_start
           }.compact
         end
 
         new_vehicles = vrp.vehicles.collect { |vehicle|
 
-          if vehicle.particular_unavailable_date
-            vehicle.particular_unavailable_indice = vehicle.particular_unavailable_date.collect{ |particular_date|
-              (particular_date - epoch).to_i if particular_date >= schedule_start
+          if vehicle.unavailable_work_date
+            vehicle.unavailable_work_day_indices = vehicle.unavailable_work_date.collect{ |unavailable_date|
+              (unavailable_date - epoch).to_i - real_schedule_start if (unavailable_date - epoch).to_i >= real_schedule_start
             }.compact
+            if vrp.schedule_unavailable_indices
+              vehicle.unavailable_work_day_indices += vrp.schedule_unavailable_indices
+              vehicle.unavailable_work_day_indices.uniq
+            end
           end
 
-          if vehicle.static_interval_date
-            vehicle.static_interval_indices = vehicle.static_interval_date.collect{ |static_interval|
-              [(static_interval[:start] >= vrp.schedule_range_date[:start] ? (static_interval[:start] - epoch).to_i : schedule_start), (static_interval[:end] <= vrp.schedule_range_date[:end] ? (static_interval[:end] - epoch).to_i : schedule_end)] if static_interval[:start] >= schedule_start || static_interval[:end] <= schedule_end
-            }.compact
-          end
-
-          if vehicle.sequence_timewindows || vehicle.static_interval_indices
+          if vehicle.sequence_timewindows
             (schedule_start..schedule_end).collect{ |vehicle_day_index|
-              sequence_vehicle_index = ((vehicle_day_index - schedule_start)%vehicle.sequence_timewindows.size).to_i
-              if !vehicle.particular_unavailable_indices || vehicle.particular_unavailable_indices.none?{ |index| index == vehicle_day_index}
-                if (vehicle.sequence_timewindows[(sequence_vehicle_index + vehicle.sequence_timewindow_start_index)%vehicle.sequence_timewindows.size][:start] || vehicle.sequence_timewindows[(sequence_vehicle_index + vehicle.sequence_timewindow_start_index)%vehicle.sequence_timewindows.size][:end]) && 
-                (!vehicle.static_interval_indices || vehicle.static_interval_indices && vehicle.static_interval_indices.any?{ |interval| interval[0] <= vehicle_day_index && interval[1] >= vehicle_day_index })
-                  original_timewindow = vehicle.sequence_timewindows[(sequence_vehicle_index + vehicle.sequence_timewindow_start_index)%vehicle.sequence_timewindows.size]
+              if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index - shift == vehicle_day_index}
+                associated_timewindow = vehicle.sequence_timewindows.find{ |timewindow| !timewindow[:day_index] || timewindow[:day_index] == vehicle_day_index%vehicle.work_period_days_number }
+                if associated_timewindow
                   new_vehicle = Marshal::load(Marshal.dump(vehicle))
                   new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index+1}"
                   new_vehicle.timewindow = {
-                    start: vehicle_day_index * 86400 + original_timewindow[:start],
-                    end: vehicle_day_index * 86400 + original_timewindow[:end]
+                    start: vehicle_day_index * 86400 + associated_timewindow[:start],
+                    end: vehicle_day_index * 86400 + associated_timewindow[:end]
                   }
-                  new_vehicle.rests.collect!{ |rest|
+                  associated_rests = vehicle.rests.select{ |rest| rest.timewindows.any?{ |timewindow| timewindow[:day_index] == vehicle_day_index%vehicle.work_period_days_number } }
+                  new_vehicle.rests = associated_rests.collect{ |rest|
                     new_rest  = Marshal::load(Marshal.dump(rest))
-                    timewindows = new_rest.timewindows.collect!{ |timewindow|
+                    timewindows = new_rest.timewindows.select{ |timewindow| timewindow[:day_index] == vehicle_day_index%vehicle.work_period_days_number }.collect!{ |timewindow|
                       {
                         start: vehicle_day_index * 86400 + timewindow[:start],
                         end: vehicle_day_index * 86400 + timewindow[:end]
@@ -73,6 +73,8 @@ module Interpreters
                   }
                   new_vehicle.day_index = vehicle_day_index
                   new_vehicle
+                else
+                  nil
                 end
               end
             }.compact
@@ -85,49 +87,55 @@ module Interpreters
 
         new_services = vrp.services.collect{ |service|
 
-          if service.particular_unavailable_date
-            service.particular_unavailable_indices = service.particular_unavailable_date.collect{ |particular_date|
-              (particular_date - epoch).to_i if particular_date >= schedule_start
+          if service.unavailable_visit_day_date
+            service.unavailable_visit_day_indices = service.unavailable_visit_day_date.collect{ |unavailable_date|
+              (unavailable_date - epoch).to_i - real_schedule_start if (unavailable_date - epoch).to_i >= real_schedule_start
             }.compact
+            if vrp.schedule_unavailable_indices
+              service.unavailable_visit_day_indices += vrp.schedule_unavailable_indices
+              service.unavailable_visit_day_indices.uniq
+            end
           end
 
-          if service.static_interval_date
-            service.static_interval_indices = service.static_interval_date.collect{ |static_interval|
-              [static_interval[:start] >= vrp.schedule_range_date[:start] ? (static_interval[:start] - epoch).to_i : schedule_start, static_interval[:end] <= vrp.schedule_range_date[:end] ? (static_interval[:end] - epoch).to_i : schedule_end] if static_interval[:start] >= schedule_start || static_interval[:end] <= schedule_end
-            }.compact
-          end
 
           if service.visits_number
-            day_range = (service.activity.timewindows.last[:end].to_f/86400).ceil - (service.activity.timewindows.first[:start].to_f/86400).floor
+            visit_period = (schedule_end + 1).to_f/service.visits_number
+            timewindows_iterations = (visit_period /(service.visits_period_days_number || 1)).ceil
             ## Create as much service as needed
             (0..service.visits_number-1).collect{ |visit_index|
-              new_service = Marshal::load(Marshal.dump(service))
-              new_service.id = "#{new_service.id}_#{visit_index+1}/#{new_service.visits_number}"
-              new_service.activity.timewindows = if service.static_interval_indices
-                (service.static_interval_indices[visit_index][0]..service.static_interval_indices[visit_index][1]).collect{ |index|
-                  service.activity.timewindows.collect{ |timewindow|
-                    ## Extract the right timewindows to the current index day
-                    if service.particular_unavailable_indices.none?{ |unavailable| unavailable == index} && (timewindow[:start].to_f/86400) >= (index - service.activity.timewindow_start_day_shift_number)%day_range &&
-                    (timewindow[:end].to_f/86400) < (index - service.activity.timewindow_start_day_shift_number)%day_range + 1
-                      {
-                        start: timewindow[:start]%86400 + (index)* 86400,
-                        end: timewindow[:end]%86400 + (index) * 86400
-                      }
+              new_service = nil
+              if !service.unavailable_visit_indices || service.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index}
+                new_service = Marshal::load(Marshal.dump(service))
+                new_service.id = "#{new_service.id}_#{visit_index+1}/#{new_service.visits_number}"
+                new_service.activity.timewindows = (0..timewindows_iterations-1).collect { |iteration|
+                  if service.activity.timewindows
+                    new_timewindows = service.activity.timewindows.collect{ |timewindow|
+                      if timewindow.day_index
+                        if !service.unavailable_visit_day_indices || service.unavailable_visit_day_indices.none?{ |unavailable| (unavailable - shift) == (visit_index * visit_period).to_i + iteration * service.visits_period_days_number + timewindow.day_index } &&
+                        (visit_index * visit_period).to_i + iteration * service.visits_period_days_number + timewindow.day_index < ((visit_index + 1)* visit_period).ceil
+                          {
+                            start: timewindow[:start] + (visit_index * visit_period + iteration * service.visits_period_days_number + timewindow.day_index).ceil * 86400,
+                            end: timewindow[:end] + (visit_index * visit_period + iteration * service.visits_period_days_number + timewindow.day_index).ceil * 86400
+                          }
+                        else
+                        end
+                      else
+                        {
+                          start: timewindow[:start] + (visit_index * visit_period + iteration).to_i * 86400,
+                          end: timewindow[:end] + (visit_index * visit_period + iteration).to_i * 86400
+                        }
+                      end
+                    }.compact.uniq
+                    if new_timewindows.size > 0
+                      new_timewindows
                     end
-                  }.compact
-                }.flatten
-              elsif service.visits_range_days_number
-                service.activity.timewindows.collect{ |timewindow|
-                  if service.particular_unavailable_indices.none?{ |unavailable| unavailable * 86400 == timewindow[:start] + 86400 * (visit_index * (service.visits_range_days_number + service.activity.timewindow_start_day_shift_number) + schedule_start) }
-                    {
-                      start: timewindow[:start] + 86400 * (schedule_start + visit_index * (service.visits_range_days_number + service.activity.timewindow_start_day_shift_number)%(service.visits_range_days_number + 1)),
-                      end: timewindow[:end] + 86400 * (schedule_start + visit_index * (service.visits_range_days_number + service.activity.timewindow_start_day_shift_number)%(service.visits_range_days_number + 1))
-                    }
                   end
                 }.compact.flatten
+              else
+                nil
               end
               new_service
-            }
+            }.compact
           else
             service
           end

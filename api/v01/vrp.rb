@@ -34,6 +34,7 @@ module Api
       def self.vrp_request_timewindow(this)
         this.optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds')
         this.optional(:end, type: Integer, desc: 'End of the current timewindow in seconds')
+        this.optional(:day_index, type: Integer, desc: 'Day index of the current timewindow within the current sequence')
         # this.at_least_one_of :start, :end
       end
 
@@ -126,17 +127,11 @@ module Api
                 optional(:duration, type: Float, desc: 'Maximum tour duration')
                 optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
 
-                optional(:static_interval_indices, type: Array[Array[Integer]], desc: 'Describe the schedule intervals of availability')
-                optional(:static_interval_date, type: Array, desc: 'Describe the schedule date of availability') do
-                  Vrp.vrp_request_date_range(self)
-                end
-                mutually_exclusive :static_interval_indices, :static_interval_date
+                optional(:work_period_days_number, type: Integer, desc: 'Number of days within a period defined within the sequence_timewindows')
 
-                optional(:particular_unavailable_indices, type: Array[Integer], desc: 'Express the exceptionnals indices of unavailabilty')
-                optional(:particular_unavailable_date, type: Array, desc: 'Express the exceptionnals days of unavailability')
-                mutually_exclusive :particular_unavailable_indices, :particular_unavailable_date
-
-                optional(:sequence_timewindow_start_index, type: Integer, desc: '')
+                optional(:unavailable_work_day_indices, type: Array[Integer], desc: 'Express the exceptionnals indices of unavailabilty')
+                optional(:unavailable_work_date, type: Array, desc: 'Express the exceptionnals days of unavailability')
+                mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
 
                 optional(:start_point_id, type: String, desc: 'Begin of the tour')
                 optional(:end_point_id, type: String, desc: 'End of the tour')
@@ -163,18 +158,14 @@ module Api
                 optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
                 optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
 
-                optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule')
-                optional(:visits_range_days_number, type: Integer, desc: '')
+                optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
+                optional(:visits_period_days_number, type: Integer, desc: 'Number of days within a period defined by the timewindows')
 
-                optional(:static_interval_indices, type: Array[Array[Integer]], desc: '')
-                optional(:static_interval_date, type: Array, desc: '') do
-                  Vrp.vrp_request_date_range(self)
-                end
-                mutually_exclusive :static_interval_indices, :static_interval_date
+                optional(:unavailable_visit_indices, type: Array[Integer], desc: 'unavailable indices of visit')
 
-                optional(:particular_unavailable_indices, type: Array[Array[Integer]], desc: 'Express the exceptionnals indices of unavailabilty')
-                optional(:particular_unavailable_date, type: Array, desc: 'Express the exceptionnals days of unavailability')
-                mutually_exclusive :particular_unavailable_indices, :particular_unavailable_date
+                optional(:unavailable_visit_day_indices, type: Array[Integer], desc: 'Express the exceptionnals days indices of unavailabilty')
+                optional(:unavailable_visit_day_date, type: Array, desc: 'Express the exceptionnals days of unavailability')
+                mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
                 optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
                 optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
@@ -224,10 +215,13 @@ module Api
                   at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
                 end
                 optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
-                  optional(:range_indices, type: Array[Float], desc: '')
-                  optional(:range_date, type: Array[Date], desc: '')
+                  optional(:range_indices, type: Hash, desc: '')
+                  optional(:range_date, type: Hash, desc: '') do
+                    Vrp.vrp_request_date_range(self)
+                  end
+
                   mutually_exclusive :range_indices, :range_date
-                  optional(:unavailable_indices, type: Array[Float], desc: '')
+                  optional(:unavailable_indices, type: Array[Integer], desc: '')
                   optional(:unavailable_date, type: Array[Date], desc: '')
                   mutually_exclusive :unavailable_indices, :unavailable_date
                 end
