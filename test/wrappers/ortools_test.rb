@@ -1191,7 +1191,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem = {
       matrices: [{
         id: 'matrix_0',
-        distance: [
+        time: [
           [0, 3, 3, 3],
           [3, 0, 3, 3],
           [3, 3, 0, 3],
@@ -1213,6 +1213,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
+        cost_time_multiplier: 1,
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
@@ -1346,7 +1347,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem = {
       matrices: [{
         id: 'matrix_0',
-        distance: [
+        time: [
           [0, 3, 3, 3],
           [3, 0, 3, 3],
           [3, 3, 0, 3],
@@ -1371,6 +1372,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
+        cost_time_multiplier: 1,
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
@@ -1411,7 +1413,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 9,
+          value: 10,
         }]
       }, {
         id: 'service_3',
@@ -1422,7 +1424,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 8,
+          value: 9,
         }]
       }],
       configuration: {
@@ -1447,7 +1449,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem = {
       matrices: [{
         id: 'matrix_0',
-        distance: [
+        time: [
           [0, 3, 3, 3],
           [3, 0, 3, 3],
           [3, 3, 0, 3],
@@ -1484,76 +1486,67 @@ class Wrappers::OrtoolsTest < Minitest::Test
       services: [{
         id: 'service_0',
         type: 'pickup',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_1'
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 5,
+          value: 9,
         }]
       }, {
         id: 'service_1',
         type: 'pickup',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2'
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 6,
+          value: 9,
         }]
       }, {
         id: 'service_2',
         type: 'delivery',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_3'
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 6,
+          value: 9,
         }]
       }, {
         id: 'service_3',
         type: 'delivery',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_3'
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 5,
+          value: 9,
         }]
       }, {
         id: 'service_4',
         type: 'delivery',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_3'
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 5,
+          value: 9,
         }]
       }, {
         id: 'service_5',
         type: 'pickup',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2'
         },
         quantities: [{
           unit_id: 'unit_0',
-          value: 6,
+          value: 9,
         }]
       }],
       configuration: {
-        preprocessing: {
-          prefer_short_segment: true
-        },
         resolution: {
-          duration: 100
+          duration: 10
         }
       }
     }
@@ -1562,6 +1555,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
-    assert_equal 5, result[:routes][0][:activities].size
+    assert_equal 8, result[:routes][0][:activities].size
   end
 end
