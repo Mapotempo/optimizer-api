@@ -35,6 +35,7 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_at_least_one,
+        :assert_vehicles_no_force_start,
         :assert_vehicles_no_late_multiplier,
         :assert_vehicles_no_overload_multiplier,
         :assert_services_no_late_multiplier,

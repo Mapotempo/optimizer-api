@@ -43,6 +43,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :start_index, :int32, 11
     optional :end_index, :int32, 12
     optional :duration, :int64, 13
+    optional :force_start, :bool, 14
   end
   add_message "ortools_vrp.Problem" do
     repeated :vehicles, :message, 3, "ortools_vrp.Vehicle"

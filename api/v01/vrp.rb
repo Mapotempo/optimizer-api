@@ -104,6 +104,7 @@ module Api
                 optional(:cost_late_multiplier, type: Float, desc: 'Cost applied once a point is deliver late (ORtools only)')
                 optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration')
                 optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour')
+                optional(:force_start, type: Boolean, desc: 'Force the vehicle to start as soon as the vehicle timewindow is open')
 
                 optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
                 optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')

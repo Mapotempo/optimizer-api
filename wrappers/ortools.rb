@@ -117,6 +117,7 @@ module Wrappers
           start_index: vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
           end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
           duration: vehicle.duration ? vehicle.duration : -1,
+          force_start: vehicle.force_start
         )
       }
 

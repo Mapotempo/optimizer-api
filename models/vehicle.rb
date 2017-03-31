@@ -44,6 +44,7 @@ module Models
     field :length, default: nil
     field :hazardous_goods, default: nil
 
+    field :force_start, default: false
     field :duration, default: nil
     field :matrix_id, default: nil
     field :day_index, default: nil
