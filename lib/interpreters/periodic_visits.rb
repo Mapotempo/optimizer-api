@@ -59,19 +59,24 @@ module Interpreters
                     start: vehicle_day_index * 86400 + associated_timewindow[:start],
                     end: vehicle_day_index * 86400 + associated_timewindow[:end]
                   }
+                  new_vehicle.sequence_timewindows = nil
                   associated_rests = vehicle.rests.select{ |rest| rest.timewindows.any?{ |timewindow| timewindow[:day_index] == vehicle_day_index%vehicle.work_period_days_number } }
                   new_vehicle.rests = associated_rests.collect{ |rest|
-                    new_rest  = Marshal::load(Marshal.dump(rest))
-                    timewindows = new_rest.timewindows.select{ |timewindow| timewindow[:day_index] == vehicle_day_index%vehicle.work_period_days_number }.collect!{ |timewindow|
-                      {
-                        start: vehicle_day_index * 86400 + timewindow[:start],
-                        end: vehicle_day_index * 86400 + timewindow[:end]
-                      }
-                    }
-                    new_rest[:id] = "#{new_rest[:id]}_#{vehicle_day_index+1}"
-                    new_rest
+                    new_rest = Marshal::load(Marshal.dump(rest))
+                    new_rest_timewindows = new_rest.timewindows.collect{ |timewindow|
+                      if timewindow[:day_index] == vehicle_day_index%vehicle.work_period_days_number
+                        {
+                          start: vehicle_day_index * 86400 + timewindow[:start],
+                          end: vehicle_day_index * 86400 + timewindow[:end]
+                        }
+                      end
+                    }.compact
+                    if new_rest_timewindows.size > 0
+                      new_rest.timewindows = new_rest_timewindows
+                      new_rest[:id] = "#{new_rest[:id]}_#{vehicle_day_index+1}"
+                      new_rest
+                    end
                   }
-                  new_vehicle.day_index = vehicle_day_index
                   new_vehicle
                 else
                   nil
@@ -111,13 +116,12 @@ module Interpreters
                   if service.activity.timewindows
                     new_timewindows = service.activity.timewindows.collect{ |timewindow|
                       if timewindow.day_index
-                        if !service.unavailable_visit_day_indices || service.unavailable_visit_day_indices.none?{ |unavailable| (unavailable - shift) == (visit_index * visit_period).to_i + iteration * service.visits_period_days_number + timewindow.day_index } &&
-                        (visit_index * visit_period).to_i + iteration * service.visits_period_days_number + timewindow.day_index < ((visit_index + 1)* visit_period).ceil
+                        if (!service.unavailable_visit_day_indices || service.unavailable_visit_day_indices.none?{ |unavailable| (unavailable - shift) == (visit_index * visit_period).ceil + iteration * service.visits_period_days_number + timewindow.day_index }) &&
+                        (visit_index * visit_period).to_i + iteration * service.visits_period_days_number + timewindow.day_index < ((visit_index + 1)* visit_period).to_i
                           {
                             start: timewindow[:start] + (visit_index * visit_period + iteration * service.visits_period_days_number + timewindow.day_index).ceil * 86400,
                             end: timewindow[:end] + (visit_index * visit_period + iteration * service.visits_period_days_number + timewindow.day_index).ceil * 86400
                           }
-                        else
                         end
                       else
                         {

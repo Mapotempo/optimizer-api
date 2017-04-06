@@ -376,7 +376,7 @@ class InterpreterTest < Minitest::Test
     assert_equal 5, expanded_vrp[:vehicles].size
     assert expanded_vrp[:vehicles][0].timewindow[:start] + 172800 == expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 7}
+    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 }
   end
 
   def test_expand_vrp_service_over_a_week
