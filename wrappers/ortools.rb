@@ -135,7 +135,7 @@ module Wrappers
 
     def closest_rest_start(timewindows, current_start)
       timewindows.size == 0 || timewindows.one?{ |tw| current_start >= tw[:start] && current_start <= tw[:end] } ? current_start :
-        timewindows.sort_by {|tw_start, tw_end| tw_end }.find{ |tw| tw[:start] > current_start}[:start]
+        timewindows.sort_by { |tw0, tw1| tw1 ? tw0[:start] < tw1[:start] : tw0 }.find{ |tw| tw[:start] > current_start }[:start]
     end
 
     def kill
