@@ -49,7 +49,7 @@ module Interpreters
           end
 
           if vehicle.sequence_timewindows
-            (schedule_start..schedule_end).collect{ |vehicle_day_index|
+            new_vehicles = (schedule_start..schedule_end).collect{ |vehicle_day_index|
               if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index - shift == vehicle_day_index}
                 associated_timewindow = vehicle.sequence_timewindows.find{ |timewindow| !timewindow[:day_index] || timewindow[:day_index] == vehicle_day_index%vehicle.work_period_days_number }
                 if associated_timewindow
@@ -77,12 +77,17 @@ module Interpreters
                       new_rest
                     end
                   }
+                  vrp.rests += new_vehicle.rests
                   new_vehicle
                 else
                   nil
                 end
               end
             }.compact
+            vehicle.rests.each{ |rest|
+              vrp.rests.delete(rest)
+            }
+            new_vehicles
           else
             vehicle
           end
