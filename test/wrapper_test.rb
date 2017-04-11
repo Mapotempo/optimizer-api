@@ -220,15 +220,15 @@ class WrapperTest < Minitest::Test
           [ 0,  1,  1, 10,  0]
         ]
       }],
-      "units": [{
-          "id": "unit0",
-          "label": "kg"
+      units: [{
+          id: "unit0",
+          label: "kg"
       }, {
-          "id": "unit1",
-          "label": "kg"
+          id: "unit1",
+          label: "kg"
       }, {
-          "id": "unit2",
-          "label": "kg"
+          id: "unit2",
+          label: "kg"
       }],
       points: (0..(size - 1)).collect{ |i|
         {
