@@ -46,7 +46,7 @@ module Wrappers
 
     def solve(vrp, job, &block)
       @job = job
-      result = run_jsprit(vrp.matrices[0].time, vrp.matrices[0].distance, vrp.vehicles, vrp.services, vrp.shipments, vrp.rests, vrp.resolution_duration, vrp.resolution_iterations, vrp.resolution_iterations_without_improvment, vrp.resolution_stable_iterations, vrp.resolution_stable_coefficient, vrp.preprocessing_prefer_short_segment, @threads, &block)
+      result = run_jsprit(vrp, @threads, &block)
       if result && result.is_a?(Hash)
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result
@@ -75,15 +75,15 @@ module Wrappers
       }.nil?
     end
 
-    def run_jsprit(matrix_time, matrix_distance, vehicles, services, shipments, rests, resolution_duration, resolution_iterations, resolution_iterations_without_improvment, resolution_stable_iterations, resolution_stable_coefficient, nearby, threads, &block)
-      fleet = Hash[vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
+    def run_jsprit(vrp, threads, &block)
+      fleet = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
       builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
         xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
           xml.problemType {
             xml.fleetSize 'FINITE'
           }
           xml.vehicles {
-            vehicles.each do |vehicle|
+            vrp.vehicles.each do |vehicle|
               xml.vehicle {
                 xml.id_ vehicle.id
                 xml.typeId vehicle.id
@@ -151,7 +151,7 @@ module Wrappers
             end
           }
           xml.vehicleTypes {
-            vehicles.each do |vehicle|
+            vrp.vehicles.each do |vehicle|
               xml.type {
                 xml.id_ vehicle.id
                 if vehicle.capacities.size > 0
@@ -175,9 +175,9 @@ module Wrappers
               }
             end
           }
-          if services.size > 0
+          if vrp.services.size > 0
             xml.services {
-              services.each do |service|
+              vrp.services.each do |service|
                 xml.service(id: service.id, type: service.type) {
                   xml.location {
                     xml.index service.activity.point.matrix_index
@@ -215,9 +215,9 @@ module Wrappers
               end
             }
           end
-          if shipments.size > 0
+          if vrp.shipments.size > 0
             xml.shipments {
-              shipments.each do |shipment|
+              vrp.shipments.each do |shipment|
                 xml.shipment(id: shipment.id) {
                   xml.pickup {
                     xml.location {
@@ -282,18 +282,18 @@ module Wrappers
       input_problem.close
 
       input_algorithm = Tempfile.new('optimize-jsprit-input_algorithm', tmpdir=@tmp_dir)
-      input_algorithm.write(algorithm_config(resolution_iterations))
+      input_algorithm.write(algorithm_config(vrp.resolution_iterations))
       input_algorithm.close
 
-      if matrix_time
+      if vrp.matrices[0].time
         input_time_matrix = Tempfile.new('optimize-jsprit-input_time_matrix', tmpdir=@tmp_dir)
-        input_time_matrix.write(matrix_time.collect{ |a| a.join(" ") }.join("\n"))
+        input_time_matrix.write(vrp.matrices[0].time.collect{ |a| a.join(" ") }.join("\n"))
         input_time_matrix.close
       end
 
-      if matrix_distance
+      if vrp.matrices[0].distance
         input_distance_matrix = Tempfile.new('optimize-jsprit-input_distance_matrix', tmpdir=@tmp_dir)
-        input_distance_matrix.write(matrix_distance.collect{ |a| a.join(" ") }.join("\n"))
+        input_distance_matrix.write(vrp.matrices[0].distance.collect{ |a| a.join(" ") }.join("\n"))
         input_distance_matrix.close
       end
 
@@ -305,10 +305,10 @@ module Wrappers
         "--algorithm '#{input_algorithm.path}'",
         input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '',
         input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '',
-        resolution_duration ? "--ms '#{resolution_duration}'" : '',
-        nearby ? "--nearby" : '',
-        resolution_iterations_without_improvment ? "--no_improvment_iterations '#{resolution_iterations_without_improvment}'" : '',
-        resolution_stable_iterations && resolution_stable_coefficient ? "--stable_iterations '#{resolution_stable_iterations}' --stable_coef '#{resolution_stable_coefficient}'" : '',
+        vrp.resolution_duration ? "--ms '#{vrp.resolution_duration}'" : '',
+        vrp.preprocessing_prefer_short_segment ? "--nearby" : '',
+        vrp.resolution_iterations_without_improvment ? "--no_improvment_iterations '#{vrp.resolution_iterations_without_improvment}'" : '',
+        vrp.resolution_stable_iterations && resolution_stable_coefficient ? "--stable_iterations '#{vrp.resolution_stable_iterations}' --stable_coef '#{vrp.resolution_stable_coefficient}'" : '',
         "--threads '#{threads}'",
         "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       puts cmd
@@ -338,12 +338,12 @@ module Wrappers
           r && (cost = Float(r[1]))
           r && (fresh_output = true)
         end
-        block.call(self, iterations, resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, fleet, services, shipments, rests, matrix_time, matrix_distance)) if block
+        block.call(self, iterations, vrp.resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, fleet, vrp)) if block
         fresh_output = nil
       }
 
       if @thread.value == 0
-        parse_output(output.path, iterations, fleet, services, shipments, rests, matrix_time, matrix_distance)
+        parse_output(output.path, iterations, fleet, vrp)
       else
         out
       end
@@ -355,7 +355,7 @@ module Wrappers
       output && output.unlink
     end
 
-    def parse_output(path, iterations, fleet, services, shipments, rests, matrix_time, matrix_distance)
+    def parse_output(path, iterations, fleet, vrp)
       doc = Nokogiri::XML(File.open(path))
       doc.remove_namespaces!
       solution = doc.xpath('/problem/solutions/solution').last
@@ -377,24 +377,24 @@ module Wrappers
                 route.xpath('act').collect{ |act|
                   point = case act['type']
                   when 'delivery', 'service', 'pickup'
-                    services.find{ |service| service[:id] == act.at_xpath('serviceId').content }.activity.point[:matrix_index]
+                    vrp.services.find{ |service| service[:id] == act.at_xpath('serviceId').content }.activity.point[:matrix_index]
                   when 'pickupShipment'
-                    shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup.point[:matrix_index]
+                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup.point[:matrix_index]
                   when 'deliverShipment'
-                    shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.delivery.point[:matrix_index]
+                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.delivery.point[:matrix_index]
                   else
                     previous
                   end
 
                   duration = case act['type']
                   when 'delivery', 'service', 'pickup'
-                    services.find{ |service| service[:id] == act.at_xpath('serviceId').content }.activity[:duration]
+                    vrp.services.find{ |service| service[:id] == act.at_xpath('serviceId').content }.activity[:duration]
                   when 'pickupShipment'
-                    shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup[:duration]
+                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup[:duration]
                   when 'deliverShipment'
-                    shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.delivery[:duration]
+                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.delivery[:duration]
                   when 'break'
-                    rests.find{ |rest| rest[:id] == act.at_xpath('breakId').content }[:duration]
+                    vrp.rests.find{ |rest| rest[:id] == act.at_xpath('breakId').content }[:duration]
                   end
 
                   current_activity = {
@@ -403,8 +403,8 @@ module Wrappers
                     delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
                     service_id: (a = act.at_xpath('serviceId')) && a && a.content,
                     rest_id: (a = act.at_xpath('breakId')) && a && a.content,
-                    travel_time: (previous && point && matrix_time ? matrix_time[previous][point] : 0),
-                    travel_distance: (previous && point && matrix_distance ? matrix_distance[previous][point] : 0),
+                    travel_time: (previous && point && vrp.matrices[0].time ? vrp.matrices[0].time[previous][point] : 0),
+                    travel_distance: (previous && point && vrp.matrices[0].distance ? vrp.matrices[0].distance[previous][point] : 0),
                     begin_time: (a = act.at_xpath('endTime')) && a && Float(a.content) - duration,
                     departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
                   }.delete_if { |k, v| !v }
@@ -429,7 +429,7 @@ module Wrappers
             end
           },
           unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
-            (services.find{ |s| s.id == job.attr('id')} ? :service_id : shipments.find{ |s| s.id == job.attr('id')} ? :shipment_id : nil) => job.attr('id')
+            (vrp.services.find{ |s| s.id == job.attr('id')} ? :service_id : vrp.shipments.find{ |s| s.id == job.attr('id')} ? :shipment_id : nil) => job.attr('id')
           }}
         }
       end
