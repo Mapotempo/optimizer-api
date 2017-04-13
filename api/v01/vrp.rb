@@ -212,6 +212,7 @@ module Api
                   optional(:stable_coefficient, type: Float, desc: 'variation coefficient related to stable_iterations (Jsprit only)')
                   optional(:initial_time_out, type: Integer, desc: 'minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
                   optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
+                  optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution')
                   at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
                 end
                 optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do

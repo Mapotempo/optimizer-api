@@ -624,4 +624,66 @@ class Wrappers::JspritTest < Minitest::Test
     rv1 = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_1' }
     assert rv1[:activities].collect{ |a| a[:service_id] }.include?('service_4')
   end
+
+    def test_vehicle_limit
+    jsprit = OptimizerWrapper::JSPRIT
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          end: 1
+        }
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          end: 1
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          vehicle_limit: 1
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert jsprit.inapplicable_solve?(vrp).empty?
+    result = jsprit.solve(vrp, 'test')
+    assert result
+    assert_equal 2, result[:routes].size
+    assert_equal problem[:services].size + 1, result[:routes][0][:activities].size + result[:routes][1][:activities].size
+  end
 end

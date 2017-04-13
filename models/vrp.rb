@@ -30,6 +30,7 @@ module Models
     field :resolution_stable_coefficient, default: nil
     field :resolution_initial_time_out, default: nil
     field :resolution_time_out_multiplier, default: nil
+    field :resolution_vehicle_limit, default: nil
 
     field :schedule_range_indices, default: nil
     field :schedule_range_date, default: nil
@@ -44,6 +45,7 @@ module Models
     validates_numericality_of :resolution_stable_coefficient, allow_nil: true
     validates_numericality_of :resolution_initial_time_out, allow_nil: true
     validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
+    validates_numericality_of :resolution_vehicle_limit, allow_nil: true
 
     has_many :matrices, class_name: 'Models::Matrix'
     has_many :points, class_name: 'Models::Point'
@@ -72,6 +74,7 @@ module Models
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
       self.resolution_initial_time_out = resolution[:initial_time_out]
       self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
+      self.resolution_vehicle_limit = resolution[:vehicle_limit]
     end
 
     def preprocessing=(preprocessing)

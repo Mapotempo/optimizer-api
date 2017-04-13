@@ -309,6 +309,7 @@ module Wrappers
         vrp.preprocessing_prefer_short_segment ? "--nearby" : '',
         vrp.resolution_iterations_without_improvment ? "--no_improvment_iterations '#{vrp.resolution_iterations_without_improvment}'" : '',
         vrp.resolution_stable_iterations && resolution_stable_coefficient ? "--stable_iterations '#{vrp.resolution_stable_iterations}' --stable_coef '#{vrp.resolution_stable_coefficient}'" : '',
+        vrp.resolution_vehicle_limit ? "--vehicle_limit #{vrp.resolution_vehicle_limit}" : '',
         "--threads '#{threads}'",
         "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       puts cmd
