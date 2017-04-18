@@ -97,6 +97,13 @@ module Wrappers
       vrp.shipments.empty?
     end
 
+
+    def assert_no_shipments_with_multiple_timewindows(vrp)
+      vrp.shipments.empty? || vrp.shipments.none? { |shipment|
+        shipment.pickup.timewindows.size > 1 || shipment.delivery.timewindows.size > 1
+      }
+    end
+
     def assert_services_no_skills(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         !service.skills.empty?
