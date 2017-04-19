@@ -43,6 +43,7 @@ module Models
     field :width, default: nil
     field :length, default: nil
     field :hazardous_goods, default: nil
+    field :max_walk_distance, default: 750
 
     field :force_start, default: false
     field :duration, default: nil
@@ -125,6 +126,7 @@ module Models
         width: width,
         length: length,
         hazardous_goods: hazardous_goods,
+        max_walk_distance: max_walk_distance
       }
     end
   end
