@@ -406,7 +406,7 @@
    "cost_fixed": 0.0,
    "cost_distance_multiplier": 0.0,
    "cost_time_multiplier": 1.0,
-   "cost_waiting_time_multiplier": 1.0,
+   "cost_waiting_time_multiplier": 0.0,
    "cost_late_multiplier": 0.3,
    "rest_ids": ["r13223"],
    "capacities": [{
@@ -419,6 +419,8 @@
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p0",
     "timewindows": [{
      "start": null,
@@ -429,13 +431,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13225",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p1",
     "timewindows": [],
     "duration": 240.0
@@ -443,13 +446,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13260",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p2",
     "timewindows": [],
     "duration": 240.0
@@ -457,13 +461,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13259",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p3",
     "timewindows": [],
     "duration": 240.0
@@ -471,13 +476,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13262",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p4",
     "timewindows": [{
      "start": null,
@@ -488,13 +494,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13263",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p5",
     "timewindows": [{
      "start": null,
@@ -505,13 +512,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13264",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p6",
     "timewindows": [],
     "duration": 240.0
@@ -519,13 +527,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13265",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p7",
     "timewindows": [{
      "start": null,
@@ -536,13 +545,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13266",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p8",
     "timewindows": [{
      "start": null,
@@ -553,13 +563,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13267",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p9",
     "timewindows": [],
     "duration": 240.0
@@ -567,13 +578,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13269",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p10",
     "timewindows": [],
     "duration": 240.0
@@ -581,13 +593,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13268",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p11",
     "timewindows": [],
     "duration": 240.0
@@ -595,13 +608,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13238",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p12",
     "timewindows": [{
      "start": null,
@@ -612,13 +626,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13239",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p13",
     "timewindows": [],
     "duration": 240.0
@@ -626,13 +641,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13234",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p14",
     "timewindows": [],
     "duration": 240.0
@@ -640,13 +656,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13235",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p15",
     "timewindows": [],
     "duration": 240.0
@@ -654,13 +671,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13237",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p16",
     "timewindows": [],
     "duration": 240.0
@@ -668,13 +686,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13236",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p17",
     "timewindows": [],
     "duration": 240.0
@@ -682,13 +701,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13233",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p18",
     "timewindows": [{
      "start": null,
@@ -699,13 +719,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13270",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p19",
     "timewindows": [],
     "duration": 240.0
@@ -713,13 +734,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13229",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p20",
     "timewindows": [],
     "duration": 240.0
@@ -727,13 +749,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13232",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p21",
     "timewindows": [],
     "duration": 240.0
@@ -741,13 +764,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13230",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p22",
     "timewindows": [{
      "start": null,
@@ -758,13 +782,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13231",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p23",
     "timewindows": [],
     "duration": 240.0
@@ -772,13 +797,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13228",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p24",
     "timewindows": [],
     "duration": 240.0
@@ -786,13 +812,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13226",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p25",
     "timewindows": [],
     "duration": 240.0
@@ -800,13 +827,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13227",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p26",
     "timewindows": [],
     "duration": 240.0
@@ -814,13 +842,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13255",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p27",
     "timewindows": [],
     "duration": 240.0
@@ -828,13 +857,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13256",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p28",
     "timewindows": [],
     "duration": 240.0
@@ -842,13 +872,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13257",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p29",
     "timewindows": [],
     "duration": 240.0
@@ -856,13 +887,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13258",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p30",
     "timewindows": [],
     "duration": 240.0
@@ -870,13 +902,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13261",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p31",
     "timewindows": [],
     "duration": 240.0
@@ -884,13 +917,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13251",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p32",
     "timewindows": [],
     "duration": 240.0
@@ -898,13 +932,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13252",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p33",
     "timewindows": [],
     "duration": 240.0
@@ -912,13 +947,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13253",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p34",
     "timewindows": [{
      "start": null,
@@ -929,13 +965,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13254",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p35",
     "timewindows": [{
      "start": null,
@@ -946,13 +983,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13250",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p36",
     "timewindows": [{
      "start": null,
@@ -963,13 +1001,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13245",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p37",
     "timewindows": [],
     "duration": 240.0
@@ -977,13 +1016,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13246",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p38",
     "timewindows": [{
      "start": null,
@@ -994,13 +1034,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13247",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p39",
     "timewindows": [],
     "duration": 240.0
@@ -1008,13 +1049,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13249",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p40",
     "timewindows": [],
     "duration": 240.0
@@ -1022,13 +1064,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13248",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p41",
     "timewindows": [],
     "duration": 240.0
@@ -1036,13 +1079,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13241",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p42",
     "timewindows": [{
      "start": null,
@@ -1053,13 +1097,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13242",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p43",
     "timewindows": [],
     "duration": 240.0
@@ -1067,13 +1112,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13243",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p44",
     "timewindows": [],
     "duration": 240.0
@@ -1081,13 +1127,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13244",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p45",
     "timewindows": [],
     "duration": 240.0
@@ -1095,13 +1142,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13240",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p46",
     "timewindows": [],
     "duration": 240.0
@@ -1109,13 +1157,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13271",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p47",
     "timewindows": [],
     "duration": 240.0
@@ -1123,13 +1172,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13272",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p48",
     "timewindows": [],
     "duration": 240.0
@@ -1137,13 +1187,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13273",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p49",
     "timewindows": [],
     "duration": 240.0
@@ -1151,13 +1202,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13274",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p50",
     "timewindows": [],
     "duration": 240.0
@@ -1165,13 +1217,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13275",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p51",
     "timewindows": [],
     "duration": 240.0
@@ -1179,13 +1232,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 2.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13276",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p52",
     "timewindows": [],
     "duration": 240.0
@@ -1193,13 +1247,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13277",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p53",
     "timewindows": [],
     "duration": 240.0
@@ -1207,13 +1262,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13278",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p54",
     "timewindows": [],
     "duration": 240.0
@@ -1221,13 +1277,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13279",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p55",
     "timewindows": [],
     "duration": 240.0
@@ -1235,13 +1292,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13280",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p56",
     "timewindows": [],
     "duration": 240.0
@@ -1249,13 +1307,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13281",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p57",
     "timewindows": [],
     "duration": 240.0
@@ -1263,13 +1322,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13282",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p58",
     "timewindows": [],
     "duration": 240.0
@@ -1277,13 +1337,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13284",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p59",
     "timewindows": [],
     "duration": 240.0
@@ -1291,13 +1352,14 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }, {
    "id": "s13283",
    "type": "service",
    "sticky_vehicle_ids": ["v61"],
    "activity": {
+
+    "late_multiplier": 0.3,
     "point_id": "p60",
     "timewindows": [],
     "duration": 240.0
@@ -1305,8 +1367,7 @@
    "quantities": [{
     "unit_id": "unit1",
     "value": 1.0
-   }],
-   "late_multiplier": 0.3
+   }]
   }],
   "configuration": {
    "preprocessing": {

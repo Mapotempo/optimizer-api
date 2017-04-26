@@ -20,9 +20,7 @@ require './models/base'
 
 module Models
   class Service < Base
-    field :late_multiplier, default: nil
     field :priority, default: 4
-    validates_numericality_of :late_multiplier, allow_nil: true
     validates_numericality_of :priority
     field :type, default: :service
 

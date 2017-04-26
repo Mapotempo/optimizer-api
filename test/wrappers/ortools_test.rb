@@ -662,7 +662,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_1',
-        late_multiplier: 1,
         activity: {
           point_id: 'point_1',
           timewindows: [{
@@ -672,10 +671,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 7,
             end: 8
           }],
+          late_multiplier: 1,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 1,
         activity: {
           point_id: 'point_2',
           timewindows: [{
@@ -685,6 +684,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 10,
             end: 11
           }],
+          late_multiplier: 1,
         }
       }],
       configuration: {
@@ -729,7 +729,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_1',
-        late_multiplier: 1,
         activity: {
           point_id: 'point_1',
           timewindows: [{
@@ -742,10 +741,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 11,
             end: 12
           }],
+          late_multiplier: 1,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 1,
         activity: {
           point_id: 'point_2',
           timewindows: [{
@@ -758,6 +757,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 15,
             end: 16
           }],
+          late_multiplier: 1,
         }
       }],
       configuration: {
@@ -802,7 +802,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_1',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_1',
           timewindows: [{
@@ -812,10 +811,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 7,
             end: 8
           }],
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2',
           timewindows: [{
@@ -825,6 +824,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 10,
             end: 11
           }],
+          late_multiplier: 0,
         }
       }],
       configuration: {
@@ -869,7 +869,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_1',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_1',
           timewindows: [{
@@ -882,10 +881,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 11,
             end: 12
           }],
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2',
           timewindows: [{
@@ -898,6 +897,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 15,
             end: 16
           }],
+          late_multiplier: 0,
         }
       }],
       configuration: {
@@ -967,45 +967,45 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_0',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_1',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_1',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_3',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_3',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_4',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_4',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_5',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_5',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_6',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_6',
+          late_multiplier: 0,
         }
       }],
       configuration: {
@@ -1059,21 +1059,21 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_1'
+          point_id: 'point_1',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_1',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_2'
+          point_id: 'point_2',
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_3'
+          point_id: 'point_3',
+          late_multiplier: 0,
         }
       }],
       configuration: {
@@ -1139,33 +1139,33 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_1',
           timewindows: [{
             start: 2980,
             end: 3020
-          }]
+          }],
+          late_multiplier: 0,
         }
       }, {
         id: 'service_1',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2',
           timewindows: [{
             start: 2980,
             end: 3020
-          }]
+          }],
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_3',
           timewindows: [{
             start: 2980,
             end: 3020
-          }]
+          }],
+          late_multiplier: 0,
         }
       }],
       configuration: {
@@ -1227,30 +1227,30 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_1'
+          point_id: 'point_1',
+          late_multiplier: 0,
         },
         skills: ["frozen"]
       }, {
         id: 'service_1',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_2'
+          point_id: 'point_2',
+          late_multiplier: 0,
         },
         skills: ["cool"]
       }, {
         id: 'service_2',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_3'
+          point_id: 'point_3',
+          late_multiplier: 0,
         },
         skills: ["frozen"]
       }, {
         id: 'service_3',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_3'
+          point_id: 'point_3',
+          late_multiplier: 0,
         },
         skills: ["cool"]
       }],
@@ -1300,7 +1300,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_1',
-        late_multiplier: 0,
         activity: {
           setup_duration: 2,
           point_id: 'point_1',
@@ -1311,10 +1310,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 7,
             end: 8
           }],
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
-        late_multiplier: 0,
         activity: {
           setup_duration: 2,
           point_id: 'point_1',
@@ -1325,6 +1324,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 7,
             end: 8
           }],
+          late_multiplier: 0,
         }
       }],
       configuration: {
@@ -1385,9 +1385,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       services: [{
         id: 'service_0',
         type: 'pickup',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_1'
+          point_id: 'point_1',
+          late_multiplier: 0,
         },
         quantities: [{
           unit_id: 'unit_0',
@@ -1396,9 +1396,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'service_1',
         type: 'pickup',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_2'
+          point_id: 'point_2',
+          late_multiplier: 0,
         },
         quantities: [{
           unit_id: 'unit_0',
@@ -1407,9 +1407,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'service_2',
         type: 'delivery',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_3'
+          point_id: 'point_3',
+          late_multiplier: 0,
         },
         quantities: [{
           unit_id: 'unit_0',
@@ -1418,9 +1418,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'service_3',
         type: 'delivery',
-        late_multiplier: 0,
         activity: {
-          point_id: 'point_3'
+          point_id: 'point_3',
+          late_multiplier: 0,
         },
         quantities: [{
           unit_id: 'unit_0',
@@ -1597,26 +1597,26 @@ class Wrappers::OrtoolsTest < Minitest::Test
       services: [{
         id: 'service_0',
         type: 'service',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_1',
-          duration: 3
+          duration: 3,
+          late_multiplier: 0,
         }
       }, {
         id: 'service_1',
         type: 'service',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2',
-          duration: 5
+          duration: 5,
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
         type: 'service',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_3',
-          duration: 5
+          duration: 5,
+          late_multiplier: 0,
         }
       }],
       configuration: {
@@ -1675,35 +1675,35 @@ class Wrappers::OrtoolsTest < Minitest::Test
       services: [{
         id: 'service_0',
         type: 'service',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_1',
           duration: 0,
           timewindows: [{
             start: 9
-          }]
+          }],
+          late_multiplier: 0,
         }
       }, {
         id: 'service_1',
         type: 'service',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_2',
           duration: 0,
           timewindows: [{
             start: 18
-          }]
+          }],
+          late_multiplier: 0,
         }
       }, {
         id: 'service_2',
         type: 'service',
-        late_multiplier: 0,
         activity: {
           point_id: 'point_3',
           duration: 0,
           timewindows: [{
             start: 18
-          }]
+          }],
+          late_multiplier: 0,
         }
       }],
       configuration: {

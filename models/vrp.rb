@@ -92,7 +92,7 @@ module Models
 
     def need_matrix_time?
       services.find{ |service|
-        !service.activity.timewindows.empty? || service.late_multiplier != 0
+        !service.activity.timewindows.empty? || service.activity.late_multiplier != 0
       } ||
       shipments.find{ |shipment|
         !shipment.pickup.timewindows.empty? || shipment.pickup.late_multiplier != 0 ||

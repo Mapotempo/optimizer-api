@@ -709,12 +709,12 @@ class WrapperTest < Minitest::Test
           id: "service_#{i}",
           activity: {
             point_id: "point_#{i}",
+            late_multiplier: 3,
             timewindows: [{
               start: 1,
               end: 2
             }]
           },
-          late_multiplier: 3,
           skills: ['A']
         }
       },

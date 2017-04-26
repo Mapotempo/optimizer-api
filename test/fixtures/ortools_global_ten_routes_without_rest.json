@@ -930,6 +930,7 @@
         "id": "s34702",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p0",
           "timewindows": [],
           "duration": 600
@@ -939,13 +940,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34701",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p1",
           "timewindows": [],
           "duration": 600
@@ -955,13 +956,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34703",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p2",
           "timewindows": [],
           "duration": 600
@@ -971,13 +972,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34704",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p3",
           "timewindows": [],
           "duration": 600
@@ -987,13 +988,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34705",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p4",
           "timewindows": [],
           "duration": 600
@@ -1003,13 +1004,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34706",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p5",
           "timewindows": [],
           "duration": 600
@@ -1019,13 +1020,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34707",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p6",
           "timewindows": [
             {
@@ -1040,13 +1041,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34636",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p7",
           "timewindows": [],
           "duration": 600
@@ -1056,13 +1057,13 @@
             "unit_id": "unit1",
             "value": 8
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34712",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p8",
           "timewindows": [],
           "duration": 600
@@ -1072,13 +1073,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34713",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p9",
           "timewindows": [],
           "duration": 600
@@ -1088,13 +1089,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34634",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p10",
           "timewindows": [
             {
@@ -1109,13 +1110,13 @@
             "unit_id": "unit1",
             "value": 5
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34635",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p11",
           "timewindows": [
             {
@@ -1130,13 +1131,13 @@
             "unit_id": "unit1",
             "value": 6
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34710",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p12",
           "timewindows": [],
           "duration": 600
@@ -1146,13 +1147,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34711",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p13",
           "timewindows": [],
           "duration": 600
@@ -1162,13 +1163,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34709",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p14",
           "timewindows": [
             {
@@ -1183,13 +1184,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34708",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p15",
           "timewindows": [],
           "duration": 600
@@ -1199,13 +1200,13 @@
             "unit_id": "unit1",
             "value": 80
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34633",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p16",
           "timewindows": [
             {
@@ -1220,13 +1221,13 @@
             "unit_id": "unit1",
             "value": 3
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34699",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p17",
           "timewindows": [],
           "duration": 600
@@ -1236,13 +1237,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34700",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p18",
           "timewindows": [],
           "duration": 600
@@ -1252,13 +1253,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34698",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p19",
           "timewindows": [],
           "duration": 600
@@ -1268,13 +1269,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34697",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p20",
           "timewindows": [],
           "duration": 600
@@ -1284,13 +1285,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34696",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p21",
           "timewindows": [],
           "duration": 600
@@ -1300,13 +1301,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34695",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p22",
           "timewindows": [],
           "duration": 600
@@ -1316,13 +1317,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34694",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p23",
           "timewindows": [],
           "duration": 600
@@ -1332,13 +1333,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34693",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p24",
           "timewindows": [],
           "duration": 600
@@ -1348,13 +1349,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34692",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p25",
           "timewindows": [],
           "duration": 600
@@ -1364,13 +1365,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34691",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p26",
           "timewindows": [],
           "duration": 600
@@ -1380,13 +1381,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34690",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p27",
           "timewindows": [],
           "duration": 600
@@ -1396,13 +1397,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34689",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p28",
           "timewindows": [],
           "duration": 600
@@ -1412,13 +1413,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34688",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p29",
           "timewindows": [],
           "duration": 600
@@ -1428,13 +1429,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34687",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p30",
           "timewindows": [],
           "duration": 600
@@ -1444,13 +1445,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34686",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p31",
           "timewindows": [],
           "duration": 600
@@ -1460,13 +1461,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34685",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p32",
           "timewindows": [],
           "duration": 600
@@ -1476,13 +1477,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34684",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p33",
           "timewindows": [],
           "duration": 600
@@ -1492,13 +1493,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34683",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p34",
           "timewindows": [],
           "duration": 600
@@ -1508,13 +1509,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34682",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p35",
           "timewindows": [],
           "duration": 600
@@ -1524,13 +1525,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34681",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p36",
           "timewindows": [],
           "duration": 600
@@ -1540,13 +1541,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34680",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p37",
           "timewindows": [],
           "duration": 600
@@ -1556,13 +1557,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34679",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p38",
           "timewindows": [],
           "duration": 600
@@ -1572,13 +1573,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34678",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p39",
           "timewindows": [],
           "duration": 600
@@ -1588,13 +1589,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34677",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p40",
           "timewindows": [],
           "duration": 600
@@ -1604,13 +1605,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34676",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p41",
           "timewindows": [],
           "duration": 600
@@ -1620,13 +1621,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34675",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p42",
           "timewindows": [],
           "duration": 600
@@ -1636,13 +1637,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34674",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p43",
           "timewindows": [],
           "duration": 600
@@ -1652,13 +1653,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34673",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p44",
           "timewindows": [],
           "duration": 600
@@ -1668,13 +1669,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34672",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p45",
           "timewindows": [],
           "duration": 600
@@ -1684,13 +1685,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34671",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p46",
           "timewindows": [],
           "duration": 600
@@ -1700,13 +1701,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34670",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p47",
           "timewindows": [],
           "duration": 600
@@ -1716,13 +1717,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34669",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p48",
           "timewindows": [],
           "duration": 600
@@ -1732,13 +1733,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34668",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p49",
           "timewindows": [],
           "duration": 600
@@ -1748,13 +1749,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34667",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p50",
           "timewindows": [],
           "duration": 600
@@ -1764,13 +1765,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34666",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p51",
           "timewindows": [],
           "duration": 600
@@ -1780,13 +1781,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34665",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p52",
           "timewindows": [],
           "duration": 600
@@ -1796,13 +1797,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34664",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p53",
           "timewindows": [],
           "duration": 600
@@ -1812,13 +1813,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34663",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p54",
           "timewindows": [],
           "duration": 600
@@ -1828,13 +1829,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34662",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p55",
           "timewindows": [],
           "duration": 600
@@ -1844,13 +1845,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34661",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p56",
           "timewindows": [],
           "duration": 600
@@ -1860,13 +1861,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34660",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p57",
           "timewindows": [],
           "duration": 600
@@ -1876,13 +1877,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34659",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p58",
           "timewindows": [],
           "duration": 600
@@ -1892,13 +1893,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34658",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p59",
           "timewindows": [],
           "duration": 600
@@ -1908,13 +1909,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34657",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p60",
           "timewindows": [],
           "duration": 600
@@ -1924,13 +1925,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34656",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p61",
           "timewindows": [],
           "duration": 600
@@ -1940,13 +1941,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34655",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p62",
           "timewindows": [],
           "duration": 600
@@ -1956,13 +1957,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34654",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p63",
           "timewindows": [],
           "duration": 600
@@ -1972,13 +1973,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34653",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p64",
           "timewindows": [],
           "duration": 600
@@ -1988,13 +1989,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34652",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p65",
           "timewindows": [],
           "duration": 600
@@ -2004,13 +2005,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34651",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p66",
           "timewindows": [],
           "duration": 600
@@ -2020,13 +2021,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34650",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p67",
           "timewindows": [],
           "duration": 600
@@ -2036,13 +2037,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34649",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p68",
           "timewindows": [],
           "duration": 600
@@ -2052,13 +2053,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34648",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p69",
           "timewindows": [],
           "duration": 600
@@ -2068,13 +2069,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34647",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p70",
           "timewindows": [],
           "duration": 600
@@ -2084,13 +2085,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34646",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p71",
           "timewindows": [],
           "duration": 600
@@ -2100,13 +2101,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34645",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p72",
           "timewindows": [],
           "duration": 600
@@ -2116,13 +2117,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34644",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p73",
           "timewindows": [],
           "duration": 600
@@ -2132,13 +2133,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34643",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p74",
           "timewindows": [],
           "duration": 600
@@ -2148,13 +2149,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34642",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p75",
           "timewindows": [],
           "duration": 600
@@ -2164,13 +2165,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34641",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p76",
           "timewindows": [],
           "duration": 600
@@ -2180,13 +2181,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34640",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p77",
           "timewindows": [],
           "duration": 600
@@ -2196,13 +2197,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34639",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p78",
           "timewindows": [],
           "duration": 600
@@ -2212,13 +2213,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34637",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p79",
           "timewindows": [],
           "duration": 600
@@ -2228,13 +2229,13 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       },
       {
         "id": "s34638",
         "type": "service",
         "activity": {
+          "late_multiplier": 3,
           "point_id": "p80",
           "timewindows": [],
           "duration": 600
@@ -2244,8 +2245,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 3
+        ]
       }
     ],
     "configuration": {

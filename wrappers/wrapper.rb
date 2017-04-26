@@ -156,7 +156,13 @@ module Wrappers
 
     def assert_services_no_late_multiplier(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
-        service.late_multiplier && service.late_multiplier != 0
+        service.activity.late_multiplier && service.activity.late_multiplier != 0
+      }
+    end
+
+    def assert_shipments_no_late_multiplier(vrp)
+      vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
+        shipment.pickup.late_multiplier && shipment.pickup.late_multiplier != 0 && shipment.delivery.late_multiplier && shipment.delivery.late_multiplier != 0
       }
     end
 

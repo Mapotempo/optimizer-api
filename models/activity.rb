@@ -27,8 +27,10 @@ module Models
     field :duration, default: 0
     field :setup_duration, default: 0
     field :timewindow_start_day_shift_number, default: 0
+    field :late_multiplier, default: nil
     validates_numericality_of :duration
     validates_numericality_of :setup_duration
+    validates_numericality_of :late_multiplier, allow_nil: true
 
     belongs_to :point, class_name: 'Models::Point'
     has_many :timewindows, class_name: 'Models::Timewindow'

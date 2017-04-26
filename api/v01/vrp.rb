@@ -46,6 +46,7 @@ module Api
       def self.vrp_request_activity(this)
         this.optional(:duration, type: Float, desc: 'time in seconds while the current activity stand until it\'s over')
         this.optional(:setup_duration, type: Float, desc: 'time at destination before the proper activity is effectively performed')
+        this.optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
         this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '')
         this.requires(:point_id, type: String, desc: 'reference to the associated point')
         this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may be performed') do
@@ -156,7 +157,6 @@ module Api
 
               optional(:services, type: Array, desc: 'Independant activity, which does not require a context') do
                 requires(:id, type: String)
-                optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
                 optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
 
                 optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
@@ -182,7 +182,6 @@ module Api
               end
               optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off') do
                 requires(:id, type: String, desc: '')
-                optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
                 optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
                 optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned')
                 optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this shipment')

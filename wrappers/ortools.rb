@@ -60,7 +60,6 @@ module Wrappers
           time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
             end: tw.end || 2**56,
-            late_multiplier: service.late_multiplier || 0,
           ) },
           quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
@@ -72,7 +71,8 @@ module Wrappers
           matrix_index: points[service.activity.point_id].matrix_index,
           vehicle_indices: service.sticky_vehicles.size > 0 ? service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
           setup_duration: service.activity.setup_duration,
-          id: service.id
+          id: service.id,
+          late_multiplier: service.activity.late_multiplier || 0,
         )
       } + vrp.shipments.collect{ |shipment|
         vehicles_indices = vrp.vehicles.collect.with_index{ |vehicle, index|
@@ -86,7 +86,6 @@ module Wrappers
           time_windows: shipment.pickup.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
             end: tw.end || 2**56,
-            late_multiplier: shipment.late_multiplier || 0,
           ) },
           quantities: vrp.units.collect{ |unit|
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
@@ -99,12 +98,12 @@ module Wrappers
           vehicle_indices: shipment.sticky_vehicles.size > 0 ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
           setup_duration: shipment.pickup.setup_duration,
           id: shipment.id + "pickup",
-          linked_ids: [shipment.id + "delivery"]
+          linked_ids: [shipment.id + "delivery"],
+          late_multiplier: shipment.pickup.late_multiplier || 0
         )] + [OrtoolsVrp::Service.new(
           time_windows: shipment.delivery.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
             end: tw.end || 2**56,
-            late_multiplier: shipment.late_multiplier || 0,
           ) },
           quantities: vrp.units.collect{ |unit|
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
@@ -116,7 +115,8 @@ module Wrappers
           matrix_index: points[shipment.delivery.point_id].matrix_index,
           vehicle_indices: shipment.sticky_vehicles.size > 0 ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
           setup_duration: shipment.delivery.setup_duration,
-          id: shipment.id + "delivery"
+          id: shipment.id + "delivery",
+          late_multiplier: shipment.delivery.late_multiplier || 0
         )]
       }.flatten(1)
 
@@ -138,6 +138,7 @@ module Wrappers
           cost_distance_multiplier: vehicle.cost_distance_multiplier,
           cost_time_multiplier: vehicle.cost_time_multiplier,
           cost_waiting_time_multiplier: vehicle.cost_waiting_time_multiplier,
+          cost_late_multiplier: vehicle.cost_late_multiplier || 0,
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
@@ -148,14 +149,12 @@ module Wrappers
           time_window: OrtoolsVrp::TimeWindow.new(
             start: (vehicle.timewindow && vehicle.timewindow.start) || 0,
             end: (vehicle.timewindow && vehicle.timewindow.end) || 2147483647,
-            late_multiplier: vehicle.cost_late_multiplier || 0,
           ),
           rests: vehicle.rests.collect{ |rest|
             OrtoolsVrp::Rest.new(
               time_windows: rest.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
                 start: tw.start || -2**56,
                 end: tw.end || 2**56,
-                late_multiplier: rest.late_multiplier || 0,
               ) },
               duration: rest.duration,
             )

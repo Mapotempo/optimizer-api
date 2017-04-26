@@ -229,6 +229,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p0",
           "timewindows": [
             {
@@ -243,8 +244,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33808",
@@ -253,6 +253,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p1",
           "timewindows": [
             {
@@ -267,8 +268,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33827",
@@ -277,6 +277,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p2",
           "timewindows": [
             {
@@ -291,8 +292,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33828",
@@ -301,6 +301,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p3",
           "timewindows": [
             {
@@ -315,8 +316,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33829",
@@ -325,6 +325,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p4",
           "timewindows": [
             {
@@ -339,8 +340,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33830",
@@ -349,6 +349,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p5",
           "timewindows": [
             {
@@ -363,8 +364,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33831",
@@ -373,6 +373,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p6",
           "timewindows": [
             {
@@ -387,8 +388,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33832",
@@ -397,6 +397,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p7",
           "timewindows": [
             {
@@ -411,8 +412,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33809",
@@ -421,6 +421,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p8",
           "timewindows": [
             {
@@ -435,8 +436,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33810",
@@ -445,6 +445,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p9",
           "timewindows": [
             {
@@ -459,8 +460,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33811",
@@ -469,6 +469,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p10",
           "timewindows": [
             {
@@ -483,8 +484,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33812",
@@ -493,6 +493,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p11",
           "timewindows": [],
           "duration": 480
@@ -502,8 +503,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33813",
@@ -512,6 +512,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p12",
           "timewindows": [
             {
@@ -526,8 +527,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33814",
@@ -536,6 +536,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p13",
           "timewindows": [
             {
@@ -550,8 +551,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33815",
@@ -560,6 +560,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p14",
           "timewindows": [
             {
@@ -574,8 +575,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33816",
@@ -584,6 +584,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p15",
           "timewindows": [
             {
@@ -598,8 +599,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33817",
@@ -608,6 +608,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p16",
           "timewindows": [
             {
@@ -622,8 +623,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33818",
@@ -632,6 +632,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p17",
           "timewindows": [
             {
@@ -646,8 +647,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33819",
@@ -656,6 +656,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p18",
           "timewindows": [],
           "duration": 480
@@ -665,8 +666,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33820",
@@ -675,6 +675,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p19",
           "timewindows": [
             {
@@ -689,8 +690,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33821",
@@ -699,6 +699,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p20",
           "timewindows": [
             {
@@ -713,8 +714,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33822",
@@ -723,6 +723,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p21",
           "timewindows": [],
           "duration": 480
@@ -732,8 +733,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33823",
@@ -742,6 +742,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p22",
           "timewindows": [],
           "duration": 480
@@ -751,8 +752,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33824",
@@ -761,6 +761,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p23",
           "timewindows": [
             {
@@ -775,8 +776,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       },
       {
         "id": "s33825",
@@ -785,6 +785,7 @@
           "v336"
         ],
         "activity": {
+          "late_multiplier": 0.3,
           "point_id": "p24",
           "timewindows": [
             {
@@ -799,8 +800,7 @@
             "unit_id": "unit1",
             "value": 1
           }
-        ],
-        "late_multiplier": 0.3
+        ]
       }
     ],
     "configuration": {

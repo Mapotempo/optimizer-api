@@ -11,7 +11,6 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "ortools_vrp.TimeWindow" do
     optional :start, :int64, 1
     optional :end, :int64, 2
-    optional :late_multiplier, :float, 3
   end
   add_message "ortools_vrp.Service" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
@@ -24,6 +23,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :type, :string, 8
     optional :id, :string, 9
     repeated :linked_ids, :string, 10
+    optional :late_multiplier, :float, 11
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
@@ -46,6 +46,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :end_index, :int32, 12
     optional :duration, :int64, 13
     optional :force_start, :bool, 14
+    optional :cost_late_multiplier, :float, 15
   end
   add_message "ortools_vrp.Problem" do
     repeated :vehicles, :message, 3, "ortools_vrp.Vehicle"
