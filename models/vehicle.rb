@@ -49,8 +49,6 @@ module Models
     field :duration, default: nil
     field :matrix_id, default: nil
 
-    field :work_period_days_number, default: 1
-
     field :unavailable_work_day_indices, default: nil
     field :unavailable_work_date, default: nil
 

@@ -61,11 +61,9 @@ class InterpreterTest < Minitest::Test
         matrix_id: 'matrix_0',
         rest_ids: ['rest_0'],
         sequence_timewindows: [{
-          day_index: 0,
           start: 1,
           end: 1
-        }],
-        work_period_days_number: 2
+        }]
       }],
       services: (1..(size - 1)).collect{ |i|
         {
@@ -99,10 +97,12 @@ class InterpreterTest < Minitest::Test
       }
     }
     expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
-    assert_equal 1, expanded_vrp[:vehicles].size
+    assert_equal 2, expanded_vrp[:vehicles].size
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2}
-    assert expanded_vrp[:services][0].activity.timewindows[0][:start] + 86400 == expanded_vrp[:services][1].activity.timewindows[0][:start]
+    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 4}
+    assert expanded_vrp[:services][0].activity.timewindows[0][:start] + 86400 == expanded_vrp[:services][0].activity.timewindows[2][:start]
+    assert expanded_vrp[:services][0].skills == ["1_f_2"]
+    assert expanded_vrp[:services][1].skills == ["2_f_2"]
   end
 
   def test_expand_vrp_schedule_range_date
@@ -148,8 +148,7 @@ class InterpreterTest < Minitest::Test
         sequence_timewindows: [{
           start: 1,
           end: 1
-        }],
-        work_period_days_number: 1
+        }]
       }],
       services: (1..(size - 1)).collect{ |i|
         {
@@ -186,8 +185,10 @@ class InterpreterTest < Minitest::Test
     assert_equal 2, expanded_vrp[:vehicles].size
     assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2}
-    assert expanded_vrp[:services][0].activity.timewindows[0][:start] + 86400 == expanded_vrp[:services][1].activity.timewindows[0][:start]
+    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 4}
+    assert expanded_vrp[:services][0].activity.timewindows[0][:start] + 86400 == expanded_vrp[:services][0].activity.timewindows[2][:start]
+    assert expanded_vrp[:services][0].skills == ["1_f_2"]
+    assert expanded_vrp[:services][1].skills == ["2_f_2"]
   end
 
   def test_expand_vrp_unavailable_visits
@@ -234,8 +235,23 @@ class InterpreterTest < Minitest::Test
           day_index: 0,
           start: 1,
           end: 11
-        }],
-        work_period_days_number: 2
+        }, {
+          day_index: 1,
+          start: 1,
+          end: 11
+        }, {
+          day_index: 2,
+          start: 1,
+          end: 11
+        }, {
+          day_index: 3,
+          start: 1,
+          end: 11
+        }, {
+          day_index: 4,
+          start: 1,
+          end: 11
+        }]
       }],
       services: (1..(size - 1)).collect{ |i|
         {
@@ -256,7 +272,6 @@ class InterpreterTest < Minitest::Test
               end: 408
             }]
           },
-          visits_period_days_number: 2,
           unavailable_visit_day_indices: (6..8).to_a + (12..13).to_a,
           unavailable_visit_indices: [2],
           visits_number: 3
@@ -278,11 +293,13 @@ class InterpreterTest < Minitest::Test
       }
     }
     expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
-    assert_equal 8, expanded_vrp[:vehicles].size
-    assert expanded_vrp[:vehicles][0].timewindow[:start] + 172800 == expanded_vrp[:vehicles][1].timewindow[:start]
+    assert_equal 10, expanded_vrp[:vehicles].size
+    assert expanded_vrp[:vehicles][0].timewindow[:start] == 1
+    assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
+    assert_equal 2 * problem[:rests].size, expanded_vrp[:rests].size
     assert expanded_vrp[:services][0].activity.timewindows.size == 3
-    assert expanded_vrp[:services][1].activity.timewindows.size == 5
+    assert expanded_vrp[:services][1].activity.timewindows.size == 3
   end
 
   def test_expand_vrp_with_date
@@ -329,9 +346,12 @@ class InterpreterTest < Minitest::Test
           day_index: 0,
           start: 1,
           end: 11
+        }, {
+          day_index: 1,
+          start: 1,
+          end: 11
         }],
-        unavailable_work_date: [Date.new(2017,1,8), Date.new(2017,1,11)],
-        work_period_days_number: 2
+        unavailable_work_date: [Date.new(2017,1,8), Date.new(2017,1,11)]
       }],
       services: (1..(size - 1)).collect{ |i|
         {
@@ -353,8 +373,7 @@ class InterpreterTest < Minitest::Test
             }]
           },
           unavailable_visit_day_date: [Date.new(2017,1,2), Date.new(2017,1,11), Date.new(2017,1,17)],
-          visits_number: 2,
-          visits_period_days_number: 2
+          visits_number: 2
         }
       },
       configuration: {
@@ -366,15 +385,15 @@ class InterpreterTest < Minitest::Test
         },
         schedule: {
           range_date: {
-            start: Date.new(2017,1,2),
-            end: Date.new(2017,1,12)
+            start: Date.new(2017,1,2), # monday
+            end: Date.new(2017,1,12) # thursday
           }
         }
       }
     }
     expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
-    assert_equal 5, expanded_vrp[:vehicles].size
-    assert expanded_vrp[:vehicles][0].timewindow[:start] + 172800 == expanded_vrp[:vehicles][1].timewindow[:start]
+    assert_equal 4, expanded_vrp[:vehicles].size
+    assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
     assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 }
   end
@@ -426,8 +445,7 @@ class InterpreterTest < Minitest::Test
           day_index: 1,
           start: 2,
           end: 12
-        }],
-        work_period_days_number: 7,
+        }]
       }],
       services: (1..(size - 1)).collect{ |i|
         {
@@ -460,8 +478,7 @@ class InterpreterTest < Minitest::Test
               end: 611
             }]
           },
-          visits_number: 2,
-          visits_period_days_number: 7
+          visits_number: 2
         }
       },
       configuration: {
@@ -484,6 +501,7 @@ class InterpreterTest < Minitest::Test
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
     assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 }
     ## The timewindows cover multiple services
-    assert expanded_vrp[:services][0].activity.timewindows[0][:start] + 7 * 86400 == expanded_vrp[:services][1].activity.timewindows[0][:start]
+    assert expanded_vrp[:services][0].skills == ["1_f_2"]
+    assert expanded_vrp[:services][1].skills == ["2_f_2"]
   end
 end

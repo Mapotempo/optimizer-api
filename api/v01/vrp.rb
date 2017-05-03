@@ -34,7 +34,7 @@ module Api
       def self.vrp_request_timewindow(this)
         this.optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds')
         this.optional(:end, type: Integer, desc: 'End of the current timewindow in seconds')
-        this.optional(:day_index, type: Integer, desc: '[planning] Day index of the current timewindow within the current sequence')
+        this.optional(:day_index, type: Integer, values: 0..6, desc: '[planning] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
         # this.at_least_one_of :start, :end
       end
 
@@ -129,8 +129,6 @@ module Api
                 optional(:duration, type: Float, desc: 'Maximum tour duration')
                 optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
 
-                optional(:work_period_days_number, type: Integer, desc: '[planning] Number of days within a period defined within the sequence_timewindows')
-
                 optional(:unavailable_work_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals indices of unavailabilty')
                 optional(:unavailable_work_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
                 mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
@@ -160,7 +158,6 @@ module Api
                 optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
 
                 optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
-                optional(:visits_period_days_number, type: Integer, desc: 'Number of days within a period defined by the timewindows')
 
                 optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
 
