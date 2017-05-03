@@ -87,7 +87,7 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
-    # Béziers - 203 services with time window - dimension time car - late for services & vehicles
+    # Béziers - 203 services with time window - dimension time car - late for services & vehicles - force start and no wait cost
     def test_ortools_one_route_many_stops
       vrp = ENV['DUMP_VRP'] ? 
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
@@ -105,7 +105,7 @@ class RealCasesTest < Minitest::Test
       assert result[:routes][0][:total_travel_time] < 21050, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
 
       # Check elapsed time
-      assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 60000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Lyon - 65 services (without tw) + rest - dimension time car_urban - late for services & vehicles
