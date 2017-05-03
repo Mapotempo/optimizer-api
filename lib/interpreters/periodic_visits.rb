@@ -100,15 +100,14 @@ module Interpreters
         frequencies.uniq!
 
         new_vehicles = vrp.vehicles.collect { |vehicle|
-
           if vehicle.unavailable_work_date
             vehicle.unavailable_work_day_indices = vehicle.unavailable_work_date.collect{ |unavailable_date|
               (unavailable_date - epoch).to_i - real_schedule_start if (unavailable_date - epoch).to_i >= real_schedule_start
             }.compact
-            if vrp.schedule_unavailable_indices
-              vehicle.unavailable_work_day_indices += vrp.schedule_unavailable_indices
-              vehicle.unavailable_work_day_indices.uniq
-            end
+          end
+          if vrp.schedule_unavailable_indices
+            vehicle.unavailable_work_day_indices += vrp.schedule_unavailable_indices
+            vehicle.unavailable_work_day_indices.uniq!
           end
 
           if vehicle.sequence_timewindows

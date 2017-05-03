@@ -49,7 +49,7 @@ module Models
     field :duration, default: nil
     field :matrix_id, default: nil
 
-    field :unavailable_work_day_indices, default: nil
+    field :unavailable_work_day_indices, default: []
     field :unavailable_work_date, default: nil
 
     validates_numericality_of :cost_fixed
