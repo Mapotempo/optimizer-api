@@ -23,8 +23,10 @@ require './wrappers/vroom'
 require './wrappers/jsprit'
 require './wrappers/ortools'
 
+require './lib/cache_manager'
+
 module OptimizerWrapper
-  CACHE = ActiveSupport::Cache::NullStore.new
+  CACHE = CacheManager.new(ActiveSupport::Cache::NullStore.new)
 
   DEMO = Wrappers::Demo.new(CACHE)
   VROOM = Wrappers::Vroom.new(CACHE)
