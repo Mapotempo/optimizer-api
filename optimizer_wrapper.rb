@@ -517,7 +517,7 @@ module OptimizerWrapper
     def self.get(key)
       result = OptimizerWrapper::REDIS.get(key)
       if result
-        JSON.parse(result)
+        JSON.parse(result.force_encoding(Encoding::UTF_8)) # On some env string is encoded as ASCII
       end
     end
 
