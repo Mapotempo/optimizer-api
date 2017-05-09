@@ -898,10 +898,11 @@ class WrapperTest < Minitest::Test
         }
       }
     }
+
     begin
       OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
-    rescue => e
-      assert e.message.match 'BadRequest'
+    rescue StandardError => error
+      assert error.message.match 'RouterWrapperError'
     end
   end
 end

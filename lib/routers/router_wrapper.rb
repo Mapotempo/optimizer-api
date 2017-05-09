@@ -124,9 +124,7 @@ module Routers
         @cache_request.write(key, request && request.to_s)
       end
 
-      if request == ''
-        [Array.new(row.size) { Array.new(column.size, 2147483647) }]
-      else
+      unless request.to_s.empty?
         data = JSON.parse(request)
         dimensions.collect{ |dim|
           if data.key?("matrix_#{dim}")

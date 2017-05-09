@@ -109,6 +109,7 @@ module OptimizerWrapper
             block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
             # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
             matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, options)
+            raise RouterWrapperError unless matrices
             m = Models::Matrix.create({
               id: 'm' + (id+=1).to_s,
               time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
@@ -381,7 +382,7 @@ module OptimizerWrapper
 
     routes = result[:routes].collect{ |route|
       new_route = []
-      vehicle = original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } ? original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } : original_vrp.vehicles[0] 
+      vehicle = original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } ? original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } : original_vrp.vehicles[0]
       new_activities = []
       activities = route[:activities].collect.with_index{ |activity, idx_a|
         idx_s = original_vrp.services.index{ |s| s.id == activity[:service_id] }
@@ -508,6 +509,7 @@ module OptimizerWrapper
 
   class UnsupportedProblemError < StandardError; end
   class UnsupportedRouterModeError < StandardError; end
+  class RouterWrapperError < StandardError; end
 
   class Result
     def self.set(key, value)
