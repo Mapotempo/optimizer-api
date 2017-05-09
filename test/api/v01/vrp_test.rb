@@ -145,4 +145,37 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 200, last_response.status, last_response.body
     assert_equal 1.upto(6).collect{ |i| "service_#{i}"}, JSON.parse(last_response.body)['solutions'][0]['routes'][0]['activities'][1..-2].collect{ |p| p['service_id'] }.sort_by{ |p| p[-1].to_i }
   end
+
+  def test_ignore_unknown_parameters
+    vrp = {
+        points: [{
+                     id: 'p1',
+                     location: {
+                         lat: 1,
+                         lon: 2
+                     },
+                     unknow_parameter: 'test'
+                 }],
+        vehicles: [{
+                       id: 'v1',
+                       router_mode: 'car',
+                       router_dimension: 'time'
+                   }],
+        services: [{
+                       id: 's1',
+                       type: 'service',
+                       activity: {
+                           point_id: 'p1'
+                       }
+                   }],
+        configuration: {
+            resolution: {
+                duration: 1
+            }
+        }
+    }
+    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
+    assert_equal 200, last_response.status, last_response.body
+    assert JSON.parse(last_response.body)['job']['status']['completed']
+  end
 end

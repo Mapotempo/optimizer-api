@@ -34,7 +34,7 @@ module Models
       super(hash.inject({}) { |memo, (k, v)|
         memo[k.to_sym] = v
         memo
-      })
+      }.select { |k, _v| self.respond_to?(k) })
     end
 
     def self.has_many(name, options = {})
