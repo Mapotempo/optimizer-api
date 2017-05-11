@@ -30,6 +30,9 @@ module Models
     field :visits_number, default: 1
     field :visits_period_days_number, default: 1
 
+    validates_numericality_of :visits_number
+    validates_numericality_of :visits_period_days_number
+
     field :unavailable_visit_indices, default: nil
 
     field :unavailable_visit_day_indices, default: nil
