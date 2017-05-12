@@ -647,13 +647,13 @@ $(document).ready(function() {
             ]);
           }
         } else if (activity.service_id) {
+            var customer_id = customers.indexOf(activity.service_id);
             var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {
               if (key.replace(/ 1$/, '') == (mapping.quantity || 'quantity')) return val;
             });
             var quantity1_2 = $.map(data.customers[customer_id], function(val, key) {
               if (key.replace(/ 2$/, '') == (mapping.quantity || 'quantity')) return val;
             });
-            var customer_id = customers.indexOf(activity.service_id);
             var ref = activity.service_id;
             var lat = data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
             var lon = data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
@@ -760,7 +760,6 @@ $(document).ready(function() {
         var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {
           if (key.replace(/ 1$/, '') == (mapping.quantity || 'quantity')) return val;
         });
-        console.log(quantity1_1);
         var quantity1_2 = $.map(data.customers[customer_id], function(val, key) {
           if (key.replace(/ 2$/, '') == (mapping.quantity || 'quantity')) return val;
         });
