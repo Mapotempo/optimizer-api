@@ -48,13 +48,18 @@ module Wrappers
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
 
       services = vrp.services.collect{ |service|
-        vehicles_indices = vrp.vehicles.collect.with_index{ |vehicle, index|
-          if !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size)
-            index
-          else
-            nil
-          end
-        }.compact
+        vehicles_indices = if vrp.services.any? { |service| service.skills == nil } && vrp.services.any? { |service| service.skills.size > 0 } &&
+          vrp.vehicles.any? { |vehicle| vehicle.skills } && vrp.vehicles.none? { |vehicle| vehicle.skills && ((vehicle.skills[0] & service.skills).size == service.skills.size) }
+          [-1]
+        else
+          vrp.vehicles.collect.with_index{ |vehicle, index|
+            if !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size)
+              index
+            else
+              nil
+            end
+          }.compact
+        end
 
         OrtoolsVrp::Service.new(
           time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(

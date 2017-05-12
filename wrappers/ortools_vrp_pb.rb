@@ -17,7 +17,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :quantities, :uint32, 2
     optional :duration, :uint32, 3
     optional :priority, :uint32, 4
-    repeated :vehicle_indices, :uint32, 5
+    repeated :vehicle_indices, :int32, 5
     optional :matrix_index, :uint32, 6
     optional :setup_duration, :uint32, 7
     optional :type, :string, 8
