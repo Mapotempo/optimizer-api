@@ -41,6 +41,7 @@ module Api
         elsif e.is_a?(OptimizerWrapper::UnsupportedRouterModeError)
           rack_response(format_message(response, nil), 400)
         elsif e.is_a?(OptimizerWrapper::UnsupportedProblemError)
+          response = "#{e.class} : #{e.data.map { |service| service.join(', ') }.join(' | ')}"
           rack_response(format_message(response, nil), 417)
         else
           rack_response(format_message(response, e.backtrace), 500)

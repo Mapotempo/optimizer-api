@@ -43,23 +43,26 @@ module OptimizerWrapper
   end
 
   def self.wrapper_vrp(api_key, services, vrp)
-    services_vrps = split_vrp(vrp).map{ |vrp|
+    inapplicable_services = []
+    services_vrps = split_vrp(vrp).map{ |vrp_element|
       {
         service: services[:services][:vrp].find{ |s|
-          inapplicable = config[:services][s].inapplicable_solve?(vrp)
+          inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
           if inapplicable.empty?
             puts "Select service #{s}"
             true
           else
+            inapplicable_services << inapplicable
             puts "Skip inapplicable #{s}: #{inapplicable.join(', ')}"
             false
           end
         },
-        vrp: vrp
+        vrp: vrp_element
       }
     }
+
     if services_vrps.any?{ |sv| !sv[:service] }
-      raise UnsupportedProblemError
+      raise UnsupportedProblemError.new(inapplicable_services)
     else
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         solve(services_vrps)
@@ -507,7 +510,13 @@ module OptimizerWrapper
     end
   end
 
-  class UnsupportedProblemError < StandardError; end
+  class UnsupportedProblemError < StandardError
+    attr_reader :data
+
+    def initialize(data = [])
+      @data = data
+    end
+  end
   class UnsupportedRouterModeError < StandardError; end
   class RouterWrapperError < StandardError; end
 
