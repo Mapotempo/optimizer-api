@@ -465,9 +465,9 @@ Once defined at the service level it allow the vehicles to arrive late at a poin
   services: [{
     id: "visit",
     type: "service",
-    late_multiplier: 0.3,
     activity: {
       point_id: "visit-point-1",
+      late_multiplier: 0.3,
       timewindows: [{
         start: 3600,
         end: 4800
@@ -641,9 +641,9 @@ Indicate to the solver which activities are the most important, the priority 0 i
  services: [{
     id: "visit-1",
     type: "service",
-    late_multiplier: 0.3,
     activity: {
       point_id: "visit-point-1",
+      late_multiplier: 0.3,
       timewindows: [{
         start: 3600,
         end: 4800
@@ -654,9 +654,9 @@ Indicate to the solver which activities are the most important, the priority 0 i
   }, {
     id: "visit-2",
     type: "service",
-    late_multiplier: 0.3,
     activity: {
       point_id: "visit-point-1",
+      late_multiplier: 0.3,
       timewindows: [{
         start: 3800,
         end: 5000
@@ -692,9 +692,9 @@ When two activities are performed at the same location in a direct sequence allo
  services: [{
     id: "visit-1",
     type: "service",
-    late_multiplier: 0.3,
     activity: {
       point_id: "visit-point-1",
+      late_multiplier: 0.3,
       timewindows: [{
         start: 3600,
         end: 4800
@@ -705,9 +705,9 @@ When two activities are performed at the same location in a direct sequence allo
   }, {
     id: "visit-2",
     type: "service",
-    late_multiplier: 0.3,
     activity: {
       point_id: "visit-point-1",
+      late_multiplier: 0.3,
       timewindows: [{
         start: 3800,
         end: 5000

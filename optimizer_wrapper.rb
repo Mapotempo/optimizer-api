@@ -303,7 +303,7 @@ module OptimizerWrapper
         aa = vrp.services[a[0]]
         bb = vrp.services[b[0]]
         (aa.activity.timewindows.collect{ |t| [t[:start], t[:end]]} == bb.activity.timewindows.collect{ |t| [t[:start], t[:end]]} &&
-          ((cost_late_multiplier && aa.late_multiplier.to_f > 0 && bb.late_multiplier.to_f > 0) || (aa.activity.duration == 0 && bb.activity.duration == 0)) &&
+          ((cost_late_multiplier && aa.activity.late_multiplier.to_f > 0 && bb.activity.late_multiplier.to_f > 0) || (aa.activity.duration == 0 && bb.activity.duration == 0)) &&
           (no_capacities || (aa.quantities.size == 0 && bb.quantities.size == 0)) &&
           aa.skills == bb.skills) ?
           matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
