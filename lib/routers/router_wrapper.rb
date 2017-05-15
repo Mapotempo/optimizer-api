@@ -58,7 +58,7 @@ module Routers
               ''
             else
               response = (response && /json/.match(response.headers[:content_type]) && response.size > 1) ? JSON.parse(response) : nil
-              raise RouterError.new(result.message + (response ? ' - ' + response['message'] : ''))
+              raise RouterError.new(result.message + (response && response['message'] ? ' - ' + response['message'] : ''))
             end
           }
           if request != ''
@@ -117,7 +117,7 @@ module Routers
             ''
           else
             response = (response && /json/.match(response.headers[:content_type]) && response.size > 1) ? JSON.parse(response) : nil
-            raise RouterError.new(result.message + (response ? ' - ' + response['message'] : ''))
+            raise RouterError.new(result.message + (response && response['message'] ? ' - ' + response['message'] : ''))
           end
         }
 
@@ -155,7 +155,7 @@ module Routers
             ''
           else
             response = (response && /json/.match(response.headers[:content_type]) && response.size > 1) ? JSON.parse(response) : nil
-            raise RouterError.new(result.message + (response ? ' - ' + response['message'] : ''))
+            raise RouterError.new(result.message + (response && response['message'] ? ' - ' + response['message'] : ''))
           end
         }
 
