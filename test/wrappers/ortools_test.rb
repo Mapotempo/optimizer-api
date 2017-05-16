@@ -1292,16 +1292,27 @@ class Wrappers::OrtoolsTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 3,
+          end: 16
+        }
       }, {
         id: 'vehicle_1',
         start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 3,
+          end: 16
+        }
       }],
       services: [{
         id: 'service_1',
         activity: {
           setup_duration: 2,
+          duration: 1,
           point_id: 'point_1',
           timewindows: [{
             start: 3,
@@ -1316,6 +1327,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'service_2',
         activity: {
           setup_duration: 2,
+          duration: 1,
           point_id: 'point_1',
           timewindows: [{
             start: 3,
@@ -1338,7 +1350,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
-    assert_equal problem[:services].size , result[:routes][0][:activities].size
+    assert_equal problem[:services].size , result[:routes][0][:activities].size - 1
+    assert_equal problem[:services].size , result[:routes][1][:activities].size - 1
   end
 
 
