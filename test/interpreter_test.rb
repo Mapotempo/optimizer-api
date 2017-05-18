@@ -99,8 +99,8 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
     assert_equal 2, expanded_vrp[:vehicles].size
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 4}
-    assert expanded_vrp[:services][0].activity.timewindows[0][:start] + 86400 == expanded_vrp[:services][0].activity.timewindows[2][:start]
+    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2}
+    assert expanded_vrp[:services][0].activity.timewindows[0][:start] == expanded_vrp[:services][1].activity.timewindows[0][:start]
     assert expanded_vrp[:services][0].skills == ["1_f_2"]
     assert expanded_vrp[:services][1].skills == ["2_f_2"]
   end
@@ -185,8 +185,8 @@ class InterpreterTest < Minitest::Test
     assert_equal 2, expanded_vrp[:vehicles].size
     assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 4}
-    assert expanded_vrp[:services][0].activity.timewindows[0][:start] + 86400 == expanded_vrp[:services][0].activity.timewindows[2][:start]
+    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2}
+    assert expanded_vrp[:services][0].activity.timewindows[0][:start] == expanded_vrp[:services][1].activity.timewindows[0][:start]
     assert expanded_vrp[:services][0].skills == ["1_f_2"]
     assert expanded_vrp[:services][1].skills == ["2_f_2"]
   end

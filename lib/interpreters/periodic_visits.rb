@@ -29,6 +29,8 @@ module Interpreters
         shift = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : vrp.schedule_range_date[:start].cwday - 1
         schedule_end = real_schedule_end - real_schedule_start
         schedule_start = 0
+        have_services_day_index = vrp.services.none? { |service| service.activity.timewindows.none? || service.activity.timewindows.none? { |timewindow| timewindow[:day_index] } }
+        have_vehicles_day_index = vrp.vehicles.none? { |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none? { |timewindow| timewindow[:day_index] } }
 
         unavailable_indices = if vrp.schedule_unavailable_indices
           vrp.schedule_unavailable_indices
@@ -66,12 +68,17 @@ module Interpreters
                         start: timewindow[:start] + timewindow.day_index * 86400,
                         end: timewindow[:end] + timewindow.day_index * 86400
                       }
-                    else
+                    elsif have_services_day_index || have_vehicles_day_index
                       (0..[6, schedule_end].min).collect{ |day_index|
                         {
                           start: timewindow[:start] + (day_index).to_i * 86400,
                           end: timewindow[:end] + (day_index).to_i * 86400
                         }
+                      }
+                    else
+                      {
+                        start: timewindow[:start],
+                        end: timewindow[:end]
                       }
                     end
                   }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
@@ -110,8 +117,8 @@ module Interpreters
             vehicle.unavailable_work_day_indices.uniq!
           end
 
-          if vehicle.sequence_timewindows
-            new_vehicles = (schedule_start..schedule_end).collect{ |vehicle_day_index|
+          if vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?
+            new_periodic_vehicle = (schedule_start..schedule_end).collect{ |vehicle_day_index|
               if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index - shift == vehicle_day_index}
                 associated_timewindow = vehicle.sequence_timewindows.find{ |timewindow| !timewindow[:day_index] || timewindow[:day_index] == (vehicle_day_index + shift) % 7 }
                 if associated_timewindow
@@ -164,7 +171,29 @@ module Interpreters
             vehicle.rests.each{ |rest|
               vrp.rests.delete(rest)
             }
-            new_vehicles
+            new_periodic_vehicle
+          elsif !have_services_day_index
+            new_periodic_vehicle = (schedule_start..schedule_end).collect{ |vehicle_day_index|
+              new_vehicle = Marshal::load(Marshal.dump(vehicle))
+              new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index+1}"
+              if new_vehicle.skills.empty?
+                new_vehicle.skills = [frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (schedule_end + 1)).to_i + 1}_f_#{frequency}" } + services_unavailable_indices.collect { |index|
+                  if index != vehicle_day_index
+                    "not_#{index}"
+                  end
+                }.compact]
+              else
+                new_vehicle.skills.each{ |alternative_skill|
+                  alternative_skill += frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (schedule_end + 1)).to_i + 1}_f_#{frequency}" } + services_unavailable_indices.collect { |index|
+                    if index != vehicle_day_index
+                      "not_#{index}"
+                    end
+                  }.compact
+                }
+              end
+              new_vehicle
+            }
+            new_periodic_vehicle
           else
             vehicle
           end
