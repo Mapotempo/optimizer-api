@@ -165,6 +165,9 @@ module Api
                 optional(:unavailable_visit_day_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
                 mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
+                optional(:minimum_lapse, type: Integer, desc: 'Minimum day lapse between two visits')
+                optional(:maximum_lapse, type: Integer, desc: 'Maximum day lapse between two visits')
+
                 optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
                 optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
 
@@ -194,6 +197,13 @@ module Api
                 end
               end
               at_least_one_of :services, :shipments
+
+              optional(:relations, type: Array, desc: '') do
+                requires(:id, type: String, desc: '')
+                requires(:type, type: String, desc: 'same_vehicle, sequence, direct_sequence, minimum_day_lapse or maximum_day_lapse')
+                requires(:lapse, type: Integer, desc: 'Only used in case of minimum and maximum day lapse')
+                requires(:linked_ids, type: Array[String], desc: '')
+              end
 
               optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation') do
                 optional(:preprocessing, type: Hash, desc: 'Parameters independant from the search') do

@@ -47,11 +47,18 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :duration, :int64, 13
     optional :force_start, :bool, 14
     optional :cost_late_multiplier, :float, 15
+    optional :day_index, :int32, 16
+  end
+  add_message "ortools_vrp.Relation" do
+    optional :type, :string, 1
+    repeated :linked_ids, :string, 2
+    optional :lapse, :int32, 3
   end
   add_message "ortools_vrp.Problem" do
     repeated :vehicles, :message, 3, "ortools_vrp.Vehicle"
     repeated :services, :message, 4, "ortools_vrp.Service"
     repeated :matrices, :message, 5, "ortools_vrp.Matrix"
+    repeated :relations, :message, 6, "ortools_vrp.Relation"
   end
 end
 
@@ -62,5 +69,6 @@ module OrtoolsVrp
   Rest = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Rest").msgclass
   Capacity = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Capacity").msgclass
   Vehicle = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Vehicle").msgclass
+  Relation = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Relation").msgclass
   Problem = Google::Protobuf::DescriptorPool.generated_pool.lookup("ortools_vrp.Problem").msgclass
 end

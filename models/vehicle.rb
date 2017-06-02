@@ -51,6 +51,7 @@ module Models
 
     field :unavailable_work_day_indices, default: []
     field :unavailable_work_date, default: nil
+    field :global_day_index, default: nil
 
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
@@ -59,6 +60,7 @@ module Models
     validates_numericality_of :cost_late_multiplier, allow_nil: true
     validates_numericality_of :cost_setup_time_multiplier
     validates_numericality_of :coef_setup
+    validates_numericality_of :global_day_index, allow_nil: true
     validates_inclusion_of :router_mode, in: %w( car car_urban truck pedestrian cycle public_transport )
     validates_inclusion_of :router_dimension, in: %w( time distance )
     validates_numericality_of :speed_multiplier

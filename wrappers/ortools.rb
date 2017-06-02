@@ -168,7 +168,16 @@ module Wrappers
           start_index: vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
           end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
           duration: vehicle.duration ? vehicle.duration : -1,
-          force_start: vehicle.force_start
+          force_start: vehicle.force_start,
+          day_index: vehicle.global_day_index ? vehicle.global_day_index : -1
+        )
+      }
+
+      relations = vrp.relations.collect{ |relation|
+        OrtoolsVrp::Relation.new(
+          type: relation.type,
+          linked_ids: relation.linked_ids || [],
+          lapse: relation.lapse || -1
         )
       }
 
@@ -176,6 +185,7 @@ module Wrappers
         vehicles: vehicles,
         services: services,
         matrices: matrices,
+        relations: relations
       )
 
       cost, iterations, result = run_ortools(problem, vrp, services, points, matrix_indices, &block)

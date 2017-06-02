@@ -52,6 +52,20 @@ module Interpreters
           end
 
           if service.visits_number
+            if service.minimum_lapse
+              vrp.relations << {
+                type: "minimum_day_lapse",
+                linked_ids: (1..service.visits_number).collect{ |index| "#{service.id}_ #{index}/#{service.visits_number}"},
+                lapse: service.minimum_lapse
+              }
+            end
+            if service.maximum_lapse
+              vrp.relations << {
+                type: "maximum_day_lapse",
+                linked_ids: (1..service.visits_number).collect{ |index| "#{service.id}_ #{index}/#{service.visits_number}"},
+                lapse: service.maximum_lapse
+              }
+            end
             frequencies << service.visits_number
             visit_period = (schedule_end + 1).to_f/service.visits_number
             timewindows_iterations = (visit_period /(6 || 1)).ceil
@@ -86,11 +100,13 @@ module Interpreters
                     new_timewindows
                   end
                 end
-                new_service.skills += ["#{visit_index+1}_f_#{service.visits_number}"]
-                new_service.skills += service.unavailable_visit_day_indices.collect{ |day_index|
-                  services_unavailable_indices << day_index
-                  "not_#{day_index}"
-                } if service.unavailable_visit_day_indices
+                if !service.minimum_lapse && !service.maximum_lapse
+                  new_service.skills += ["#{visit_index+1}_f_#{service.visits_number}"]
+                end
+                  new_service.skills += service.unavailable_visit_day_indices.collect{ |day_index|
+                    services_unavailable_indices << day_index
+                    "not_#{day_index}"
+                  } if service.unavailable_visit_day_indices
                 new_service
               else
                 nil
@@ -128,6 +144,7 @@ module Interpreters
                     start: ((vehicle_day_index + shift)* 86400 + associated_timewindow[:start]) % (7 * 86400),
                     end: ((vehicle_day_index  + shift)* 86400 + associated_timewindow[:end]) % (7 * 86400)
                   }
+                  new_vehicle.global_day_index = vehicle_day_index
                   new_vehicle.sequence_timewindows = nil
                   associated_rests = vehicle.rests.select{ |rest| rest.timewindows.any?{ |timewindow| timewindow[:day_index] == (vehicle_day_index + shift) % 7 } }
                   new_vehicle.rests = associated_rests.collect{ |rest|
@@ -176,6 +193,7 @@ module Interpreters
             new_periodic_vehicle = (schedule_start..schedule_end).collect{ |vehicle_day_index|
               new_vehicle = Marshal::load(Marshal.dump(vehicle))
               new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index+1}"
+              new_vehicle.global_day_index = vehicle_day_index
               if new_vehicle.skills.empty?
                 new_vehicle.skills = [frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (schedule_end + 1)).to_i + 1}_f_#{frequency}" } + services_unavailable_indices.collect { |index|
                   if index != vehicle_day_index

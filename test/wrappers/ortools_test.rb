@@ -1354,7 +1354,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size , result[:routes][1][:activities].size - 1
   end
 
-
   def test_pickup_delivery
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
@@ -1797,5 +1796,159 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert_equal 2, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size + result[:routes][1][:activities].size
+  end
+
+  def test_minimum_day_lapse
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        global_day_index: 0
+      }, {
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0',
+        global_day_index: 1
+      }, {
+        id: 'vehicle_2',
+        matrix_id: 'matrix_0',
+        global_day_index: 2
+      }, {
+        id: 'vehicle_3',
+        matrix_id: 'matrix_0',
+        global_day_index: 3
+      }, {
+        id: 'vehicle_4',
+        matrix_id: 'matrix_0',
+        global_day_index: 4
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        id: 'minimum_lapse_1',
+        type: "minimum_day_lapse",
+        lapse: 2,
+        linked_ids: ['service_1', 'service_2', 'service_3']
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 5, result[:routes].size
+    assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][2][:activities].size + result[:routes][4][:activities].size
+    assert_equal result[:routes][0][:activities].size, result[:routes][2][:activities].size
+    assert_equal result[:routes][2][:activities].size, result[:routes][4][:activities].size
+  end
+
+  def test_maximum_day_lapse
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        global_day_index: 0
+      }, {
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0',
+        global_day_index: 4
+      }, {
+        id: 'vehicle_2',
+        matrix_id: 'matrix_0',
+        global_day_index: 3
+      }, {
+        id: 'vehicle_3',
+        matrix_id: 'matrix_0',
+        global_day_index: 2
+      }, {
+        id: 'vehicle_4',
+        matrix_id: 'matrix_0',
+        global_day_index: 1
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        id: 'minimum_lapse_1',
+        type: "maximum_day_lapse",
+        lapse: 2,
+        linked_ids: ['service_1', 'service_2']
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 5, result[:routes].size
+    assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][3][:activities].size
+    assert_equal result[:routes][0][:activities].size, result[:routes][3][:activities].size
   end
 end

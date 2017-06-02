@@ -36,6 +36,12 @@ module Models
     field :unavailable_visit_day_indices, default: nil
     field :unavailable_visit_day_date, default: nil
 
+    field :minimum_lapse, default: nil
+    field :maximum_lapse, default: nil
+
+    validates_numericality_of :minimum_lapse
+    validates_numericality_of :maximum_lapse
+
     validates_inclusion_of :type, :in => %i(service pickup delivery)
 
     field :skills, default: []
