@@ -52,31 +52,36 @@ module Api
         description: '
 ## Table of Contents
 * [Overview](#overview)
-* [Input Model](#input-model)
-  * [General Model](#general-model)
-  * [Points](#points)
-  * [TimeWindows](#timewindows)
-  * [Vehicles](#vehicles)
-  * [Activities](#activities)
-  * [Services and Shipments](#services-and-shipments)
-  * [Matrices](#matrices)
-  * [Units](#units)
-  * [Capacities](#capacities)
-  * [Quantities](#quantities)
-  * [Rests](#rests)
-  * [Configuration](#configuration)
-* [Solve](#solve)
-  * [Lateness²](#lateness)
-  * [Multiple Vehicles](#multiple-vehicles)
-  * [Multiple Depots](#multiple-depots)
-  * [Multiple Timewindows¹](#multiple-timewindows)
-  * [Multiple Matrices²](#multiple-matrices)
-  * [Pickup and Delivery³](#pickup-and-delivery)
-  * [Priority²](#priority)
-  * [Quantities Overload²](#quantities-overload)
-  * [Setup Duration](#setup-duration)
-  * [Skills](#skills)
-  * [Alternative Skills³](#alternative-skills)
+* [Standard Optimisation](#standard-optimisation)
+  * [Input Model](#input-model)
+    * [General Model](#general-model)
+    * [Points](#points)
+    * [TimeWindows](#timewindows)
+    * [Vehicles](#vehicles)
+    * [Activities](#activities)
+    * [Services and Shipments](#services-and-shipments)
+    * [Matrices](#matrices)
+    * [Units](#units)
+    * [Capacities](#capacities)
+    * [Quantities](#quantities)
+    * [Rests](#rests)
+    * [Configuration](#configuration)
+  * [Solve](#solve)
+    * [Lateness²](#lateness)
+    * [Multiple Vehicles](#multiple-vehicles)
+    * [Multiple Depots](#multiple-depots)
+    * [Multiple Timewindows¹](#multiple-timewindows)
+    * [Multiple Matrices²](#multiple-matrices)
+    * [Pickup and Delivery³](#pickup-and-delivery)
+    * [Priority²](#priority)
+    * [Quantities Overload²](#quantities-overload)
+    * [Setup Duration](#setup-duration)
+    * [Skills](#skills)
+    * [Alternative Skills³](#alternative-skills)
+* [Schedule Optimisation](#schedule-optimisation)
+  *[Problem Definition](#problem-definition)
+  *[Vehicle Definition](#vehicle-definition)
+  *[Services Definition](#services-definition)
 
 -----------------
 ¹ Limit of 2 timewindows with ORtools  
@@ -86,7 +91,7 @@ module Api
 -----------------
 
 Overview (#overview)
---
+==
 
 The API has been built to wrap a large panel of  Traveling Salesman Problem(TSP) and Vehicle Routing Problem(VRP) constraints in order to call the most fitted solvers.
 
@@ -94,6 +99,9 @@ The currently integreted solvers are:
 *   **[Vroom](https://github.com/VROOM-Project/vroom)** only handle the basic Traveling Salesman Problem.
 *   **[ORtools](https://github.com/google/or-tools)** handle multiple vehicles, timewindows, quantities, skills and lateness.
 *   **[Jsprit](https://github.com/graphhopper/jsprit)** handle multiple vehicles, timewindows, quantities, skills and setup duration.
+
+Standard Optimisation
+==
 
 Input Model (#input-model)
 --
@@ -799,6 +807,106 @@ Some vehicles can change its skills once empty, passing from one configuration t
     },
     skills: ["cool"]
   }]
+```
+Schedule Optimisation(#schedule-optimisation)
+==
+
+### Problem definition(#problem-definition)
+The plan must be described in its general way, the schedule duration the begin and end days or indices.
+Some day may have to be exclude from the resolution, like holiday, and could be defined by its days or indices.
+```json
+  "configuration": {
+      "preprocessing": {
+          "prefer_short_segment": true
+      },
+      "resolution": {
+          "duration": 1000,
+          "iterations_without_improvment": 100
+      },
+      "schedule": {
+          "range_indices": {
+              "start": 0,
+              "end": 13
+          },
+          "unavailable_indices": [2]
+      }
+  }
+
+```
+
+### Vehicle definition(#vehicle-definition)
+The timewindows of a vehicle over a week can be defined with an array of timewindows using "sequence_timewindows" instead of a single timewindow
+To link a timewindow with a week day, a day_index can be set (from 0 [monday] to 6 [sunday]). Those timewindows will repeated over the entire period for each week it containts.
+As the problem level definition, some days could be unavailable for a specific vehicle, this can be defined with "unavailable_work_date" or "unavailable_work_day_indices"
+```json
+  {
+    "id": "vehicle_id-1",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "sequence_timewindows": [{
+        "day_index": 0,
+        "start": 25200,
+        "end": 57600
+    }, {
+        "day_index": 1,
+        "start": 25200,
+        "end": 57600
+    }, {
+        "day_index": 2,
+        "start": 25200,
+        "end": 57600
+    }, {
+        "day_index": 3,
+        "start": 25200,
+        "end": 57600
+    }, {
+        "day_index": 4,
+        "start": 25200,
+        "end": 57600
+    }],
+    "start_point_id": "store",
+    "end_point_id": "store",
+    "unavailable_work_day_indices": [5, 7],
+  }
+```
+
+### Services definition(#services-definition)
+As the vehicles, services have period defined timewindows, using "day_index" parameter within its timewindows. And some days could be not available to deliver a customer, which can be defined with "unavailable_visit_day_indices" or "unavailable_visit_day_date"
+Some visits could be avoided because it is not mandatory, or any particular reason, "unavailable_visit_indices" allow to not include a particular visit over the period.
+To define multiple visit of a customer over the period, you can set it through the "visits_number" field.
+By default, it will devide the period by the number of visits in order to non overlap the multiple visits.
+```json
+  {
+    "id": "visit-1",
+    "type": "service",
+    "activity": {
+        "point_id": "visit-point-1",
+        "timewindows": [{
+            "day_index": 0,
+            "start": 28800,
+            "end": 64800
+        }, {
+            "day_index": 0,
+            "start": 61200,
+            "end": 97200
+        }, {
+            "day_index": 2,
+            "start": 28800,
+            "end": 64800
+        }, {
+            "day_index": 3,
+            "start": 28800,
+            "end": 64800
+        }, {
+            "day_index": 4,
+            "start": 28800,
+            "end": 64800
+        }],
+        "duration": 1200.0
+    },
+    "visits_number": 2
+  }
 ```
 '
       }
