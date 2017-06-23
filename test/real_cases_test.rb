@@ -215,7 +215,7 @@ class RealCasesTest < Minitest::Test
       assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 31700, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check elapsed time
-      assert result[:elapsed] < 20000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
     end
   end
 
