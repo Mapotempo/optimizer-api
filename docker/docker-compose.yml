@@ -1,0 +1,30 @@
+version: '2'
+services:
+  wrapper:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: mapotempo/optimizer-api:latest
+    links:
+        - redis-cache
+
+  resque-small:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: mapotempo/optimizer-api:latest
+    links:
+        - redis-cache
+    command: /bin/bash -c "cd /srv/app && APP_ENV=production COUNT=5 QUEUE=SMALL /usr/bin/bundle exec rake resque:workers"
+
+  resque-large:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: mapotempo/optimizer-api:latest
+    links:
+        - redis-cache
+    command: /bin/bash -c "cd /srv/app && APP_ENV=production COUNT=5 QUEUE=LARGE /usr/bin/bundle exec rake resque:workers"
+
+  redis-cache:
+      image: redis:alpine
