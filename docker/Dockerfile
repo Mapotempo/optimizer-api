@@ -14,6 +14,8 @@ ENV VROOM_VERSION ${VROOM_VERSION:-v0.3.1}
 ENV RAILS_ENV production
 ENV ROUTER_URL https://router.mapotempo.com
 
+ENV REDIS_HOST redis-cache
+
 ADD . /srv/app
 
 # Install app
