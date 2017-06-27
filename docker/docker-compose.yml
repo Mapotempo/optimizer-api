@@ -6,7 +6,9 @@ services:
       dockerfile: docker/Dockerfile
     image: mapotempo/optimizer-api:latest
     links:
-        - redis-cache
+      - redis-cache
+    external_links:
+      - router_wrapper_1:router
 
   resque-small:
     build:
