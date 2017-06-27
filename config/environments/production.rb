@@ -27,7 +27,7 @@ require './lib/cache_manager'
 
 module OptimizerWrapper
   ActiveSupport::Cache.lookup_store :redis_store
-  CACHE = CacheManager.new(ActiveSupport::Cache::RedisStore.new('mapotempo-optimizer-api', namespace: 'mapotempo-optimizer-api', expires_in: 60*60*24*1))
+  CACHE = CacheManager.new(ActiveSupport::Cache::RedisStore.new(ENV['REDIS_HOST'] || 'localhost', 'mapotempo-optimizer-api', namespace: 'mapotempo-optimizer-api', expires_in: 60*60*24*1))
 
   DEMO = Wrappers::Demo.new(CACHE, threads: 4)
   VROOM = Wrappers::Vroom.new(CACHE, threads: 4)
