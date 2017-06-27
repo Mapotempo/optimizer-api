@@ -12,7 +12,6 @@ ARG VROOM_VERSION
 ENV VROOM_VERSION ${VROOM_VERSION:-v0.3.1}
 
 ENV RAILS_ENV production
-ENV APP_
 ENV ROUTER_URL https://router.mapotempo.com
 
 ADD . /srv/app
