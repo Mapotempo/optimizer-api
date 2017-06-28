@@ -5,10 +5,10 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: mapotempo/optimizer-api:latest
+    ports:
+      - "80:80"
     volumes:
       - ./production.rb:/srv/app/config/environments/production.rb
-    ports:
-      - 80:80
     links:
       - redis-cache
 
