@@ -21,6 +21,9 @@ module Interpreters
 
     def self.expand(vrp)
       frequencies = []
+      if vrp.relations.size == 0
+        vrp.relations = []
+      end
       services_unavailable_indices = []
       if vrp.schedule_range_indices || vrp.schedule_range_date
         epoch = Date.new(1970,1,1)
@@ -52,19 +55,15 @@ module Interpreters
           end
 
           if service.visits_number
-            if service.minimum_lapse
-              vrp.relations << {
-                type: "minimum_day_lapse",
-                linked_ids: (1..service.visits_number).collect{ |index| "#{service.id}_ #{index}/#{service.visits_number}"},
-                lapse: service.minimum_lapse
-              }
+            if service.minimum_lapse && service.visits_number > 1
+              vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
+              :linked_ids => (1..service.visits_number).collect{ |index| "#{service.id}_#{index}/#{service.visits_number}"},
+              :lapse => service.minimum_lapse)
             end
-            if service.maximum_lapse
-              vrp.relations << {
-                type: "maximum_day_lapse",
-                linked_ids: (1..service.visits_number).collect{ |index| "#{service.id}_ #{index}/#{service.visits_number}"},
-                lapse: service.maximum_lapse
-              }
+            if service.maximum_lapse && service.visits_number > 1
+              maxlapse = Models::Relation.new(:type => "maximum_day_lapse",
+                :linked_ids => (1..service.visits_number).collect{ |index| "#{service.id}_#{index}/#{service.visits_number}"},
+                :lapse => service.maximum_lapse)
             end
             frequencies << service.visits_number
             visit_period = (schedule_end + 1).to_f/service.visits_number
