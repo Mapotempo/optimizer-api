@@ -9,7 +9,7 @@ ARG JSPRIT_VERSION
 ENV JSPRIT_VERSION ${JSPRIT_VERSION:-lastestPrime}
 
 ARG VROOM_VERSION
-ENV VROOM_VERSION ${VROOM_VERSION:-v0.3.1}
+ENV VROOM_VERSION ${VROOM_VERSION:-v1.0.0}
 
 ENV RAILS_ENV production
 ENV ROUTER_URL https://router.mapotempo.com
@@ -109,6 +109,7 @@ RUN apt-get update && \
     echo -n > /var/lib/apt/extended_states && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
-COPY docker/env.d/* /etc/nginx/env.d/
+
+ADD docker/env.d/* /etc/nginx/env.d/
 
 WORKDIR /srv/app
