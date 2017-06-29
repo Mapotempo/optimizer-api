@@ -32,7 +32,7 @@ include Ai4r::Clusterers
 require 'sim_annealing'
 
 module OptimizerWrapper
-  REDIS = Redis.new
+  REDIS = Resque.redis
 
   def self.config
     @@c
