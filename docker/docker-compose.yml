@@ -38,3 +38,4 @@ services:
 
   redis-cache:
       image: redis:alpine
+      command: redis-server --save ""
