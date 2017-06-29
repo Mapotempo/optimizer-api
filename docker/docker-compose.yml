@@ -11,6 +11,8 @@ services:
       - ./production.rb:/srv/app/config/environments/production.rb
     links:
       - redis-cache
+    environment:
+      APP_ENV: production
 
   resque-small:
     build:

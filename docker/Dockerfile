@@ -109,4 +109,6 @@ RUN apt-get update && \
     echo -n > /var/lib/apt/extended_states && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
+COPY docker/env.d/* /etc/nginx/env.d/
+
 WORKDIR /srv/app
