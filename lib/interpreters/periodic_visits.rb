@@ -215,7 +215,7 @@ module Interpreters
             vehicle
           end
         }.flatten
-        vrp.vehicles = new_vehicles
+        vrp.vehicles = new_vehicles.sort{ |a, b| a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id }
       end
       vrp
     end
