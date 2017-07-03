@@ -21,7 +21,9 @@ require './models/base'
 module Models
   class Quantity < Base
     field :value
+    field :setup_value, default: 1
     validates_numericality_of :value
+    validates_numericality_of :setup_value
 
     belongs_to :service, class_name: 'Models::Service'
     belongs_to :unit, class_name: 'Models::Unit'

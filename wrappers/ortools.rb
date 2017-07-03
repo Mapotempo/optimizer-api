@@ -68,7 +68,7 @@ module Wrappers
           ) },
           quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (q.value*1000+0.5).to_i : 0
+            q && q.value ? (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
           },
           type: service.type.to_s,
           duration: service.activity.duration,
@@ -78,6 +78,10 @@ module Wrappers
           setup_duration: service.activity.setup_duration,
           id: service.id,
           late_multiplier: service.activity.late_multiplier || 0,
+          setup_quantities: vrp.units.collect{ |unit|
+            q = service.quantities.find{ |quantity| quantity.unit == unit }
+            q && q.setup_value && unit.counting ? (q.setup_value).to_i : 0
+          },
         )
       } + vrp.shipments.collect{ |shipment|
         vehicles_indices = vrp.vehicles.collect.with_index{ |vehicle, index|
@@ -147,8 +151,9 @@ module Wrappers
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
-              limit: q && q.limit ? (q.limit*1000+0.5).to_i : -2147483648,
+              limit: q && q.limit ? unit.counting ? q.limit : (q.limit*1000+0.5).to_i : -2147483648,
               overload_multiplier: (q && q.overload_multiplier) || 0,
+              counting: (unit && unit.counting) || false
             )
           },
           time_window: OrtoolsVrp::TimeWindow.new(

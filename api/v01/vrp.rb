@@ -85,6 +85,7 @@ module Api
               optional(:units, type: Array, desc: 'The name of a Capacity/Quantity') do
                 requires(:id, type: String)
                 optional(:label, type: String, desc: 'Name of the unit')
+                optional(:counting, type: Boolean, desc: 'Define if the unit is a counting one, which allow to count the number of stop in a single route')
               end
 
               optional(:rests, type: Array, desc: 'Break within a vehicle tour') do
@@ -177,7 +178,8 @@ module Api
                 end
                 optional(:quantities, type: Array, desc: 'Define the entities which are taken or dropped') do
                   requires(:unit_id, type: String, desc: 'Unit related to this quantity')
-                  requires(:value, type: Float, desc: 'Value of the current quantity')
+                  optional(:value, type: Float, desc: 'Value of the current quantity')
+                  optional(:setup_value, type: Integer, desc: 'If the associated unit is a counting one, define the default value to count for this stop (additional quantities for this specific service are to define with the value tag)')
                 end
               end
               optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off') do
