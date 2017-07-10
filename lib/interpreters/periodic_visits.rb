@@ -61,7 +61,7 @@ module Interpreters
               :lapse => service.minimum_lapse)
             end
             if service.maximum_lapse && service.visits_number > 1
-              maxlapse = Models::Relation.new(:type => "maximum_day_lapse",
+              vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
                 :linked_ids => (1..service.visits_number).collect{ |index| "#{service.id}_#{index}/#{service.visits_number}"},
                 :lapse => service.maximum_lapse)
             end
