@@ -217,6 +217,33 @@ class RealCasesTest < Minitest::Test
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
     end
+
+    # Angers - Route duration and vehicle timewindow are identical
+    def test_ortools_global_with_identical_route_duration_and_vehicle_window
+      vrp = ENV['DUMP_VRP'] ? 
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
+      assert result
+
+      # Check activities
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service35'}
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service83'}
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service84'}
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service88' || unassigned[:service_id] == 'service89' }
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1169'}
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183'}
+      assert_equal vrp.services.size - 6, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+
+      # Check routes
+      assert_equal 29, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+
+      # Check total travel time
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 176000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+
+      # Check elapsed time
+      assert result[:elapsed] < 8000, "Too long elapsed time: #{result[:elapsed]}"
+    end
   end
 
 end
