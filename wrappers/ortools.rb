@@ -46,6 +46,7 @@ module Wrappers
       @job = job
 
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
+      relations = []
 
       services = vrp.services.collect{ |service|
         vehicles_indices = if vrp.services.any? { |service| service.skills == nil } && vrp.services.any? { |service| service.skills.size > 0 } &&
@@ -91,6 +92,11 @@ module Wrappers
             nil
           end
         }.compact
+        relations <<  OrtoolsVrp::Relation.new(
+          type: "order",
+          linked_ids: [shipment.id + "pickup", shipment.id + "delivery"],
+          lapse: -1
+        )
         [OrtoolsVrp::Service.new(
           time_windows: shipment.pickup.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
@@ -107,7 +113,6 @@ module Wrappers
           vehicle_indices: shipment.sticky_vehicles.size > 0 ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
           setup_duration: shipment.pickup.setup_duration,
           id: shipment.id + "pickup",
-          linked_ids: [shipment.id + "delivery"],
           late_multiplier: shipment.pickup.late_multiplier || 0
         )] + [OrtoolsVrp::Service.new(
           time_windows: shipment.delivery.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
@@ -178,7 +183,7 @@ module Wrappers
         )
       }
 
-      relations = vrp.relations.collect{ |relation|
+      relations += vrp.relations.collect{ |relation|
         OrtoolsVrp::Relation.new(
           type: relation.type,
           linked_ids: relation.linked_ids || [],
