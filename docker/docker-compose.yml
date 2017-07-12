@@ -4,7 +4,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: mapotempo/optimizer-api:latest
+    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-latest}
     ports:
       - "8083:80" # HOST:CONTAINER, edit only HOST part
     volumes:
@@ -19,7 +19,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: mapotempo/optimizer-api:latest
+    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-latest}
     volumes:
       - ./production.rb:/srv/app/config/environments/production.rb
     links:
@@ -27,5 +27,5 @@ services:
     command: /bin/bash -c "cd /srv/app && APP_ENV=production COUNT=5 QUEUE=DEFAULT /usr/bin/bundle exec rake resque:workers"
 
   redis-cache:
-      image: redis:alpine
-      command: redis-server --save ""
+    image: redis:${REDIS_VERSION:-3.2-alpine}
+    command: redis-server --save ""
