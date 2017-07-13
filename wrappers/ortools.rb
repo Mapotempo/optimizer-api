@@ -334,9 +334,9 @@ module Wrappers
         block.call(self, iterations, nil, cost, r && parse_output(vrp, services, points, matrix_indices, cost, iterations, r[1])) if block
       }
 
+      result = out.split("\n")[-1]
       if @thread.value == 0
         cost_line = out.split("\n")[-2]
-        result = out.split("\n")[-1]
         if result == 'No solution found...'
           nil
         else
@@ -349,7 +349,7 @@ module Wrappers
           [cost, iterations, result]
         end
       else
-        out
+        raise RuntimeError.new(result)
       end
     ensure
       input && input.unlink
