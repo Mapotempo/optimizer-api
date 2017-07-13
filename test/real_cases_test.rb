@@ -244,6 +244,24 @@ class RealCasesTest < Minitest::Test
       # Check elapsed time
       assert result[:elapsed] < 8000, "Too long elapsed time: #{result[:elapsed]}"
     end
+
+    # La Roche-Sur-Yon - A single route with a single double timewindow
+    def test_ortools_one_route_with_single_mtws
+      vrp = ENV['DUMP_VRP'] ? 
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
+      assert result
+      # Check activities
+      assert_equal vrp.services.size - 1, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
+
+      # Check total travel time
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 6300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+
+      # Check elapsed time
+      assert result[:elapsed] < 7000, "Too long elapsed time: #{result[:elapsed]}"
+    end
   end
 
 end
