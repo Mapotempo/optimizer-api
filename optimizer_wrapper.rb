@@ -172,7 +172,7 @@ module OptimizerWrapper
     real_result
   rescue Resque::Plugins::Status::Killed
     puts 'Job Killed'
-  rescue Exception => e
+  rescue => e
     puts e
     puts e.backtrace
     raise
