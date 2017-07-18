@@ -504,4 +504,103 @@ class InterpreterTest < Minitest::Test
     assert expanded_vrp[:services][0].skills == ["1_f_2"]
     assert expanded_vrp[:services][1].skills == ["2_f_2"]
   end
+
+    def test_expand_vrp_with_date_and_indices
+    size = 5
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ],
+        distance: [
+          [ 0,  1,  1, 10,  0],
+          [ 1,  0,  1, 10,  1],
+          [ 1,  1,  0, 10,  1],
+          [10, 10, 10,  0, 10],
+          [ 0,  1,  1, 10,  0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      rests: [{
+        id: 'rest_0',
+        timewindows: [{
+          day_index: 0,
+          start: 1,
+          end: 1
+        }],
+        duration: 1
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        rest_ids: ['rest_0'],
+        sequence_timewindows: [{
+          day_index: 0,
+          start: 1,
+          end: 11
+        }, {
+          day_index: 1,
+          start: 4,
+          end: 14
+        }],
+        unavailable_work_day_indices: [1,2,3,4,6,7]
+      }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+            timewindows: [{
+              day_index: 0,
+              start: 1,
+              end: 2
+            },{
+              day_index: 0,
+              start: 5,
+              end: 7
+            },{
+              day_index: 1,
+              start: 402,
+              end: 408
+            }]
+          },
+          unavailable_visit_day_indices: [0,1,2,4,6,7],
+          visits_number: 2
+        }
+      },
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        },
+        schedule: {
+          range_date: {
+            start: Date.new(2017,1,2), # monday
+            end: Date.new(2017,1,12) # thursday
+          }
+        }
+      }
+    }
+    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    assert_equal 2, expanded_vrp[:vehicles].size
+    assert_equal expanded_vrp[:vehicles][0].timewindow[:start], 1
+    assert_equal expanded_vrp[:vehicles][0].timewindow[:end], 11
+    assert_equal expanded_vrp[:vehicles][1].timewindow[:start], 86404
+    assert_equal expanded_vrp[:vehicles][1].timewindow[:end], 86414
+    assert_equal 2 * (size - 1), expanded_vrp[:services].size
+    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 }
+  end
 end
