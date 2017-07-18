@@ -36,7 +36,7 @@ module Api
         end
 
         response = {message: e.message}
-        if e.is_a?(RangeError) || e.is_a?(Grape::Exceptions::ValidationErrors)
+        if e.is_a?(RangeError) || e.is_a?(Grape::Exceptions::ValidationErrors) || e.is_a?(ActiveHash::RecordNotFound)
           rack_response(format_message(response, e.backtrace), 400)
         elsif e.is_a?(Grape::Exceptions::MethodNotAllowed)
           rack_response(format_message(response, nil), 405)
