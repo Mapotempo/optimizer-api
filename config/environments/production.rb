@@ -49,7 +49,7 @@ module OptimizerWrapper
       api_keys: ['demo'],
       queue: 'DEFAULT',
       services: {
-        vrp: [:vroom, :jsprit, :ortools]
+        vrp: [:vroom, :ortools, :jsprit]
       }
     }],
     router: {
