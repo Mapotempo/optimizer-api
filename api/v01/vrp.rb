@@ -76,8 +76,8 @@ module Api
                 requires(:id, type: String)
                 optional(:matrix_index, type: Integer, desc: 'Index within the matrices, required if the matrices are already given')
                 optional(:location, type: Hash, desc: 'Location of the point if the matrices are not given') do
-                  requires(:lat, type: Float, desc: 'Latitude coordinate')
-                  requires(:lon, type: Float, desc: 'Longitude coordinate')
+                  requires(:lat, type: Float, allow_blank: false, desc: 'Latitude coordinate')
+                  requires(:lon, type: Float, allow_blank: false, desc: 'Longitude coordinate')
                 end
                 at_least_one_of :matrix_index, :location
               end
