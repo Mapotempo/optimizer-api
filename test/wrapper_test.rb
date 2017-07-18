@@ -905,4 +905,57 @@ class WrapperTest < Minitest::Test
       assert error.message.match 'RouterWrapperError'
     end
   end
+
+  def test_point_id_not_defined
+    problem = {
+      points: [
+        {
+          id: "point_0",
+          location: {
+            lat: 1000,
+            lon: 1000
+          }
+        }, {
+          id: "point_1",
+          location: {
+            lat: 1000,
+            lon: 1000
+          }
+        }
+      ],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1,
+      }],
+      services: [
+        {
+          id: "service_0",
+          activity: {
+            point_id: "point_0"
+          }
+        }, {
+          id: "service_1",
+          activity: {
+            point_id: "point_2"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    begin
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+    rescue StandardError => error
+      assert error.is_a?(ActiveHash::RecordNotFound)
+      assert error.message.match 'Couldn\'t find Models::Point with ID=point_2'
+    end
+  end
 end
