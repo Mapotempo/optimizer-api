@@ -63,6 +63,8 @@ module OptimizerWrapper
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
+    elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
+      raise DiscordantProblemError.new("Geometry is not available if locations are not defined")
     else
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         solve(services_vrps)
@@ -137,7 +139,6 @@ module OptimizerWrapper
           result = OptimizerWrapper.config[:services][service].solve(vrp, job) { |wrapper, avancement, total, cost, solution|
             block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
           }
-
           if result.class.name == 'Hash' # result.is_a?(Hash) not working
             result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
             parse_result(vrp, result)
@@ -172,6 +173,10 @@ module OptimizerWrapper
         preprocessing: {
           cluster_threshold: vrp.preprocessing_cluster_threshold,
           prefer_short_segment: vrp.preprocessing_prefer_short_segment
+        },
+        restitution: {
+          geometry: vrp.restitution_geometry,
+          geometry_polyline: vrp.restitution_geometry_polyline
         },
         resolution: {
           duration: vrp.resolution_duration && vrp.resolution_duration / vrp.vehicles.size,
@@ -250,6 +255,29 @@ module OptimizerWrapper
       end
       if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.distance
         r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
+      end
+      if vrp.restitution_geometry
+        previous = nil
+        segments = r[:activities].collect{ |activity|
+          current = nil
+          if activity[:point_id]
+            current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
+          elsif activity[:service_id]
+            current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
+          elsif activity[:pickup_shipment_id]
+            current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
+          elsif activity[:delivery_shipment_id]
+            current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
+          end
+          segment = if previous && current
+            [previous[:location][:lat], previous[:location][:lon], current[:location][:lat], current[:location][:lon]]
+          end
+          previous = current
+          segment
+        }.compact
+        r[:geometry] = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][v[:router_mode].to_sym],
+          v[:router_mode].to_sym, v[:router_dimension], [segments], vrp.restitution_geometry_polyline, v.router_options)[0][2]
+        raise RouterWrapperError unless r[:geometry]
       end
     }
 
@@ -469,8 +497,9 @@ module OptimizerWrapper
         activities: activities,
         total_distance: route[:total_distance] ? route[:total_distance] : 0,
         total_time: route[:total_time] ? route[:total_time] : 0,
-        total_travel_time: route[:total_travel_time] ? route[:total_travel_time] : 0
-      }
+        total_travel_time: route[:total_travel_time] ? route[:total_travel_time] : 0,
+        geometry: route[:geometry]
+      }.delete_if{ |k,v| v.nil? }
     }
     result[:unassigned] = routes.find{ |route| route[:vehicle_id] == "unassigned" } ? routes.find{ |route| route[:vehicle_id] == "unassigned" }[:activities] : []
     result[:routes] = routes.select{ |route| route[:vehicle_id] != "unassigned" }
@@ -510,6 +539,13 @@ module OptimizerWrapper
     end
   end
 
+  class DiscordantProblemError < StandardError
+    attr_reader :data
+
+    def initialize(data = [])
+      @data = data
+    end
+  end
   class UnsupportedProblemError < StandardError
     attr_reader :data
 

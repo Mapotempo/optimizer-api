@@ -46,6 +46,9 @@ module Api
         elsif e.is_a?(OptimizerWrapper::UnsupportedProblemError)
           response = "#{e.class} : #{e.data.map { |service| service.join(', ') }.join(' | ')}"
           rack_response(format_message(response, nil), 417)
+        elsif e.is_a?(OptimizerWrapper::DiscordantProblemError)
+          response = "#{e.class} : #{e.data}"
+          rack_response(format_message(response, nil), 417)
         else
           rack_response(format_message(response, e.backtrace), 500)
         end

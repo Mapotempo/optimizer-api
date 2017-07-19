@@ -39,6 +39,7 @@ module Api
       expose :total_time, documentation: { type: Integer, desc: 'Sum of every travel time and activity duration of the route' }
       expose :start_time, documentation: { type: Integer, desc: 'Give the actual start time of the current route if provided by the solve' }
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
+      expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place'}
     end
 
     class VrpResultSolution < Grape::Entity

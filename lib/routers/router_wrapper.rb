@@ -31,7 +31,7 @@ module Routers
       @api_key = api_key
     end
 
-    def compute_batch(url, mode, dimension, segments, options = {})
+    def compute_batch(url, mode, dimension, segments, polyline, options = {})
       results = {}
       nocache_segments = []
       segments.each{ |s|
@@ -44,8 +44,9 @@ module Routers
         end
       }
       if !nocache_segments.empty?
+        format = polyline ? 'json' : 'geojson'
         nocache_segments.each_slice(50){ |slice_segments|
-          resource = RestClient::Resource.new(url + '/0.1/routes.json', timeout: nil)
+          resource = RestClient::Resource.new(url + "/0.1/routes.#{format}", timeout: nil)
           request = resource.post(params(mode, dimension, options).merge({
             locs: slice_segments.collect{ |segment| segment.join(',') }.join('|')
           })) { |response, request, result, &block|
@@ -85,7 +86,13 @@ module Routers
           if feature
             distance = feature['properties']['router']['total_distance'] if feature['properties'] && feature['properties']['router']
             time = feature['properties']['router']['total_time'] if feature['properties'] && feature['properties']['router']
-            trace = feature['geometry']['polylines'] if feature['geometry']
+            trace =  if feature['geometry']
+              if polyline
+                feature['geometry']['polylines']
+              else
+                feature['geometry']['coordinates']
+              end
+            end
             [distance, time, trace]
           else
             [nil, nil, nil]

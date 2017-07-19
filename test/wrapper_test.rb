@@ -958,4 +958,182 @@ class WrapperTest < Minitest::Test
       assert error.message.match 'Couldn\'t find Models::Point with ID=point_2'
     end
   end
+
+  def test_trace_location_not_defined
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ],
+        distance: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ]
+      }],
+      points: [
+        {
+          id: "point_0",
+          matrix_index: 0,
+          location: {
+            lat: 1000,
+            lon: 1000
+          }
+        }, {
+          id: "point_1",
+          matrix_index: 2,
+        }
+      ],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1,
+      }],
+      services: [
+        {
+          id: "service_0",
+          activity: {
+            point_id: "point_0"
+          }
+        }, {
+          id: "service_1",
+          activity: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          trace: true
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    begin
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+    rescue StandardError => error
+      assert error.is_a?(OptimizerWrapper::DiscordantProblemError)
+      assert error.data.match 'Trace is not available if locations are not defined'
+    end
+  end
+
+  def test_geometry_polyline_encoded
+    problem = {
+      points: [
+        {
+          id: "point_0",
+          location: {
+            lat: 48,
+            lon: 5
+          }
+        }, {
+          id: "point_1",
+          location: {
+            lat: 50,
+            lon: 1
+          }
+        }
+      ],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1,
+      }],
+      services: [
+        {
+          id: "service_0",
+          activity: {
+            point_id: "point_0"
+          }
+        }, {
+          id: "service_1",
+          activity: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          geometry: true,
+          geometry_polyline: true
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    assert result[:routes][0][:geometry]
+  end
+
+  def test_geometry_polyline
+    problem = {
+      points: [
+        {
+          id: "point_0",
+          location: {
+            lat: 48,
+            lon: 5
+          }
+        }, {
+          id: "point_1",
+          location: {
+            lat: 49,
+            lon: 1
+          }
+        }
+      ],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1,
+      }],
+      services: [
+        {
+          id: "service_0",
+          activity: {
+            point_id: "point_0"
+          }
+        }, {
+          id: "service_1",
+          activity: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          geometry: true,
+          geometry_polyline: false
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    assert result[:routes][0][:geometry]
+  end
 end

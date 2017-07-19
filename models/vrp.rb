@@ -32,6 +32,9 @@ module Models
     field :resolution_time_out_multiplier, default: nil
     field :resolution_vehicle_limit, default: nil
 
+    field :restitution_geometry, default: false
+    field :restitution_geometry_polyline, default: false
+
     field :schedule_range_indices, default: nil
     field :schedule_range_date, default: nil
     field :schedule_unavailable_indices, default: nil
@@ -65,6 +68,12 @@ module Models
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
       self.resolution = configuration[:resolution] if configuration[:resolution]
       self.schedule = configuration[:schedule] if configuration[:schedule]
+      self.restitution = configuration[:restitution] if configuration[:restitution]
+    end
+
+    def restitution=(restitution)
+      self.restitution_geometry = restitution[:geometry]
+      self.restitution_geometry_polyline = restitution[:geometry_polyline]
     end
 
     def resolution=(resolution)

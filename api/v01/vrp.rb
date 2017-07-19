@@ -224,6 +224,10 @@ module Api
                   optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution')
                   at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
                 end
+                optional(:restitution, type: Hash, desc: 'Restitution paramaters') do
+                  optional(:geometry, type: Boolean, desc: 'Allow to return the polyline of each route')
+                  optional(:geometry_polyline, type: Boolean, desc: 'Encode the polyline')
+                end
                 optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
                   optional(:range_indices, type: Hash, desc: '[planning] Day indices within the plan has to be build')
                   optional(:range_date, type: Hash, desc: '[planning] Define the total period to consider') do
