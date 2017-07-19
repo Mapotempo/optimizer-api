@@ -280,7 +280,7 @@ module Wrappers
                     departure_time: i.size > 1 ? earliest_start + (shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i ): nil
   #              pickup_shipments_id [:id0:],
   #              delivery_shipments_id [:id0:]
-                  }
+                  }.delete_if{ |k,v| !v }
                   earliest_start += shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i
                   previous = point
                   current_activity

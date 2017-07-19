@@ -1136,4 +1136,70 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
     assert result[:routes][0][:geometry]
   end
+
+  def test_shipments_result
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ],
+        distance: [
+          [ 0, 10, 20, 30,  0],
+          [10,  0, 30, 40, 10],
+          [20, 30,  0, 50, 20],
+          [30, 40, 50,  0, 30],
+          [ 0, 10, 20, 30,  0]
+        ]
+      }],
+      points: [{
+          id: "point_0",
+          matrix_index: 0
+        }, {
+          id: "point_1",
+          matrix_index: 1
+        }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1,
+        matrix_id: 'matrix_0'
+      }],
+      shipments: [
+        {
+          id: "shipment_0",
+          pickup: {
+            point_id: "point_0"
+          },
+          delivery: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
+    assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
+    assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
+    assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
+
+    result = OptimizerWrapper.solve([service: :jsprit, vrp: Models::Vrp.create(problem)])
+    assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
+    assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
+    assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
+    assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
+  end
 end
