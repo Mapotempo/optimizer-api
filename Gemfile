@@ -26,6 +26,10 @@ gem 'resque-status'
 gem 'ai4r'
 gem 'sim_annealing'
 
+gem 'rgeo'
+gem 'rgeo-geojson'
+gem 'polylines'
+
 gem 'google-protobuf', '>=3'
 
 group :test do

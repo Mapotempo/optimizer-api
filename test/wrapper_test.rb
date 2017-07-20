@@ -1194,6 +1194,171 @@ class WrapperTest < Minitest::Test
     assert result[:routes][0][:geometry]
   end
 
+  def test_input_zones
+    problem = {
+      points: [
+        {
+          id: "point_0",
+          location: {
+            lat: 48,
+            lon: 5
+          }
+        }, {
+          id: "point_1",
+          location: {
+            lat: 49,
+            lon: 1
+          }
+        }
+      ],
+      zones: [{
+        id: "zone_0",
+        polygon: {
+        "type": "Polygon",
+        "coordinates": [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
+        },
+        allocations: [["vehicle_0"]]
+      }, {
+        id: "zone_1",
+        polygon: {
+          "type": "Polygon",
+          "coordinates": [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
+        },
+        allocations: [["vehicle_1"]]
+      }, {
+        id: "zone_2",
+        polygon: {
+          "type": "Polygon",
+          "coordinates": [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
+        },
+        allocations: [["vehicle_1"]]
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }],
+      services: [
+        {
+          id: "service_0",
+          activity: {
+            point_id: "point_0"
+          }
+        }, {
+          id: "service_1",
+          activity: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          geometry: true,
+          geometry_polyline: false
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    assert_equal result[:routes][0][:activities].size, 2
+    assert_equal result[:routes][1][:activities].size, 2
+  end
+
+  def test_input_zones_shipment
+    problem = {
+      points: [
+        {
+          id: "point_0",
+          location: {
+            lat: 48,
+            lon: 5
+          }
+        }, {
+          id: "point_1",
+          location: {
+            lat: 49,
+            lon: 1
+          }
+        }
+      ],
+      zones: [{
+        id: "zone_0",
+        polygon: {
+        "type": "Polygon",
+        "coordinates": [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
+        },
+        allocations: [["vehicle_0"]]
+      }, {
+        id: "zone_1",
+        polygon: {
+          "type": "Polygon",
+          "coordinates": [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
+        },
+        allocations: [["vehicle_1"]]
+      }, {
+        id: "zone_2",
+        polygon: {
+          "type": "Polygon",
+          "coordinates": [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
+        },
+        allocations: [["vehicle_1"]]
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }],
+      services: [{
+        id: "service_0",
+        activity: {
+          point_id: "point_0"
+        }
+      }],
+      shipments: [
+        {
+          id: "shipment_0",
+          pickup: {
+            point_id: "point_0"
+          },
+          delivery: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          geometry: true,
+          geometry_polyline: false
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    assert_equal 1, result[:routes][0][:activities].size
+    assert_equal 2, result[:routes][1][:activities].size
+    assert_equal 1, result[:unassigned].size
+  end
+
   def test_shipments_result
     problem = {
       matrices: [{

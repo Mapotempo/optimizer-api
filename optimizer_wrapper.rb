@@ -31,6 +31,8 @@ require './lib/clusterers/complete_linkage_max_distance.rb'
 include Ai4r::Clusterers
 require 'sim_annealing'
 
+require 'rgeo/geo_json'
+
 module OptimizerWrapper
   REDIS = Resque.redis
 
@@ -78,6 +80,7 @@ module OptimizerWrapper
 
   def self.solve(services_vrps, job = nil, &block)
     join_vrps(services_vrps, block) { |service, vrp, block|
+      apply_zones(vrp)
       if vrp.services.empty? && vrp.shipments.empty?
         {
           costs: 0,
@@ -294,6 +297,57 @@ module OptimizerWrapper
     end
 
     result
+  end
+
+  def self.apply_zones(vrp)
+    vrp.zones.each{ |zone|
+      if !zone.allocations.empty?
+        vehicles = if zone.allocations.size == 1
+          zone.allocations[0].collect { |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id }}.compact
+        else
+          zone.allocations.collect{ |allocation| vrp.vehicles.find{ |vehicle| vehicle.id == allocation.first }}.compact
+        end
+        if !vehicles.compact.empty?
+          vehicles.each { |vehicle|
+            if vehicle.skills.empty?
+              vehicle.skills = [[zone[:id]]]
+            else
+              vehicle.skills.each{ |alternative| alternative << zone[:id] }
+            end
+          }
+        end
+      end
+    }
+    if vrp.points.all?{ |point| point.location }
+      vrp.zones.each{ |zone|
+        related_ids = vrp.services.collect{ |service|
+          activity_point = vrp.points.find{ |point| point.id == service.activity.point_id }
+          if zone.inside(activity_point.location.lat, activity_point.location.lon)
+            service.skills += [zone[:id]]
+            service.id
+          end
+        }.compact + vrp.shipments.collect{ |shipment|
+          shipments_ids = []
+          pickup_point = vrp.points.find{ |point| point[:id] == shipment[:pickup][:point_id] }
+          if zone.inside(pickup_point[:location][:lat], pickup_point[:location][:lon])
+            shipment.skills += [zone[:id]]
+            shipments_ids << shipment.id + "pickup"
+          end
+          delivery_point = vrp.points.find{ |point| point[:id] == shipment[:delivery][:point_id] }
+          if zone.inside(delivery_point[:location][:lat], delivery_point[:location][:lon])
+            shipment.skills += [zone[:id]]
+            shipments_ids << shipment.id + "delivery"
+          end
+          shipments_ids
+        }.compact
+        if !zone.allocations.empty? && zone.allocations.size > 1 && !related_ids.empty? && related_ids.size > 1
+          vrp.relations += [{
+            type: :same_route,
+            linked_ids: related_ids.flatten,
+          }]
+        end
+      }
+    end
   end
 
   def self.cluster(vrp, cluster_threshold, force_cluster)

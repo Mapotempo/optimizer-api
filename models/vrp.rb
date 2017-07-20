@@ -58,6 +58,7 @@ module Models
     has_many :services, class_name: 'Models::Service'
     has_many :shipments, class_name: 'Models::Shipment'
     has_many :relations, class_name: 'Models::Relation'
+    has_many :zones, class_name: 'Models::Zone'
 
     def self.create(hash, delete = true)
       Models.delete_all if delete

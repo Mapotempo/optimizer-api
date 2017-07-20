@@ -38,6 +38,7 @@ module Wrappers
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
         :assert_no_shipments_with_multiple_timewindows,
+        :assert_zones_only_size_one_alternative
       ]
     end
 
@@ -185,7 +186,7 @@ module Wrappers
 
       relations += vrp.relations.collect{ |relation|
         OrtoolsVrp::Relation.new(
-          type: relation.type,
+          type: relation.type.to_s,
           linked_ids: relation.linked_ids || [],
           lapse: relation.lapse || -1
         )

@@ -195,6 +195,18 @@ module Wrappers
       })
     end
 
+    def assert_no_relations(vrp)
+      vrp.relations.empty?
+    end
+
+    def assert_no_zones(vrp)
+      vrp.zones.empty?
+    end
+
+    def assert_zones_only_size_one_alternative(vrp)
+      vrp.zones.empty? || vrp.zones.all?{ |zone| zone.allocations.none?{ |alternative| alternative.size > 1 }}
+    end
+
     def solve_synchronous?(vrp)
       false
     end

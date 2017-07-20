@@ -82,6 +82,7 @@ GEM
     netrc (0.11.0)
     nokogiri (1.6.8.1)
       mini_portile2 (~> 2.1.0)
+    polylines (0.3.0)
     puma (3.6.2)
     rack (1.5.5)
     rack-accept (0.4.5)
@@ -119,6 +120,9 @@ GEM
       http-cookie (>= 1.0.2, < 2.0)
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
+    rgeo (0.6.0)
+    rgeo-geojson (0.4.3)
+      rgeo (~> 0.5)
     ruby-progressbar (1.8.1)
     sim_annealing (0.0.2)
     simplecov (0.12.0)
@@ -167,6 +171,7 @@ DEPENDENCIES
   minitest
   minitest-reporters
   nokogiri
+  polylines
   puma
   rack
   rack-contrib
@@ -178,9 +183,11 @@ DEPENDENCIES
   resque
   resque-status
   rest-client
+  rgeo
+  rgeo-geojson
   sim_annealing
   simplecov
   thin
 
 BUNDLED WITH
-   1.12.5
+   1.13.6

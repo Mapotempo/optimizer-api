@@ -98,6 +98,12 @@ module Api
                 optional(:exclusion_cost, type: Float, desc: '(not used)')
               end
 
+              optional(:zones, type: Array, desc: '') do
+                requires(:id, type: String, desc: '')
+                requires(:polygon, type: Hash, desc: 'geometry which describe the area')
+                optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle vehicles combination the zone could to be served')
+              end
+
               requires(:vehicles, type: Array, desc: 'Usually represent a work day of a particular driver/vehicle') do
                 requires(:id, type: String)
                 optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
@@ -251,7 +257,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:matrices, :units, :points, :rests, :vehicles, :services, :shipments, :configuration].each{ |key|
+              [:matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :configuration].each{ |key|
                 (vrp.send "#{key}=", params[:vrp][key]) if params[:vrp][key]
               }
               if !vrp.valid?
