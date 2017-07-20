@@ -714,8 +714,7 @@ class WrapperTest < Minitest::Test
               start: 1,
               end: 2
             }]
-          },
-          skills: ['A']
+          }
         }
       },
       configuration: {

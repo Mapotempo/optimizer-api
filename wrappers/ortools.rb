@@ -50,8 +50,8 @@ module Wrappers
       relations = []
 
       services = vrp.services.collect{ |service|
-        vehicles_indices = if vrp.services.any? { |service| service.skills == nil } && vrp.services.any? { |service| service.skills.size > 0 } &&
-          vrp.vehicles.any? { |vehicle| vehicle.skills } && vrp.vehicles.none? { |vehicle| vehicle.skills && ((vehicle.skills[0] & service.skills).size == service.skills.size) }
+        vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? } ||
+          vrp.vehicles.none? { |vehicle| vehicle[:skills] && ((vehicle.skills[0] & service.skills).size == service.skills.size) })
           [-1]
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
@@ -86,13 +86,19 @@ module Wrappers
           },
         )
       } + vrp.shipments.collect{ |shipment|
-        vehicles_indices = vrp.vehicles.collect.with_index{ |vehicle, index|
-          if !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size)
-            index
-          else
-            nil
-          end
-        }.compact
+        vehicles_indices = if !shipment[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? } ||
+          vrp.vehicles.none? { |vehicle| vehicle[:skills] && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size) })
+          [-1]
+        else
+          vrp.vehicles.collect.with_index{ |vehicle, index|
+            if !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size)
+              index
+            else
+              nil
+            end
+          }.compact
+        end
+
         relations <<  OrtoolsVrp::Relation.new(
           type: "order",
           linked_ids: [shipment.id + "pickup", shipment.id + "delivery"],
