@@ -256,7 +256,7 @@ module OptimizerWrapper
       if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.distance
         r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
       end
-      if vrp.restitution_geometry
+      if vrp.restitution_geometry && r[:activities].size > 1
         previous = nil
         segments = r[:activities].collect{ |activity|
           current = nil

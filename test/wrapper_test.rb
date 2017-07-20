@@ -1137,6 +1137,63 @@ class WrapperTest < Minitest::Test
     assert result[:routes][0][:geometry]
   end
 
+  def test_geometry_route_single_activity
+    problem = {
+      points: [
+        {
+          id: "point_0",
+          location: {
+            lat: 48,
+            lon: 5
+          }
+        }, {
+          id: "point_1",
+          location: {
+            lat: 49,
+            lon: 1
+          }
+        }
+      ],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }],
+      services: [
+        {
+          id: "service_0",
+          activity: {
+            point_id: "point_0"
+          }
+        }, {
+          id: "service_1",
+          activity: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          geometry: true,
+          geometry_polyline: false
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    assert result[:routes][0][:geometry]
+  end
+
   def test_shipments_result
     problem = {
       matrices: [{
