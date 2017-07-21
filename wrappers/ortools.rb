@@ -100,7 +100,7 @@ module Wrappers
         end
 
         relations <<  OrtoolsVrp::Relation.new(
-          type: "order",
+          type: "shipment",
           linked_ids: [shipment.id + "pickup", shipment.id + "delivery"],
           lapse: -1
         )
