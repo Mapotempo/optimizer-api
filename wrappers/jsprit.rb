@@ -159,7 +159,9 @@ module Wrappers
                   xml.method_missing('capacity-dimensions') {
                     # Jsprit accepts only integers
                     vehicle.capacities.each_with_index do |capacity, index|
-                      xml.dimension (capacity[:limit] * 1000).to_i, index: index
+                      if capacity[:limit]
+                        xml.dimension (capacity[:limit] * 1000).to_i, index: index
+                      end
                     end
                   }
                 else
@@ -203,7 +205,7 @@ module Wrappers
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
                       service.quantities.each_with_index do |quantity, index|
-                        xml.dimension (quantity[:value] * 1000).to_i, index: index
+                        xml.dimension (quantity[:value] ? quantity[:value] * 1000 : 0).to_i, index: index
                       end
                     }
                   else
