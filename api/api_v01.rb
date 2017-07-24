@@ -79,9 +79,11 @@ module Api
     * [Skills](#skills)
     * [Alternative Skills³](#alternative-skills)
 * [Schedule Optimisation](#schedule-optimisation)
-  *[Problem Definition](#problem-definition)
-  *[Vehicle Definition](#vehicle-definition)
-  *[Services Definition](#services-definition)
+  * [Problem Definition](#problem-definition)
+  * [Vehicle Definition](#vehicle-definition)
+  * [Services Definition](#services-definition)
+  * [Additional Parameters](#additional-parameters)
+    * [Minimum/Maximum Lapse](#min-max-lapse)
 
 -----------------
 ¹ Limit of 2 timewindows with ORtools  
@@ -808,10 +810,13 @@ Some vehicles can change its skills once empty, passing from one configuration t
     skills: ["cool"]
   }]
 ```
+
 Schedule Optimisation(#schedule-optimisation)
 ==
 
-### Problem definition(#problem-definition)
+Problem definition(#problem-definition)
+---
+
 The plan must be described in its general way, the schedule duration the begin and end days or indices.
 Some day may have to be exclude from the resolution, like holiday, and could be defined by its days or indices.
 ```json
@@ -834,7 +839,9 @@ Some day may have to be exclude from the resolution, like holiday, and could be 
 
 ```
 
-### Vehicle definition(#vehicle-definition)
+Vehicle definition(#vehicle-definition)
+---
+
 The timewindows of a vehicle over a week can be defined with an array of timewindows using "sequence_timewindows" instead of a single timewindow
 To link a timewindow with a week day, a day_index can be set (from 0 [monday] to 6 [sunday]). Those timewindows will repeated over the entire period for each week it containts.
 As the problem level definition, some days could be unavailable for a specific vehicle, this can be defined with "unavailable_work_date" or "unavailable_work_day_indices"
@@ -871,7 +878,9 @@ As the problem level definition, some days could be unavailable for a specific v
   }
 ```
 
-### Services definition(#services-definition)
+Services definition(#services-definition)
+---
+
 As the vehicles, services have period defined timewindows, using "day_index" parameter within its timewindows. And some days could be not available to deliver a customer, which can be defined with "unavailable_visit_day_indices" or "unavailable_visit_day_date"
 Some visits could be avoided because it is not mandatory, or any particular reason, "unavailable_visit_indices" allow to not include a particular visit over the period.
 To define multiple visit of a customer over the period, you can set it through the "visits_number" field.
@@ -906,6 +915,47 @@ By default, it will devide the period by the number of visits in order to non ov
         "duration": 1200.0
     },
     "visits_number": 2
+  }
+```
+N.B: Shipments are currently not available within the schedule optimisation
+
+Additional parameters(#additional-parameters)
+---
+
+### **Minimum/Maximum Lapse**(#min-max-lapse)
+Between to visits of the same mission, it could be necessary to determine exactly the lapse. At this purpose, the "minimum_lapse" and "maximum_lapse" fields of services are available.
+```json
+  {
+    "id": "visit-1",
+    "type": "service",
+    "activity": {
+        "point_id": "visit-point-1",
+        "timewindows": [{
+            "day_index": 0,
+            "start": 28800,
+            "end": 64800
+        }, {
+            "day_index": 0,
+            "start": 61200,
+            "end": 97200
+        }, {
+            "day_index": 2,
+            "start": 28800,
+            "end": 64800
+        }, {
+            "day_index": 3,
+            "start": 28800,
+            "end": 64800
+        }, {
+            "day_index": 4,
+            "start": 28800,
+            "end": 64800
+        }],
+        "duration": 1200.0
+    },
+    "visits_number": 2,
+    "minimum_lapse": 7,
+    "maximum_lapse": 14
   }
 ```
 '
