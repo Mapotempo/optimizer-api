@@ -444,7 +444,7 @@ Inform about the drivers obligations to have some rest within a route
 ```
 
 ### **Configuration**(#configuration)
-The configuration is divided in two parts  
+The configuration is divided in four parts
 Preprocessing parameters will twist the problem in order to simplify or orient the solve
 ```json
   configuration: {
@@ -467,6 +467,32 @@ Resolution parameters will only indicate when stopping the search is admissible
 **VROOM** requires no parameters and stops by itself.  
  **ORtools** Can take a maximum solve duration, or can stop by itself depending on the solve state as a time-out between two new best solution, or as a number of iterations without improvement.  
 **Jsprit**: Can take a maximum solve duration, a number of iterations wihtout improvment or a number of iteration without variation in the neighborhood search.  
+
+Schedule parameters are only usefull in the case of Schedule Optimisation. Those allow to define the considerated period ("range_indices") and the indices which are unavailable within the solve ("unavailable_indices")
+```json
+  configuration: {
+    schedule: {
+      range_indices: {
+        start: 0,
+        end: 13
+      },
+      unavailable_indices: [5, 6, 12, 13]
+    }
+  }
+```
+An alternative exist to those parameters in order to define it by date instead of indices "schedule_range_date" and "schedule_unavailable_date".
+
+Restitution parameters allow to have some control on the API response
+```json
+  configuration: {
+    restitution: {
+      geometry: true,
+      geometry_polyline: false
+    }
+  }
+```
+"geometry" inform the API to return the Geojson of the route in output
+"geometry_polyline" precise that the geojson must be an encoded polyline.
 
 Solve(#solve)
 --
