@@ -34,6 +34,8 @@ module OptimizerWrapper
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
 
+  @@dump_vrp_cache = CacheManager.new(ActiveSupport::Cache::NullStore.new)
+
   @@c = {
     product_title: 'Optimizers API',
     product_contact_email: 'tech@mapotempo.com',

@@ -27,6 +27,10 @@ module Api
 
       private
 
+      def self.dump_vrp_cache
+        ::OptimizerWrapper::dump_vrp_cache
+      end
+
       def self.services(api_key)
         ::OptimizerWrapper::config[:api_keys][api_key]
       end

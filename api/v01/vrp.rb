@@ -18,6 +18,7 @@
 require 'grape'
 require 'grape-swagger'
 require 'date'
+require 'digest/md5'
 
 
 require './api/v01/api_base'
@@ -250,10 +251,8 @@ module Api
           }
           post do
             begin
-              if ENV['DUMP_VRP'] || OptimizerWrapper::DUMP_VRP
-                path = ENV['DUMP_VRP'] ?
-                  'test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') :
-                  'tmp/vrp_' + Time.now.strftime("%Y-%m-%d_%H-%M-%S")
+              if ENV['DUMP_VRP']
+                path = 'test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_')
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
@@ -263,7 +262,9 @@ module Api
               if !vrp.valid?
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
-                ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp)
+                checksum = Digest::MD5.hexdigest Marshal.dump(params[:vrp])
+                APIBase.dump_vrp_cache.write(checksum, params[:vrp])
+                ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp, checksum)
                 if ret.is_a?(String)
                   #present result, with: VrpResult
                   status 201

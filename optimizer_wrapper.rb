@@ -40,11 +40,15 @@ module OptimizerWrapper
     @@c
   end
 
+  def self.dump_vrp_cache
+    @@dump_vrp_cache
+  end
+
   def self.router
     @router ||= Routers::RouterWrapper.new(ActiveSupport::Cache::NullStore.new, ActiveSupport::Cache::NullStore.new, config[:router][:api_key])
   end
 
-  def self.wrapper_vrp(api_key, services, vrp)
+  def self.wrapper_vrp(api_key, services, vrp, checksum)
     inapplicable_services = []
     services_vrps = split_vrp(vrp).map{ |vrp_element|
       {
@@ -71,7 +75,7 @@ module OptimizerWrapper
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         solve(services_vrps)
       else
-        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)))
+        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)), checksum: checksum)
         JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end
