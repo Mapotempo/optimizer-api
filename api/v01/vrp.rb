@@ -263,7 +263,7 @@ module Api
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
                 checksum = Digest::MD5.hexdigest Marshal.dump(params[:vrp])
-                APIBase.dump_vrp_cache.write(checksum, params[:vrp])
+                APIBase.dump_vrp_cache.write(checksum, {vrp: params[:vrp]}.to_json)
                 ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp, checksum)
                 if ret.is_a?(String)
                   #present result, with: VrpResult
