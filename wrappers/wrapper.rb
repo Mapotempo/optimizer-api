@@ -38,7 +38,7 @@ module Wrappers
     end
 
     def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size == 1
+      vrp.vehicles.size == 1 && !vrp.schedule_range_indices && !vrp.schedule_range_date
     end
 
     def assert_vehicles_at_least_one(vrp)
