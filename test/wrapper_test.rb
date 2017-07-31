@@ -809,7 +809,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
   end
 
   def test_multiple_matrices_not_provided
@@ -850,7 +850,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
   end
 
   def test_router_matrix_error
@@ -899,7 +899,7 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
     rescue StandardError => error
       assert error.message.match 'RouterWrapperError'
     end
@@ -951,7 +951,7 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
     rescue StandardError => error
       assert error.is_a?(ActiveHash::RecordNotFound)
       assert error.message.match 'Couldn\'t find Models::Point with ID=point_2'
@@ -1023,7 +1023,7 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem))
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
     rescue StandardError => error
       assert error.is_a?(OptimizerWrapper::DiscordantProblemError)
       assert error.data.match 'Trace is not available if locations are not defined'
