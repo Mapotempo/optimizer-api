@@ -34,6 +34,7 @@ module Models
 
     field :restitution_geometry, default: false
     field :restitution_geometry_polyline, default: false
+    field :restitution_intermediate_solutions, default: true
 
     field :schedule_range_indices, default: nil
     field :schedule_range_date, default: nil
@@ -75,6 +76,7 @@ module Models
     def restitution=(restitution)
       self.restitution_geometry = restitution[:geometry]
       self.restitution_geometry_polyline = restitution[:geometry_polyline]
+      self.restitution_intermediate_solutions = restitution[:intermediate_solutions]
     end
 
     def resolution=(resolution)

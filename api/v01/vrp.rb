@@ -234,6 +234,7 @@ module Api
                 optional(:restitution, type: Hash, desc: 'Restitution paramaters') do
                   optional(:geometry, type: Boolean, desc: 'Allow to return the polyline of each route')
                   optional(:geometry_polyline, type: Boolean, desc: 'Encode the polyline')
+                  optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
                 end
                 optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
                   optional(:range_indices, type: Hash, desc: '[planning] Day indices within the plan has to be build')
