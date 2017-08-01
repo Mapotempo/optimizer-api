@@ -27,9 +27,9 @@ module Interpreters
       services_unavailable_indices = []
       if vrp.schedule_range_indices || vrp.schedule_range_date
         epoch = Date.new(1970,1,1)
-        real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start] - epoch).to_i
-        real_schedule_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : (vrp.schedule_range_date[:end] - epoch).to_i
-        shift = vrp.schedule_range_indices ? real_schedule_start : vrp.schedule_range_date[:start].cwday - 1
+        real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - epoch).to_i
+        real_schedule_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : (vrp.schedule_range_date[:end].to_date - epoch).to_i
+        shift = vrp.schedule_range_indices ? real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
         schedule_end = real_schedule_end - real_schedule_start
         schedule_start = 0
         have_services_day_index = vrp.services.none? { |service| service.activity.timewindows.none? || service.activity.timewindows.none? { |timewindow| timewindow[:day_index] } }
@@ -48,7 +48,7 @@ module Interpreters
         new_services = vrp.services.collect{ |service|
           if service.unavailable_visit_day_date
             service.unavailable_visit_day_indices = service.unavailable_visit_day_date.collect{ |unavailable_date|
-              (unavailable_date - epoch).to_i - real_schedule_start if (unavailable_date - epoch).to_i >= real_schedule_start
+              (unavailable_date.to_date - epoch).to_i - real_schedule_start if (unavailable_date.to_date - epoch).to_i >= real_schedule_start
             }.compact
             if vrp.schedule_unavailable_indices
               service.unavailable_visit_day_indices += vrp.schedule_unavailable_indices.collect { |unavailable_index|
@@ -128,7 +128,7 @@ module Interpreters
         new_vehicles = vrp.vehicles.collect { |vehicle|
           if vehicle.unavailable_work_date
             vehicle.unavailable_work_day_indices = vehicle.unavailable_work_date.collect{ |unavailable_date|
-              (unavailable_date - epoch).to_i - real_schedule_start if (unavailable_date - epoch).to_i >= real_schedule_start
+              (unavailable_date.to_date - epoch).to_i - real_schedule_start if (unavailable_date.to_date - epoch).to_i >= real_schedule_start
             }.compact
           end
           if vrp.schedule_unavailable_indices

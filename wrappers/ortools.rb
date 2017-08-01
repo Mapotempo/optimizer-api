@@ -257,6 +257,7 @@ module Wrappers
               nil
             end] +
             route.collect{ |i|
+              route_rest_index = 0
               if i.first < matrix_indices.size + 2
                 if i.first < vrp.services.size
                   point = services[i.first].matrix_index
@@ -293,13 +294,15 @@ module Wrappers
                   current_activity
                 end
               else
-                earliest_start = closest_rest_start(vrp.rests[i.first - matrix_indices.size - 2][:timewindows], earliest_start)
+                vehicle_rest = vehicle.rests[route_rest_index]
+                earliest_start = closest_rest_start(vehicle_rest[:timewindows], earliest_start)
                 current_rest = {
-                  rest_id: vrp.rests[i.first - matrix_indices.size - 2].id,
+                  rest_id: vehicle_rest.id,
                   begin_time: earliest_start,
-                  departure_time: earliest_start + vrp.rests[i.first - matrix_indices.size - 2][:duration]
+                  departure_time: earliest_start + vehicle_rest[:duration]
                 }
-                earliest_start += vrp.rests[i.first - matrix_indices.size - 2][:duration]
+                earliest_start += vehicle_rest[:duration]
+                ++route_rest_index
                 current_rest
               end
             } +
