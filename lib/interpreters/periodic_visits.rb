@@ -37,7 +37,7 @@ module Interpreters
 
         unavailable_indices = if vrp.schedule_unavailable_indices
           vrp.schedule_unavailable_indices.collect { |unavailable_index|
-            unavailable_index + shift
+            unavailable_index
           }
         elsif vrp.schedule_unavailable_date
           vrp.schedule_unavailable_date.collect{ |date|
@@ -50,9 +50,9 @@ module Interpreters
             service.unavailable_visit_day_indices = service.unavailable_visit_day_date.collect{ |unavailable_date|
               (unavailable_date.to_date - epoch).to_i - real_schedule_start if (unavailable_date.to_date - epoch).to_i >= real_schedule_start
             }.compact
-            if vrp.schedule_unavailable_indices
-              service.unavailable_visit_day_indices += vrp.schedule_unavailable_indices.collect { |unavailable_index|
-                unavailable_index + shift
+            if unavailable_indices
+              service.unavailable_visit_day_indices += unavailable_indices.collect { |unavailable_index|
+                unavailable_index
               }
               service.unavailable_visit_day_indices.uniq
             end
@@ -131,9 +131,9 @@ module Interpreters
               (unavailable_date.to_date - epoch).to_i - real_schedule_start if (unavailable_date.to_date - epoch).to_i >= real_schedule_start
             }.compact
           end
-          if vrp.schedule_unavailable_indices
-            vehicle.unavailable_work_day_indices += vrp.schedule_unavailable_indices.collect { |unavailable_index|
-              unavailable_index + shift
+          if unavailable_indices
+            vehicle.unavailable_work_day_indices += unavailable_indices.collect { |unavailable_index|
+              unavailable_index
             }
             vehicle.unavailable_work_day_indices.uniq!
           end

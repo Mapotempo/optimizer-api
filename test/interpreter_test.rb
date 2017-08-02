@@ -604,6 +604,137 @@ class InterpreterTest < Minitest::Test
     assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 }
   end
 
+  def test_date_and_unavailable_date
+    size = 2
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0, 1],
+          [ 1, 0]
+        ],
+        distance: [
+          [ 0, 1],
+          [ 1, 0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        sequence_timewindows: [{
+          day_index: 0,
+          start: 1,
+          end: 11
+        }, {
+          day_index: 1,
+          start: 4,
+          end: 14
+        }]
+      }],
+      services: [{
+          id: "service_1",
+          activity: {
+            point_id: "point_1",
+            timewindows: [{
+              day_index: 0,
+              start: 5,
+              end: 12
+            }]
+          },
+          visits_number: 2
+        }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        schedule: {
+          range_date: {
+            start: Date.new(2017,1,2), # monday
+            end: Date.new(2017,1,3) # thursday
+          },
+          unavailable_date: [
+            Date.new(2017,1,2)
+          ],
+        }
+      }
+    }
+    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    assert_equal 1, expanded_vrp[:vehicles].size
+    assert_equal "vehicle_0_1", expanded_vrp[:vehicles].first[:id]
+  end
+
+  def test_date_and_unavailable_indices
+    size = 2
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [ 0, 1],
+          [ 1, 0,]
+        ],
+        distance: [
+          [ 0, 1],
+          [ 1, 0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        sequence_timewindows: [{
+          day_index: 0,
+          start: 1,
+          end: 11
+        }, {
+          day_index: 1,
+          start: 4,
+          end: 14
+        }]
+      }],
+      services: [{
+          id: "service_1",
+          activity: {
+            point_id: "point_1",
+            timewindows: [{
+              day_index: 0,
+              start: 5,
+              end: 12
+            }]
+          },
+          visits_number: 2
+        }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        schedule: {
+          range_date: {
+            start: Date.new(2017,1,2), # monday
+            end: Date.new(2017,1,3) # thursday
+          },
+          unavailable_indices: [
+            1
+          ],
+        }
+      }
+    }
+    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    assert_equal 1, expanded_vrp[:vehicles].size
+    assert_equal "vehicle_0_0", expanded_vrp[:vehicles].last[:id]
+  end
 
   def test_multiple_reference_to_same_rests
     problem = {
