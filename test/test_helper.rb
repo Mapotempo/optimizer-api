@@ -31,6 +31,7 @@ require 'minitest/reporters'
 Minitest::Reporters.use!
 
 require 'grape'
+require 'hashie'
 require 'grape-swagger'
 require 'grape-entity'
 

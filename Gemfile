@@ -13,6 +13,7 @@ gem 'grape_logging'
 gem 'grape-entity'
 gem 'grape-swagger'
 gem 'grape-swagger-entity'
+gem 'hashie'
 
 gem 'i18n'
 gem 'rack-contrib'
