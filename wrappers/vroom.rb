@@ -40,7 +40,8 @@ module Wrappers
         :assert_no_shipments,
         :assert_matrices_only_one,
         :assert_one_vehicle_only_or_no_sticky_vehicle,
-        :assert_no_relations
+        :assert_no_relations,
+        :assert_vehicles_no_duration_limit,
       ]
     end
 

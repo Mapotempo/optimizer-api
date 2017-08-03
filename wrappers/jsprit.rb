@@ -41,7 +41,8 @@ module Wrappers
         :assert_services_no_late_multiplier,
         :assert_services_no_priority,
         :assert_one_sticky_at_most,
-        :assert_no_relations
+        :assert_no_relations,
+        :assert_vehicles_no_duration_limit
       ]
     end
 

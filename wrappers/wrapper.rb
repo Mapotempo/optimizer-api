@@ -154,6 +154,12 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_no_duration_limit(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        vehicle.duration
+      }
+    end
+
     def assert_services_no_late_multiplier(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         service.activity.late_multiplier && service.activity.late_multiplier != 0
