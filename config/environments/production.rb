@@ -56,7 +56,7 @@ module OptimizerWrapper
     }],
     router: {
       api_key: 'demo',
-      car: 'https://router.mapotempo.com'
+      url: 'https://router.mapotempo.com'
     }
   }
 

@@ -117,10 +117,9 @@ module OptimizerWrapper
           i = 0
           id = 0
           uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
-            raise UnsupportedRouterModeError unless OptimizerWrapper.config[:router][mode]
             block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
             # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
-            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][mode], mode, dimensions, points, points, options)
+            matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, points, points, options)
             raise RouterWrapperError unless matrices
             m = Models::Matrix.create({
               id: 'm' + (id+=1).to_s,
@@ -282,7 +281,7 @@ module OptimizerWrapper
           previous = current
           segment
         }.compact
-        r[:geometry] = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][v[:router_mode].to_sym],
+        r[:geometry] = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
           v[:router_mode].to_sym, v[:router_dimension], [segments], vrp.restitution_geometry_polyline, v.router_options)[0][2]
         raise RouterWrapperError unless r[:geometry]
       end
