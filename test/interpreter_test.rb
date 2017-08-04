@@ -1184,4 +1184,71 @@ class InterpreterTest < Minitest::Test
     assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.min
     assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.max
   end
+
+  def test_minimum_lapse_3_visits
+    problem = {
+      "points": [
+        {
+          "id": "point_1",
+          "location": {
+            "lat": 43.8,
+            "lon": 5.8
+          }
+        },
+        {
+          "id": "agent_home",
+          "location": {
+            "lat": 44.0,
+            "lon": 5.1
+          }
+        }
+      ],
+      "vehicles": [
+        {
+          "id": "car_1",
+          "cost_fixed": 0.0,
+          "cost_time_multiplier": 1.0,
+          "start_point_id": "agent_home",
+          "end_point_id": "agent_home"
+        }
+      ],
+      "services": [
+        {
+          "id": "point_1",
+          "priority": 2,
+          "visits_number": 3,
+          "minimum_lapse": 10,
+          "type": "service",
+          "activity": {
+            "duration": 100.0,
+            "point_id": "point_1"
+          }
+        },
+      ],
+      "configuration": {
+        "preprocessing": {
+          "prefer_short_segment": true
+        },
+        "resolution": {
+          "duration": 60000,
+          "iterations": 50,
+          "iterations_without_improvment": 30,
+          "initial_time_out": 2160000,
+          "time_out_multiplier": 1
+        },
+        "schedule": {
+          "range_date": {
+            "start": "2017-09-01",
+            "end": "2017-09-21"
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert_equal 3, result[:routes][0][:activities].size
+    assert_equal 3, result[:routes][10][:activities].size
+    assert_equal 3, result[:routes][20][:activities].size
+  end
+
 end
