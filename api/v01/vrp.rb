@@ -182,7 +182,7 @@ module Api
                 optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
                 optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
 
-                requires(:type, type: Symbol, desc: 'service, pickup or delivery')
+                optional(:type, type: Symbol, desc: 'service, pickup or delivery')
                 requires(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
                   Vrp.vrp_request_activity(self)
                 end
@@ -213,7 +213,7 @@ module Api
               optional(:relations, type: Array, desc: '') do
                 requires(:id, type: String, desc: '')
                 requires(:type, type: String, desc: 'same_vehicle, sequence, direct_sequence, minimum_day_lapse or maximum_day_lapse')
-                requires(:lapse, type: Integer, desc: 'Only used in case of minimum and maximum day lapse')
+                optional(:lapse, type: Integer, desc: 'Only used in case of minimum and maximum day lapse')
                 requires(:linked_ids, type: Array[String], desc: '')
               end
 
@@ -260,7 +260,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :configuration].each{ |key|
+              [:matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :relations, :configuration].each{ |key|
                 (vrp.send "#{key}=", params[:vrp][key]) if params[:vrp][key]
               }
               if !vrp.valid?
