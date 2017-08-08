@@ -25,6 +25,6 @@ module Models
     field :linked_ids, default: []
 
     validates_numericality_of :lapse, allow_nil: true
-    validates_inclusion_of :type, :in => %i(same_route sequence order minimum_day_lapse maximum_day_lapse shipment)
+    validates_inclusion_of :type, :in => %i(same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup)
   end
 end
