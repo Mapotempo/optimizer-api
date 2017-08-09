@@ -133,6 +133,9 @@ module Api
                 optional :length, type: Float, desc: 'Length in meters.'
                 optional :hazardous_goods, type: Symbol, values: [:explosive, :gas, :flammable, :combustible, :organic, :poison, :radio_active, :corrosive, :poisonous_inhalation, :harmful_to_water, :other], desc: 'List of hazardous materials in the vehicle.'
                 optional :max_walk_distance, type: Float, default: 750, desc: 'Max distance by walk.'
+                optional :approach, type: String, desc: 'Arrive/Leave in the traffic direction.'
+                optional :snap, type: Float, desc: 'Snap checkpoint to junction.'
+                optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
                 optional(:duration, type: Float, desc: 'Maximum tour duration')
                 optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')

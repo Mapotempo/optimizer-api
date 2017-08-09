@@ -44,6 +44,9 @@ module Models
     field :length, default: nil
     field :hazardous_goods, default: nil
     field :max_walk_distance, default: 750
+    field :approach, default: nil
+    field :snap, default: nil
+    field :strict_restriction, default: false
 
     field :force_start, default: false
     field :duration, default: nil
@@ -126,7 +129,10 @@ module Models
         width: width,
         length: length,
         hazardous_goods: hazardous_goods,
-        max_walk_distance: max_walk_distance
+        max_walk_distance: max_walk_distance,
+        approach: approach,
+        snap: snap,
+        strict_restriction: strict_restriction
       }
     end
   end
