@@ -1193,6 +1193,110 @@ class WrapperTest < Minitest::Test
     assert result[:routes][0][:geometry]
   end
 
+  def test_geometry_with_rests
+    problem = {
+      points: [
+        {
+            id: "point0",
+            location:
+            {
+                lat: 5.7,
+                lon: 43.7
+            }
+        },
+        {
+            id: "point1",
+            location:
+            {
+                lat: 6.2,
+                lon: 44.2
+            }
+        },
+        {
+            id: "depot",
+            location:
+            {
+                lat: 44.0,
+                lon: 5.1
+            }
+        }],
+        rests: [
+        {
+            id: "break1",
+            duration: 3600.0,
+            timewindows: [
+            {
+                start: 45000,
+                end: 48600
+            }]
+        }],
+        vehicles: [
+        {
+            id: "vehicle1",
+            cost_fixed: 0.0,
+            cost_time_multiplier: 1.0,
+            cost_waiting_time_multiplier: 1.0,
+            router_mode: "car",
+            router_dimension: "time",
+            speed_multiplier: 1.0,
+            start_point_id: "depot",
+            end_point_id: "depot",
+            rest_ids: ["break1"],
+            timewindow: {
+                start: 28800,
+                end: 61200
+            }
+        }],
+        services: [
+        {
+            id: "point0",
+            type: "service",
+            activity:
+            {
+                duration: 1200.0,
+                point_id: "point0",
+                timewindows: [
+                {
+                    start: 28800,
+                    end: 63000
+                }]
+            }
+        },
+        {
+            id: "point1",
+            priority: 2,
+            visits_number: 1,
+            type: "service",
+            activity:
+            {
+                duration: 1800.0,
+                point_id: "point1",
+                timewindows: [
+                {
+                    start: 30600,
+                    end: 57600
+                }]
+            }
+        }],
+        configuration:
+        {
+            resolution:
+            {
+                duration: 100,
+            },
+            restitution:
+            {
+                geometry: true,
+                geometry_polyline: true
+            }
+        }
+    }
+
+    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    assert_equal result[:routes][0][:activities].size, 3
+    assert !result[:routes][0][:geometry].nil?
+  end
+
   def test_input_zones
     problem = {
       points: [

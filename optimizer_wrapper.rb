@@ -267,21 +267,23 @@ module OptimizerWrapper
       if vrp.restitution_geometry && r[:activities].size > 1
         previous = nil
         segments = r[:activities].collect{ |activity|
-          current = nil
-          if activity[:point_id]
-            current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
-          elsif activity[:service_id]
-            current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
-          elsif activity[:pickup_shipment_id]
-            current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
-          elsif activity[:delivery_shipment_id]
-            current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
+          if !activity[:rest_id]
+            current = nil
+            if activity[:point_id]
+              current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
+            elsif activity[:service_id]
+              current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
+            elsif activity[:pickup_shipment_id]
+              current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
+            elsif activity[:delivery_shipment_id]
+              current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
+            end
+            segment = if previous && current
+              [previous[:location][:lat], previous[:location][:lon], current[:location][:lat], current[:location][:lon]]
+            end
+            previous = current
+            segment
           end
-          segment = if previous && current
-            [previous[:location][:lat], previous[:location][:lon], current[:location][:lat], current[:location][:lon]]
-          end
-          previous = current
-          segment
         }.compact
         r[:geometry] = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
           v[:router_mode].to_sym, v[:router_dimension], [segments], vrp.restitution_geometry_polyline, v.router_options)[0][2]
