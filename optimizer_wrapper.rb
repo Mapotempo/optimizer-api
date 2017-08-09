@@ -93,7 +93,8 @@ module OptimizerWrapper
       else
         vrp_need_matrix = {
           time: vrp.need_matrix_time?,
-          distance: vrp.need_matrix_distance?
+          distance: vrp.need_matrix_distance?,
+          value: vrp.need_matrix_value?
         }
 
         need_matrix = vrp.vehicles.collect{ |vehicle|
@@ -124,7 +125,8 @@ module OptimizerWrapper
             m = Models::Matrix.create({
               id: 'm' + (id+=1).to_s,
               time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
-              distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance))
+              distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance)),
+              value: (matrices[dimensions.index(:value)] if dimensions.index(:value))
             })
             vrp.matrices += [m]
             [[mode, dimensions, options], m]

@@ -116,5 +116,9 @@ module Models
     def need_matrix_distance?
       false
     end
+
+    def need_matrix_value?
+      false
+    end
   end
 end

@@ -46,10 +46,12 @@ module Api
 
       def self.vrp_request_activity(this)
         this.optional(:duration, type: Float, desc: 'time in seconds while the current activity stand until it\'s over')
+        this.optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
         this.optional(:setup_duration, type: Float, desc: 'time at destination before the proper activity is effectively performed')
         this.optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
         this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '')
         this.requires(:point_id, type: String, desc: 'reference to the associated point')
+        this.optional(:value_matrix_index, type: Integer, desc: 'associated value matrix index')
         this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may be performed') do
           Vrp.vrp_request_timewindow(self)
         end
@@ -69,8 +71,9 @@ module Api
             requires(:vrp, type: Hash, documentation: {param_type: 'body'}) do
               optional(:matrices, type: Array, desc: 'Define all the distances between each point of problem') do
                 requires(:id, type: String)
-                optional(:matrix_time, type: Array[Array[Float]], desc: 'Matrix of time, travel duration between each pair of point in the problem')
-                optional(:matrix_distance, type: Array[Array[Float]], desc: 'Matrix of distance, travel distance between each pair of point in the problem')
+                optional(:time, type: Array[Array[Float]], desc: 'Matrix of time, travel duration between each pair of point in the problem')
+                optional(:distance, type: Array[Array[Float]], desc: 'Matrix of distance, travel distance between each pair of point in the problem')
+                optional(:value, type: Array[Array[Float]], desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related')
               end
 
               optional(:points, type: Array, desc: 'Particular place in the map') do
@@ -110,6 +113,7 @@ module Api
                 optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
                 optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
                 optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools)')
+                optional(:cost_value_multiplier, type: Float, desc: 'multiplier applied to the value matrix and additional activity value')
                 optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting in the route (Jsprit Only)')
                 optional(:cost_late_multiplier, type: Float, desc: 'Cost applied once a point is deliver late (ORtools only)')
                 optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration')
@@ -117,6 +121,7 @@ module Api
                 optional(:force_start, type: Boolean, desc: 'Force the vehicle to start as soon as the vehicle timewindow is open')
 
                 optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
+                optional(:value_matrix_id, type: String, desc: 'Related value matrix, if defined')
                 optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
                 exactly_one_of :matrix_id, :router_mode
                 optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')

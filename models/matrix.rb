@@ -20,6 +20,6 @@ require './models/base'
 
 module Models
   class Matrix < Base
-    fields :time, :distance
+    fields :time, :distance, :value
   end
 end

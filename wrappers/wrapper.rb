@@ -213,6 +213,12 @@ module Wrappers
       vrp.zones.empty? || vrp.zones.all?{ |zone| zone.allocations.none?{ |alternative| alternative.size > 1 }}
     end
 
+    def assert_no_value_matrix(vrp)
+      vrp.matrices.none?{ |matrix|
+        matrix.value
+      }
+    end
+
     def solve_synchronous?(vrp)
       false
     end

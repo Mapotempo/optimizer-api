@@ -25,6 +25,7 @@ module Models
     field :cost_distance_multiplier, default: 0
     field :cost_time_multiplier, default: 1
     field :cost_waiting_time_multiplier, default: 1
+    field :cost_value_multiplier, default: 0
     field :cost_late_multiplier, default: nil
     field :cost_setup_time_multiplier, default: 0
     field :coef_setup, default: 1
@@ -51,6 +52,7 @@ module Models
     field :force_start, default: false
     field :duration, default: nil
     field :matrix_id, default: nil
+    field :value_matrix_id, default: nil
 
     field :unavailable_work_day_indices, default: []
     field :unavailable_work_date, default: nil
@@ -60,6 +62,7 @@ module Models
     validates_numericality_of :cost_distance_multiplier
     validates_numericality_of :cost_time_multiplier
     validates_numericality_of :cost_waiting_time_multiplier
+    validates_numericality_of :cost_value_multiplier
     validates_numericality_of :cost_late_multiplier, allow_nil: true
     validates_numericality_of :cost_setup_time_multiplier
     validates_numericality_of :coef_setup
@@ -87,6 +90,10 @@ module Models
       cost_distance_multiplier != 0
     end
 
+    def need_matrix_value?
+      false
+    end
+
     def matrix_time
       matrix && matrix.time
     end
@@ -95,12 +102,17 @@ module Models
       matrix && matrix.distance
     end
 
+    def matrix_value
+      matrix && matrix.value
+    end
+
     def matrix_blend(matrix, matrix_indices, dimensions, options = {})
       matrix_indices.collect{ |i|
         matrix_indices.collect{ |j|
           if i && j
             (dimensions.include?(:time) && matrix.time ? matrix.time[i][j] * (options[:cost_time_multiplier] || 1) : 0) +
-            (dimensions.include?(:distance) && matrix.distance ? matrix.distance[i][j] * (options[:cost_distance_multiplier] || 1) : 0)
+            (dimensions.include?(:distance) && matrix.distance ? matrix.distance[i][j] * (options[:cost_distance_multiplier] || 1) : 0) +
+            (dimensions.include?(:value) && matrix.value ? matrix.value[i][j] * (options[:value_matrix_multiplier] || 1) : 0)
           else
             0
           end

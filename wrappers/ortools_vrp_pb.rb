@@ -7,6 +7,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "ortools_vrp.Matrix" do
     repeated :time, :float, 2
     repeated :distance, :float, 3
+    repeated :value, :float, 4
   end
   add_message "ortools_vrp.TimeWindow" do
     optional :start, :int64, 1
@@ -24,6 +25,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :id, :string, 9
     optional :late_multiplier, :float, 10
     repeated :setup_quantities, :uint32, 11
+    optional :additional_value, :uint32, 12
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
@@ -49,6 +51,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :force_start, :bool, 14
     optional :cost_late_multiplier, :float, 15
     optional :day_index, :int32, 16
+    optional :value_matrix_index, :uint32, 17
+    optional :cost_value_multiplier, :float, 18
   end
   add_message "ortools_vrp.Relation" do
     optional :type, :string, 1

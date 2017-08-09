@@ -74,6 +74,7 @@ module Wrappers
           },
           type: service.type.to_s,
           duration: service.activity.duration,
+          additional_value: service.activity.additional_value,
           priority: service.priority,
           matrix_index: points[service.activity.point_id].matrix_index,
           vehicle_indices: service.sticky_vehicles.size > 0 ? service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
@@ -115,6 +116,7 @@ module Wrappers
           },
           type: 'pickup',
           duration: shipment.pickup.duration,
+          additional_value: shipment.pickup.additional_value,
           priority: shipment.priority,
           matrix_index: points[shipment.pickup.point_id].matrix_index,
           vehicle_indices: shipment.sticky_vehicles.size > 0 ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
@@ -132,6 +134,7 @@ module Wrappers
           },
           type: 'delivery',
           duration: shipment.delivery.duration,
+          additional_value: shipment.delivery.additional_value,
           priority: shipment.priority,
           matrix_index: points[shipment.delivery.point_id].matrix_index,
           vehicle_indices: shipment.sticky_vehicles.size > 0 ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
@@ -150,7 +153,8 @@ module Wrappers
       matrices = vrp.matrices.collect{ |matrix|
         OrtoolsVrp::Matrix.new(
           time: matrix[:time] ? matrix[:time].flatten : [],
-          distance: matrix[:distance] ? matrix[:distance].flatten : []
+          distance: matrix[:distance] ? matrix[:distance].flatten : [],
+          value: matrix[:value] ? matrix[:value].flatten : []
         )
       }
       vehicles = vrp.vehicles.collect{ |vehicle|
@@ -159,6 +163,7 @@ module Wrappers
           cost_distance_multiplier: vehicle.cost_distance_multiplier,
           cost_time_multiplier: vehicle.cost_time_multiplier,
           cost_waiting_time_multiplier: vehicle.cost_waiting_time_multiplier,
+          cost_value_multiplier: vehicle.cost_value_multiplier || 0,
           cost_late_multiplier: vehicle.cost_late_multiplier || 0,
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
@@ -182,6 +187,7 @@ module Wrappers
             )
           },
           matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.matrix_id },
+          value_matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.value_matrix_id } || 0,
           start_index: vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
           end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
           duration: vehicle.duration ? vehicle.duration : -1,
