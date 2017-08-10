@@ -176,7 +176,7 @@ This could be usefull if the routing data are provided from an external source.
     }]
 ```
 ### **TimeWindows**(#timewindows)
-Define a time interval when a resource is available or when an activity can be performed.  
+Define a time interval when a resource is available or when an activity can be performed. By default values are supposed to be defined in seconds, if a time matrix is send with problem the values must be set on the same time unit.
 Vehicles only have single timewindow
 ```json
   timewindow: {
@@ -386,7 +386,7 @@ Which is defined as follows
   }]
 ```
 ### **Quantities**(#quantities)
-Inform on the size taken by an activity package once loaded into a vehicle.
+Inform of the package size, shift within a route, once loaded into a vehicle.
 ```json
   quantities: [{
     unit_id: "Kg",
@@ -404,6 +404,31 @@ Inform on the size taken by an activity package once loaded into a vehicle.
         end: 4800
       }],
       duration: 2100.0
+    },
+    quantities: [{
+      unit_id: "Kg",
+      value: 8,
+    }]
+  }
+```
+```json
+  shipments: [{
+    id: "pickup_delivery",
+    pickup: {
+      point_id: "visit-point-1",
+      timewindows: [{
+        start: 3600,
+        end: 4800
+      }],
+      duration: 2100.0
+    },
+    delivery: {
+      point_id: "visit-point-2",
+      timewindows: [{
+        start: 4500,
+        end: 7200
+      }],
+      duration: 1100.0
     },
     quantities: [{
       unit_id: "Kg",
