@@ -8,12 +8,11 @@ gem 'puma'
 gem 'thin'
 gem 'rack-cors'
 
-gem 'grape'
+gem 'grape', '<0.19.0' # Ruby 2.1
 gem 'grape_logging'
 gem 'grape-entity'
-gem 'grape-swagger'
-gem 'grape-swagger-entity'
-gem 'hashie'
+gem 'grape-swagger', '<0.26.0' # Ruby 2.1
+gem 'grape-swagger-entity', '<0.1.6' # Ruby 2.1
 
 gem 'i18n'
 gem 'rack-contrib'
