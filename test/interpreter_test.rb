@@ -1251,4 +1251,155 @@ class InterpreterTest < Minitest::Test
     assert_equal 3, result[:routes][20][:activities].size
   end
 
+  def test_minimum_and_maximum_lapse
+    problem = {
+        configuration:
+        {
+            preprocessing:
+            {
+                prefer_short_segment: true
+            },
+            resolution:
+            {
+                duration: 600
+            },
+            schedule:
+            {
+                range_date:
+                {
+                    start: "2017-09-01",
+                    end: "2017-09-30"
+                }
+            }
+        },
+        points: [
+        {
+            id: "point_0",
+            location:
+            {
+                lat: 43.8,
+                lon: 5.8
+            }
+        },
+        {
+            id: "point_1",
+            location:
+            {
+                lat: 43.8,
+                lon: 5.8
+            }
+        },
+        {
+            id: "agent_home",
+            location:
+            {
+                lat: 44.0,
+                lon: 5.1
+            }
+        }],
+        vehicles: [
+        {
+            id: "vehicle_1",
+            cost_time_multiplier: 1.0,
+            cost_waiting_time_multiplier: 1.0,
+            router_mode: "car",
+            router_dimension: "time",
+            speed_multiplier: 1.0,
+            start_point_id: "agent_home",
+            end_point_id: "agent_home",
+            sequence_timewindows: [
+            {
+                start: 0,
+                end: 30000,
+                day_index: 0
+            },
+            {
+                start: 0,
+                end: 30000,
+                day_index: 1
+            },
+            {
+                start: 0,
+                end: 30000,
+                day_index: 2
+            },
+            {
+                start: 0,
+                end: 30000,
+                day_index: 3
+            },
+            {
+                start: 0,
+                end: 30000,
+                day_index: 4
+            }]
+        }],
+        services: [
+        {
+            id: "service_0",
+            priority: 2,
+            visits_number: 2,
+            minimum_lapse: 15,
+            maximum_lapse: 32,
+            type: "service",
+            activity:
+            {
+                duration: 5400.0,
+                point_id: "point_0",
+                timewindows: [
+                {
+                    start: 0,
+                    end: 5400,
+                    day_index: 1
+                },
+                {
+                    start: 0,
+                    end: 5400,
+                    day_index: 2
+                },
+                {
+                    start: 0,
+                    end: 5400,
+                    day_index: 3
+                }]
+            }
+        },
+        {
+            id: "service_1",
+            priority: 2,
+            visits_number: 2,
+            minimum_lapse: 11,
+            maximum_lapse: 22,
+            type: "service",
+            activity:
+            {
+                duration: 5400.0,
+                point_id: "point_1",
+                timewindows: [
+                {
+                    start: 0,
+                    end: 5400,
+                    day_index: 1
+                },
+                {
+                    start: 0,
+                    end: 5400,
+                    day_index: 2
+                },
+                {
+                    start: 0,
+                    end: 5400,
+                    day_index: 3
+                }]
+            }
+        }]
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert_equal 3, result[:routes][2][:activities].size
+    assert_equal 3, result[:routes][3][:activities].size
+    assert_equal 3, result[:routes][12][:activities].size
+    assert_equal 3, result[:routes][13][:activities].size
+  end
+
 end
