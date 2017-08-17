@@ -51,11 +51,11 @@ module Wrappers
 
       services = vrp.services.collect{ |service|
         vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? } ||
-          vrp.vehicles.none? { |vehicle| vehicle[:skills] && ((vehicle.skills[0] & service.skills).size == service.skills.size) })
+          vrp.vehicles.none? { |vehicle| !vehicle[:skills].empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) })
           [-1]
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
-            if !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size)
+            if service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size)
               index
             else
               nil
@@ -88,11 +88,11 @@ module Wrappers
         )
       } + vrp.shipments.collect{ |shipment|
         vehicles_indices = if !shipment[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? } ||
-          vrp.vehicles.none? { |vehicle| vehicle[:skills] && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size) })
+          vrp.vehicles.none? { |vehicle| !vehicle[:skills].empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size) })
           [-1]
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
-            if !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size)
+            if shipment.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size)
               index
             else
               nil
