@@ -901,7 +901,7 @@ class WrapperTest < Minitest::Test
     begin
       OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
     rescue StandardError => error
-      assert error.message.match 'RouterWrapperError'
+      assert error.class.name.match 'RouterWrapperError'
     end
   end
 
