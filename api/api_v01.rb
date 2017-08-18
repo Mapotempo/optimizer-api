@@ -65,6 +65,7 @@ module Api
     * [Capacities](#capacities)
     * [Quantities](#quantities)
     * [Rests](#rests)
+    * [Relations](#relations)
     * [Configuration](#configuration)
   * [Solve](#solve)
     * [Lateness²](#lateness)
@@ -72,7 +73,7 @@ module Api
     * [Multiple Depots](#multiple-depots)
     * [Multiple Timewindows¹](#multiple-timewindows)
     * [Multiple Matrices²](#multiple-matrices)
-    * [Pickup and Delivery³](#pickup-and-delivery)
+    * [Pickup or Delivery³](#pickup-or-delivery)
     * [Priority²](#priority)
     * [Quantities Overload²](#quantities-overload)
     * [Setup Duration](#setup-duration)
@@ -113,15 +114,16 @@ Before calling the solvers, a VRP model must be defined, which represent the pro
 
 ### **General Model**(#general-model)
 ```json
-vrp:{
-  points: [..],
-  vehicles: [..],
-  units: [..],
-  services: [..],
-  shipments: [..],
-  matrices: [..],
-  rests: [..],
-  configuration: [..]
+"vrp": {
+  "points": [..],
+  "vehicles": [..],
+  "units": [..],
+  "services": [..],
+  "shipments": [..],
+  "matrices": [..],
+  "rests": [..],
+  "relations": [..],
+  "configuration": [..]
 }
 ```
 Those high level entities are completed by few others as **timewindows** and **activities** which are locally defined.
@@ -133,214 +135,214 @@ The others entities are optional but will be unavoidable depending on the proble
 Represent a point in space, it could call a matrix index or be self defined as latitude and longitude coordinates.  
 With coordinates
 ```json
-  points: [{
-      id: "vehicle-start",
-      location: {
-        lat: start_lat,
-        lon: start_lon
+  "points": [{
+      "id": "vehicle-start",
+      "location": {
+        "lat": start_lat,
+        "lon": start_lon
       }
     }, {
-      id: "vehicle-end",
-      location: {
-        lat: start_lat,
-        lon: start_lon
+      "id": "vehicle-end",
+      "location": {
+        "lat": start_lat,
+        "lon": start_lon
       }
     }, {
-      id: "visit-point-1",
-      location: {
-        lat: visit_lat,
-        lon: visit_lon
+      "id": "visit-point-1",
+      "location": {
+        "lat": visit_lat,
+        "lon": visit_lon
       }, {
-      id: "visit-point-2",
-      location: {
-        lat: visit_lat,
-        lon: visit_lon
+      "id": "visit-point-2",
+      "location": {
+        "lat": visit_lat,
+        "lon": visit_lon
       }
     }]
 ```
 If the problem matrices are defined the matrix indices can be used to link each point to its distance to other points instead of coordinates.
 This could be usefull if the routing data are provided from an external source.
 ```json
-  points: [{
-      id: "vehicle-start",
-      matrix_index: 0
+  "points": [{
+      "id": "vehicle-start",
+      "matrix_index": 0
     }, {
-      id: "vehicle-end",
-      matrix_index: 1
+      "id": "vehicle-end",
+      "matrix_index": 1
     }, {
-      id: "visit-point-1",
-      matrix_index: 2
+      "id": "visit-point-1",
+      "matrix_index": 2
     }, {
-      id: "visit-point-2",
-      matrix_index: 3
+      "id": "visit-point-2",
+      "matrix_index": 3
     }]
 ```
 ### **TimeWindows**(#timewindows)
 Define a time interval when a resource is available or when an activity can be performed. By default values are supposed to be defined in seconds, if a time matrix is send with problem the values must be set on the same time unit.
 Vehicles only have single timewindow
 ```json
-  timewindow: {
-    start: 0,
-    end: 7200
+  "timewindow": {
+    "start": 0,
+    "end": 7200
   }
 ```
 Activities can have multiple timewindows
 ```json
-  timewindows: [{
-    start: 600,
-    end: 900
+  "timewindows": [{
+    "start": 600,
+    "end": 900
   },{
-    start: 1200,
-    end: 1500
+    "start": 1200,
+    "end": 1500
   }],
 ```
 ### **Vehicles**(#vehicles)
 Describe the features of the existing or supposed vehicles. It should be taken in every sense, it could represent a work day of a particular driver/vehicle, or a planning over long period of time. It represent the entity which must travel between points.
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end"
   }]
 ```
 Costs can also be added in order to fit more precisely the real constraints
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    cost_fixed: 500.0,
-    cost_distance_multiplier: 1.0,
-    cost_time_multiplier: 1.0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "cost_fixed": 500.0,
+    "cost_distance_multiplier": 1.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
 The router dimension can be set as distance, this describe that the route between will be the shortest, instead of the fastest.
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "distance",
-    speed_multiplier: 1.0,
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "distance",
+    "speed_multiplier": 1.0,
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    cost_fixed: 500.0,
-    cost_distance_multiplier: 1.0,
-    cost_time_multiplier: 0.0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "cost_fixed": 500.0,
+    "cost_distance_multiplier": 1.0,
+    "cost_time_multiplier": 0.0
   }]
 ```
 
 ### **Activities**(#activities)
 Describe where an activity take place , when it could be performed and how long it last.
 ```json
-  activity: {
-    point_id: "visit-point",
-    timewindows: [{
-      start: 3600,
-      end: 4800
+  "activity": {
+    "point_id": "visit-point",
+    "timewindows": [{
+      "start": 3600,
+      "end": 4800
     }],
-    duration: 2100.0
+    "duration": 2100.0
   }
 ```
 ### **Services and Shipments**(#services-and-shipments)
 Describe more precisely the activities to be performed into the VRP.
 Services are single activities which are self-sufficient.
 ```json
-  services: [{
-    id: "visit",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "services": [{
+    "id": "visit",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     }
   }
 ```
 Shipments are a couple of activities, the pickup is where the vehicle must take-off a package and the delivery the place the vehicle must deliver this particular package.
 pickup and delivery are build following the activity model
 ```json
-  shipments: [{
-    id: "shipment",
-    pickup: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "shipments": [{
+    "id": "shipment",
+    "pickup": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }]
     },
-    delivery: {
-      point_id: "visit-point-2",
-      duration: 2100.0
+    "delivery": {
+      "point_id": "visit-point-2",
+      "duration": 2100.0
     }
   }]
 ```
 ### **Matrices**(#matrices)
-Describe the topology of the problem, it represent travel time or distance between every points,
-Matrices are not mandatory, if those are not defined the router wrapper will use the points data to build it.
+Describe the topology of the problem, it represent travel time, distance or value between every points,
+Matrices are not mandatory, if time or distance are not defined the router wrapper will use the points data to build it.
 ```json
-  matrices: [{
-    id: "matrix-1",
-    time: [
+  "matrices": [{
+    "id": "matrix-1",
+    "time": [
       [0, 655, 1948, 5231],
       [603, 0, 1692, 4977],
       [1861, 1636, 0, 6143],
-      [5184, 4951, 6221, 0],
+      [5184, 4951, 6221, 0]
     ]
   }]
 ```
 With this matrix defined, the vehicle definition is now the following :
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    matrix_id: "matrix-1",
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id",
+    "matrix_id": "matrix-1",
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    cost_fixed: 0.0,
-    cost_distance_multiplier: 0.0,
-    cost_time_multiplier: 1.0,
+    "cost_fixed": 0.0,
+    "cost_distance_multiplier": 0.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
 Note that every vehicle could be linked to a unique matrix in order to model multiple transport mode
 
 In the case the distance cost is greater than 0, it will be mandatory to transmit the related matrix
 ```json
-  matrices: [{
-    id: "matrix-1",
-    time: [
+  "matrices": [{
+    "id": "matrix-1",
+    "time": [
       [0, 655, 1948, 5231],
       [603, 0, 1692, 4977],
       [1861, 1636, 0, 6143],
-      [5184, 4951, 6221, 0],
+      [5184, 4951, 6221, 0]
     ],
-    distance: [
+    "distance": [
       [0, 655, 1948, 5231],
       [603, 0, 1692, 4977],
       [1861, 1636, 0, 6143],
-      [5184, 4951, 6221, 0],
+      [5184, 4951, 6221, 0]
     ]
   }]
 ```
@@ -348,144 +350,161 @@ Whenever there is no time constraint and the objective is only set on distance, 
 ### **Units**(#units)
 Describe the dimension used for the goods. ie : kgs, litres, pallets...etc
 ```json
-  units: [{
-    id: "unit-Kg",
-    label: "Kilogram"
+  "units": [{
+    "id": "unit-Kg",
+    "label": "Kilogram"
   }]
 ```
 ### **Capacities**(#capacities)
 Define the limit allowed for a defined unit into the vehicle.
 ```json
-  capacities: [{
-    unit_id: "unit-Kg",
-    limit: 10,
-    overload_multiplier: 0,
+  "capacities": [{
+    "unit_id": "unit-Kg",
+    "limit": 10,
+    "overload_multiplier": 0
   }]
 ```
 Which is defined as follows
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    capacities: [{
-      unit_id: "Kg",
-      limit: 10,
-      overload_multiplier: 0,
+    "capacities": [{
+      "unit_id": "unit-Kg",
+      "limit": 10,
+      "overload_multiplier": 0
     }],
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    cost_fixed: 0.0,
-    cost_distance_multiplier: 0.0,
-    cost_time_multiplier: 1.0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "cost_fixed": 0.0,
+    "cost_distance_multiplier": 0.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
 ### **Quantities**(#quantities)
 Inform of the package size, shift within a route, once loaded into a vehicle.
 ```json
-  quantities: [{
-    unit_id: "Kg",
-    value: 8,
+  "quantities": [{
+    "unit_id": "unit-Kg",
+    "value": 8
   }]
 ```
 ```json
-  services: [{
-    id: "visit",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "services": [{
+    "id": "visit",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     },
-    quantities: [{
-      unit_id: "Kg",
-      value: 8,
+    "quantities": [{
+      "unit_id": "unit-Kg",
+      "value": 8
     }]
   }
 ```
 ```json
-  shipments: [{
-    id: "pickup_delivery",
-    pickup: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "shipments": [{
+    "id": "pickup_delivery",
+    "pickup": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     },
-    delivery: {
-      point_id: "visit-point-2",
-      timewindows: [{
-        start: 4500,
-        end: 7200
+    "delivery": {
+      "point_id": "visit-point-2",
+      "timewindows": [{
+        "start": 4500,
+        "end": 7200
       }],
-      duration: 1100.0
+      "duration": 1100.0
     },
-    quantities: [{
-      unit_id: "Kg",
-      value: 8,
+    "quantities": [{
+      "unit_id": "unit-Kg",
+      "value": 8
     }]
   }
 ```
 ### **Rests**(#rests)
 Inform about the drivers obligations to have some rest within a route
 ```json
-  rests: [{
-    id: "Break-1",
-    timewindows: [{
-      start: 1200,
-      end: 2400
+  "rests": [{
+    "id": "Break-1",
+    "timewindows": [{
+      "start": 1200,
+      "end": 2400
     }],
-    duration: 600
+    "duration": 600
   }]
 ```
 
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    rests_ids: ["Break-1"]
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    cost_fixed: 0.0,
-    cost_distance_multiplier: 0.0,
-    cost_time_multiplier: 1.0,
+    "rests_ids": ["Break-1"]
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "cost_fixed": 0.0,
+    "cost_distance_multiplier": 0.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
+
+### **Relations**(#relations)
+Relations allow to define constraints explicitly between missions.
+Those could be of the following types: 
+  * **same_route** : force missions to be served within the same route.
+  * **order** : force services to be served within the same route in a specific order, but allow to insert others missions between
+  * **sequence** : force services to be served in a specific order, excluding others missions to be performed between
+  * **meetup** : ensure that some missions are performed at the same time by multiple vehicles.
+
+```json
+  "relations": [{
+    "id": "sequence_1",
+    "type": "sequence",
+    "linked_ids": ["service_1", "service_3", "service_2"]
+  }]
+```
+
 
 ### **Configuration**(#configuration)
 The configuration is divided in four parts
 Preprocessing parameters will twist the problem in order to simplify or orient the solve
 ```json
-  configuration: {
-    preprocessing: {
-      cluster_threshold: 5,
-      prefer_short_segment: true
+  "configuration": {
+    "preprocessing": {
+      "cluster_threshold": 5,
+      "prefer_short_segment": true
     }
   }
 ```
 Resolution parameters will only indicate when stopping the search is admissible
 ```json
-  configuration: {
-    resolution: {
-      duration: 30,
-      iterations: 1000,
-      iterations_without_improvment: 100,
+  "configuration": {
+    "resolution": {
+      "duration": 30,
+      "iterations": 1000,
+      "iterations_without_improvment": 100
     }
   }
 ```
@@ -493,26 +512,26 @@ Resolution parameters will only indicate when stopping the search is admissible
  **ORtools** Can take a maximum solve duration, or can stop by itself depending on the solve state as a time-out between two new best solution, or as a number of iterations without improvement.  
 **Jsprit**: Can take a maximum solve duration, a number of iterations wihtout improvment or a number of iteration without variation in the neighborhood search.  
 
-Schedule parameters are only usefull in the case of Schedule Optimisation. Those allow to define the considerated period ("range_indices") and the indices which are unavailable within the solve ("unavailable_indices")
+Schedule parameters are only usefull in the case of Schedule Optimisation. Those allow to define the considerated period (__range_indices__) and the indices which are unavailable within the solve (__unavailable_indices__)
 ```json
-  configuration: {
-    schedule: {
-      range_indices: {
-        start: 0,
-        end: 13
+  "configuration": {
+    "schedule": {
+      "range_indices": {
+        "start": 0,
+        "end": 13
       },
-      unavailable_indices: [5, 6, 12, 13]
+      "unavailable_indices": [5, 6, 12, 13]
     }
   }
 ```
-An alternative exist to those parameters in order to define it by date instead of indices "schedule_range_date" and "schedule_unavailable_date".
+An alternative exist to those parameters in order to define it by date instead of indices __schedule_range_date__ and __schedule_unavailable_date__.
 
 Restitution parameters allow to have some control on the API response
 ```json
-  configuration: {
-    restitution: {
-      geometry: true,
-      geometry_polyline: false
+  "configuration": {
+    "restitution": {
+      "geometry": true,
+      "geometry_polyline": false
     }
   }
 ```
@@ -525,258 +544,258 @@ The current API can handle multiple particular behavior.
 ### Lateness²(#lateness)
 Once defined at the service level it allow the vehicles to arrive late at a points to serve.
 ```json
-  services: [{
-    id: "visit",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      late_multiplier: 0.3,
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "services": [{
+    "id": "visit",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "late_multiplier": 0.3,
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     }
   }
 ```
 Defined at the vehicle level, it allow the vehicle to arrive late at the ending depot.
 ```json
-  vehicles: [{
-    id: "vehicle_id-1",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id-1",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    start_point_id: "vehicle-start-1",
-    end_point_id: "vehicle-start-1",
-    cost_fixed: 500.0,
-    cost_late_multiplier, 0.3,
-    cost_distance_multiplier: 1.0,
-    cost_time_multiplier: 1.0,
+    "start_point_id": "vehicle-start-1",
+    "end_point_id": "vehicle-start-1",
+    "cost_fixed": 500.0,
+    "cost_late_multiplier", 0.3,
+    "cost_distance_multiplier": 1.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
-Note : In the case of a global optimization, at least one those two level parameters must be set to zero. All the services __late_multiplier__ or all the vehicles __cost_late_multiplier__
+Note : In the case of a global optimization, at least one those two parameters (__late_multiplier__ or __cost_late_multiplier__) must be set to zero, otherwise only one vehicle would be used.
 ### Multiple vehicles(#multiple-vehicles)
 ```json
-  vehicles: [{
-    id: "vehicle_id-1",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    timewindow: {
-      start: 0,
-      end: 7200
+  "vehicles": [{
+    "id": "vehicle_id-1",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "timewindow": {
+      "start": 0,
+      "end": 7200
     },
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    cost_fixed: 500.0,
-    cost_distance_multiplier: 1.0,
-    cost_time_multiplier: 1.0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "cost_fixed": 500.0,
+    "cost_distance_multiplier": 1.0,
+    "cost_time_multiplier": 1.0
   },{
-    id: "vehicle_id-2",
-    router_mode: "truck",
-    router_dimension: "distance",
-    speed_multiplier: 0.9,
-    timewindow: {
-      start: 8900,
-      end: 14400
+    "id": "vehicle_id-2",
+    "router_mode": "truck",
+    "router_dimension": "distance",
+    "speed_multiplier": 0.9,
+    "timewindow": {
+      "start": 8900,
+      "end": 14400
     },
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    cost_fixed: 4000.0,
-    cost_distance_multiplier: 0.60,
-    cost_time_multiplier: 0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "cost_fixed": 4000.0,
+    "cost_distance_multiplier": 0.60,
+    "cost_time_multiplier": 0
   }]
 ```
 ### Multiple depots(#multiple-depots)
-Depots can be set to any points or stay free
+Depots can be set to any points or stay free (in such case don\'t send the associated key word)
 ```json
-  vehicles: [{
-    id: "vehicle_id-1",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    start_point_id: "vehicle-start-1",
-    end_point_id: "vehicle-start-1",
-    cost_fixed: 500.0,
-    cost_distance_multiplier: 1.0,
-    cost_time_multiplier: 1.0,
+  "vehicles": [{
+    "id": "vehicle_id-1",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "start_point_id": "vehicle-start-1",
+    "end_point_id": "vehicle-start-1",
+    "cost_fixed": 500.0,
+    "cost_distance_multiplier": 1.0,
+    "cost_time_multiplier": 1.0
   }, {
-    id: "vehicle_id-2",
-    router_mode: "truck",
-    router_dimension: "distance",
-    speed_multiplier: 0.9,
-    start_point_id: "vehicle-start-2",
-    end_point_id: "vehicle-end-2",
-    cost_fixed: 4000.0,
-    cost_distance_multiplier: 0.60,
-    cost_time_multiplier: 0,
+    "id": "vehicle_id-2",
+    "router_mode": "truck",
+    "router_dimension": "distance",
+    "speed_multiplier": 0.9,
+    "start_point_id": "vehicle-start-2",
+    "end_point_id": "vehicle-end-2",
+    "cost_fixed": 4000.0,
+    "cost_distance_multiplier": 0.60,
+    "cost_time_multiplier": 0
   }, {
-    id: "vehicle_id-2",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    end_point_id: "vehicle-end-2",
-    cost_fixed: 500.0,
-    cost_distance_multiplier: 1.0,
-    cost_time_multiplier: 1.0,
+    "id": "vehicle_id-2",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "end_point_id": "vehicle-end-2",
+    "cost_fixed": 500.0,
+    "cost_distance_multiplier": 1.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
 ### Multiple matrices²(#multiple-matrices)
 Every vehicle can have its own matrix to represent its custom speed or route behavior.
 ```json
-  matrices: [{
-    id: "matrix-1",
-    time: [
+  "matrices": [{
+    "id": "matrix-1",
+    "time": [
       [0, 655, 1948, 5231],
       [603, 0, 1692, 4977],
       [1861, 1636, 0, 6143],
-      [5184, 4951, 6221, 0],
+      [5184, 4951, 6221, 0]
     ]
   }, {
-    id: "matrix-2",
-    time: [
+    "id": "matrix-2",
+    "time": [
       [0, 541, 1645, 4800],
       [530, 0, 1503, 4465],
       [1506, 1298, 0, 5836],
-      [4783, 4326, 5760, 0],
+      [4783, 4326, 5760, 0]
     ]
   }]
 ```
 ### Multiple TimeWindows¹(#multiple-timewindows)
 ```json
-  services: [{
-    id: "visit",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 1200,
-        end: 2400
+  "services": [{
+    "id": "visit",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 1200,
+        "end": 2400
       }, {
-        start: 3600,
-        end: 4800
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     }
   }
 ```
-### Pickup and Delivery³(#pickup-and-delivery)
-Services can be set with a __pickup__ or a __delivery__ type which inform the solver about the activity to perform. The __pickup__ allows some kind of reload in route, the __delivery__ allows to drop off some resources.
+### Pickup or Delivery³(#pickup-or-delivery)
+Services can be set with a __pickup__ or a __delivery__ type which inform the solver about the activity to perform. The __pickup__ allows a reload action within the route, the __delivery__ allows to drop off resources.
 ```json
-  services: [{
-    id: "visit-pickup",
-    type: "pickup",
-    activity: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "services": [{
+    "id": "visit-pickup",
+    "type": "pickup",
+    "activity": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     },
-    quantities: [{
-      unit_id: "Kg",
-      value: 8,
+    "quantities": [{
+      "unit_id": "unit-Kg",
+      "value": 8
     }]
   }, {
-    id: "visit-delivery",
-    type: "delivery",
-    activity: {
-      point_id: "visit-point-2",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+    "id": "visit-delivery",
+    "type": "delivery",
+    "activity": {
+      "point_id": "visit-point-2",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     },
-    quantities: [{
-      unit_id: "Kg",
-      value: 6,
+    "quantities": [{
+      "unit_id": "unit-Kg",
+      "value": 6
     }]
   }]
 ### Priority²(#priority)
 Indicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8.
 ```json
- services: [{
-    id: "visit-1",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      late_multiplier: 0.3,
-      timewindows: [{
-        start: 3600,
-        end: 4800
+ "services": [{
+    "id": "visit-1",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "late_multiplier": 0.3,
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 600.0,
-      priority: 0
+      "duration": 600.0,
+      "priority": 0
     }
   }, {
-    id: "visit-2",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      late_multiplier: 0.3,
-      timewindows: [{
-        start: 3800,
-        end: 5000
+    "id": "visit-2",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "late_multiplier": 0.3,
+      "timewindows": [{
+        "start": 3800,
+        "end": 5000
       }],
-      duration: 600.0,
-      priority: 2
+      "duration": 600.0,
+      "priority": 2
     }
   }]
 ```
 ### Quantities overload²(#quantities-overload)
 Allow the vehicles to load more than the defined limit, but add a cost in return of every excess unit.
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    capacities: [{
-      unit_id: "Kg",
-      limit: 10,
-      overload_multiplier: 0.3,
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "capacities": [{
+      "unit_id": "unit-Kg",
+      "limit": 10,
+      "overload_multiplier": 0.3
     }],
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    cost_fixed: 0.0,
-    cost_distance_multiplier: 0.0,
-    cost_time_multiplier: 1.0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "cost_fixed": 0.0,
+    "cost_distance_multiplier": 0.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
 ### Setup duration³(#setup-duration)
-When two activities are performed at the same location in a direct sequence allow to have a common time of preparation. It Could be assimilated to a parking time.
+When two activities are performed at the same location in a direct sequence allow to have a common time of preparation. It Could be assimilated to an administrative time.
 ```json
- services: [{
-    id: "visit-1",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      late_multiplier: 0.3,
-      timewindows: [{
-        start: 3600,
-        end: 4800
+ "services": [{
+    "id": "visit-1",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "late_multiplier": 0.3,
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 600.0,
-      setup_duration: 1500.0
+      "duration": 600.0,
+      "setup_duration": 1500.0
     }
   }, {
-    id: "visit-2",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      late_multiplier: 0.3,
-      timewindows: [{
-        start: 3800,
-        end: 5000
+    "id": "visit-2",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "late_multiplier": 0.3,
+      "timewindows": [{
+        "start": 3800,
+        "end": 5000
       }],
-      duration: 600.0,
-      setup_duration: 1500.0
+      "duration": 600.0,
+      "setup_duration": 1500.0
     }
   }]
 ```
@@ -785,81 +804,81 @@ If those two services are performed in a row, the cumulated time of activity wil
 Some package must be carried by some particular vehicle, or some points can only be visited by some particular vehicle or driver. Skills allow to represent those kind of constraints.  
 A vehicle can carry the services or shipments with the defined skills and the ones which have none or part of the current vehicle skills.
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    skills: [
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "skills": [
         ["frozen"]
       ]
-    cost_fixed: 0.0,
-    cost_distance_multiplier: 0.0,
-    cost_time_multiplier: 1.0,
+    "cost_fixed": 0.0,
+    "cost_distance_multiplier": 0.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
 Services must be carried by a vehicle which have at least all the required skills by the current service or shipment.
 ```json
-  services: [{
-    id: "visit",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "services": [{
+    "id": "visit",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     },
-    skills: ["frozen"]
+    "skills": ["frozen"]
   }
 ```
 ### Alternative Skills³(#alternative-skills)
 Some vehicles can change its skills once empty, passing from one configuration to another. Here passing from a configuration it can carry only cool products from another it can only tool frozen ones and vice versa.
 ```json
-  vehicles: [{
-    id: "vehicle_id",
-    router_mode: "car",
-    router_dimension: "time",
-    speed_multiplier: 1.0,
-    start_point_id: "vehicle-start",
-    end_point_id: "vehicle-end",
-    skills: [
+  "vehicles": [{
+    "id": "vehicle_id",
+    "router_mode": "car",
+    "router_dimension": "time",
+    "speed_multiplier": 1.0,
+    "start_point_id": "vehicle-start",
+    "end_point_id": "vehicle-end",
+    "skills": [
         ["cool"],
         ["frozen"]
       ]
-    cost_fixed: 0.0,
-    cost_distance_multiplier: 0.0,
-    cost_time_multiplier: 1.0,
+    "cost_fixed": 0.0,
+    "cost_distance_multiplier": 0.0,
+    "cost_time_multiplier": 1.0
   }]
 ```
 ```json
-  services: [{
-    id: "visit-1",
-    type: "service",
-    activity: {
-      point_id: "visit-point-1",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+  "services": [{
+    "id": "visit-1",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-1",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     },
-    skills: ["frozen"]
+    "skills": ["frozen"]
   }, {
-    id: "visit-2",
-    type: "service",
-    activity: {
-      point_id: "visit-point-2",
-      timewindows: [{
-        start: 3600,
-        end: 4800
+    "id": "visit-2",
+    "type": "service",
+    "activity": {
+      "point_id": "visit-point-2",
+      "timewindows": [{
+        "start": 3600,
+        "end": 4800
       }],
-      duration: 2100.0
+      "duration": 2100.0
     },
-    skills: ["cool"]
+    "skills": ["cool"]
   }]
 ```
 
@@ -894,9 +913,9 @@ Some day may have to be exclude from the resolution, like holiday, and could be 
 Vehicle definition(#vehicle-definition)
 ---
 
-The timewindows of a vehicle over a week can be defined with an array of timewindows using "sequence_timewindows" instead of a single timewindow
-To link a timewindow with a week day, a day_index can be set (from 0 [monday] to 6 [sunday]). Those timewindows will repeated over the entire period for each week it containts.
-As the problem level definition, some days could be unavailable for a specific vehicle, this can be defined with "unavailable_work_date" or "unavailable_work_day_indices"
+The timewindows of a vehicle over a week can be defined with an array using __sequence_timewindows__ instead of a single timewindow.
+To link a timewindow with a week day, a __day_index can__ be set (from 0 [monday] to 6 [sunday]). Those time slot will repeated over the entire period for every week contained.
+As at the problem definition level, some days could be unavailable to a specific vehicle, this can be defined with __unavailable_work_date__ or __unavailable_work_day_indices__
 ```json
   {
     "id": "vehicle_id-1",
@@ -926,17 +945,17 @@ As the problem level definition, some days could be unavailable for a specific v
     }],
     "start_point_id": "store",
     "end_point_id": "store",
-    "unavailable_work_day_indices": [5, 7],
+    "unavailable_work_day_indices": [5, 7]
   }
 ```
 
 Services definition(#services-definition)
 ---
 
-As the vehicles, services have period defined timewindows, using "day_index" parameter within its timewindows. And some days could be not available to deliver a customer, which can be defined with "unavailable_visit_day_indices" or "unavailable_visit_day_date"
-Some visits could be avoided because it is not mandatory, or any particular reason, "unavailable_visit_indices" allow to not include a particular visit over the period.
-To define multiple visit of a customer over the period, you can set it through the "visits_number" field.
-By default, it will devide the period by the number of visits in order to non overlap the multiple visits.
+As the vehicles, services have period defined timewindows, using __day_index__ parameter within its timewindows. And some days could be not available to deliver a customer, which can be defined with __unavailable_visit_day_indices__ or __unavailable_visit_day_date__
+Some visits could be avoided because it is not mandatory, or any particular reason, __unavailable_visit_indices__ allow to not include a particular visit over the period.
+To define multiple visit of a customer over the period, you can set it through the __visits_number__ field.
+By default, it will divide the period by the number of visits in order to non overlap the multiple visits.
 ```json
   {
     "id": "visit-1",
@@ -975,7 +994,7 @@ Additional parameters(#additional-parameters)
 ---
 
 ### **Minimum/Maximum Lapse**(#min-max-lapse)
-Between to visits of the same mission, it could be necessary to determine exactly the lapse. At this purpose, the "minimum_lapse" and "maximum_lapse" fields of services are available.
+Between to visits of the same mission, it could be necessary to determine exactly the lapse. At this purpose, the __minimum_lapse__ and __maximum_lapse__ fields of services are available.
 ```json
   {
     "id": "visit-1",
@@ -1017,24 +1036,24 @@ Zones(#zones)
 In order to distribute geographically the problem, some sector can be defined. The API takes geojson and encrypted geojson. A zone contains the vehicles which are allowed to perform it at the same time. The API call make it feasible to have multiple elaborate combinations.
 But only a single complex combination (multiple vehicles allowed to perform activities within the area at the same time).
 ```json
-      zones: [{
-        id: "zone_0",
-        polygon: {
+      "zones": [{
+        "id": "zone_0",
+        "polygon": {
         "type": "Polygon",
         "coordinates": [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
         },
-        allocations: [["vehicle_0", "vehicle_1"]]
+        "allocations": [["vehicle_0", "vehicle_1"]]
       }]
 ```
 Or multiple unique vehicle alternative are currently implemented at the solver side.
 ```json
-      zones: [{
-        id: "zone_0",
-        polygon: {
+      "zones": [{
+        "id": "zone_0",
+        "polygon": {
         "type": "Polygon",
         "coordinates": [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
         },
-        allocations: [["vehicle_0"], ["vehicle_1"]]
+        "allocations": [["vehicle_0"], ["vehicle_1"]]
       }]
 ```
 '
