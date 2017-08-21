@@ -68,14 +68,14 @@ module Api
     * [Relations](#relations)
     * [Configuration](#configuration)
   * [Solve](#solve)
-    * [Lateness²](#lateness)
+    * [Lateness¹](#lateness)
     * [Multiple Vehicles](#multiple-vehicles)
     * [Multiple Depots](#multiple-depots)
     * [Multiple Timewindows¹](#multiple-timewindows)
-    * [Multiple Matrices²](#multiple-matrices)
-    * [Pickup or Delivery³](#pickup-or-delivery)
-    * [Priority²](#priority)
-    * [Quantities Overload²](#quantities-overload)
+    * [Multiple Matrices¹](#multiple-matrices)
+    * [Pickup or Delivery](#pickup-or-delivery)
+    * [Priority¹](#priority)
+    * [Quantities Overload¹](#quantities-overload)
     * [Setup Duration](#setup-duration)
     * [Skills](#skills)
     * [Alternative Skills³](#alternative-skills)
@@ -88,9 +88,8 @@ module Api
 * [Zones](#zones)
 
 -----------------
-¹ Limit of 2 timewindows with ORtools  
-² Currently not available with Jsprit  
-³ Currently not available with ORtools  
+¹ Currently not available with Jsprit
+² Currently not available with ORtools
 
 -----------------
 
@@ -132,7 +131,7 @@ Furthermore at least one **vehicle** is mandatory and define at least one **serv
 The others entities are optional but will be unavoidable depending on the problem to describe.
 
 ### **Points**(#points)
-Represent a point in space, it could call a matrix index or be self defined as latitude and longitude coordinates.  
+Represent a point in space, it could be called as a __location__ with latitude and longitude coordinates.
 With coordinates
 ```json
   "points": [{
@@ -160,7 +159,7 @@ With coordinates
       }
     }]
 ```
-If the problem matrices are defined the matrix indices can be used to link each point to its distance to other points instead of coordinates.
+Or as a __matrix_index__ can be used to link to its position within the matrices.
 This could be usefull if the routing data are provided from an external source.
 ```json
   "points": [{
@@ -178,7 +177,7 @@ This could be usefull if the routing data are provided from an external source.
     }]
 ```
 ### **TimeWindows**(#timewindows)
-Define a time interval when a resource is available or when an activity can be performed. By default values are supposed to be defined in seconds, if a time matrix is send with problem the values must be set on the same time unit.
+Define a time interval when a resource is available or when an activity can begin. By default duration are supposed to be defined in seconds. If a time matrix is send with the problem, values must be set on the same time unit.
 Vehicles only have single timewindow
 ```json
   "timewindow": {
@@ -197,7 +196,7 @@ Activities can have multiple timewindows
   }],
 ```
 ### **Vehicles**(#vehicles)
-Describe the features of the existing or supposed vehicles. It should be taken in every sense, it could represent a work day of a particular driver/vehicle, or a planning over long period of time. It represent the entity which must travel between points.
+Describe the features of the existing or supposed vehicles. It should be taken in every sense, it could represent a work day of a particular driver/vehicle, or a planning over long period of time. It represents the entity which must travel between points.
 ```json
   "vehicles": [{
     "id": "vehicle_id",
@@ -212,7 +211,7 @@ Describe the features of the existing or supposed vehicles. It should be taken i
     "end_point_id": "vehicle-end"
   }]
 ```
-Costs can also be added in order to fit more precisely the real constraints
+Costs can also be added in order to fit more precisely the real operating cost
 ```json
   "vehicles": [{
     "id": "vehicle_id",
@@ -250,7 +249,7 @@ The router dimension can be set as distance, this describe that the route betwee
 ```
 
 ### **Activities**(#activities)
-Describe where an activity take place , when it could be performed and how long it last.
+Describe where an activity take place, when it can be performed and how long it last.
 ```json
   "activity": {
     "point_id": "visit-point",
@@ -262,7 +261,7 @@ Describe where an activity take place , when it could be performed and how long 
   }
 ```
 ### **Services and Shipments**(#services-and-shipments)
-Describe more precisely the activities to be performed into the VRP.
+Describe more specifically the activities to be performed.
 Services are single activities which are self-sufficient.
 ```json
   "services": [{
@@ -278,8 +277,8 @@ Services are single activities which are self-sufficient.
     }
   }
 ```
-Shipments are a couple of activities, the pickup is where the vehicle must take-off a package and the delivery the place the vehicle must deliver this particular package.
-pickup and delivery are build following the activity model
+Shipments are a couple of indivisible activities, the __pickup__ is the action which must take-off a package and the __delivery__ the action which deliver this particular package.
+__pickup__ and __delivery__ are build following the __activity__ model
 ```json
   "shipments": [{
     "id": "shipment",
@@ -326,7 +325,7 @@ With this matrix defined, the vehicle definition is now the following :
     "cost_time_multiplier": 1.0
   }]
 ```
-Note that every vehicle could be linked to a unique matrix in order to model multiple transport mode
+Note that every vehicle could be linked to different matrices in order to model multiple transport mode
 
 In the case the distance cost is greater than 0, it will be mandatory to transmit the related matrix
 ```json
@@ -388,7 +387,7 @@ Which is defined as follows
   }]
 ```
 ### **Quantities**(#quantities)
-Inform of the package size, shift within a route, once loaded into a vehicle.
+Inform of the package size, shift within a route once loaded into a vehicle.
 ```json
   "quantities": [{
     "unit_id": "unit-Kg",
@@ -508,9 +507,9 @@ Resolution parameters will only indicate when stopping the search is admissible
     }
   }
 ```
-**VROOM** requires no parameters and stops by itself.  
- **ORtools** Can take a maximum solve duration, or can stop by itself depending on the solve state as a time-out between two new best solution, or as a number of iterations without improvement.  
-**Jsprit**: Can take a maximum solve duration, a number of iterations wihtout improvment or a number of iteration without variation in the neighborhood search.  
+**VROOM** requires no parameters and stops by itself.
+**ORtools** Can take a maximum solve duration, or can stop by itself depending on the solve state as a time-out between two new best solution, or as a number of iterations without improvement.
+**Jsprit**: Can take a maximum solve duration, a number of iterations wihtout improvment or a number of iteration without variation in the neighborhood search.
 
 Schedule parameters are only usefull in the case of Schedule Optimisation. Those allow to define the considerated period (__range_indices__) and the indices which are unavailable within the solve (__unavailable_indices__)
 ```json
@@ -535,13 +534,13 @@ Restitution parameters allow to have some control on the API response
     }
   }
 ```
-"geometry" inform the API to return the Geojson of the route in output
-"geometry_polyline" precise that the geojson must be an encoded polyline.
+__geometry__ inform the API to return the Geojson of the route in output
+__geometry_polyline__ precise that the geojson must be an encoded polyline.
 
 Solve(#solve)
 --
 The current API can handle multiple particular behavior.
-### Lateness²(#lateness)
+### Lateness¹(#lateness)
 Once defined at the service level it allow the vehicles to arrive late at a points to serve.
 ```json
   "services": [{
@@ -644,7 +643,7 @@ Depots can be set to any points or stay free (in such case don\'t send the assoc
     "cost_time_multiplier": 1.0
   }]
 ```
-### Multiple matrices²(#multiple-matrices)
+### Multiple matrices¹(#multiple-matrices)
 Every vehicle can have its own matrix to represent its custom speed or route behavior.
 ```json
   "matrices": [{
@@ -665,7 +664,7 @@ Every vehicle can have its own matrix to represent its custom speed or route beh
     ]
   }]
 ```
-### Multiple TimeWindows¹(#multiple-timewindows)
+### Multiple TimeWindows(#multiple-timewindows)
 ```json
   "services": [{
     "id": "visit",
@@ -683,7 +682,7 @@ Every vehicle can have its own matrix to represent its custom speed or route beh
     }
   }
 ```
-### Pickup or Delivery³(#pickup-or-delivery)
+### Pickup or Delivery(#pickup-or-delivery)
 Services can be set with a __pickup__ or a __delivery__ type which inform the solver about the activity to perform. The __pickup__ allows a reload action within the route, the __delivery__ allows to drop off resources.
 ```json
   "services": [{
@@ -717,7 +716,8 @@ Services can be set with a __pickup__ or a __delivery__ type which inform the so
       "value": 6
     }]
   }]
-### Priority²(#priority)
+```
+### Priority¹(#priority)
 Indicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8.
 ```json
  "services": [{
@@ -748,8 +748,8 @@ Indicate to the solver which activities are the most important, the priority 0 i
     }
   }]
 ```
-### Quantities overload²(#quantities-overload)
-Allow the vehicles to load more than the defined limit, but add a cost in return of every excess unit.
+### Quantities overload¹(#quantities-overload)
+Allow the vehicles to load more than the defined limit, but add a cost at every excess unit.
 ```json
   "vehicles": [{
     "id": "vehicle_id",
@@ -768,8 +768,8 @@ Allow the vehicles to load more than the defined limit, but add a cost in return
     "cost_time_multiplier": 1.0
   }]
 ```
-### Setup duration³(#setup-duration)
-When two activities are performed at the same location in a direct sequence allow to have a common time of preparation. It Could be assimilated to an administrative time.
+### Setup duration(#setup-duration)
+When multiple activities are performed at the same location in a direct sequence it allows to have a common time of preparation. It Could be assimilated to an administrative time.
 ```json
  "services": [{
     "id": "visit-1",
@@ -802,7 +802,7 @@ When two activities are performed at the same location in a direct sequence allo
 If those two services are performed in a row, the cumulated time of activity will be : 1500 + 600 + 600 = 2700 instead of 4200 if the two duration were set to 2100.
 ### Skills(#skills)
 Some package must be carried by some particular vehicle, or some points can only be visited by some particular vehicle or driver. Skills allow to represent those kind of constraints.  
-A vehicle can carry the services or shipments with the defined skills and the ones which have none or part of the current vehicle skills.
+A vehicle can carry the __services__ or __shipments__ with the defined __skills__ and the ones which have none or part of the current vehicle skills.
 ```json
   "vehicles": [{
     "id": "vehicle_id",
@@ -819,7 +819,7 @@ A vehicle can carry the services or shipments with the defined skills and the on
     "cost_time_multiplier": 1.0
   }]
 ```
-Services must be carried by a vehicle which have at least all the required skills by the current service or shipment.
+Missions must be carried by a vehicle which have at least all the required skills by the current service or shipment.
 ```json
   "services": [{
     "id": "visit",
@@ -836,7 +836,7 @@ Services must be carried by a vehicle which have at least all the required skill
   }
 ```
 ### Alternative Skills³(#alternative-skills)
-Some vehicles can change its skills once empty, passing from one configuration to another. Here passing from a configuration it can carry only cool products from another it can only tool frozen ones and vice versa.
+Some vehicles can change its __skills__ once empty, passing from one configuration to another. Here passing from a configuration it can carry only cool products from another it can only tool frozen ones and vice versa.
 ```json
   "vehicles": [{
     "id": "vehicle_id",
