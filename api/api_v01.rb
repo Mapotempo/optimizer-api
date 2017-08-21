@@ -93,7 +93,7 @@ module Api
 
 -----------------
 
-Overview (#overview)
+<a name="overview"></a>Overview
 ==
 
 The API has been built to wrap a large panel of  Traveling Salesman Problem(TSP) and Vehicle Routing Problem(VRP) constraints in order to call the most fitted solvers.
@@ -103,15 +103,15 @@ The currently integreted solvers are:
 *   **[ORtools](https://github.com/google/or-tools)** handle multiple vehicles, timewindows, quantities, skills and lateness.
 *   **[Jsprit](https://github.com/graphhopper/jsprit)** handle multiple vehicles, timewindows, quantities, skills and setup duration.
 
-Standard Optimisation
+<a name="standard-optimisation"></a>Standard Optimisation
 ==
 
-Input Model (#input-model)
+<a name="input-model"></a>Input Model
 --
 
 Before calling the solvers, a VRP model must be defined, which represent the problem to solve with all its parameters and constraints.
 
-### **General Model**(#general-model)
+### <a name="general-model"></a>**General Model**
 ```json
 "vrp": {
   "points": [..],
@@ -130,7 +130,7 @@ To define the model, the first step will be to every **points** which will be us
 Furthermore at least one **vehicle** is mandatory and define at least one **service** or **shipment** will be essential to launch the solve.
 The others entities are optional but will be unavoidable depending on the problem to describe.
 
-### **Points**(#points)
+### <a name="points"></a>**Points**
 Represent a point in space, it could be called as a __location__ with latitude and longitude coordinates.
 With coordinates
 ```json
@@ -176,7 +176,7 @@ This could be usefull if the routing data are provided from an external source.
       "matrix_index": 3
     }]
 ```
-### **TimeWindows**(#timewindows)
+### <a name="timewindows"></a>**TimeWindows**
 Define a time interval when a resource is available or when an activity can begin. By default duration are supposed to be defined in seconds. If a time matrix is send with the problem, values must be set on the same time unit.
 Vehicles only have single timewindow
 ```json
@@ -195,7 +195,7 @@ Activities can have multiple timewindows
     "end": 1500
   }],
 ```
-### **Vehicles**(#vehicles)
+### <a name="vehicles"></a>**Vehicles**
 Describe the features of the existing or supposed vehicles. It should be taken in every sense, it could represent a work day of a particular driver/vehicle, or a planning over long period of time. It represents the entity which must travel between points.
 ```json
   "vehicles": [{
@@ -248,7 +248,7 @@ The router dimension can be set as distance, this describe that the route betwee
   }]
 ```
 
-### **Activities**(#activities)
+### <a name="activities"></a>**Activities**
 Describe where an activity take place, when it can be performed and how long it last.
 ```json
   "activity": {
@@ -260,7 +260,7 @@ Describe where an activity take place, when it can be performed and how long it 
     "duration": 2100.0
   }
 ```
-### **Services and Shipments**(#services-and-shipments)
+### <a name="services-and-shipments"></a>**Services and Shipments**
 Describe more specifically the activities to be performed.
 Services are single activities which are self-sufficient.
 ```json
@@ -295,7 +295,7 @@ __pickup__ and __delivery__ are build following the __activity__ model
     }
   }]
 ```
-### **Matrices**(#matrices)
+### <a name="matrices"></a>**Matrices**
 Describe the topology of the problem, it represent travel time, distance or value between every points,
 Matrices are not mandatory, if time or distance are not defined the router wrapper will use the points data to build it.
 ```json
@@ -346,7 +346,7 @@ In the case the distance cost is greater than 0, it will be mandatory to transmi
   }]
 ```
 Whenever there is no time constraint and the objective is only set on distance, the time matrix is not mandatory
-### **Units**(#units)
+### <a name="units"></a>**Units**
 Describe the dimension used for the goods. ie : kgs, litres, pallets...etc
 ```json
   "units": [{
@@ -354,7 +354,7 @@ Describe the dimension used for the goods. ie : kgs, litres, pallets...etc
     "label": "Kilogram"
   }]
 ```
-### **Capacities**(#capacities)
+### <a name="capacities"></a>**Capacities**
 Define the limit allowed for a defined unit into the vehicle.
 ```json
   "capacities": [{
@@ -386,7 +386,7 @@ Which is defined as follows
     "cost_time_multiplier": 1.0
   }]
 ```
-### **Quantities**(#quantities)
+### <a name="quantities"></a>**Quantities**
 Inform of the package size, shift within a route once loaded into a vehicle.
 ```json
   "quantities": [{
@@ -437,7 +437,7 @@ Inform of the package size, shift within a route once loaded into a vehicle.
     }]
   }
 ```
-### **Rests**(#rests)
+### <a name="rests"></a>**Rests**
 Inform about the drivers obligations to have some rest within a route
 ```json
   "rests": [{
@@ -469,7 +469,7 @@ Inform about the drivers obligations to have some rest within a route
   }]
 ```
 
-### **Relations**(#relations)
+### <a name="relations"></a>**Relations**
 Relations allow to define constraints explicitly between missions.
 Those could be of the following types: 
   * **same_route** : force missions to be served within the same route.
@@ -486,7 +486,7 @@ Those could be of the following types:
 ```
 
 
-### **Configuration**(#configuration)
+### <a name="configuration"></a>**Configuration**
 The configuration is divided in four parts
 Preprocessing parameters will twist the problem in order to simplify or orient the solve
 ```json
@@ -537,10 +537,10 @@ Restitution parameters allow to have some control on the API response
 __geometry__ inform the API to return the Geojson of the route in output
 __geometry_polyline__ precise that the geojson must be an encoded polyline.
 
-Solve(#solve)
+ <a name="solve"></a>Solve
 --
 The current API can handle multiple particular behavior.
-### Lateness¹(#lateness)
+### <a name="lateness"></a>Lateness¹
 Once defined at the service level it allow the vehicles to arrive late at a points to serve.
 ```json
   "services": [{
@@ -577,7 +577,7 @@ Defined at the vehicle level, it allow the vehicle to arrive late at the ending 
   }]
 ```
 Note : In the case of a global optimization, at least one those two parameters (__late_multiplier__ or __cost_late_multiplier__) must be set to zero, otherwise only one vehicle would be used.
-### Multiple vehicles(#multiple-vehicles)
+### <a name="multiple-vehicles"></a>Multiple vehicles
 ```json
   "vehicles": [{
     "id": "vehicle_id-1",
@@ -609,7 +609,7 @@ Note : In the case of a global optimization, at least one those two parameters (
     "cost_time_multiplier": 0
   }]
 ```
-### Multiple depots(#multiple-depots)
+### <a name="multiple-depots"></a>Multiple depots
 Depots can be set to any points or stay free (in such case don\'t send the associated key word)
 ```json
   "vehicles": [{
@@ -643,7 +643,7 @@ Depots can be set to any points or stay free (in such case don\'t send the assoc
     "cost_time_multiplier": 1.0
   }]
 ```
-### Multiple matrices¹(#multiple-matrices)
+### <a name="multiple-matrices"></a>Multiple matrices¹
 Every vehicle can have its own matrix to represent its custom speed or route behavior.
 ```json
   "matrices": [{
@@ -664,7 +664,7 @@ Every vehicle can have its own matrix to represent its custom speed or route beh
     ]
   }]
 ```
-### Multiple TimeWindows(#multiple-timewindows)
+### <a name="multiple-timewindows"></a>Multiple TimeWindows
 ```json
   "services": [{
     "id": "visit",
@@ -682,7 +682,7 @@ Every vehicle can have its own matrix to represent its custom speed or route beh
     }
   }
 ```
-### Pickup or Delivery(#pickup-or-delivery)
+### <a name="pickup-or-delivery"></a>Pickup or Delivery
 Services can be set with a __pickup__ or a __delivery__ type which inform the solver about the activity to perform. The __pickup__ allows a reload action within the route, the __delivery__ allows to drop off resources.
 ```json
   "services": [{
@@ -717,7 +717,7 @@ Services can be set with a __pickup__ or a __delivery__ type which inform the so
     }]
   }]
 ```
-### Priority¹(#priority)
+### <a name="priority"></a>Priority¹
 Indicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8.
 ```json
  "services": [{
@@ -748,7 +748,7 @@ Indicate to the solver which activities are the most important, the priority 0 i
     }
   }]
 ```
-### Quantities overload¹(#quantities-overload)
+### <a name="quantities-overload"></a>Quantities overload¹
 Allow the vehicles to load more than the defined limit, but add a cost at every excess unit.
 ```json
   "vehicles": [{
@@ -768,7 +768,7 @@ Allow the vehicles to load more than the defined limit, but add a cost at every 
     "cost_time_multiplier": 1.0
   }]
 ```
-### Setup duration(#setup-duration)
+### <a name="setup-duration"></a>Setup duration
 When multiple activities are performed at the same location in a direct sequence it allows to have a common time of preparation. It Could be assimilated to an administrative time.
 ```json
  "services": [{
@@ -800,7 +800,7 @@ When multiple activities are performed at the same location in a direct sequence
   }]
 ```
 If those two services are performed in a row, the cumulated time of activity will be : 1500 + 600 + 600 = 2700 instead of 4200 if the two duration were set to 2100.
-### Skills(#skills)
+### <a name="skills"></a>Skills
 Some package must be carried by some particular vehicle, or some points can only be visited by some particular vehicle or driver. Skills allow to represent those kind of constraints.  
 A vehicle can carry the __services__ or __shipments__ with the defined __skills__ and the ones which have none or part of the current vehicle skills.
 ```json
@@ -835,7 +835,7 @@ Missions must be carried by a vehicle which have at least all the required skill
     "skills": ["frozen"]
   }
 ```
-### Alternative Skills³(#alternative-skills)
+### <a name="alternative-skills"></a>Alternative Skills³
 Some vehicles can change its __skills__ once empty, passing from one configuration to another. Here passing from a configuration it can carry only cool products from another it can only tool frozen ones and vice versa.
 ```json
   "vehicles": [{
@@ -882,10 +882,10 @@ Some vehicles can change its __skills__ once empty, passing from one configurati
   }]
 ```
 
-Schedule Optimisation(#schedule-optimisation)
+<a name="schedule-optimisation"></a>Schedule Optimisation
 ==
 
-Problem definition(#problem-definition)
+<a name="problem-definition"></a>Problem definition
 ---
 
 The plan must be described in its general way, the schedule duration the begin and end days or indices.
@@ -910,7 +910,7 @@ Some day may have to be exclude from the resolution, like holiday, and could be 
 
 ```
 
-Vehicle definition(#vehicle-definition)
+<a name="vehicle-definition"></a>Vehicle definition
 ---
 
 The timewindows of a vehicle over a week can be defined with an array using __sequence_timewindows__ instead of a single timewindow.
@@ -949,7 +949,7 @@ As at the problem definition level, some days could be unavailable to a specific
   }
 ```
 
-Services definition(#services-definition)
+<a name="services-definition"></a>Services definition
 ---
 
 As the vehicles, services have period defined timewindows, using __day_index__ parameter within its timewindows. And some days could be not available to deliver a customer, which can be defined with __unavailable_visit_day_indices__ or __unavailable_visit_day_date__
@@ -990,10 +990,10 @@ By default, it will divide the period by the number of visits in order to non ov
 ```
 N.B: Shipments are currently not available within the schedule optimisation
 
-Additional parameters(#additional-parameters)
+<a name="additional-parameters"></a>Additional parameters
 ---
 
-### **Minimum/Maximum Lapse**(#min-max-lapse)
+### <a name="min-max-lapse"></a>**Minimum/Maximum Lapse**
 Between to visits of the same mission, it could be necessary to determine exactly the lapse. At this purpose, the __minimum_lapse__ and __maximum_lapse__ fields of services are available.
 ```json
   {
@@ -1030,7 +1030,7 @@ Between to visits of the same mission, it could be necessary to determine exactl
   }
 ```
 
-Zones(#zones)
+<a name="zones"></a>Zones
 ==
 
 In order to distribute geographically the problem, some sector can be defined. The API takes geojson and encrypted geojson. A zone contains the vehicles which are allowed to perform it at the same time. The API call make it feasible to have multiple elaborate combinations.
