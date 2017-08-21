@@ -2363,4 +2363,79 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 2, result[:routes][0][:activities].size
     assert_equal 5, result[:routes][1][:activities].size
   end
+
+  def test_unreachable_destination
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      configuration: {
+          resolution: {
+              duration: 100
+          }
+      },
+      points: [{
+          id: "point_0",
+          location: {
+              lat: 43.8,
+              lon: 5.8
+          }
+      }, {
+          id: "point_1",
+          location: {
+              lat: -43.8,
+              lon: 5.8
+          }
+      }, {
+          id: "point_2",
+          location: {
+              lat: 44.8,
+              lon: 4.8
+          }
+      }, {
+          id: "agent_home",
+          location: {
+              lat: 44.0,
+              lon: 5.1
+          }
+      }],
+      vehicles: [{
+          id: "vehicle_1",
+          cost_time_multiplier: 1.0,
+          cost_waiting_time_multiplier: 1.0,
+          cost_distance_multiplier: 1.0,
+          router_mode: "car",
+          router_dimension: "time",
+          speed_multiplier: 1.0,
+          start_point_id: "agent_home",
+          end_point_id: "agent_home"
+      }],
+      services: [{
+          id: "service_0",
+          type: "service",
+          activity: {
+            duration: 100.0,
+            point_id: "point_0"
+          }
+      }, {
+          id: "service_1",
+          type: "service",
+          activity: {
+              duration: 100.0,
+              point_id: "point_1"
+          }
+      }, {
+          id: "service_2",
+          type: "service",
+          activity: {
+              duration: 100.0,
+              point_id: "point_2"
+          }
+      }]
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert result
+    assert_equal 4, result[:routes][0][:activities].size
+    assert result[:cost] < 2 ** 32
+  end
 end
