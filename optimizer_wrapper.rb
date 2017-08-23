@@ -75,7 +75,7 @@ module OptimizerWrapper
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         solve(services_vrps)
       else
-        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)), api_key: api_key, checksum: checksum)
+        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)), api_key: api_key, checksum: checksum, pids: [])
         JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end
@@ -144,14 +144,20 @@ module OptimizerWrapper
         cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |vrp|
           block.call(nil, 0, nil, 'run optimization') if block
           time_start = Time.now
-          result = OptimizerWrapper.config[:services][service].solve(vrp, job) { |wrapper, avancement, total, cost, solution|
+          result = OptimizerWrapper.config[:services][service].solve(vrp, job, Proc.new{ |pids|
+              if job
+                actual_result = Result.get(job) || { 'pids' => nil }
+                actual_result['pids'] = pids
+                Result.set(job, actual_result)
+              end
+            }) { |wrapper, avancement, total, cost, solution|
             block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
           }
           if result.class.name == 'Hash' # result.is_a?(Hash) not working
             result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
             parse_result(vrp, result)
           elsif result.class.name == 'String' # result.is_a?(String) not working
-            raise RuntimeError.new(result)
+            raise RuntimeError.new(result) unless result == "Job killed"
           else
             raise RuntimeError.new('No solution provided')
           end
@@ -222,8 +228,17 @@ module OptimizerWrapper
   end
 
   def self.job_kill(api_key, id)
+    res = Result.get(id)
+    if res && res['pids'] && !res['pids'].empty?
+      res['pids'].each{ |pid|
+        begin
+          Process.kill("KILL", pid)
+        rescue Errno::ESRCH
+          nil
+        end
+      }
+    end
     Result.remove(api_key, id)
-    Resque::Plugins::Status::Hash.kill(id)
   end
 
   def self.job_remove(api_key, id)
@@ -578,7 +593,8 @@ module OptimizerWrapper
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         if avancement && cost
-          p = Result.get(self.uuid) || {'graph' => []}
+          p = Result.get(self.uuid)
+          p.merge!({ 'graph' => [] }) if !p.has_key?('graph')
           p['graph'] << {iteration: avancement, cost: cost, time: time}
           Result.set(self.uuid, p)
         end

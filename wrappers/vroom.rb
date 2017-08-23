@@ -50,7 +50,7 @@ module Wrappers
       true
     end
 
-    def solve(vrp, job = nil, &block)
+    def solve(vrp, job = nil, thread_proc = nil, &block)
       if vrp.points.empty? || vrp.services.empty?
         return
       end

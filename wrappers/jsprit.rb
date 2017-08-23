@@ -47,9 +47,9 @@ module Wrappers
       ]
     end
 
-    def solve(vrp, job, &block)
+    def solve(vrp, job, thread_proc = nil, &block)
       @job = job
-      result = run_jsprit(vrp, @threads, &block)
+      result = run_jsprit(vrp, @threads, thread_proc, &block)
       if result && result.is_a?(Hash)
         vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
         result
@@ -78,7 +78,7 @@ module Wrappers
       }.nil?
     end
 
-    def run_jsprit(vrp, threads, &block)
+    def run_jsprit(vrp, threads, thread_proc = nil, &block)
       fleet = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
       builder = Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |xml|
         xml.problem(xmlns: 'http://www.w3schools.com', ' xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => 'http://www.w3schools.com vrp_xml_schema.xsd') {
@@ -323,6 +323,20 @@ module Wrappers
       }
       return if !@thread
 
+      pipe = @semaphore.synchronize {
+        IO.popen("ps -ef | grep #{@thread.pid}")
+      }
+
+      childs = pipe.readlines.map do |line|
+        parts = line.split(/\s+/)
+        parts[1].to_i if parts[2] == @thread.pid.to_s
+      end.compact || []
+      childs << @thread.pid
+
+      if thread_proc
+        thread_proc.call(childs)
+      end
+
       out = nil
       iterations = 0
       iterations_start = 0
@@ -351,6 +365,10 @@ module Wrappers
       if @thread.value == 0
         parse_output(output.path, iterations, fleet, vrp)
       else
+        if @thread.value == 9
+          out = "Job killed"
+          puts out # Keep trace in worker
+        end
         out
       end
     ensure

@@ -42,7 +42,7 @@ module Wrappers
       ]
     end
 
-    def solve(vrp, job, &block)
+    def solve(vrp, job, thread_proc = nil, &block)
 # FIXME or-tools can handle no end-point itself
       @job = job
 
@@ -210,9 +210,15 @@ module Wrappers
         matrices: matrices,
         relations: relations
       )
-
-      cost, iterations, result = run_ortools(problem, vrp, services, points, matrix_indices, &block)
-      return if !result
+      ret = run_ortools(problem, vrp, services, points, matrix_indices, thread_proc, &block)
+      case ret
+      when String
+        return ret
+      when Array
+        cost, iterations, result = ret
+      else
+        return ret
+      end
 
       parse_output(vrp, services, points, matrix_indices, cost, iterations, result)
     end
@@ -223,10 +229,7 @@ module Wrappers
     end
 
     def kill
-      @semaphore.synchronize {
-        Process.kill("KILL", @thread.pid)
-        @killed = true
-      }
+      @killed = true
     end
 
     private
@@ -321,7 +324,7 @@ module Wrappers
       }
     end
 
-    def run_ortools(problem, vrp, services, points, matrix_indices, &block)
+    def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close
@@ -340,7 +343,22 @@ module Wrappers
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
+
       return if !@thread
+
+      pipe = @semaphore.synchronize {
+        IO.popen("ps -ef | grep #{@thread.pid}")
+      }
+
+      childs = pipe.readlines.map do |line|
+        parts = line.split(/\s+/)
+        parts[1].to_i if parts[2] == @thread.pid.to_s
+      end.compact || []
+      childs << @thread.pid
+
+      if thread_proc
+        thread_proc.call(childs)
+      end
 
       out = ''
       iterations = 0
@@ -371,6 +389,10 @@ module Wrappers
           end
           [cost, iterations, result]
         end
+      elsif @thread.value == 9
+        out = "Job killed"
+        puts out # Keep trace in worker
+        out
       else
         raise RuntimeError.new(result)
       end
