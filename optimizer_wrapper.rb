@@ -223,8 +223,12 @@ module OptimizerWrapper
 
   def self.job_list(api_key)
     jobs = (JobList.get(api_key) || []).collect{ |e|
-      Resque::Plugins::Status::Hash.get(e)
-    }
+      if Resque::Plugins::Status::Hash.get(e)
+        Resque::Plugins::Status::Hash.get(e)
+      else
+        Result.remove(api_key, e)
+      end
+    }.compact
   end
 
   def self.job_kill(api_key, id)
