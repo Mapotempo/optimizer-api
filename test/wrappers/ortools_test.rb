@@ -113,6 +113,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
           iterations_without_improvment: 10,
           initial_time_out: 500,
           time_out_multiplier: 3
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -183,6 +186,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -251,6 +257,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -311,6 +320,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -370,6 +382,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -437,6 +452,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -495,6 +513,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -553,6 +574,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -621,6 +645,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -690,6 +717,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -763,6 +793,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -830,6 +863,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -903,6 +939,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1014,6 +1053,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1082,6 +1124,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1174,6 +1219,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1260,6 +1308,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1342,6 +1393,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1445,6 +1499,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1559,6 +1616,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1637,6 +1697,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1724,6 +1787,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1787,6 +1853,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         resolution: {
           duration: 10,
           vehicle_limit: 1
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1865,6 +1934,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1940,6 +2012,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -2030,6 +2105,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -2108,6 +2186,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -2188,6 +2269,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -2276,6 +2360,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -2352,6 +2439,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -2370,7 +2460,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
           resolution: {
               duration: 100
-          }
+          },
+        restitution: {
+          intermediate_solutions: false,
+        }
       },
       points: [{
           id: "point_0",

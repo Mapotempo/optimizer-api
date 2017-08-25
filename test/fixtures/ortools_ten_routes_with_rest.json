@@ -5638,7 +5638,7 @@
     "vehicles": [
       {
         "id": "v474",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5659,7 +5659,7 @@
       },
       {
         "id": "v475",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5680,7 +5680,7 @@
       },
       {
         "id": "v476",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5701,7 +5701,7 @@
       },
       {
         "id": "v477",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5722,7 +5722,7 @@
       },
       {
         "id": "v478",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5743,7 +5743,7 @@
       },
       {
         "id": "v479",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5764,7 +5764,7 @@
       },
       {
         "id": "v480",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5785,7 +5785,7 @@
       },
       {
         "id": "v481",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5806,7 +5806,7 @@
       },
       {
         "id": "v482",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -5827,7 +5827,7 @@
       },
       {
         "id": "v483",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -20470,6 +20470,9 @@
         "iterations_without_improvment": 100,
         "initial_time_out": 30000,
         "time_out_multiplier": 2
+      },
+      "restitution": {
+        "intermediate_solutions": false
       }
     }
   }

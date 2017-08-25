@@ -494,7 +494,7 @@
     "vehicles": [
       {
         "id": "v475",
-        "router_mode": "car_urban",
+        "router_mode": "car",
         "router_dimension": "time",
         "speed_multiplier": 1.5,
         "timewindow": {
@@ -1761,6 +1761,9 @@
         "iterations_without_improvment": 100,
         "initial_time_out": 3000,
         "time_out_multiplier": 2
+      },
+      "restitution": {
+        "intermediate_solutions": false
       }
     }
   }

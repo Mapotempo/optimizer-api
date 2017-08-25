@@ -9,6 +9,9 @@
             "resolution": {
                 "duration": 6000,
                 "iterations_whithout_improvment": 100
+            },
+            "restitution": {
+                "intermediate_solutions": false
             }
         },
         "points": [{

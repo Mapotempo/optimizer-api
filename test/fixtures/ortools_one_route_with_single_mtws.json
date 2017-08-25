@@ -455,6 +455,9 @@
                 "iterations_without_improvment": 100,
                 "initial_time_out": 6000,
                 "time_out_multiplier": 2
+            },
+            "restitution": {
+                "intermediate_solutions": false
             }
         }
     }

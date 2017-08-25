@@ -1071,7 +1071,8 @@ class WrapperTest < Minitest::Test
         },
         restitution: {
           geometry: true,
-          geometry_polyline: true
+          geometry_polyline: true,
+          intermediate_solutions: false,
         },
         resolution: {
           duration: 10
@@ -1124,7 +1125,8 @@ class WrapperTest < Minitest::Test
         },
         restitution: {
           geometry: true,
-          geometry_polyline: false
+          geometry_polyline: false,
+          intermediate_solutions: false,
         },
         resolution: {
           duration: 10
@@ -1181,7 +1183,8 @@ class WrapperTest < Minitest::Test
         },
         restitution: {
           geometry: true,
-          geometry_polyline: false
+          geometry_polyline: false,
+          intermediate_solutions: false,
         },
         resolution: {
           duration: 10
@@ -1287,7 +1290,8 @@ class WrapperTest < Minitest::Test
             restitution:
             {
                 geometry: true,
-                geometry_polyline: true
+                geometry_polyline: true,
+                intermediate_solutions: false,
             }
         }
     }
@@ -1364,7 +1368,8 @@ class WrapperTest < Minitest::Test
         },
         restitution: {
           geometry: true,
-          geometry_polyline: false
+          geometry_polyline: false,
+          intermediate_solutions: false,
         },
         resolution: {
           duration: 10
@@ -1448,7 +1453,8 @@ class WrapperTest < Minitest::Test
         },
         restitution: {
           geometry: true,
-          geometry_polyline: false
+          geometry_polyline: false,
+          intermediate_solutions: false,
         },
         resolution: {
           duration: 10
@@ -1511,6 +1517,9 @@ class WrapperTest < Minitest::Test
         },
         resolution: {
           duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
