@@ -164,6 +164,8 @@ module OptimizerWrapper
         end
       end
     }
+  rescue Resque::Plugins::Status::Killed
+    puts 'Job Killed'
   rescue Exception => e
     puts e
     puts e.backtrace
@@ -233,6 +235,7 @@ module OptimizerWrapper
 
   def self.job_kill(api_key, id)
     res = Result.get(id)
+    Resque::Plugins::Status::Hash.kill(id)
     if res && res['pids'] && !res['pids'].empty?
       res['pids'].each{ |pid|
         begin
@@ -242,6 +245,7 @@ module OptimizerWrapper
         end
       }
     end
+    @killed = true
     Result.remove(api_key, id)
   end
 
