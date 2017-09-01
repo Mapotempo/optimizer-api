@@ -10,6 +10,7 @@ services:
     volumes:
       - ./production.rb:/srv/app/config/environments/production.rb
       - ./production.rb:/srv/app/config/environments/development.rb
+    restart: always
     links:
       - redis-cache
     environment:
