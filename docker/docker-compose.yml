@@ -4,7 +4,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-latest}
+    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-55.0.0}
     ports:
       - "8083:80" # HOST:CONTAINER, edit only HOST part
     volumes:
