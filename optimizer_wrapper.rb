@@ -244,9 +244,10 @@ module OptimizerWrapper
           nil
         end
       }
+    else
+      Result.remove(api_key, id)
     end
     @killed = true
-    Result.remove(api_key, id)
   end
 
   def self.job_remove(api_key, id)
@@ -601,7 +602,7 @@ module OptimizerWrapper
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         if avancement && cost
-          p = Result.get(self.uuid)
+          p = Result.get(self.uuid) || { 'graph' => [] }
           p.merge!({ 'graph' => [] }) if !p.has_key?('graph')
           p['graph'] << {iteration: avancement, cost: cost, time: time}
           Result.set(self.uuid, p)
@@ -614,7 +615,12 @@ module OptimizerWrapper
       }
 
       p = Result.get(self.uuid) || {}
-      p['result'] = result
+      p['result'] = result if result
+
+      # Add values related to the current solve status
+      p['result']['iterations'] = p['graph'].last['iteration']
+      p['result']['elapsed'] = p['graph'].last['time']
+
       Result.set(self.uuid, p)
     end
 

@@ -368,6 +368,7 @@ module Wrappers
         if @thread.value == 9
           out = "Job killed"
           puts out # Keep trace in worker
+          out = parse_output(output.path, iterations, fleet, vrp) if cost
         end
         out
       end

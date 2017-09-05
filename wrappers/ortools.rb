@@ -392,7 +392,11 @@ module Wrappers
       elsif @thread.value == 9
         out = "Job killed"
         puts out # Keep trace in worker
-        out
+        if cost
+          [cost, iterations, result]
+        else
+          out
+        end
       else
         raise RuntimeError.new(result)
       end
