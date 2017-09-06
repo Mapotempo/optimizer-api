@@ -320,7 +320,7 @@ module Wrappers
             }]).compact
         }},
         unassigned: (vrp.services.collect(&:id) - result.flatten(1).collect{ |i| i.first < vrp.services.size && vrp.services[i.first].id }).collect{ |service_id| {service_id: service_id} } +
-        (vrp.shipments.collect(&:id) - result.flatten(1).collect{ |i| i.first >= vrp.services.size && i.first - vrp.services.size < vrp.shipments.size && vrp.shipments[i.first].id }).collect{ |shipment_id| {shipment_id: shipment_id} }
+        (vrp.shipments.collect(&:id) - result.flatten(1).collect{ |i| i.first >= vrp.services.size && i.first - vrp.services.size < vrp.shipments.size && vrp.shipments[i.first - vrp.services.size].id }).collect{ |shipment_id| {shipment_id: shipment_id} }
       }
     end
 
