@@ -59,16 +59,55 @@ class Api::V01::VrpTest < Minitest::Test
     }
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
-    assert JSON.parse(last_response.body)['job']['id']
+    job_id = JSON.parse(last_response.body)['job']['id']
+    assert job_id
 
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
+
+    delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+    assert_equal 204, last_response.status, last_response.body
   end
 
   def test_list_vrp
+    OptimizerWrapper.config[:solve_synchronously] = false
+    Resque.inline = false
+
+    vrp = {
+      points: [{
+        id: 'p1',
+        location: {
+          lat: 1,
+          lon: 2
+        }
+      }],
+      vehicles: [{
+        id: 'v1',
+        router_mode: 'car',
+        router_dimension: 'time'
+      }],
+      services: [{
+        id: 's1',
+        type: 'service',
+        activity: {
+          point_id: 'p1'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 1
+        }
+      }
+    }
+    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
+    job_id = JSON.parse(last_response.body)['job']['id']
+
     get '/0.1/vrp/jobs', {api_key: 'demo'}
     assert_equal 200, last_response.status, last_response.body
     assert JSON.parse(last_response.body)[0]
+
+    delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+    assert_equal 204, last_response.status, last_response.body
   end
 
   def test_real_problem_without_matrix
