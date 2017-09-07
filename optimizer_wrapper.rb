@@ -618,8 +618,10 @@ module OptimizerWrapper
       p['result'] = result if result
 
       # Add values related to the current solve status
-      p['result']['iterations'] = p['graph'].last['iteration']
-      p['result']['elapsed'] = p['graph'].last['time']
+      if p && p['graph'] && !p['graph'].empty?
+        p['result']['iterations'] = p['graph'].last['iteration']
+        p['result']['elapsed'] = p['graph'].last['time']
+      end
 
       Result.set(self.uuid, p)
     end
