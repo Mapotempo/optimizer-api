@@ -19,4 +19,9 @@ class CacheManager
     Api::Root.logger.warn("Got error #{error} attempting to write cache #{name}.")
     return nil
   end
+
+  def cleanup(options = nil)
+    @cache.cleanup(options)
+    return nil
+  end
 end

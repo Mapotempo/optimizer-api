@@ -16,6 +16,11 @@ Rake::TestTask.new do |t|
   t.pattern = "test/**/*_test.rb"
 end
 
+task clean_cache: :environment do
+  require './environment'
+  OptimizerWrapper.dump_vrp_cache.cleanup
+end
+
 task :environment do
   require './environment'
 end
