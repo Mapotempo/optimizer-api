@@ -320,13 +320,16 @@ module Api
               error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
             else
               solution = OptimizerWrapper::Result.get(id) || {}
-              if job.killed? || job.failed?
+              if job.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
+                status 404
+                error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
+              elsif job.failed?
                 status 202
                 present({
                   solutions: [solution['result']],
                   job: {
                     id: id,
-                    status: job.killed? ? :killed : :failed,
+                    status: :failed,
                     avancement: job.message,
                     graph: solution['graph']
                   }
@@ -387,7 +390,29 @@ module Api
               error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
-              status 204
+              solution = OptimizerWrapper::Result.get(id) || {}
+              if solution && !solution.empty?
+              status 202
+              job.status = "killed"
+              present({
+                solutions: [solution['result']],
+                job: {
+                  id: id,
+                  status: :killed,
+                  avancement: job.message,
+                  graph: solution['graph']
+                }
+              }, with: Grape::Presenters::Presenter)
+              else
+                status 202
+                present({
+                  job: {
+                    id: id,
+                    status: :killed,
+                  }
+                }, with: Grape::Presenters::Presenter)
+              end
+              OptimizerWrapper.job_remove(params[:api_key], id)
             end
           end
         end

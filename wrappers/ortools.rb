@@ -392,7 +392,7 @@ module Wrappers
       elsif @thread.value == 9
         out = "Job killed"
         puts out # Keep trace in worker
-        if cost
+        if cost && !result.include?('Iteration : ')
           [cost, iterations, result]
         else
           out

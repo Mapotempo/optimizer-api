@@ -244,10 +244,9 @@ module OptimizerWrapper
           nil
         end
       }
-    else
-      Result.remove(api_key, id)
     end
     @killed = true
+    Job.dequeue(Job, id)
   end
 
   def self.job_remove(api_key, id)
@@ -615,7 +614,9 @@ module OptimizerWrapper
       }
 
       p = Result.get(self.uuid) || {}
-      p['result'] = result if result
+      if result && !@killed && (!p['result'] || result[:cost] && result[:cost] < p['result']['cost'])
+        p['result'] = result
+      end
 
       # Add values related to the current solve status
       if p && p['graph'] && !p['graph'].empty?
