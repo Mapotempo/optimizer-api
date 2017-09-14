@@ -35,6 +35,7 @@ module Wrappers
     def solver_constraints
       super + [
         :assert_end_optimization,
+        :assert_vehicles_at_least_one,
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
         :assert_no_shipments_with_multiple_timewindows,
