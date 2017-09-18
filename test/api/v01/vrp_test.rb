@@ -322,4 +322,53 @@ class Api::V01::VrpTest < Minitest::Test
     assert last_response.body
     assert JSON.parse(last_response.body)['job']['status']['completed'] || JSON.parse(last_response.body)['job']['status']['queued']
   end
+
+  # Optimize each 5 routes
+  def test_vroom_optimize_each
+    OptimizerWrapper.config[:solve_synchronously] = false
+    Resque.inline = false
+
+    vrp = JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']
+    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
+    assert_equal 201, last_response.status, last_response.body
+    job_id = JSON.parse(last_response.body)['job']['id']
+    while last_response.body
+      sleep(1)
+      get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+      assert_equal 200, last_response.status, last_response.body
+      if JSON.parse(last_response.body)['job']['status'] == 'completed'
+        break
+      end
+    end
+    result = JSON.parse(last_response.body)
+    assert_equal 5, result['solutions'][0]['routes'].size
+
+    Resque.inline = true
+    OptimizerWrapper.config[:solve_synchronously] = true
+  end
+
+  # Optimize each 5 routes
+  def test_ortools_optimize_each
+    OptimizerWrapper.config[:solve_synchronously] = false
+    Resque.inline = false
+
+    vrp = JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']
+    post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
+    assert_equal 201, last_response.status, last_response.body
+    job_id = JSON.parse(last_response.body)['job']['id']
+    while last_response.body
+      sleep(1)
+      get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+      assert_equal 200, last_response.status, last_response.body
+      if JSON.parse(last_response.body)['job']['status'] == 'completed'
+        break
+      end
+    end
+
+    result = JSON.parse(last_response.body)
+    assert_equal 5, result['solutions'][0]['routes'].size
+
+    Resque.inline = true
+    OptimizerWrapper.config[:solve_synchronously] = true
+  end
 end
