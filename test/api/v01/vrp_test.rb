@@ -189,14 +189,14 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 1.upto(6).collect{ |i| "service_#{i}"}, JSON.parse(last_response.body)['solutions'][0]['routes'][0]['activities'][1..-2].collect{ |p| p['service_id'] }.sort_by{ |p| p[-1].to_i }
   end
 
-  def test_deleted_job
+  def test_deleted_job # The server must be running
     OptimizerWrapper.config[:solve_synchronously] = false
     Resque.inline = false
 
     vrp = {
       configuration: {
           resolution: {
-            duration: 100
+            duration: 2000
           },
         },
       points: [{
@@ -268,16 +268,22 @@ class Api::V01::VrpTest < Minitest::Test
         activity: {
           point_id: 'point_6'
         }
-      }],
+      }]
     }
 
     post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
-
+    while last_response.body
+      sleep(1)
+      get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+      assert_equal 200, last_response.status, last_response.body
+      if JSON.parse(last_response.body)['job']['status'] != 'queued'
+        break
+      end
+    end
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
-    sleep(2)
     delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     assert_equal 202, last_response.status, last_response.body
     assert !JSON.parse(last_response.body)["solutions"].first.empty?
