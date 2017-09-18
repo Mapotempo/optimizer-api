@@ -83,7 +83,7 @@ module OptimizerWrapper
   end
 
   def self.solve(services_vrps, job = nil, &block)
-    join_vrps(services_vrps, block) { |service, vrp, block|
+    real_result = join_vrps(services_vrps, block) { |service, vrp, block|
       apply_zones(vrp)
       if vrp.services.empty? && vrp.shipments.empty?
         {
@@ -164,6 +164,12 @@ module OptimizerWrapper
         end
       end
     }
+    if job
+      p = Result.get(job) || {}
+      p['result'] = real_result
+    end
+    Result.set(job, p) if job
+    real_result
   rescue Resque::Plugins::Status::Killed
     puts 'Job Killed'
   rescue Exception => e
