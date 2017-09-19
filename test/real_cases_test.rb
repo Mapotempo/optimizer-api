@@ -185,10 +185,10 @@ class RealCasesTest < Minitest::Test
       assert result
 
       # Check routes
-      assert_equal (vrp.vehicles.size - 1), result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal (vrp.vehicles.size), result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 35000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 58500, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check activities
       activities = result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
