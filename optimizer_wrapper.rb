@@ -121,7 +121,6 @@ module OptimizerWrapper
             block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
             # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
             matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, points, points, options)
-            raise RouterWrapperError.new("Matrix error: #{mode}#{dimensions}") unless matrices
             m = Models::Matrix.create({
               id: 'm' + (id+=1).to_s,
               time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),

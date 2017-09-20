@@ -120,8 +120,9 @@ module Routers
           case response.code
           when 200
             response
-          when 417
-            ''
+          # Disable to get info when no matrice is returned
+          # when 417
+          #   ''
           else
             response = (response && /json/.match(response.headers[:content_type]) && response.size > 1) ? JSON.parse(response) : nil
             raise RouterError.new(result.message + (response && response['message'] ? ' - ' + response['message'] : ''))
