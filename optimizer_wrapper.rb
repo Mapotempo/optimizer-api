@@ -281,8 +281,39 @@ module OptimizerWrapper
     }
   end
 
+  def self.route_details(vrp, route, vehicle)
+    previous = nil
+    details = nil
+    segments = route[:activities].collect{ |activity|
+      if !activity[:rest_id]
+        current = nil
+        if activity[:point_id]
+          current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
+        elsif activity[:service_id]
+          current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
+        elsif activity[:pickup_shipment_id]
+          current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
+        elsif activity[:delivery_shipment_id]
+          current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
+        end
+        segment = if previous && current
+          [previous[:location][:lat], previous[:location][:lon], current[:location][:lat], current[:location][:lon]]
+        end
+        previous = current
+        segment
+      end
+    }.compact
+     if segments.size > 0
+      details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
+        vehicle[:router_mode].to_sym, vehicle[:router_dimension], segments, vrp.restitution_geometry_polyline, vehicle.router_options)
+      raise RouterWrapperError unless details
+    end
+    details
+  end
+
   def self.parse_result(vrp, result)
     result[:routes].each{ |r|
+      details = nil
       v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
       if r[:end_time] && r[:start_time]
         r[:total_time] = r[:end_time] - r[:start_time]
@@ -291,34 +322,25 @@ module OptimizerWrapper
       end
       if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.distance
         r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
+      elsif vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }[:distance].nil? && r[:activities].size > 1 && vrp.points.all? { |point| point.location }
+        details = route_details(vrp, r, v)
+        if details
+          r[:total_distance] = details.collect{ |detail| detail.first}.reduce(:+)
+          index = 0
+          r[:activities][1..-1].each{ |activity|
+            if activity[:rest_id]
+            else
+              activity[:travel_distance] = details[index].first
+              index += 1
+            end
+          }
+        end
       end
       if vrp.restitution_geometry && r[:activities].size > 1
-        previous = nil
-        segments = r[:activities].collect{ |activity|
-          if !activity[:rest_id]
-            current = nil
-            if activity[:point_id]
-              current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
-            elsif activity[:service_id]
-              current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
-            elsif activity[:pickup_shipment_id]
-              current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
-            elsif activity[:delivery_shipment_id]
-              current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
-            end
-            segment = if previous && current
-              [previous[:location][:lat], previous[:location][:lon], current[:location][:lat], current[:location][:lon]]
-            end
-            previous = current
-            segment
-          end
-        }.compact
-        r[:geometry] = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
-          v[:router_mode].to_sym, v[:router_dimension], [segments], vrp.restitution_geometry_polyline, v.router_options)[0][2]
-        raise RouterWrapperError unless r[:geometry]
+        details = route_details(vrp, r, v) if details.nil?
+        r[:geometry] = details.collect{ |segment| segment.last } if details
       end
     }
-
     if result[:routes].all?{ |r| r[:total_time] }
       result[:total_time] = result[:routes].collect{ |r|
         r[:total_time]
@@ -567,7 +589,7 @@ module OptimizerWrapper
             a = {
               point_id: (original_vrp.services[index].activity.point_id if original_vrp.services[index].id),
               travel_time: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0,
-              travel_distance: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance]  ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
+              travel_distance: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
               # travel_start_time: 0, # TODO: from matrix_time
               # arrival_time: 0, # TODO: from matrix_time
               # departure_time: 0, # TODO: from matrix_time
