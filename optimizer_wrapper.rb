@@ -325,7 +325,7 @@ module OptimizerWrapper
       elsif vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }[:distance].nil? && r[:activities].size > 1 && vrp.points.all? { |point| point.location }
         details = route_details(vrp, r, v)
         if details
-          r[:total_distance] = details.collect{ |detail| detail.first}.reduce(:+)
+          r[:total_distance] = details.collect{ |detail| detail.first}.compact.reduce(:+)
           index = 0
           r[:activities][1..-1].each{ |activity|
             if activity[:rest_id]
