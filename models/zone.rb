@@ -22,6 +22,8 @@ module Models
     field :polygon
     field :allocations, default: []
 
+    has_many :vehicles, class_name: 'Models::Vehicle'
+
     def decode_geom
       @geom = RGeo::GeoJSON.decode(polygon.to_json, json_parser: :json)
     end

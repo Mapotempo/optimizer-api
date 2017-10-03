@@ -50,6 +50,7 @@ module OptimizerWrapper
 
   def self.wrapper_vrp(api_key, services, vrp, checksum)
     inapplicable_services = []
+    apply_zones(vrp)
     services_vrps = split_vrp(vrp).map{ |vrp_element|
       {
         service: services[:services][:vrp].find{ |s|
@@ -84,7 +85,6 @@ module OptimizerWrapper
 
   def self.solve(services_vrps, job = nil, &block)
     real_result = join_vrps(services_vrps, block) { |service, vrp, block|
-      apply_zones(vrp)
       if vrp.services.empty? && vrp.shipments.empty?
         {
           costs: 0,
@@ -190,6 +190,7 @@ module OptimizerWrapper
       sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
       sub_vrp.vehicles = vrp.vehicles.select{ |v| v.id == vehicle.id }
       sub_vrp.services = services
+      sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id }}}
       sub_vrp.configuration = {
         preprocessing: {
           cluster_threshold: vrp.preprocessing_cluster_threshold,
@@ -223,7 +224,7 @@ module OptimizerWrapper
       cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
       routes: results.map{ |r| r[:routes][0] }.compact,
       unassigned: results.flat_map{ |r| r[:unassigned] }.compact,
-      elapsed: results.map{ |r| r[:elapsed] }.reduce(&:+),
+      elapsed: results.map{ |r| r[:elapsed] || 0 }.reduce(&:+),
       total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+)
     }
   end
@@ -359,13 +360,13 @@ module OptimizerWrapper
   def self.apply_zones(vrp)
     vrp.zones.each{ |zone|
       if !zone.allocations.empty?
-        vehicles = if zone.allocations.size == 1
+        zone.vehicles = if zone.allocations.size == 1
           zone.allocations[0].collect { |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id }}.compact
         else
           zone.allocations.collect{ |allocation| vrp.vehicles.find{ |vehicle| vehicle.id == allocation.first }}.compact
         end
-        if !vehicles.compact.empty?
-          vehicles.each { |vehicle|
+        if !zone.vehicles.compact.empty?
+          zone.vehicles.each { |vehicle|
             if vehicle.skills.empty?
               vehicle.skills = [[zone[:id]]]
             else
@@ -380,23 +381,30 @@ module OptimizerWrapper
         related_ids = vrp.services.collect{ |service|
           activity_point = vrp.points.find{ |point| point.id == service.activity.point_id }
           if zone.inside(activity_point.location.lat, activity_point.location.lon)
+            service.sticky_vehicles += zone.vehicles
+            service.sticky_vehicles.uniq!
             service.skills += [zone[:id]]
             service.id
           end
         }.compact + vrp.shipments.collect{ |shipment|
           shipments_ids = []
           pickup_point = vrp.points.find{ |point| point[:id] == shipment[:pickup][:point_id] }
+          delivery_point = vrp.points.find{ |point| point[:id] == shipment[:delivery][:point_id] }
+          if zone.inside(pickup_point[:location][:lat], pickup_point[:location][:lon]) && zone.inside(delivery_point[:location][:lat], delivery_point[:location][:lon])
+            shipment.sticky_vehicles += zone.vehicles
+            shipment.sticky_vehicles.uniq!
+          end
           if zone.inside(pickup_point[:location][:lat], pickup_point[:location][:lon])
             shipment.skills += [zone[:id]]
             shipments_ids << shipment.id + "pickup"
           end
-          delivery_point = vrp.points.find{ |point| point[:id] == shipment[:delivery][:point_id] }
           if zone.inside(delivery_point[:location][:lat], delivery_point[:location][:lon])
             shipment.skills += [zone[:id]]
             shipments_ids << shipment.id + "delivery"
           end
-          shipments_ids
+          shipments_ids.uniq
         }.compact
+        # Remove zone allocation verification if we need to assign zone without vehicle affectation together
         if !zone.allocations.empty? && zone.allocations.size > 1 && !related_ids.empty? && related_ids.size > 1
           vrp.relations += [{
             type: :same_route,

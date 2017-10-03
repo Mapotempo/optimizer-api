@@ -1377,7 +1377,7 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, Models::Vrp.create(problem), nil)
     assert_equal result[:routes][0][:activities].size, 2
     assert_equal result[:routes][1][:activities].size, 2
   end
@@ -1462,7 +1462,7 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, Models::Vrp.create(problem), nil)
     assert_equal 1, result[:routes][0][:activities].size
     assert_equal 2, result[:routes][1][:activities].size
     assert_equal 1, result[:unassigned].size
