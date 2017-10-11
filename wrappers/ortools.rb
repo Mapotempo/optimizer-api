@@ -70,9 +70,8 @@ module Wrappers
           ) },
           quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
+            q && q.value ? (service.type.to_s == "delivery" ? -1 : 1) * (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
           },
-          type: service.type.to_s,
           duration: service.activity.duration,
           additional_value: service.activity.additional_value,
           priority: service.priority,
@@ -112,7 +111,6 @@ module Wrappers
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
             q && q.value ? (q.value*1000+0.5).to_i : 0
           },
-          type: 'pickup',
           duration: shipment.pickup.duration,
           additional_value: shipment.pickup.additional_value,
           priority: shipment.priority,
@@ -130,7 +128,6 @@ module Wrappers
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
             q && q.value ? (q.value*1000+0.5).to_i : 0
           },
-          type: 'delivery',
           duration: shipment.delivery.duration,
           additional_value: shipment.delivery.additional_value,
           priority: shipment.priority,
