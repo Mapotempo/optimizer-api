@@ -19,6 +19,7 @@ require 'grape'
 require 'grape-swagger'
 require 'date'
 require 'digest/md5'
+require 'csv'
 
 
 require './api/v01/api_base'
@@ -27,9 +28,36 @@ require './api/v01/entities/vrp_result'
 
 module Api
   module V01
+    module CSVParser
+      def self.call(object, env)
+        # TODO use encoding from Content-Type or detect it.
+        CSV.parse(object.force_encoding('utf-8'), headers: true).collect{ |row|
+          r = row.to_h
+
+          r.keys.each{ |key|
+            if key.include?('.')
+              part = key.split('.', 2)
+              r.deep_merge!({part[0] => {part[1] => r[key]}})
+              r.delete(key)
+            end
+          }
+
+          json = r['json']
+          if json # Open the secret short cut
+            r.delete('json')
+            r.deep_merge!(JSON.parse(json))
+          end
+
+          r
+        }
+      end
+    end
+
     class Vrp < APIBase
       content_type :json, 'application/json; charset=UTF-8'
       content_type :xml, 'application/xml'
+      content_type :csv, 'text/csv;'
+      parser :csv, CSVParser
       default_format :json
 
       def self.vrp_request_timewindow(this)
@@ -265,7 +293,7 @@ module Api
             detail: ''
           }
           params {
-            optional(:vrp, type: Hash) do
+            optional(:vrp, type: Hash, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
               optional(:matrices, type: Array, desc: 'Define all the distances between each point of problem') do
                 Vrp.vrp_request_matrices(self)
               end
@@ -317,6 +345,22 @@ module Api
                 end
               end
             end
+
+            optional :points, type: Array, desc: 'Particular place in the map', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+              Vrp.vrp_request_point(self)
+            end
+
+            optional :services, type: Array, desc: 'Independant activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+              Vrp.vrp_request_service(self)
+            end
+
+            optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) }) do
+              Vrp.vrp_request_shipment(self)
+            end
+
+            optional(:vehicles, type: Array, desc: 'Usually represent a work day of a particular driver/vehicle', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) }) do
+              Vrp.vrp_request_vehicle(self)
+            end
           }
           post do
             begin
@@ -326,7 +370,12 @@ module Api
               end
               vrp = ::Models::Vrp.create({})
               [:matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :relations, :configuration].each{ |key|
-                (vrp.send "#{key}=", params[:vrp][key]) if params[:vrp][key]
+                if params[:vrp] && params[:vrp][key]
+                  (vrp.send "#{key}=", params[:vrp][key])
+                end
+                if params[key]
+                  (vrp.send("#{key}+=", params[key]))
+                end
               }
               if !vrp.valid?
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
