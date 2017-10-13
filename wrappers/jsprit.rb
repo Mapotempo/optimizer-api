@@ -68,6 +68,38 @@ module Wrappers
 
     private
 
+    def build_timewindows(activity, day_index)
+      activity.timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index}.collect{ |timewindow|
+        {
+          start: timewindow.start,
+          end: timewindow.end
+        }
+      }
+    end
+
+    def build_quantities(job)
+      job.quantities.collect{ |quantity|
+        {
+          unit: quantity.unit,
+          value: quantity.value,
+          setup_value: quantity.unit.counting ? quantity.setup_value : 0
+        }
+      }
+    end
+
+    def build_detail(job, activity, point, day_index)
+      {
+        lat: point && point.location && point.location.lat,
+        lon: point && point.location && point.location.lon,
+        skills: job.skills,
+        setup_duration: activity.setup_duration,
+        duration: activity.duration,
+        additional_value: activity.additional_value,
+        timewindows: build_timewindows(activity, day_index),
+        quantities: build_quantities(job)
+      }.delete_if{ |k,v| !v }.compact
+    end
+
     def assert_end_optimization(vrp)
       vrp.resolution_duration || vrp.resolution_iterations || vrp.resolution_iterations_without_improvment
     end
@@ -393,34 +425,38 @@ module Wrappers
 
             if route_index
               route = solution.xpath('routes/route')[route_index]
-              previous = fleet[route.at_xpath('vehicleId').content].start_point ? fleet[route.at_xpath('vehicleId').content].start_point.matrix_index : nil
+              previous_index = fleet[route.at_xpath('vehicleId').content].start_point ? fleet[route.at_xpath('vehicleId').content].start_point.matrix_index : nil
               {
                 vehicle_id: route.at_xpath('vehicleId').content,
                 start_time: Float(route.at_xpath('start').content),
                 end_time: Float(route.at_xpath('end').content),
-                activities: (fleet[route.at_xpath('vehicleId').content].start_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].start_point.id }] : []) +
+                activities: ((fleet[route.at_xpath('vehicleId').content].start_point ? [{
+                  point_id: fleet[route.at_xpath('vehicleId').content].start_point.id,
+                  detail: vehicle.start_point.location ? {
+                    lat: vehicle.start_point.location.lat,
+                    lon: vehicle.start_point.location.lon
+                  } : nil
+                }.delete_if{ |k,v| !v }] : []) +
                 route.xpath('act').collect{ |act|
-                  point = case act['type']
+                  job = nil
+                  activity = nil
+                  case act['type']
                   when 'delivery', 'service', 'pickup'
-                    vrp.services.find{ |service| service[:id] == act.at_xpath('serviceId').content }.activity.point[:matrix_index]
+                    job = vrp.services.find{ |service| service[:id] == act.at_xpath('serviceId').content }
+                    activity = job.activity
                   when 'pickupShipment'
-                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup.point[:matrix_index]
+                    job = vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }
+                    activity = job.pickup
                   when 'deliverShipment'
-                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.delivery.point[:matrix_index]
-                  else
-                    previous
-                  end
-
-                  duration = case act['type']
-                  when 'delivery', 'service', 'pickup'
-                    vrp.services.find{ |service| service[:id] == act.at_xpath('serviceId').content }.activity[:duration]
-                  when 'pickupShipment'
-                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.pickup[:duration]
-                  when 'deliverShipment'
-                    vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }.delivery[:duration]
+                    job = vrp.shipments.find{ |shipment| shipment[:id] == act.at_xpath('shipmentId').content }
+                    activity = job.delivery
                   when 'break'
-                    vrp.rests.find{ |rest| rest[:id] == act.at_xpath('breakId').content }[:duration]
+                    job = vrp.rests.find{ |rest| rest[:id] == act.at_xpath('breakId').content }
+                    activity = job
                   end
+                  point = act['type'] == 'break' ? nil : activity.point
+                  point_index = act['type'] == 'break' ? previous_index : activity.point[:matrix_index]
+                  duration = activity[:duration]
 
                   current_activity = {
   #                  activity: act.attr('type').to_sym,
@@ -428,28 +464,44 @@ module Wrappers
                     delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
                     service_id: (a = act.at_xpath('serviceId')) && a && a.content,
                     rest_id: (a = act.at_xpath('breakId')) && a && a.content,
-                    travel_time: (previous && point && vrp.matrices[0].time ? vrp.matrices[0].time[previous][point] : 0),
-                    travel_distance: (previous && point && vrp.matrices[0].distance ? vrp.matrices[0].distance[previous][point] : 0),
+                    travel_time: (previous_index && point_index && vrp.matrices[0].time ? vrp.matrices[0].time[previous_index][point_index] : 0),
+                    travel_distance: (previous_index && point_index && vrp.matrices[0].distance ? vrp.matrices[0].distance[previous_index][point_index] : 0),
                     begin_time: (a = act.at_xpath('endTime')) && a && Float(a.content) - duration,
                     departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
+                    detail: build_detail(job, activity, act['type'] == 'break' ? nil : point, nil)
                   }.delete_if { |k, v| !v }
-                  previous = point
+                  previous_index = point_index
                   current_activity
-                } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{ point_id: fleet[route.at_xpath('vehicleId').content].end_point.id }] : [])
+                } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{
+                  point_id: fleet[route.at_xpath('vehicleId').content].end_point.id,
+                  detail: vehicle.end_point.location ? {
+                    lat: vehicle.end_point.location.lat,
+                    lon: vehicle.end_point.location.lon
+                  } : nil
+                }.delete_if{ |k,v| !v }] : [])).compact
               }
             else
               {
                 vehicle_id: vehicle.id,
                 activities:
                   ([vehicle.start_point && {
-                    point_id: vehicle.start_point.id
-                  }] +
+                    point_id: vehicle.start_point.id,
+                    detail: vehicle.start_point.location ? {
+                      lat: vehicle.start_point.location.lat,
+                      lon: vehicle.start_point.location.lon
+                    } : nil
+                  }.delete_if{ |k,v| !v }] +
                   (vehicle.rests.empty? ? [nil] : [{
-                    rest_id: vehicle.rests[0].id
+                    rest_id: vehicle.rests[0].id,
+                    detail: build_detail(rest, rest, nil, nil)
                   }]) +
                   [vehicle.end_point && {
-                    point_id: vehicle.end_point.id
-                  }]).compact
+                    point_id: vehicle.end_point.id,
+                    detail: vehicle.end_point.location ? {
+                      lat: vehicle.end_point.location.lat,
+                      lon: vehicle.end_point.location.lon
+                    } : nil
+                  }.delete_if{ |k,v| !v }]).compact
               }
             end
           },

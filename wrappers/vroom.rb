@@ -105,14 +105,21 @@ module Wrappers
       block.call(self, 1, 1, cost, nil) if block
       previous = vehicle_have_start ? vehicle.start_point.matrix_index : nil
       activities = ([vehicle_have_start ? {
-          point_id: vehicle.start_point.id
-        } : nil] +
+          point_id: vehicle.start_point.id,
+          detail: vehicle.start_point.location ? {
+            lat: vehicle.start_point.location.lat,
+            lon: vehicle.start_point.location.lon
+          } : nil
+        }.delete_if{ |k,v| !v } : nil] +
         tour.collect{ |i|
-          point = vrp.services[i - 1].activity.point[:matrix_index]
+          point_index = vrp.services[i - 1].activity.point[:matrix_index]
+          point = vrp.points[point_index]
+          service = vrp.services[i - 1]
           current_activity = {
-            service_id: vrp.services[i - 1].id,
-            travel_time: (previous && point && vrp.matrices[0][:time] ? vrp.matrices[0][:time][previous][point] : 0),
-            travel_distance: (previous && point && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][previous][point] : 0)
+            service_id: service.id,
+            travel_time: (previous && point_index && vrp.matrices[0][:time] ? vrp.matrices[0][:time][previous][point_index] : 0),
+            travel_distance: (previous && point_index && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][previous][point_index] : 0),
+            detail: build_detail(service, service.activity, point, nil)
 #          travel_distance 0,
 #          travel_start_time 0,
 #          waiting_duration 0,
@@ -121,12 +128,16 @@ module Wrappers
 #          pickup_shipments_id [:id0:],
 #          delivery_shipments_id [:id0:]
           }
-          previous = point
+          previous = point_index
           current_activity
         } +
         [vehicle_have_end ? {
-          point_id: vehicle.end_point.id
-        } : nil]).compact
+          point_id: vehicle.end_point.id,
+          detail: vehicle.end_point.location ? {
+            lat: vehicle.end_point.location.lat,
+            lon: vehicle.end_point.location.lon
+          } : nil
+        }.delete_if{ |k,v| !v } : nil]).compact
 
       rests = vehicle.rests
       if vehicle.timewindow && vehicle.timewindow.start
@@ -165,6 +176,14 @@ module Wrappers
     end
 
     private
+
+    def build_detail(job, activity, point, day_index)
+      {
+        lat: point && point.location && point.location.lat,
+        lon: point && point.location && point.location.lon,
+        duration: activity.duration
+      }
+    end
 
     def assert_vehicles_no_end_time_or_late_multiplier(vrp)
       vrp.vehicles.empty? || vrp.vehicles.all?{ |vehicle|

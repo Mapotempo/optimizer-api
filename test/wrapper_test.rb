@@ -1465,7 +1465,7 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, Models::Vrp.create(problem), nil)
     assert_equal 1, result[:routes][0][:activities].size
     assert_equal 2, result[:routes][1][:activities].size
-    assert_equal 1, result[:unassigned].size
+    assert_equal 2, result[:unassigned].size
   end
 
   def test_shipments_result

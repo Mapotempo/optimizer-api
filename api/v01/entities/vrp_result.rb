@@ -20,6 +20,29 @@
 
 module Api
   module V01
+
+    class VrpResultSolutionRouteActivityDetailTimewindows < Grape::Entity
+      expose :start, documentation: { type: Integer, desc: '' }
+      expose :end, documentation: { type: Integer, desc: '' }
+    end
+
+    class VrpResultSolutionRouteActivityDetailQuantities < Grape::Entity
+      expose :unit, documentation: { type: String, desc: '' }
+      expose :value, documentation: { type: Float, desc: '' }
+      expose :setup_value, documentation: { type: Float, desc: '' }
+    end
+
+    class VrpResultSolutionRouteActivityDetails < Grape::Entity
+      expose :lat, documentation: { type: Float, desc: '' }
+      expose :lon, documentation: { type: Float, desc: '' }
+      expose :skills, documentation: { type: Array[String], desc: '' }
+      expose :setup_duration, documentation: { type: Integer, desc: '' }
+      expose :duration, documentation: { type: Integer, desc: '' }
+      expose :additional_value, documentation: { type: Integer, desc: '' }
+      expose :quantities, using: VrpResultSolutionRouteActivityDetailQuantities, documentation: { is_array: true, desc: '' }
+      expose :timewindows, using: VrpResultSolutionRouteActivityDetailTimewindows, documentation: { is_array: true, desc: '' }
+    end
+
     class VrpResultSolutionRouteActivities < Grape::Entity
       expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
       expose :travel_distance, documentation: { type: Integer, desc: 'travel distance from the previous point' }
@@ -30,6 +53,7 @@ module Api
       expose :service_id, documentation: { type: String, desc: '' }
       expose :pickup_shipment_id, documentation: { type: String, desc: '' }
       expose :delivery_shipment_id, documentation: { type: String, desc: '' }
+      expose :detail, using: VrpResultSolutionRouteActivityDetails, documentation: { desc: '' }
     end
 
     class VrpResultSolutionRoute < Grape::Entity
