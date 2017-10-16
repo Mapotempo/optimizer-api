@@ -51,7 +51,7 @@ module OptimizerWrapper
   def self.wrapper_vrp(api_key, services, vrp, checksum)
     inapplicable_services = []
     apply_zones(vrp)
-    services_vrps = split_vrp(vrp).map{ |vrp_element|
+    services_vrps = split_vrp(Interpreters::PeriodicVisits.expand(vrp)).map{ |vrp_element|
       {
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
@@ -135,7 +135,6 @@ module OptimizerWrapper
             vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.router_options]] }.id
           }
         end
-        vrp = Interpreters::PeriodicVisits.expand(vrp)
 
         File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
