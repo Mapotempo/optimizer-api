@@ -268,6 +268,7 @@ module Api
         this.optional(:geometry, type: Boolean, desc: 'Allow to return the polyline of each route')
         this.optional(:geometry_polyline, type: Boolean, desc: 'Encode the polyline')
         this.optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
+        this.optional(:csv, type: Boolean, desc: 'The output is a CSV file')
       end
 
       def self.vrp_request_schedule(this)
@@ -434,37 +435,49 @@ module Api
                 error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
               elsif job.failed?
                 status 202
-                present({
-                  solutions: [solution['result']],
-                  job: {
-                    id: id,
-                    status: :failed,
-                    avancement: job.message,
-                    graph: solution['graph']
-                  }
-                }, with: Grape::Presenters::Presenter)
+                if solution['csv']
+                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+                else
+                  present({
+                    solutions: [solution['result']],
+                    job: {
+                      id: id,
+                      status: :failed,
+                      avancement: job.message,
+                      graph: solution['graph']
+                    }
+                  }, with: Grape::Presenters::Presenter)
+                end
               elsif !job.completed?
-                status 200
-                present({
-                  solutions: [solution['result']],
-                  job: {
-                    id: id,
-                    status: job.queued? ? :queued : job.working? ? :working : nil,
-                    avancement: job.message,
-                    graph: solution['graph']
-                  }
-                }, with: Grape::Presenters::Presenter)
+                status 206
+                if solution['csv']
+                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+                else
+                  present({
+                    solutions: [solution['result']],
+                    job: {
+                      id: id,
+                      status: job.queued? ? :queued : job.working? ? :working : nil,
+                      avancement: job.message,
+                      graph: solution['graph']
+                    }
+                  }, with: Grape::Presenters::Presenter)
+                end
               else
                 status 200
-                present({
-                  solutions: [solution['result']],
-                  job: {
-                    id: id,
-                    status: :completed,
-                    avancement: job.message,
-                    graph: solution['graph']
-                  }
-                }, with: Grape::Presenters::Presenter)
+                if solution['csv']
+                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+                else
+                  present({
+                    solutions: [solution['result']],
+                    job: {
+                      id: id,
+                      status: :completed,
+                      avancement: job.message,
+                      graph: solution['graph']
+                    }
+                  }, with: Grape::Presenters::Presenter)
+                end
                 OptimizerWrapper.job_remove(params[:api_key], id)
               end
             end
@@ -501,17 +514,21 @@ module Api
               OptimizerWrapper.job_kill(params[:api_key], id)
               solution = OptimizerWrapper::Result.get(id) || {}
               if solution && !solution.empty?
-              status 202
-              job.status = "killed"
-              present({
-                solutions: [solution['result']],
-                job: {
-                  id: id,
-                  status: :killed,
-                  avancement: job.message,
-                  graph: solution['graph']
-                }
-              }, with: Grape::Presenters::Presenter)
+                status 202
+                job.status = "killed"
+                if solution['csv']
+                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+                else
+                  present({
+                    solutions: [solution['result']],
+                    job: {
+                      id: id,
+                      status: :killed,
+                      avancement: job.message,
+                      graph: solution['graph']
+                    }
+                  }, with: Grape::Presenters::Presenter)
+                end
               else
                 status 202
                 present({

@@ -274,10 +274,11 @@ class Api::V01::VrpTest < Minitest::Test
     post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
+    get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     while last_response.body
-      sleep(1)
+      sleep(0.5)
+      assert_equal 206, last_response.status, last_response.body
       get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
-      assert_equal 200, last_response.status, last_response.body
       if JSON.parse(last_response.body)['job']['status'] != 'queued'
         break
       end
@@ -332,10 +333,11 @@ class Api::V01::VrpTest < Minitest::Test
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
+    get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     while last_response.body
       sleep(1)
+      assert_equal 206, last_response.status, last_response.body
       get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
-      assert_equal 200, last_response.status, last_response.body
       if JSON.parse(last_response.body)['job']['status'] == 'completed'
         break
       end
@@ -356,10 +358,11 @@ class Api::V01::VrpTest < Minitest::Test
     post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
+    get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     while last_response.body
       sleep(1)
+      assert_equal 206, last_response.status, last_response.body
       get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
-      assert_equal 200, last_response.status, last_response.body
       if JSON.parse(last_response.body)['job']['status'] == 'completed'
         break
       end
@@ -370,5 +373,109 @@ class Api::V01::VrpTest < Minitest::Test
 
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
+  end
+
+  def test_csv_configuration
+    OptimizerWrapper.config[:solve_synchronously] = false
+    Resque.inline = false
+
+    vrp = {
+      configuration: {
+          resolution: {
+            duration: 500
+          },
+          restitution: {
+            csv: true
+          }
+        },
+      points: [{
+        id: 'point_0',
+        location: {lat: 45.288798, lon: 4.951565}
+      }, {
+        id: 'point_1',
+        location: {lat: 45.6047844887, lon: 4.7589656711}
+      }, {
+        id: 'point_2',
+        location: {lat: 45.6047844887, lon: 4.7589656711}
+      }, {
+        id: 'point_3',
+        location: {lat: 45.344334, lon: 4.817731}
+      }, {
+        id: 'point_4',
+        location: {lat: 45.5764120817, lon: 4.8056146502}
+      }, {
+        id: 'point_5',
+        location: {lat: 45.5764120817, lon: 4.8056146502}
+      }, {
+        id: 'point_6',
+        location: {lat: 45.2583248913, lon: 4.6873225272}
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 50000
+        },
+        router_mode: 'car',
+        router_dimension: 'distance',
+      }],
+      services: [{
+        id: 'service_1',
+        type: 'service',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        type: 'service',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        type: 'service',
+        activity: {
+          point_id: 'point_3'
+        }
+      }, {
+        id: 'service_4',
+        type: 'service',
+        activity: {
+          point_id: 'point_4'
+        }
+      }, {
+        id: 'service_5',
+        type: 'service',
+        activity: {
+          point_id: 'point_5'
+        }
+      }, {
+        id: 'service_6',
+        type: 'service',
+        activity: {
+          point_id: 'point_6'
+        }
+      }]
+    }
+
+    post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
+    assert_equal 201, last_response.status, last_response.body
+    job_id = JSON.parse(last_response.body)['job']['id']
+
+    get "0.1/vrp/jobs/#{job_id}.csv", {api_key: 'demo'}
+    while last_response.status
+      sleep(1)
+      assert_equal 206, last_response.status, last_response.body
+      get "0.1/vrp/jobs/#{job_id}.csv", {api_key: 'demo'}
+      if last_response.status != 206
+        break
+      end
+    end
+    Resque.inline = true
+    OptimizerWrapper.config[:solve_synchronously] = true
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal 9, last_response.body.count("\n")
   end
 end

@@ -145,6 +145,9 @@ module OptimizerWrapper
           result = OptimizerWrapper.config[:services][service].solve(vrp, job, Proc.new{ |pids|
               if job
                 actual_result = Result.get(job) || { 'pids' => nil }
+                if vrp[:restitution_csv]
+                  actual_result['csv'] = true
+                end
                 actual_result['pids'] = pids
                 Result.set(job, actual_result)
               end
@@ -167,6 +170,7 @@ module OptimizerWrapper
       p['result'] = real_result
     end
     Result.set(job, p) if job
+
     real_result
   rescue Resque::Plugins::Status::Killed
     puts 'Job Killed'
@@ -218,7 +222,6 @@ module OptimizerWrapper
         callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
       } : nil)
     }
-
     services_vrps.size == 1 ? results[0] : {
       cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
       routes: results.map{ |r| r[:routes][0] }.compact,
@@ -256,6 +259,70 @@ module OptimizerWrapper
 
   def self.job_remove(api_key, id)
     Result.remove(api_key, id)
+  end
+
+  def self.build_csv(solution)
+
+    header = ['vehicle_id','id','lat','lon','setup_duration','duration','additional_value']
+    quantities_header = []
+    quantities_id = []
+    if solution
+      solution['routes'].each{ |route|
+        route['activities'].each{ |activity|
+          if activity['detail'] && activity['detail']['quantities']
+            activity['detail']['quantities'].each{ |quantity|
+              quantities_id << quantity['unit']['id']
+              quantities_header << quantity['unit']['label']
+            }
+          end
+        }
+      }
+
+      quantities_header.uniq!
+      quantities_id.uniq!
+
+      max_timewindows_size = solution['routes'].collect{ |route|
+        route['activities'].collect{ |activity|
+          if activity['detail'] && activity['detail']['timewindows']
+            activity['detail']['timewindows'].size
+          end
+        }.compact
+      }.flatten.max
+      timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
+        ["timewindow_start_#{index}", "timewindow_end_#{index}"]
+      }.flatten
+      csv = CSV.generate{ |out_csv|
+        out_csv << (header + quantities_header.compact.flatten + timewindows_header)
+        solution['routes'].each{ |route|
+          route['activities'].each{ |activity|
+            common = [
+              route['vehicle_id'],
+              activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['point_id'],
+              activity['detail']['lat'],
+              activity['detail']['lon'],
+              activity['detail']['setup_duration'] || 0,
+              activity['detail']['duration'] || 0,
+              activity['detail']['additional_value'] || 0,
+            ]
+            timewindows = (0..max_timewindows_size-1).collect{ |index|
+              if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
+                [activity['detail']['timewindows'][0]['start'] || '', activity['detail']['timewindows'][0]['end'] || '']
+              else
+                ['','']
+              end
+            }.flatten
+            quantities = quantities_id.collect{ |id|
+              if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['id'] == id }
+                activity['detail']['quantities'].find{ |quantity| quantity['unit']['id'] == id }['value']
+              else
+                ''
+              end
+            }
+            out_csv << (common + quantities + timewindows)
+          }
+        }
+      }
+    end
   end
 
   private

@@ -12,14 +12,6 @@ Number.prototype.toHHMMSS = function() {
   return hours+':'+minutes+':'+seconds;
 }
 
-var getParams = function() {
-  var parameters = {};
-  var parts = window.location.search.replace(/[?&]+([^=&]+)=?([^&#]*)/gi, function(match, key, value, offset) {
-    parameters[key] = value;
-  });
-  return parameters;
-}
-
 $(document).ready(function() {
   var debug = (window.location.search.search('debug') != -1) ? true : false;
   var data = {

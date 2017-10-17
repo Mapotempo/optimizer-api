@@ -1,3 +1,11 @@
+var getParams = function() {
+  var parameters = {};
+  var parts = window.location.search.replace(/[?&]+([^=&]+)=?([^&#]*)/gi, function(match, key, value, offset) {
+    parameters[key] = value;
+  });
+  return parameters;
+}
+
 var i18n = {
   title: 'Optimisez vos fichiers CSV',
   form: {
@@ -8,6 +16,11 @@ var i18n = {
     'optim-iterations-label': 'Nombre maximum d\'itérations :',
     'optim-iterations-without-improvment-label': 'Itérations sans amélioration (arrêt automatique) :',
     'send-files': 'Envoyer',
+    'send-csvs': 'Envoyer',
+    'csv-points-label': 'Votre fichier points csv :',
+    'csv-services-label': 'Votre fichier services csv :',
+    'csv-vehicles-label': 'Votre fichier vehicules csv :',
+    'json-config-label': 'Votre fichier de configuration :',
     'result-label': 'Résultat de votre optimisation :'
   },
   customers: 'clients',

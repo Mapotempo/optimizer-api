@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="block">
+    <img src="images/logo.png">
+    <h1>Optimizer</h1>
+  </div>
+  <div class="block">
+    <fieldset id="optim-list-status">
+      <legend id="optim-list-legend"></legend>
+      <div id="jobs-list">
+        
+      </div>
+    </fieldset>
+  </div>
+  <form id="lalala" enctype="multipart/form-data" action="/0.1/vrp/submit.json" method="post">
+    <a id="doc-link" href="#documentation">documentation</a>
+    <div class="block">
+      <span id="csv-points-label"></span> <input type="file" name="points" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="csv-points">
+    </div>
+    <div class="block">
+      <span id="csv-services-label"></span> <input type="file" name="services" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="csv-services">
+    </div>
+    <div class="block">
+      <span id="csv-vehicles-label"></span> <input type="file" name="vehicles" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="csv-vehicles">
+    </div>
+    <div class="block">
+      <span id="json-config-label"></span> <input type="file" name="vrp" id="json-config">
+    </div>
+    <div class="block">
+      <button id="send-csvs"></button>
+      <span id="csvs-infos"></span>
+    </div>
+  </form>
+
+  <div class="block">
+    <a name="documentation"></a>
+    <h2>Documentation</h2>
+    <div id="documentation">
+    </div>
+  </div>
+  <script src="js/jquery-1.12.3.min.js"></script>
+  <script src="js/papaparse.min.js"></script>
+  <script src="js/Chart.Core.min.js"></script>
+  <script src="js/Chart.Scatter.min.js"></script>
+  <script src="js/conf.js"></script>
+  <script src="js/csv.js"></script>
+</body>
+</html>
