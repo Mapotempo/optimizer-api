@@ -263,7 +263,7 @@ module OptimizerWrapper
 
   def self.build_csv(solution)
 
-    header = ['vehicle_id','id','lat','lon','setup_duration','duration','additional_value']
+    header = ['vehicle_id','id', 'point_id', 'lat','lon','setup_duration','duration','additional_value']
     quantities_header = []
     quantities_id = []
     if solution
@@ -297,16 +297,17 @@ module OptimizerWrapper
           route['activities'].each{ |activity|
             common = [
               route['vehicle_id'],
-              activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['point_id'],
+              activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
+              activity['point_id'],
               activity['detail']['lat'],
               activity['detail']['lon'],
-              activity['detail']['setup_duration'] || 0,
-              activity['detail']['duration'] || 0,
+              formatted_duration(activity['detail']['setup_duration'] || 0),
+              formatted_duration(activity['detail']['duration'] || 0),
               activity['detail']['additional_value'] || 0,
             ]
             timewindows = (0..max_timewindows_size-1).collect{ |index|
               if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
-                [activity['detail']['timewindows'][0]['start'] || '', activity['detail']['timewindows'][0]['end'] || '']
+                [formatted_duration(activity['detail']['timewindows'][0]['start']) || '', formatted_duration(activity['detail']['timewindows'][0]['end']) || '']
               else
                 ['','']
               end
@@ -326,6 +327,13 @@ module OptimizerWrapper
   end
 
   private
+
+  def self.formatted_duration(duration)
+    h = (duration / 3600).to_i
+    m = (duration / 60).to_i % 60
+    s = duration.to_i % 60
+    [h, m, s].map { |t| t.to_s.rjust(2,'0') }.join(':')
+  end
 
   def self.route_total_dimension(vrp, route, vehicle, dimension)
     previous = nil

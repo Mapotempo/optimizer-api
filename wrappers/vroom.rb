@@ -117,6 +117,7 @@ module Wrappers
           service = vrp.services[i - 1]
           current_activity = {
             service_id: service.id,
+            point_id: point.id,
             travel_time: (previous && point_index && vrp.matrices[0][:time] ? vrp.matrices[0][:time][previous][point_index] : 0),
             travel_distance: (previous && point_index && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][previous][point_index] : 0),
             detail: build_detail(service, service.activity, point, nil)

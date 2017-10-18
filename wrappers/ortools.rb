@@ -315,6 +315,7 @@ module Wrappers
                   earliest_start = i.size > 1 ? i.last : earliest_start
                   current_activity = {
                     service_id: service.id,
+                    point_id: point ? point.id : nil,
                     travel_time: (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous_index][point_index] : 0),
                     travel_distance: (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous_index][point_index] : 0),
                     begin_time: earliest_start,
@@ -336,6 +337,7 @@ module Wrappers
                   current_activity = {
                     pickup_shipment_id: shipment_activity == 0 && shipment.id,
                     delivery_shipment_id: shipment_activity == 1 && shipment.id,
+                    point_id: point.id,
                     travel_time: (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous_index][point_index] : 0),
                     travel_distance: (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous_index][point_index] : 0),
                     begin_time: earliest_start,

@@ -3,13 +3,16 @@
 
 $(document).ready(function() {
 
-    $('#send-csvs').append(i18n.form['send-csvs']);
-    $('#csv-points-label').append(i18n.form['csv-points-label']);
-    $('#csv-services-label').append(i18n.form['csv-services-label']);
-    $('#csv-vehicles-label').append(i18n.form['csv-vehicles-label']);
-    $('#json-config-label').append(i18n.form['json-config-label']);
+  $('#send-csvs').append(i18n.form['send-csvs']);
+  $('#status-label').append(i18n.form['status-label']);
+  $('#csv-points-label').append(i18n.form['csv-points-label']);
+  $('#csv-services-label').append(i18n.form['csv-services-label']);
+  $('#csv-vehicles-label').append(i18n.form['csv-vehicles-label']);
+  $('#json-config-label').append(i18n.form['json-config-label']);
 
-   $('#lalala').submit(function(e) {
+  $('#infos').html(i18n.waitingSubmit);
+
+  $('#post-form').submit(function(e) {
     e.preventDefault();
 
     var filesConfigs = $('#json-config')[0].files;
@@ -30,18 +33,23 @@ $(document).ready(function() {
       .done(function(response) {
         var jobId = response.job.id;
         if (jobId != null)
-          watchJobStateFor(jobId);
+          watchJobUpdate(jobId);
 
       })
       .fail(function(error) {
+        $('#infos').html(i18n.failureCallOptim('Vérification des fichiers requise'));
         console.log(error.responseText);
       });
 
+    } else {
+      $('#infos').html(i18n.form.invalidConfig);
     }
   });
 
-   watchJobStateFor = function(jobId) {
-    var lala = function() {
+  watchJobUpdate = function(jobId) {
+    var check_job = function() {
+
+      $('#infos').html(i18n.optimizeLoading);
       $.ajax({
         url: '/0.1/vrp/jobs/' + jobId + '.csv?api_key=' + getParams()["api_key"],
         type: 'GET',
@@ -49,6 +57,7 @@ $(document).ready(function() {
       .done(function(response, responseText, XHR) {
 
         if (XHR.status == 200) {
+          $('#infos').html(i18n.optimizeFinished);
           if (response instanceof Object && 'solutions' in response) {
             self.solutionJSON = (response.solutions);
           } else {
@@ -62,27 +71,17 @@ $(document).ready(function() {
 
           clearInterval(timeOut);
         } else if (XHR.status == 202) {
+          $('#infos').html(i18n.optimizeFinishedError);
           console.log(response);
           clearInterval(timeOut);
         }
       })
       .fail(function(err) {
+        $('#infos').html(i18n.failureCallOptim(err));
         console.log(err.status);
       })
     }
 
-    var timeOut = setInterval(lala, 3000);
+    var timeOut = setInterval(check_job, 3000);
   }
-
-  function IsJsonString(str) {
-    try {
-      JSON.parse(str);
-    } catch (e) {
-      console.log("err:; " , e);
-      return false;
-    }
-    return true;
-  }
-
 });
-

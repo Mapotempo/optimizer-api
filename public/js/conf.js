@@ -21,7 +21,9 @@ var i18n = {
     'csv-services-label': 'Votre fichier services csv :',
     'csv-vehicles-label': 'Votre fichier vehicules csv :',
     'json-config-label': 'Votre fichier de configuration :',
-    'result-label': 'Résultat de votre optimisation :'
+    'result-label': 'Résultat de votre optimisation :',
+    'status-label': 'Status de votre optimisation :',
+    'invalidConfig': 'Fichier de configuration absent'
   },
   customers: 'clients',
   vehicles: 'véhicules',
@@ -44,8 +46,11 @@ var i18n = {
   errorFile: function(filename) {
     return 'Une erreur est survenue en lisant le fichier ' + filename + ': ';
   },
+  waitingSubmit : "En attente de l\'envoi du problème",
   optimizeQueued: 'En attente d\'un processus disponible...',
   optimizeLoading: 'Traitement et optimisation en cours...',
+  optimizeFinished: 'optimisation terminée',
+  optimizeFinishedError: 'optimisation sans résultat',
   failureCallOptim: function(error) {
     return 'Erreur interne en lançant le service d\'optimisation : ' + error;
   },

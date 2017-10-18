@@ -463,6 +463,7 @@ module Wrappers
                     pickup_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'pickupShipment' && a.content,
                     delivery_shipment_id: (a = act.at_xpath('shipmentId')) && a && act['type'] == 'deliverShipment' && a.content,
                     service_id: (a = act.at_xpath('serviceId')) && a && a.content,
+                    point_id: point ? point.id : nil,
                     rest_id: (a = act.at_xpath('breakId')) && a && a.content,
                     travel_time: (previous_index && point_index && vrp.matrices[0].time ? vrp.matrices[0].time[previous_index][point_index] : 0),
                     travel_distance: (previous_index && point_index && vrp.matrices[0].distance ? vrp.matrices[0].distance[previous_index][point_index] : 0),

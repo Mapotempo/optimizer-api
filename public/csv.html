@@ -18,7 +18,7 @@
       </div>
     </fieldset>
   </div>
-  <form id="lalala" enctype="multipart/form-data" action="/0.1/vrp/submit.json" method="post">
+  <form id="post-form" enctype="multipart/form-data" action="/0.1/vrp/submit.json" method="post">
     <a id="doc-link" href="#documentation">documentation</a>
     <div class="block">
       <span id="csv-points-label"></span> <input type="file" name="points" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="csv-points">
@@ -37,6 +37,10 @@
       <span id="csvs-infos"></span>
     </div>
   </form>
+
+  <div class="block">
+    <div><span id="status-label"></span> <span id="infos"></span></div>
+  </div>
 
   <div class="block">
     <a name="documentation"></a>
