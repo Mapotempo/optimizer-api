@@ -240,12 +240,14 @@ module Wrappers
 
     def build_quantities(job)
       job.quantities.collect{ |quantity|
-        {
-          unit: quantity.unit,
-          value: quantity.value,
-          setup_value: quantity.unit.counting ? quantity.setup_value : 0
-        }
-      }
+        if quantity.unit
+          {
+            unit: quantity.unit,
+            value: quantity.value,
+            setup_value: quantity.unit.counting ? quantity.setup_value : 0
+          }
+        end
+      }.compact
     end
 
     def build_rest(rest, day_index)
