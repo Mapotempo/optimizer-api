@@ -728,7 +728,7 @@ module OptimizerWrapper
       end
 
       # Add values related to the current solve status
-      if p && p['graph'] && !p['graph'].empty?
+      if p && p['result'] && p['graph'] && !p['graph'].empty?
         p['result']['iterations'] = p['graph'].last['iteration']
         p['result']['elapsed'] = p['graph'].last['time']
       end
