@@ -10,7 +10,7 @@ Number.prototype.toHHMMSS = function() {
   if (minutes < 10) {minutes = "0"+minutes;}
   if (seconds < 10) {seconds = "0"+seconds;}
   return hours+':'+minutes+':'+seconds;
-}
+};
 
 $(document).ready(function() {
   var debug = (window.location.search.search('debug') != -1) ? true : false;
@@ -38,12 +38,12 @@ $(document).ready(function() {
     },
     roleDispatcher: function(object) {
       switch ($(object).data('role')) {
-        case 'focus':
-          //actually in building, create to apply different behavior to the button object restartJob, actually not set. #TODO
-          break;
-        case 'delete':
-          this.ajaxDeleteJob($(object).val());
-          break;
+      case 'focus':
+        //actually in building, create to apply different behavior to the button object restartJob, actually not set. #TODO
+        break;
+      case 'delete':
+        this.ajaxDeleteJob($(object).val());
+        break;
       }
     },
     ajaxGetJobs: function(timeinterval) {
@@ -53,11 +53,9 @@ $(document).ready(function() {
           type: 'get',
           dataType: 'json',
           data: { api_key: getParams()['api_key'] },
-        })
-        .done(function(data) {
+        }).done(function(data) {
           jobsManager.shouldUpdate(data);
-        })
-        .fail(function(jqXHR, textStatus, errorThrown){
+        }).fail(function(jqXHR, textStatus, errorThrown){
           clearInterval(window.AjaxGetRequestInterval);
           if (jqXHR.status == 401) {
             $('#optim-list-status').prepend('<div class="error">' + i18n.unauthorizedError + '</div>');
@@ -81,8 +79,7 @@ $(document).ready(function() {
         data: {
           api_key: getParams()['api_key']
         },
-      })
-      .done(function(data) {
+      }).done(function(data) {
         if (debug) { console.log("the uuid have been deleted from the jobs queue & the DB"); }
         $('button[data-role="delete"][value="' + uuid + '"]').fadeOut(500, function() { $(this).closest('.job').remove(); });
       });
@@ -216,7 +213,7 @@ $(document).ready(function() {
     $('#optim-infos').html('');
   };
 
-  var customers = []
+  customers = [];
 
   var buildVRP = function() {
     if (data.customers.length > 0 && data.vehicles.length > 0) {
@@ -340,7 +337,7 @@ $(document).ready(function() {
           if (matches) quantities[matches[1]] = $.extend(quantities[matches[1]], {limit: val});
           matches = key.match(new RegExp((mapping.initial_quantity || 'initial_quantity') + regexp));
           if (matches) quantities[matches[1]] = $.extend(quantities[matches[1]], {initial: val});
-        })
+        });
         vrp.vehicles.push({
           id: vehicle[mapping.reference || 'reference'],
           start_point_id: (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lat || 'start_lon']) ? vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.') : null,
@@ -376,7 +373,7 @@ $(document).ready(function() {
             var regexp = '\\s([0-9]+)$';
             var matches = key.match(new RegExp((mapping.quantity || 'quantity') + regexp));
             if (matches) quantities[matches[1]] = $.extend(quantities[matches[1]], {value: val});
-          })
+          });
           vrp.shipments.push({
             id: customer[mapping.reference || 'reference'],
             pickup: {
@@ -411,7 +408,7 @@ $(document).ready(function() {
             var regexp = '\\s([0-9]+)$';
             var matches = key.match(new RegExp((mapping.quantity || 'quantity') + regexp));
             if (matches) quantities[matches[1]] = $.extend(quantities[matches[1]], {value: val});
-          })
+          });
           vrp.services.push({
             id: customer[mapping.reference || 'reference'],
             type: 'pickup',
@@ -438,7 +435,7 @@ $(document).ready(function() {
             var regexp = '\\s([0-9]+)$';
             var matches = key.match(new RegExp((mapping.quantity || 'quantity') + regexp));
             if (matches) quantities[matches[1]] = $.extend(quantities[matches[1]], {value: val});
-          })
+          });
           vrp.services.push({
             id: customer[mapping.reference || 'reference'],
             type: 'delivery',
@@ -568,7 +565,7 @@ $(document).ready(function() {
             nbInterval++;
             interval = setTimeout(checkResponse, Math.min(delay * nbInterval, 30000));
           }
-        }
+        };
         checkResponse();
       },
       error: function(xhr, status, message) {
@@ -643,45 +640,45 @@ $(document).ready(function() {
           previous_lat = lat;
           previous_lon = lon;
         } else if (activity.service_id) {
-            var customer_id = customers.indexOf(activity.service_id);
-            var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {
-              if (key.replace(/ 1$/, '') == (mapping.quantity || 'quantity')) return val;
-            });
-            var quantity1_2 = $.map(data.customers[customer_id], function(val, key) {
-              if (key.replace(/ 2$/, '') == (mapping.quantity || 'quantity')) return val;
-            });
-            var setup_duration = duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_setup || 'pickup_setup'] : data.customers[customer_id][mapping.delivery_setup || 'delivery_setup']) || 0;
-            var ref = activity.service_id;
-            var lat = data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
-            var lon = data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
-            var start = data.customers[customer_id][mapping.pickup_start || 'pickup_start'] ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
-            var d = (previous_lat == lat && previous_lon == lon ? setup_duration : 0) + (duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
-            var end = data.customers[customer_id][mapping.pickup_end || 'pickup_end'] ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
-            var skills = $.map(data.customers[customer_id], function(val, key) {
-              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
-            }).filter(function(el) {
-              return el;
-            }).join(',');
-            stops.push([
-              ref,
-              i,
-              route.vehicle_id,
-              'visite',
-              ref, // name
-              '', // street
-              '', // postalcode
-              '', // country
-              lat,
-              lon,
-              d ? d.toHHMMSS() : '',
-              quantity1_1,
-              quantity1_2,
-              start,
-              end,
-              skills
-            ]);
-            previous_lat = lat;
-            previous_lon = lon;
+          var customer_id = customers.indexOf(activity.service_id);
+          var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ 1$/, '') == (mapping.quantity || 'quantity')) return val;
+          });
+          var quantity1_2 = $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ 2$/, '') == (mapping.quantity || 'quantity')) return val;
+          });
+          var setup_duration = duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_setup || 'pickup_setup'] : data.customers[customer_id][mapping.delivery_setup || 'delivery_setup']) || 0;
+          var ref = activity.service_id;
+          var lat = data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
+          var lon = data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
+          var start = data.customers[customer_id][mapping.pickup_start || 'pickup_start'] ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
+          var d = (previous_lat == lat && previous_lon == lon ? setup_duration : 0) + (duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
+          var end = data.customers[customer_id][mapping.pickup_end || 'pickup_end'] ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
+          var skills = $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+          }).filter(function(el) {
+            return el;
+          }).join(',');
+          stops.push([
+            ref,
+            i,
+            route.vehicle_id,
+            'visite',
+            ref, // name
+            '', // street
+            '', // postalcode
+            '', // country
+            lat,
+            lon,
+            d ? d.toHHMMSS() : '',
+            quantity1_1,
+            quantity1_2,
+            start,
+            end,
+            skills
+          ]);
+          previous_lat = lat;
+          previous_lon = lon;
         } else if (activity.rest_id) {
           stops.push([
             '',
@@ -837,9 +834,9 @@ $(document).ready(function() {
   var displaySolution = function(solution, options) {
     $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: ' + Math.round(solution.total_distance / 1000) + ')');
     // if (result) {
-      var csv = createCSV(solution);
-      $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
-      $('#result').html(csv);
+    var csv = createCSV(solution);
+    $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
+    $('#result').html(csv);
     // }
     if (options && options.initForm)
       initForm();

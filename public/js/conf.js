@@ -4,7 +4,7 @@ var getParams = function() {
     parameters[key] = value;
   });
   return parameters;
-}
+};
 
 var i18n = {
   title: 'Optimisez vos fichiers CSV',
@@ -47,7 +47,7 @@ var i18n = {
   errorFile: function(filename) {
     return 'Une erreur est survenue en lisant le fichier ' + filename + ': ';
   },
-  waitingSubmit : "En attente de l\'envoi du problème",
+  waitingSubmit : 'En attente de l\'envoi du problème',
   optimizeQueued: 'En attente d\'un processus disponible...',
   optimizeLoading: 'Traitement et optimisation en cours...',
   optimizeFinished: 'optimisation terminée',

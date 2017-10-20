@@ -30,14 +30,11 @@ $(document).ready(function() {
         cache: false,
         processData: false,
         data: problem_data
-      })
-      .done(function(response) {
+      }).done(function(response) {
         var jobId = response.job.id;
         if (jobId != null)
           watchJobUpdate(jobId);
-
-      })
-      .fail(function(error) {
+      }).fail(function(error) {
         $('#infos').html(i18n.failureCallOptim('Vérification des fichiers requise'));
         console.log(error.responseText);
       });
@@ -47,16 +44,14 @@ $(document).ready(function() {
     }
   });
 
-  watchJobUpdate = function(jobId) {
+  var watchJobUpdate = function(jobId) {
     var check_job = function() {
 
       $('#infos').html(i18n.optimizeLoading);
       $.ajax({
         url: '/0.1/vrp/jobs/' + jobId + '.csv?api_key=' + getParams()["api_key"],
         type: 'GET',
-      })
-      .done(function(response, responseText, XHR) {
-
+      }).done(function(response, responseText, XHR) {
         if (XHR.status == 200) {
           $('#infos').html(i18n.optimizeFinished);
           if (response instanceof Object && 'solutions' in response) {
@@ -76,13 +71,12 @@ $(document).ready(function() {
           console.log(response);
           clearInterval(timeOut);
         }
-      })
-      .fail(function(err) {
+      }).fail(function(err) {
         $('#infos').html(i18n.failureCallOptim(err));
         console.log(err.status);
-      })
-    }
+      });
+    };
 
     var timeOut = setInterval(check_job, 3000);
-  }
+  };
 });
