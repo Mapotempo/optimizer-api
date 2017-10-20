@@ -69,7 +69,16 @@ module Models
 
       define_method("#{name[0..-2]}_ids=") do |vals|
         c = class_from_string(options[:class_name])
-        self[name] = vals && vals.collect{ |val_id| c.find(val_id) }.compact
+        self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+      end
+
+      define_method("#{name[0..-2]}_ids+=") do |vals|
+        c = class_from_string(options[:class_name])
+        if self[name]
+          self[name] += vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+        else
+          self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+        end
       end
     end
 

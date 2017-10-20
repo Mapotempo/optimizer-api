@@ -21,13 +21,16 @@
   <form id="post-form" enctype="multipart/form-data" action="/0.1/vrp/submit.json" method="post">
     <a id="doc-link" href="#documentation">documentation</a>
     <div class="block">
-      <span id="csv-points-label"></span> <input type="file" name="points" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="csv-points">
+      <span id="csv-points-label"></span> <input type="file" name="points" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.csv" id="csv-points">
     </div>
     <div class="block">
-      <span id="csv-services-label"></span> <input type="file" name="services" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="csv-services">
+      <span id="csv-timewindows-label"></span> <input type="file" name="timewindows" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.csv" id="csv-timewindows">
     </div>
     <div class="block">
-      <span id="csv-vehicles-label"></span> <input type="file" name="vehicles" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="csv-vehicles">
+      <span id="csv-services-label"></span> <input type="file" name="services" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.csv" id="csv-services">
+    </div>
+    <div class="block">
+      <span id="csv-vehicles-label"></span> <input type="file" name="vehicles" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.csv" id="csv-vehicles">
     </div>
     <div class="block">
       <span id="json-config-label"></span> <input type="file" name="vrp" id="json-config">

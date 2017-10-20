@@ -6,6 +6,7 @@ $(document).ready(function() {
   $('#send-csvs').append(i18n.form['send-csvs']);
   $('#status-label').append(i18n.form['status-label']);
   $('#csv-points-label').append(i18n.form['csv-points-label']);
+  $('#csv-timewindows-label').append(i18n.form['csv-timewindows-label']);
   $('#csv-services-label').append(i18n.form['csv-services-label']);
   $('#csv-vehicles-label').append(i18n.form['csv-vehicles-label']);
   $('#json-config-label').append(i18n.form['json-config-label']);

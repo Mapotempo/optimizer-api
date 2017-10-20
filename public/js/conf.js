@@ -18,6 +18,7 @@ var i18n = {
     'send-files': 'Envoyer',
     'send-csvs': 'Envoyer',
     'csv-points-label': 'Votre fichier points csv :',
+    'csv-timewindows-label': 'Votre fichier timewindows csv :',
     'csv-services-label': 'Votre fichier services csv :',
     'csv-vehicles-label': 'Votre fichier vehicules csv :',
     'json-config-label': 'Votre fichier de configuration :',

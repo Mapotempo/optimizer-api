@@ -78,25 +78,28 @@ module Interpreters
               if !service.unavailable_visit_indices || service.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
                 new_service = Marshal::load(Marshal.dump(service))
                 new_service.id = "#{new_service.id}_#{visit_index+1}/#{new_service.visits_number}"
-                new_service.activity.timewindows = if service.activity.timewindows
+                new_service.activity.timewindows = if !service.activity.timewindows.empty?
                   new_timewindows = service.activity.timewindows.collect{ |timewindow|
                     if timewindow.day_index
                       {
+                        id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
                         start: timewindow[:start] + timewindow.day_index * 86400,
                         end: timewindow[:end] + timewindow.day_index * 86400
-                      }
+                      }.delete_if { |k, v| !v }
                     elsif have_services_day_index || have_vehicles_day_index
                       (0..[6, schedule_end].min).collect{ |day_index|
                         {
+                          id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
                           start: timewindow[:start] + (day_index).to_i * 86400,
                           end: timewindow[:end] + (day_index).to_i * 86400
-                        }
+                        }.delete_if { |k, v| !v }
                       }
                     else
                       {
+                        id: (timewindow[:id] if timewindow[:id] && !timewindow[:id].nil?),
                         start: timewindow[:start],
                         end: timewindow[:end]
-                      }
+                      }.delete_if { |k, v| !v }
                     end
                   }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
                   if new_timewindows.size > 0
@@ -146,9 +149,10 @@ module Interpreters
                   new_vehicle = Marshal::load(Marshal.dump(vehicle))
                   new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
                   new_vehicle.timewindow = {
+                    id: ("#{associated_timewindow[:id]} #{(vehicle_day_index + shift) % 7}" if associated_timewindow[:id] && !associated_timewindow[:id].nil?),
                     start: (((vehicle_day_index + shift) % 7 )* 86400 + associated_timewindow[:start]),
                     end: (((vehicle_day_index + shift) % 7 )* 86400 + associated_timewindow[:end])
-                  }
+                  }.delete_if { |k, v| !v }
                   new_vehicle.global_day_index = vehicle_day_index
                   new_vehicle.sequence_timewindows = nil
                   associated_rests = vehicle.rests.select{ |rest| rest.timewindows.any?{ |timewindow| timewindow[:day_index] == (vehicle_day_index + shift) % 7 } }
@@ -157,9 +161,10 @@ module Interpreters
                     new_rest_timewindows = new_rest.timewindows.collect{ |timewindow|
                       if timewindow[:day_index] == (vehicle_day_index + shift) % 7
                         {
+                          id: ("timewindow[:id] #{(vehicle_day_index + shift) % 7}" if timewindow[:id] && !timewindow[:id].nil?),
                           start: (((vehicle_day_index + shift) % 7 ) * 86400 + timewindow[:start]),
                           end: (((vehicle_day_index + shift) % 7 ) * 86400 + timewindow[:end])
-                        }
+                        }.delete_if { |k, v| !v }
                       end
                     }.compact
                     if new_rest_timewindows.size > 0

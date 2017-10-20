@@ -307,7 +307,7 @@ module OptimizerWrapper
             ]
             timewindows = (0..max_timewindows_size-1).collect{ |index|
               if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
-                [formatted_duration(activity['detail']['timewindows'][0]['start']) || '', formatted_duration(activity['detail']['timewindows'][0]['end']) || '']
+                [formatted_duration(activity['detail']['timewindows'][index]['start']) || '', formatted_duration(activity['detail']['timewindows'][index]['end']) || '']
               else
                 ['','']
               end

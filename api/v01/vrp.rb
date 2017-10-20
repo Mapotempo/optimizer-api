@@ -61,6 +61,7 @@ module Api
       default_format :json
 
       def self.vrp_request_timewindow(this)
+        this.optional(:id, type: String)
         this.optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds')
         this.optional(:end, type: Integer, desc: 'End of the current timewindow in seconds')
         this.optional(:day_index, type: Integer, values: 0..6, desc: '[planning] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
@@ -351,6 +352,10 @@ module Api
               Vrp.vrp_request_point(self)
             end
 
+            optional :timewindows, type: Array, desc: 'Time slot while the activity may be performed', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+              Vrp.vrp_request_timewindow(self)
+            end
+
             optional :services, type: Array, desc: 'Independant activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
               Vrp.vrp_request_service(self)
             end
@@ -370,7 +375,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :relations, :configuration].each{ |key|
+              [:matrices, :units, :points, :rests, :zones, :vehicles, :timewindows, :services, :shipments, :relations, :configuration].each{ |key|
                 if params[:vrp] && params[:vrp][key]
                   (vrp.send "#{key}=", params[:vrp][key])
                 end
