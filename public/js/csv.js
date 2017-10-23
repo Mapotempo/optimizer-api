@@ -6,6 +6,9 @@ $(document).ready(function() {
   $('#send-csvs').append(i18n.form['send-csvs']);
   $('#status-label').append(i18n.form['status-label']);
   $('#csv-points-label').append(i18n.form['csv-points-label']);
+  $('#csv-units-label').append(i18n.form['csv-units-label']);
+  $('#csv-capacities-label').append(i18n.form['csv-capacities-label']);
+  $('#csv-quantities-label').append(i18n.form['csv-quantities-label']);
   $('#csv-timewindows-label').append(i18n.form['csv-timewindows-label']);
   $('#csv-services-label').append(i18n.form['csv-services-label']);
   $('#csv-vehicles-label').append(i18n.form['csv-vehicles-label']);

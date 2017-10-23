@@ -57,6 +57,8 @@ module Models
     has_many :units, class_name: 'Models::Unit'
     has_many :rests, class_name: 'Models::Rest'
     has_many :timewindows, class_name: 'Models::Timewindow'
+    has_many :capacities, class_name: 'Models::Capacity'
+    has_many :quantities, class_name: 'Models::Quantity'
     has_many :vehicles, class_name: 'Models::Vehicle'
     has_many :services, class_name: 'Models::Service'
     has_many :shipments, class_name: 'Models::Shipment'

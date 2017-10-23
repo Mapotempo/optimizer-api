@@ -126,12 +126,14 @@ module Api
       end
 
       def self.vrp_request_quantity(this)
+        this.optional(:id, type: String)
         this.requires(:unit_id, type: String, desc: 'Unit related to this quantity')
         this.optional(:value, type: Float, desc: 'Value of the current quantity')
         this.optional(:setup_value, type: Integer, desc: 'If the associated unit is a counting one, define the default value to count for this stop (additional quantities for this specific service are to define with the value tag)')
       end
 
       def self.vrp_request_capacity(this)
+        this.optional(:id, type: String)
         this.requires(:unit_id, type: String, desc: 'Unit of the capacity')
         this.requires(:limit, type: Float, desc: 'Maximum capacity which could be take away')
         this.optional(:initial, type: Float, desc: 'Initial quantity value in the vehicle')
@@ -352,8 +354,20 @@ module Api
               Vrp.vrp_request_point(self)
             end
 
+            optional :units, type: Array, desc: 'The name of a Capacity/Quantity', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+              Vrp.vrp_request_unit(self)
+            end
+
             optional :timewindows, type: Array, desc: 'Time slot while the activity may be performed', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
               Vrp.vrp_request_timewindow(self)
+            end
+
+            optional :capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+              Vrp.vrp_request_capacity(self)
+            end
+
+            optional :quantities, type: Array, desc: 'Define the entities which are taken or dropped', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+              Vrp.vrp_request_quantity(self)
             end
 
             optional :services, type: Array, desc: 'Independant activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
@@ -375,7 +389,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:matrices, :units, :points, :rests, :zones, :vehicles, :timewindows, :services, :shipments, :relations, :configuration].each{ |key|
+              [:matrices, :units, :points, :rests, :zones, :capacities, :quantities, :vehicles, :timewindows, :services, :shipments, :relations, :configuration].each{ |key|
                 if params[:vrp] && params[:vrp][key]
                   (vrp.send "#{key}=", params[:vrp][key])
                 end

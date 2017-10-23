@@ -80,6 +80,24 @@ module Models
           self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
         end
       end
+
+      define_method("#{name[0..-4]}y_ids=") do |vals|
+        c = class_from_string(options[:class_name])
+        if self[name]
+          self[name] += vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+        else
+          self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+        end
+      end
+
+      define_method("#{name[0..-4]}y_ids+=") do |vals|
+        c = class_from_string(options[:class_name])
+        if self[name]
+          self[name] += vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+        else
+          self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+        end
+      end
     end
 
     def self.belongs_to(name, options = {})

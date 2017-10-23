@@ -271,8 +271,8 @@ module OptimizerWrapper
         route['activities'].each{ |activity|
           if activity['detail'] && activity['detail']['quantities']
             activity['detail']['quantities'].each{ |quantity|
-              quantities_id << quantity['unit']['id']
-              quantities_header << quantity['unit']['label']
+              quantities_id << quantity['unit']['attributes']['id']
+              quantities_header << "quantity_#{quantity['unit']['attributes']['label']}"
             }
           end
         }
@@ -292,7 +292,7 @@ module OptimizerWrapper
         ["timewindow_start_#{index}", "timewindow_end_#{index}"]
       }.flatten
       csv = CSV.generate{ |out_csv|
-        out_csv << (header + quantities_header.compact.flatten + timewindows_header)
+        out_csv << (header + quantities_header + timewindows_header)
         solution['routes'].each{ |route|
           route['activities'].each{ |activity|
             common = [
@@ -313,8 +313,8 @@ module OptimizerWrapper
               end
             }.flatten
             quantities = quantities_id.collect{ |id|
-              if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['id'] == id }
-                activity['detail']['quantities'].find{ |quantity| quantity['unit']['id'] == id }['value']
+              if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes']['id'] == id }
+                activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
               else
                 ''
               end
