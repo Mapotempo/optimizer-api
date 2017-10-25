@@ -2835,4 +2835,79 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 4, result[:routes][0][:activities].size
     assert result[:cost] < 2 ** 32
   end
+
+  def test_initial_load_output
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      units: [{
+        id: 'kg',
+        label: 'Kg'
+      }, {
+        id: 'l',
+        label: 'L'
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        capacities: [{
+          unit_id: 'kg',
+          limit: 5
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: -5
+        }]
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: 4
+        },{
+          unit_id: 'l',
+          value: -1
+        }]
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal 5, result[:routes].first[:initial_loads].first[:value]
+    assert_equal 1, result[:routes].first[:initial_loads][1][:value]
+    assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
+  end
 end

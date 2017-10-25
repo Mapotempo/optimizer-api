@@ -26,7 +26,7 @@ module Api
       expose :end, documentation: { type: Integer, desc: '' }
     end
 
-    class VrpResultSolutionRouteActivityDetailQuantities < Grape::Entity
+    class VrpResultDetailQuantities < Grape::Entity
       expose :unit, documentation: { type: String, desc: '' }
       expose :value, documentation: { type: Float, desc: '' }
       expose :setup_value, documentation: { type: Float, desc: '' }
@@ -39,7 +39,7 @@ module Api
       expose :setup_duration, documentation: { type: Integer, desc: '' }
       expose :duration, documentation: { type: Integer, desc: '' }
       expose :additional_value, documentation: { type: Integer, desc: '' }
-      expose :quantities, using: VrpResultSolutionRouteActivityDetailQuantities, documentation: { is_array: true, desc: '' }
+      expose :quantities, using: VrpResultDetailQuantities, documentation: { is_array: true, desc: '' }
       expose :timewindows, using: VrpResultSolutionRouteActivityDetailTimewindows, documentation: { is_array: true, desc: '' }
     end
 
@@ -64,6 +64,7 @@ module Api
       expose :start_time, documentation: { type: Integer, desc: 'Give the actual start time of the current route if provided by the solve' }
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
       expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place'}
+      expose :initial_loads, using: VrpResultDetailQuantities, documentation: { is_array: true, desc: 'Give the actual initial loads of the route' }
     end
 
     class VrpResultSolution < Grape::Entity
