@@ -25,6 +25,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :late_multiplier, :float, 10
     repeated :setup_quantities, :int32, 11
     optional :additional_value, :uint32, 12
+    optional :exclusion_cost, :int32, 13
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"

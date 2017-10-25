@@ -84,6 +84,7 @@ module Wrappers
             q = service.quantities.find{ |quantity| quantity.unit == unit }
             q && q.setup_value && unit.counting ? (q.setup_value).to_i : 0
           },
+          exclusion_cost: service.exclusion_cost || -1,
         )
       } + vrp.shipments.collect{ |shipment|
         vehicles_indices = if !shipment[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
@@ -118,7 +119,8 @@ module Wrappers
           vehicle_indices: shipment.sticky_vehicles.size > 0 ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
           setup_duration: shipment.pickup.setup_duration,
           id: shipment.id + "pickup",
-          late_multiplier: shipment.pickup.late_multiplier || 0
+          late_multiplier: shipment.pickup.late_multiplier || 0,
+          exclusion_cost: shipment.exclusion_cost || -1,
         )] + [OrtoolsVrp::Service.new(
           time_windows: shipment.delivery.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
@@ -135,7 +137,8 @@ module Wrappers
           vehicle_indices: shipment.sticky_vehicles.size > 0 ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) } : vehicles_indices,
           setup_duration: shipment.delivery.setup_duration,
           id: shipment.id + "delivery",
-          late_multiplier: shipment.delivery.late_multiplier || 0
+          late_multiplier: shipment.delivery.late_multiplier || 0,
+          exclusion_cost: shipment.exclusion_cost || -1,
         )]
       }.flatten(1)
 

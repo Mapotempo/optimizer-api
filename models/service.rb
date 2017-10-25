@@ -21,7 +21,9 @@ require './models/base'
 module Models
   class Service < Base
     field :priority, default: 4
+    field :exclusion_cost, default: nil
     validates_numericality_of :priority
+    validates_numericality_of :exclusion_cost, allow_nil: true
     field :type, default: :service
 
     # field :visits_minimal_interval, default: nil
