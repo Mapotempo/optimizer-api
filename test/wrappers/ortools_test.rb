@@ -2910,4 +2910,142 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:routes].first[:initial_loads][1][:value]
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
   end
+
+  def test_force_first
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        },
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_2'
+        },
+      }],
+      relations: [{
+        id: 'force_first',
+        type: "force_first",
+        linked_ids: ['service_1', 'service_3']
+      }],
+      configuration: {
+        resolution: {
+          duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 3, result[:routes].size
+    assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][1][:activities].size
+    assert_equal 'service_1', result[:routes][0][:activities].first[:service_id]
+    assert_equal 'service_3', result[:routes][1][:activities].first[:service_id]
+  end
+
+  def test_never_first
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        id: 'never_first',
+        type: "never_first",
+        linked_ids: ['service_1', 'service_3']
+      }],
+      configuration: {
+        resolution: {
+          duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 2, result[:routes].size
+    assert_equal problem[:services].size, [result[:routes][0][:activities].size, result[:routes][1][:activities].size].max
+    assert_equal 'service_2', result[:routes][0][:activities].first[:service_id] || result[:routes][1][:activities].first[:service_id]
+  end
 end
