@@ -322,6 +322,33 @@ module OptimizerWrapper
             out_csv << (common + quantities + timewindows)
           }
         }
+        solution['unassigned'].each{ |activity|
+          common = [
+            '',
+            activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
+            activity['point_id'],
+            activity['detail']['lat'],
+            activity['detail']['lon'],
+            formatted_duration(activity['detail']['setup_duration'] || 0),
+            formatted_duration(activity['detail']['duration'] || 0),
+            activity['detail']['additional_value'] || 0,
+          ]
+          timewindows = (0..max_timewindows_size-1).collect{ |index|
+            if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
+              [formatted_duration(activity['detail']['timewindows'][index]['start']) || '', formatted_duration(activity['detail']['timewindows'][index]['end']) || '']
+            else
+              ['','']
+            end
+          }.flatten
+          quantities = quantities_id.collect{ |id|
+            if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes']['id'] == id }
+              activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
+            else
+              ''
+            end
+          }
+          out_csv << (common + quantities + timewindows)
+        }
       }
     end
   end
