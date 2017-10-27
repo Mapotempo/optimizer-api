@@ -62,8 +62,8 @@ module Api
 
       def self.vrp_request_timewindow(this)
         this.optional(:id, type: String)
-        this.optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds')
-        this.optional(:end, type: Integer, desc: 'End of the current timewindow in seconds')
+        this.optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
+        this.optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:day_index, type: Integer, values: 0..6, desc: '[planning] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
         # this.at_least_one_of :start, :end
       end
@@ -98,7 +98,7 @@ module Api
 
       def self.vrp_request_rest(this)
         this.requires(:id, type: String)
-        this.requires(:duration, type: Float, desc: 'Duration of the vehicle rest')
+        this.requires(:duration, types: [String, Float, Integer], desc: 'Duration of the vehicle rest', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
           Vrp.vrp_request_timewindow(self)
         end
@@ -113,9 +113,9 @@ module Api
       end
 
       def self.vrp_request_activity(this)
-        this.optional(:duration, type: Float, desc: 'time in seconds while the current activity stand until it\'s over')
+        this.optional(:duration, types: [String, Float, Integer], desc: 'time in seconds while the current activity stand until it\'s over', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
-        this.optional(:setup_duration, type: Float, desc: 'time at destination before the proper activity is effectively performed')
+        this.optional(:setup_duration, types: [String, Float, Integer], desc: 'time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
         this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '')
         this.requires(:point_id, type: String, desc: 'reference to the associated point')
@@ -175,7 +175,7 @@ module Api
         this.optional :snap, type: Float, desc: 'Snap waypoint to junction close by snap distance.'
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
-        this.optional(:duration, type: Float, desc: 'Maximum tour duration')
+        this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
 
         this.optional(:unavailable_work_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals indices of unavailabilty')

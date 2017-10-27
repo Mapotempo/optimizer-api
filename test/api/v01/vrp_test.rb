@@ -478,4 +478,43 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 200, last_response.status, last_response.body
     assert_equal 9, last_response.body.count("\n")
   end
+
+  def test_time_parameters
+    vrp = {
+        points: [{
+                     id: 'p1',
+                     location: {
+                         lat: 1,
+                         lon: 2
+                     }
+                 }],
+        vehicles: [{
+                       id: 'v1',
+                       router_mode: 'car',
+                       router_dimension: 'time',
+                       duration: '12:00'
+                   }],
+        services: [{
+                       id: 's1',
+                       type: 'service',
+                       activity: {
+                           point_id: 'p1',
+                           duration: "00:20:00",
+                           timewindows: [{
+                              start: 80,
+                              end: 800.0
+                           }]
+                       }
+                   }],
+        configuration: {
+            resolution: {
+                duration: 1
+            }
+        }
+    }
+    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
+    assert 200 || 201 == last_response.status
+    assert last_response.body
+    assert JSON.parse(last_response.body)['job']['status']['completed'] || JSON.parse(last_response.body)['job']['status']['queued']
+  end
 end
