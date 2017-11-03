@@ -18,18 +18,21 @@
 
 class ScheduleType
   def type_cast(value)
-    if value.kind_of?(String) && /[0-9]+:[0-9]+:[0-9]+/.match(value)
-      pattern = /([0-9]+):([0-9]+):([0-9]+)/.match(value)
-      3600 * pattern[1].to_i + 60 * pattern[2].to_i + pattern[3].to_i
-    elsif value.kind_of?(String) && /[0-9]+:[0-9]+/.match(value)
-      pattern = /([0-9]+):([0-9]+)/.match(value)
-      3600 * pattern[1].to_i + 60 * pattern[2].to_i
-    elsif value.kind_of?(String) && /\A[0-9]+\.{0,1}[0-9]*\z/.match(value)
-      value.to_i
-    elsif value.kind_of?(Integer) || value.kind_of?(Float)
-      value.to_i
-    else
-      raise ArgumentError.new("Invalid Time value")
+    if !value.nil?
+      if /[0-9]+:[0-9]+:[0-9]+/.match(value.to_s)
+        pattern = /([0-9]+):([0-9]+):([0-9]+)/.match(value)
+        3600 * pattern[1].to_i + 60 * pattern[2].to_i + pattern[3].to_i
+      elsif /[0-9]+:[0-9]+/.match(value.to_s)
+        pattern = /([0-9]+):([0-9]+)/.match(value)
+        3600 * pattern[1].to_i + 60 * pattern[2].to_i
+      elsif /\A[0-9]+\.{0,1}[0-9]*\z/.match(value.to_s)
+        value.to_i
+      elsif (value.kind_of?(Integer) || value.kind_of?(Float))
+        value.to_i
+      else
+        puts 'error'
+        raise ArgumentError.new("Invalid Time value")
+      end
     end
   end
 end
