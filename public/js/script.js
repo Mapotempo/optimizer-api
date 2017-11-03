@@ -288,8 +288,6 @@ $(document).ready(function() {
       var router_dimensions = [];
       var speed_multipliers = [];
       data.vehicles.forEach(function(vehicle) {
-        if (vehicle[mapping.router_mode || 'router_mode'] && vehicle[mapping.router_mode || 'router_mode'] != 'car' && vehicle[mapping.router_mode || 'router_mode'] != 'truck')
-          throw i18n.invalidRouterMode(vehicle[mapping.router_mode || 'router_mode']);
         if (router_modes.indexOf(vehicle[mapping.router_mode || 'router_mode']) == -1) router_modes.push(vehicle[mapping.router_mode || 'router_mode']);
         if (router_modes.length > 1)
           throw i18n.notSameRouter(router_modes);
