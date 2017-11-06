@@ -37,7 +37,7 @@ module Interpreters
     end
 
     def homogeneous_capacities(a, b)
-      a.all?{ |current_ct| a && b.find{ |ct| current_ct && ct && current_ct.unit_id == ct.unit_id && current_ct.value == ct.value }}
+      a.all?{ |current_ct| a && b.find{ |ct| current_ct && ct && current_ct.unit_id == ct.unit_id && current_ct.limit == ct.limit }}
     end
 
     def homogeneous_vehicles(vehicles)
