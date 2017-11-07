@@ -20,6 +20,7 @@ require './models/base'
 
 module Models
   class Quantity < Base
+    field :refill, default: false
     field :value
     field :setup_value, default: 1
     validates_numericality_of :value

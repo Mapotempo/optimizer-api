@@ -49,7 +49,6 @@ module Wrappers
 
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
       relations = []
-
       services = vrp.services.collect{ |service|
         vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
           [-1]
@@ -85,6 +84,10 @@ module Wrappers
             q && q.setup_value && unit.counting ? (q.setup_value).to_i : 0
           },
           exclusion_cost: service.exclusion_cost || -1,
+          refill_quantities: vrp.units.collect{ |unit|
+            q = service.quantities.find{ |quantity| quantity.unit == unit }
+            !q.nil? && q.refill
+          },
         )
       } + vrp.shipments.collect{ |shipment|
         vehicles_indices = if !shipment[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
@@ -121,6 +124,7 @@ module Wrappers
           id: shipment.id + "pickup",
           late_multiplier: shipment.pickup.late_multiplier || 0,
           exclusion_cost: shipment.exclusion_cost || -1,
+          refill_quantities: vrp.units.collect{ |unit| false },
         )] + [OrtoolsVrp::Service.new(
           time_windows: shipment.delivery.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
@@ -139,6 +143,7 @@ module Wrappers
           id: shipment.id + "delivery",
           late_multiplier: shipment.delivery.late_multiplier || 0,
           exclusion_cost: shipment.exclusion_cost || -1,
+          refill_quantities: vrp.units.collect{ |unit| false },
         )]
       }.flatten(1)
 

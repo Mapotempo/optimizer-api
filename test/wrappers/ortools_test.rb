@@ -3048,4 +3048,90 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size, [result[:routes][0][:activities].size, result[:routes][1][:activities].size].max
     assert_equal 'service_2', result[:routes][0][:activities].first[:service_id] || result[:routes][1][:activities].first[:service_id]
   end
+
+  def test_refill_quantities
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      units: [{
+        id: 'kg',
+        labal: 'kg'
+      }],
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        capacities: [{
+          unit_id: 'kg',
+          limit: 5
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          refill: true
+        }]
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: -5
+        }]
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_2'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: -5
+        }]
+      }],
+      relations: [{
+        id: 'never_first',
+        type: "never_first",
+        linked_ids: ['service_1', 'service_3']
+      }],
+      configuration: {
+        resolution: {
+          duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal problem[:services].size, result[:routes][0][:activities].size
+    assert 'service_2' == result[:routes][0][:activities].first[:service_id] || 'service_2' == result[:routes][0][:activities].last[:service_id]
+    assert 'service_3' == result[:routes][0][:activities].first[:service_id] || 'service_3' == result[:routes][0][:activities].last[:service_id]
+    assert_equal 'service_1', result[:routes][0][:activities][1][:service_id]
+    assert_equal result[:routes][0][:initial_loads], 5
+  end
 end
