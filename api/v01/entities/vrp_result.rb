@@ -30,6 +30,7 @@ module Api
       expose :unit, documentation: { type: String, desc: '' }
       expose :value, documentation: { type: Float, desc: '' }
       expose :setup_value, documentation: { type: Float, desc: '' }
+      expose :current_load, documentation: { type: Float, desc: '' }
     end
 
     class VrpResultSolutionRouteActivityDetails < Grape::Entity

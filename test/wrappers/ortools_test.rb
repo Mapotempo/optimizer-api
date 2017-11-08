@@ -3132,6 +3132,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert 'service_2' == result[:routes][0][:activities].first[:service_id] || 'service_2' == result[:routes][0][:activities].last[:service_id]
     assert 'service_3' == result[:routes][0][:activities].first[:service_id] || 'service_3' == result[:routes][0][:activities].last[:service_id]
     assert_equal 'service_1', result[:routes][0][:activities][1][:service_id]
-    assert_equal result[:routes][0][:initial_loads], 5
+    assert_equal result[:routes][0][:initial_loads].first[:value], 5
   end
 end
