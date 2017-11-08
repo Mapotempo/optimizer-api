@@ -17,6 +17,7 @@
 #
 require './wrappers/wrapper'
 require './wrappers/ortools_vrp_pb'
+require './wrappers/ortools_result_pb'
 
 require 'open3'
 require 'thread'
@@ -28,6 +29,7 @@ module Wrappers
       @exec_ortools = hash[:exec_ortools] || 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'
       @optimize_time = hash[:optimize_time]
       @resolution_stable_iterations = hash[:optimize_time]
+      @previous_result = nil
 
       @semaphore = Mutex.new
     end
@@ -46,7 +48,7 @@ module Wrappers
     def solve(vrp, job, thread_proc = nil, &block)
 # FIXME or-tools can handle no end-point itself
       @job = job
-
+      @previous_result = nil
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
       relations = []
       services = vrp.services.collect{ |service|
@@ -223,7 +225,7 @@ module Wrappers
         return ret
       end
 
-      parse_output(vrp, services, points, matrix_indices, cost, iterations, result)
+      result
     end
 
     def closest_rest_start(timewindows, current_start)
@@ -282,18 +284,20 @@ module Wrappers
       vrp.resolution_duration || vrp.resolution_iterations_without_improvment
     end
 
-    def parse_output(vrp, services, points, matrix_indices, cost, iterations, result)
-      result = result.split(';').collect{ |r| r.split(',').collect{ |i| i.scan(/[0-9]+/).collect{ |j| Integer(j) } }[1..-2] }
+    def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+      content = OrtoolsResult::Result.decode(output.read)
+      return @previous_result if content['routes'].empty? && @previous_result
+      collected_indices = []
 
       {
-        cost: cost,
-        iterations: iterations,
+        cost: content['cost'] || 0,
+        iterations: content['iterations'] || 0,
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,
 #        start_time: 0,
 #        end_time: 0,
-        routes: result.each_with_index.collect{ |route, index|
+        routes: content['routes'].each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
           previous = nil
           load_status = vrp.units.collect{ |unit|
@@ -307,27 +311,32 @@ module Wrappers
           earliest_start = route_start
           {
           vehicle_id: vehicle.id,
-          activities:
-            ([if vehicle.start_point
-              previous_index = points[vehicle.start_point.id].matrix_index
-              {
-                point_id: vehicle.start_point.id,
-                detail: vehicle.start_point.location ? {
-                  lat: vehicle.start_point.location.lat,
-                  lon: vehicle.start_point.location.lon
-                } : nil
-              }.delete_if{ |k,v| !v }
-            else
-              nil
-            end] +
-            route.collect{ |i|
-              route_rest_index = 0
-              if i.first < matrix_indices.size + 2
-                if i.first < vrp.services.size
-                  point_index = services[i.first].matrix_index
+          activities: route['activities'].collect{ |activity|
+              current_index = activity['index'] || 0
+              if activity['type'] == 'start' && vehicle.start_point
+                previous_index = points[vehicle.start_point.id].matrix_index
+                {
+                  point_id: vehicle.start_point.id,
+                  detail: vehicle.start_point.location ? {
+                    lat: vehicle.start_point.location.lat,
+                    lon: vehicle.start_point.location.lon
+                  } : nil
+                }.delete_if{ |k,v| !v }
+              elsif activity['type'] == 'end'  && vehicle.end_point
+                vehicle.end_point && {
+                  point_id: vehicle.end_point.id,
+                  detail: vehicle.end_point.location ? {
+                    lat: vehicle.end_point.location.lat,
+                    lon: vehicle.end_point.location.lon
+                  } : nil
+                }.delete_if{ |k,v| !v }
+              elsif activity['type'] == 'service'
+                collected_indices << current_index
+                if current_index < vrp.services.size
+                  point_index = services[current_index].matrix_index
                   point = vrp.points[point_index]
-                  service = vrp.services[i.first]
-                  earliest_start = i.size > 1 ? i.last : earliest_start
+                  service = vrp.services[current_index]
+                  earliest_start = activity['start_time'] || 0
                   travel_time = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous_index][point_index] : 0)
                   travel_distance = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous_index][point_index] : 0)
                   current_activity = {
@@ -336,7 +345,7 @@ module Wrappers
                     travel_time: travel_time,
                     travel_distance: travel_distance,
                     begin_time: earliest_start,
-                    departure_time: i.size > 1 ? earliest_start + vrp.services[i.first].activity[:duration].to_i : nil,
+                    departure_time: earliest_start + vrp.services[current_index].activity[:duration].to_i,
                     detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil)
   #              pickup_shipments_id [:id0:],
   #              delivery_shipments_id [:id0:]
@@ -347,16 +356,15 @@ module Wrappers
                     current[:current_load] += (quantity ? (quantity.value || 0) : 0) + (quantity && current_unit[:counting] && quantity.setup_value && travel_time == 0 && travel_distance == 0 ? quantity.setup_value : 0)
                     current[:minimum_load] = [current[:minimum_load], current[:current_load]].min
                   }
-                  earliest_start += vrp.services[i.first].activity[:duration].to_i
                   previous_index = point_index
                   current_activity
                 else
-                  shipment_index = ((i.first - vrp.services.size)/2).to_i
-                  shipment_activity = (i.first - vrp.services.size)%2
+                  shipment_index = ((current_index - vrp.services.size)/2).to_i
+                  shipment_activity = (current_index - vrp.services.size)%2
                   shipment = vrp.shipments[shipment_index]
-                  point_index = services[i.first].matrix_index
+                  point_index = services[current_index].matrix_index
                   point = vrp.points[point_index]
-                  earliest_start = i.size > 1 ? i.last : earliest_start
+                  earliest_start = activity['start_time'] || 0
                   travel_time = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous_index][point_index] : 0)
                   travel_distance = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous_index][point_index] : 0)
                   current_activity = {
@@ -366,7 +374,7 @@ module Wrappers
                     travel_time: travel_time,
                     travel_distance: travel_distance,
                     begin_time: earliest_start,
-                    departure_time: i.size > 1 ? earliest_start + (shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i ): nil,
+                    departure_time: earliest_start + (shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i ),
                     detail: build_detail(shipment, shipment_activity == 0 ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil)
   #              pickup_shipments_id [:id0:],
   #              delivery_shipments_id [:id0:]
@@ -385,8 +393,8 @@ module Wrappers
                   previous_index = point_index
                   current_activity
                 end
-              else
-                vehicle_rest = vehicle.rests[route_rest_index]
+              elsif activity['type'] == 'break'
+                vehicle_rest = vehicle.rests[current_index]
                 earliest_start = closest_rest_start(vehicle_rest[:timewindows], earliest_start)
                 current_rest = {
                   rest_id: vehicle_rest.id,
@@ -395,17 +403,11 @@ module Wrappers
                   detail: build_rest(vehicle_rest, vehicle.global_day_index ? vehicle.global_day_index%7 : nil)
                 }
                 earliest_start += vehicle_rest[:duration]
-                ++route_rest_index
                 current_rest
+              else
+                nil
               end
-            } +
-            [vehicle.end_point && {
-              point_id: vehicle.end_point.id,
-              detail: vehicle.end_point.location ? {
-                lat: vehicle.end_point.location.lat,
-                lon: vehicle.end_point.location.lon
-              } : nil
-            }.delete_if{ |k,v| !v }]).compact,
+            }.compact,
           initial_loads: load_status.collect{ |unit|
             {
               unit_id: unit[:unit_id],
@@ -413,14 +415,14 @@ module Wrappers
             }
           }
         }},
-        unassigned: (vrp.services.collect(&:id) - result.flatten(1).collect{ |i| i.first < vrp.services.size && vrp.services[i.first].id }).collect{ |service_id|
+        unassigned: (vrp.services.collect(&:id) - collected_indices.collect{ |index| index < vrp.services.size && vrp.services[index].id }).collect{ |service_id|
           service = vrp.services.find{ |service| service.id == service_id }
           {
             service_id:service_id,
             point_id: service.activity.point_id,
             detail: build_detail(service, service.activity, service.activity.point, nil)
           }
-        } + (vrp.shipments.collect(&:id) - result.flatten(1).collect{ |i| i.first >= vrp.services.size && i.first - vrp.services.size < vrp.shipments.size && vrp.shipments[i.first - vrp.services.size].id }).collect{ |shipment_id|
+        } + (vrp.shipments.collect(&:id) - collected_indices.collect{ |index| index >= vrp.services.size && index - vrp.services.size < vrp.shipments.size && vrp.shipments[index - vrp.services.size].id }).collect{ |shipment_id|
           shipment = vrp.shipments.find{ |shipment| shipment.id == shipment_id }
           [{
             shipment_id: "#{shipment_id}pickup",
@@ -440,6 +442,8 @@ module Wrappers
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close
 
+      output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
+
       cmd = [
         "#{@exec_ortools} ",
         (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
@@ -449,7 +453,8 @@ module Wrappers
         (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
         vrp.resolution_vehicle_limit ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
-        "-instance_file '#{input.path}'"].compact.join(' ')
+        "-instance_file '#{input.path}'",
+        "-solution_file '#{output.path}'"].compact.join(' ')
       puts cmd
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
@@ -478,12 +483,11 @@ module Wrappers
       stdout_and_stderr.each_line { |line|
         puts (@job ? @job + ' - ' : '') + line
         out = out + line
-        r = /Iteration : ([0-9]+)/.match(line)
+        r = /^Iteration : ([0-9]+)/.match(line)
         r && (iterations = Integer(r[1]))
-        r = / Cost : ([0-9.eE+]+)/.match(line)
-        r && (cost = Float(r[1]))
-        r = /(([0-9]+(,[0-9]+(\[[0-9]+\])*)*;)+)+/.match(line)
-        block.call(self, iterations, nil, cost, r && parse_output(vrp, services, points, matrix_indices, cost, iterations, r[1])) if block
+        s = / Cost : ([0-9.eE+]+)/.match(line)
+        s && (cost = Integer(s[1]))
+        block.call(self, iterations, nil, cost, r && @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)) if block && r && s && vrp.restitution_intermediate_solutions
       }
 
       result = out.split("\n")[-1]
@@ -498,13 +502,13 @@ module Wrappers
           iterations = if cost_line.include?('Final Iteration : ')
             cost_line.split(' ')[3].to_i
           end
-          [cost, iterations, result]
+          [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
         end
       elsif @thread.value == 9
         out = "Job killed"
         puts out # Keep trace in worker
         if cost && !result.include?('Iteration : ')
-          [cost, iterations, result]
+          [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
         else
           out
         end
@@ -513,6 +517,7 @@ module Wrappers
       end
     ensure
       input && input.unlink
+      output && output.unlink
     end
   end
 end

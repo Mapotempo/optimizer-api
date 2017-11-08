@@ -140,24 +140,24 @@ module OptimizerWrapper
         File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
         block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
-        cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |vrp|
+        cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
           block.call(nil, 0, nil, 'run optimization') if block
           time_start = Time.now
-          result = OptimizerWrapper.config[:services][service].solve(vrp, job, Proc.new{ |pids|
+          result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
               if job
                 actual_result = Result.get(job) || { 'pids' => nil }
-                if vrp[:restitution_csv]
+                if cluster_vrp[:restitution_csv]
                   actual_result['csv'] = true
                 end
                 actual_result['pids'] = pids
                 Result.set(job, actual_result)
               end
             }) { |wrapper, avancement, total, cost, solution|
-            block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(vrp, solution)) if block
+            block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(cluster_vrp, solution)) if block
           }
           if result.class.name == 'Hash' # result.is_a?(Hash) not working
             result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-            parse_result(vrp, result)
+            parse_result(cluster_vrp, result)
           elsif result.class.name == 'String' # result.is_a?(String) not working
             raise RuntimeError.new(result) unless result == "Job killed"
           else
@@ -202,7 +202,8 @@ module OptimizerWrapper
         },
         restitution: {
           geometry: vrp.restitution_geometry,
-          geometry_polyline: vrp.restitution_geometry_polyline
+          geometry_polyline: vrp.restitution_geometry_polyline,
+          intermediate_solutions: vrp.restitution_intermediate_solutions
         },
         resolution: {
           duration: vrp.resolution_duration && vrp.resolution_duration / vrp.vehicles.size,
@@ -283,13 +284,13 @@ module OptimizerWrapper
       quantities_header.uniq!
       quantities_id.uniq!
 
-      max_timewindows_size = solution['routes'].collect{ |route|
+      max_timewindows_size = (solution['routes'].collect{ |route|
         route['activities'].collect{ |activity|
           if activity['detail'] && activity['detail']['timewindows']
             activity['detail']['timewindows'].size
           end
         }.compact
-      }.flatten.max
+      }.flatten + [0]).max
       timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
         ["timewindow_start_#{index}", "timewindow_end_#{index}"]
       }.flatten
