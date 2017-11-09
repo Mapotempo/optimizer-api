@@ -204,7 +204,9 @@ module Wrappers
           end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
           duration: vehicle.duration ? vehicle.duration : -1,
           force_start: vehicle.force_start,
-          day_index: vehicle.global_day_index ? vehicle.global_day_index : -1
+          day_index: vehicle.global_day_index ? vehicle.global_day_index : -1,
+          max_ride_time: vehicle.maximum_ride_time || 0,
+          max_ride_distance: vehicle.maximum_ride_distance || 0
         )
       }
 

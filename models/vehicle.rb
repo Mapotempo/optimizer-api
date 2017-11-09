@@ -51,6 +51,8 @@ module Models
 
     field :force_start, default: false
     field :duration, default: nil
+    field :maximum_ride_time, default: nil
+    field :maximum_ride_distance, default: nil
     field :matrix_id, default: nil
     field :value_matrix_id, default: nil
 
@@ -82,11 +84,11 @@ module Models
 
     def need_matrix_time?
       cost_time_multiplier != 0 || cost_waiting_time_multiplier != 0 || cost_late_multiplier != 0 || cost_setup_time_multiplier != 0 ||
-      !rests.empty?
+      !rests.empty? || maximum_ride_time
     end
 
     def need_matrix_distance?
-      cost_distance_multiplier != 0
+      cost_distance_multiplier != 0 || maximum_ride_distance
     end
 
     def need_matrix_value?

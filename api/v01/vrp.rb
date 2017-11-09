@@ -176,6 +176,8 @@ module Api
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
         this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
+        this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
+        this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
         this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
 
         this.optional(:unavailable_work_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals indices of unavailabilty')

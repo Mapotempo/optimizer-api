@@ -3220,4 +3220,60 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 'service_1', result[:routes][0][:activities][1][:service_id]
     assert_equal result[:routes][0][:initial_loads].first[:value], 5
   end
+
+  def test_max_ride_time
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 5, 11],
+          [5, 0, 11],
+          [11, 11, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        maximum_ride_time: 10
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 1, result[:routes].size
+    assert_equal problem[:services].size, result[:routes][0][:activities].size
+    assert_equal 1 , result[:unassigned].size
+  end
 end

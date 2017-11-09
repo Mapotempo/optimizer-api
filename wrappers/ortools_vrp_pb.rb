@@ -54,6 +54,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :day_index, :int32, 16
     optional :value_matrix_index, :uint32, 17
     optional :cost_value_multiplier, :float, 18
+    optional :max_ride_time, :int64, 19
+    optional :max_ride_distance, :int64, 20
   end
   add_message "ortools_vrp.Relation" do
     optional :type, :string, 1
