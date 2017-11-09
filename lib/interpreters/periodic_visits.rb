@@ -37,8 +37,8 @@ module Interpreters
 
         unavailable_indices = if vrp.schedule_unavailable_indices
           vrp.schedule_unavailable_indices.collect { |unavailable_index|
-            unavailable_index
-          }
+            unavailable_index if unavailable_index >= schedule_start && unavailable_index <= schedule_end
+          }.compact
         elsif vrp.schedule_unavailable_date
           vrp.schedule_unavailable_date.collect{ |date|
             (date - epoch).to_i - real_schedule_start if (date - epoch).to_i >= real_schedule_start
@@ -52,8 +52,8 @@ module Interpreters
             }.compact
             if unavailable_indices
               service.unavailable_visit_day_indices += unavailable_indices.collect { |unavailable_index|
-                unavailable_index
-              }
+                unavailable_index if unavailable_index >= schedule_start && unavailable_index <= schedule_end
+              }.compact
               service.unavailable_visit_day_indices.uniq
             end
           end
