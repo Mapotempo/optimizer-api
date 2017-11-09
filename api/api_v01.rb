@@ -88,8 +88,8 @@ module Api
 * [Zones](#zones)
 
 -----------------
-¹ Currently not available with Jsprit
-² Currently not available with ORtools
+* ¹ Currently not available with Jsprit
+* ² Currently not available with ORtools
 
 -----------------
 
@@ -177,7 +177,7 @@ This could be usefull if the routing data are provided from an external source.
     }]
 ```
 ### <a name="timewindows"></a>**TimeWindows**
-Define a time interval when a resource is available or when an activity can begin. By default duration are supposed to be defined in seconds. If a time matrix is send with the problem, values must be set on the same time unit.
+Define a time interval when a resource is available or when an activity can begin. By default times and durations are supposed to be defined in seconds. If a time matrix is send with the problem, values must be set on the same time unit.
 Vehicles only have single timewindow
 ```json
   "timewindow": {
@@ -247,6 +247,11 @@ The router dimension can be set as distance, this describe that the route betwee
     "cost_time_multiplier": 0.0
   }]
 ```
+Some additional parameters are available :
+* **force_start** Force the vehicle to leave its depot at the starting time of its working timewindow.
+* **duration** Define the maximum duration of the vehicle route
+* **maximum_ride_time** and **maximum_ride_distance** To define a maximum ride distance or duration, you can set the "maximum_ride_distance" and "maximum_ride_time" parameters with meter and seconds.
+
 
 ### <a name="activities"></a>**Activities**
 Describe where an activity take place, when it can be performed and how long it last.
@@ -260,6 +265,9 @@ Describe where an activity take place, when it can be performed and how long it 
     "duration": 2100.0
   }
 ```
+Some additional parameters are available :
+* **setup_duration** allow to combine the activities durations performed at the same place
+
 ### <a name="services-and-shipments"></a>**Services and Shipments**
 Describe more specifically the activities to be performed.
 Services are single activities which are self-sufficient.
@@ -325,7 +333,7 @@ With this matrix defined, the vehicle definition is now the following :
     "cost_time_multiplier": 1.0
   }]
 ```
-Note that every vehicle could be linked to different matrices in order to model multiple transport mode
+Note that every vehicle could be linked to different matrices in order to model multiple transport mode.
 
 In the case the distance cost is greater than 0, it will be mandatory to transmit the related matrix
 ```json
@@ -345,7 +353,9 @@ In the case the distance cost is greater than 0, it will be mandatory to transmi
     ]
   }]
 ```
-Whenever there is no time constraint and the objective is only set on distance, the time matrix is not mandatory
+Whenever there is no time constraint and the objective is only set on distance, the time matrix is not mandatory.
+
+An additional value matrix is available to represent a cost matrix.
 ### <a name="units"></a>**Units**
 Describe the dimension used for the goods. ie : kgs, litres, pallets...etc
 ```json
@@ -436,6 +446,7 @@ Inform of the package size, shift within a route once loaded into a vehicle.
       "value": 8
     }]
   }
+The "refill" parameters allow to let the optimizer decide how many values of the current quantity can be loaded at the current activity.
 ```
 ### <a name="rests"></a>**Rests**
 Inform about the drivers obligations to have some rest within a route
@@ -476,12 +487,16 @@ Those could be of the following types:
   * **order** : force services to be served within the same route in a specific order, but allow to insert others missions between
   * **sequence** : force services to be served in a specific order, excluding others missions to be performed between
   * **meetup** : ensure that some missions are performed at the same time by multiple vehicles.
+  * **maximum_duration_lapse** : Define a maximum in route duration between two activities.
+  * **force_first** : The linked activities are the only which can be set as first of a route. (Only one relation of this kind is considered)
+  * **never_first** : The linked activities can\'t be set as first of a vehicle.
 
 ```json
   "relations": [{
     "id": "sequence_1",
     "type": "sequence",
-    "linked_ids": ["service_1", "service_3", "service_2"]
+    "linked_ids": ["service_1", "service_3", "service_2"],
+    "lapse": null
   }]
 ```
 
@@ -717,8 +732,8 @@ Services can be set with a __pickup__ or a __delivery__ type which inform the so
     }]
   }]
 ```
-### <a name="priority"></a>Priority¹
-Indicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8.
+### <a name="priority"></a>Priority and Exclusion cost¹
+Priority ndicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8.
 ```json
  "services": [{
     "id": "visit-1",
@@ -748,6 +763,7 @@ Indicate to the solver which activities are the most important, the priority 0 i
     }
   }]
 ```
+The "exclusion_cost" parameter override the priority and define at which cost the current activity can be unassigned.
 ### <a name="quantities-overload"></a>Quantities overload¹
 Allow the vehicles to load more than the defined limit, but add a cost at every excess unit.
 ```json
