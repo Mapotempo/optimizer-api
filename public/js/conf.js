@@ -101,6 +101,7 @@ var mapping = {
   delivery_setup: 'delivery_setup',
   skills: 'skills',
   quantity: 'quantity',
+  shipment_inroute: 'maximum_inroute_duration',
   initial_quantity: 'initial quantity',
   start_lat: 'start_lat',
   start_lon: 'start_lng',

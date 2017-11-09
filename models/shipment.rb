@@ -22,8 +22,10 @@ module Models
   class Shipment < Base
     field :priority, default: 4
     field :exclusion_cost, default: nil
+    field :maximum_inroute_duration, default: nil
     validates_numericality_of :priority, allow_nil: true
     validates_numericality_of :exclusion_cost, allow_nil: true
+    validates_numericality_of :maximum_inroute_duration, allow_nil: true
 
     field :skills, default: []
 

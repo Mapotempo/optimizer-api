@@ -143,6 +143,8 @@ $(document).ready(function() {
   $('#file-customers-help .column-value').append('<td>1.234</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.skills + '</td>');
   $('#file-customers-help .column-value').append('<td>"tag1,tag2"</td>');
+  $('#file-customers-help .column-name').append('<td>' + mapping.shipment_inroute + '</td>');
+  $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
 
   $('#file-vehicles-help .column-name').append('<td>' + mapping.reference + '</td>');
   $('#file-vehicles-help .column-value').append('<td>ref</td>');
@@ -374,6 +376,7 @@ $(document).ready(function() {
           });
           vrp.shipments.push({
             id: customer[mapping.reference || 'reference'],
+            maximum_inroute_duration: duration(customer[mapping.shipment_inroute || 'shipment_inroute']) || null,
             pickup: {
               point_id: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.'),
               timewindows: [{
