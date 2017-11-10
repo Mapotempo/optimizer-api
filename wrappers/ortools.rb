@@ -434,18 +434,21 @@ module Wrappers
         unassigned: (vrp.services.collect(&:id) - collected_indices.collect{ |index| index < vrp.services.size && vrp.services[index].id }).collect{ |service_id|
           service = vrp.services.find{ |service| service.id == service_id }
           {
-            service_id:service_id,
+            service_id: service_id,
+            type: service.type.to_s,
             point_id: service.activity.point_id,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil)
           }
         } + (vrp.shipments.collect(&:id) - collected_indices.collect{ |index| index >= vrp.services.size && index - vrp.services.size < vrp.shipments.size && vrp.shipments[index - vrp.services.size].id }).collect{ |shipment_id|
           shipment = vrp.shipments.find{ |shipment| shipment.id == shipment_id }
           [{
-            shipment_id: "#{shipment_id}pickup",
+            shipment_id: "#{shipment_id}",
+            type: 'pickup',
             point_id: shipment.pickup.point_id,
             detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil)
           }] << {
-            shipment_id: "#{shipment_id}delivery",
+            shipment_id: "#{shipment_id}",
+            type: 'delivery',
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil)
           }
