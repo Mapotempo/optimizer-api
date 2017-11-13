@@ -21,10 +21,14 @@ include Ai4r::Clusterers
 
 module Interpreters
   class SplitClustering
-    attr_accessor :free_vehicles
 
-    def initialize
-      @free_vehicles = Array.new
+    def initialize(vrp)
+      @initial_vrp_duration = vrp.resolution_duration/vrp.vehicles.size if vrp.resolution_duration
+      @initial_vrp_time_out = vrp.resolution_initial_time_out/vrp.vehicles.size if vrp.resolution_initial_time_out
+      @all_vehicles = vrp.vehicles
+      @vehicle_index = 0
+      @initial_visits = vrp.services.size
+      @homogeneous = homogeneous_vehicles(vrp.vehicles)
     end
 
     def homogeneous_point(a, b)
@@ -66,27 +70,19 @@ module Interpreters
     def split_clusters(services_vrps, job = nil, &block)
       all_vrps = services_vrps.collect{ |services_vrp|
         vrp = services_vrp[:vrp]
-        vrp_vehicle_initial_time_out = nil
-        vrp_vehicle_duration = nil
 
-        if (homogeneous_vehicles(vrp.vehicles) && vrp.preprocessing_max_split_size && vrp.shipments.size == 0)
-          vrp_vehicle_initial_time_out = vrp.resolution_initial_time_out/vrp.vehicles.size if vrp.resolution_initial_time_out
-          vrp_vehicle_duration = vrp.resolution_duration/vrp.vehicles.size if vrp.resolution_duration
-          if (vrp.services.size > vrp.preprocessing_max_split_size && vrp.vehicles.size + @free_vehicles.size > 1)
+        if @homogeneous && vrp.preprocessing_max_split_size && vrp.shipments.size == 0
+          if vrp.services.size > vrp.preprocessing_max_split_size && @vehicle_index < @all_vehicles.size
             points = vrp.services.collect.with_index{ |service, index|
               service.activity.point.matrix_index = index
               [service.activity.point.location.lat, service.activity.point.location.lon]
             }
 
-            while vrp.vehicles.size < 2 do
-              vrp.vehicles << @free_vehicles.slice!(0)
-            end
             result_cluster = clustering(vrp, 2)
-            vehicles_subset = vehicles_subsets(vrp, result_cluster)
 
-            sub_first = build_partial_vrp(vrp, vehicles_subset[0], result_cluster[0], vrp_vehicle_initial_time_out, vrp_vehicle_duration)
+            sub_first = build_partial_vrp(vrp, result_cluster[0])
 
-            sub_second = build_partial_vrp(vrp, vehicles_subset[1], result_cluster[1], vrp_vehicle_initial_time_out, vrp_vehicle_duration)
+            sub_second = build_partial_vrp(vrp, result_cluster[1])
 
             deeper_search = [{
               service: services_vrp[:service],
@@ -97,26 +93,38 @@ module Interpreters
             }]
             split_clusters(deeper_search, job)
           else
-            unassigned_size = 0
             sub_vrp = Marshal::load(Marshal.dump(vrp))
             sub_vrp.id = Random.new
+            unassigned_size = 0
+            estimated_sub_size = [((vrp.services.size.to_f / (@initial_visits)).to_f * @all_vehicles.size).to_i, 1].max
+            sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size - 1].collect{ |vehicle|
+              vehicle.matrix_id = nil
+              vehicle
+            }
+            previous_unassigned_size = 0
+            loop_index = 0
             begin
+              previous_unassigned_size = unassigned_size
               sub_vrp.resolution_initial_time_out = 1000
+              sub_vrp.resolution_duration = @initial_vrp_duration * sub_vrp.vehicles.size if @initial_vrp_duration
               result = OptimizerWrapper.solve([{
                 service: services_vrp[:service],
                 vrp: sub_vrp
               }], job)
               unassigned_size = result[:unassigned].size || 0
-              has_add = false
-              if (unassigned_size > 0 && @free_vehicles.size > 0)
-                sub_vrp.vehicles << @free_vehicles.slice!(0)
-                has_add = true
+              if unassigned_size != 0 && previous_unassigned_size != unassigned_size
+                loop_index += 1
+                sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size + loop_index - 1].collect{ |vehicle|
+                  vehicle.matrix_id = nil
+                  vehicle
+                }
               elsif unassigned_size == 0
-                result[:routes].select{ |route| route.size == 2 }.size
+                to_reduce = result[:routes].select{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] }}.size
+                sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size + loop_index - to_reduce - 1]
               end
-            end while unassigned_size > 0 and @free_vehicles.size > 0 || has_add
-            sub_vrp.resolution_initial_time_out = vrp_vehicle_initial_time_out * sub_vrp.vehicles.size if vrp.resolution_initial_time_out
-            sub_vrp.resolution_duration = vrp_vehicle_duration * sub_vrp.vehicles.size if vrp.resolution_duration
+            end while previous_unassigned_size != unassigned_size && @vehicle_index + loop_index < @all_vehicles.size
+            @vehicle_index += sub_vrp.vehicles.size
+            sub_vrp.resolution_initial_time_out = @initial_vrp_time_out * sub_vrp.vehicles.size if @initial_vrp_time_out
             {
               service: services_vrp[:service],
               vrp: sub_vrp
@@ -169,37 +177,9 @@ module Interpreters
       result
     end
 
-    def edit_vehicles(vrp, base_vehicles, services, nclust, medoids)
-      vrp.vehicles.each{ |vehicle|
-        vehicle.matrix_id = nil
-      }
-
-      @free_vehicles += vrp.vehicles[nclust..-1]
-      base_vehicles[0..nclust-1]
-    end
-
-    def vehicles_subsets(vrp, result_clusters)
-      subsets_size = Array.new(result_clusters.size, 0)
-      result_clusters.each.with_index { |cluster, index|
-        subsets_size[index] = cluster.size
-      }
-      vehicles_size = subsets_size.collect{ |size|
-        [(size * vrp.vehicles.size / vrp.services.size).round, 1].max
-      }
-
-      previous = 0
-      sub_vehicles = vehicles_size.collect.with_index{ |subset_size, index|
-        vehicle_subset = vrp.vehicles[previous..(previous+subset_size-1)]
-        previous += subset_size
-        vehicle_subset
-      }
-    end
-
-    def build_partial_vrp(vrp, vehicle_subset, cluster_services, vehicle_initial_time_out, vehicle_duration)
+    def build_partial_vrp(vrp, cluster_services)
       sub_vrp = Marshal::load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
-      sub_vrp.resolution_initial_time_out = vehicle_initial_time_out * vehicle_subset.size if vehicle_initial_time_out
-      sub_vrp.resolution_duration = vehicle_duration * vehicle_subset.size if vehicle_duration
       services = vrp.services.select{ |service| cluster_services.include?(service.id) }.compact
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact
       sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
@@ -209,7 +189,6 @@ module Interpreters
         [service.activity.point.location.lat, service.activity.point.location.lon]
       }
       sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten ).compact.uniq
-      sub_vrp.vehicles = vehicle_subset
       sub_vrp
     end
   end

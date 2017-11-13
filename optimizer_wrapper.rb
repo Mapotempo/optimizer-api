@@ -734,8 +734,10 @@ module OptimizerWrapper
 
     def perform
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
-      split_lib = Interpreters::SplitClustering.new
-      complete_services_vrp = split_lib.split_clusters(services_vrps, self.uuid)
+      complete_services_vrp = services_vrps.collect{ |service_vrp|
+        split_lib = Interpreters::SplitClustering.new(service_vrp[:vrp])
+        split_lib.split_clusters([service_vrp], self.uuid)
+      }.flatten
       result = OptimizerWrapper.solve(complete_services_vrp, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
