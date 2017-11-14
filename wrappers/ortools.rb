@@ -306,6 +306,34 @@ module Wrappers
     end
 
     def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+      if vrp.vehicles.size == 0 || (vrp.services.nil? || vrp.services.size == 0) && (vrp.shipments.nil? || vrp.shipments.size == 0)
+        empty_result = {
+          cost: 0,
+          iterations: 0,
+          routes: [],
+          unassigned: (vrp.services.collect{ |service|
+            {
+              service_id: "#{service.id}",
+              type: service.type.to_s,
+              point_id: service.activity.point_id,
+              detail: build_detail(service, service.activity, service.activity.point, nil, nil)
+            }
+          }) + (vrp.shipments.collect{ |shipment|
+            [{
+              shipment_id: "#{shipment.id}",
+              type: 'pickup',
+              point_id: shipment.pickup.point_id,
+              detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil)
+            }] << {
+              shipment_id: "#{shipment.id}",
+              type: 'delivery',
+              point_id: shipment.delivery.point_id,
+              detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil)
+            }
+          })
+        }
+        return empty_result
+      end
       content = OrtoolsResult::Result.decode(output.read)
       return @previous_result if content['routes'].empty? && @previous_result
       collected_indices = []
@@ -457,6 +485,9 @@ module Wrappers
     end
 
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
+      if vrp.vehicles.size == 0 || (vrp.services.nil? || vrp.services.size == 0) && (vrp.shipments.nil? || vrp.shipments.size == 0)
+        return [0, 0, @previous_result = parse_output(vrp, services, points, matrix_indices, 0, 0, nil)]
+      end
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close

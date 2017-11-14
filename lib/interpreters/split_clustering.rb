@@ -111,7 +111,7 @@ module Interpreters
                 service: services_vrp[:service],
                 vrp: sub_vrp
               }], job)
-              unassigned_size = result[:unassigned].size || 0
+              unassigned_size = result && result[:unassigned] && result[:unassigned].size || 0
               if unassigned_size != 0 && previous_unassigned_size != unassigned_size
                 loop_index += 1
                 sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size + loop_index - 1].collect{ |vehicle|
@@ -119,7 +119,9 @@ module Interpreters
                   vehicle
                 }
               elsif unassigned_size == 0
-                to_reduce = result[:routes].select{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] }}.size
+                to_reduce = result && result[:routes].select{ |route| route[:activities].none?{ |activity|
+                  activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id]
+                }}.size || 0
                 sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size + loop_index - to_reduce - 1]
               end
             end while previous_unassigned_size != unassigned_size && @vehicle_index + loop_index < @all_vehicles.size
