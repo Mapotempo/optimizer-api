@@ -275,10 +275,12 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
     get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+    previous_response = nil
     while last_response.body
-      sleep(0.5)
+      sleep(1)
       assert_equal 206, last_response.status, last_response.body
       get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+      previous_response = last_response
       if JSON.parse(last_response.body)['job']['status'] != 'queued'
         break
       end
@@ -287,7 +289,7 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.config[:solve_synchronously] = true
     delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     assert_equal 202, last_response.status, last_response.body
-    assert !JSON.parse(last_response.body)["solutions"].first.empty?
+    assert !JSON.parse(previous_response.body)["solutions"].first.nil? || !JSON.parse(last_response.body)["solutions"].first.nil?
   end
 
   def test_ignore_unknown_parameters
