@@ -219,6 +219,10 @@ module Wrappers
       }
     end
 
+    def assert_no_routes(vrp)
+      vrp.relations.empty?
+    end
+
     def solve_synchronous?(vrp)
       false
     end

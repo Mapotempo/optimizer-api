@@ -43,7 +43,8 @@ module Wrappers
         :assert_one_sticky_at_most,
         :assert_no_relations,
         :assert_vehicles_no_duration_limit,
-        :assert_no_value_matrix
+        :assert_no_value_matrix,
+        :assert_no_routes
       ]
     end
 

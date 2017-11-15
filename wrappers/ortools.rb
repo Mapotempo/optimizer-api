@@ -218,11 +218,21 @@ module Wrappers
         )
       }
 
+      routes = vrp.routes.collect{ |route|
+        if !route.vehicle.nil? && !route.mission_ids.empty?
+          OrtoolsVrp::Route.new(
+            vehicle_id: route.vehicle.id,
+            service_ids: route.mission_ids
+          )
+        end
+      }
+
       problem = OrtoolsVrp::Problem.new(
         vehicles: vehicles,
         services: services,
         matrices: matrices,
-        relations: relations
+        relations: relations,
+        routes: routes
       )
       ret = run_ortools(problem, vrp, services, points, matrix_indices, thread_proc, &block)
       case ret

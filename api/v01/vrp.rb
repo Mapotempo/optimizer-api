@@ -254,6 +254,11 @@ module Api
         this.requires(:linked_ids, type: Array[String], desc: '')
       end
 
+      def self.vrp_request_route(this)
+        this.optional(:vehicle_id, type: String, desc: 'vehicle linked to the current described route')
+        this.requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route')
+      end
+
       def self.vrp_request_preprocessing(this)
         this.optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
         this.optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
@@ -338,6 +343,10 @@ module Api
 
               optional(:relations, type: Array, desc: '') do
                 Vrp.vrp_request_relation(self)
+              end
+
+              optional(:routes, type: Array, desc: '') do
+                Vrp.vrp_request_route(self)
               end
 
               optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation') do
