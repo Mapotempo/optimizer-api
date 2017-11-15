@@ -112,6 +112,9 @@ class Api::V01::VrpTest < Minitest::Test
 
     delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     assert_equal 202, last_response.status, last_response.body
+    
+    Resque.inline = true
+    OptimizerWrapper.config[:solve_synchronously] = true
   end
 
   def test_real_problem_without_matrix
@@ -289,7 +292,8 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.config[:solve_synchronously] = true
     delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     assert_equal 202, last_response.status, last_response.body
-    assert !JSON.parse(previous_response.body)["solutions"].first.nil? || !JSON.parse(last_response.body)["solutions"].first.nil?
+    assert !JSON.parse(previous_response.body)["solutions"].nil? && !JSON.parse(previous_response.body)["solutions"].empty? ||
+    !JSON.parse(last_response.body)["solutions"].nil? && !JSON.parse(last_response.body)["solutions"].empty?
   end
 
   def test_ignore_unknown_parameters
