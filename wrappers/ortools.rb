@@ -477,7 +477,7 @@ module Wrappers
             point_id: service.activity.point_id,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil)
           }
-        } + (vrp.shipments.collect(&:id) - collected_indices.collect{ |index| index >= vrp.services.size && index - vrp.services.size < vrp.shipments.size && vrp.shipments[index - vrp.services.size].id }).collect{ |shipment_id|
+        } + (vrp.shipments.collect(&:id) - collected_indices.collect{ |index| index >= vrp.services.size && ((index - vrp.services.size)/2).to_i < vrp.shipments.size && vrp.shipments[((index - vrp.services.size)/2).to_i].id }.uniq).collect{ |shipment_id|
           shipment = vrp.shipments.find{ |shipment| shipment.id == shipment_id }
           [{
             shipment_id: "#{shipment_id}",

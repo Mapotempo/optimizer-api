@@ -2672,7 +2672,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert_equal 4, result[:routes][0][:activities].size
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
-    assert_equal 4, result[:unassigned].size
+    assert_equal 2, result[:unassigned].size
   end
 
   def test_value_matrix
