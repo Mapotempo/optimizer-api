@@ -141,7 +141,7 @@ module Wrappers
           ) },
           quantities: vrp.units.collect{ |unit|
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (q.value*1000+0.5).to_i : 0
+            q && q.value ? -(q.value*1000+0.5).to_i : 0
           },
           duration: shipment.delivery.duration,
           additional_value: shipment.delivery.additional_value,

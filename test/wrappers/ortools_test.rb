@@ -2321,6 +2321,96 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 6, result[:routes][0][:activities].size
   end
 
+  def test_shipments_quantities
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 3, 3],
+          [3, 0, 3],
+          [3, 3, 0]
+        ]
+      }],
+      units: [{
+        id: 'unit_0',
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        cost_time_multiplier: 1,
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        capacities: [{
+          unit_id: 'unit_0',
+          limit: 2
+        }]
+      }],
+      shipments: [{
+        id: 'shipment_0',
+        pickup: {
+          point_id: 'point_1',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_2',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        quantities: [{
+          unit_id: "unit_0",
+          value: 2
+        }]
+      }, {
+        id: 'shipment_1',
+        pickup: {
+          point_id: 'point_1',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_2',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        quantities: [{
+          unit_id: "unit_0",
+          value: 2
+        }]
+      }],
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
+        },
+        resolution: {
+          duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} + 1 == result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} + 1 == result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
   def test_shipments_inroute_duration
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
