@@ -344,7 +344,10 @@ module Wrappers
         }
         return empty_result
       end
+
       content = OrtoolsResult::Result.decode(output.read)
+      output.rewind
+
       return @previous_result if content['routes'].empty? && @previous_result
       collected_indices = []
 
@@ -547,7 +550,7 @@ module Wrappers
         r && (iterations = Integer(r[1]))
         s = / Cost : ([0-9.eE+]+)/.match(line)
         s && (cost = Integer(s[1]))
-        block.call(self, iterations, nil, cost, r && @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)) if block && r && s && vrp.restitution_intermediate_solutions
+        block.call(self, iterations, nil, cost, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)) if block && r && s && vrp.restitution_intermediate_solutions
       }
 
       result = out.split("\n")[-1]
