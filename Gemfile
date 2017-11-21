@@ -8,16 +8,16 @@ gem 'puma'
 gem 'thin'
 gem 'rack-cors'
 
-gem 'grape', '<0.19.0' # Ruby 2.1
+gem 'grape', '<0.19.0' # Waiting Ruby 2.2
 gem 'grape_logging'
 gem 'grape-entity'
-gem 'grape-swagger', '<0.26.0' # Ruby 2.1
-gem 'grape-swagger-entity', '<0.1.6' # Ruby 2.1
+gem 'grape-swagger', '<0.26.0' # Waiting Ruby 2.2
+gem 'grape-swagger-entity', '<0.1.6' # Waiting Ruby 2.2
 
 gem 'i18n'
 gem 'rack-contrib'
 gem 'rest-client'
-gem 'activemodel', '<5' # Ruby 2.1
+gem 'activemodel', '<5' # Waiting Ruby 2.2
 gem 'active_hash', github: 'Mapotempo/active_hash'
 gem 'nokogiri'
 gem 'resque'
