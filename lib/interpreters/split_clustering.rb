@@ -71,7 +71,7 @@ module Interpreters
       all_vrps = services_vrps.collect{ |services_vrp|
         vrp = services_vrp[:vrp]
 
-        if @homogeneous && vrp.preprocessing_max_split_size && vrp.shipments.size == 0
+        if @homogeneous && vrp.preprocessing_max_split_size && vrp.shipments.size == 0 && @initial_visits > vrp.preprocessing_max_split_size
           if vrp.services.size > vrp.preprocessing_max_split_size && @vehicle_index < @all_vehicles.size
             points = vrp.services.collect.with_index{ |service, index|
               service.activity.point.matrix_index = index
