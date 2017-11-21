@@ -119,7 +119,7 @@ module OptimizerWrapper
           i = 0
           id = 0
           uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
-            block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix') if block
+            block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil) if block
             # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
             matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, points, points, options)
             m = Models::Matrix.create({
@@ -139,9 +139,9 @@ module OptimizerWrapper
 
         File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
-        block.call(nil, nil, nil, 'process clustering') if block && vrp.preprocessing_cluster_threshold
+        block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
         cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
-          block.call(nil, 0, nil, 'run optimization') if block
+          block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
           time_start = Time.now
           result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
               if job
@@ -152,8 +152,8 @@ module OptimizerWrapper
                 actual_result['pids'] = pids
                 Result.set(job, actual_result)
               end
-            }) { |wrapper, avancement, total, cost, solution|
-            block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && parse_result(cluster_vrp, solution)) if block
+            }) { |wrapper, avancement, total, message, cost, time, solution|
+            block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block
           }
           if result.class.name == 'Hash' # result.is_a?(Hash) not working
             result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
@@ -230,6 +230,7 @@ module OptimizerWrapper
       routes: results.flat_map{ |r| r[:routes] }.compact,
       unassigned: results.flat_map{ |r| r[:unassigned] }.compact,
       elapsed: results.map{ |r| r[:elapsed] || 0 }.reduce(&:+),
+      total_time: results.map{ |r| r[:total_travel_time] }.compact.reduce(&:+),
       total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+)
     }
   end

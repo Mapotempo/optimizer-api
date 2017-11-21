@@ -542,6 +542,7 @@ module Wrappers
       out = ''
       iterations = 0
       cost = nil
+      time = 0.0
       # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
         puts (@job ? @job + ' - ' : '') + line
@@ -550,7 +551,13 @@ module Wrappers
         r && (iterations = Integer(r[1]))
         s = / Cost : ([0-9.eE+]+)/.match(line)
         s && (cost = Integer(s[1]))
-        block.call(self, iterations, nil, cost, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)) if block && r && s && vrp.restitution_intermediate_solutions
+        t = / Time : ([0-9.eE+]+)/.match(line)
+        t && (time = t[1].to_f)
+        @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+        if block && r && s && t && vrp.restitution_intermediate_solutions
+          block.call(self, iterations, nil, nil, cost, t, @previous_result)
+        end
+
       }
 
       result = out.split("\n")[-1]
