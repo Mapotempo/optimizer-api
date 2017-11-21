@@ -8,10 +8,10 @@ GIT
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (4.2.9)
-      activesupport (= 4.2.9)
+    activemodel (4.2.10)
+      activesupport (= 4.2.10)
       builder (~> 3.1)
-    activesupport (4.2.9)
+    activesupport (4.2.10)
       i18n (~> 0.7)
       minitest (~> 5.1)
       thread_safe (~> 0.3, >= 0.3.4)
@@ -25,7 +25,8 @@ GEM
     builder (3.2.3)
     coercible (1.0.0)
       descendants_tracker (~> 0.0.1)
-    daemons (1.2.4)
+    concurrent-ruby (1.0.5)
+    daemons (1.2.5)
     descendants_tracker (0.0.4)
       thread_safe (~> 0.3, >= 0.3.1)
     docile (1.1.5)
@@ -33,7 +34,7 @@ GEM
       unf (>= 0.0.5, < 1.0.0)
     equalizer (0.0.11)
     eventmachine (1.2.5)
-    google-protobuf (3.3.0)
+    google-protobuf (3.5.0)
     grape (0.18.0)
       activesupport
       builder
@@ -52,12 +53,13 @@ GEM
     grape-swagger-entity (0.1.5)
       grape-entity
       grape-swagger (>= 0.20.4)
-    grape_logging (1.5.0)
+    grape_logging (1.7.0)
       grape
     hashie (3.5.6)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
-    i18n (0.8.6)
+    i18n (0.9.1)
+      concurrent-ruby (~> 1.0)
     ice_nine (0.11.2)
     json (2.1.0)
     mime-types (3.1)
@@ -65,13 +67,13 @@ GEM
     mime-types-data (3.2016.0521)
     mini_portile2 (2.3.0)
     minitest (5.10.3)
-    minitest-reporters (1.1.14)
+    minitest-reporters (1.1.18)
       ansi
       builder
       minitest (>= 5.0)
       ruby-progressbar
     mono_logger (1.1.0)
-    multi_json (1.12.1)
+    multi_json (1.12.2)
     multi_xml (0.6.0)
     mustermann (0.4.0)
       tool (~> 0.2)
@@ -81,13 +83,13 @@ GEM
     nokogiri (1.8.1)
       mini_portile2 (~> 2.3.0)
     polylines (0.3.0)
-    puma (3.9.1)
+    puma (3.11.0)
     rack (1.5.5)
     rack-accept (0.4.5)
       rack (>= 0.4)
-    rack-contrib (1.5.0)
+    rack-contrib (1.8.0)
       rack (~> 1.4)
-    rack-cors (1.0.1)
+    rack-cors (1.0.2)
     rack-protection (1.5.3)
       rack
     rack-test (0.7.0)
@@ -96,14 +98,14 @@ GEM
     rakeup (1.2.0)
       rack (~> 1.5.0)
       rake (~> 10.3.0)
-    redis (3.3.3)
-    redis-activesupport (5.0.3)
+    redis (3.3.5)
+    redis-activesupport (5.0.4)
       activesupport (>= 3, < 6)
-      redis-store (~> 1.3.0)
-    redis-namespace (1.5.3)
-      redis (~> 3.0, >= 3.0.4)
-    redis-store (1.3.0)
-      redis (>= 2.2)
+      redis-store (>= 1.3, < 2)
+    redis-namespace (1.6.0)
+      redis (>= 3.0.4)
+    redis-store (1.4.1)
+      redis (>= 2.2, < 5)
     require_all (1.4.0)
     resque (1.27.4)
       mono_logger (~> 1.0)
@@ -120,13 +122,13 @@ GEM
     rgeo (0.6.0)
     rgeo-geojson (0.4.3)
       rgeo (~> 0.5)
-    ruby-progressbar (1.8.1)
+    ruby-progressbar (1.9.0)
     sim_annealing (0.0.2)
-    simplecov (0.14.1)
+    simplecov (0.15.1)
       docile (~> 1.1.0)
       json (>= 1.8, < 3)
       simplecov-html (~> 0.10.0)
-    simplecov-html (0.10.1)
+    simplecov-html (0.10.2)
     sinatra (1.4.8)
       rack (~> 1.5)
       rack-protection (~> 1.4)
@@ -138,7 +140,7 @@ GEM
     thread_safe (0.3.6)
     tilt (2.0.8)
     tool (0.2.3)
-    tzinfo (1.2.3)
+    tzinfo (1.2.4)
       thread_safe (~> 0.1)
     unf (0.1.4)
       unf_ext
@@ -173,8 +175,9 @@ DEPENDENCIES
   rack
   rack-contrib
   rack-cors
-  rack-test
+  rack-test (< 0.8)
   rakeup
+  redis (< 4)
   redis-activesupport
   require_all
   resque

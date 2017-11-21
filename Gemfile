@@ -22,6 +22,7 @@ gem 'active_hash', github: 'Mapotempo/active_hash'
 gem 'nokogiri'
 gem 'resque'
 gem 'resque-status'
+gem 'redis', '<4' # Waiting Ruby 2.2 (dependency from resque)
 
 gem 'ai4r'
 gem 'sim_annealing'
@@ -33,7 +34,7 @@ gem 'polylines'
 gem 'google-protobuf', '>=3'
 
 group :test do
-  gem 'rack-test'
+  gem 'rack-test', '<0.8' # Waiting Ruby 2.2
   gem 'minitest'
   gem 'minitest-reporters'
   gem 'simplecov', require: false
