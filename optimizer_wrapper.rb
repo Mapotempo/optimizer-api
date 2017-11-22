@@ -521,12 +521,12 @@ module OptimizerWrapper
   end
 
   def self.cluster(vrp, cluster_threshold, force_cluster)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster)
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && vrp.schedule_range_indices.nil?
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster)
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && vrp.schedule_range_indices.nil?
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else

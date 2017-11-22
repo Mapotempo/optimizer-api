@@ -45,6 +45,23 @@ module Interpreters
           }.compact
         end
 
+        new_relations = vrp.relations.collect{ |relation|
+          first_service = vrp.services.find{ |service| service.id == relation.linked_ids.first }
+          relation_linked_ids = relation.linked_ids.select{ |mission_id|
+            vrp.services.one? { |service| service.id == mission_id }
+          }
+          if first_service && first_service.visits_number && relation_linked_ids.all?{ |service_id|
+              current_service = vrp.services.find{ |service| service.id == service_id }.visits_number == first_service.visits_number
+            }
+            (1..(first_service.visits_number || 1)).collect{ |relation_index|
+              new_relation = Marshal::load(Marshal.dump(relation))
+              new_relation.linked_ids = relation_linked_ids.collect{ |service_id| "#{service_id}_#{relation_index}/#{first_service.visits_number || 1}"}
+              new_relation
+            }
+          end
+        }.compact.flatten
+        vrp.relations = new_relations
+
         new_services = vrp.services.collect{ |service|
           if service.unavailable_visit_day_date
             service.unavailable_visit_day_indices = service.unavailable_visit_day_date.collect{ |unavailable_date|

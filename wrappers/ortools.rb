@@ -213,7 +213,10 @@ module Wrappers
       relations += vrp.relations.collect{ |relation|
         OrtoolsVrp::Relation.new(
           type: relation.type.to_s,
-          linked_ids: relation.linked_ids || [],
+          linked_ids: relation.linked_ids.select{ |mission_id|
+            vrp.services.one? { |service| service.id == mission_id } ||
+            vrp.shipments.one? { |shipment| "#{service.id}pickup" == mission_id } || vrp.shipments.one? { |shipment| "#{service.id}delivery" == mission_id }
+          },
           lapse: relation.lapse || -1
         )
       }
