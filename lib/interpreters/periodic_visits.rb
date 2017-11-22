@@ -32,7 +32,9 @@ module Interpreters
         shift = vrp.schedule_range_indices ? real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
         schedule_end = real_schedule_end - real_schedule_start
         schedule_start = 0
-        have_services_day_index = vrp.services.none? { |service| service.activity.timewindows.none? || service.activity.timewindows.none? { |timewindow| timewindow[:day_index] } }
+        have_services_day_index = !vrp.services.empty? && vrp.services.none? { |service| service.activity.timewindows.none? || service.activity.timewindows.none? { |timewindow| timewindow[:day_index] } }
+        have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none? { |shipment| shipment.pickup.timewindows.none? || shipment.pickup.timewindows.none? { |timewindow| timewindow[:day_index] } ||
+          shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none? { |timewindow| timewindow[:day_index] } }
         have_vehicles_day_index = vrp.vehicles.none? { |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none? { |timewindow| timewindow[:day_index] } }
 
         unavailable_indices = if vrp.schedule_unavailable_indices
@@ -46,16 +48,30 @@ module Interpreters
         end
 
         new_relations = vrp.relations.collect{ |relation|
-          first_service = vrp.services.find{ |service| service.id == relation.linked_ids.first }
+          first_service = vrp.services.find{ |service| service.id == relation.linked_ids.first } ||
+          vrp.shipments.find{ |shipment| "#{shipment.id}pickup" == relation.linked_ids.first || "#{shipment.id}delivery" == relation.linked_ids.first }
           relation_linked_ids = relation.linked_ids.select{ |mission_id|
-            vrp.services.one? { |service| service.id == mission_id }
+            vrp.services.one? { |service| service.id == mission_id } ||
+            vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == relation.linked_ids.first || "#{shipment.id}delivery" == relation.linked_ids.first }
           }
-          if first_service && first_service.visits_number && relation_linked_ids.all?{ |service_id|
-              current_service = vrp.services.find{ |service| service.id == service_id }.visits_number == first_service.visits_number
-            }
+          related_missions = relation_linked_ids.collect{ |mission_id|
+            vrp.services.find{ |service| service.id == mission_id } ||
+            vrp.shipments.find{ |shipment| "#{shipment.id}pickup" == mission_id || "#{shipment.id}delivery" == mission_id }
+          }
+          if first_service && first_service.visits_number &&
+          related_missions.all?{ |mission| mission.visits_number == first_service.visits_number }
             (1..(first_service.visits_number || 1)).collect{ |relation_index|
               new_relation = Marshal::load(Marshal.dump(relation))
-              new_relation.linked_ids = relation_linked_ids.collect{ |service_id| "#{service_id}_#{relation_index}/#{first_service.visits_number || 1}"}
+              new_relation.linked_ids = relation_linked_ids.collect.with_index{ |mission_id, index|
+                additional_tag = if mission_id == "#{related_missions[index].id}pickup"
+                  'pickup'
+                elsif  mission_id == "#{related_missions[index].id}delivery"
+                  'delivery'
+                else
+                  ''
+                end
+                "#{related_missions[index].id}_#{relation_index}/#{first_service.visits_number || 1}#{additional_tag}"
+              }
               new_relation
             }
           end
@@ -103,7 +119,7 @@ module Interpreters
                         start: timewindow[:start] + timewindow.day_index * 86400,
                         end: timewindow[:end] + timewindow.day_index * 86400
                       }.delete_if { |k, v| !v }
-                    elsif have_services_day_index || have_vehicles_day_index
+                    elsif have_services_day_index || have_vehicles_day_index || have_shipments_day_index
                       (0..[6, schedule_end].min).collect{ |day_index|
                         {
                           id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
@@ -141,6 +157,117 @@ module Interpreters
           end
         }.flatten
         vrp.services = new_services
+
+        new_shipments = vrp.shipments.collect{ |shipment|
+          if shipment.unavailable_visit_day_date
+            shipment.unavailable_visit_day_indices = shipment.unavailable_visit_day_date.collect{ |unavailable_date|
+              (unavailable_date.to_date - epoch).to_i - real_schedule_start if (unavailable_date.to_date - epoch).to_i >= real_schedule_start
+            }.compact
+            if unavailable_indices
+              shipment.unavailable_visit_day_indices += unavailable_indices.collect { |unavailable_index|
+                unavailable_index if unavailable_index >= schedule_start && unavailable_index <= schedule_end
+              }.compact
+              shipment.unavailable_visit_day_indices.uniq
+            end
+          end
+
+          if shipment.visits_number
+            if shipment.minimum_lapse && shipment.visits_number > 1
+              vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
+              :linked_ids => (1..shipment.visits_number).collect{ |index| "#{shipment.id}_#{index}/#{shipment.visits_number}" },
+              :lapse => shipment.minimum_lapse)
+            end
+            if shipment.maximum_lapse && shipment.visits_number > 1
+              vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
+                :linked_ids => (1..shipment.visits_number).collect{ |index| "#{shipment.id}_#{index}/#{shipment.visits_number}" },
+                :lapse => shipment.maximum_lapse)
+            end
+            frequencies << shipment.visits_number
+            visit_period = (schedule_end + 1).to_f/shipment.visits_number
+            timewindows_iterations = (visit_period /(6 || 1)).ceil
+            ## Create as much shipment as needed
+            (0..shipment.visits_number-1).collect{ |visit_index|
+              new_shipment = nil
+              if !shipment.unavailable_visit_indices || shipment.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
+                new_shipment = Marshal::load(Marshal.dump(shipment))
+                new_shipment.id = "#{new_shipment.id}_#{visit_index+1}/#{new_shipment.visits_number}"
+
+                new_shipment.pickup.timewindows = if !shipment.pickup.timewindows.empty?
+                  new_timewindows = shipment.pickup.timewindows.collect{ |timewindow|
+                    if timewindow.day_index
+                      {
+                        id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
+                        start: timewindow[:start] + timewindow.day_index * 86400,
+                        end: timewindow[:end] + timewindow.day_index * 86400
+                      }.delete_if { |k, v| !v }
+                    elsif have_services_day_index || have_vehicles_day_index || have_shipments_day_index
+                      (0..[6, schedule_end].min).collect{ |day_index|
+                        {
+                          id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
+                          start: timewindow[:start] + (day_index).to_i * 86400,
+                          end: timewindow[:end] + (day_index).to_i * 86400
+                        }.delete_if { |k, v| !v }
+                      }
+                    else
+                      {
+                        id: (timewindow[:id] if timewindow[:id] && !timewindow[:id].nil?),
+                        start: timewindow[:start],
+                        end: timewindow[:end]
+                      }.delete_if { |k, v| !v }
+                    end
+                  }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
+                  if new_timewindows.size > 0
+                    new_timewindows
+                  end
+                end
+
+                new_shipment.delivery.timewindows = if !shipment.delivery.timewindows.empty?
+                  new_timewindows = shipment.delivery.timewindows.collect{ |timewindow|
+                    if timewindow.day_index
+                      {
+                        id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
+                        start: timewindow[:start] + timewindow.day_index * 86400,
+                        end: timewindow[:end] + timewindow.day_index * 86400
+                      }.delete_if { |k, v| !v }
+                    elsif have_services_day_index || have_vehicles_day_index || have_shipments_day_index
+                      (0..[6, schedule_end].min).collect{ |day_index|
+                        {
+                          id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
+                          start: timewindow[:start] + (day_index).to_i * 86400,
+                          end: timewindow[:end] + (day_index).to_i * 86400
+                        }.delete_if { |k, v| !v }
+                      }
+                    else
+                      {
+                        id: (timewindow[:id] if timewindow[:id] && !timewindow[:id].nil?),
+                        start: timewindow[:start],
+                        end: timewindow[:end]
+                      }.delete_if { |k, v| !v }
+                    end
+                  }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
+                  if new_timewindows.size > 0
+                    new_timewindows
+                  end
+                end
+
+                if !shipment.minimum_lapse && !shipment.maximum_lapse
+                  new_shipment.skills += ["#{visit_index+1}_f_#{shipment.visits_number}"]
+                end
+                  new_shipment.skills += shipment.unavailable_visit_day_indices.collect{ |day_index|
+                    shipments_unavailable_indices << day_index
+                    "not_#{day_index}"
+                  } if shipment.unavailable_visit_day_indices
+                new_shipment
+              else
+                nil
+              end
+              new_shipment
+            }.compact
+          else
+            shipment
+          end
+        }.flatten
+        vrp.shipments = new_shipments
 
         services_unavailable_indices.uniq!
         frequencies.uniq!
@@ -216,28 +343,30 @@ module Interpreters
               vrp.rests.delete(rest)
             }
             new_periodic_vehicle
-          elsif !have_services_day_index
+          elsif !have_services_day_index && !have_shipments_day_index
             new_periodic_vehicle = (schedule_start..schedule_end).collect{ |vehicle_day_index|
-              new_vehicle = Marshal::load(Marshal.dump(vehicle))
-              new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
-              new_vehicle.global_day_index = vehicle_day_index
-              if new_vehicle.skills.empty?
-                new_vehicle.skills = [frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (schedule_end + 1)).to_i + 1}_f_#{frequency}" } + services_unavailable_indices.collect { |index|
-                  if index != vehicle_day_index
-                    "not_#{index}"
-                  end
-                }.compact]
-              else
-                new_vehicle.skills.each{ |alternative_skill|
-                  alternative_skill += frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (schedule_end + 1)).to_i + 1}_f_#{frequency}" } + services_unavailable_indices.collect { |index|
+              if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index == vehicle_day_index}
+                new_vehicle = Marshal::load(Marshal.dump(vehicle))
+                new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
+                new_vehicle.global_day_index = vehicle_day_index
+                if new_vehicle.skills.empty?
+                  new_vehicle.skills = [frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (schedule_end + 1)).to_i + 1}_f_#{frequency}" } + services_unavailable_indices.collect { |index|
                     if index != vehicle_day_index
                       "not_#{index}"
                     end
-                  }.compact
-                }
+                  }.compact]
+                else
+                  new_vehicle.skills.each{ |alternative_skill|
+                    alternative_skill += frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (schedule_end + 1)).to_i + 1}_f_#{frequency}" } + services_unavailable_indices.collect { |index|
+                      if index != vehicle_day_index
+                        "not_#{index}"
+                      end
+                    }.compact
+                  }
+                end
+                new_vehicle
               end
-              new_vehicle
-            }
+            }.compact
             new_periodic_vehicle
           else
             vehicle

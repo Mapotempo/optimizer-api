@@ -40,7 +40,6 @@ module Wrappers
         :assert_vehicles_at_least_one,
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
-        :assert_no_shipments_with_multiple_timewindows,
         :assert_zones_only_size_one_alternative
       ]
     end
@@ -215,7 +214,8 @@ module Wrappers
           type: relation.type.to_s,
           linked_ids: relation.linked_ids.select{ |mission_id|
             vrp.services.one? { |service| service.id == mission_id } ||
-            vrp.shipments.one? { |shipment| "#{service.id}pickup" == mission_id } || vrp.shipments.one? { |shipment| "#{service.id}delivery" == mission_id }
+            vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
+            vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
           },
           lapse: relation.lapse || -1
         )

@@ -27,6 +27,22 @@ module Models
     validates_numericality_of :exclusion_cost, allow_nil: true
     validates_numericality_of :maximum_inroute_duration, allow_nil: true
 
+    field :visits_number, default: 1
+
+    validates_numericality_of :visits_number
+
+    field :unavailable_visit_indices, default: nil
+
+    field :unavailable_visit_day_indices, default: nil
+    field :unavailable_visit_day_date, default: nil
+
+    field :minimum_lapse, default: nil
+    field :maximum_lapse, default: nil
+
+    validates_numericality_of :minimum_lapse
+    validates_numericality_of :maximum_lapse
+
+
     field :skills, default: []
 
     belongs_to :pickup, class_name: 'Models::Activity'

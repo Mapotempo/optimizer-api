@@ -1402,4 +1402,116 @@ class InterpreterTest < Minitest::Test
     assert_equal 3, result[:routes][13][:activities].size
   end
 
+  def test_shipments_and_relation
+    problem = {
+        points: [
+        {
+            id: "point_0",
+            location:
+            {
+                lat: 48.9,
+                lon: 2.3
+            }
+        },
+        {
+            id: "point_1",
+            location:
+            {
+                lat: 48.8,
+                lon: 2.3
+            }
+        },
+        {
+            id: "depot",
+            location:
+            {
+                lat: 50.5,
+                lon: 2.7
+            }
+        }],
+        units: [],
+        vehicles: [
+        {
+            id: "vehicle_0",
+            start_point_id: "depot",
+            end_point_id: "depot",
+            router_mode: "car",
+            cost_late_multiplier: 0.0,
+            cost_time_multiplier:  1.0,
+            speed_multiplier: 1.0
+        },
+        {
+            id: "vehicle_1",
+            start_point_id: "depot",
+            end_point_id: "depot",
+            router_mode: "car",
+            cost_late_multiplier: 0.0,
+            cost_time_multiplier:  1.0,
+            speed_multiplier: 1.0,
+            timewindow: {
+              start: 500
+            },
+            unavailable_work_day_indices: [1]
+        }],
+        shipments: [
+        {
+            id: "shipment_0",
+            pickup:
+            {
+                point_id: "point_0"
+            },
+            delivery:
+            {
+                point_id: "point_1",
+                duration: 500,
+                late_multiplier: 0.0
+            }
+        },
+        {
+            id: "shipment_1",
+            pickup:
+            {
+                point_id: "point_0"
+            },
+            delivery:
+            {
+                point_id: "point_1",
+                duration: 500,
+                late_multiplier: 0.0
+            }
+        }],
+        relations: [
+        {
+            id: "id_rel",
+            type: "meetup",
+            linked_ids: ["shipment_0delivery", "shipment_1delivery"]
+        }],
+        configuration:
+        {
+            preprocessing:
+            {
+                prefer_short_segment: true
+            },
+            resolution:
+            {
+                duration: 1000
+            },
+            schedule:
+            {
+                range_indices:
+                {
+                    start: 0,
+                    end: 2
+                }
+            }
+        }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert_equal 5, result[:routes].size
+    assert_equal 4, result[:routes][0][:activities].size
+    assert_equal 4, result[:routes][1][:activities].size
+    assert_equal result[:routes][0][:activities][2]['begin_time'], result[:routes][1][:activities][2]['begin_time']
+  end
+
 end
