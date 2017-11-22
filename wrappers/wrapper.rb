@@ -223,6 +223,26 @@ module Wrappers
       vrp.relations.empty?
     end
 
+    def assert_only_empty_or_fill_quantities(vrp)
+      problem_units = vrp.units.collect{ |unit|
+        {
+          unit_id: unit.id,
+          fill: false,
+          empty: false
+        }
+      }
+
+      vrp.services.each{ |service|
+        service.quantities.each{ |quantity|
+          unit_status = problem_units.find{ |unit| unit[:unit_id] == quantity.unit_id }
+          unit_status[:fill] ||= quantity.fill
+          unit_status[:empty] ||= quantity.empty
+          return false if unit_status[:fill] && unit_status[:empty]
+        }
+      }
+      true
+    end
+
     def solve_synchronous?(vrp)
       false
     end

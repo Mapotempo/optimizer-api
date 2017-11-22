@@ -40,11 +40,28 @@ module Wrappers
         :assert_vehicles_at_least_one,
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
-        :assert_zones_only_size_one_alternative
+        :assert_zones_only_size_one_alternative,
+        :assert_only_empty_or_fill_quantities,
       ]
     end
 
     def solve(vrp, job, thread_proc = nil, &block)
+
+    problem_units = vrp.units.collect{ |unit|
+        {
+          unit_id: unit.id,
+          fill: false,
+          empty: false
+        }
+      }
+
+      vrp.services.each{ |service|
+        service.quantities.each{ |quantity|
+          unit_status = problem_units.find{ |unit| unit[:unit_id] == quantity.unit_id }
+          unit_status[:fill] ||= quantity.fill
+          unit_status[:empty] ||= quantity.empty
+        }
+      }
 # FIXME or-tools can handle no end-point itself
       @job = job
       @previous_result = nil
@@ -69,8 +86,9 @@ module Wrappers
             end: tw.end || 2**56,
           ) },
           quantities: vrp.units.collect{ |unit|
+            is_empty_unit = problem_units.find{ |unit_status| unit_status[:id] == unit.id }
             q = service.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (service.type.to_s == "delivery" ? -1 : 1) * (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
+            q && q.value ? (is_empty_unit ? -1 : 1) * (service.type.to_s == "delivery" ? -1 : 1) * (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
           },
           duration: service.activity.duration,
           additional_value: service.activity.additional_value,
@@ -87,7 +105,7 @@ module Wrappers
           exclusion_cost: service.exclusion_cost || -1,
           refill_quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
-            !q.nil? && q.refill
+            !q.nil? && (q.fill || q.empty)
           },
         )
       } + vrp.shipments.collect{ |shipment|
@@ -120,8 +138,9 @@ module Wrappers
             end: tw.end || 2**56,
           ) },
           quantities: vrp.units.collect{ |unit|
+            is_empty_unit = problem_units.find{ |unit_status| unit_status[:id] == unit.id }
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (q.value*1000+0.5).to_i : 0
+            q && q.value ? (is_empty_unit ? -1 : 1) * (q.value*1000+0.5).to_i : 0
           },
           duration: shipment.pickup.duration,
           additional_value: shipment.pickup.additional_value,
@@ -139,8 +158,9 @@ module Wrappers
             end: tw.end || 2**56,
           ) },
           quantities: vrp.units.collect{ |unit|
+            is_empty_unit = problem_units.find{ |unit_status| unit_status[:id] == unit.id }
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? -(q.value*1000+0.5).to_i : 0
+            q && q.value ? - (is_empty_unit ? -1 : 1) * (q.value*1000+0.5).to_i : 0
           },
           duration: shipment.delivery.duration,
           additional_value: shipment.delivery.additional_value,

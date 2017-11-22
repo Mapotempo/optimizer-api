@@ -128,6 +128,9 @@ module Api
       def self.vrp_request_quantity(this)
         this.optional(:id, type: String)
         this.requires(:unit_id, type: String, desc: 'Unit related to this quantity')
+        this.optional(:fill, type: Boolean, desc: 'Allow to fill more quantities than defined in the value field, until the vehicle capacity is full')
+        this.optional(:empty, type: Boolean, desc: 'Allow to empty more quantities than defined in the value field, until the vehicle capacity reach zero')
+        this.mutually_exclusive :fill, :empty
         this.optional(:value, type: Float, desc: 'Value of the current quantity')
         this.optional(:setup_value, type: Integer, desc: 'If the associated unit is a counting one, define the default value to count for this stop (additional quantities for this specific service are to define with the value tag)')
       end

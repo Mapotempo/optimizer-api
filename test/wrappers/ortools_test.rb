@@ -3225,7 +3225,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 'service_2', result[:routes][0][:activities].first[:service_id] || result[:routes][1][:activities].first[:service_id]
   end
 
-  def test_refill_quantities
+  def test_fill_quantities
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       units: [{
@@ -3265,7 +3265,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         quantities: [{
           unit_id: 'kg',
-          refill: true
+          fill: true
         }]
       }, {
         id: 'service_2',
