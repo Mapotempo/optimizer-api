@@ -190,6 +190,7 @@ module Wrappers
       }
       vehicles = vrp.vehicles.collect{ |vehicle|
         OrtoolsVrp::Vehicle.new(
+          id: vehicle.id,
           cost_fixed: vehicle.cost_fixed,
           cost_distance_multiplier: vehicle.cost_distance_multiplier,
           cost_time_multiplier: vehicle.cost_time_multiplier,
@@ -236,7 +237,7 @@ module Wrappers
             vrp.services.one? { |service| service.id == mission_id } ||
             vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
             vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
-          },
+          }.uniq,
           lapse: relation.lapse || -1
         )
       }

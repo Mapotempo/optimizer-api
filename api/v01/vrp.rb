@@ -217,8 +217,8 @@ module Api
         this.optional(:unavailable_visit_day_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
         this.mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
-        this.optional(:minimum_lapse, type: Integer, desc: 'Minimum day lapse between two visits')
-        this.optional(:maximum_lapse, type: Integer, desc: 'Maximum day lapse between two visits')
+        this.optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
+        this.optional(:maximum_lapse, type: Float, desc: 'Maximum day lapse between two visits')
 
         this.optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
@@ -236,6 +236,18 @@ module Api
         this.requires(:id, type: String, desc: '')
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
         this.optional(:exlusion_cost, type: Integer,  desc: 'Exclusion cost')
+
+        this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
+
+        this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
+
+        this.optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals days indices of unavailabilty')
+        this.optional(:unavailable_visit_day_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
+        this.mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
+
+        this.optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
+        this.optional(:maximum_lapse, type: Float, desc: 'Maximum day lapse between two visits')
+
         this.optional(:maximum_inroute_duration, type: Integer,  desc: 'Maximum in route duration of this particular shipment (Must be feasible !)')
         this.optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this shipment')

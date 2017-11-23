@@ -1511,7 +1511,7 @@ class InterpreterTest < Minitest::Test
     assert_equal 5, result[:routes].size
     assert_equal 4, result[:routes][0][:activities].size
     assert_equal 4, result[:routes][1][:activities].size
-    assert_equal result[:routes][0][:activities][2]['begin_time'], result[:routes][1][:activities][2]['begin_time']
+    assert_equal result[:routes][0][:activities][2][:begin_time], result[:routes][1][:activities][2][:begin_time]
   end
 
 end
