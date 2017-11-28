@@ -33,6 +33,10 @@ module Wrappers
       }
     end
 
+    def assert_points_same_definition(vrp)
+      (vrp.points.all?{ |point| point.location } || vrp.points.none?{ |point| point.location }) && (vrp.points.all?{ |point| point.matrix_index } || vrp.points.none?{ |point| point.matrix_index })
+    end
+
     def assert_units_only_one(vrp)
       vrp.units.size <= 1
     end

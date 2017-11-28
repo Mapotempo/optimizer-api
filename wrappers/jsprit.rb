@@ -46,6 +46,7 @@ module Wrappers
         :assert_no_value_matrix,
         :assert_no_routes,
         :assert_only_empty_or_fill_quantities,
+        :assert_points_same_definition,
       ]
     end
 
