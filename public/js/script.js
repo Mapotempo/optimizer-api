@@ -730,28 +730,53 @@ $(document).ready(function() {
         var quantity1_2 = $.map(data.customers[customer_id], function(val, key) {
           if (key.replace(/ 2$/, '') == (mapping.quantity || 'quantity')) return val;
         });
-        stops.push([
-          job.shipment_id,
-          '',
-          '',
-          'visite',
-          job.shipment_id, // name
-          '', // street
-          '', // postalcode
-          '', // country
-          data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
-          data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
-          data.customers[customer_id][mapping.delivery_duration || 'delivery_duration'],
-          quantity1_1,
-          quantity1_2,
-          data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
-          data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
-          $.map(data.customers[customer_id], function(val, key) {
-            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
-          }).filter(function(el) {
-            return el;
-          }).join(',')
-        ]);
+        if (job.type == 'delivery') {
+          stops.push([
+            job.shipment_id,
+            '',
+            '',
+            'visite',
+            job.shipment_id, // name
+            '', // street
+            '', // postalcode
+            '', // country
+            data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
+            data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
+            data.customers[customer_id][mapping.delivery_duration || 'delivery_duration'],
+            quantity1_1,
+            quantity1_2,
+            data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
+            data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
+            $.map(data.customers[customer_id], function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).filter(function(el) {
+              return el;
+            }).join(',')
+          ]);
+        } else {
+          stops.push([
+            (job.shipment_id + ' pickup'),
+            '',
+            '',
+            'visite',
+            job.shipment_id, // name
+            '', // street
+            '', // postalcode
+            '', // country
+            data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'],
+            data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'],
+            data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'],
+            quantity1_1,
+            quantity1_2,
+            data.customers[customer_id][mapping.pickup_start || 'pickup_start'],
+            data.customers[customer_id][mapping.pickup_end || 'pickup_end'],
+            $.map(data.customers[customer_id], function(val, key) {
+              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+            }).filter(function(el) {
+              return el;
+            }).join(',')
+          ]);
+        }
       } else {
         var customer_id = customers.indexOf(job.service_id);
         var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {

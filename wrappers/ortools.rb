@@ -487,12 +487,12 @@ module Wrappers
             type: 'pickup',
             point_id: shipment.pickup.point_id,
             detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil)
-          }] << {
+          }, {
             shipment_id: "#{shipment_id}",
             type: 'delivery',
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil)
-          }
+          }]
         }.flatten
       }
     end
