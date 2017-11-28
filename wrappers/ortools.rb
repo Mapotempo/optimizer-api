@@ -294,7 +294,7 @@ module Wrappers
     def build_quantities(job, job_loads)
       if job_loads
         job_loads.collect{ |current_load|
-          associated_quantity = job.quantities.find{ |quantity| quantity.unit.id == current_load[:unit].id} if job
+          associated_quantity = job.quantities.find{ |quantity| quantity.unit && quantity.unit.id == current_load[:unit].id} if job
           {
             unit: current_load[:unit],
             value: associated_quantity && associated_quantity.value,
