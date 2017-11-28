@@ -25,54 +25,17 @@ module Interpreters
     def initialize(vrp)
       @initial_vrp_duration = vrp.resolution_duration/vrp.vehicles.size if vrp.resolution_duration
       @initial_vrp_time_out = vrp.resolution_initial_time_out/vrp.vehicles.size if vrp.resolution_initial_time_out
-      @all_vehicles = vrp.vehicles
-      @vehicle_index = 0
+      @free_vehicles = vrp.vehicles
+      @used_vehicles = []
       @initial_visits = vrp.services.size
-      @homogeneous = homogeneous_vehicles(vrp.vehicles)
     end
-
-    def homogeneous_point(a, b)
-      return a.nil? && b.nil? || !a.nil? && !b.nil? && a.location.nil? && b.location.nil? && a.matrix_index == b.matrix_index ||
-        !a.nil? && !b.nil? && a.location && b.location && a.location.lat == b.location.lat && a.location.lon == b.location.lon
-    end
-
-    def homogeneous_sequence_timewindows(a, b)
-      a.all?{ |current_tw| b.find{ |tw| current_tw && tw && current_tw.start == tw.start && current_tw.end == tw.end }}
-    end
-
-    def homogeneous_capacities(a, b)
-      a.all?{ |current_ct| a && b.find{ |ct| current_ct && ct && current_ct.unit_id == ct.unit_id && current_ct.limit == ct.limit }}
-    end
-
-    def homogeneous_vehicles(vehicles)
-        vehicles.all? { |vehicle|
-          homogeneous_point(vehicle.start_point, vehicles.first.start_point) &&
-          homogeneous_point(vehicle.end_point, vehicles.first.end_point) &&
-          vehicle.duration == vehicles.first.duration &&
-          vehicle.router_mode == vehicles.first.router_mode &&
-          vehicle.router_dimension == vehicles.first.router_dimension &&
-          vehicle.speed_multiplier_area == vehicles.first.speed_multiplier_area &&
-          vehicle.cost_fixed == vehicles.first.cost_fixed &&
-          vehicle.cost_distance_multiplier == vehicles.first.cost_distance_multiplier &&
-          vehicle.cost_time_multiplier == vehicles.first.cost_time_multiplier &&
-          vehicle.cost_waiting_time_multiplier == vehicles.first.cost_waiting_time_multiplier &&
-          vehicle.cost_value_multiplier == vehicles.first.cost_value_multiplier &&
-          vehicle.cost_late_multiplier == vehicles.first.cost_late_multiplier &&
-          vehicle.cost_setup_time_multiplier == vehicles.first.cost_setup_time_multiplier &&
-          (vehicle.timewindow.nil? && vehicles.first.timewindow.nil? && vehicle.sequence_timewindows.empty? && vehicles.first.sequence_timewindows.empty? ||
-            vehicle.timewindow && vehicles.first.timewindow && vehicle.timewindow.start == vehicles.first.timewindow.start &&
-            vehicle.timewindow.end == vehicles.first.timewindow.end) ||
-          homogeneous_sequence_timewindows(vehicle.sequence_timewindows, vehicles.first.sequence_timewindows) &&
-          homogeneous_capacities(vehicle.capacities, vehicles.first.capacities)
-        }
-      end
 
     def split_clusters(services_vrps, job = nil, &block)
       all_vrps = services_vrps.collect{ |services_vrp|
         vrp = services_vrp[:vrp]
 
-        if @homogeneous && vrp.preprocessing_max_split_size && vrp.shipments.size == 0 && @initial_visits > vrp.preprocessing_max_split_size
-          if vrp.services.size > vrp.preprocessing_max_split_size && @vehicle_index < @all_vehicles.size
+        if vrp.preprocessing_max_split_size && vrp.shipments.size == 0 && @initial_visits > vrp.preprocessing_max_split_size
+          if vrp.services.size > vrp.preprocessing_max_split_size
             points = vrp.services.collect.with_index{ |service, index|
               service.activity.point.matrix_index = index
               [service.activity.point.location.lat, service.activity.point.location.lon]
@@ -96,36 +59,29 @@ module Interpreters
             sub_vrp = Marshal::load(Marshal.dump(vrp))
             sub_vrp.id = Random.new
             unassigned_size = 0
-            estimated_sub_size = [((vrp.services.size.to_f / (@initial_visits)).to_f * @all_vehicles.size).to_i, 1].max
-            sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size - 1].collect{ |vehicle|
+
+            sub_vrp.vehicles = @free_vehicles.collect{ |vehicle|
               vehicle.matrix_id = nil
               vehicle
             }
-            previous_unassigned_size = 0
-            loop_index = 0
-            begin
-              previous_unassigned_size = unassigned_size
               sub_vrp.resolution_initial_time_out = 1000
               sub_vrp.resolution_duration = @initial_vrp_duration * sub_vrp.vehicles.size if @initial_vrp_duration
-              result = OptimizerWrapper.solve([{
-                service: services_vrp[:service],
-                vrp: sub_vrp
-              }], job)
-              unassigned_size = result && result[:unassigned] && result[:unassigned].size || 0
-              if unassigned_size != 0 && previous_unassigned_size != unassigned_size
-                loop_index += 1
-                sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size + loop_index - 1].collect{ |vehicle|
-                  vehicle.matrix_id = nil
-                  vehicle
-                }
-              elsif unassigned_size == 0
-                to_reduce = result && result[:routes].select{ |route| route[:activities].none?{ |activity|
-                  activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id]
-                }}.size || 0
-                sub_vrp.vehicles = @all_vehicles[@vehicle_index..@vehicle_index + estimated_sub_size + loop_index - to_reduce - 1]
-              end
-            end while previous_unassigned_size != unassigned_size && @vehicle_index + loop_index < @all_vehicles.size
-            @vehicle_index += sub_vrp.vehicles.size
+
+            result = OptimizerWrapper.solve([{
+              service: services_vrp[:service],
+              vrp: sub_vrp
+            }], job)
+
+            current_usefull_vehicle = sub_vrp.vehicles.select{ |vehicle|
+              associated_route = result[:routes].find{ |route| route[:vehicle_id] == vehicle.id }
+              associated_route[:activities].any?{ |activity| activity[:service_id] } if associated_route
+            }
+
+            sub_vrp.vehicles = current_usefull_vehicle
+            @free_vehicles -= current_usefull_vehicle
+            @used_vehicles += current_usefull_vehicle
+
+            sub_vrp.resolution_duration = @initial_vrp_duration * sub_vrp.vehicles.size if @initial_vrp_duration
             sub_vrp.resolution_initial_time_out = @initial_vrp_time_out * sub_vrp.vehicles.size if @initial_vrp_time_out
             {
               service: services_vrp[:service],
