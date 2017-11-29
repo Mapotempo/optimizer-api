@@ -46,7 +46,15 @@ module Wrappers
       ]
     end
 
-    def solve(vrp, job, thread_proc = nil, &block)
+  def solve(vrp, job, thread_proc = nil, &block)
+    if vrp.relations.one?{ |relation| relation.type == 'order' }
+      order_route = {
+        id: 'automatic_route_order' + (vrp.vehicles.first.id if vrp.vehicles.size == 1),
+        vehicle: vrp.vehicles.size == 1 ? vrp.vehicles.first : nil,
+        mission_ids: vrp.relations.find{ |relation| relation.type == 'order' }.linked_ids
+      }
+      vrp.routes += [order_route]
+    end
 
     problem_units = vrp.units.collect{ |unit|
         {
