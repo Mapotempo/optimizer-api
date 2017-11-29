@@ -95,7 +95,7 @@ module Wrappers
             end: tw.end || 2**56,
           ) },
           quantities: vrp.units.collect{ |unit|
-            is_empty_unit = problem_units.find{ |unit_status| unit_status[:id] == unit.id }
+            is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = service.quantities.find{ |quantity| quantity.unit == unit }
             q && q.value ? (is_empty_unit ? -1 : 1) * (service.type.to_s == "delivery" ? -1 : 1) * (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
           },
@@ -147,7 +147,7 @@ module Wrappers
             end: tw.end || 2**56,
           ) },
           quantities: vrp.units.collect{ |unit|
-            is_empty_unit = problem_units.find{ |unit_status| unit_status[:id] == unit.id }
+            is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
             q && q.value ? (is_empty_unit ? -1 : 1) * (q.value*1000+0.5).to_i : 0
           },
@@ -167,7 +167,7 @@ module Wrappers
             end: tw.end || 2**56,
           ) },
           quantities: vrp.units.collect{ |unit|
-            is_empty_unit = problem_units.find{ |unit_status| unit_status[:id] == unit.id }
+            is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
             q && q.value ? - (is_empty_unit ? -1 : 1) * (q.value*1000+0.5).to_i : 0
           },
