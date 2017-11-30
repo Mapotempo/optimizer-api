@@ -591,7 +591,7 @@ $(document).ready(function() {
           var lat = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
           var lon = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
           var start = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
-          var d = (previous_lat == lat && previous_lon == lon ? setup_duration : 0) + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
+          var d = (previous_lat == lat && previous_lon == lon ? 0 : setup_duration) + (duration(activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
           var end = activity.pickup_shipment_id ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
           var quantity1_1 = $.map(data.customers[customer_id], function(val, key) {
             if (key.replace(/ 1$/, '') == (mapping.quantity || 'quantity')) return val;
@@ -653,7 +653,7 @@ $(document).ready(function() {
           var lat = data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] : data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'];
           var lon = data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] ? data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'] : data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'];
           var start = data.customers[customer_id][mapping.pickup_start || 'pickup_start'] ? data.customers[customer_id][mapping.pickup_start || 'pickup_start'] : data.customers[customer_id][mapping.delivery_start || 'delivery_start'];
-          var d = (previous_lat == lat && previous_lon == lon ? setup_duration : 0) + (duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
+          var d = (previous_lat == lat && previous_lon == lon ? 0 : setup_duration) + (duration(data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'] ? data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'] : data.customers[customer_id][mapping.delivery_duration || 'delivery_duration']) || 0);
           var end = data.customers[customer_id][mapping.pickup_end || 'pickup_end'] ? data.customers[customer_id][mapping.pickup_end || 'pickup_end'] : data.customers[customer_id][mapping.delivery_end || 'delivery_end'];
           var skills = $.map(data.customers[customer_id], function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
