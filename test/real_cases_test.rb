@@ -293,7 +293,25 @@ class RealCasesTest < Minitest::Test
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 10100, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 11200, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+
+      # Check elapsed time
+      assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
+    end
+
+    # Nice - A single route with an order defining the most part of the route, many stops
+    def test_ortools_single_route_with_route_order_2
+      vrp = ENV['DUMP_VRP'] ?
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      assert result
+      # Check activities
+      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
+
+      # Check total travel time
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 13500, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
