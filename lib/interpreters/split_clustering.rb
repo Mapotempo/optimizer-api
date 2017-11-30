@@ -62,10 +62,12 @@ module Interpreters
 
             sub_vrp.vehicles = @free_vehicles.collect{ |vehicle|
               vehicle.matrix_id = nil
+              sub_vrp.rests << vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id } if !vehicle.rests.empty?
               vehicle
             }
-              sub_vrp.resolution_initial_time_out = 1000
-              sub_vrp.resolution_duration = @initial_vrp_duration * sub_vrp.vehicles.size if @initial_vrp_duration
+
+            sub_vrp.resolution_initial_time_out = 1000
+            sub_vrp.resolution_duration = @initial_vrp_duration * sub_vrp.vehicles.size if @initial_vrp_duration
 
             result = OptimizerWrapper.solve([{
               service: services_vrp[:service],
@@ -140,7 +142,6 @@ module Interpreters
       sub_vrp.id = Random.new
       services = vrp.services.select{ |service| cluster_services.include?(service.id) }.compact
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact
-      sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
       sub_vrp.services = services
       points = sub_vrp.services.collect.with_index{ |service, i|
         service.activity.point.matrix_index = i
