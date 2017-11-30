@@ -46,7 +46,7 @@ module Wrappers
     end
 
     def assert_vehicles_at_least_one(vrp)
-      vrp.vehicles.size >= 1
+      vrp.vehicles.size >= 1 && (vrp.vehicles.none?{ |vehicle| vehicle.duration } || vrp.vehicles.any?{ |vehicle| vehicle.duration > 0 })
     end
 
     def assert_vehicles_start(vrp)
@@ -161,6 +161,12 @@ module Wrappers
     def assert_vehicles_no_duration_limit(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.duration
+      }
+    end
+
+    def assert_vehicles_no_zero_duration(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+        vehicle.duration && vehicle.duration == 0
       }
     end
 

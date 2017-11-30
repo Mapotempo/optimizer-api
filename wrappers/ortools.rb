@@ -43,6 +43,7 @@ module Wrappers
         :assert_zones_only_size_one_alternative,
         :assert_only_empty_or_fill_quantities,
         :assert_points_same_definition,
+        :assert_vehicles_no_zero_duration,
       ]
     end
 
@@ -88,7 +89,6 @@ module Wrappers
             end
           }.compact
         end
-
         OrtoolsVrp::Service.new(
           time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
             start: tw.start || -2**56,
