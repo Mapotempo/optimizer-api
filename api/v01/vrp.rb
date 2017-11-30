@@ -419,7 +419,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:matrices, :units, :points, :rests, :zones, :capacities, :quantities, :vehicles, :timewindows, :services, :shipments, :relations, :configuration].each{ |key|
+              [:matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :configuration].each{ |key|
                 if params[:vrp] && params[:vrp][key]
                   (vrp.send "#{key}=", params[:vrp][key])
                 end
