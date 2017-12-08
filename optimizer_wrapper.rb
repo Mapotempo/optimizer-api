@@ -52,7 +52,7 @@ module OptimizerWrapper
   def self.wrapper_vrp(api_key, services, vrp, checksum)
     inapplicable_services = []
     apply_zones(vrp)
-    services_vrps = split_vrp(Interpreters::PeriodicVisits.expand(vrp)).map{ |vrp_element|
+    services_vrps = split_vrp(vrp).map{ |vrp_element|
       {
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
@@ -75,7 +75,12 @@ module OptimizerWrapper
       raise DiscordantProblemError.new("Geometry is not available if locations are not defined")
     else
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
-        solve(services_vrps)
+        complete_services_vrp = services_vrps.collect{ |service_vrp|
+          service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
+          split_lib = Interpreters::SplitClustering.new(service_vrp[:vrp])
+          split_lib.split_clusters([service_vrp], nil)
+        }.flatten
+        solve(complete_services_vrp)
       else
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)), api_key: api_key, checksum: checksum, pids: [])
         JobList.add(api_key, job_id)
@@ -736,6 +741,7 @@ module OptimizerWrapper
     def perform
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
       complete_services_vrp = services_vrps.collect{ |service_vrp|
+        service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
         split_lib = Interpreters::SplitClustering.new(service_vrp[:vrp])
         split_lib.split_clusters([service_vrp], self.uuid)
       }.flatten
