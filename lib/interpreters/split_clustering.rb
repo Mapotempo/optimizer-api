@@ -45,15 +45,16 @@ module Interpreters
 
             sub_first = build_partial_vrp(vrp, result_cluster[0])
 
-            sub_second = build_partial_vrp(vrp, result_cluster[1])
+            sub_second = build_partial_vrp(vrp, result_cluster[1]) if result_cluster[1]
 
             deeper_search = [{
               service: services_vrp[:service],
               vrp: sub_first
-            }, {
+            }]
+            deeper_search << {
               service: services_vrp[:service],
               vrp: sub_second
-            }]
+            } if sub_second
             split_clusters(deeper_search, job)
           else
             sub_vrp = Marshal::load(Marshal.dump(vrp))
@@ -133,7 +134,7 @@ module Interpreters
           vector[i[0]][0]
         }
       }
-      puts "Split #{vrp.services.size} into #{result[0].size} & #{result[1].size}"
+      puts "Split #{vrp.services.size} into #{result[0].size} & #{result[1] ? result[1].size : 0}"
       result
     end
 
