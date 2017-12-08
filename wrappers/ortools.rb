@@ -240,16 +240,19 @@ module Wrappers
       }
 
       relations += vrp.relations.collect{ |relation|
-        OrtoolsVrp::Relation.new(
-          type: relation.type.to_s,
-          linked_ids: relation.linked_ids.select{ |mission_id|
-            vrp.services.one? { |service| service.id == mission_id } ||
-            vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
-            vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
-          }.uniq,
-          lapse: relation.lapse || -1
-        )
-      }
+        current_linked_ids = relation.linked_ids.select{ |mission_id|
+          vrp.services.one? { |service| service.id == mission_id } ||
+          vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
+          vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
+        }.uniq
+        if !current_linked_ids.empty?
+          OrtoolsVrp::Relation.new(
+            type: relation.type.to_s,
+            linked_ids: current_linked_ids,
+            lapse: relation.lapse || -1
+          )
+        end
+      }.compact
 
       routes = vrp.routes.collect{ |route|
         if !route.vehicle.nil? && !route.mission_ids.empty?
