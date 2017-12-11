@@ -80,7 +80,7 @@ module OptimizerWrapper
           split_lib = Interpreters::SplitClustering.new(service_vrp[:vrp])
           split_lib.split_clusters([service_vrp], nil)
         }.flatten
-        solve(complete_services_vrp)
+        solve(complete_services_vrp, complete_services_vrp.size != services_vrps.size ? services_vrps.first[:vrp].vehicles : nil)
       else
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)), api_key: api_key, checksum: checksum, pids: [])
         JobList.add(api_key, job_id)
@@ -89,8 +89,12 @@ module OptimizerWrapper
     end
   end
 
-  def self.solve(services_vrps, job = nil, &block)
+  def self.solve(services_vrps, fleet = nil, job = nil, &block)
+    missions_size = services_vrps.collect{ |service_vrp| service_vrp[:vrp].services.size + service_vrp[:vrp].shipments.size }.reduce(:+)
+    initial_fleet_size = fleet.size if fleet
+
     real_result = join_vrps(services_vrps, block) { |service, vrp, block|
+      cluster_result = nil
       if vrp.services.empty? && vrp.shipments.empty?
         {
           costs: 0,
@@ -102,6 +106,14 @@ module OptimizerWrapper
           distance: vrp.need_matrix_distance?,
           value: vrp.need_matrix_value?
         }
+        if fleet
+          vrp.vehicles = fleet.collect{ |vehicle|
+            vehicle.matrix_id = nil
+            vehicle
+          }
+          vrp.resolution_duration = vrp.resolution_duration / missions_size * vrp.services.size if vrp.resolution_duration
+          vrp.resolution_initial_time_out = vrp.resolution_initial_time_out / missions_size * vrp.services.size if vrp.resolution_initial_time_out
+        end
 
         need_matrix = vrp.vehicles.collect{ |vehicle|
           [vehicle, vehicle.dimensions]
@@ -145,7 +157,7 @@ module OptimizerWrapper
         File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
         block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
-        cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
+        cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
           block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
           time_start = Time.now
           result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
@@ -170,6 +182,15 @@ module OptimizerWrapper
           end
         end
       end
+      current_usefull_vehicle = vrp.vehicles.select{ |vehicle|
+        associated_route = cluster_result[:routes].find{ |route| route[:vehicle_id] == vehicle.id }
+        associated_route[:activities].any?{ |activity| activity[:service_id] } if associated_route
+      }
+      cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet
+
+      vrp.vehicles = current_usefull_vehicle if fleet
+      fleet -= current_usefull_vehicle if fleet
+      cluster_result
     }
     if job
       p = Result.get(job) || {}
@@ -745,7 +766,7 @@ module OptimizerWrapper
         split_lib = Interpreters::SplitClustering.new(service_vrp[:vrp])
         split_lib.split_clusters([service_vrp], self.uuid)
       }.flatten
-      result = OptimizerWrapper.solve(complete_services_vrp, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+      result = OptimizerWrapper.solve(complete_services_vrp, complete_services_vrp.size != services_vrps.size ? services_vrps.first[:vrp].vehicles : nil, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
