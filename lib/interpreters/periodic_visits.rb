@@ -315,8 +315,8 @@ module Interpreters
                     end
                   }.compact]
                 else
-                  new_vehicle.skills.each{ |alternative_skill|
-                    alternative_skill += @frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect { |index|
+                  new_vehicle.skills.collect!{ |alternative_skill|
+                    alternative_skill + @frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect { |index|
                       if index != vehicle_day_index
                         "not_#{index}"
                       end
