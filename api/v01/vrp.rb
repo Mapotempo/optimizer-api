@@ -294,8 +294,8 @@ module Api
       end
 
       def self.vrp_request_restitution(this)
-        this.optional(:geometry, type: Boolean, desc: 'Allow to return the polyline of each route')
-        this.optional(:geometry_polyline, type: Boolean, desc: 'Encode the polyline')
+        this.optional(:geometry, type: Boolean, desc: 'Allow to return the MultiLineString of each route')
+        this.optional(:geometry_polyline, type: Boolean, desc: 'Encode the MultiLineString')
         this.optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
         this.optional(:csv, type: Boolean, desc: 'The output is a CSV file')
       end

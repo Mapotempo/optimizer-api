@@ -549,8 +549,8 @@ Restitution parameters allow to have some control on the API response
     }
   }
 ```
-__geometry__ inform the API to return the Geojson of the route in output
-__geometry_polyline__ precise that the geojson must be an encoded polyline.
+__geometry__ inform the API to return the Geojson of the route in output, as a MultiLineString feature
+__geometry_polyline__ precise that if the geomtry is asked the Geojson must be encoded.
 
  <a name="solve"></a>Solve
 --
