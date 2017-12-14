@@ -22,15 +22,10 @@ include Ai4r::Clusterers
 module Interpreters
   class SplitClustering
 
-    def initialize(vrp)
-      @initial_visits = vrp.services.size
-    end
-
-    def split_clusters(services_vrps, job = nil, &block)
-      all_vrps = services_vrps.collect{ |services_vrp|
-        vrp = services_vrp[:vrp]
-
-        if vrp.preprocessing_max_split_size && vrp.shipments.size == 0 && @initial_visits > vrp.preprocessing_max_split_size &&
+    def self.split_clusters(services_vrps, job = nil, &block)
+      all_vrps = services_vrps.collect{ |service_vrp|
+        vrp = service_vrp[:vrp]
+        if vrp.preprocessing_max_split_size && vrp.shipments.size == 0 && service_vrp[:problem_size] > vrp.preprocessing_max_split_size &&
         vrp.services.size > vrp.preprocessing_max_split_size
           points = vrp.services.collect.with_index{ |service, index|
             service.activity.point.matrix_index = index
@@ -44,18 +39,24 @@ module Interpreters
           sub_second = build_partial_vrp(vrp, result_cluster[1]) if result_cluster[1]
 
           deeper_search = [{
-            service: services_vrp[:service],
-            vrp: sub_first
+            service: service_vrp[:service],
+            vrp: sub_first,
+            fleet_id: service_vrp[:fleet_id],
+            problem_size: service_vrp[:problem_size]
           }]
           deeper_search << {
-            service: services_vrp[:service],
-            vrp: sub_second
+            service: service_vrp[:service],
+            vrp: sub_second,
+            fleet_id: service_vrp[:fleet_id],
+            problem_size: service_vrp[:problem_size]
           } if sub_second
           split_clusters(deeper_search, job)
         else
           {
-            service: services_vrp[:service],
-            vrp: vrp
+            service: service_vrp[:service],
+            vrp: vrp,
+            fleet_id: service_vrp[:fleet_id],
+            problem_size: service_vrp[:problem_size]
           }
         end
       }.flatten
@@ -65,7 +66,7 @@ module Interpreters
       raise
     end
 
-    def clustering(vrp, n)
+    def self.clustering(vrp, n)
       vector = vrp.services.collect{ |service|
         [service.id, service.activity.point.location.lat, service.activity.point.location.lon]
       }
@@ -99,7 +100,7 @@ module Interpreters
       result
     end
 
-    def build_partial_vrp(vrp, cluster_services)
+    def self.build_partial_vrp(vrp, cluster_services)
       sub_vrp = Marshal::load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
       services = vrp.services.select{ |service| cluster_services.include?(service.id) }.compact

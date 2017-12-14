@@ -52,7 +52,14 @@ module OptimizerWrapper
   def self.wrapper_vrp(api_key, services, vrp, checksum)
     inapplicable_services = []
     apply_zones(vrp)
-    services_vrps = split_vrp(vrp).map{ |vrp_element|
+    services_fleets = []
+    services_vrps = split_vrp(vrp).map.with_index{ |vrp_element, i|
+      if vrp_element[:preprocessing_max_split_size]
+        services_fleets << {
+          id: "fleet_#{i}",
+          fleet: vrp_element[:preprocessing_max_split_size] ? vrp_element.vehicles : nil
+        }
+      end
       {
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
@@ -65,7 +72,9 @@ module OptimizerWrapper
             false
           end
         },
-        vrp: vrp_element
+        vrp: vrp_element,
+        fleet_id: "fleet_#{i}",
+        problem_size: vrp_element.services.size + vrp_element.shipments.size
       }
     }
 
@@ -77,23 +86,21 @@ module OptimizerWrapper
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         complete_services_vrp = services_vrps.collect{ |service_vrp|
           service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
-          split_lib = Interpreters::SplitClustering.new(service_vrp[:vrp])
-          split_lib.split_clusters([service_vrp], nil)
+          Interpreters::SplitClustering.split_clusters([service_vrp])
         }.flatten
-        solve(complete_services_vrp, complete_services_vrp.size != services_vrps.size ? services_vrps.first[:vrp].vehicles : nil)
+        solve(complete_services_vrp, services_fleets)
       else
-        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)), api_key: api_key, checksum: checksum, pids: [])
+        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)),
+        services_fleets: Base64.encode64(Marshal::dump(services_fleets)), api_key: api_key, checksum: checksum, pids: [])
         JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end
     end
   end
 
-  def self.solve(services_vrps, fleet = nil, job = nil, &block)
-    missions_size = services_vrps.collect{ |service_vrp| service_vrp[:vrp].services.size + service_vrp[:vrp].shipments.size }.reduce(:+)
-    initial_fleet_size = fleet.size if fleet
+  def self.solve(services_vrps, services_fleets = [], job = nil, &block)
 
-    real_result = join_vrps(services_vrps, block) { |service, vrp, block|
+    real_result = join_vrps(services_vrps, block) { |service, vrp, fleet_id, problem_size, block|
       cluster_result = nil
       if vrp.services.empty? && vrp.shipments.empty?
         {
@@ -106,13 +113,13 @@ module OptimizerWrapper
           distance: vrp.need_matrix_distance?,
           value: vrp.need_matrix_value?
         }
-        if fleet
-          vrp.vehicles = fleet.collect{ |vehicle|
+        if services_fleets.one?{ |service_fleet| service_fleet[:id] == fleet_id }
+          vrp.vehicles = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }[:fleet].collect{ |vehicle|
             vehicle.matrix_id = nil
             vehicle
           }
-          vrp.resolution_duration = vrp.resolution_duration / missions_size * vrp.services.size if vrp.resolution_duration
-          vrp.resolution_initial_time_out = vrp.resolution_initial_time_out / missions_size * vrp.services.size if vrp.resolution_initial_time_out
+          vrp.resolution_duration = vrp.resolution_duration / problem_size * vrp.services.size if vrp.resolution_duration
+          vrp.resolution_initial_time_out = vrp.resolution_initial_time_out / problem_size * vrp.services.size if vrp.resolution_initial_time_out
         end
 
         need_matrix = vrp.vehicles.collect{ |vehicle|
@@ -186,10 +193,13 @@ module OptimizerWrapper
         associated_route = cluster_result[:routes].find{ |route| route[:vehicle_id] == vehicle.id }
         associated_route[:activities].any?{ |activity| activity[:service_id] } if associated_route
       }
-      cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet
+      if fleet_id && !services_fleets.empty?
+        cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet_id && !services_fleets.empty?
 
-      vrp.vehicles = current_usefull_vehicle if fleet
-      fleet -= current_usefull_vehicle if fleet
+        vrp.vehicles = current_usefull_vehicle
+        current_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
+        current_usefull_vehicle.each{ |vehicle| current_fleet[:fleet].delete(vehicle) }
+      end
       cluster_result
     }
     if job
@@ -246,7 +256,7 @@ module OptimizerWrapper
 
   def self.join_vrps(services_vrps, callback)
     results = services_vrps.each_with_index.map{ |sv, i|
-      yield(sv[:service], sv[:vrp], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
+      yield(sv[:service], sv[:vrp], sv[:fleet_id], sv[:problem_size], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
         callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
       } : nil)
     }
@@ -761,12 +771,12 @@ module OptimizerWrapper
 
     def perform
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
+      services_fleets = Marshal.load(Base64.decode64(options['services_fleets']))
       complete_services_vrp = services_vrps.collect{ |service_vrp|
         service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
-        split_lib = Interpreters::SplitClustering.new(service_vrp[:vrp])
-        split_lib.split_clusters([service_vrp], self.uuid)
+        Interpreters::SplitClustering.split_clusters([service_vrp])
       }.flatten
-      result = OptimizerWrapper.solve(complete_services_vrp, complete_services_vrp.size != services_vrps.size ? services_vrps.first[:vrp].vehicles : nil, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+      result = OptimizerWrapper.solve(complete_services_vrp, services_fleets, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
