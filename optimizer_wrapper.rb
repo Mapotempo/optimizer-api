@@ -192,8 +192,8 @@ module OptimizerWrapper
       current_usefull_vehicle = vrp.vehicles.select{ |vehicle|
         associated_route = cluster_result[:routes].find{ |route| route[:vehicle_id] == vehicle.id }
         associated_route[:activities].any?{ |activity| activity[:service_id] } if associated_route
-      }
-      if fleet_id && !services_fleets.empty?
+      } if cluster_result
+      if fleet_id && !services_fleets.empty? && cluster_result
         cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet_id && !services_fleets.empty?
 
         vrp.vehicles = current_usefull_vehicle
