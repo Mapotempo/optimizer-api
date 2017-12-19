@@ -114,20 +114,21 @@ module Models
 
     def need_matrix_time?
      !(services.find{ |service|
-        !service.activity.timewindows.empty? || service.activity.late_multiplier != 0
+        !service.activity.timewindows.empty? || service.activity.late_multiplier && service.activity.late_multiplier != 0
       } ||
       shipments.find{ |shipment|
-        !shipment.pickup.timewindows.empty? || shipment.pickup.late_multiplier != 0 ||
-        !shipment.delivery.timewindows.empty? || shipment.delivery.late_multiplier != 0
+        !shipment.pickup.timewindows.empty? || shipment.pickup.late_multiplier && shipment.pickup.late_multiplier != 0 ||
+        !shipment.delivery.timewindows.empty? || shipment.delivery.late_multiplier && shipment.delivery.late_multiplier != 0
       } ||
       vehicles.find{ |vehicle|
-        vehicle.duration || vehicle.timewindow || !vehicle.sequence_timewindows.empty? ||
-        vehicle.cost_time_multiplier != 0
+        vehicle.need_matrix_time?
       }).nil?
     end
 
     def need_matrix_distance?
-      false
+      !(vehicles.find{ |vehicle|
+        vehicle.need_matrix_distance?
+      }).nil?
     end
 
     def need_matrix_value?

@@ -83,7 +83,7 @@ module Models
     has_many :rests, class_name: 'Models::Rest'
 
     def need_matrix_time?
-      cost_time_multiplier != 0 || cost_waiting_time_multiplier != 0 || cost_late_multiplier != 0 || cost_setup_time_multiplier != 0 ||
+      cost_time_multiplier != 0 || cost_late_multiplier && cost_late_multiplier != 0 || cost_setup_time_multiplier != 0 ||
       !rests.empty? || maximum_ride_time
     end
 
