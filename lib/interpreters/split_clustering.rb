@@ -25,7 +25,7 @@ module Interpreters
     def self.split_clusters(services_vrps, job = nil, &block)
       all_vrps = services_vrps.collect{ |service_vrp|
         vrp = service_vrp[:vrp]
-        if vrp.preprocessing_max_split_size && vrp.shipments.size == 0 && service_vrp[:problem_size] > vrp.preprocessing_max_split_size &&
+        if vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 && vrp.shipments.size == 0 && service_vrp[:problem_size] > vrp.preprocessing_max_split_size &&
         vrp.services.size > vrp.preprocessing_max_split_size
           points = vrp.services.collect.with_index{ |service, index|
             service.activity.point.matrix_index = index
