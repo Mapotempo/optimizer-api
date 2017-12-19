@@ -324,6 +324,9 @@ module Interpreters
                   }
                 end
                 vrp.rests += new_vehicle.rests
+                vrp.services.select{ |service| service.sticky_vehicles.any?{ sticky_vehicle == vehicle }}.each{ |service|
+                  service.sticky_vehicles.insert(-1, new_vehicle)
+                }
                 new_vehicle
               else
                 nil
@@ -355,6 +358,9 @@ module Interpreters
                   }.compact
                 }
               end
+              vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle }}.each{ |service|
+                service.sticky_vehicles.insert(-1, new_vehicle)
+              }
               new_vehicle
             end
           }.compact
