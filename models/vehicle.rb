@@ -71,6 +71,7 @@ module Models
     validates_numericality_of :global_day_index, allow_nil: true
     validates_inclusion_of :router_dimension, in: %w( time distance )
     validates_numericality_of :speed_multiplier
+    validates_numericality_of :duration, greater_than_or_equal_to: 0
     field :skills, default: []
 
     has_many :sequence_timewindows, class_name: 'Models::Timewindow'

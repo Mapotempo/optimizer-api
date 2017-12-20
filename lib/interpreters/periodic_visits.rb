@@ -56,17 +56,22 @@ module Interpreters
 
     def self.generate_services(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
       new_services = vrp.services.collect{ |service|
+        if !service.unavailable_visit_day_indices.empty?
+          service.unavailable_visit_day_indices.delete_if{ |unavailable_index|
+            unavailable_index < 0 || unavailable_index > @schedule_end
+          }.compact
+        end
         if service.unavailable_visit_day_date
           epoch = Date.new(1970,1,1)
-          service.unavailable_visit_day_indices = service.unavailable_visit_day_date.collect{ |unavailable_date|
+          service.unavailable_visit_day_indices += service.unavailable_visit_day_date.collect{ |unavailable_date|
             (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
           }.compact
-          if @unavailable_indices
-            service.unavailable_visit_day_indices += @unavailable_indices.collect { |unavailable_index|
-              unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
-            }.compact
-            service.unavailable_visit_day_indices.uniq
-          end
+        end
+        if @unavailable_indices
+          service.unavailable_visit_day_indices += @unavailable_indices.collect { |unavailable_index|
+            unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
+          }.compact
+          service.unavailable_visit_day_indices.uniq
         end
 
         if service.visits_number
@@ -144,17 +149,22 @@ module Interpreters
 
     def self.generate_shipments(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
       new_shipments = vrp.shipments.collect{ |shipment|
+        if !shipment.unavailable_visit_day_indices.empty?
+          shipment.unavailable_visit_day_indices.delete_if{ |unavailable_index|
+            unavailable_index < 0 || unavailable_index > @schedule_end
+          }.compact
+        end
         if shipment.unavailable_visit_day_date
           epoch = Date.new(1970,1,1)
           shipment.unavailable_visit_day_indices = shipment.unavailable_visit_day_date.collect{ |unavailable_date|
             (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
           }.compact
-          if @unavailable_indices
-            shipment.unavailable_visit_day_indices += @unavailable_indices.collect { |unavailable_index|
-              unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
-            }.compact
-            shipment.unavailable_visit_day_indices.uniq
-          end
+        end
+        if @unavailable_indices
+          shipment.unavailable_visit_day_indices += @unavailable_indices.collect { |unavailable_index|
+            unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
+          }.compact
+          shipment.unavailable_visit_day_indices.uniq
         end
 
         if shipment.visits_number

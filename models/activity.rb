@@ -29,7 +29,7 @@ module Models
     field :additional_value, default: 0
     field :timewindow_start_day_shift_number, default: 0
     field :late_multiplier, default: nil
-    validates_numericality_of :duration
+    validates_numericality_of :duration, greater_than_or_equal_to: 0
     validates_numericality_of :setup_duration
     validates_numericality_of :late_multiplier, allow_nil: true
 
