@@ -55,7 +55,7 @@ GEM
       grape-swagger (>= 0.20.4)
     grape_logging (1.7.0)
       grape
-    hashie (3.5.6)
+    hashie (3.5.7)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
     i18n (0.9.1)
@@ -67,7 +67,7 @@ GEM
     mime-types-data (3.2016.0521)
     mini_portile2 (2.3.0)
     minitest (5.10.3)
-    minitest-reporters (1.1.18)
+    minitest-reporters (1.1.19)
       ansi
       builder
       minitest (>= 5.0)
@@ -119,9 +119,9 @@ GEM
       http-cookie (>= 1.0.2, < 2.0)
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
-    rgeo (0.6.0)
-    rgeo-geojson (0.4.3)
-      rgeo (~> 0.5)
+    rgeo (1.0.0)
+    rgeo-geojson (1.0.0)
+      rgeo (~> 1.0)
     ruby-progressbar (1.9.0)
     sim_annealing (0.0.2)
     simplecov (0.15.1)
