@@ -420,16 +420,16 @@ module OptimizerWrapper
             ]
             timewindows = (0..max_timewindows_size-1).collect{ |index|
               if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
-                [formatted_duration(activity['detail']['timewindows'][index]['start']) || '', formatted_duration(activity['detail']['timewindows'][index]['end']) || '']
+                [formatted_duration(activity['detail']['timewindows'][index]['start']) || nil, formatted_duration(activity['detail']['timewindows'][index]['end']) || nil]
               else
-                ['','']
+                [nil, nil]
               end
             }.flatten
             quantities = quantities_id.collect{ |id|
               if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes']['id'] == id }
                 activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
               else
-                ''
+                nil
               end
             }
             out_csv << (common + quantities + timewindows)
@@ -437,7 +437,7 @@ module OptimizerWrapper
         }
         solution['unassigned'].each{ |activity|
           common = [
-            '',
+            nil,
             activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
             activity['point_id'],
             activity['detail']['lat'],
@@ -448,16 +448,16 @@ module OptimizerWrapper
           ]
           timewindows = (0..max_timewindows_size-1).collect{ |index|
             if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
-              [formatted_duration(activity['detail']['timewindows'][index]['start']) || '', formatted_duration(activity['detail']['timewindows'][index]['end']) || '']
+              [formatted_duration(activity['detail']['timewindows'][index]['start']) || nil, formatted_duration(activity['detail']['timewindows'][index]['end']) || nil]
             else
-              ['','']
+              [nil, nil]
             end
           }.flatten
           quantities = quantities_id.collect{ |id|
             if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes']['id'] == id }
               activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
             else
-              ''
+              nil
             end
           }
           out_csv << (common + quantities + timewindows)
