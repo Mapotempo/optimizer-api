@@ -1514,4 +1514,212 @@ class InterpreterTest < Minitest::Test
     assert_equal result[:routes][0][:activities][2][:begin_time], result[:routes][1][:activities][2][:begin_time]
   end
 
+  def test_remove_multiple_empty_service
+    problem = {
+        points: [
+        {
+            id: "point_0",
+            location:
+            {
+                lat: 48.9,
+                lon: 2.3
+            }
+        },
+        {
+            id: "point_1",
+            location:
+            {
+                lat: 48.8,
+                lon: 2.3
+            }
+        },
+        {
+            id: "depot",
+            location:
+            {
+                lat: 50.5,
+                lon: 2.7
+            }
+        }],
+        units: [{
+          id: 'unit_0',
+        }, {
+          id: 'unit_1',
+        }],
+        vehicles: [
+        {
+            id: "vehicle_0",
+            start_point_id: "depot",
+            end_point_id: "depot",
+            router_mode: "car",
+            cost_late_multiplier: 0.0,
+            cost_time_multiplier:  1.0,
+            speed_multiplier: 1.0,
+            capacities: [{
+                unit_id: "unit_0",
+                limit: 5
+              }]
+        }],
+        services: [
+        {
+            id: "service_0",
+            activity:
+            {
+                point_id: "point_0"
+            },
+            quantities:[{
+                unit_id: "unit_0",
+                value: 5
+            }]
+        },
+        {
+            id: "empty_0",
+            activity:
+            {
+                point_id: "point_1"
+            },
+            quantities:[{
+                unit_id: "unit_0",
+                empty: true
+            }, {
+                unit_id: "unit_1",
+                value: 1
+            }]
+        }, {
+            id: "empty_1",
+            activity:
+            {
+                point_id: "point_1"
+            },
+            quantities:[{
+                unit_id: "unit_0",
+                empty: true
+            }, {
+                unit_id: "unit_1",
+                value: 1
+            }]
+        }],
+        configuration:
+        {
+            preprocessing:
+            {
+                prefer_short_segment: true,
+                max_split_size: 500
+            },
+            resolution:
+            {
+                duration: 1000
+            }
+        }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert_equal 4, result[:routes][0][:activities].size
+  end
+
+  def test_do_not_remove_multiple_empty_service
+    problem = {
+        points: [
+        {
+            id: "point_0",
+            location:
+            {
+                lat: 48.9,
+                lon: 2.3
+            }
+        },
+        {
+            id: "point_1",
+            location:
+            {
+                lat: 48.8,
+                lon: 2.3
+            }
+        },
+        {
+            id: "depot",
+            location:
+            {
+                lat: 50.5,
+                lon: 2.7
+            }
+        }],
+        units: [{
+          id: 'unit_0',
+        }, {
+          id: 'unit_1',
+        }],
+        vehicles: [
+        {
+            id: "vehicle_0",
+            start_point_id: "depot",
+            end_point_id: "depot",
+            router_mode: "car",
+            cost_late_multiplier: 0.0,
+            cost_time_multiplier:  1.0,
+            speed_multiplier: 1.0,
+            capacities: [{
+              unit_id: "unit_0",
+              limit: 5
+            }, {
+              unit_id: "unit_1",
+              limit: 5
+            }]
+        }],
+        services: [
+        {
+            id: "service_0",
+            activity:
+            {
+                point_id: "point_0"
+            },
+            quantities:[{
+                unit_id: "unit_0",
+                value: 5
+            }]
+        },
+        {
+            id: "empty_0",
+            activity:
+            {
+                point_id: "point_1"
+            },
+            quantities:[{
+                unit_id: "unit_0",
+                empty: true
+            }, {
+                unit_id: "unit_1",
+                value: 1
+            }]
+        }, {
+            id: "empty_1",
+            activity:
+            {
+                point_id: "point_1"
+            },
+            quantities:[{
+                unit_id: "unit_0",
+                empty: true
+            }, {
+                unit_id: "unit_1",
+                value: 1
+            }]
+        }],
+        configuration:
+        {
+            preprocessing:
+            {
+                prefer_short_segment: true,
+                max_split_size: 500
+            },
+            resolution:
+            {
+                duration: 1000
+            }
+        }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert_equal 5, result[:routes][0][:activities].size
+  end
 end

@@ -57,8 +57,12 @@ module OptimizerWrapper
       if vrp_element[:preprocessing_max_split_size]
         services_fleets << {
           id: "fleet_#{i}",
-          fleet: vrp_element[:preprocessing_max_split_size] ? vrp_element.vehicles : nil
+          fleet: vrp_element.vehicles,
+          fills: vrp_element.services.select{ |service| service.quantities.any?{ |quantity| quantity.fill }},
+          empties: vrp_element.services.select{ |service| service.quantities.any?{ |quantity| quantity.empty }}
         }
+        ## Remove fills and empties services
+        vrp_element.services.delete_if{ |service| service.quantities.any?{ |quantity| quantity.fill || quantity.empty }}
       end
       {
         service: services[:services][:vrp].find{ |s|
@@ -114,12 +118,20 @@ module OptimizerWrapper
           value: vrp.need_matrix_value?
         }
         if services_fleets.one?{ |service_fleet| service_fleet[:id] == fleet_id }
-          vrp.vehicles = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }[:fleet].collect{ |vehicle|
+          associated_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
+          vrp.vehicles = associated_fleet[:fleet].collect{ |vehicle|
             vehicle.matrix_id = nil
             vehicle
           }
           vrp.resolution_duration = vrp.resolution_duration / problem_size * vrp.services.size if vrp.resolution_duration
           vrp.resolution_initial_time_out = vrp.resolution_initial_time_out / problem_size * vrp.services.size if vrp.resolution_initial_time_out
+
+          ## Reintroduce fills and empties services
+          vrp.services += associated_fleet[:fills] if !associated_fleet[:fills].empty?
+          vrp.points += associated_fleet[:fills].collect{ |fill| fill[:activity].point } if !associated_fleet[:fills].empty?
+          vrp.services += associated_fleet[:empties] if !associated_fleet[:empties].empty?
+          vrp.points += associated_fleet[:empties].collect{ |empty| empty[:activity].point } if !associated_fleet[:empties].empty?
+          vrp.services.uniq!
         end
 
         need_matrix = vrp.vehicles.collect{ |vehicle|
@@ -199,6 +211,32 @@ module OptimizerWrapper
         vrp.vehicles = current_usefull_vehicle
         current_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
         current_usefull_vehicle.each{ |vehicle| current_fleet[:fleet].delete(vehicle) }
+
+        cluster_result[:routes].each{ |route|
+
+          vehicle = vrp.vehicles.find{ |vehicle| vehicle.id == route[:vehicle_id] }
+          capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
+          previous = nil
+          previous_point = nil
+          route[:activities].delete_if{ |activity|
+            current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
+            current_point = vrp.points.find{ |point| point.id == current_service[:activity][:point_id] } if current_service
+
+            if previous && current_service && same_position(vrp, previous_point, current_point) && same_empty_units(capacities_units, previous, current_service) &&
+            !same_fill_units(capacities_units, previous, current_service)
+              current_fleet[:empties].delete(previous)
+              true
+            elsif previous && current_service && same_position(vrp, previous_point, current_point) && same_fill_units(capacities_units, previous, current_service) &&
+            !same_empty_units(capacities_units, previous, current_service)
+              current_fleet[:fills].delete(previous)
+              true
+            else
+              previous = current_service if previous.nil? || activity[:service_id]
+              previous_point = current_point if previous.nil? || activity[:service_id]
+              false
+            end
+          }
+        }
       end
       cluster_result
     }
@@ -215,6 +253,41 @@ module OptimizerWrapper
     puts e
     puts e.backtrace
     raise
+  end
+
+  def self.same_position(vrp, previous, current)
+    (vrp.matrices.first[:time].nil? || vrp.matrices.first[:time] && vrp.matrices.first[:time][previous.matrix_index][current.matrix_index] == 0) &&
+    (vrp.matrices.first[:distance].nil? || vrp.matrices.first[:distance] && vrp.matrices.first[:distance][previous.matrix_index][current.matrix_index] == 0)
+  end
+
+  def self.same_empty_units(capacities, previous, current)
+    if previous && current
+      previous_empty_units = previous.quantities.collect{ |quantity|
+        quantity.unit.id if quantity.empty
+      }.compact if previous
+      useful_units = (current.quantities.collect{ |quantity|
+        quantity.unit.id
+      }.compact & capacities) if current
+      current_empty_units = current.quantities.collect{ |quantity|
+        quantity.unit.id if quantity.empty
+      }.compact if current
+      !previous_empty_units.empty? && !current_empty_units.empty? && (useful_units & previous_empty_units & current_empty_units == useful_units)
+    end
+  end
+
+  def self.same_fill_units(capacities, previous, current)
+    if previous && current
+      previous_fill_units = previous.quantities.collect{ |quantity|
+        quantity.unit.id if quantity.fill
+      }.compact if previous
+      useful_units = (current.quantities.collect{ |quantity|
+        quantity.unit.id
+      }.compact & capacities) if current
+      current_fill_units = current.quantities.collect{ |quantity|
+        quantity.unit.id if quantity.fill
+      }.compact if current
+      !previous_fill_units.empty? && !current_fill_units.empty? && (useful_units & previous_fill_units & current_fill_units == useful_units)
+    end
   end
 
   def self.split_vrp(vrp)
