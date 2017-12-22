@@ -1,4 +1,4 @@
-FROM mapotempo/nginx-passenger:2.0.0
+FROM mapotempo/nginx-passenger:2.0.1
 
 LABEL maintainer="Mapotempo <contact@mapotempo.com>"
 
