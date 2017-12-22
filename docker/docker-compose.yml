@@ -4,7 +4,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0} # Warning, resque must have the same version
+    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0-beta1} # Warning, resque must have the same version
     ports:
       - "8083:80" # HOST:CONTAINER, edit only HOST part
     volumes:
@@ -21,7 +21,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0}
+    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0-beta1}
     volumes:
       - ./production.rb:/srv/app/config/environments/production.rb
     restart: always
