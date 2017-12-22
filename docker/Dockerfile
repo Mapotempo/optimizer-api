@@ -1,12 +1,9 @@
-FROM mapotempo/nginx-passenger:1.0.0
+FROM mapotempo/nginx-passenger:2.0.0
 
 LABEL maintainer="Mapotempo <contact@mapotempo.com>"
 
 ARG ORTOOLS_VERSION
-ENV ORTOOLS_VERSION ${ORTOOLS_VERSION:-v5.1}
-
-ARG JSPRIT_VERSION
-ENV JSPRIT_VERSION ${JSPRIT_VERSION:-lastestPrime}
+ENV ORTOOLS_VERSION ${ORTOOLS_VERSION:-v6.5}
 
 ARG VROOM_VERSION
 ENV VROOM_VERSION ${VROOM_VERSION:-v1.0.0}
@@ -37,36 +34,9 @@ RUN apt-get update && \
     echo -n > /var/lib/apt/extended_states && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
-# Install JSprit
-RUN echo "deb http://ftp.fr.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list && \
-    apt-get update && \
-    apt-get install -y git && \
-    apt-get install -y -t jessie-backports openjdk-8-jdk maven \
-            openjdk-8-jre && \
-    \
-# Get source code
-    git clone https://github.com/mapotempo/jsprit --branch ${JSPRIT_VERSION} /srv/jsprit && \
-    git clone https://github.com/mapotempo/optimizer-jsprit /srv/optimizer-jsprit && \
-    \
-# Build
-    cd /srv/jsprit && \
-    rm -rf .git && \
-    mvn clean install -Dmaven.test.skip=true && \
-    \
-    cd /srv/optimizer-jsprit && \
-    rm -rf .git && \
-    mvn clean install -Dmaven.test.skip=true && \
-    \
-# Cleanup Debian packages
-    apt-get remove -y git maven openjdk-8-jdk && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    echo -n > /var/lib/apt/extended_states && \
-    rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
-
 # Install ORTools
 RUN apt-get update && \
-    apt-get install -t jessie-backports -y git bison flex python-setuptools python-dev autoconf \
+    apt-get install -y git bison flex python-setuptools python-dev autoconf \
             libtool zlib1g-dev texinfo help2man gawk g++ curl texlive cmake subversion unzip gettext && \
     \
 # Override IP address for this mirror because the other one is buggy.

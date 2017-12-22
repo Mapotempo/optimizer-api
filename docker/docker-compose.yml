@@ -1,10 +1,10 @@
 version: '3.3'
 services:
-  wrapper:
+  optimizer:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0-beta1} # Warning, resque must have the same version
+    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0} # Warning, resque must have the same version
     ports:
       - "8083:80" # HOST:CONTAINER, edit only HOST part
     volumes:
@@ -15,13 +15,13 @@ services:
       - redis-cache
       - resque-default
     environment:
-      APP_ENV: production # Swith to "development" for more traces
+      APP_ENV: production # Switch to "development" for more traces
 
   resque-default:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0-beta1}
+    image: mapotempo/optimizer-api:${MAPOTEMPO_VERSION:-56.0.0}
     volumes:
       - ./production.rb:/srv/app/config/environments/production.rb
     restart: always
