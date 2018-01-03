@@ -20,7 +20,6 @@ require 'tmpdir'
 
 require './wrappers/demo'
 require './wrappers/vroom'
-require './wrappers/jsprit'
 require './wrappers/ortools'
 
 require './lib/cache_manager'
@@ -30,7 +29,6 @@ module OptimizerWrapper
 
   DEMO = Wrappers::Demo.new(CACHE)
   VROOM = Wrappers::Vroom.new(CACHE)
-  JSPRIT = Wrappers::Jsprit.new(CACHE)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
 
@@ -43,14 +41,13 @@ module OptimizerWrapper
     services: {
       demo: DEMO,
       vroom: VROOM,
-      jsprit: JSPRIT,
       ortools: ORTOOLS,
     },
     profiles: [{
       api_keys: ['demo'],
       queue: 'DEFAULT',
       services: {
-        vrp: [:vroom, :ortools, :jsprit]
+        vrp: [:vroom, :ortools]
       }
     }],
     router: {
