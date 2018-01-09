@@ -512,19 +512,29 @@ Preprocessing parameters will twist the problem in order to simplify or orient t
     }
   }
 ```
-Resolution parameters will only indicate when stopping the search is admissible
+Resolution parameters will only indicate when stopping the search is tolerated. In this case, the solve will last at most 30 seconds and at least 3. If it doesn`t find a new better solution within a time lapse of twice times the duration it takes to find the previous solution, the solve is interrupted.
 ```json
   "configuration": {
     "resolution": {
-      "duration": 30,
-      "iterations": 1000,
-      "iterations_without_improvment": 100
+      "duration": 30000,
+      "initial_time_out": 3000,
+      "time_out_multiplier": 2
     }
   }
 ```
-**VROOM** requires no parameters and stops by itself.
-**ORtools** Can take a maximum solve duration, or can stop by itself depending on the solve state as a time-out between two new best solution, or as a number of iterations without improvement.
+**VROOM** requires no parameters and stops by itself.  
+**ORtools** Can take a maximum solve duration, or can stop by itself depending on the solve state as a time-out between two new best solution, or as a number of iterations without improvement.  
 **Jsprit**: Can take a maximum solve duration, a number of iterations wihtout improvment or a number of iteration without variation in the neighborhood search.
+
+The followings paramaters are available :
+* **duration** : ORtools, Jsprit
+* **iterations_without_improvment** : ORtools, Jsprit
+* **initial_time_out** : ORtools
+* **time_out_multiplier** : ORtools
+* **stable_iterations** : Jsprit
+* **stable_coefficient** : Jsprit
+
+N.B : In most of the case, ORtools is called.
 
 Schedule parameters are only usefull in the case of Schedule Optimisation. Those allow to define the considerated period (__range_indices__) and the indices which are unavailable within the solve (__unavailable_indices__)
 ```json
@@ -733,7 +743,7 @@ Services can be set with a __pickup__ or a __delivery__ type which inform the so
   }]
 ```
 ### <a name="priority"></a>Priority and Exclusion cost¹
-Priority ndicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8.
+Priority ndicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8. The default value is 4.
 ```json
  "services": [{
     "id": "visit-1",

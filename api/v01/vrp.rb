@@ -206,7 +206,7 @@ module Api
 
       def self.vrp_request_service(this)
         this.requires(:id, type: String)
-        this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
+        this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
         this.optional(:exlusion_cost, type: Integer,  desc: 'Exclusion cost')
 
         this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
@@ -234,7 +234,7 @@ module Api
 
       def self.vrp_request_shipment(this)
         this.requires(:id, type: String, desc: '')
-        this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8)')
+        this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
         this.optional(:exlusion_cost, type: Integer,  desc: 'Exclusion cost')
 
         this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
