@@ -112,11 +112,11 @@ module OptimizerWrapper
           routes: []
         }
       else
-        vrp_need_matrix = {
-          time: vrp.need_matrix_time?,
-          distance: vrp.need_matrix_distance?,
-          value: vrp.need_matrix_value?
-        }
+        vrp_need_matrix = [
+          vrp.need_matrix_time? ? :time : nil,
+          vrp.need_matrix_distance? ? :distance : nil,
+          vrp.need_matrix_value? ? :value : nil
+        ].compact
         if services_fleets.one?{ |service_fleet| service_fleet[:id] == fleet_id }
           associated_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
           vrp.vehicles = associated_fleet[:fleet].collect{ |vehicle|
@@ -138,7 +138,7 @@ module OptimizerWrapper
           [vehicle, vehicle.dimensions]
         }.select{ |vehicle, dimensions|
           dimensions.find{ |dimension|
-            vrp_need_matrix[dimension] && (vehicle.matrix_id.nil? || vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
+            vrp_need_matrix.include?(dimension) && (vehicle.matrix_id.nil? || vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
           }
         }
 
@@ -149,7 +149,7 @@ module OptimizerWrapper
           }
 
           uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            [vehicle.router_mode.to_sym, dimensions, vehicle.router_options]
+            [vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]
           }.uniq
 
           i = 0
@@ -169,7 +169,7 @@ module OptimizerWrapper
           }]
 
           uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-            vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions, vehicle.router_options]] }.id
+            vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]] }.id
           }
         end
 
