@@ -599,17 +599,23 @@ module Wrappers
 
       result = out.split("\n")[-1]
       if @thread.value == 0
-        cost_line = out.split("\n")[-2]
         if result == 'No solution found...'
           nil
         else
-          cost = if cost_line.include?('Cost : ')
-            cost_line.split(' ')[-4].to_i
+          cost = if result.include?('Cost : ')
+            result.split(' ')[-4].to_i
           end
-          iterations = if cost_line.include?('Final Iteration : ')
-            cost_line.split(' ')[3].to_i
+          iterations = if result.include?('Final Iteration : ')
+            result.split(' ')[3].to_i
           end
-          [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
+          time = if result.include?('Time : ')
+            result.split(' ')[-1].to_f
+          end
+          @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+          if block
+            block.call(self, iterations, nil, nil, cost, time, @previous_result)
+          end
+          [cost, iterations, @previous_result]
         end
       elsif @thread.value == 9
         out = "Job killed"
