@@ -45,6 +45,7 @@ module Wrappers
         :assert_no_value_matrix,
         :assert_no_routes,
         :assert_points_same_definition,
+        :assert_at_least_one_mission,
       ]
     end
 

@@ -253,6 +253,10 @@ module Wrappers
       true
     end
 
+    def assert_at_least_one_mission(vrp)
+      !vrp.services.empty? || !vrp.shipments.empty? 
+    end
+
     def solve_synchronous?(vrp)
       false
     end

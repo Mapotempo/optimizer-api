@@ -47,6 +47,7 @@ module Wrappers
         :assert_no_routes,
         :assert_only_empty_or_fill_quantities,
         :assert_points_same_definition,
+        :assert_at_least_one_mission,
       ]
     end
 
