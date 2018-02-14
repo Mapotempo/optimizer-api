@@ -9,7 +9,7 @@ bundle
 ```
 
 This project requires some solver and interface projects in order to be fully functionnal !
-* [Vroom v1.0.0](https://github.com/VROOM-Project/vroom/tree/v1.0.0)
+* [Vroom actual master](https://github.com/VROOM-Project/vroom)
 * [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v6.5](https://github.com/google/or-tools/tree/v6.5)
 * (optional) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
 
