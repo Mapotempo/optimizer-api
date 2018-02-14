@@ -248,7 +248,8 @@ The router dimension can be set as distance, this describe that the route betwee
   }]
 ```
 Some additional parameters are available :
-* **force_start** Force the vehicle to leave its depot at the starting time of its working timewindow.
+* **force_start** [ DEPRECATED ] Force the vehicle to leave its depot at the starting time of its working timewindow. This option is deprecated. 
+* **shift_preference** Force the vehicle to leave its depot at the starting time of its working timewindow or to get back to depot at the end of its working timewindow or, by default, minimize span.
 * **duration** Define the maximum duration of the vehicle route
 * **maximum_ride_time** and **maximum_ride_distance** To define a maximum ride distance or duration, you can set the "maximum_ride_distance" and "maximum_ride_time" parameters with meter and seconds.
 

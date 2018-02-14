@@ -50,7 +50,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :start_index, :int32, 11
     optional :end_index, :int32, 12
     optional :duration, :int64, 13
-    optional :force_start, :bool, 14
+    optional :shift_preference, :string, 14
     optional :cost_late_multiplier, :float, 15
     optional :day_index, :int32, 16
     optional :value_matrix_index, :uint32, 17

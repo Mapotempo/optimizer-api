@@ -234,7 +234,7 @@ module Wrappers
           start_index: vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
           end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
           duration: vehicle.duration ? vehicle.duration : -1,
-          force_start: vehicle.force_start,
+          shift_preference: (vehicle.force_start ? :force_start : vehicle.shift_preference) ,
           day_index: vehicle.global_day_index ? vehicle.global_day_index : -1,
           max_ride_time: vehicle.maximum_ride_time || 0,
           max_ride_distance: vehicle.maximum_ride_distance || 0

@@ -153,7 +153,8 @@ module Api
         this.optional(:cost_late_multiplier, type: Float, desc: 'Cost applied once a point is deliver late (ORtools only)')
         this.optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration')
         this.optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour')
-        this.optional(:force_start, type: Boolean, desc: 'Force the vehicle to start as soon as the vehicle timewindow is open')
+        this.optional(:force_start, type: Boolean, desc: '[ DEPRECATED ] Force the vehicle to start as soon as the vehicle timewindow is open')
+        this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open, as late as possible or let vehicule start at any time ')
 
         this.optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
         this.optional(:value_matrix_id, type: String, desc: 'Related value matrix, if defined')

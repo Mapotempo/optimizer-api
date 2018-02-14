@@ -50,6 +50,7 @@ module Models
     field :strict_restriction, default: false
 
     field :force_start, default: false
+    field :shift_preference, default: :minimize_span
     field :duration, default: nil
     field :maximum_ride_time, default: nil
     field :maximum_ride_distance, default: nil
@@ -70,6 +71,7 @@ module Models
     validates_numericality_of :coef_setup
     validates_numericality_of :global_day_index, allow_nil: true
     validates_inclusion_of :router_dimension, in: %w( time distance )
+    validates_inclusion_of :shift_preference, in: %w( force_start force_end minimize_span )
     validates_numericality_of :speed_multiplier
     validates_numericality_of :duration, greater_than_or_equal_to: 0
     field :skills, default: []
