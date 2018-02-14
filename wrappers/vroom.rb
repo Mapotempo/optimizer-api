@@ -179,24 +179,20 @@ module Wrappers
       vehicle = vehicles.first
       problem[:vehicles] << {
         id: 0,
-        start_index: vehicle.start_point_id ? services.size : nil,
-        end_index: vehicle.end_point_id ? services.size + (vehicle.start_point_id ? 1 : 0) : nil
+        start_index: vehicle.start_point_id ? points[vehicle.start_point_id].matrix_index : nil,
+        end_index: vehicle.end_point_id ? points[vehicle.end_point_id].matrix_index : nil
       }.delete_if{ |k, v| v.nil? }
-      matrix_indices = []
       problem[:jobs] = services.collect.with_index{ |service, index|
-        matrix_indices << points[service.activity.point_id].matrix_index
         [{
           id: index,
-          location_index: index
+          location_index: points[service.activity.point_id].matrix_index
         }]
       }.flatten
 
       matrix = matrices.find{ |current_matrix| current_matrix.id == vehicle.matrix_id }
+      size_matrix = [(matrix[:time] || []).size, (matrix[:distance] || []).size, (matrix[:value] || []).size].max - 1
 
-      matrix_indices << points[vehicle.start_point_id].matrix_index if vehicle.start_point_id
-      matrix_indices << points[vehicle.end_point_id].matrix_index if vehicle.end_point_id
-
-      agglomerate_matrix = vehicle.matrix_blend(matrix, matrix_indices, [:time, :distance], {cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier})
+      agglomerate_matrix = vehicle.matrix_blend(matrix, (0..size_matrix), [:time, :distance], {cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier})
       agglomerate_matrix.collect!{ |a| a.collect{ |b| ((100 * b + (prefer_short ? 20 * Math.sqrt(b) : 0))/100 + 0.5) .to_i } }
 
       problem[:matrix] = agglomerate_matrix
