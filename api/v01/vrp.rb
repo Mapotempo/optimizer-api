@@ -180,6 +180,7 @@ module Api
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
         this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
+        this.optional(:weekly_duration, types: [String, Float, Integer], desc: 'Maximum work duration over a week', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
         this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
@@ -265,9 +266,11 @@ module Api
 
       def self.vrp_request_relation(this)
         this.requires(:id, type: String, desc: '')
-        this.requires(:type, type: String, desc: 'same_vehicle, sequence, direct_sequence, minimum_day_lapse or maximum_day_lapse')
+        this.requires(:type, type: String, desc: 'same_route, sequence, order, minimum_day_lapse, maximum_day_lapse, shipment, meetup, maximum_duration_lapse, force_first, never_first, force_end or vehicle_group_week_duration')
         this.optional(:lapse, type: Integer, desc: 'Only used in case of minimum and maximum day lapse')
-        this.requires(:linked_ids, type: Array[String], desc: '')
+        this.optional(:linked_ids, type: Array[String], desc: 'List of activities involved in the relation')
+        this.optional(:linked_vehicles_ids, type: Array[String], desc: 'List of vehicles involved in the relation')
+        this.at_least_one_of :linked_ids, :linked_vehicles_ids
       end
 
       def self.vrp_request_route(this)

@@ -71,7 +71,146 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
   end
 
-    def test_alternative_stop_conditions
+  def test_weekly_duration
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        cost_fixed: 20
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_week_duration',
+        linked_vehicles_ids: ['vehicle_1'],
+        lapse: 1
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 1, result[:routes][1][:activities].size
+  end
+
+  def test_periodic_weekly_duration
+    problem = {
+        points: [
+        {
+            id: "point_0",
+            location:
+            {
+                lat: 48.9,
+                lon: 2.3
+            }
+        },
+        {
+            id: "point_1",
+            location:
+            {
+                lat: 48.8,
+                lon: 2.3
+            }
+        },
+        {
+            id: "depot",
+            location:
+            {
+                lat: 50.5,
+                lon: 2.7
+            }
+        }],
+        units: [],
+        vehicles: [
+        {
+            id: "vehicle_1",
+            start_point_id: "depot",
+            end_point_id: "depot",
+            router_mode: "car",
+            cost_late_multiplier: 0.0,
+            cost_time_multiplier:  1.0,
+            speed_multiplier: 1.0,
+            weekly_duration: 100000
+        },
+        {
+            id: "vehicle_2",
+            start_point_id: "depot",
+            end_point_id: "depot",
+            router_mode: "car",
+            cost_late_multiplier: 0.0,
+            cost_time_multiplier:  1.0,
+            speed_multiplier: 1.0
+        }],
+        services: [{
+          id: 'service_1',
+          activity: {
+            point_id: 'point_1'
+          }
+        }],
+      configuration:
+        {
+            preprocessing:
+            {
+                prefer_short_segment: true
+            },
+            resolution:
+            {
+                duration: 1000
+            },
+            schedule:
+            {
+                range_indices:
+                {
+                    start: 0,
+                    end: 2
+                }
+            }
+        }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert result
+  end
+
+  def test_alternative_stop_conditions
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       matrices: [{

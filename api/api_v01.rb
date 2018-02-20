@@ -251,6 +251,7 @@ Some additional parameters are available :
 * **force_start** [ DEPRECATED ] Force the vehicle to leave its depot at the starting time of its working timewindow. This option is deprecated. 
 * **shift_preference** Force the vehicle to leave its depot at the starting time of its working timewindow or to get back to depot at the end of its working timewindow or, by default, minimize span.
 * **duration** Define the maximum duration of the vehicle route
+* **weekly_duration** Define the maximum work duration over a week for the vehicle
 * **maximum_ride_time** and **maximum_ride_distance** To define a maximum ride distance or duration, you can set the "maximum_ride_distance" and "maximum_ride_time" parameters with meter and seconds.
 
 
@@ -482,21 +483,26 @@ Inform about the drivers obligations to have some rest within a route
 ```
 
 ### <a name="relations"></a>**Relations**
-Relations allow to define constraints explicitly between missions.
+Relations allow to define constraints explicitly between activities and/or vehicles.
 Those could be of the following types: 
   * **same_route** : force missions to be served within the same route.
   * **order** : force services to be served within the same route in a specific order, but allow to insert others missions between
   * **sequence** : force services to be served in a specific order, excluding others missions to be performed between
   * **meetup** : ensure that some missions are performed at the same time by multiple vehicles.
   * **maximum_duration_lapse** : Define a maximum in route duration between two activities.
+  * **minimum_day_lapse** : Define a minimum number of unworked days between two worked days.
+  * **maximum_day_lapse** : Define a maximum number of unworked days between two worked days.
+  * **force_end** : The linked activities are the only which can be set as last of a route. (Only one relation of this kind is considered)
   * **force_first** : The linked activities are the only which can be set as first of a route. (Only one relation of this kind is considered)
   * **never_first** : The linked activities can\'t be set as first of a vehicle.
+  * **vehicle_group_week_duration** : The sum of linked vehicles duration should not exceed lapse.
 
 ```json
   "relations": [{
     "id": "sequence_1",
     "type": "sequence",
     "linked_ids": ["service_1", "service_3", "service_2"],
+    "linked_vehicles": ["vehicle_1", "vehicle_2"],
     "lapse": null
   }]
 ```

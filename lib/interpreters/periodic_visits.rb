@@ -272,7 +272,11 @@ module Interpreters
     end
 
     def self.generate_vehicles(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
+      same_vehicle_list = []
+      lapses_list = []
       new_vehicles = vrp.vehicles.collect { |vehicle|
+        same_vehicle_list.push([])
+        lapses_list.push(-1)
         if vehicle.unavailable_work_date
           epoch = Date.new(1970,1,1)
           vehicle.unavailable_work_day_indices = vehicle.unavailable_work_date.collect{ |unavailable_date|
@@ -293,6 +297,8 @@ module Interpreters
               if associated_timewindow
                 new_vehicle = Marshal::load(Marshal.dump(vehicle))
                 new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
+                same_vehicle_list[-1].push(new_vehicle.id)
+                lapses_list[-1] = vehicle.weekly_duration
                 new_vehicle.timewindow = {
                   id: ("#{associated_timewindow[:id]} #{(vehicle_day_index + @shift) % 7}" if associated_timewindow[:id] && !associated_timewindow[:id].nil?),
                   start: (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:start]),
@@ -352,6 +358,8 @@ module Interpreters
             if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index == vehicle_day_index}
               new_vehicle = Marshal::load(Marshal.dump(vehicle))
               new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
+              same_vehicle_list[-1].push(new_vehicle.id)
+              lapses_list[-1] = vehicle.weekly_duration
               new_vehicle.global_day_index = vehicle_day_index
               if new_vehicle.skills.empty?
                 new_vehicle.skills = [@frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect { |index|
@@ -376,9 +384,20 @@ module Interpreters
           }.compact
           new_periodic_vehicle
         else
+          same_vehicle_list[-1].push(new_vehicle.id)
+          lapses_list[-1] = vehicle.weekly_duration
           vehicle
         end
       }.flatten
+      same_vehicle_list.each.with_index{ |list, index|
+        new_relation = Models::Relation.new ({
+          type: 'vehicle_group_week_duration',
+          linked_vehicles_ids: list,
+          lapse: lapses_list[index]
+        })
+        vrp.relations << new_relation
+      }
+      new_vehicles
     end
 
     def self.generate_routes(vrp)

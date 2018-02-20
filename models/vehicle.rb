@@ -52,6 +52,7 @@ module Models
     field :force_start, default: false
     field :shift_preference, default: :minimize_span
     field :duration, default: nil
+    field :weekly_duration, default: nil
     field :maximum_ride_time, default: nil
     field :maximum_ride_distance, default: nil
     field :matrix_id, default: nil
@@ -74,6 +75,7 @@ module Models
     validates_inclusion_of :shift_preference, in: %w( force_start force_end minimize_span )
     validates_numericality_of :speed_multiplier
     validates_numericality_of :duration, greater_than_or_equal_to: 0
+    validates_numericality_of :weekly_duration, greater_than_or_equal_to: 0
     field :skills, default: []
 
     has_many :sequence_timewindows, class_name: 'Models::Timewindow'

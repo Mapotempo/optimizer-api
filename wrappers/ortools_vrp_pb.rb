@@ -57,11 +57,13 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :cost_value_multiplier, :float, 18
     optional :max_ride_time, :int64, 19
     optional :max_ride_distance, :int64, 20
+    optional :weekly_duration, :int64, 21
   end
   add_message "ortools_vrp.Relation" do
     optional :type, :string, 1
     repeated :linked_ids, :string, 2
     optional :lapse, :int32, 3
+    repeated :linked_vehicles_ids, :string, 4
   end
   add_message "ortools_vrp.Route" do
     optional :vehicle_id, :string, 1

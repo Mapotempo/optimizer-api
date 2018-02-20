@@ -234,6 +234,7 @@ module Wrappers
           start_index: vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
           end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
           duration: vehicle.duration ? vehicle.duration : -1,
+          weekly_duration: vehicle.weekly_duration ? vehicle.weekly_duration : -1,
           shift_preference: (vehicle.force_start ? :force_start : vehicle.shift_preference) ,
           day_index: vehicle.global_day_index ? vehicle.global_day_index : -1,
           max_ride_time: vehicle.maximum_ride_time || 0,
@@ -247,15 +248,18 @@ module Wrappers
           vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
           vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
         }.uniq
-        if !current_linked_ids.empty?
+        current_linked_vehicles = relation.linked_vehicles_ids.select{ |vehicle_id|
+          vrp.vehicles.one? { |vehicle| vehicle.id == vehicle_id }
+        }.uniq
+        if !current_linked_ids.empty? || !current_linked_vehicles.empty?
           OrtoolsVrp::Relation.new(
             type: relation.type.to_s,
             linked_ids: current_linked_ids,
+            linked_vehicles_ids: current_linked_vehicles,
             lapse: relation.lapse || -1
           )
         end
       }.compact
-
       routes = vrp.routes.collect{ |route|
         if !route.vehicle.nil? && !route.mission_ids.empty?
           OrtoolsVrp::Route.new(
