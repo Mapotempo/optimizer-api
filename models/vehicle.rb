@@ -53,6 +53,7 @@ module Models
     field :shift_preference, default: :minimize_span
     field :duration, default: nil
     field :weekly_duration, default: nil
+    field :distance, default: nil
     field :maximum_ride_time, default: nil
     field :maximum_ride_distance, default: nil
     field :matrix_id, default: nil
@@ -76,6 +77,7 @@ module Models
     validates_numericality_of :speed_multiplier
     validates_numericality_of :duration, greater_than_or_equal_to: 0
     validates_numericality_of :weekly_duration, greater_than_or_equal_to: 0
+    validates_numericality_of :distance, greater_than_or_equal_to: 0
     field :skills, default: []
 
     has_many :sequence_timewindows, class_name: 'Models::Timewindow'
@@ -93,7 +95,7 @@ module Models
     end
 
     def need_matrix_distance?
-      cost_distance_multiplier != 0 || maximum_ride_distance
+      cost_distance_multiplier != 0 || maximum_ride_distance || distance
     end
 
     def need_matrix_value?

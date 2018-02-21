@@ -58,6 +58,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :max_ride_time, :int64, 19
     optional :max_ride_distance, :int64, 20
     optional :weekly_duration, :int64, 21
+    optional :distance, :int64, 22
   end
   add_message "ortools_vrp.Relation" do
     optional :type, :string, 1

@@ -252,6 +252,7 @@ Some additional parameters are available :
 * **shift_preference** Force the vehicle to leave its depot at the starting time of its working timewindow or to get back to depot at the end of its working timewindow or, by default, minimize span.
 * **duration** Define the maximum duration of the vehicle route
 * **weekly_duration** Define the maximum work duration over a week for the vehicle
+* **distance** Define the maximum distance of the vehicle route
 * **maximum_ride_time** and **maximum_ride_distance** To define a maximum ride distance or duration, you can set the "maximum_ride_distance" and "maximum_ride_time" parameters with meter and seconds.
 
 
