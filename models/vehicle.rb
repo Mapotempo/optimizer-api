@@ -28,10 +28,10 @@ module Models
     field :cost_value_multiplier, default: 0
     field :cost_late_multiplier, default: nil
     field :cost_setup_time_multiplier, default: 0
+    field :coef_service, default: 1
     field :coef_setup, default: 1
-    field :coef_travel_time, default: 1
+    field :additional_service, default: 0
     field :additional_setup, default: 0
-    field :additional_travel_time, default: 0
 
     field :router_mode, default: :car
     field :router_dimension, default: :time
@@ -76,7 +76,7 @@ module Models
     validates_numericality_of :cost_late_multiplier, allow_nil: true
     validates_numericality_of :cost_setup_time_multiplier
     validates_numericality_of :coef_setup
-    validates_numericality_of :coef_travel_time
+    validates_numericality_of :coef_service
     validates_numericality_of :additional_setup
     validates_numericality_of :additional_travel_time
     validates_numericality_of :global_day_index, allow_nil: true

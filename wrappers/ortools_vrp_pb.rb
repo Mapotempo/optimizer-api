@@ -59,10 +59,10 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :max_ride_time, :int64, 19
     optional :max_ride_distance, :int64, 20
     optional :distance, :int64, 22
-    optional :coef_setup, :float, 23
-    optional :coef_travel, :float, 24
-    optional :additional_setup, :int64, 25
-    optional :additional_travel, :int64, 26
+    optional :coef_service, :float, 23
+    optional :coef_setup, :float, 24
+    optional :additional_service, :int64, 25
+    optional :additional_setup, :int64, 26
   end
   add_message "ortools_vrp.Relation" do
     optional :type, :string, 1
