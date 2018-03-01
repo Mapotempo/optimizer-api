@@ -208,6 +208,10 @@ module Wrappers
           cost_waiting_time_multiplier: vehicle.cost_waiting_time_multiplier,
           cost_value_multiplier: vehicle.cost_value_multiplier || 0,
           cost_late_multiplier: vehicle.cost_late_multiplier || 0,
+          coef_setup: vehicle.coef_setup || 1,
+          coef_travel: vehicle.coef_travel_time || 1,
+          additional_setup: vehicle.additional_setup || 0,
+          additional_travel: vehicle.additional_travel_time || 0,
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(

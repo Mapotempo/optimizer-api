@@ -29,6 +29,9 @@ module Models
     field :cost_late_multiplier, default: nil
     field :cost_setup_time_multiplier, default: 0
     field :coef_setup, default: 1
+    field :coef_travel_time, default: 1
+    field :additional_setup, default: 0
+    field :additional_travel_time, default: 0
 
     field :router_mode, default: :car
     field :router_dimension, default: :time
@@ -63,6 +66,8 @@ module Models
     field :unavailable_work_date, default: nil
     field :global_day_index, default: nil
 
+    field :skills, default: []
+
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
     validates_numericality_of :cost_time_multiplier
@@ -71,6 +76,9 @@ module Models
     validates_numericality_of :cost_late_multiplier, allow_nil: true
     validates_numericality_of :cost_setup_time_multiplier
     validates_numericality_of :coef_setup
+    validates_numericality_of :coef_travel_time
+    validates_numericality_of :additional_setup
+    validates_numericality_of :additional_travel_time
     validates_numericality_of :global_day_index, allow_nil: true
     validates_inclusion_of :router_dimension, in: %w( time distance )
     validates_inclusion_of :shift_preference, in: %w( force_start force_end minimize_span )
@@ -78,7 +86,6 @@ module Models
     validates_numericality_of :duration, greater_than_or_equal_to: 0
     validates_numericality_of :weekly_duration, greater_than_or_equal_to: 0
     validates_numericality_of :distance, greater_than_or_equal_to: 0
-    field :skills, default: []
 
     has_many :sequence_timewindows, class_name: 'Models::Timewindow'
 
