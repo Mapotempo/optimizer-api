@@ -1277,16 +1277,16 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 5, result[:routes][0][:activities].size
   end
 
-  def test_distance_matrix_2
+  def test_max_ride_distance
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       matrices: [{
         id: 'matrix_0',
         distance: [
-          [0, 1000000, 3000, 3000],
-          [1000000, 0, 1000000, 1000000],
-          [3000, 1000000, 0, 3000],
-          [3000, 1000000, 3000, 0]
+          [0, 1000, 3, 3],
+          [1000, 0, 1000, 1000],
+          [3, 1000, 0, 3],
+          [3, 1000, 3, 0]
         ]
       }],
       points: [{
@@ -1307,6 +1307,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
+        cost_time_multiplier: 0,
+        cost_distance_multiplier: 1,
         maximum_ride_distance: 4
       }],
       services: [{
