@@ -38,6 +38,7 @@ group :test do
   gem 'minitest'
   gem 'minitest-reporters'
   gem 'simplecov', require: false
+  gem 'byebug'
 end
 
 group :production do
