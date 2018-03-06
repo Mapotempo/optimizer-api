@@ -4037,63 +4037,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0 , result[:unassigned].size
   end
 
-  def test_vehicle_max_distance_no_sol
-    ortools = OptimizerWrapper::ORTOOLS
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        distance: [
-          [0, 11, 9],
-          [11, 0, 6],
-          [9, 6, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        distance: 10
-      },{
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        distance: 11
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1',
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 10
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
-    result = ortools.solve(vrp, 'test')
-    assert !result
-  end
-
-  def test_vehicle_max_distance_unconsistent_sol
+  def test_vehicle_max_distance_one_per_vehicle
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       matrices: [{
@@ -4121,12 +4065,16 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        distance: 10
+        cost_time_multiplier:0,
+        cost_distance_multiplier: 1,
+        distance: 11
       },{
         id: 'vehicle_1',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        distance: 11
+        cost_time_multiplier:0,
+        cost_distance_multiplier: 1,
+        distance: 10
       }],
       services: [{
         id: 'service_1',
@@ -4151,7 +4099,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
-    assert_equal 2 , result[:unassigned].size
+    assert_equal result[:routes][0][:activities].size , result[:routes][1][:activities].size
   end
 
   def test_max_ride_time_never_from_or_to_depot
