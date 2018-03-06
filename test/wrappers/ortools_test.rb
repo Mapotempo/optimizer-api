@@ -3952,11 +3952,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
+        cost_distance_multiplier: 1,
         distance: 10
       },{
         id: 'vehicle_1',
         start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
+        matrix_id: 'matrix_0',
+        cost_distance_multiplier: 1,
       }],
       services: [{
         id: 'service_1',
