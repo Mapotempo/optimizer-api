@@ -58,7 +58,6 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :cost_value_multiplier, :float, 18
     optional :max_ride_time, :int64, 19
     optional :max_ride_distance, :int64, 20
-    optional :weekly_duration, :int64, 21
     optional :distance, :int64, 22
     optional :coef_setup, :float, 23
     optional :coef_travel, :float, 24

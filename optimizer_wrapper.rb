@@ -81,6 +81,7 @@ module OptimizerWrapper
         problem_size: vrp_element.services.size + vrp_element.shipments.size
       }
     }
+    adjust_vehicles_duration(vrp)
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
@@ -475,6 +476,14 @@ module OptimizerWrapper
   end
 
   private
+
+  def self.adjust_vehicles_duration(vrp)
+      vrp.vehicles.select{ |v| v.duration? && v.rests.size > 0 }.each{ |v|
+        v.rests.each{ |r|
+          v.duration += r.duration
+        }
+      }
+  end
 
   def self.formatted_duration(duration)
     h = (duration / 3600).to_i

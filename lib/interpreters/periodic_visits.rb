@@ -304,9 +304,11 @@ module Interpreters
     def self.generate_vehicles(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
       same_vehicle_list = []
       lapses_list = []
+      rests_durations = []
       new_vehicles = vrp.vehicles.collect { |vehicle|
         same_vehicle_list.push([])
         lapses_list.push(-1)
+        rests_durations.push(0)
         if vehicle.unavailable_work_date
           epoch = Date.new(1970,1,1)
           vehicle.unavailable_work_day_indices = vehicle.unavailable_work_date.collect{ |unavailable_date|
@@ -328,47 +330,16 @@ module Interpreters
                 new_vehicle = Marshal::load(Marshal.dump(vehicle))
                 new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
                 same_vehicle_list[-1].push(new_vehicle.id)
-                lapses_list[-1] = vehicle.weekly_duration
-                new_vehicle.timewindow = {
-                  id: ("#{associated_timewindow[:id]} #{(vehicle_day_index + @shift) % 7}" if associated_timewindow[:id] && !associated_timewindow[:id].nil?),
-                  start: (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:start]),
-                  end: (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:end])
-                }.delete_if { |k, v| !v }
+                lapses_list[-1] = vehicle.overall_duration
+                new_vehicle.timewindow = Marshal::load(Marshal.dump(associated_timewindow))
+                new_vehicle.timewindow.id = ("#{associated_timewindow[:id]} #{(vehicle_day_index + @shift) % 7}" if associated_timewindow[:id] && !associated_timewindow[:id].nil?),
+                new_vehicle.timewindow.start = (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:start]),
+                new_vehicle.timewindow.end = (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:end])
+                new_vehicle.timewindow.day_index = nil
                 new_vehicle.global_day_index = vehicle_day_index
                 new_vehicle.sequence_timewindows = nil
-                associated_rests = vehicle.rests.select{ |rest| rest.timewindows.any?{ |timewindow| timewindow[:day_index] == (vehicle_day_index + @shift) % 7 } }
-                new_vehicle.rests = associated_rests.collect{ |rest|
-                  new_rest = Marshal::load(Marshal.dump(rest))
-                  new_rest_timewindows = new_rest.timewindows.collect{ |timewindow|
-                    if timewindow[:day_index] == (vehicle_day_index + @shift) % 7
-                      {
-                        id: ("timewindow[:id] #{(vehicle_day_index + @shift) % 7}" if timewindow[:id] && !timewindow[:id].nil?),
-                        start: (((vehicle_day_index + @shift) % 7 ) * 86400 + timewindow[:start]),
-                        end: (((vehicle_day_index + @shift) % 7 ) * 86400 + timewindow[:end])
-                      }.delete_if { |k, v| !v }
-                    end
-                  }.compact
-                  if new_rest_timewindows.size > 0
-                    new_rest.timewindows = new_rest_timewindows
-                    new_rest[:id] = "#{new_rest[:id]}_#{vehicle_day_index}"
-                    new_rest
-                  end
-                }
-                if new_vehicle.skills.empty?
-                  new_vehicle.skills = [@frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect { |index|
-                    if index != vehicle_day_index
-                      "not_#{index}"
-                    end
-                  }.compact]
-                else
-                  new_vehicle.skills.collect!{ |alternative_skill|
-                    alternative_skill + @frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect { |index|
-                      if index != vehicle_day_index
-                        "not_#{index}"
-                      end
-                    }.compact
-                  }
-                end
+                rest_durations = associate_rests(vehicle, vehicle_day_index, new_vehicle, rests_durations)
+                new_vehicle.skills = associate_skills(new_vehicle, vehicle_day_index)
                 vrp.rests += new_vehicle.rests
                 vrp.services.select{ |service| service.sticky_vehicles.any?{ sticky_vehicle == vehicle }}.each{ |service|
                   service.sticky_vehicles.insert(-1, new_vehicle)
@@ -389,23 +360,10 @@ module Interpreters
               new_vehicle = Marshal::load(Marshal.dump(vehicle))
               new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
               same_vehicle_list[-1].push(new_vehicle.id)
-              lapses_list[-1] = vehicle.weekly_duration
+              lapses_list[-1] = vehicle.overall_duration
               new_vehicle.global_day_index = vehicle_day_index
-              if new_vehicle.skills.empty?
-                new_vehicle.skills = [@frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect { |index|
-                  if index != vehicle_day_index
-                    "not_#{index}"
-                  end
-                }.compact]
-              else
-                new_vehicle.skills.each{ |alternative_skill|
-                  alternative_skill += @frequencies.collect { |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect { |index|
-                    if index != vehicle_day_index
-                      "not_#{index}"
-                    end
-                  }.compact
-                }
-              end
+              rest_durations = associate_rests(vehicle, vehicle_day_index, new_vehicle, rests_durations)
+              new_vehicle.skills = associate_skills(new_vehicle, vehicle_day_index)
               vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle }}.each{ |service|
                 service.sticky_vehicles.insert(-1, new_vehicle)
               }
@@ -415,17 +373,19 @@ module Interpreters
           new_periodic_vehicle
         else
           same_vehicle_list[-1].push(new_vehicle.id)
-          lapses_list[-1] = vehicle.weekly_duration
+          lapses_list[-1] = vehicle.overall_duration
           vehicle
         end
       }.flatten
       same_vehicle_list.each.with_index{ |list, index|
-        new_relation = Models::Relation.new ({
-          type: 'vehicle_group_week_duration',
-          linked_vehicles_ids: list,
-          lapse: lapses_list[index]
-        })
-        vrp.relations << new_relation
+        if lapses_list[index] && lapses_list[index] != -1
+          new_relation = Models::Relation.new({
+            type: 'vehicle_group_duration',
+            linked_vehicles_ids: list,
+            lapse: lapses_list[index] + rests_durations[index]
+          })
+          vrp.relations << new_relation
+      end
       }
       new_vehicles
     end
@@ -502,6 +462,55 @@ module Interpreters
     rescue => e
       puts e
       puts e.backtrace
+    end
+
+    def self.associate_rests(vehicle, vehicle_day_index, new_vehicle, rests_durations)
+      associated_rests = vehicle.rests.select{ |rest| rest.timewindows.any?{ |timewindow| timewindow[:day_index] == (vehicle_day_index + @shift) % 7 }}
+      associated_rests_without_tw = vehicle.rests.select{ |rest| rest.timewindows.size == 0 }
+      new_vehicle.rests = associated_rests.collect{ |rest|
+        new_rest = Marshal::load(Marshal.dump(rest))
+        new_rest[:id] = "#{new_rest[:id]}_#{vehicle_day_index}"
+        new_rest_timewindows = new_rest.timewindows.collect{ |timewindow|
+            if timewindow[:day_index] == (vehicle_day_index + @shift) % 7
+              {
+                id: ("#{timewindow[:id]} #{(vehicle_day_index + @shift) % 7}" if timewindow[:id] && !timewindow[:id].nil?),
+                start: timewindow[:start] ? (((vehicle_day_index + @shift) % 7 ) * 86400 + timewindow[:start]) : 0,
+                end: timewindow[:end] ? (((vehicle_day_index + @shift) % 7 ) * 86400 + timewindow[:end]) : 1
+              }.delete_if { |k, v| !v }
+            end
+          }.compact
+        new_rest.timewindows = new_rest_timewindows
+        rests_durations[-1] += new_rest.duration
+        new_rest
+      }
+      new_vehicle.rests += associated_rests_without_tw.collect{ |rest|
+        new_rest = Marshal::load(Marshal.dump(rest))
+        new_rest[:id] = "#{new_rest[:id]}_#{vehicle_day_index}"
+        new_rest.timewindows = [{
+          id: "#{new_rest[:id]}_#{vehicle_day_index}",
+        }]
+        rests_durations[-1] += new_rest.duration
+        new_rest
+      }
+      return rests_durations
+    end
+
+    def self.associate_skills(new_vehicle, vehicle_day_index)
+      if new_vehicle.skills.empty?
+        new_vehicle.skills = [@frequencies.collect{ |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect{ |index|
+          if index != vehicle_day_index
+            "not_#{index}"
+          end
+        }.compact]
+      else
+        new_vehicle.skills.collect!{ |alternative_skill|
+          alternative_skill + @frequencies.collect{ |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect{ |index|
+            if index != vehicle_day_index
+              "not_#{index}"
+            end
+          }.compact
+        }
+      end
     end
 
   end

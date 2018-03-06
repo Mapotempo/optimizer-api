@@ -26,6 +26,6 @@ module Models
     field :linked_vehicles_ids, default: []
 
     validates_numericality_of :lapse, allow_nil: true
-    validates_inclusion_of :type, :in => %i(same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse force_first never_first force_end vehicle_group_week_duration)
+    validates_inclusion_of :type, :in => %i(same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse force_first never_first force_end vehicle_group_duration)
   end
 end
