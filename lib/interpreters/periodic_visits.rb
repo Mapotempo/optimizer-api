@@ -323,10 +323,10 @@ module Interpreters
         end
 
         if vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?
-          new_periodic_vehicle = (@schedule_start..@schedule_end).collect{ |vehicle_day_index|
+          new_periodic_vehicle = []
+          (@schedule_start..@schedule_end).each{ |vehicle_day_index|
             if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index == vehicle_day_index}
-              associated_timewindow = vehicle.sequence_timewindows.find{ |timewindow| !timewindow[:day_index] || timewindow[:day_index] == (vehicle_day_index + @shift) % 7 }
-              if associated_timewindow
+              vehicle.sequence_timewindows.select{ |timewindow| !timewindow[:day_index] || timewindow[:day_index] == (vehicle_day_index + @shift) % 7 }.each{ |associated_timewindow|
                 new_vehicle = Marshal::load(Marshal.dump(vehicle))
                 new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
                 same_vehicle_list[-1].push(new_vehicle.id)
@@ -344,12 +344,10 @@ module Interpreters
                 vrp.services.select{ |service| service.sticky_vehicles.any?{ sticky_vehicle == vehicle }}.each{ |service|
                   service.sticky_vehicles.insert(-1, new_vehicle)
                 }
-                new_vehicle
-              else
-                nil
-              end
+                new_periodic_vehicle << new_vehicle
+              }
             end
-          }.compact
+          }
           vehicle.rests.each{ |rest|
             vrp.rests.delete(rest)
           }
