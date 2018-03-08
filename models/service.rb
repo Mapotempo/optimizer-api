@@ -26,6 +26,9 @@ module Models
     validates_numericality_of :exclusion_cost, allow_nil: true
     field :type, default: :service
 
+    field :first_possible_day, default: nil
+    field :last_possible_day, default: nil
+
     field :visits_number, default: 1
 
     validates_numericality_of :visits_number

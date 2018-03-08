@@ -83,7 +83,7 @@ module Wrappers
           [-1]
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
-            if service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size)
+            if service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) && check_if_compatible_days(vrp,vehicle,service)
               index
             else
               nil
@@ -358,6 +358,14 @@ module Wrappers
         timewindows: activity && build_timewindows(activity, day_index),
         quantities: build_quantities(job, job_load)
       }.delete_if{ |k,v| !v }.compact
+    end
+
+    def check_if_compatible_days(vrp,vehicle,service)
+      if (vrp.schedule_range_indices || vrp.schedule_range_date) && (service.minimum_lapse || service.maximum_lapse)
+        (vehicle.global_day_index >= service[:first_possible_day] && vehicle.global_day_index <= service[:last_possible_day]) ? true : false
+      else
+        true
+      end
     end
 
     def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
