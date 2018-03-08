@@ -292,6 +292,17 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
+      expected_ids = vrp.relations.first.linked_ids
+      actual_route = result[:routes].first[:activities].collect{ |activity|
+        activity[:service_id]
+      }
+
+      route_order = actual_route.select{ |service_id|
+        expected_ids.include?(service_id)
+      }
+      # Check solution order
+      assert_equal expected_ids, route_order
+
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 11200, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
@@ -309,6 +320,17 @@ class RealCasesTest < Minitest::Test
       # Check activities
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
+
+      expected_ids = vrp.relations.first.linked_ids
+      actual_route = result[:routes].first[:activities].collect{ |activity|
+        activity[:service_id]
+      }
+
+      route_order = actual_route.select{ |service_id|
+        expected_ids.include?(service_id)
+      }
+      # Check solution order
+      assert_equal expected_ids, route_order
 
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 13500, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"

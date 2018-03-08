@@ -31,6 +31,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
     optional :duration, :uint32, 2
+    optional :id, :string, 3
   end
   add_message "ortools_vrp.Capacity" do
     optional :limit, :int32, 1

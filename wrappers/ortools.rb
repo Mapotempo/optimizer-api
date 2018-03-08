@@ -231,6 +231,7 @@ module Wrappers
                 end: tw.end || 2**56,
               ) },
               duration: rest.duration,
+              id: rest.id
             )
           },
           matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.matrix_id },
@@ -295,8 +296,8 @@ module Wrappers
     end
 
     def closest_rest_start(timewindows, current_start)
-      timewindows.size == 0 || timewindows.one?{ |tw| tw[:start].nil? || current_start >= tw[:start] && (current_start <= tw[:end] || tw[:end].nil?) } ? current_start :
-        timewindows.sort_by { |tw0, tw1| tw1 ? tw0[:start] < tw1[:start] : tw0 }.find{ |tw| tw[:start] > current_start }[:start]
+      (timewindows.size == 0 || timewindows.one?{ |tw| tw[:start].nil? || current_start >= tw[:start] && (current_start <= tw[:end] || tw[:end].nil?) }) ? current_start :
+        (timewindows.sort_by { |tw0, tw1| tw1 ? tw0[:start] < tw1[:start] : tw0 }.find{ |tw| tw[:start] > current_start } || timewindows.first)[:start]
     end
 
     def kill
@@ -397,7 +398,7 @@ module Wrappers
 
       return @previous_result if content['routes'].empty? && @previous_result
       collected_indices = []
-
+      collected_rests_indices = []
       {
         cost: content['cost'] || 0,
         iterations: content['iterations'] || 0,
@@ -498,7 +499,8 @@ module Wrappers
                   current_activity
                 end
               elsif activity['type'] == 'break'
-                vehicle_rest = vehicle.rests[current_index]
+                collected_rests_indices << current_index
+                vehicle_rest = vrp.rests[current_index]
                 earliest_start = closest_rest_start(vehicle_rest[:timewindows], earliest_start)
                 current_rest = {
                   rest_id: vehicle_rest.id,
@@ -540,7 +542,13 @@ module Wrappers
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil)
           }]
-        }.flatten
+        }.flatten + (vrp.rests.collect(&:id) - collected_rests_indices.collect{ |index| index < vrp.rests.size && vrp.rests[index].id }).collect{ |rest_id|
+          rest = vrp.rests.find{ |rest| rest.id == rest_id }
+          {
+            rest_id: rest.id,
+            detail: build_rest(rest, nil)
+          }
+        }
       }
     end
 

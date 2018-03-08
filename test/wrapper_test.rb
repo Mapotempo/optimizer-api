@@ -693,7 +693,7 @@ class WrapperTest < Minitest::Test
         id: 'rest_0',
         timewindows: [{
           start: 1,
-          end: 1
+          end: 2
         }],
         duration: 1
       }],
