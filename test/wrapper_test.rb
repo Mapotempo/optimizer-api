@@ -1386,16 +1386,22 @@ class WrapperTest < Minitest::Test
     problem = {
       points: [
         {
-          id: "point_0",
+          id: "point_0", # zone_1
           location: {
             lat: 48,
             lon: 5
           }
         }, {
-          id: "point_1",
+          id: "point_1", # zone_0
           location: {
             lat: 49,
             lon: 1
+          }
+        }, {
+          id: "point_2", # no_zone
+          location: {
+            lat: 50,
+            lon: 3
           }
         }
       ],
@@ -1433,7 +1439,7 @@ class WrapperTest < Minitest::Test
       services: [{
         id: "service_0",
         activity: {
-          point_id: "point_0"
+          point_id: "point_1"
         }
       }],
       shipments: [
@@ -1443,7 +1449,7 @@ class WrapperTest < Minitest::Test
             point_id: "point_0"
           },
           delivery: {
-            point_id: "point_1"
+            point_id: "point_2"
           }
         }
       ],
@@ -1463,9 +1469,9 @@ class WrapperTest < Minitest::Test
     }
 
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:routes][0][:activities].size
-    assert_equal 2, result[:routes][1][:activities].size
-    assert_equal 2, result[:unassigned].size
+    assert_equal 2, result[:routes][0][:activities].size
+    assert_equal 3, result[:routes][1][:activities].size
+    assert_equal 0, result[:unassigned].size
   end
 
   def test_shipments_result
