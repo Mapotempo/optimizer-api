@@ -212,7 +212,7 @@ module Wrappers
     end
 
     def assert_no_relations(vrp)
-      vrp.relations.empty?
+      vrp.relations.empty? || vrp.relations.all?{ |relation| relation.linked_ids.empty? && relation.linked_vehicles_ids.empty? }
     end
 
     def assert_no_zones(vrp)
@@ -230,7 +230,7 @@ module Wrappers
     end
 
     def assert_no_routes(vrp)
-      vrp.relations.empty?
+      vrp.routes.empty? || vrp.routes.all?{ |route| route.mission_ids.empty? }
     end
 
     def assert_only_empty_or_fill_quantities(vrp)
