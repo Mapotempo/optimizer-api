@@ -184,7 +184,7 @@ module Api
 
         this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:weekly_duration, types: [String, Float, Integer], desc: 'Maximum work duration over a week', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
-        this.optional(:distance, types: [Float, Integer], desc: 'Maximum tour distance')
+        this.optional(:distance, types: Integer, desc: 'Maximum tour distance')
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
         this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
