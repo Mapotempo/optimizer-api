@@ -98,7 +98,7 @@ module Models
 
     def need_matrix_time?
       cost_time_multiplier != 0 || cost_late_multiplier && cost_late_multiplier != 0 || cost_setup_time_multiplier != 0 ||
-      !rests.empty? || maximum_ride_time || duration || weekly_duration
+      !rests.empty? || maximum_ride_time || duration || overall_duration
     end
 
     def need_matrix_distance?
