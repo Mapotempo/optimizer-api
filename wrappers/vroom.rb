@@ -145,6 +145,7 @@ module Wrappers
 
       {
         cost: cost,
+        solvers: ['vroom'],
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,

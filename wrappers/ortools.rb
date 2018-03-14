@@ -364,6 +364,7 @@ module Wrappers
     def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
       if vrp.vehicles.size == 0 || (vrp.services.nil? || vrp.services.size == 0) && (vrp.shipments.nil? || vrp.shipments.size == 0)
         empty_result = {
+          solvers: ['ortools'],
           cost: 0,
           iterations: 0,
           routes: [],
@@ -404,6 +405,7 @@ module Wrappers
       collected_rests_indices = []
       {
         cost: content['cost'] || 0,
+        solvers: ['ortools'],
         iterations: content['iterations'] || 0,
         routes: content['routes'].each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]

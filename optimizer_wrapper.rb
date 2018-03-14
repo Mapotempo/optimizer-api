@@ -108,6 +108,7 @@ module OptimizerWrapper
       cluster_result = nil
       if vrp.services.empty? && vrp.shipments.empty?
         {
+          solvers: [],
           costs: 0,
           routes: []
         }
@@ -341,6 +342,7 @@ module OptimizerWrapper
     }
 
     services_vrps.size == 1 ? results[0] : {
+      solvers: results.flat_map{ |r| r[:solvers] }.compact,
       cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
       routes: results.flat_map{ |r| r[:routes] }.compact,
       unassigned: results.flat_map{ |r| r[:unassigned] }.compact,

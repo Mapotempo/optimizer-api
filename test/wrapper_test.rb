@@ -1773,4 +1773,79 @@ class WrapperTest < Minitest::Test
     assert !vroom.inapplicable_solve?(vrp).empty?
     assert ortools.inapplicable_solve?(vrp).empty?
   end
+
+  def test_split_vrps_using_two_solver
+    problem={
+      points: [
+        {
+          id: 'point_0',
+          location: {
+            lat: 48.787021,
+            lon: 2.65819
+          }
+        },
+        {
+        id: 'point_1',
+            location:
+            {
+                lat: 48.844836,
+                lon: 2.369496
+            }
+        },
+        {
+        id: 'point_2',
+            location:
+            {
+                lat: 48.630381,
+                lon: 2.437141
+            }
+        }
+      ],
+      vehicles: [
+        {
+            id: 'vehicle_0',
+            speed_multiplier: 1.0,
+            start_point_id: 'point_0',
+            cost_time_multiplier: 1.0,
+            cost_waiting_time_multiplier: 1.0
+        },
+        {
+            id: 'vehicle_1',
+            speed_multiplier: 1.0,
+            cost_time_multiplier: 1.0,
+            cost_waiting_time_multiplier: 1.0
+        }
+      ],
+      services: [
+        {
+            id: 'service_1',
+            sticky_vehicle_ids: ['vehicle_0'],
+
+            activity:
+            {
+                point_id: 'point_1',
+                duration: 600.0
+            }
+        },
+        {
+            id: 'service_2',
+            sticky_vehicle_ids: ['vehicle_1'],
+            'activity':
+            {
+                point_id: 'point_2',
+                duration: 600.0
+            }
+        }
+      ],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom, :ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal result[:solvers][0],'vroom'
+    assert_equal result[:solvers][1],'ortools'
+  end
 end
