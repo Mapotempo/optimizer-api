@@ -1197,6 +1197,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_geometry_with_rests
+    # conflict with rest
     problem = {
       points: [
         {
