@@ -407,11 +407,6 @@ module Wrappers
       {
         cost: content['cost'] || 0,
         iterations: content['iterations'] || 0,
-#        total_travel_distance: 0,
-#        total_travel_time: 0,
-#        total_waiting_time: 0,
-#        start_time: 0,
-#        end_time: 0,
         routes: content['routes'].each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
           previous = nil
@@ -473,8 +468,6 @@ module Wrappers
                     begin_time: earliest_start,
                     departure_time: earliest_start + vrp.services[current_index].activity[:duration].to_i,
                     detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads)
-  #              pickup_shipments_id [:id0:],
-  #              delivery_shipments_id [:id0:]
                   }.delete_if{ |k,v| !v }
                   previous_index = point_index
                   current_activity
@@ -496,8 +489,6 @@ module Wrappers
                     begin_time: earliest_start,
                     departure_time: earliest_start + (shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i ),
                     detail: build_detail(shipment, shipment_activity == 0 ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads)
-  #              pickup_shipments_id [:id0:],
-  #              delivery_shipments_id [:id0:]
                   }.delete_if{ |k,v| !v }
                   earliest_start += shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i
                   previous_index = point_index

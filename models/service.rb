@@ -26,9 +26,6 @@ module Models
     validates_numericality_of :exclusion_cost, allow_nil: true
     field :type, default: :service
 
-    # field :visits_minimal_interval, default: nil
-    # field :visits_maximal_interval, default: nil
-
     field :visits_number, default: 1
 
     validates_numericality_of :visits_number
