@@ -167,12 +167,6 @@ module Wrappers
       }
     end
 
-    def assert_vehicles_no_end_time_or_late_multiplier(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.all?{ |vehicle|
-        !vehicle.timewindow || (vehicle.cost_late_multiplier && vehicle.cost_late_multiplier > 0)
-      }
-    end
-
     def run_vroom(vehicles, services, points, matrices, dimensions, prefer_short)
       input = Tempfile.new('optimize-vroom-input', tmpdir=@tmp_dir)
       problem = { vehicles:[], jobs:[], matrix:[] }

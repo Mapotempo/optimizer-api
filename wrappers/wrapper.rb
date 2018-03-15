@@ -254,7 +254,17 @@ module Wrappers
     end
 
     def assert_at_least_one_mission(vrp)
-      !vrp.services.empty? || !vrp.shipments.empty? 
+      !vrp.services.empty? || !vrp.shipments.empty?
+    end
+
+    def assert_end_optimization(vrp)
+      vrp.resolution_duration || vrp.resolution_iterations_without_improvment
+    end
+
+    def assert_vehicles_no_end_time_or_late_multiplier(vrp)
+      vrp.vehicles.empty? || vrp.vehicles.all?{ |vehicle|
+        !vehicle.timewindow || (vehicle.cost_late_multiplier && vehicle.cost_late_multiplier > 0)
+      }
     end
 
     def solve_synchronous?(vrp)

@@ -361,10 +361,6 @@ module Wrappers
       }.delete_if{ |k,v| !v }.compact
     end
 
-    def assert_end_optimization(vrp)
-      vrp.resolution_duration || vrp.resolution_iterations_without_improvment
-    end
-
     def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
       if vrp.vehicles.size == 0 || (vrp.services.nil? || vrp.services.size == 0) && (vrp.shipments.nil? || vrp.shipments.size == 0)
         empty_result = {
