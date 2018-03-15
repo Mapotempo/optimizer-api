@@ -388,6 +388,11 @@ module Wrappers
               point_id: shipment.delivery.point_id,
               detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil)
             }
+          }).flatten + (vrp.rests.collect{ |rest|
+            {
+              rest_id: rest.id,
+              detail: build_rest(rest, nil)
+            }
           })
         }
         return empty_result
