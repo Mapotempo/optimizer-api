@@ -523,4 +523,99 @@ class Api::V01::VrpTest < Minitest::Test
     assert last_response.body
     assert JSON.parse(last_response.body)['job']['status']['completed'] || JSON.parse(last_response.body)['job']['status']['queued']
   end
+
+  def test_using_two_solver
+
+    OptimizerWrapper.config[:solve_synchronously] = false
+    Resque.inline = false
+    problem={
+      points: [
+        {
+          id: 'point_0',
+          location: {
+            lat: 48.787021,
+            lon: 2.65819
+          }
+        },
+        {
+        id: 'point_1',
+            location:
+            {
+                lat: 48.844836,
+                lon: 2.369496
+            }
+        },
+        {
+        id: 'point_2',
+            location:
+            {
+                lat: 48.630381,
+                lon: 2.437141
+            }
+        }
+      ],
+      vehicles: [
+        {
+            id: 'vehicle_0',
+            router_mode: 'car',
+            speed_multiplier: 1.0,
+            start_point_id: 'point_0',
+            cost_time_multiplier: 1.0,
+            cost_waiting_time_multiplier: 1.0
+        },
+        {
+            id: 'vehicle_1',
+            router_mode: 'car',
+            speed_multiplier: 1.0,
+            cost_time_multiplier: 1.0,
+            cost_waiting_time_multiplier: 1.0
+        }
+      ],
+      services: [
+        {
+            id: 'service_1',
+            sticky_vehicle_ids: ['vehicle_0'],
+
+            activity:
+            {
+                point_id: 'point_1',
+                duration: 600.0
+            }
+        },
+        {
+            id: 'service_2',
+            sticky_vehicle_ids: ['vehicle_1'],
+            'activity':
+            {
+                point_id: 'point_2',
+                duration: 600.0
+            }
+        }
+      ],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    
+    post('/0.1/vrp/submit', {api_key: 'solvers', vrp: problem}, content_type: :json)
+    assert_equal 201, last_response.status, last_response.body
+    job_id = JSON.parse(last_response.body)['job']['id']
+    get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'solvers'}
+    while last_response.status
+      sleep(1)
+      assert_equal 206, last_response.status, last_response.body
+      get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'solvers'}
+      if last_response.status != 206
+        break
+      end
+    end
+    result = JSON.parse(last_response.body)
+    assert_equal result['solutions'][0]['solvers'][0],'vroom'
+    assert_equal result['solutions'][0]['solvers'][1],'ortools'
+
+    Resque.inline = true
+    OptimizerWrapper.config[:solve_synchronously] = true
+  end
 end

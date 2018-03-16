@@ -53,6 +53,12 @@ module OptimizerWrapper
         vrp: [:demo, :vroom, :jsprit, :ortools]
       }
     }, {
+      api_keys: ['solvers'],
+      queue: 'DEFAULT',
+      services: {
+        vrp: [:vroom, :ortools]
+      }
+    }, {
       api_keys: ['vroom'],
       queue: 'DEFAULT',
       services: {

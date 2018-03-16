@@ -26,6 +26,7 @@ module Wrappers
     def solve(vrp, job = nil, thread_proc = nil, &block)
       {
         cost: 0,
+        solvers: [:demo],
         total_travel_distance: 0,
         total_travel_time: 0,
         total_waiting_time: 0,
