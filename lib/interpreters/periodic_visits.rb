@@ -75,21 +75,36 @@ module Interpreters
         end
 
         if service.visits_number
-          if service.minimum_lapse && service.visits_number > 1
-            (1..service.visits_number - 1).each{ |index|
-              current_lapse = (index * service.minimum_lapse).truncate - ((index-1) * service.minimum_lapse).truncate
+          if service.minimum_lapse && service.maximum_lapse && service.visits_number > 1
+            (2..service.visits_number).each{ |index|
+              current_lapse = (index -1) * service.minimum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-              :linked_ids => (index..index+1).collect{ |current_index| "#{service.id}_#{current_index}/#{service.visits_number}"},
+              :linked_ids => ["#{service.id}_1/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
               :lapse => current_lapse)
             }
-          end
-          if service.maximum_lapse && service.visits_number > 1
-            (1..service.visits_number - 1).each{ |index|
-              current_lapse = (index * service.maximum_lapse).truncate - ((index-1) * service.maximum_lapse).truncate
+            (2..service.visits_number).each{ |index|
+              current_lapse = (index -1) * service.maximum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-              :linked_ids => (index..index+1).collect{ |current_index| "#{service.id}_#{current_index}/#{service.visits_number}"},
+              :linked_ids => ["#{service.id}_1/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
               :lapse => current_lapse)
             }
+          else
+            if service.minimum_lapse && service.visits_number > 1
+              (2..service.visits_number).each{ |index|
+                current_lapse = service.minimum_lapse.to_i
+                vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
+                :linked_ids => ["#{service.id}_#{index-1}/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
+                :lapse => current_lapse)
+              }
+            end
+            if service.maximum_lapse && service.visits_number > 1
+              (2..service.visits_number).each{ |index|
+                current_lapse = service.maximum_lapse.to_i
+                vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
+                :linked_ids => ["#{service.id}_#{index-1}/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
+                :lapse => current_lapse)
+              }
+            end
           end
           @frequencies << service.visits_number
           visit_period = (@schedule_end + 1).to_f/service.visits_number
@@ -168,21 +183,36 @@ module Interpreters
         end
 
         if shipment.visits_number
-          if shipment.minimum_lapse && shipment.visits_number > 1
-            (1..shipment.visits_number - 1).each{ |index|
-              current_lapse = (index * shipment.minimum_lapse).truncate - ((index-1) * shipment.minimum_lapse).truncate
+          if shipment.minimum_lapse && shipment.maximum_lapse && shipment.visits_number > 1
+            (2..shipment.visits_number).each{ |index|
+              current_lapse = (index -1) * shipment.minimum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-              :linked_ids => (index..index+1).collect{ |current_index| "#{shipment.id}_#{current_index}/#{shipment.visits_number}"},
+              :linked_ids => ["#{shipment.id}_1/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
               :lapse => current_lapse)
             }
-          end
-          if shipment.maximum_lapse && shipment.visits_number > 1
-            (1..shipment.visits_number - 1).each{ |index|
-              current_lapse = (index * shipment.maximum_lapse).truncate - ((index-1) * shipment.maximum_lapse).truncate
+            (2..shipment.visits_number).each{ |index|
+              current_lapse = (index -1) * shipment.maximum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-              :linked_ids => (index..index+1).collect{ |current_index| "#{shipment.id}_#{current_index}/#{shipment.visits_number}"},
+              :linked_ids => ["#{shipment.id}_1/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
               :lapse => current_lapse)
             }
+          else
+            if shipment.minimum_lapse && shipment.visits_number > 1
+              (2..shipment.visits_number).each{ |index|
+                current_lapse = shipment.minimum_lapse.to_i
+                vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
+                :linked_ids => ["#{shipment.id}_#{index-1}/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
+                :lapse => current_lapse)
+              }
+            end
+            if shipment.maximum_lapse && shipment.visits_number > 1
+              (2..shipment.visits_number).each{ |index|
+                current_lapse = shipment.maximum_lapse.to_i
+                vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
+                :linked_ids => ["#{shipment.id}_#{index-1}/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
+                :lapse => current_lapse)
+              }
+            end
           end
           @frequencies << shipment.visits_number
           visit_period = (@schedule_end + 1).to_f/shipment.visits_number
@@ -457,7 +487,6 @@ module Interpreters
         vrp.relations = generate_relations(vrp)
         vrp.services = generate_services(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
         vrp.shipments = generate_shipments(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
-
         @services_unavailable_indices.uniq!
         @frequencies.uniq!
 

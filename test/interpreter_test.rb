@@ -1166,10 +1166,8 @@ class InterpreterTest < Minitest::Test
         },
         "resolution": {
           "duration": 60000,
-          "iterations": 50,
-          "iterations_without_improvment": 30,
-          "initial_time_out": 2160000,
-          "time_out_multiplier": 1
+          "initial_time_out": 5000,
+          "time_out_multiplier": 2
         },
         "schedule": {
           "range_date": {
