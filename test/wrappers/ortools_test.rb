@@ -2564,6 +2564,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
           [1, 1, 0]
         ]
       }],
+      units: [{
+        id: 'unit'
+      }],
       points: [{
         id: 'point_0',
         matrix_index: 0
@@ -2577,40 +2580,82 @@ class Wrappers::OrtoolsTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         matrix_id: 'matrix_0',
-        global_day_index: 0
+        global_day_index: 0,
+        capacities: [{
+          unit_id: 'unit',
+          limit: 1
+        }]
       }, {
         id: 'vehicle_1',
         matrix_id: 'matrix_0',
-        global_day_index: 4
+        global_day_index: 4,
+        capacities: [{
+          unit_id: 'unit',
+          limit: 1
+        }]
       }, {
         id: 'vehicle_2',
         matrix_id: 'matrix_0',
-        global_day_index: 3
+        global_day_index: 3,
+        capacities: [{
+          unit_id: 'unit',
+          limit: 1
+        }]
       }, {
         id: 'vehicle_3',
         matrix_id: 'matrix_0',
-        global_day_index: 2
+        global_day_index: 2,
+        capacities: [{
+          unit_id: 'unit',
+          limit: 1
+        }]
       }, {
         id: 'vehicle_4',
         matrix_id: 'matrix_0',
-        global_day_index: 1
+        global_day_index: 1,
+        capacities: [{
+          unit_id: 'unit',
+          limit: 1
+        }]
       }],
       services: [{
         id: 'service_1',
         activity: {
           point_id: 'point_1'
-        }
+        },
+        quantities: [{
+          unit_id: 'unit',
+          value: 1
+        }]
       }, {
         id: 'service_2',
         activity: {
           point_id: 'point_2'
-        }
+        },
+        quantities: [{
+          unit_id: 'unit',
+          value: 1
+        }]
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_2'
+        },
+        quantities: [{
+          unit_id: 'unit',
+          value: 1
+        }]
       }],
       relations: [{
-        id: 'minimum_lapse_1',
+        id: 'maximum_lapse_1',
         type: "maximum_day_lapse",
-        lapse: 2,
+        lapse: 1,
         linked_ids: ['service_1', 'service_2']
+      },{
+        id: 'maximum_lapse_2',
+        type: "maximum_day_lapse",
+        lapse: 1,
+        linked_ids: ['service_1', 'service_3']
       }],
       configuration: {
         resolution: {
@@ -2626,8 +2671,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 5, result[:routes].size
-    assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][3][:activities].size
-    assert_equal result[:routes][0][:activities].size, result[:routes][3][:activities].size
+    assert_equal 1, result[:unassigned].size
+    assert problem[:vehicles].find{ |vehicle| result[:routes].find{ |route|
+      route[:activities].one?{ |activity| activity[:service_id] == ('service_2' || 'service_3') }
+    }[:vehicle_id] == vehicle[:id] }[:global_day_index] - problem[:vehicles].find{ |vehicle| result[:routes].find{ |route|
+      route[:activities].one?{ |activity| activity[:service_id]  == 'service_1' }
+    }[:vehicle_id] == vehicle[:id] }[:global_day_index] == 1
   end
 
   def test_counting_quantities

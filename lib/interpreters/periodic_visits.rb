@@ -448,7 +448,8 @@ module Interpreters
           (current_index == 1 || current_index > 1 && service.minimum_lapse &&
             route[:vehicle].global_day_index >= routes.find{ |sub_route|
               !sub_route[:mission_ids].empty? && sub_route[:mission_ids].one?{ |id|
-              id == "#{service_id}_#{current_index-1}/#{sequence_size}" }}[:vehicle].global_day_index + (current_index * service.minimum_lapse).truncate - ((current_index-1) * service.minimum_lapse).truncate ||
+              id == "#{service_id}_#{current_index-1}/#{sequence_size}" }
+            }[:vehicle].global_day_index + service.minimum_lapse ||
             !service.minimum_lapse && !(route[:vehicle].skills & service.skills).empty?)
             # Verify timewindows too
         }
@@ -497,6 +498,10 @@ module Interpreters
         vrp.routes = generate_routes(vrp)
       end
       vrp
+
+    rescue => e
+      puts e
+      puts e.backtrace
     end
 
   end

@@ -199,7 +199,9 @@ module Wrappers
           value: matrix[:value] ? matrix[:value].flatten : []
         )
       }
-      vehicles = vrp.vehicles.collect{ |vehicle|
+      vehicles = vrp.vehicles.sort!{ |a, b|
+        a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+      }.collect{ |vehicle|
         OrtoolsVrp::Vehicle.new(
           id: vehicle.id,
           cost_fixed: vehicle.cost_fixed,
