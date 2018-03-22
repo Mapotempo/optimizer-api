@@ -120,6 +120,8 @@ module OptimizerWrapper
       end
       {
         service: services[:services][:vrp].find{ |s|
+          @unfeasible_services =  config[:services][s].detect_unfeasible_services(vrp)
+          vrp_element.services.delete_if{ |service| @unfeasible_services.key?(service.id)}
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
           if inapplicable.empty?
             puts "Select service #{s}"
@@ -194,6 +196,7 @@ module OptimizerWrapper
           vrp_need_matrix = compute_vrp_need_matrix(vrp)
           vrp = compute_need_matrix(vrp, vrp_need_matrix)
         end
+        @unfeasible_services = config[:services][service].check_distances(vrp, @unfeasible_services)
 
         File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
@@ -268,6 +271,16 @@ module OptimizerWrapper
     end
     Result.set(job, p) if job
 
+    if !@unfeasible_services.empty?
+        @unfeasible_services.keys.each{ |service|
+          real_result[:unassigned] << {
+            service_id: service,
+            type: @unfeasible_services[service][:type],
+            point_id: @unfeasible_services[service][:point_id],
+            detail: @unfeasible_services[service][:detail]
+          }
+        }
+    end
     real_result
   rescue Resque::Plugins::Status::Killed
     puts 'Job Killed'
@@ -490,6 +503,8 @@ module OptimizerWrapper
   end
 
   private
+
+  @unfeasible_services = {}
 
   def self.adjust_vehicles_duration(vrp)
       vrp.vehicles.select{ |v| v.duration? && v.rests.size > 0 }.each{ |v|

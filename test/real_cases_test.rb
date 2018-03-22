@@ -253,7 +253,7 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size - 1, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal vrp.services.size + result[:unassigned].size - 1, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time

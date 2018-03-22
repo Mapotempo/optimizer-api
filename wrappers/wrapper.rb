@@ -275,6 +275,208 @@ module Wrappers
       false
     end
 
+    def is_there_compatible_day(vrp, s, t_day, v)
+      day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:start] : vrp[:schedule][:range_date][:start]
+      last_day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:end] : vrp[:schedule][:range_date][:end]
+      possible_day = false
+      while day <= last_day && possible_day == false
+        s_ok = (t_day != nil) ? t_day == day : (s[:unavailable_visit_day_indices] && s[:unavailable_visit_day_indices].include?(day)) ||
+          (s[:unavailable_visit_date] && s[:unavailable_visit_day_indices].include?(day)) ? false : true
+        v_ok = (vrp[:vehicles][v][:unavailable_work_day_indices] && vrp[:vehicles][v][:unavailable_work_day_indices].include?(day)) ||
+          (vrp[:vehicles][v][:unavailable_work_date] && vrp[:vehicles][v][:unavailable_work_date].include?(day)) ? false : true
+        possible_day = (s_ok && v_ok) ? true : false
+
+        day += 1
+      end
+      possible_day
+    end
+
+    def find_vehicle(vrp, s, t_start, t_end, t_day)
+      found = false
+      v = 0
+      while found == false && v < vrp[:vehicles].size
+        if vrp[:vehicles][v][:timewindow]
+          v_start = vrp[:vehicles][v][:timewindow][:start]
+          v_end = vrp[:vehicles][v][:timewindow][:end]
+          v_day = vrp[:vehicles][v][:timewindow][:day_index] ? vrp[:vehicles][v][:timewindow][:day_index] : nil
+          days_compatible = v_day == t_day ? true : (v_day == nil || t_day == nil) ? true : false
+          if s[:unavailable_visit_day_indices] && s[:unavailable_visit_day_indices].include?(v_day)
+            days_compatible = false
+          end
+          if s[:unavailable_visit_day_date] && v_day >= 0 && s[:unavailable_visit_day_date].include?(vrp[:schedule][:range_date][:start] + v_day)
+            days_compatible = false
+          end
+          if v_day == nil && vrp[:schedule]
+            days_compatible = is_there_compatible_day(vrp, s, t_day, v) ? days_compatible : false
+          end
+          if days_compatible && ((t_start == nil) ||
+            v_start <= t_start || (v_start <= t_end && v_end >= t_start + s[:activity][:duration] + s[:activity][:setup_duration] + s[:activity][:additional_value]))
+              found = true
+          end
+        else
+          if vrp[:vehicles][v][:sequence_timewindows]
+            vrp[:vehicles][v][:sequence_timewindows].each{ |v_t|
+              v_start = v_t[:start]
+              v_end = v_t[:end]
+              v_day = v_t[:day_index]
+              days_compatible = v_day == t_day ? true : (v_day == nil || t_day == nil) ? true : false
+              if found || (days_compatible && (t_start == nil && t_end == nil || v_start <= t_start || v_start <= t_end && v_end >= t_start + s[:activity][:duration] + s[:activity][:setup_duration] + s[:activity][:additional_value]))
+                found = true
+              end
+            }
+          else
+            found = vrp[:schedule] ? is_there_compatible_day(vrp, s, t_day, v) : true
+          end
+        end
+
+        v += 1
+      end
+      found
+    end
+
+    def create_unfeasible(service, reason)
+      {
+        type: service[:type],
+        point_id: service[:activity][:point_id],
+        detail: {
+          lat: service.activity.point && service.activity.point.location && service.activity.point.location.lat,
+          lon: service.activity.point && service.activity.point.location && service.activity.point.location.lon,
+          skills: service && service.skills,
+          setup_duration: service.activity && service.activity.setup_duration,
+          duration: service.activity && service.activity.duration,
+          additional_value: service.activity && service.activity.additional_value,
+          timewindows: service.activity && build_timewindows(service.activity, nil),
+          quantities: build_quantities(service,nil),
+          reason: reason
+        }
+      }
+    end
+
+    def check(vrp,matrix,unfeasible)
+      if matrix != nil
+        line_cpt = Array.new(matrix.size){ |i| 0 }
+        column_cpt = Array.new(matrix.size){ |i| 0 }
+        matrix.each_with_index{ |vector, line|
+          vector.each_with_index{ |value, col|
+            if value == 2**31-1
+              line_cpt[line] += 1
+              column_cpt[col] += 1
+            end
+          }
+        }
+
+        (0..matrix.size-1).each{ |index|
+          if (column_cpt[index] == matrix.size - 1 && column_cpt[index] > 0) || (line_cpt[index] == matrix.size - 1 && line_cpt[index] > 0)
+            unfeasible_service = vrp[:services].find{ |s| s[:activity][:point][:matrix_index] == index }
+            if unfeasible_service
+              unfeasible[unfeasible_service[:id]] = create_unfeasible(unfeasible_service, "Unreachable")
+            end
+          end
+        }
+      end
+    end
+
+    def detect_unfeasible_services(vrp)
+      unfeasible = {}
+
+      if !vrp[:vehicles] || !vrp[:services]
+        return unfeasible
+      end
+
+      # check enough capacity
+      if vrp[:units] && !vrp[:units].empty?
+        # compute vehicle capacities
+        capacity = {}
+        unlimited = {}
+        vrp[:units].each{ |u|
+          capacity[u[:id]] = Float::INFINITY
+          unlimited[u[:id]] = vrp[:vehicles].select{ |v| v[:capacities] && !v[:capacities].empty? && v[:capacities].select{ |u| u.unit_id == u.id } }.size == vrp[:vehicles].size ? false : true
+        }
+
+        vrp[:vehicles].select{ |v| v[:capacities] && !v[:capacities].empty? }.each{ |v|
+          v[:capacities].each{ |c|
+            if capacity[c[:unit_id]] == Float::INFINITY && !unlimited[c[:unit_id]]
+              capacity[c[:unit_id]] = c[:limit]
+            else
+              capacity[c[:unit_id]] += c[:limit]
+            end
+          }
+        }
+
+        # check needed capacity
+        vrp[:services].each{ |s|
+          if s[:quantities]
+            s[:quantities].each{ |q|
+              if capacity[q[:unit_id]] < q[:value] && !(unfeasible.key?(s[:id]))
+                unfeasible[s[:id]] = create_unfeasible(s,"Unsufficient #{q[:unit_id]} capacity in vehicles")
+              end
+            }
+          end
+        }
+      end
+
+      # check skills compatibility
+      vrp[:services].each{ |s|
+        found = false
+        if s[:skills] && s[:skills].size > 0
+          nb_vehicles = vrp[:vehicles].size
+          nbSkills = s[:skills].uniq.size
+          vehicle = 0
+          while found == false && vehicle < nb_vehicles
+            if vrp[:vehicles][vehicle][:skills]
+              v_skill = vrp[:vehicles][vehicle][:skills].uniq
+              common = 0
+              v_skill.each{ |skill|
+                if v_skill.include? skill # check this function
+                  common += 1
+                end
+              }
+              if common == nbSkills
+                found = true
+              end
+            end
+            vehicle += 1
+          end
+          if !found
+            unfeasible[s[:id]] = create_unfeasible(s,"No vehicle with skills needed")
+          end
+        end
+      }
+
+      # check time-windows compatibility
+      vrp[:services].each{ |s|
+        found = false
+        if s[:activity][:timewindows] && s[:activity][:timewindows].size > 0
+          s[:activity][:timewindows].each{ |t|
+            if !found
+              t_start = t[:start]
+              t_end = t[:end]
+              t_day = t[:day_index] ? t[:day_index] : nil
+              found = find_vehicle(vrp, s, t_start, t_end, t_day)
+            end
+          }
+        else
+          found = find_vehicle(vrp, s, nil, nil, nil)
+        end
+
+        if !found
+          unfeasible[s[:id]] = create_unfeasible(s,"No vehicle with compatible timewindow")
+        end
+      }
+
+      unfeasible
+    end
+
+    def check_distances(vrp, unfeasible)
+      vrp[:matrices].each{ |matrix|
+        check(vrp,matrix[:time],unfeasible)
+        check(vrp,matrix[:distance],unfeasible)
+        check(vrp,matrix[:value],unfeasible)
+      }
+
+      unfeasible
+    end
+
     def kill
     end
   end
