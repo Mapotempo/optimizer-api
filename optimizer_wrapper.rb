@@ -147,6 +147,12 @@ module OptimizerWrapper
             point.matrix_index = index
             [point.location.lat, point.location.lon]
           }
+          vrp.vehicles.select{ |v| v[:start_point] && v[:start_point] != nil}.each{ |v|
+            v[:start_point][:matrix_index] = vrp[:points].find{ |p| p.id == v[:start_point][:id] }[:matrix_index]
+          }
+          vrp.vehicles.select{ |v| v[:end_point] && v[:end_point] != nil}.each{ |v|
+            v[:end_point][:matrix_index] = vrp[:points].find{ |p| p.id == v[:end_point][:id] }[:matrix_index]
+          }
 
           uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
             [vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]
