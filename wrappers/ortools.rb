@@ -566,6 +566,7 @@ module Wrappers
         (vrp.resolution_initial_time_out || @initial_time_out) && '-initial_time_out_no_solution_improvement ' + (vrp.resolution_initial_time_out || @initial_time_out).to_s,
         (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
         vrp.resolution_vehicle_limit ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
+        vrp.resolution_solver_parameter ? "-solver_parameter #{vrp.resolution_solver_parameter}" : nil,
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
         "-instance_file '#{input.path}'",
         "-solution_file '#{output.path}'"].compact.join(' ')

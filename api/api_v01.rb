@@ -103,6 +103,88 @@ The currently integreted solvers are:
 *   **[ORtools](https://github.com/google/or-tools)** handle multiple vehicles, timewindows, quantities, skills and lateness.
 *   **[Jsprit](https://github.com/graphhopper/jsprit)** handle multiple vehicles, timewindows, quantities, skills and setup duration.
 
+In order to select which solver will be used, we have created several assert. If the conditions are satisfied, the solver called can be used.  
+
+*   **assert_at_least_one_mission** :  
+ *ORtools, Vroom*. The VRP has at least one service or one shipment.
+*   **assert_end_optimization** :  
+ *ORtools*. The VRP has a resolution_duration or a resolution_iterations_without_improvment.
+*   **assert_matrices_only_one** :  
+ *Vroom*. The VRP has only one matrix or only one vehicle configuration type (router_mode, router_dimension, speed_multiplier).
+*   **assert_no_relations** :  
+ *Vroom*. The VRP has no relations or every relation has no linked_ids and no linked_vehicles_ids.
+*   **assert_no_routes** :  
+ *Vroom*. The Routes have no mission_ids.
+*   **assert_no_shipments** :  
+ *Vroom*. The VRP has no shipments.
+*   **assert_no_shipments_with_multiple_timewindows** :  
+ The Shipments pickup and delivery have at most one timewindow.
+*   **assert_no_value_matrix** :  
+ *Vroom*. The matrices have no value.
+*   **assert_no_zones** :  
+ The VRP contains no zone.
+*   **assert_one_sticky_at_most** :  
+ The Services and Shipments have at most one sticky_vehicle.
+*   **assert_one_vehicle_only_or_no_sticky_vehicle** :  
+ *Vroom*. The VRP has no more than one vehicle || The Services and Shipments have no sticky_vehicle.
+*   **assert_only_empty_or_fill_quantities** :  
+ *ORtools*. The VRP have no services which empty and fill the same quantity.
+*   **assert_points_same_definition** :  
+ *ORtools, Vroom*. All the Points have the same definition, location || matrix_index || matrix_index.
+*   **assert_services_at_most_two_timewindows** :  
+ The Services have at most two timewindows
+*   **assert_services_no_capacities** :  
+ *Vroom*. The Vehicles have no capacity.
+*   **assert_services_no_late_multiplier** :  
+ The Services have no late multiplier cost.
+*   **assert_services_no_multiple_timewindows** :  
+ The Services have at most one timewindow.
+*   **assert_services_no_priority** :  
+ *Vroom*. The Services have a priority equal to 4 (which means no priority).
+*   **assert_services_no_skills** :  
+ *Vroom*. The Services have no skills.
+*   **assert_services_no_timewindows** :  
+ *Vroom*. The Services have no timewindow.
+*   **assert_services_quantities_only_one** :  
+ The Services have no size quantity strictly superior to 1.
+*   **assert_shipments_no_late_multiplier** :  
+ The Shipments have no pickup and delivery late multiplier cost.
+*   **assert_units_only_one** :  
+ The VRP has at most one unit.
+*   **assert_vehicles_at_least_one** :  
+ *ORtools*. The VRP has at least one vehicle.
+*   **assert_vehicles_capacities_only_one** :  
+ The Vehicles have at most one capacity.
+*   **assert_vehicles_no_alternative_skills** :  
+ *ORtools*. The Vehicles have no altenartive skills.
+*   **assert_vehicles_no_capacity_initial** :  
+ *ORtools*. The Vehicles have no inital capcity different than 0.
+*   **assert_vehicles_no_duration_limit** :  
+ *Vroom*. The Vehicles have no duration.
+*   **assert_vehicles_no_end_time_or_late_multiplier** :  
+ *Vroom*. The Vehicles have no timewindow or have a cost_late_multiplier strictly superior to 0.
+*   **assert_vehicles_no_force_start** :  
+ The Vehicles have no start forced.
+*   **assert_vehicles_no_late_multiplier** :  
+ The Vehicles have no late multiplier cost.
+*   **assert_vehicles_no_overload_multiplier** :  
+ The Vehicles have no overload multiplier.
+*   **assert_vehicles_no_rests** :  
+ The Vehicles have no rest.
+*   **assert_vehicles_no_timewindow** :  
+ The Vehicles have no timewindow.
+*   **assert_vehicles_no_zero_duration** :  
+ *ORtools*. The Vehicles have no duration equal to 0.
+*   **assert_vehicles_only_one** :  
+ *Vroom*. The VRP has only one vehicle and the VRP has no schedule range indices and no schedule range date.
+*   **assert_vehicles_start** :  
+ The Vehicles have no start_point.
+*   **assert_vehicles_start_or_end** :  
+ *Vroom*. The Vehicles have no start_point and no end_point.
+*   **assert_zones_only_size_one_alternative** :  
+ *ORtools*. The Zones have at most one alternative allocation.
+
+
 <a name="standard-optimisation"></a>Standard Optimisation
 ==
 
@@ -248,7 +330,7 @@ The router dimension can be set as distance, this describe that the route betwee
   }]
 ```
 Some additional parameters are available :
-* **force_start** [ DEPRECATED ] Force the vehicle to leave its depot at the starting time of its working timewindow. This option is deprecated. 
+* **force_start** [ DEPRECATED ] Force the vehicle to leave its depot at the starting time of its working timewindow. This option is deprecated.
 * **shift_preference** Force the vehicle to leave its depot at the starting time of its working timewindow or to get back to depot at the end of its working timewindow or, by default, minimize span.
 * **duration** Define the maximum duration of the vehicle route
 * **weekly_duration** Define the maximum work duration over a week for the vehicle
@@ -485,7 +567,7 @@ Inform about the drivers obligations to have some rest within a route
 
 ### <a name="relations"></a>**Relations**
 Relations allow to define constraints explicitly between activities and/or vehicles.
-Those could be of the following types: 
+Those could be of the following types:
   * **same_route** : force missions to be served within the same route.
   * **order** : force services to be served within the same route in a specific order, but allow to insert others missions between
   * **sequence** : force services to be served in a specific order, excluding others missions to be performed between
@@ -572,7 +654,14 @@ __geometry_polyline__ precise that if the geomtry is asked the Geojson must be e
 
  <a name="solve"></a>Solve
 --
-The current API can handle multiple particular behavior.
+The current API can handle multiple particular behavior. **Solver_parameter** force the called solver to a particular behavior. Currently, 6 heuristics are available with ORtools :
+*   **Path cheapest arc** : Connect start node to the node which produces the cheapest route segment, then extend the route by iterating on the last node added to the route.
+*   **Global cheapest arc** : Iteratively connect two nodes which produce the cheapest route segment.
+*   **Local cheapest insertion** : Insert nodes at their cheapest position.
+*   **Savings** : The savings value is the difference between the cost of two routes visiting one node each and one route visiting both nodes.
+*   **Parallel cheapest insertion** : Insert nodes at their cheapest position on any route; potentially several routes can be built in parallel.
+*   **First unbound minimum value** : Select the first node with an unbound successor and connect it to the first available node (default).
+
 ### <a name="lateness"></a>Lateness¹
 Once defined at the service level it allow the vehicles to arrive late at a points to serve.
 ```json

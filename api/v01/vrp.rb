@@ -300,6 +300,7 @@ module Api
         this.optional(:initial_time_out, type: Integer, desc: 'minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
         this.optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution')
+        this.optional(:solver_parameter, type: Integer, desc: 'Integer which force the execution of a particular behavior')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
       end
 
