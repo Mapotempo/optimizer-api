@@ -46,6 +46,7 @@ module Wrappers
         :assert_no_routes,
         :assert_points_same_definition,
         :assert_at_least_one_mission,
+        :assert_no_distance_limitation,
       ]
     end
 

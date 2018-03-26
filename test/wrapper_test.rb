@@ -1848,4 +1848,61 @@ class WrapperTest < Minitest::Test
     assert_equal result[:solvers][0],'vroom'
     assert_equal result[:solvers][1],'ortools'
   end
+
+  def test_assert_inapplicable_for_vroom_if_vehicle_distance
+    ortools = OptimizerWrapper::ORTOOLS
+    vroom = OptimizerWrapper::VROOM
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        distance: 10
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration',
+        linked_ids: [],
+        linked_vehicles_ids: [],
+        lapse: nil
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+
+    assert !vroom.inapplicable_solve?(vrp).empty?
+    assert ortools.inapplicable_solve?(vrp).empty?
+  end
 end

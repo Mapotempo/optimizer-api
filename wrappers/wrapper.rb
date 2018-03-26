@@ -267,6 +267,10 @@ module Wrappers
       }
     end
 
+    def assert_no_distance_limitation(vrp)
+      vrp[:vehicles].none?{ |v| v[:distance] }
+    end
+
     def solve_synchronous?(vrp)
       false
     end
