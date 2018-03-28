@@ -275,6 +275,14 @@ module Wrappers
       false
     end
 
+    def build_timewindows(activity, day_index)
+      nil
+    end
+
+    def build_quantities(job, job_loads)
+      nil
+    end
+
     def is_there_compatible_day(vrp, s, t_day, v)
       day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:start] : vrp[:schedule][:range_date][:start]
       last_day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:end] : vrp[:schedule][:range_date][:end]
@@ -463,6 +471,17 @@ module Wrappers
           unfeasible[s[:id]] = create_unfeasible(s,"No vehicle with compatible timewindow")
         end
       }
+
+      # check if one service has minimum lapse
+      if vrp.schedule_range_indices || vrp.schedule_range_date
+        nb_days = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1 : (vrp.schedule_range_date[:end].to_date - vrp.schedule_range_date[:start].to_date).to_i + 1
+        vrp[:services].select{ |s| s[:minimum_lapse] && s[:visits_number] > 1 }.each{ |s|
+          found = !(s[:minimum_lapse] >= nb_days)
+          if !found
+            unfeasible[s[:id]] = create_unfeasible(s,"Unconsistent minimum_lapse")
+          end
+        }
+      end
 
       unfeasible
     end

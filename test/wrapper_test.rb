@@ -2189,4 +2189,58 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
     assert_equal 1, result[:unassigned].size
   end
+
+  def test_impossible_service_unconsistent_minimum_lapse
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        visits_number: 2,
+        activity: {
+          point_id: 'point_1'
+        },
+        minimum_lapse: 2
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        },
+        schedule:{
+          range_date: {
+            start: Date.new(2017,1,27),
+            end: Date.new(2017,1,28)
+          }
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 1, result[:unassigned].size
+  end
 end
