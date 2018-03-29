@@ -621,12 +621,12 @@ module OptimizerWrapper
     vrp.zones.each{ |zone|
       if !zone.allocations.empty?
         zone.vehicles = if zone.allocations.size == 1
-          zone.allocations[0].collect { |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id }}.compact
+          zone.allocations[0].collect{ |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id }}.compact
         else
           zone.allocations.collect{ |allocation| vrp.vehicles.find{ |vehicle| vehicle.id == allocation.first }}.compact
         end
         if !zone.vehicles.compact.empty?
-          zone.vehicles.each { |vehicle|
+          zone.vehicles.each{ |vehicle|
             if vehicle.skills.empty?
               vehicle.skills = [[zone[:id]]]
             else
@@ -701,7 +701,7 @@ module OptimizerWrapper
       c.distance_function = lambda do |a, b|
         aa = vrp.services[a[0]]
         bb = vrp.services[b[0]]
-        aa.activity.timewindows.empty? && bb.activity.timewindows.empty? || aa.activity.timewindows.any?{ |twa| bb.activity.timewindows.any?{ |twb| twa[:start] <= twb[:end] && twb[:start] <= twa[:end] } } ?
+        aa.activity.timewindows.empty? && bb.activity.timewindows.empty? || aa.activity.timewindows.any?{ |twa| bb.activity.timewindows.any?{ |twb| twa[:start] <= twb[:end] && twb[:start] <= twa[:end] }} ?
           matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
           Float::INFINITY
       end

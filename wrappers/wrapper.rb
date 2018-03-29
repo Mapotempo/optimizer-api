@@ -398,7 +398,7 @@ module Wrappers
         unlimited = {}
         vrp[:units].each{ |u|
           capacity[u[:id]] = Float::INFINITY
-          unlimited[u[:id]] = vrp[:vehicles].select{ |v| v[:capacities] && !v[:capacities].empty? && v[:capacities].select{ |u| u.unit_id == u.id } }.size == vrp[:vehicles].size ? false : true
+          unlimited[u[:id]] = vrp[:vehicles].select{ |v| v[:capacities] && !v[:capacities].empty? && v[:capacities].select{ |u| u.unit_id == u.id }}.size == vrp[:vehicles].size ? false : true
         }
 
         vrp[:vehicles].select{ |v| v[:capacities] && !v[:capacities].empty? }.each{ |v|

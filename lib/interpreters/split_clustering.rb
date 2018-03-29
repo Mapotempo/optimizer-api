@@ -91,7 +91,7 @@ module Interpreters
 
       clusterer = c.build(data_set, n)
 
-      result = clusterer.clusters.collect { |cluster|
+      result = clusterer.clusters.collect{ |cluster|
         cluster.data_items.collect{ |i|
           vector[i[0]][0]
         }

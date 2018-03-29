@@ -424,7 +424,7 @@ module Wrappers
         {
           cost: Float(solution.at_xpath('cost').content),
           iterations: iterations,
-          routes: fleet.collect { |id, vehicle|
+          routes: fleet.collect{ |id, vehicle|
             route_index = solution.xpath('routes/route').find_index{ |route| route.at_xpath('vehicleId').content == id }
 
             if route_index

@@ -68,7 +68,7 @@ module Interpreters
           }.compact
         end
         if @unavailable_indices
-          service.unavailable_visit_day_indices += @unavailable_indices.collect { |unavailable_index|
+          service.unavailable_visit_day_indices += @unavailable_indices.collect{ |unavailable_index|
             unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
           }.compact
           service.unavailable_visit_day_indices.uniq
@@ -176,7 +176,7 @@ module Interpreters
           }.compact
         end
         if @unavailable_indices
-          shipment.unavailable_visit_day_indices += @unavailable_indices.collect { |unavailable_index|
+          shipment.unavailable_visit_day_indices += @unavailable_indices.collect{ |unavailable_index|
             unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
           }.compact
           shipment.unavailable_visit_day_indices.uniq
@@ -306,7 +306,7 @@ module Interpreters
       same_vehicle_list = []
       lapses_list = []
       rests_durations = []
-      new_vehicles = vrp.vehicles.collect { |vehicle|
+      new_vehicles = vrp.vehicles.collect{ |vehicle|
         equivalent_vehicles[vehicle.id] = []
         same_vehicle_list.push([])
         lapses_list.push(-1)
@@ -318,7 +318,7 @@ module Interpreters
           }.compact
         end
         if @unavailable_indices
-          vehicle.unavailable_work_day_indices += @unavailable_indices.collect { |unavailable_index|
+          vehicle.unavailable_work_day_indices += @unavailable_indices.collect{ |unavailable_index|
             unavailable_index
           }
           vehicle.unavailable_work_day_indices.uniq!
@@ -632,10 +632,10 @@ module Interpreters
         @shift = vrp.schedule_range_indices ? @real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
         @schedule_end = real_schedule_end - @real_schedule_start
         @schedule_start = 0
-        have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| service.activity.timewindows.none? || service.activity.timewindows.none?{ |timewindow| timewindow[:day_index] } }
+        have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| service.activity.timewindows.none? || service.activity.timewindows.none?{ |timewindow| timewindow[:day_index] }}
         have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none? || shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } ||
-          shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] } }
-        have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] } }
+          shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] }}
+        have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] }}
 
         @unavailable_indices = if vrp.schedule_unavailable_indices
           vrp.schedule_unavailable_indices.collect{ |unavailable_index|

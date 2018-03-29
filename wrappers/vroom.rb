@@ -189,7 +189,7 @@ module Wrappers
       size_matrix = [(matrix[:time] || []).size, (matrix[:distance] || []).size, (matrix[:value] || []).size].max - 1
 
       agglomerate_matrix = vehicle.matrix_blend(matrix, (0..size_matrix), [:time, :distance], {cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier})
-      agglomerate_matrix.collect!{ |a| a.collect{ |b| ((100 * b + (prefer_short ? 20 * Math.sqrt(b) : 0))/100 + 0.5) .to_i } }
+      agglomerate_matrix.collect!{ |a| a.collect{ |b| ((100 * b + (prefer_short ? 20 * Math.sqrt(b) : 0))/100 + 0.5) .to_i }}
 
       problem[:matrix] = agglomerate_matrix
       input.write(problem.to_json)
