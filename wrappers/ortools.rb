@@ -504,7 +504,7 @@ module Wrappers
               elsif activity['type'] == 'break'
                 collected_rests_indices << current_index
                 vehicle_rest = vrp.rests[current_index]
-                earliest_start = closest_rest_start(vehicle_rest[:timewindows], earliest_start)
+                earliest_start = vehicle_rest[:timewindows].nil? ? earliest_start : closest_rest_start(vehicle_rest[:timewindows], earliest_start)
                 current_rest = {
                   rest_id: vehicle_rest.id,
                   begin_time: earliest_start,

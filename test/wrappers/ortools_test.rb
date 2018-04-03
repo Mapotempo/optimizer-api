@@ -376,7 +376,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
-        cost_fixed: 20
+        overall_duration: 1,
       },{
         id: 'vehicle_1',
         start_point_id: 'depot',
@@ -409,7 +409,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
     assert result
-    assert_equal 3, result[:routes][0][:activities].size
+    assert_equal 3, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_1_0' }[:activities].size
+    assert_equal 2, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_0' }[:activities].size
+    assert_equal 0, result[:unassigned].size
   end
 
   def test_duration_adjusted_by_presence_of_rest
@@ -443,7 +445,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       vehicles: [{
         id: 'vehicle_0',
-        start_point_id: 'point_0',
+        end_point_id: 'point_0',
         matrix_id: 'matrix_0',
         rest_ids: ['rest_0'],
         duration: 1
