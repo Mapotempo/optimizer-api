@@ -335,6 +335,7 @@ module Api
           }
           params {
             optional(:vrp, type: Hash, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
+              optional(:name, type: String, desc: 'Name of the problem')
               optional(:matrices, type: Array, desc: 'Define all the distances between each point of problem') do
                 Vrp.vrp_request_matrices(self)
               end
@@ -391,6 +392,8 @@ module Api
               end
             end
 
+            optional :name, type: String, desc: 'Name of the problem'
+
             optional :points, type: Array, desc: 'Particular place in the map', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
               Vrp.vrp_request_point(self)
             end
@@ -430,7 +433,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :configuration].each{ |key|
+              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :configuration].each{ |key|
                 if params[:vrp] && params[:vrp][key]
                   (vrp.send "#{key}=", params[:vrp][key])
                 end
@@ -442,7 +445,7 @@ module Api
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
                 checksum = Digest::MD5.hexdigest Marshal.dump(params[:vrp])
-                APIBase.dump_vrp_cache.write([params[:api_key], checksum].join("_"), {vrp: params[:vrp]}.to_json)
+                APIBase.dump_vrp_cache.write([params[:api_key], vrp[:name], checksum].compact.join("_").parameterize(''), {vrp: params[:vrp]}.to_json)
                 ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp, checksum)
                 if ret.is_a?(String)
                   #present result, with: VrpResult

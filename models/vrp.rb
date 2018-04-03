@@ -20,6 +20,7 @@ require './models/base'
 
 module Models
   class Vrp < Base
+    field :name, default: nil
     field :preprocessing_max_split_size, default: nil
     field :preprocessing_cluster_threshold, default: nil
     field :preprocessing_force_cluster, default: false
