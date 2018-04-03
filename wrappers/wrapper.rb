@@ -280,6 +280,14 @@ module Wrappers
       vrp[:vehicles].none?{ |v| v[:distance] }
     end
 
+    def assert_range_date_if_month_duration(vrp)
+      if vrp[:relations] && vrp[:relations].any?{ |r| r[:type] == "vehicle_group_duration_on_months" } && !vrp.schedule_range_date
+        false
+      else
+        true
+      end
+    end
+
     def solve_synchronous?(vrp)
       false
     end

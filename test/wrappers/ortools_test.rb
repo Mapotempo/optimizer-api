@@ -471,6 +471,536 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:unassigned].size
   end
 
+  def test_overall_duration_with_rest
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      rests: [{
+        id: 'rest_0',
+        duration: 1,
+        timewindows: [{
+          id: 'time',
+          start: 1,
+          end: 1
+          }]
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        cost_fixed: 20
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        rest_ids: ['rest_0'],
+        overall_duration: 1,
+        sequence_timewindows: [{
+          start: 0,
+          end: 5
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule:
+            {
+                range_indices:
+                {
+                    start: 0,
+                    end: 1
+                }
+            }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 3, result[:routes][0][:activities].size
+  end
+
+  def test_overall_duration_on_weeks
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration_on_weeks',
+        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        lapse: 5,
+        periodicity: 1
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule: {
+          range_indices: {
+            start: 5,
+            end: 7
+          }
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 0, result[:unassigned].size
+  end
+
+  def test_overall_duration_on_weeks_date
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration_on_weeks',
+        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        lapse: 5,
+        periodicity: 1
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule: {
+           range_date: {
+            start: Date.new(2018,3,30),
+            end: Date.new(2018,4,2)
+          }
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 0, result[:unassigned].size
+  end
+
+  def test_overall_duration_on_two_weeks
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration_on_weeks',
+        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        lapse: 5,
+        periodicity: 2
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule: {
+          range_indices: {
+            start: 5,
+            end: 7
+          }
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 1, result[:unassigned].size
+  end
+
+  def test_overall_duration_on_two_weeks_date
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration_on_weeks',
+        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        lapse: 5,
+        periodicity: 1
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule: {
+          range_date: {
+            start: Date.new(2018,3,30),
+            end: Date.new(2018,4,9)
+          }
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 0, result[:unassigned].size
+  end
+
+  def test_overall_duration_on_months
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration_on_months',
+        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        lapse: 5,
+        periodicity: 1
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule: {
+          range_date: {
+            start: Date.new(2018,3,30),
+            end: Date.new(2018,4,1)
+          }
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 0, result[:unassigned].size
+  end
+
+  def test_overall_duration_on_two_months
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration_on_months',
+        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        lapse: 5,
+        periodicity: 2
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule: {
+          range_date: {
+            start: Date.new(2018,3,30),
+            end: Date.new(2018,4,1)
+          }
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 1, result[:unassigned].size
+  end
+
+  def test_do_not_solve_if_range_index_and_month_duration
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }, {
+        id: 'vehicle_2',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      relations: [{
+        type: 'vehicle_group_duration_on_months',
+        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        lapse: 5,
+        periodicity: 1
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 2
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert !ortools.inapplicable_solve?(vrp).empty?
+  end
+
   def test_alternative_stop_conditions
     ortools = OptimizerWrapper::ORTOOLS
     problem = {

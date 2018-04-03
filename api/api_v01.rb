@@ -579,6 +579,7 @@ Those could be of the following types:
   * **force_first** : The linked activities are the only which can be set as first of a route. (Only one relation of this kind is considered)
   * **never_first** : The linked activities can\'t be set as first of a vehicle.
   * **vehicle_group_duration** : The sum of linked vehicles duration should not exceed lapse over whole period.
+Some relations need to be extended over all period. Parameter **periodicity** allows to express recurrence of the relation over the period.
 
 ```json
   "relations": [{
@@ -590,7 +591,13 @@ Those could be of the following types:
     "id": "group_duration",
     "type": "vehicle_group_duration",
     "linked_vehicles": ["vehicle_1", "vehicle_2"],
-    "lapse": null
+    "lapse": 3
+  }, {
+    "id": "group_duration",
+    "type": "vehicle_group_duration_on_weeks",
+    "linked_vehicles": ["vehicle_1", "vehicle_2"],
+    "lapse": 3,
+    "periodicity": 2
   }]
 ```
 

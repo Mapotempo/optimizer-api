@@ -20,6 +20,8 @@ module Interpreters
   class PeriodicVisits
 
     @frequencies = []
+    @services_unavailable_indices = []
+    @equivalent_vehicles = {}
 
     def self.generate_relations(vrp)
       new_relations = vrp.relations.collect{ |relation|
@@ -292,15 +294,16 @@ module Interpreters
       }.flatten
     end
 
-    def self.generate_vehicles(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index, vehicles_linked_by_duration)
-      equivalent_vehicles = {}
+    def self.generate_vehicles(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
       same_vehicle_list = []
       lapses_list = []
       rests_durations = []
       new_vehicles = vrp.vehicles.collect{ |vehicle|
-        equivalent_vehicles[vehicle.id] = []
-        same_vehicle_list.push([])
-        lapses_list.push(-1)
+        @equivalent_vehicles[vehicle.id] = []
+        if vehicle.overall_duration
+          same_vehicle_list.push([])
+          lapses_list.push(-1)
+        end
         rests_durations.push(0)
         if vehicle.unavailable_work_date
           epoch = Date.new(1970,1,1)
@@ -322,9 +325,11 @@ module Interpreters
               vehicle.sequence_timewindows.select{ |timewindow| !timewindow[:day_index] || timewindow[:day_index] == (vehicle_day_index + @shift) % 7 }.each{ |associated_timewindow|
                 new_vehicle = Marshal::load(Marshal.dump(vehicle))
                 new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
-                equivalent_vehicles[vehicle.id] << "#{vehicle.id}_#{vehicle_day_index}"
-                same_vehicle_list[-1].push(new_vehicle.id)
-                lapses_list[-1] = vehicle.overall_duration
+                @equivalent_vehicles[vehicle.id] << "#{vehicle.id}_#{vehicle_day_index}"
+                if vehicle.overall_duration
+                  same_vehicle_list[-1].push(new_vehicle.id)
+                  lapses_list[-1] = vehicle.overall_duration
+                end
                 new_vehicle.timewindow = Marshal::load(Marshal.dump(associated_timewindow))
                 new_vehicle.timewindow.id = ("#{associated_timewindow[:id]} #{(vehicle_day_index + @shift) % 7}" if associated_timewindow[:id] && !associated_timewindow[:id].nil?),
                 new_vehicle.timewindow.start = (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:start]),
@@ -348,9 +353,11 @@ module Interpreters
             if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index == vehicle_day_index}
               new_vehicle = Marshal::load(Marshal.dump(vehicle))
               new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
-              equivalent_vehicles[vehicle.id] << "#{vehicle.id}_#{vehicle_day_index}"
-              same_vehicle_list[-1].push(new_vehicle.id)
-              lapses_list[-1] = vehicle.overall_duration
+              @equivalent_vehicles[vehicle.id] << "#{vehicle.id}_#{vehicle_day_index}"
+              if vehicle.overall_duration
+                same_vehicle_list[-1].push(new_vehicle.id)
+                lapses_list[-1] = vehicle.overall_duration
+              end
               new_vehicle.global_day_index = vehicle_day_index
               new_vehicle.rests = generate_rests(vehicle, (vehicle_day_index + @shift) % 7, rests_durations)
               vrp.rests += new_vehicle.rests
@@ -363,9 +370,11 @@ module Interpreters
           }.compact
           new_periodic_vehicle
         else
-          equivalent_vehicles[vehicle.id] << vehicle.id
-          same_vehicle_list[-1].push(new_vehicle.id)
-          lapses_list[-1] = vehicle.overall_duration
+          @equivalent_vehicles[vehicle.id] << vehicle.id
+          if vehicle.overall_duration
+            same_vehicle_list[-1].push(new_vehicle.id)
+            lapses_list[-1] = vehicle.overall_duration
+          end
           vehicle
         end
       }.flatten
@@ -378,20 +387,6 @@ module Interpreters
           })
           vrp.relations << new_relation
       end
-      }
-      vehicles_linked_by_duration.each{ |r|
-        linked_vehicles = []
-        r[:linked_vehicles_ids].each{ |v|
-          equivalent_vehicles[v].each{ |eq_v|
-            linked_vehicles << eq_v
-          }
-        }
-        new_relation = Models::Relation.new({
-          type: 'vehicle_group_duration',
-          linked_vehicles_ids: linked_vehicles,
-          lapse: r[:lapse]
-        })
-        vrp.relations << new_relation
       }
       new_vehicles
     end
@@ -451,6 +446,7 @@ module Interpreters
         additional_time = travel_time + time_back_to_depot - residual_time_for_vehicle[route[:vehicle].id][:last_computed_time]
         if additional_time <= residual_time[residual_time_for_vehicle[route[:vehicle].id][:idx]]
           residual_time[residual_time_for_vehicle[route[:vehicle].id][:idx]] -= additional_time
+          residual_time_for_vehicle[route[:vehicle].id][:last_computed_time] += additional_time
           true
         else
           false
@@ -601,6 +597,84 @@ module Interpreters
       }
     end
 
+    def self.save_relations(vrp, relation_type)
+      relations_to_save = vrp.relations.select{ |r| r.type == relation_type }.collect{ |r|
+        {
+          type: r.type,
+          linked_vehicles_ids: r.linked_vehicles_ids,
+          lapse: r.lapse,
+          periodicity: r.periodicity
+        }
+      }
+    end
+
+    def self.get_all_vehicles_in_relation(relations)
+      if relations
+        relations.each{ |r|
+          new_list = []
+          r[:linked_vehicles_ids].each{ |v|
+            new_list.concat(@equivalent_vehicles[v])
+          }
+          r[:linked_vehicles_ids] = new_list
+        }
+      end
+    end
+
+    def self.generate_relations_on_periodic_vehicles(vrp, list)
+      list.each{ |r|
+        case r[:type]
+        when 'vehicle_group_duration'
+          vrp.relations << Models::Relation.new({
+            type: 'vehicle_group_duration',
+            linked_vehicles_ids: r[:linked_vehicles_ids],
+            lapse: r[:lapse]
+          })
+        when 'vehicle_group_duration_on_weeks', 'vehicle_group_duration_on_months'
+          relations = {}
+          if vrp.schedule_range_date
+            first_date = (r[:type]=='vehicle_group_duration_on_months' ? vrp.schedule_range_date[:start].month : vrp.schedule_range_date[:start].strftime('%W').to_i)
+            r[:linked_vehicles_ids].each{ |v|
+              v_date = (r[:type]=='vehicle_group_duration_on_months' ? (vrp.schedule_range_date[:start] + v.split("_").last.to_i).month : (vrp.schedule_range_date[:start] + v.split("_").last.to_i).strftime('%W').to_i)
+              relation_nb = ((v_date - first_date) / r[:periodicity]).floor
+              if relations.key?(relation_nb)
+                relations[relation_nb][:vehicles] << v
+              else
+                relations[relation_nb] = {
+                  type: 'vehicle_group_duration',
+                  vehicles: [v],
+                  lapse: r[:lapse]
+                }
+              end
+            }
+          else
+            r[:linked_vehicles_ids].each{ |v|
+              vrp[:vehicles].select{ |vehicle| vehicle.id == v }.each{ |vehicle|
+                week_nb = (vehicle.global_day_index + @shift)/7.floor
+                periodicity = (r[:periodicity].nil? ? 1 : r[:periodicity])
+                relation_nb = week_nb/periodicity.floor
+                if relations.key?(relation_nb)
+                  relations[relation_nb][:vehicles] << vehicle.id
+                else
+                  relations[relation_nb] = {
+                    type: 'vehicle_group_duration',
+                    vehicles: [vehicle.id],
+                    lapse: r[:lapse]
+                  }
+                end
+              }
+            }
+          end
+          relations.each{ |key, relation|
+            vrp.relations << Models::Relation.new({
+              type: 'vehicle_group_duration',
+              linked_vehicles_ids: relation[:vehicles],
+              lapse: relation[:lapse]
+            })
+          }
+        end
+      }
+    end
+
     def self.expand(vrp)
       if vrp.schedule_range_indices || vrp.schedule_range_date
         epoch = Date.new(1970,1,1)
@@ -624,12 +698,7 @@ module Interpreters
           }.compact
         end
 
-        vehicles_linked_by_duration = vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.collect{ |r|
-          {
-            linked_vehicles_ids: r.linked_vehicles_ids,
-            lapse: r.lapse
-          }
-        }
+        vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
 
         vrp.relations = generate_relations(vrp)
         vrp.services = generate_services(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
@@ -639,9 +708,11 @@ module Interpreters
         @frequencies.uniq!
 
         vrp.rests = []
-        vrp.vehicles = generate_vehicles(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index, vehicles_linked_by_duration).sort{ |a, b|
+        vrp.vehicles = generate_vehicles(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index).sort{ |a, b|
           a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
         }
+        vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
+        generate_relations_on_periodic_vehicles(vrp,vehicles_linked_by_duration)
 
         vrp.routes = generate_routes(vrp)
       end
