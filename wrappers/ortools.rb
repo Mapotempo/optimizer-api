@@ -79,11 +79,12 @@ module Wrappers
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
       relations = []
       services = vrp.services.collect{ |service|
-        vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
+        vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) && service[:unavailable_visit_day_indices].empty?
           [-1]
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
-            if service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) && check_if_compatible_days(vrp,vehicle,service)
+            if service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) &&
+            check_services_compatible_days(vrp, vehicle, service) && (service.unavailable_visit_day_indices.empty? || !service.unavailable_visit_day_indices.include?(vehicle.global_day_index))
               index
             else
               nil
@@ -124,7 +125,8 @@ module Wrappers
           [-1]
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
-            if shipment.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size)
+            if shipment.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size) &&
+            (shipment.unavailable_visit_day_indices.empty? || !shipment.unavailable_visit_day_indices.include(vehicle.global_day_index))
               index
             else
               nil
@@ -360,7 +362,7 @@ module Wrappers
       }.delete_if{ |k,v| !v }.compact
     end
 
-    def check_if_compatible_days(vrp,vehicle,service)
+    def check_services_compatible_days(vrp, vehicle, service)
       if (vrp.schedule_range_indices || vrp.schedule_range_date) && (service.minimum_lapse || service.maximum_lapse)
         (vehicle.global_day_index >= service[:first_possible_day] && vehicle.global_day_index <= service[:last_possible_day]) ? true : false
       else

@@ -20,7 +20,6 @@ module Interpreters
   class PeriodicVisits
 
     @frequencies = []
-    @services_unavailable_indices = []
 
     def self.generate_relations(vrp)
       new_relations = vrp.relations.collect{ |relation|
@@ -146,10 +145,6 @@ module Interpreters
               if !service.minimum_lapse && !service.maximum_lapse
                 new_service.skills += ["#{visit_index+1}_f_#{service.visits_number}"]
               end
-                new_service.skills += service.unavailable_visit_day_indices.collect{ |day_index|
-                  @services_unavailable_indices << day_index
-                  "not_#{day_index}"
-                } if service.unavailable_visit_day_indices
               new_service
             else
               nil
@@ -285,10 +280,6 @@ module Interpreters
               if !shipment.minimum_lapse && !shipment.maximum_lapse
                 new_shipment.skills += ["#{visit_index+1}_f_#{shipment.visits_number}"]
               end
-                new_shipment.skills += shipment.unavailable_visit_day_indices.collect{ |day_index|
-                  shipments_unavailable_indices << day_index
-                  "not_#{day_index}"
-                } if shipment.unavailable_visit_day_indices
               new_shipment
             else
               nil
@@ -546,18 +537,10 @@ module Interpreters
 
     def self.associate_skills(new_vehicle, vehicle_day_index)
       if new_vehicle.skills.empty?
-        new_vehicle.skills = [@frequencies.collect{ |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect{ |index|
-          if index != vehicle_day_index
-            "not_#{index}"
-          end
-        }.compact]
+        new_vehicle.skills = [@frequencies.collect{ |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" }]
       else
         new_vehicle.skills.collect!{ |alternative_skill|
-          alternative_skill + @frequencies.collect{ |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" } + @services_unavailable_indices.collect{ |index|
-            if index != vehicle_day_index
-              "not_#{index}"
-            end
-          }.compact
+          alternative_skill + @frequencies.collect{ |frequency| "#{(vehicle_day_index * frequency / (@schedule_end + 1)).to_i + 1}_f_#{frequency}" }
         }
       end
     end
@@ -653,7 +636,6 @@ module Interpreters
         compute_days_interval(vrp)
         vrp.shipments = generate_shipments(vrp, have_services_day_index, have_shipments_day_index, have_vehicles_day_index)
 
-        @services_unavailable_indices.uniq!
         @frequencies.uniq!
 
         vrp.rests = []
