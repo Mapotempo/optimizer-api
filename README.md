@@ -2,10 +2,26 @@
 
 Run an optimizer depending of contraints for a Vehicle Routing Problem (VRP).
 
+## Prerequisite
+
+* Ruby 2.2+ (RVM is recommanded)
+```
+sudo apt install ruby-full
+```
+* redis-server
+```
+sudo apt install redis-server
+```
+* libgeos-dev
+```
+sudo apt install libgeos-dev
+```
+
+
 ## Installation
 
 ```
-bundle
+bundle install
 ```
 
 This project requires some solver and interface projects in order to be fully functionnal !
