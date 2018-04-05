@@ -24,7 +24,7 @@ module Models
     field :cost_fixed, default: 0
     field :cost_distance_multiplier, default: 0
     field :cost_time_multiplier, default: 1
-    field :cost_waiting_time_multiplier, default: 1
+    field :cost_waiting_time_multiplier, default: nil
     field :cost_value_multiplier, default: 0
     field :cost_late_multiplier, default: nil
     field :cost_setup_time_multiplier, default: 0

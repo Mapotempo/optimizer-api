@@ -37,6 +37,7 @@ module Wrappers
     def solver_constraints
       super + [
         :assert_end_optimization,
+        :assert_vehicles_objective,
         :assert_vehicles_at_least_one,
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
@@ -209,7 +210,7 @@ module Wrappers
           cost_fixed: vehicle.cost_fixed,
           cost_distance_multiplier: vehicle.cost_distance_multiplier,
           cost_time_multiplier: vehicle.cost_time_multiplier,
-          cost_waiting_time_multiplier: vehicle.cost_waiting_time_multiplier,
+          cost_waiting_time_multiplier: vehicle.cost_waiting_time_multiplier || vehicle.cost_time_multiplier,
           cost_value_multiplier: vehicle.cost_value_multiplier || 0,
           cost_late_multiplier: vehicle.cost_late_multiplier || 0,
           coef_service: vehicle.coef_service || 1,

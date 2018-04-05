@@ -138,6 +138,15 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_objective(vrp)
+      vrp.vehicles.all?{ |vehicle|
+        vehicle.cost_time_multiplier && vehicle.cost_time_multiplier > 0 ||
+        vehicle.cost_distance_multiplier && vehicle.cost_distance_multiplier > 0 ||
+        vehicle.cost_waiting_time_multiplier && vehicle.cost_waiting_time_multiplier > 0 ||
+        vehicle.cost_value_multiplier && vehicle.cost_value_multiplier > 0
+      }
+    end
+
     def assert_vehicles_no_late_multiplier(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.cost_late_multiplier && vehicle.cost_late_multiplier != 0

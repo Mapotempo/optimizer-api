@@ -30,6 +30,7 @@ module Wrappers
 
     def solver_constraints
       super + [
+        :assert_vehicles_objective,
         :assert_vehicles_only_one,
         :assert_vehicles_start_or_end,
         :assert_vehicles_no_end_time_or_late_multiplier,
