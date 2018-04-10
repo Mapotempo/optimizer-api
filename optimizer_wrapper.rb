@@ -23,6 +23,7 @@ require 'json'
 require 'thread'
 
 require './lib/routers/router_wrapper.rb'
+require './lib/interpreters/multi_modal.rb'
 require './lib/interpreters/periodic_visits.rb'
 require './lib/interpreters/split_clustering.rb'
 
@@ -103,7 +104,7 @@ module OptimizerWrapper
     vrp
   end
 
-  def self.wrapper_vrp(api_key, services, vrp, checksum)
+  def self.wrapper_vrp(api_key, services, vrp, checksum, job_id = nil)
     inapplicable_services = []
     apply_zones(vrp)
     services_fleets = []
@@ -174,6 +175,9 @@ module OptimizerWrapper
           costs: 0,
           routes: []
         }
+      elsif !vrp.subtours.empty?
+        multi_modal = Interpreters::MultiModal.new(vrp, services_fleets, fleet_id, service)
+        cluster_result = multi_modal.multimodal_routes()
       else
         if services_fleets.one?{ |service_fleet| service_fleet[:id] == fleet_id }
           associated_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
@@ -291,8 +295,9 @@ module OptimizerWrapper
   end
 
   def self.same_position(vrp, previous, current)
-    (vrp.matrices.first[:time].nil? || vrp.matrices.first[:time] && vrp.matrices.first[:time][previous.matrix_index][current.matrix_index] == 0) &&
-    (vrp.matrices.first[:distance].nil? || vrp.matrices.first[:distance] && vrp.matrices.first[:distance][previous.matrix_index][current.matrix_index] == 0)
+    previous.matrix_index && current.matrix_index && (vrp.matrices.first[:time].nil? || vrp.matrices.first[:time] && vrp.matrices.first[:time][previous.matrix_index][current.matrix_index] == 0) &&
+    (vrp.matrices.first[:distance].nil? || vrp.matrices.first[:distance] && vrp.matrices.first[:distance][previous.matrix_index][current.matrix_index] == 0) ||
+    previous.location && current.location && previous.location.lat == current.location.lat && previous.location.lon == current.location.lon
   end
 
   def self.same_empty_units(capacities, previous, current)

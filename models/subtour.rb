@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2018
 #
 # This file is part of Mapotempo.
 #
@@ -19,18 +19,18 @@ require './models/base'
 
 
 module Models
-  class Point < Base
-    field :matrix_index
-    field :associated_stops, default: []
+  class Subtour < Base
 
-    validates_numericality_of :matrix_index, allow_nil: true
+    field :time_bounds, default: nil
+    field :distance_bounds, default: nil
+    field :router_mode, default: :pedestrian
+    field :router_dimension, default: :time
+    field :speed_multiplier, default: 1
+    field :skills, default: []
+    field :duration, default: nil
 
-    belongs_to :vehicle_start, class_name: 'Models::Vehicle', inverse_of: :start_point
-    belongs_to :vehicle_end, class_name: 'Models::Vehicle', inverse_of: :end_point
-    belongs_to :location, class_name: 'Models::Location'
+    has_many :transmodal_stops, class_name: 'Models::Point'
+    has_many :capacities, class_name: 'Models::Capacity'
 
-    def self.find_by_vehicle_id(*params)
-      find_by_vehicle_start_id(*params) || find_by_vehicle_end_id(*params)
-    end
   end
 end

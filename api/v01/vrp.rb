@@ -270,6 +270,24 @@ module Api
         end
       end
 
+      def self.vrp_request_subtours(this)
+        this.requires(:id, type: String, desc: '')
+        this.optional(:time_bounds, type: Integer, desc: 'Time limit from the transmodal points (Isochrone)')
+        this.optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistanche)')
+        this.optional(:router_mode, type: Integer, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
+        this.optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
+        this.optional(:speed_multiplier, type: Integer, desc: 'multiply the current modality speed, default : 1.0')
+        this.optional(:skills, type: Integer, desc: 'Particular abilities required by a vehicle to perform this subtour')
+        this.optional(:duration, type: Integer, desc: 'Maximum subtour duration')
+        this.optional(:transmodal_stops, type: Hash, desc: 'Point where the vehicles can park and start the subtours') do
+          Vrp.vrp_request_point(self)
+        end
+        this.optional(:capacities, type: Array, desc: 'Define the limit of entities the subtour modality can handle') do
+          Vrp.vrp_request_capacity(self)
+        end
+        this.exactly_one_of :time_bounds, :distance_bounds
+      end
+
       def self.vrp_request_relation(this)
         this.requires(:id, type: String, desc: '')
         this.requires(:type, type: String, desc: 'same_route, sequence, order, minimum_day_lapse, maximum_day_lapse, shipment, meetup, maximum_duration_lapse, force_first, never_first, force_end or vehicle_group_duration')
@@ -372,6 +390,10 @@ module Api
                 Vrp.vrp_request_relation(self)
               end
 
+              optional(:subtours, type: Array, desc: '') do
+                Vrp.vrp_request_subtours(self)
+              end
+
               optional(:routes, type: Array, desc: '') do
                 Vrp.vrp_request_route(self)
               end
@@ -433,7 +455,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :configuration].each{ |key|
+              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :subtours, :configuration].each{ |key|
                 if params[:vrp] && params[:vrp][key]
                   (vrp.send "#{key}=", params[:vrp][key])
                 end

@@ -1,0 +1,266 @@
+# Copyright © Mapotempo, 2018
+#
+# This file is part of Mapotempo.
+#
+# Mapotempo is free software. You can redistribute it and/or
+# modify since you respect the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# Mapotempo is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the Licenses for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Mapotempo. If not, see:
+# <http://www.gnu.org/licenses/agpl.html>
+#
+
+require 'rgeo/geo_json'
+
+module Interpreters
+  class MultiModal
+
+    def initialize(vrp, fleets, fleet_id, selected_service)
+      @original_vrp = Marshal::load(Marshal.dump(vrp))
+      @fleets = Marshal::load(Marshal.dump(fleets))
+      @fleet_id = fleet_id
+      @selected_service = selected_service
+      @sub_service_ids = Array.new
+      @associated_table = Hash.new
+      @convert_table = Hash.new
+    end
+
+    def generate_isolines()
+      @original_vrp.subtours.collect{ |tour|
+        tour.transmodal_stops.collect{ |stop|
+          isoline = JSON.parse(OptimizerWrapper.router.isoline(OptimizerWrapper.config[:router][:url], tour.router_mode, (tour.time_bounds ? :time : :distance), stop.location.lat, stop.location.lon, (tour.time_bounds || tour.distance_bounds)))
+          if isoline
+            {
+              stop_id: stop.id,
+              polygon: isoline['features'].first['geometry']
+            }
+          end
+        }
+      }.flatten
+    end
+
+    def select_services_from_isolines(isolines)
+      isolines.each{ |isoline|
+        current_geom = RGeo::GeoJSON.decode(isoline[:polygon].to_json, json_parser: :json)
+        isoline[:inside_points] = @original_vrp.points.select{ |current_point|
+          current_geom.contains?(RGeo::Cartesian.factory.point(current_point.location.lon, current_point.location.lat))
+        }
+        isoline[:inside_points].each{ |current_point|
+          if (!@associated_table.nil? && @associated_table.has_key?(current_point.id))
+            @associated_table[current_point.id] += [isoline[:stop_id]]
+            @original_vrp.points.find{ |local_point| local_point.id == current_point.id }[:associated_stops] += [isoline[:stop_id]]
+          else
+            @associated_table[current_point.id] = [isoline[:stop_id]]
+            @original_vrp.points.find{ |local_point| local_point.id == current_point.id }[:associated_stops] = [isoline[:stop_id]]
+          end
+        }
+      }
+    end
+
+    def propagate_associated_stops
+      @original_vrp.services.each{ |service|
+        service.activity.point.associated_stops = @original_vrp.points.find{ |point| point.id == service.activity.point_id }[:associated_stops]
+      }
+    end
+
+    def generate_skills_patterns
+      skills_patterns = []
+      @associated_table.each_value{ |associated_stop|
+        skills_patterns += [associated_stop]
+      }
+      skills_patterns.sort_by! { |x| x[0] }.uniq!.compact!
+      skills_patterns.collect{ |skill_pattern|
+        skills_patterns.collect{ |sk_p|
+          sk_p if (skill_pattern & sk_p).empty?
+        }.flatten.uniq.compact
+      }.uniq.compact
+      skills_patterns
+    end
+
+    def generate_subproblems(patterns)
+      problem_size = @original_vrp.services.size
+
+      patterns.collect{ |pattern|
+        sub_vrp = Marshal::load(Marshal.dump(@original_vrp))
+        sub_vrp.id = pattern
+        sub_vrp.relations = @original_vrp.relations
+        sub_vrp.points = []
+        sub_vrp.services.select!{ |service|
+          (pattern & @associated_table[service.activity.point.id]).size == @associated_table[service.activity.point.id].size
+        }
+        sub_vrp.services.collect!{ |service|
+          @sub_service_ids << service.id
+          sub_vrp.points << service.activity.point
+          service.skills += [service.activity.point.associated_stops.join('_')] if !service.activity.point.associated_stops.empty?
+          service
+        }
+        sub_vrp.points += pattern.collect{ |transmodal_id|
+          Marshal::load(Marshal.dump(@original_vrp.points.select{ |point| point.id == transmodal_id }))
+        }.flatten
+        quantities = {}
+        sub_vrp.units.each{ |unit|
+          quantities[unit.id] = 0
+        }
+        sub_vrp.services.each{ |service|
+          service.quantities.each{ |quantity|
+            quantities[quantity.unit_id] += quantity.value
+          }
+        }
+
+        sub_vrp.configuration = {
+          preprocessing: {
+            prefer_short_segment: true
+            },
+            resolution: {
+              duration: @original_vrp.resolution_duration / problem_size * sub_vrp.services.size,
+              initial_time_out: @original_vrp.resolution_duration / problem_size * sub_vrp.services.size
+            }
+        }
+
+        sub_vrp.vehicles = []
+        sub_vrp.subtours = []
+
+        vehicle_skills = @original_vrp.vehicles.collect{ |vehicle|
+          vehicle.skills.collect{ |alternative| alternative }
+        }.flatten(1).compact.uniq
+
+        @original_vrp.subtours.select{ |sub_tour| !sub_tour[:transmodal_stops].empty? && !pattern.empty? && !(sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).empty? }.each{ |sub_tour|
+          duplicate_vehicles = sub_tour.capacities.collect{ |capacity| capacity.limit > 0 ? (quantities[capacity.unit.id].to_f/capacity.limit).ceil : 1 }.max || 1
+          (sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).each{ |transmodal_id|
+            sub_vrp.vehicles += (1..duplicate_vehicles).collect{ |index|
+              if vehicle_skills && !vehicle_skills.empty?
+                vehicle_skills.collect{ |alternative|
+                  Models::Vehicle.new({
+                    id: "subtour_#{alternative.join('-')}_#{transmodal_id}_#{index}",
+                    router_mode: sub_tour.router_mode,
+                    router_dimension: sub_tour.router_dimension,
+                    speed_multiplier: sub_tour.speed_multiplier,
+                    start_point_id: transmodal_id,
+                    end_point_id: transmodal_id,
+                    skills: [sub_vrp[:points].collect{ |point| point[:associated_stops].include?(transmodal_id) ? point[:associated_stops].join('_') : nil }.compact.uniq + alternative],
+                    capacities: sub_tour.capacities,
+                    duration: sub_tour.duration
+                  })
+                }
+              else
+                Models::Vehicle.new({
+                  id: "subtour_#{transmodal_id}_#{index}",
+                  router_mode: sub_tour.router_mode,
+                  router_dimension: sub_tour.router_dimension,
+                  speed_multiplier: sub_tour.speed_multiplier,
+                  start_point_id: transmodal_id,
+                  end_point_id: transmodal_id,
+                  skills: [sub_vrp[:points].collect{ |point| point[:associated_stops].include?(transmodal_id) ? point[:associated_stops].join('_') : nil }.compact.uniq],
+                  capacities: sub_tour.capacities,
+                  duration: sub_tour.duration
+                })
+              end
+            }.flatten
+          }
+        }
+        sub_vrp.points.uniq!
+        sub_vrp
+      }.compact
+    end
+
+    def solve_subproblems(subvrps)
+      subvrps.collect{ |sub_vrp|
+        vrp_service = {
+          service: @selected_service,
+          vrp: sub_vrp,
+          fleet_id: nil,
+          problem_size: sub_vrp.services.size + sub_vrp.shipments.size
+        }
+        puts "Solve #{sub_vrp.id} sub problem"
+        result = OptimizerWrapper.solve([vrp_service], [])
+        result[:routes].each{ |route|
+          @convert_table[route[:vehicle_id]] = route[:activities]
+        }
+        result
+      }
+    end
+
+    def override_original_vrp(subresults)
+      replacement_services = subresults.collect{ |subresult|
+        subresult[:routes].collect{ |route|
+          if route[:activities].size > 2
+            service = Models::Service.new({
+              id: route[:vehicle_id],
+              activity: {
+                point_id: route[:activities].first[:point_id],
+                duration: (route[:activities][-2][:departure_time] + route[:activities].last[:travel_time]) - (route[:activities][1][:begin_time] - route[:activities][1][:travel_time])
+                #Timewindows ?
+              },
+              skills: route[:activities][1..-2].collect{ |activity|
+                @original_vrp.services.find{ |original_service| original_service.id == activity[:service_id] }.skills
+              }.flatten.compact.uniq,
+              quantities: route[:activities][-2][:detail][:quantities].collect{ |quantity|
+                {
+                  unit_id: quantity[:unit].id,
+                  value: quantity[:current_load]
+                }
+              }
+            })
+            service
+          end
+        }
+      }.flatten.compact
+      new_vrp = Marshal::load(Marshal.dump(@original_vrp))
+      new_vrp.services.delete_if{ |service| @sub_service_ids.include?(service.id) } if @sub_service_ids
+      new_vrp.services += replacement_services
+      new_vrp.subtours = []
+
+      vrp_service = {
+        service: @selected_service,
+        vrp: new_vrp,
+        fleet_id: @fleet_id,
+        problem_size: new_vrp.services.size + new_vrp.shipments.size
+      }
+      OptimizerWrapper.solve([vrp_service], @fleets)
+    end
+
+    def rebuild_entire_route(subresults, result)
+      result[:routes] = result[:routes].each{ |route|
+        last_id = nil
+        route[:activities] = route[:activities].collect{ |activity|
+          sub_activities = [activity]
+          if activity[:service_id] && @convert_table && @convert_table[activity[:service_id]]
+            if @convert_table[activity[:service_id]].first[:point_id] == last_id
+              sub_activities = @convert_table[activity[:service_id]][1..-1]
+            else
+              sub_activities = @convert_table[activity[:service_id]]
+            end
+            last_id = @convert_table[activity[:service_id]].last[:point_id]
+            activity
+          end
+          sub_activities
+        }.flatten
+      }
+      result
+    end
+
+    def multimodal_routes
+      if @original_vrp.points.none?{ |point| point.location.nil? }
+        isolines = generate_isolines()
+        select_services_from_isolines(isolines)
+        propagate_associated_stops()
+        skills_patterns = generate_skills_patterns()
+        subvrps = generate_subproblems(skills_patterns)
+        subresults = solve_subproblems(subvrps)
+        result = override_original_vrp(subresults)
+        rebuild_entire_route(subresults, result)
+      end
+    rescue => e
+      puts e
+      puts e.backtrace
+      raise
+    end
+
+  end
+end
