@@ -424,7 +424,7 @@ module Wrappers
         vrp[:services].each{ |s|
           if s[:quantities]
             s[:quantities].each{ |q|
-              if capacity[q[:unit_id]] < q[:value] && !(unfeasible.key?(s[:id]))
+              if q[:value] && capacity[q[:unit_id]] < q[:value] && !(unfeasible.key?(s[:id]))
                 unfeasible[s[:id]] = create_unfeasible(s,"Unsufficient #{q[:unit_id]} capacity in vehicles")
               end
             }
