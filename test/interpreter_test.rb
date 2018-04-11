@@ -738,441 +738,441 @@ class InterpreterTest < Minitest::Test
 
   def test_multiple_reference_to_same_rests
     problem = {
-      "points": [
+      points: [
         {
-          "id": "point_1",
-          "location": {
-            "lat": 5.8,
-            "lon": 43.8
+          id: "point_1",
+          location: {
+            lat: 5.8,
+            lon: 43.8
           }
         },
         {
-          "id": "point_2",
-          "location": {
-            "lat": 5.8,
-            "lon": 43.8
+          id: "point_2",
+          location: {
+            lat: 5.8,
+            lon: 43.8
           }
         },
         {
-          "id": "point_3",
-          "location": {
-            "lat": 5.9,
-            "lon": 44.2
+          id: "point_3",
+          location: {
+            lat: 5.9,
+            lon: 44.2
           }
         },
         {
-          "id": "point_4",
-          "location": {
-            "lat": 5.8,
-            "lon": 43.8
+          id: "point_4",
+          location: {
+            lat: 5.8,
+            lon: 43.8
           }
         },
         {
-          "id": "point5",
-          "location": {
-            "lat": 6.2,
-            "lon": 44.1
+          id: "point5",
+          location: {
+            lat: 6.2,
+            lon: 44.1
           }
         },
         {
-          "id": "agent_home",
-          "location": {
-            "lat": 44.0,
-            "lon": 5.1
+          id: "agent_home",
+          location: {
+            lat: 44.0,
+            lon: 5.1
           }
         },
         {
-          "id": "agent_interm",
-          "location": {
-            "lat": 44.6,
-            "lon": 6.1
+          id: "agent_interm",
+          location: {
+            lat: 44.6,
+            lon: 6.1
           }
         }
       ],
-      "rests": [
+      rests: [
         {
-          "id": "break-1",
-          "duration": 3600.0,
-          "timewindows": [
+          id: "break-1",
+          duration: 3600.0,
+          timewindows: [
             {
-              "start": 45000,
-              "end": 48600,
-              "day_index": 0
+              start: 45000,
+              end: 48600,
+              day_index: 0
             },
             {
-              "start": 45000,
-              "end": 48600,
-              "day_index": 1
+              start: 45000,
+              end: 48600,
+              day_index: 1
             },
             {
-              "start": 45000,
-              "end": 48600,
-              "day_index": 2
+              start: 45000,
+              end: 48600,
+              day_index: 2
             },
             {
-              "start": 45000,
-              "end": 48600,
-              "day_index": 3
+              start: 45000,
+              end: 48600,
+              day_index: 3
             },
             {
-              "start": 45000,
-              "end": 48600,
-              "day_index": 4
+              start: 45000,
+              end: 48600,
+              day_index: 4
             }
           ]
         }
       ],
-      "vehicles": [
+      vehicles: [
         {
-          "id": "car_1",
-          "cost_fixed": 0.0,
-          "cost_distance_multiplier": 1.0,
-          "cost_time_multiplier": 1.0,
-          "start_point_id": "agent_home",
-          "end_point_id": "agent_home",
-          "rest_ids": [
+          id: "car_1",
+          cost_fixed: 0.0,
+          cost_distance_multiplier: 1.0,
+          cost_time_multiplier: 1.0,
+          start_point_id: "agent_home",
+          end_point_id: "agent_home",
+          rest_ids: [
             "break-1"
           ],
-          "sequence_timewindows": [
+          sequence_timewindows: [
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 0
+              start: 28800,
+              end: 61200,
+              day_index: 0
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 1
+              start: 28800,
+              end: 61200,
+              day_index: 1
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 2
+              start: 28800,
+              end: 61200,
+              day_index: 2
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 3
+              start: 28800,
+              end: 61200,
+              day_index: 3
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 4
+              start: 28800,
+              end: 61200,
+              day_index: 4
             }
           ]
         },
         {
-          "id": "car_2",
-          "cost_fixed": 0.0,
-          "cost_distance_multiplier": 1.0,
-          "cost_time_multiplier": 1.0,
-          "start_point_id": "agent_home",
-          "end_point_id": "agent_interm",
-          "rest_ids": [
+          id: "car_2",
+          cost_fixed: 0.0,
+          cost_distance_multiplier: 1.0,
+          cost_time_multiplier: 1.0,
+          start_point_id: "agent_home",
+          end_point_id: "agent_interm",
+          rest_ids: [
             "break-1"
           ],
-          "sequence_timewindows": [
+          sequence_timewindows: [
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 0
+              start: 28800,
+              end: 61200,
+              day_index: 0
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 1
+              start: 28800,
+              end: 61200,
+              day_index: 1
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 2
+              start: 28800,
+              end: 61200,
+              day_index: 2
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 3
+              start: 28800,
+              end: 61200,
+              day_index: 3
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 4
+              start: 28800,
+              end: 61200,
+              day_index: 4
             }
           ]
         },
         {
-          "id": "car_3",
-          "cost_fixed": 0.0,
-          "cost_distance_multiplier": 1.0,
-          "cost_time_multiplier": 1.0,
-          "start_point_id": "agent_interm",
-          "end_point_id": "agent_home",
-          "rest_ids": [
+          id: "car_3",
+          cost_fixed: 0.0,
+          cost_distance_multiplier: 1.0,
+          cost_time_multiplier: 1.0,
+          start_point_id: "agent_interm",
+          end_point_id: "agent_home",
+          rest_ids: [
             "break-1"
           ],
-          "sequence_timewindows": [
+          sequence_timewindows: [
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 0
+              start: 28800,
+              end: 61200,
+              day_index: 0
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 1
+              start: 28800,
+              end: 61200,
+              day_index: 1
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 2
+              start: 28800,
+              end: 61200,
+              day_index: 2
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 3
+              start: 28800,
+              end: 61200,
+              day_index: 3
             },
             {
-              "start": 28800,
-              "end": 61200,
-              "day_index": 4
+              start: 28800,
+              end: 61200,
+              day_index: 4
             }
           ]
         }
       ],
-      "services": [
+      services: [
         {
-          "id": "point_1",
-          "priority": 2,
-          "visits_number": 2,
-          "minimum_lapse": 14,
-          "type": "service",
-          "activity": {
-            "duration": 5400.0,
-            "point_id": "point_1",
-            "timewindows": [
+          id: "point_1",
+          priority: 2,
+          visits_number: 2,
+          minimum_lapse: 14,
+          type: "service",
+          activity: {
+            duration: 5400.0,
+            point_id: "point_1",
+            timewindows: [
               {
-                "start": 30600,
-                "end": 41400,
-                "day_index": 1
+                start: 30600,
+                end: 41400,
+                day_index: 1
               },
               {
-                "start": 30600,
-                "end": 41400,
-                "day_index": 2
+                start: 30600,
+                end: 41400,
+                day_index: 2
               },
               {
-                "start": 30600,
-                "end": 41400,
-                "day_index": 3
+                start: 30600,
+                end: 41400,
+                day_index: 3
               }
             ]
           }
         },
         {
-          "id": "point_2",
-          "priority": 2,
-          "visits_number": 2,
-          "minimum_lapse": 10,
-          "type": "service",
-          "activity": {
-            "duration": 5400.0,
-            "point_id": "point_2",
-            "timewindows": [
+          id: "point_2",
+          priority: 2,
+          visits_number: 2,
+          minimum_lapse: 10,
+          type: "service",
+          activity: {
+            duration: 5400.0,
+            point_id: "point_2",
+            timewindows: [
               {
-                "start": 30600,
-                "end": 41400,
-                "day_index": 1
+                start: 30600,
+                end: 41400,
+                day_index: 1
               },
               {
-                "start": 30600,
-                "end": 41400,
-                "day_index": 2
+                start: 30600,
+                end: 41400,
+                day_index: 2
               },
               {
-                "start": 30600,
-                "end": 41400,
-                "day_index": 3
+                start: 30600,
+                end: 41400,
+                day_index: 3
               }
             ]
           }
         },
         {
-          "id": "point_3",
-          "priority": 2,
-          "visits_number": 1,
-          "minimum_lapse": 18,
-          "type": "service",
-          "activity": {
-            "duration": 2700.0,
-            "point_id": "point_3",
-            "timewindows": [
+          id: "point_3",
+          priority: 2,
+          visits_number: 1,
+          minimum_lapse: 18,
+          type: "service",
+          activity: {
+            duration: 2700.0,
+            point_id: "point_3",
+            timewindows: [
               {
-                "start": 30600,
-                "end": 42300,
-                "day_index": 0
+                start: 30600,
+                end: 42300,
+                day_index: 0
               },
               {
-                "start": 30600,
-                "end": 42300,
-                "day_index": 1
+                start: 30600,
+                end: 42300,
+                day_index: 1
               },
               {
-                "start": 30600,
-                "end": 42300,
-                "day_index": 2
+                start: 30600,
+                end: 42300,
+                day_index: 2
               },
               {
-                "start": 30600,
-                "end": 42300,
-                "day_index": 3
+                start: 30600,
+                end: 42300,
+                day_index: 3
               },
               {
-                "start": 30600,
-                "end": 42300,
-                "day_index": 4
+                start: 30600,
+                end: 42300,
+                day_index: 4
               }
             ]
           }
         },
         {
-          "id": "point_4",
-          "priority": 2,
-          "visits_number": 1,
-          "minimum_lapse": 23,
-          "type": "service",
-          "activity": {
-            "duration": 1200.0,
-            "point_id": "point_4",
-            "timewindows": [
+          id: "point_4",
+          priority: 2,
+          visits_number: 1,
+          minimum_lapse: 23,
+          type: "service",
+          activity: {
+            duration: 1200.0,
+            point_id: "point_4",
+            timewindows: [
               {
-                "start": 28800,
-                "end": 45000,
-                "day_index": 0
+                start: 28800,
+                end: 45000,
+                day_index: 0
               },
               {
-                "start": 54000,
-                "end": 63000,
-                "day_index": 0
+                start: 54000,
+                end: 63000,
+                day_index: 0
               },
               {
-                "start": 28800,
-                "end": 45000,
-                "day_index": 1
+                start: 28800,
+                end: 45000,
+                day_index: 1
               },
               {
-                "start": 54000,
-                "end": 63000,
-                "day_index": 1
+                start: 54000,
+                end: 63000,
+                day_index: 1
               },
               {
-                "start": 28800,
-                "end": 45000,
-                "day_index": 2
+                start: 28800,
+                end: 45000,
+                day_index: 2
               },
               {
-                "start": 54000,
-                "end": 63000,
-                "day_index": 2
+                start: 54000,
+                end: 63000,
+                day_index: 2
               },
               {
-                "start": 28800,
-                "end": 45000,
-                "day_index": 3
+                start: 28800,
+                end: 45000,
+                day_index: 3
               },
               {
-                "start": 54000,
-                "end": 63000,
-                "day_index": 3
+                start: 54000,
+                end: 63000,
+                day_index: 3
               },
               {
-                "start": 28800,
-                "end": 45000,
-                "day_index": 4
+                start: 28800,
+                end: 45000,
+                day_index: 4
               },
               {
-                "start": 54000,
-                "end": 63000,
-                "day_index": 4
+                start: 54000,
+                end: 63000,
+                day_index: 4
               }
             ]
           }
         },
         {
-          "id": "point5",
-          "priority": 2,
-          "visits_number": 1,
-          "minimum_lapse": 23,
-          "type": "service",
-          "activity": {
-            "duration": 1800.0,
-            "point_id": "point5",
-            "timewindows": [
+          id: "point5",
+          priority: 2,
+          visits_number: 1,
+          minimum_lapse: 23,
+          type: "service",
+          activity: {
+            duration: 1800.0,
+            point_id: "point5",
+            timewindows: [
               {
-                "start": 30600,
-                "end": 45000,
-                "day_index": 0
+                start: 30600,
+                end: 45000,
+                day_index: 0
               },
               {
-                "start": 50400,
-                "end": 57600,
-                "day_index": 0
+                start: 50400,
+                end: 57600,
+                day_index: 0
               },
               {
-                "start": 30600,
-                "end": 45000,
-                "day_index": 1
+                start: 30600,
+                end: 45000,
+                day_index: 1
               },
               {
-                "start": 50400,
-                "end": 57600,
-                "day_index": 1
+                start: 50400,
+                end: 57600,
+                day_index: 1
               },
               {
-                "start": 30600,
-                "end": 45000,
-                "day_index": 2
+                start: 30600,
+                end: 45000,
+                day_index: 2
               },
               {
-                "start": 50400,
-                "end": 57600,
-                "day_index": 2
+                start: 50400,
+                end: 57600,
+                day_index: 2
               },
               {
-                "start": 30600,
-                "end": 45000,
-                "day_index": 3
+                start: 30600,
+                end: 45000,
+                day_index: 3
               },
               {
-                "start": 50400,
-                "end": 57600,
-                "day_index": 3
+                start: 50400,
+                end: 57600,
+                day_index: 3
               },
               {
-                "start": 30600,
-                "end": 45000,
-                "day_index": 4
+                start: 30600,
+                end: 45000,
+                day_index: 4
               },
               {
-                "start": 50400,
-                "end": 57600,
-                "day_index": 4
+                start: 50400,
+                end: 57600,
+                day_index: 4
               }
             ]
           }
         }
       ],
-      "configuration": {
-        "preprocessing": {
-          "prefer_short_segment": true
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
         },
-        "resolution": {
-          "duration": 60000,
-          "initial_time_out": 5000,
-          "time_out_multiplier": 2
+        resolution: {
+          duration: 60000,
+          initial_time_out: 5000,
+          time_out_multiplier: 2
         },
-        "schedule": {
-          "range_date": {
-            "start": "2017-09-01",
-            "end": "2017-09-30"
+        schedule: {
+          range_date: {
+            start: "2017-09-01",
+            end: "2017-09-30"
           }
         }
       }
@@ -1185,59 +1185,59 @@ class InterpreterTest < Minitest::Test
 
   def test_minimum_lapse_3_visits
     problem = {
-      "points": [
+      points: [
         {
-          "id": "point_1",
-          "location": {
-            "lat": 43.8,
-            "lon": 5.8
+          id: "point_1",
+          location: {
+            lat: 43.8,
+            lon: 5.8
           }
         },
         {
-          "id": "agent_home",
-          "location": {
-            "lat": 44.0,
-            "lon": 5.1
+          id: "agent_home",
+          location: {
+            lat: 44.0,
+            lon: 5.1
           }
         }
       ],
-      "vehicles": [
+      vehicles: [
         {
-          "id": "car_1",
-          "cost_fixed": 0.0,
-          "cost_time_multiplier": 1.0,
-          "start_point_id": "agent_home",
-          "end_point_id": "agent_home"
+          id: "car_1",
+          cost_fixed: 0.0,
+          cost_time_multiplier: 1.0,
+          start_point_id: "agent_home",
+          end_point_id: "agent_home"
         }
       ],
-      "services": [
+      services: [
         {
-          "id": "point_1",
-          "priority": 2,
-          "visits_number": 3,
-          "minimum_lapse": 10,
-          "type": "service",
-          "activity": {
-            "duration": 100.0,
-            "point_id": "point_1"
+          id: "point_1",
+          priority: 2,
+          visits_number: 3,
+          minimum_lapse: 10,
+          type: "service",
+          activity: {
+            duration: 100.0,
+            point_id: "point_1"
           }
         },
       ],
-      "configuration": {
-        "preprocessing": {
-          "prefer_short_segment": true
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
         },
-        "resolution": {
-          "duration": 60000,
-          "iterations": 50,
-          "iterations_without_improvment": 30,
-          "initial_time_out": 2160000,
-          "time_out_multiplier": 1
+        resolution: {
+          duration: 60000,
+          iterations: 50,
+          iterations_without_improvment: 30,
+          initial_time_out: 2160000,
+          time_out_multiplier: 1
         },
-        "schedule": {
-          "range_date": {
-            "start": "2017-09-01",
-            "end": "2017-09-21"
+        schedule: {
+          range_date: {
+            start: "2017-09-01",
+            end: "2017-09-21"
           }
         }
       }
