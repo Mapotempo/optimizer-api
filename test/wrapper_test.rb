@@ -2021,7 +2021,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 0, result[:unassigned].size
   end
 
   def test_impossible_service_tw

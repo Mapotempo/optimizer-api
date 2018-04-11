@@ -82,7 +82,7 @@ module Wrappers
       relations = []
       services = vrp.services.collect{ |service|
         vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) && service[:unavailable_visit_day_indices].empty?
-          [-1]
+          []
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
             if service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) &&
@@ -124,7 +124,7 @@ module Wrappers
         )
       } + vrp.shipments.collect{ |shipment|
         vehicles_indices = if !shipment[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
-          [-1]
+          []
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
             if shipment.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size) &&

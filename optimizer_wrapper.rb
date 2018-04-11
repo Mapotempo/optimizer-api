@@ -278,10 +278,8 @@ module OptimizerWrapper
     if !@unfeasible_services.empty?
         @unfeasible_services.keys.each{ |service|
           real_result[:unassigned] << {
-            service_id: service,
-            type: @unfeasible_services[service][:type],
-            point_id: @unfeasible_services[service][:point_id],
-            detail: @unfeasible_services[service][:detail]
+            service: service,
+            reason: @unfeasible_services[service][:reason]
           }
         }
     end
