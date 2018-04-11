@@ -482,14 +482,19 @@ module Interpreters
         current_index = service_sequence_data[-2].to_i
         sequence_size = service_sequence_data[-1].to_i
         service_id = service.id.sub("_#{current_index}\/#{sequence_size}",'')
+        previous_service_index = current_index - 1
+        while previous_service_index >= 0 && !service[:unavailable_visit_indices].nil? && service[:unavailable_visit_indices].include?(previous_service_index)
+          previous_service_index -= 1
+        end
+        gap_with_previous = current_index - previous_service_index
         candidate_route = routes.find{ |route|
           # looking for the first vehicle possible
           # days are compatible
           (service.unavailable_visit_day_indices.nil? || (!service.unavailable_visit_day_indices.include? (route[:vehicle].global_day_index))) &&
           (current_index == 1 || current_index > 1 && service.minimum_lapse &&
-          route[:vehicle].global_day_index >= routes.find{ |sub_route|
+          (previous_service_index < 0 || route[:vehicle].global_day_index >= routes.find{ |sub_route|
             !sub_route[:mission_ids].empty? && sub_route[:mission_ids].one?{ |id|
-              id == "#{service_id}_#{current_index-1}/#{sequence_size}" }}[:vehicle].global_day_index + (current_index * service.minimum_lapse).truncate - ((current_index-1) * service.minimum_lapse).truncate ||
+              id == "#{service_id}_#{previous_service_index}/#{sequence_size}" }}[:vehicle].global_day_index + (gap_with_previous * service.minimum_lapse).truncate) ||
           !service.minimum_lapse && !(route[:vehicle].skills & service.skills).empty?) &&
           # we do not exceed vehicles max duration
           (!(residual_time_for_vehicle[route[:vehicle][:id]]) || check_with_vroom(vrp, route, service, residual_time, residual_time_for_vehicle))
