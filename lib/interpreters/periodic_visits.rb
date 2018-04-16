@@ -478,26 +478,30 @@ module Interpreters
         }
       }
       vrp.services.each{ |service|
-        service_sequence_data = /_([0-9]+)\/([0-9]+)/.match(service.id).to_a
-        current_index = service_sequence_data[-2].to_i
+        service_sequence_data = /(.+)_([0-9]+)\/([0-9]+)/.match(service.id).to_a
+        service_id = service_sequence_data[1]
+        current_index = service_sequence_data[2].to_i
         sequence_size = service_sequence_data[-1].to_i
-        service_id = service.id.sub("_#{current_index}\/#{sequence_size}",'')
-        previous_service_index = current_index - 1
-        while previous_service_index >= 0 && !service[:unavailable_visit_indices].nil? && service[:unavailable_visit_indices].include?(previous_service_index)
-          previous_service_index -= 1
-        end
-        gap_with_previous = current_index - previous_service_index
+        related_indices = vrp.services.collect{ |r_service|
+          match_result = /(.+)_([0-9]+)\/([0-9]+)/.match(r_service.id).to_a
+          match_result[2].to_i if match_result[1] == service_id && match_result[2].to_i < current_index
+        }.compact
+        previous_service_index = related_indices.max
+        gap_with_previous = current_index - previous_service_index if previous_service_index
+        previous_service_route = routes.find{ |sub_route|
+          !sub_route[:mission_ids].empty? && sub_route[:mission_ids].find{ |id|
+            id == "#{service_id}_#{previous_service_index}/#{sequence_size}"
+          }
+        }
         candidate_route = routes.find{ |route|
           # looking for the first vehicle possible
           # days are compatible
-          (service.unavailable_visit_day_indices.nil? || (!service.unavailable_visit_day_indices.include? (route[:vehicle].global_day_index))) &&
+          (service.unavailable_visit_day_indices.nil? || !service.unavailable_visit_day_indices.include?(route[:vehicle].global_day_index)) &&
           (current_index == 1 || current_index > 1 && service.minimum_lapse &&
-          (previous_service_index < 0 || route[:vehicle].global_day_index >= routes.find{ |sub_route|
-            !sub_route[:mission_ids].empty? && sub_route[:mission_ids].one?{ |id|
-              id == "#{service_id}_#{previous_service_index}/#{sequence_size}" }}[:vehicle].global_day_index + (gap_with_previous * service.minimum_lapse).truncate) ||
+          previous_service_index && previous_service_route && route[:vehicle].global_day_index >= previous_service_route[:vehicle].global_day_index + (gap_with_previous * service.minimum_lapse).truncate ||
           !service.minimum_lapse && !(route[:vehicle].skills & service.skills).empty?) &&
           # we do not exceed vehicles max duration
-          (!(residual_time_for_vehicle[route[:vehicle][:id]]) || check_with_vroom(vrp, route, service, residual_time, residual_time_for_vehicle))
+          (!residual_time_for_vehicle[route[:vehicle][:id]] || check_with_vroom(vrp, route, service, residual_time, residual_time_for_vehicle))
           # Verify timewindows too
         }
         if candidate_route
