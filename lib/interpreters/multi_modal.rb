@@ -94,12 +94,6 @@ module Interpreters
         sub_vrp.services.select!{ |service|
           (pattern & @associated_table[service.activity.point.id]).size == @associated_table[service.activity.point.id].size
         }
-        sub_vrp.services.collect!{ |service|
-          @sub_service_ids << service.id
-          sub_vrp.points << service.activity.point
-          service.skills += [service.activity.point.associated_stops.join('_')] if !service.activity.point.associated_stops.empty?
-          service
-        }
         sub_vrp.points += pattern.collect{ |transmodal_id|
           Marshal::load(Marshal.dump(@original_vrp.points.select{ |point| point.id == transmodal_id }))
         }.flatten
@@ -130,6 +124,10 @@ module Interpreters
           vehicle.skills.collect{ |alternative| alternative }
         }.flatten(1).compact.uniq
 
+        max_capacities = Hash.new
+        sub_vrp.units.each{ |unit|
+          max_capacities[unit.id] = 0
+        }
         @original_vrp.subtours.select{ |sub_tour| !sub_tour[:transmodal_stops].empty? && !pattern.empty? && !(sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).empty? }.each{ |sub_tour|
           duplicate_vehicles = sub_tour.capacities.collect{ |capacity| capacity.limit > 0 ? (quantities[capacity.unit.id].to_f/capacity.limit).ceil : 1 }.max || 1
           (sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).each{ |transmodal_id|
@@ -163,7 +161,31 @@ module Interpreters
               end
             }.flatten
           }
+          sub_tour.capacities.each{ |capacity|
+            max_capacities[capacity.unit.id] = [max_capacities[capacity.unit.id], capacity.limit].max
+          }
         }
+
+        sub_vrp.services.collect!{ |service|
+          sub_vrp.points << service.activity.point
+          service[:initial_id] = service.id
+          @sub_service_ids << service.id
+          service.skills += [service.activity.point.associated_stops.join('_')] if !service.activity.point.associated_stops.empty?
+          round = service.quantities.select{ |quantity| max_capacities[quantity.unit.id] > 0 }.collect{ |quantity| ((quantity.value || 0)/max_capacities[quantity.unit.id]) }.max || 1
+          services = (1..round.ceil).collect{ |index|
+            duplicated_service = Marshal::load(Marshal.dump(service))
+            duplicated_service.id = "#{duplicated_service.id}_#{index}"
+            duplicated_service.quantities.select{ |quantity| max_capacities[quantity.unit.id] > 0 }.each{ |quantity|
+              if round.ceil == 1 || index != round.ceil
+                quantity.value /= round
+              else
+                quantity.value -= (index-1)*quantity.value/round
+              end
+            }
+            duplicated_service
+          }
+          services
+        }.flatten!
         sub_vrp.points.uniq!
         sub_vrp
       }.compact
@@ -181,6 +203,11 @@ module Interpreters
         result = OptimizerWrapper.solve([vrp_service], [])
         result[:routes].each{ |route|
           @convert_table[route[:vehicle_id]] = route[:activities]
+          route[:activities].each{ |activity|
+            if activity[:service_id]
+              activity[:service_id] = sub_vrp.services.find{ |service| service.id == activity[:service_id] }[:initial_id]
+            end
+          }
         }
         result
       }
