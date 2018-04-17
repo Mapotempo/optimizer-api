@@ -274,10 +274,10 @@ module Api
         this.requires(:id, type: String, desc: '')
         this.optional(:time_bounds, type: Integer, desc: 'Time limit from the transmodal points (Isochrone)')
         this.optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistanche)')
-        this.optional(:router_mode, type: Integer, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
+        this.optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
         this.optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
-        this.optional(:speed_multiplier, type: Integer, desc: 'multiply the current modality speed, default : 1.0')
-        this.optional(:skills, type: Integer, desc: 'Particular abilities required by a vehicle to perform this subtour')
+        this.optional(:speed_multiplier, type: Float, desc: 'multiply the current modality speed, default : 1.0')
+        this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this subtour')
         this.optional(:duration, type: Integer, desc: 'Maximum subtour duration')
         this.optional(:transmodal_stops, type: Hash, desc: 'Point where the vehicles can park and start the subtours') do
           Vrp.vrp_request_point(self)
