@@ -325,7 +325,7 @@ module Wrappers
           days_compatible = false
         end
         days_compatible = is_there_compatible_day(vrp, s, t_day, v) if v_day.nil? && vrp[:schedule] && days_compatible
-        days_compatible && ((t_start == nil) || v_start <= t_start && v_end >= t_start || v_start <= t_end && v_end >= t_start + s[:activity][:duration] + s[:activity][:setup_duration] + s[:activity][:additional_value])
+        days_compatible && (t_start.nil? && t_end.nil? || t_start.nil? && (v_start.nil? || v_start < t_end) || t_end.nil? && (v_end.nil? || v_end > t_start) || v_start <= t_start && v_end >= t_start || v_start <= t_end && v_end >= t_start + s[:activity][:duration] + s[:activity][:setup_duration] + s[:activity][:additional_value])
       } || vrp[:vehicles].any?{ |v| !v[:timewindow] && !v[:sequence_timewindows]} || vrp[:vehicles].select{ |vehicle| vehicle[:sequence_timewindows] }.any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw|
           v_start = tw[:start]
           v_end = tw[:end]
