@@ -9,6 +9,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :quantities, :float, 2
     optional :start_time, :int32, 3
     optional :type, :string, 4
+    optional :alternative, :int32, 5
   end
   add_message "ortools_result.Route" do
     repeated :activities, :message, 1, "ortools_result.Activity"

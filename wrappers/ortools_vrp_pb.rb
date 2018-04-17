@@ -27,6 +27,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :additional_value, :uint32, 12
     optional :exclusion_cost, :int32, 13
     repeated :refill_quantities, :bool, 14
+    optional :problem_index, :int32, 15
   end
   add_message "ortools_vrp.Rest" do
     repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"
