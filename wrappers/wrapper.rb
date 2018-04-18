@@ -242,6 +242,10 @@ module Wrappers
       vrp.routes.empty? || vrp.routes.all?{ |route| route.mission_ids.empty? }
     end
 
+    def assert_no_subtours(vrp)
+      vrp.subtours.empty?
+    end
+
     def assert_only_empty_or_fill_quantities(vrp)
       problem_units = vrp.units.collect{ |unit|
         {

@@ -92,7 +92,7 @@ module Interpreters
         sub_vrp.relations = @original_vrp.relations
         sub_vrp.points = []
         sub_vrp.services.select!{ |service|
-          (pattern & @associated_table[service.activity.point.id]).size == @associated_table[service.activity.point.id].size
+          (pattern & @associated_table[service.activity.point.id]).size == @associated_table[service.activity.point.id].size if @associated_table.has_key?(service.activity.point.id)
         }
         sub_vrp.points += pattern.collect{ |transmodal_id|
           Marshal::load(Marshal.dump(@original_vrp.points.select{ |point| point.id == transmodal_id }))
@@ -112,9 +112,9 @@ module Interpreters
             prefer_short_segment: true
             },
             resolution: {
-              duration: @original_vrp.resolution_duration / problem_size * sub_vrp.services.size,
-              initial_time_out: @original_vrp.resolution_duration / problem_size * sub_vrp.services.size
-            }
+              duration: @original_vrp.resolution_duration ? @original_vrp.resolution_duration / problem_size * sub_vrp.services.size : nil,
+              initial_time_out: @original_vrp.resolution_initial_time_out ? @original_vrp.resolution_initial_time_out / problem_size * sub_vrp.services.size : nil
+            }.delete_if{ |k, v| v.nil? }
         }
 
         sub_vrp.vehicles = []
@@ -131,6 +131,7 @@ module Interpreters
         @original_vrp.subtours.select{ |sub_tour| !sub_tour[:transmodal_stops].empty? && !pattern.empty? && !(sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).empty? }.each{ |sub_tour|
           duplicate_vehicles = sub_tour.capacities.collect{ |capacity| capacity.limit > 0 ? (quantities[capacity.unit.id].to_f/capacity.limit).ceil : 1 }.max || 1
           (sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).each{ |transmodal_id|
+            transmodal_point = sub_vrp.points.find{ |point| point.id == transmodal_id }
             sub_vrp.vehicles += (1..duplicate_vehicles).collect{ |index|
               if vehicle_skills && !vehicle_skills.empty?
                 vehicle_skills.collect{ |alternative|
@@ -139,8 +140,8 @@ module Interpreters
                     router_mode: sub_tour.router_mode,
                     router_dimension: sub_tour.router_dimension,
                     speed_multiplier: sub_tour.speed_multiplier,
-                    start_point_id: transmodal_id,
-                    end_point_id: transmodal_id,
+                    start_point: transmodal_point,
+                    end_point: transmodal_point,
                     skills: [sub_vrp[:points].collect{ |point| point[:associated_stops].include?(transmodal_id) ? point[:associated_stops].join('_') : nil }.compact.uniq + alternative],
                     capacities: sub_tour.capacities,
                     duration: sub_tour.duration
@@ -152,8 +153,8 @@ module Interpreters
                   router_mode: sub_tour.router_mode,
                   router_dimension: sub_tour.router_dimension,
                   speed_multiplier: sub_tour.speed_multiplier,
-                  start_point_id: transmodal_id,
-                  end_point_id: transmodal_id,
+                  start_point: transmodal_point,
+                  end_point: transmodal_point,
                   skills: [sub_vrp[:points].collect{ |point| point[:associated_stops].include?(transmodal_id) ? point[:associated_stops].join('_') : nil }.compact.uniq],
                   capacities: sub_tour.capacities,
                   duration: sub_tour.duration
@@ -177,7 +178,7 @@ module Interpreters
             duplicated_service.id = "#{duplicated_service.id}_#{index}"
             duplicated_service.quantities.select{ |quantity| max_capacities[quantity.unit.id] > 0 }.each{ |quantity|
               if round.ceil == 1 || index != round.ceil
-                quantity.value /= round
+                quantity.value /= [round, 1].max
               else
                 quantity.value -= (index-1)*quantity.value/round
               end
@@ -188,7 +189,7 @@ module Interpreters
         }.flatten!
         sub_vrp.points.uniq!
         sub_vrp
-      }.compact
+      }.compact.delete_if{ |sub_vrp| sub_vrp.services.empty? }
     end
 
     def solve_subproblems(subvrps)
@@ -220,7 +221,7 @@ module Interpreters
             service = Models::Service.new({
               id: route[:vehicle_id],
               activity: {
-                point_id: route[:activities].first[:point_id],
+                point: @original_vrp.points.find{ |point| point.id == route[:activities].first[:point_id] },
                 duration: (route[:activities][-2][:departure_time] + route[:activities].last[:travel_time]) - (route[:activities][1][:begin_time] - route[:activities][1][:travel_time])
                 #Timewindows ?
               },
@@ -229,7 +230,7 @@ module Interpreters
               }.flatten.compact.uniq,
               quantities: route[:activities][-2][:detail][:quantities].collect{ |quantity|
                 {
-                  unit_id: quantity[:unit].id,
+                  unit: @original_vrp.units.find{ |unit| unit.id == quantity[:unit].id},
                   value: quantity[:current_load]
                 }
               }

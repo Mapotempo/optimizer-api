@@ -270,7 +270,7 @@ module Api
         end
       end
 
-      def self.vrp_request_subtours(this)
+      def self.vrp_request_subtour(this)
         this.requires(:id, type: String, desc: '')
         this.optional(:time_bounds, type: Integer, desc: 'Time limit from the transmodal points (Isochrone)')
         this.optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistanche)')
@@ -392,7 +392,7 @@ module Api
               end
 
               optional(:subtours, type: Array, desc: '') do
-                Vrp.vrp_request_subtours(self)
+                Vrp.vrp_request_subtour(self)
               end
 
               optional(:routes, type: Array, desc: '') do

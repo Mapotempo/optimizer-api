@@ -1,0 +1,726 @@
+{
+    "vrp":
+    {
+        "units": [
+        {
+            "id": "u4573"
+        }],
+        "points": [
+        {
+            "id": "p23",
+            "location":
+            {
+                "lat": 44.834516,
+                "lon": -0.545501
+            }
+        },
+        {
+            "id": "p24",
+            "location":
+            {
+                "lat": 44.834079,
+                "lon": -0.549537
+            }
+        },
+        {
+            "id": "p25",
+            "location":
+            {
+                "lat": 44.864336,
+                "lon": -0.53798
+            }
+        },
+        {
+            "id": "p26",
+            "location":
+            {
+                "lat": 44.864336,
+                "lon": -0.53798
+            }
+        },
+        {
+            "id": "p27",
+            "location":
+            {
+                "lat": 44.853503,
+                "lon": -0.541143
+            }
+        },
+        {
+            "id": "p28",
+            "location":
+            {
+                "lat": 44.85229,
+                "lon": -0.543592
+            }
+        },
+        {
+            "id": "p29",
+            "location":
+            {
+                "lat": 44.849427,
+                "lon": -0.540192
+            }
+        },
+        {
+            "id": "p30",
+            "location":
+            {
+                "lat": 44.850637,
+                "lon": -0.541595
+            }
+        },
+        {
+            "id": "p31",
+            "location":
+            {
+                "lat": 44.851261,
+                "lon": -0.541523
+            }
+        },
+        {
+            "id": "p32",
+            "location":
+            {
+                "lat": 44.851261,
+                "lon": -0.541523
+            }
+        },
+        {
+            "id": "p33",
+            "location":
+            {
+                "lat": 44.852824,
+                "lon": -0.539685
+            }
+        },
+        {
+            "id": "p34",
+            "location":
+            {
+                "lat": 44.851222,
+                "lon": -0.542351
+            }
+        },
+        {
+            "id": "p35",
+            "location":
+            {
+                "lat": 44.851169,
+                "lon": -0.54596
+            }
+        },
+        {
+            "id": "p36",
+            "location":
+            {
+                "lat": 44.84297,
+                "lon": -0.546192
+            }
+        },
+        {
+            "id": "p37",
+            "location":
+            {
+                "lat": 44.843088,
+                "lon": -0.54325
+            }
+        },
+        {
+            "id": "p38",
+            "location":
+            {
+                "lat": 44.844549,
+                "lon": -0.543906
+            }
+        },
+        {
+            "id": "p39",
+            "location":
+            {
+                "lat": 44.844345,
+                "lon": -0.540554
+            }
+        },
+        {
+            "id": "p40",
+            "location":
+            {
+                "lat": 44.848419,
+                "lon": -0.544047
+            }
+        },
+        {
+            "id": "p41",
+            "location":
+            {
+                "lat": 44.847383,
+                "lon": -0.545689
+            }
+        },
+        {
+            "id": "p42",
+            "location":
+            {
+                "lat": 44.846778,
+                "lon": -0.54884
+            }
+        },
+        {
+            "id": "p43",
+            "location":
+            {
+                "lat": 44.844741,
+                "lon": -0.549029
+            }
+        },
+        {
+            "id": "p44",
+            "location":
+            {
+                "lat": 44.843484,
+                "lon": -0.547868
+            }
+        },
+        {
+            "id": "p45",
+            "location":
+            {
+                "lat": 44.842034,
+                "lon": -0.548004
+            }
+        },
+        {
+            "id": "p46",
+            "location":
+            {
+                "lat": 44.841264,
+                "lon": -0.553608
+            }
+        },
+        {
+            "id": "p47",
+            "location":
+            {
+                "lat": 44.841264,
+                "lon": -0.553608
+            }
+        },
+        {
+            "id": "p48",
+            "location":
+            {
+                "lat": 44.841264,
+                "lon": -0.553608
+            }
+        },
+        {
+            "id": "p49",
+            "location":
+            {
+                "lat": 44.841264,
+                "lon": -0.553608
+            }
+        }, {
+            "id": "Park_eugene_leroy",
+            "location":
+            {
+                "lat": 44.827387,
+                "lon": -0.560877
+            }
+        }, {
+            "id": "Park_thiers",
+            "location":
+            {
+                "lat": 44.850955,
+                "lon": -0.542128
+            }
+        }],
+        "rests": [],
+        "vehicles": [
+        {
+            "id": "v231648",
+            "router_mode": "car",
+            "router_dimension": "time",
+            "speed_multiplier": 0.8,
+            "area": [],
+            "speed_multiplier_area": [],
+            "timewindow":
+            {
+                "start": 28800,
+                "end": 54000
+            },
+            "duration": null,
+            "distance": null,
+            "start_point_id": "p46",
+            "end_point_id": "p47",
+            "cost_fixed": 0.0,
+            "cost_distance_multiplier": 0.0,
+            "cost_time_multiplier": 1.0,
+            "cost_waiting_time_multiplier": null,
+            "cost_late_multiplier": 0.3,
+            "force_start": false,
+            "rest_ids": [],
+            "capacities": [],
+            "skills": [],
+            "toll": null,
+            "approach": null,
+            "motorway": null,
+            "max_walk_distance": 750
+        },
+        {
+            "id": "v231649",
+            "router_mode": "car",
+            "router_dimension": "time",
+            "speed_multiplier": 0.8,
+            "area": [],
+            "speed_multiplier_area": [],
+            "timewindow":
+            {
+                "start": 28800,
+                "end": 61200
+            },
+            "duration": null,
+            "distance": null,
+            "start_point_id": "p48",
+            "end_point_id": "p49",
+            "cost_fixed": 0.0,
+            "cost_distance_multiplier": 0.0,
+            "cost_time_multiplier": 1.0,
+            "cost_waiting_time_multiplier": null,
+            "cost_late_multiplier": 0.3,
+            "force_start": false,
+            "rest_ids": [],
+            "capacities": [],
+            "skills": [],
+            "toll": null,
+            "approach": null,
+            "motorway": null,
+            "max_walk_distance": 750
+        }],
+        "services": [
+        {
+            "id": "s41713075",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p23",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713076",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p24",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713077",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p25",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713078",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p26",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713079",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p27",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713080",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p28",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713081",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p29",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713082",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p30",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713083",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p31",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713084",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p32",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713085",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p33",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713086",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p34",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713087",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p35",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713088",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p36",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713089",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p37",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713090",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p38",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713091",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p39",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713092",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p40",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713093",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p41",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713094",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p42",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713095",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p43",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713096",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p44",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        },
+        {
+            "id": "s41713097",
+            "type": "service",
+            "sticky_vehicle_ids": ["v231649"],
+            "activity":
+            {
+                "point_id": "p45",
+                "timewindows": [],
+                "duration": 120,
+                "late_multiplier": 0.3
+            },
+            "quantities": [
+            {
+                "unit_id": "u4573",
+                "value": 1.0
+            }]
+        }],
+        "relations": [],
+        "subtours": [
+        {
+          "id": "sub_test",
+          "time_bounds": 360,
+          "router_mode": "pedestrian",
+          "transmodal_stop_ids": ["Park_eugene_leroy", "Park_thiers"],
+          "capacities": [{
+            "unit_id": "u4573",
+            "limit": 5
+          }]
+        }],
+        "configuration":
+        {
+            "preprocessing":
+            {
+                "max_split_size": 500,
+                "cluster_threshold": 0.0,
+                "prefer_short_segment": true
+            },
+            "resolution":
+            {
+                "duration": 60000,
+                "iterations_without_improvment": 100,
+                "initial_time_out": 5000,
+                "time_out_multiplier": 2
+            },
+            "restitution":
+            {
+                "intermediate_solutions": false
+            }
+        }
+    }
+}

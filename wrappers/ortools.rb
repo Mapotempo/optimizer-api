@@ -354,7 +354,7 @@ module Wrappers
       }
     end
 
-    def build_detail(job, activity, point, day_index, job_load)
+    def build_detail(job, activity, point, day_index, job_load, vehicle)
       {
         lat: point && point.location && point.location.lat,
         lon: point && point.location && point.location.lon,
@@ -363,7 +363,9 @@ module Wrappers
         duration: activity && activity.duration,
         additional_value: activity && activity.additional_value,
         timewindows: activity && build_timewindows(activity, day_index),
-        quantities: build_quantities(job, job_load)
+        quantities: build_quantities(job, job_load),
+        router_mode: vehicle ? vehicle.router_mode : nil,
+        speed_multiplier: vehicle ? vehicle.speed_multiplier : nil
       }.delete_if{ |k,v| !v }.compact
     end
 
@@ -387,19 +389,19 @@ module Wrappers
               service_id: "#{service.id}",
               type: service.type.to_s,
               point_id: service.activity.point_id,
-              detail: build_detail(service, service.activity, service.activity.point, nil, nil)
+              detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil)
             }
           }) + (vrp.shipments.collect{ |shipment|
             [{
               shipment_id: "#{shipment.id}",
               type: 'pickup',
               point_id: shipment.pickup.point_id,
-              detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil)
+              detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
             }] << {
               shipment_id: "#{shipment.id}",
               type: 'delivery',
               point_id: shipment.delivery.point_id,
-              detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil)
+              detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil)
             }
           }).flatten + (vrp.rests.collect{ |rest|
             {
@@ -448,7 +450,7 @@ module Wrappers
                   previous_index = points[vehicle.start_point.id].matrix_index
                   {
                     point_id: vehicle.start_point.id,
-                    detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads)
+                    detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
                   }.delete_if{ |k,v| !v }
                 end
               elsif activity['type'] == 'end'  && vehicle.end_point
@@ -481,7 +483,7 @@ module Wrappers
                     travel_distance: travel_distance,
                     begin_time: earliest_start,
                     departure_time: earliest_start + vrp.services[current_index].activity[:duration].to_i,
-                    detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads)
+                    detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads, vehicle)
                   }.delete_if{ |k,v| !v }
                   previous_index = point_index
                   current_activity
@@ -502,7 +504,7 @@ module Wrappers
                     travel_distance: travel_distance,
                     begin_time: earliest_start,
                     departure_time: earliest_start + (shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i ),
-                    detail: build_detail(shipment, shipment_activity == 0 ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads)
+                    detail: build_detail(shipment, shipment_activity == 0 ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads, vehicle)
                   }.delete_if{ |k,v| !v }
                   earliest_start += shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i
                   previous_index = point_index
@@ -537,7 +539,7 @@ module Wrappers
             service_id: service_id,
             type: service.type.to_s,
             point_id: service.activity.point_id,
-            detail: build_detail(service, service.activity, service.activity.point, nil, nil)
+            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil)
           }
         } + (vrp.shipments.collect(&:id) - collected_indices.collect{ |index| index >= vrp.services.size && ((index - vrp.services.size)/2).to_i < vrp.shipments.size && vrp.shipments[((index - vrp.services.size)/2).to_i].id }.uniq).collect{ |shipment_id|
           shipment = vrp.shipments.find{ |shipment| shipment.id == shipment_id }
@@ -545,12 +547,12 @@ module Wrappers
             shipment_id: "#{shipment_id}",
             type: 'pickup',
             point_id: shipment.pickup.point_id,
-            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil)
+            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
           }, {
             shipment_id: "#{shipment_id}",
             type: 'delivery',
             point_id: shipment.delivery.point_id,
-            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil)
+            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil)
           }]
         }.flatten + (vrp.rests.collect(&:id) - collected_rests_indices.collect{ |index| index < vrp.rests.size && vrp.rests[index].id }).collect{ |rest_id|
           rest = vrp.rests.find{ |rest| rest.id == rest_id }

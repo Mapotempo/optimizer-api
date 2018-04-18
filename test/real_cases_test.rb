@@ -338,6 +338,42 @@ class RealCasesTest < Minitest::Test
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
     end
+
+    # Bordeaux - route  with transmodality point
+    def test_ortools_multimodal_route
+      vrp = ENV['DUMP_VRP'] ?
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
+      assert result
+      # Check activities
+      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert 2 <= result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_eugene_leroy' }.size }.reduce(&:+)
+
+      # Check total cost
+      assert result[:cost] < 6800, "Cost is to high: #{result[:cost]}"
+
+      # Check elapsed time
+      assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
+    end
+
+    # Bordeaux - route with transmodality point
+    def test_ortools_multimodal_route2
+      vrp = ENV['DUMP_VRP'] ?
+        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
+        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
+      assert result
+      # Check activities
+      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert 2 <= result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_thiers' }.size }.reduce(&:+)
+
+      # Check total cost
+      assert result[:cost] < 7850, "Cost is to high: #{result[:cost]}"
+
+      # Check elapsed time
+      assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
+    end
   end
 
 end

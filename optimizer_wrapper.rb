@@ -249,7 +249,7 @@ module OptimizerWrapper
           previous_point = nil
           route[:activities].delete_if{ |activity|
             current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
-            current_point = vrp.points.find{ |point| point.id == current_service[:activity][:point_id] } if current_service
+            current_point = current_service.activity.point if current_service
 
             if previous && current_service && same_position(vrp, previous_point, current_point) && same_empty_units(capacities_units, previous, current_service) &&
             !same_fill_units(capacities_units, previous, current_service)
@@ -336,12 +336,13 @@ module OptimizerWrapper
       [:matrices, :units].each{ |key|
         (sub_vrp.send "#{key}=", vrp.send(key)) if vrp.send(key)
       }
-      point_ids = services.map{ |s| s.activity.point.id } + [vehicle.start_point_id, vehicle.end_point_id].uniq.compact
+      point_ids = services.map{ |s| s.activity.point.id } + [vehicle.start_point_id, vehicle.end_point_id].uniq.compact + vrp.subtours.map{ |s_t| s_t.transmodal_stops.map{ |t_s| t_s.id }}.flatten.uniq
       sub_vrp.points = vrp.points.select{ |p| point_ids.include? p.id }
       sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
       sub_vrp.vehicles = vrp.vehicles.select{ |v| v.id == vehicle.id }
       sub_vrp.services = services
       sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id }}}
+      sub_vrp.subtours = vrp.subtours
       sub_vrp.configuration = {
         preprocessing: {
           cluster_threshold: vrp.preprocessing_cluster_threshold,
