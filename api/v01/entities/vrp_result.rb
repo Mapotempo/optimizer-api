@@ -34,6 +34,8 @@ module Api
     end
 
     class VrpResultSolutionRouteActivityDetails < Grape::Entity
+      expose :router_mode, documentation: { type: String, desc: 'Means of transport used to reach this activity, it may vary within a route if subtours are defined' }
+      expose :speed_multiplier, documentation: { type: String, desc: 'Speed multiplier applied to the current means of transport, it may vary within a route if subtours are defined' }
       expose :lat, documentation: { type: Float, desc: '' }
       expose :lon, documentation: { type: Float, desc: '' }
       expose :skills, documentation: { type: Array[String], desc: '' }
@@ -69,6 +71,7 @@ module Api
     end
 
     class VrpResultSolution < Grape::Entity
+      expose :solvers, documentation: { type: Array[String], desc: 'Solvers used to perform the optimization' }
       expose :cost, documentation: { type: Float, desc: 'The actual cost of the solution considering all costs' }
       expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }
       expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route' }
