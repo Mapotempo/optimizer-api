@@ -1264,6 +1264,74 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size + problem[:rests].size + 1, result[:routes][0][:activities].size
   end
 
+  def test_with_rest_multiple_reference
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      rests: [{
+        id: 'rest_0',
+        timewindows: [{
+          start: 1,
+          end: 2
+        }],
+        duration: 1
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        rest_ids: ['rest_0']
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        rest_ids: ['rest_0']
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 2, result[:routes].size
+    assert_equal problem[:services].size + problem[:vehicles].collect{ |vehicle| vehicle[:rest_ids].size }.inject(:+) + 2, result[:routes].collect{ |route| route[:activities].size }.inject(:+)
+  end
+
   def test_negative_time_windows_problem
     ortools = OptimizerWrapper::ORTOOLS
     problem = {

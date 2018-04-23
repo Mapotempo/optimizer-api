@@ -512,7 +512,7 @@ module Wrappers
                 end
               elsif activity['type'] == 'break'
                 collected_rests_indices << current_index
-                vehicle_rest = vrp.rests[current_index]
+                vehicle_rest = vrp.vehicles.collect{ |vehicle| vehicle.rests }.flatten[current_index]
                 earliest_start = vehicle_rest[:timewindows].nil? ? earliest_start : closest_rest_start(vehicle_rest[:timewindows], earliest_start)
                 current_rest = {
                   rest_id: vehicle_rest.id,
@@ -554,7 +554,7 @@ module Wrappers
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil)
           }]
-        }.flatten + (vrp.rests.collect(&:id) - collected_rests_indices.collect{ |index| index < vrp.rests.size && vrp.rests[index].id }).collect{ |rest_id|
+        }.flatten + (vrp.vehicles.collect{ |vehicle| vehicle.rests.collect(&:id) }.flatten - collected_rests_indices.collect{ |index| index < vrp.rests.size && vrp.rests[index].id }).collect{ |rest_id|
           rest = vrp.rests.find{ |rest| rest.id == rest_id }
           {
             rest_id: rest.id,
