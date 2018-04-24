@@ -673,6 +673,7 @@ The current API can handle multiple particular behavior. **Solver_parameter** fo
 *   **Savings** : The savings value is the difference between the cost of two routes visiting one node each and one route visiting both nodes.
 *   **Parallel cheapest insertion** : Insert nodes at their cheapest position on any route; potentially several routes can be built in parallel.
 *   **First unbound minimum value** : Select the first node with an unbound successor and connect it to the first available node (default).
+With **Solver_parameter** you can also prevent from calling any solver (value -1). This is usefull in the case of periodic optimization, when you want to keep result from preliminar heuristic only.
 
 ### <a name="lateness"></a>Lateness¹
 Once defined at the service level it allow the vehicles to arrive late at a points to serve.

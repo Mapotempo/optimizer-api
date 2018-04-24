@@ -140,6 +140,11 @@ module OptimizerWrapper
       }
     }
 
+    if (vrp[:matrices] == nil || vrp[:matrices].empty?) && (vrp.vehicles.select{ |v| v.overall_duration }.size > 0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0 || vrp.schedule_range_indices || vrp.schedule_range_date)
+      vrp_need_matrix = compute_vrp_need_matrix(vrp)
+      vrp = compute_need_matrix(vrp, vrp_need_matrix)
+    end
+
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
     elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
@@ -161,9 +166,6 @@ module OptimizerWrapper
   def self.define_process(services_vrps, services_fleets = [], job = nil, &block)
     complete_services_vrp = services_vrps.delete_if{ |service_vrp|
       service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty? }.collect{ |service_vrp|
-      # Define subproblem sequence of treatments
-      # Enhance the model if it represents a planning optimisation
-      service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
 
       # Split/Clusterize the problem if to large
       Interpreters::SplitClustering.split_clusters([service_vrp])
@@ -226,7 +228,7 @@ module OptimizerWrapper
           }
         else
           unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
-          vrp.services.delete_if{ |service| unfeasible_services.any?{ |sub_service| sub_service[:service_id] == service.id }}
+          vrp.services.delete_if{ |service| unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
 
           if !(vrp.vehicles.select{ |v| v.overall_duration }.size>0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
             vrp_need_matrix = compute_vrp_need_matrix(vrp)
@@ -234,7 +236,12 @@ module OptimizerWrapper
           end
           unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
           @unfeasible_services += unfeasible_services
-          vrp.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:service_id] == service.id }}
+          vrp.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
+          vrp[:rejected_by_periodic].to_a.each{ |rejected_service, reason|
+            @unfeasible_services[rejected_service] = reason
+          }
+          Interpreters::PeriodicVisits.initialize
+          vrp = Interpreters::PeriodicVisits.expand(vrp)
 
           File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
@@ -259,7 +266,7 @@ module OptimizerWrapper
               parse_result(cluster_vrp, result)
             elsif result.class.name == 'String' # result.is_a?(String) not working
               raise RuntimeError.new(result) unless result == "Job killed"
-            else
+            elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
               raise RuntimeError.new('No solution provided')
             end
           end
@@ -308,7 +315,11 @@ module OptimizerWrapper
         }
       end
 
-      cluster_result
+      if vrp.preprocessing_heuristic_result && !vrp.preprocessing_heuristic_result.empty?
+        [cluster_result || vrp.preprocessing_heuristic_result, vrp.preprocessing_heuristic_result].sort_by{ |sol| sol[:cost] }[0]
+      else
+        cluster_result
+      end
     }
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
 

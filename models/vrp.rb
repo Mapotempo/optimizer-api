@@ -26,6 +26,8 @@ module Models
     field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
     field :preprocessing_neighbourhood_size, default: nil
+    field :preprocessing_use_periodic_heuristic, default: false
+    field :preprocessing_heuristic_result, defaul: {}
     field :resolution_duration, default: nil
     field :resolution_iterations, default: nil
     field :resolution_iterations_without_improvment, default: nil
@@ -110,6 +112,8 @@ module Models
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
+      self.preprocessing_use_periodic_heuristic = preprocessing[:use_periodic_heuristic]
+      self.preprocessing_heuristic_result = {}
     end
 
     def schedule=(schedule)

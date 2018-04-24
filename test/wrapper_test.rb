@@ -2213,7 +2213,10 @@ class WrapperTest < Minitest::Test
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0,
+        }
       }],
       services: [{
         id: 'service_1',

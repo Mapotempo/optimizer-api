@@ -124,7 +124,7 @@ module Api
         this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '')
         this.requires(:point_id, type: String, desc: 'reference to the associated point')
         this.optional(:value_matrix_index, type: Integer, desc: 'associated value matrix index')
-        this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may be performed') do
+        this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may start') do
           Vrp.vrp_request_timewindow(self)
         end
       end
@@ -320,6 +320,7 @@ module Api
         this.optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
         this.optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
         this.optional(:neighbourhood_size, type: Integer, desc: 'Limit the size of the considered neighbourhood within the search')
+        this.optional(:use_periodic_heuristic, type: Boolean, desc: '[planning] Calls specific heuristic, either to return its result or to provide it as initial solution to the solver.')
       end
 
       def self.vrp_request_resolution(this)

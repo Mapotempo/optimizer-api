@@ -158,12 +158,18 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'voiture4',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       },{
         id: 'voiture3',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
-        overall_duration: 3
-        }],
+        overall_duration: 3,
+        timewindow: {
+          start: 0
+        }
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -221,15 +227,24 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_1',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       },{
         id: 'vehicle_2',
         start_point_id: 'depot',
-        matrix_id: 'matrix_0'
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       },{
         id: 'vehicle_3',
         start_point_id: 'depot',
-        matrix_id: 'matrix_0'
-        }],
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
+      }],
       services: [{
         id: 'service_1',
         activity: {
@@ -377,12 +392,20 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
         overall_duration: 1,
+        timewindow: {
+          start: 1,
+          end: 10
+        }
       },{
         id: 'vehicle_1',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
         rest_ids: ['rest_0'],
         overall_duration: 1,
+        timewindow: {
+          start: 1,
+          end: 10
+        }
       }],
       services: [{
         id: 'service_1',
@@ -504,7 +527,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
-        cost_fixed: 20
+        cost_fixed: 20,
+        timewindow: {
+          start: 0
+        }
       }, {
         id: 'vehicle_1',
         start_point_id: 'depot',
@@ -571,11 +597,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }, {
         id: 'vehicle_2',
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }],
       services: [{
         id: 'service_1',
@@ -636,11 +668,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }, {
         id: 'vehicle_2',
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }],
       services: [{
         id: 'service_1',
@@ -701,11 +739,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }, {
         id: 'vehicle_2',
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }],
       services: [{
         id: 'service_1',
@@ -766,11 +810,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }, {
         id: 'vehicle_2',
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }],
       services: [{
         id: 'service_1',
@@ -831,11 +881,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }, {
         id: 'vehicle_2',
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }],
       services: [{
         id: 'service_1',
@@ -896,11 +952,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }, {
         id: 'vehicle_2',
         start_point_id: 'depot',
         end_point_id: 'depot',
         matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        }
       }],
       services: [{
         id: 'service_1',

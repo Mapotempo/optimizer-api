@@ -300,6 +300,22 @@ module Wrappers
       !(vrp[:relations] && vrp[:relations].any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' }) || vrp.schedule_range_date
     end
 
+    def assert_vehicle_tw_if_schedule(vrp)
+      !vrp.preprocessing_use_periodic_heuristic && !vrp.schedule_range_indices && !vrp.schedule_range_date ||
+      vrp[:vehicles].all?{ |vehicle|
+        vehicle[:timewindow] && (vehicle[:timewindow][:start] || vehicle[:timewindow][:end]) ||
+        vehicle[:sequence_timewindows] && vehicle[:sequence_timewindows].any?{ |tw| (tw[:start] || tw[:end]) }
+      }
+    end
+
+    def assert_if_sequence_tw_then_schedule(vrp)
+      vrp.vehicles.find{ |vehicle| vehicle[:sequence_timewindows] }.nil? || vrp.schedule_range_date || vrp.schedule_range_indices
+    end
+
+    def assert_if_periodic_heuristic_then_schedule(vrp)
+      !vrp.preprocessing_use_periodic_heuristic || vrp.schedule_range_date || vrp.schedule_range_indices
+    end
+
     def solve_synchronous?(vrp)
       false
     end
@@ -369,7 +385,7 @@ module Wrappers
           next if (column_cpt[index] == 0 || column_cpt[index] != matrix.size - 1) && (line_cpt[index] == 0 || line_cpt[index] != matrix.size - 1)
           vrp[:services].select{ |service| service[:activity][:point][:matrix_index] == index }.each{ |service|
             if unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
-              unfeasible += add_unassigned(vrp, service, 'Unreachable')
+              add_unassigned(unfeasible, vrp, service, 'Unreachable')
             end
           }
         }
@@ -378,20 +394,24 @@ module Wrappers
       unfeasible
     end
 
-    def add_unassigned(vrp, service, reason)
-      [{
-        service_id: service[:id],
-        point_id: service[:activity] ? service[:activity][:point_id] : nil,
-        detail: {
-          lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
-          lon: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lon] : nil,
-          setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
-          duration: service[:activity] ? service[:activity][:duration] : nil,
-          timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
-          quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit], value: qte[:value] } } : nil
-        },
-        reason: reason
-      }]
+    def add_unassigned(unfeasible, vrp, service, reason)
+      unfeasible << (1..service.visits_number).collect{ |index|
+        {
+          original_service_id: service[:id],
+          service_id: service.visits_number == 1 ? service[:id] : "#{service.id}_#{index}_#{service.visits_number}",
+          point_id: service[:activity] ? service[:activity][:point_id] : nil,
+          detail:{
+            lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
+            lon: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lon] : nil,
+            setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
+            duration: service[:activity] ? service[:activity][:duration] : nil,
+            timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
+            quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit], value: qte[:value] } } : nil
+          },
+          reason: reason
+        }
+      }
+      unfeasible.flatten!
     end
 
     def detect_unfeasible_services(vrp)
@@ -423,8 +443,8 @@ module Wrappers
         # check needed capacity
         vrp.services.each{ |service|
           service.quantities.select{ |quantity| quantity.value && !unlimited[quantity.unit_id] && capacity[quantity.unit_id] < quantity.value }.each{
-            if unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
-              unfeasible += add_unassigned(vrp, service, 'Unsufficient capacity in vehicles')
+            if unfeasible.none?{ |unfeas| unfeas[:original_service_id] == service[:id] }
+              add_unassigned(unfeasible, vrp, service, 'Unsufficient capacity in vehicles')
             end
           }
         }
@@ -448,22 +468,18 @@ module Wrappers
           found = find_vehicle(vrp, service, nil, nil, nil)
         end
 
-        if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
-          unfeasible += add_unassigned(vrp, service, 'No vehicle with compatible timewindow')
+        if !found && unfeasible.none?{ |unfeas| unfeas[:original_service_id] == service[:id] }
+          add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow')
         end
       }
 
       # check if one service has minimum lapse
       if vrp.schedule_range_indices || vrp.schedule_range_date
-        nb_days = if vrp.schedule_range_indices
-          vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1
-        else
-          (vrp.schedule_range_date[:end].to_date - vrp.schedule_range_date[:start].to_date).to_i + 1
-        end
+        nb_days = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1 : (vrp.schedule_range_date[:end].to_date - vrp.schedule_range_date[:start].to_date).to_i + 1
         vrp[:services].select{ |service| service[:minimum_lapse] && service[:visits_number] > 1 }.each{ |service|
           found = service[:minimum_lapse] < nb_days
-          if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
-            unfeasible += add_unassigned(vrp, service, 'Minimum_lapse is too big')
+          if !found && unfeasible.none?{ |unfeas| unfeas[:original_service_id] == service[:id] }
+            add_unassigned(unfeasible, vrp, service, 'Minimum_lapse is too big')
           end
         }
       end

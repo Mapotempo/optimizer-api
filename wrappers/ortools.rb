@@ -49,6 +49,9 @@ module Wrappers
         :assert_range_date_if_month_duration,
         :assert_correctness_provided_matrix_indices,
         :assert_square_matrix,
+        :assert_vehicle_tw_if_schedule,
+        :assert_if_sequence_tw_then_schedule,
+        :assert_if_periodic_heuristic_then_schedule
       ]
     end
 

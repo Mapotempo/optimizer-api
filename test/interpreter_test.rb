@@ -1207,7 +1207,10 @@ class InterpreterTest < Minitest::Test
           cost_fixed: 0.0,
           cost_time_multiplier: 1.0,
           start_point_id: "agent_home",
-          end_point_id: "agent_home"
+          end_point_id: "agent_home",
+          timewindow: {
+            start: 0
+          }
         }
       ],
       services: [
@@ -1446,7 +1449,10 @@ class InterpreterTest < Minitest::Test
             router_mode: "car",
             cost_late_multiplier: 0.0,
             cost_time_multiplier:  1.0,
-            speed_multiplier: 1.0
+            speed_multiplier: 1.0,
+            timewindow: {
+              start: 500
+            }
         },
         {
             id: "vehicle_1",
