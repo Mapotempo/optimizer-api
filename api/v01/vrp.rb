@@ -232,9 +232,13 @@ module Api
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
 
         this.optional(:type, type: Symbol, desc: 'service, pickup or delivery')
-        this.requires(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
+        this.optional(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
           Vrp.vrp_request_activity(self)
         end
+        this.optional(:activities, type: Array, desc: 'Define other possible activities for the service. This allows to assign different timewindows and/or points to a single service.') do
+          Vrp.vrp_request_activity(self)
+        end
+        this.mutually_exclusive :activity, :activities
         this.optional(:quantities, type: Array, desc: 'Define the entities which are taken or dropped') do
           Vrp.vrp_request_quantity(self)
         end

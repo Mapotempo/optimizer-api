@@ -5106,4 +5106,62 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 2, result[:routes][0][:activities].size
     assert_equal 5, result[:routes][1][:activities].size
   end
+
+  def test_alternative_service
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1000],
+          [1, 0, 1000],
+          [1000, 1000, 0],
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        cost_time_multiplier: 1,
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activities: [{
+          point_id: 'point_1'
+        },{
+          point_id: 'point_2'
+        }],
+        skills: ['skill1']
+      }],
+      routes: [{
+        vehicle_id: 'vehicle_0',
+        mission_ids: ['service_1', 'service_3', 'service_2']
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal [], result[:unassigned]
+    assert_equal 0, result[:routes][0][:activities][1][:alternative]
+  end
 end
