@@ -2300,4 +2300,74 @@ class WrapperTest < Minitest::Test
     assert !vroom.inapplicable_solve?(vrp).empty?
     assert ortools.inapplicable_solve?(vrp).empty?
   end
+
+  def test_should_handle_result_without_unassigned
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1, 1],
+          [1, 0, 1, 1],
+          [1, 1, 0, 1],
+          [1, 1, 1, 0]
+        ],
+      }],
+      points: [
+        {
+          id: "point_0",
+          location: {
+              lat: 44.82332,
+              lon: -0.607338
+          }
+        }, {
+          id: "point_1",
+          location: {
+              lat: 44.83395,
+              lon: -0.56545
+          }
+        }, {
+          id: "point_2",
+          location: {
+              lat: 44.853662,
+              lon: -0.568542
+          }
+        }, {
+          id: "point_3",
+          location: {
+              lat: 44.853662,
+              lon: -0.568542
+          }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        cost_time_multiplier: 1,
+        start_point_id: 'point_2',
+        end_point_id: 'point_3',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_0',
+        sticky_vehicle_ids: ['vehicle_0'],
+        activity: {
+          point_id: 'point_0'
+        }
+      }, {
+        id: 'service_1',
+        sticky_vehicle_ids: ['vehicle_0'],
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+      configuration: {
+        preprocessing: {
+          max_split_size: 500,
+        },
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, Models::Vrp.create(problem), nil)
+    assert result
+  end
 end

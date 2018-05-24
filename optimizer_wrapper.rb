@@ -239,7 +239,7 @@ module OptimizerWrapper
         cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet_id && !services_fleets.empty?
         cluster_result[:unassigned].delete_if{ |activity|
           activity[:rest_id] && current_useless_vehicle.any?{ |vehicle| vehicle.rests.any?{ |rest| rest.id == activity[:rest_id] }}
-        }
+        } if cluster_result[:unassigned]
 
         vrp.vehicles = current_usefull_vehicle
         current_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
