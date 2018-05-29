@@ -196,46 +196,64 @@ module OptimizerWrapper
           vrp.services.uniq!
         end
 
-        if !(vrp.vehicles.select{ |v| v.overall_duration }.size>0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
-          vrp_need_matrix = compute_vrp_need_matrix(vrp)
-          vrp = compute_need_matrix(vrp, vrp_need_matrix)
-        end
-        @unfeasible_services = config[:services][service].check_distances(vrp, @unfeasible_services)
-
-        File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
-
-        block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
-        cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
-          block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
-          time_start = Time.now
-          result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
-              if job
-                actual_result = Result.get(job) || { 'pids' => nil }
-                if cluster_vrp[:restitution_csv]
-                  actual_result['csv'] = true
-                end
-                actual_result['pids'] = pids
-                Result.set(job, actual_result)
-              end
-            }) { |wrapper, avancement, total, message, cost, time, solution|
-            block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block
+        if vrp.vehicles.empty?
+          cluster_result = {
+            cost: nil,
+            solvers: [service.to_s],
+            iterations: nil,
+            routes: [],
+            unassigned: vrp.services.collect{ |service|
+              {
+                service: service[:id],
+                reason: "No vehicle available for this service (split)"
+              }
+            },
+            elapsed: nil,
+            total_distance: nil
           }
-          if result.class.name == 'Hash' # result.is_a?(Hash) not working
-            result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-            parse_result(cluster_vrp, result)
-          elsif result.class.name == 'String' # result.is_a?(String) not working
-            raise RuntimeError.new(result) unless result == "Job killed"
-          else
-            raise RuntimeError.new('No solution provided')
+        else
+          if !(vrp.vehicles.select{ |v| v.overall_duration }.size>0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
+            vrp_need_matrix = compute_vrp_need_matrix(vrp)
+            vrp = compute_need_matrix(vrp, vrp_need_matrix)
+          end
+          @unfeasible_services = config[:services][service].check_distances(vrp, @unfeasible_services)
+
+          File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
+
+          block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
+          cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
+            block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
+            time_start = Time.now
+            result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
+                if job
+                  actual_result = Result.get(job) || { 'pids' => nil }
+                  if cluster_vrp[:restitution_csv]
+                    actual_result['csv'] = true
+                  end
+                  actual_result['pids'] = pids
+                  Result.set(job, actual_result)
+                end
+              }) { |wrapper, avancement, total, message, cost, time, solution|
+              block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block
+            }
+            if result.class.name == 'Hash' # result.is_a?(Hash) not working
+              result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+              parse_result(cluster_vrp, result)
+            elsif result.class.name == 'String' # result.is_a?(String) not working
+              raise RuntimeError.new(result) unless result == "Job killed"
+            else
+              raise RuntimeError.new('No solution provided')
+            end
           end
         end
       end
+
       current_usefull_vehicle = vrp.vehicles.select{ |vehicle|
         associated_route = cluster_result[:routes].find{ |route| route[:vehicle_id] == vehicle.id }
         associated_route[:activities].any?{ |activity| activity[:service_id] } if associated_route
       } if cluster_result
-      current_useless_vehicle = vrp.vehicles - current_usefull_vehicle
-      if fleet_id && !services_fleets.empty? && cluster_result
+      if fleet_id && !services_fleets.empty? && !vrp[:vehicles].empty?
+        current_useless_vehicle = vrp.vehicles - current_usefull_vehicle
         cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet_id && !services_fleets.empty?
         cluster_result[:unassigned].delete_if{ |activity|
           activity[:rest_id] && current_useless_vehicle.any?{ |vehicle| vehicle.rests.any?{ |rest| rest.id == activity[:rest_id] }}
