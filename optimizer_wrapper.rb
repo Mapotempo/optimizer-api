@@ -74,7 +74,7 @@ module OptimizerWrapper
         v[:start_point][:matrix_index] = vrp[:points].find{ |p| p.id == v[:start_point][:id] }[:matrix_index]
       }
       vrp.vehicles.select{ |v| v[:end_point] && v[:end_point] != nil}.each{ |v|
-        v[:end_point][:matrix_index] = vrp[:points].find{ |p| p.id == v[:start_point][:id] }[:matrix_index]
+        v[:end_point][:matrix_index] = vrp[:points].find{ |p| p.id == v[:end_point][:id] }[:matrix_index]
       }
 
       uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
