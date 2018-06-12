@@ -118,7 +118,7 @@ module Wrappers
             q = service.quantities.find{ |quantity| quantity.unit == unit }
             q && q.setup_value && unit.counting ? (q.setup_value).to_i : 0
           },
-          exclusion_cost: service.exclusion_cost || -1,
+          exclusion_cost: service.exclusion_cost && service.exclusion_cost.to_i || -1,
           refill_quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
             !q.nil? && (q.fill || q.empty)
