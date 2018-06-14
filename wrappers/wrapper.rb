@@ -332,7 +332,7 @@ module Wrappers
         days_compatible && (t_start.nil? && t_end.nil? ||
           t_start.nil? && (v_start.nil? || v_start <= t_end) ||
           t_end.nil? && (v_end.nil? || v_end >= t_start) ||
-          t_start && t_end && v_start <= t_end && v_end >= t_start)
+          t_start && t_end && (v_start.nil? || v_start <= t_end) && (v_end.nil? || v_end >= t_start))
       } || vrp[:vehicles].any?{ |v| !v[:timewindow] && !v[:sequence_timewindows]} || vrp[:vehicles].select{ |vehicle| vehicle[:sequence_timewindows] }.any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw|
           v_start = tw[:start]
           v_end = tw[:end]
