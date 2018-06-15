@@ -573,7 +573,8 @@ Those could be of the following types:
   * **sequence** : force services to be served in a specific order, excluding others missions to be performed between
   * **meetup** : ensure that some missions are performed at the same time by multiple vehicles.
   * **maximum_duration_lapse** : Define a maximum in route duration between two activities.
-  * **minimum_day_lapse** : Define a minimum number of unworked days between two worked days.
+  * **minimum_day_lapse** : Define a minimum number of unworked days between two worked days. For instance, if you what one visit per week, you should use a minimum lapse of 7.
+  If the first service is assigned on a Monday then, with this minimum lapse, the solver will try to keep all these service\'s visits on Mondays.
   * **maximum_day_lapse** : Define a maximum number of unworked days between two worked days.
   * **force_end** : The linked activities are the only which can be set as last of a route. (Only one relation of this kind is considered)
   * **force_first** : The linked activities are the only which can be set as first of a route. (Only one relation of this kind is considered)
@@ -609,7 +610,8 @@ Preprocessing parameters will twist the problem in order to simplify or orient t
   "configuration": {
     "preprocessing": {
       "cluster_threshold": 5,
-      "prefer_short_segment": true
+      "prefer_short_segment": true,
+      "apply_hierarchical_split": true
     }
   }
 ```
@@ -651,6 +653,10 @@ Schedule parameters are only usefull in the case of Schedule Optimisation. Those
   }
 ```
 An alternative exist to those parameters in order to define it by date instead of indices __schedule_range_date__ and __schedule_unavailable_date__.
+
+More specific parameters are also available when dealing with Schedule Optimisation:
+* **use_periodic_heuristic** : uses our specific heuristic to find the first solution to provide to the solver.
+* **same_point_day** : all services located at the same geografical point will take place on the same day of the week.
 
 Restitution parameters allow to have some control on the API response
 ```json

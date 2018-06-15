@@ -38,7 +38,7 @@ module Models
     field :resolution_time_out_multiplier, default: nil
     field :resolution_vehicle_limit, default: nil
     field :resolution_solver_parameter, default: nil
-    field :resolution_same_point_day, default: nil
+    field :resolution_same_point_day, default: false
 
     field :restitution_geometry, default: false
     field :restitution_geometry_polyline, default: false
