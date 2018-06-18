@@ -382,7 +382,7 @@ module Interpreters
         if lapses_list[index] && lapses_list[index] != -1
           new_relation = Models::Relation.new({
             type: 'vehicle_group_duration',
-            linked_vehicles_ids: list,
+            linked_vehicle_ids: list,
             lapse: lapses_list[index] + rests_durations[index]
           })
           vrp.relations << new_relation
@@ -460,7 +460,7 @@ module Interpreters
       idx = 0
       residual_time_for_vehicle = {}
       vrp.relations.select{ |r| r.type == 'vehicle_group_duration'}.each{ |r|
-        r.linked_vehicles_ids.each{ |v|
+        r.linked_vehicle_ids.each{ |v|
           residual_time_for_vehicle[v] = {
             idx: idx,
             last_computed_time: 0
@@ -610,7 +610,7 @@ module Interpreters
       relations_to_save = vrp.relations.select{ |r| r.type == relation_type }.collect{ |r|
         {
           type: r.type,
-          linked_vehicles_ids: r.linked_vehicles_ids,
+          linked_vehicle_ids: r.linked_vehicle_ids,
           lapse: r.lapse,
           periodicity: r.periodicity
         }
@@ -621,10 +621,10 @@ module Interpreters
       if relations
         relations.each{ |r|
           new_list = []
-          r[:linked_vehicles_ids].each{ |v|
+          r[:linked_vehicle_ids].each{ |v|
             new_list.concat(@equivalent_vehicles[v])
           }
-          r[:linked_vehicles_ids] = new_list
+          r[:linked_vehicle_ids] = new_list
         }
       end
     end
@@ -635,14 +635,14 @@ module Interpreters
         when 'vehicle_group_duration'
           vrp.relations << Models::Relation.new({
             type: 'vehicle_group_duration',
-            linked_vehicles_ids: r[:linked_vehicles_ids],
+            linked_vehicle_ids: r[:linked_vehicle_ids],
             lapse: r[:lapse]
           })
         when 'vehicle_group_duration_on_weeks', 'vehicle_group_duration_on_months'
           relations = {}
           if vrp.schedule_range_date
             first_date = (r[:type]=='vehicle_group_duration_on_months' ? vrp.schedule_range_date[:start].month : vrp.schedule_range_date[:start].strftime('%W').to_i)
-            r[:linked_vehicles_ids].each{ |v|
+            r[:linked_vehicle_ids].each{ |v|
               v_date = (r[:type]=='vehicle_group_duration_on_months' ? (vrp.schedule_range_date[:start] + v.split("_").last.to_i).month : (vrp.schedule_range_date[:start] + v.split("_").last.to_i).strftime('%W').to_i)
               relation_nb = ((v_date - first_date) / r[:periodicity]).floor
               if relations.key?(relation_nb)
@@ -656,7 +656,7 @@ module Interpreters
               end
             }
           else
-            r[:linked_vehicles_ids].each{ |v|
+            r[:linked_vehicle_ids].each{ |v|
               vrp[:vehicles].select{ |vehicle| vehicle.id == v }.each{ |vehicle|
                 week_nb = (vehicle.global_day_index + @shift)/7.floor
                 periodicity = (r[:periodicity].nil? ? 1 : r[:periodicity])
@@ -676,7 +676,7 @@ module Interpreters
           relations.each{ |key, relation|
             vrp.relations << Models::Relation.new({
               type: 'vehicle_group_duration',
-              linked_vehicles_ids: relation[:vehicles],
+              linked_vehicle_ids: relation[:vehicles],
               lapse: relation[:lapse]
             })
           }

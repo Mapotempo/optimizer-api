@@ -23,7 +23,7 @@ module Models
     field :type, default: :same_route
     field :lapse, default: nil
     field :linked_ids, default: []
-    field :linked_vehicles_ids, default: []
+    field :linked_vehicle_ids, default: []
     field :periodicity, default: nil
 
     validates_numericality_of :lapse, allow_nil: true

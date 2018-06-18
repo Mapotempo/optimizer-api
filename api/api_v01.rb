@@ -112,7 +112,7 @@ In order to select which solver will be used, we have created several assert. If
 *   **assert_matrices_only_one** :  
  *Vroom*. The VRP has only one matrix or only one vehicle configuration type (router_mode, router_dimension, speed_multiplier).
 *   **assert_no_relations** :  
- *Vroom*. The VRP has no relations or every relation has no linked_ids and no linked_vehicles_ids.
+ *Vroom*. The VRP has no relations or every relation has no linked_ids and no linked_vehicle_ids.
 *   **assert_no_routes** :  
  *Vroom*. The Routes have no mission_ids.
 *   **assert_no_shipments** :  
@@ -590,12 +590,12 @@ Some relations need to be extended over all period. Parameter **periodicity** al
   }, {
     "id": "group_duration",
     "type": "vehicle_group_duration",
-    "linked_vehicles": ["vehicle_1", "vehicle_2"],
+    "linked_vehicle_ids": ["vehicle_1", "vehicle_2"],
     "lapse": 3
   }, {
     "id": "group_duration",
     "type": "vehicle_group_duration_on_weeks",
-    "linked_vehicles": ["vehicle_1", "vehicle_2"],
+    "linked_vehicle_ids": ["vehicle_1", "vehicle_2"],
     "lapse": 3,
     "periodicity": 2
   }]

@@ -1585,7 +1585,7 @@ class WrapperTest < Minitest::Test
       relations: [{
         type: 'vehicle_group_duration',
         linked_ids: [],
-        linked_vehicles_ids: [],
+        linked_vehicle_ids: [],
         lapse: nil
       }],
       configuration: {
@@ -1642,7 +1642,7 @@ class WrapperTest < Minitest::Test
       relations: [{
         type: 'vehicle_group_duration',
         linked_ids: ['service_1'],
-        linked_vehicles_ids: ['vehicle_0'],
+        linked_vehicle_ids: ['vehicle_0'],
         lapse: nil
       }],
       configuration: {
@@ -1698,7 +1698,7 @@ class WrapperTest < Minitest::Test
       relations: [{
         type: 'vehicle_group_duration',
         linked_ids: [],
-        linked_vehicles_ids: [],
+        linked_vehicle_ids: [],
         lapse: nil
       }],
       routes: [{
@@ -1757,7 +1757,7 @@ class WrapperTest < Minitest::Test
       relations: [{
         type: 'vehicle_group_duration',
         linked_ids: [],
-        linked_vehicles_ids: [],
+        linked_vehicle_ids: [],
         lapse: nil
       }],
       routes: [{
@@ -1892,7 +1892,7 @@ class WrapperTest < Minitest::Test
       relations: [{
         type: 'vehicle_group_duration',
         linked_ids: [],
-        linked_vehicles_ids: [],
+        linked_vehicle_ids: [],
         lapse: nil
       }],
       configuration: {
@@ -2286,7 +2286,7 @@ class WrapperTest < Minitest::Test
       relations: [{
         type: 'vehicle_group_duration',
         linked_ids: [],
-        linked_vehicles_ids: [],
+        linked_vehicle_ids: [],
         lapse: nil
       }],
       configuration: {

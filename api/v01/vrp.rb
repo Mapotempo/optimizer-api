@@ -296,7 +296,7 @@ module Api
         this.requires(:type, type: String, desc: 'same_route, sequence, order, minimum_day_lapse, maximum_day_lapse, shipment, meetup, maximum_duration_lapse, force_first, never_first, force_end, vehicle_group_duration, vehicle_group_duration_on_weeks or vehicle_group_duration_on_months')
         this.optional(:lapse, type: Integer, desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
         this.optional(:linked_ids, type: Array[String], desc: 'List of activities involved in the relation')
-        this.optional(:linked_vehicles_ids, type: Array[String], desc: 'List of vehicles involved in the relation')
+        this.optional(:linked_vehicle_ids, type: Array[String], desc: 'List of vehicles involved in the relation')
         this.optional(:periodicity, type: Integer, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')
         this.at_least_one_of :linked_ids, :linked_vehicles_ids
       end

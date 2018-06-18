@@ -300,14 +300,14 @@ module Wrappers
           vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
           vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
         }.uniq
-        current_linked_vehicles = relation.linked_vehicles_ids.select{ |vehicle_id|
+        current_linked_vehicles = relation.linked_vehicle_ids.select{ |vehicle_id|
           vrp.vehicles.one? { |vehicle| vehicle.id == vehicle_id }
         }.uniq
         if !current_linked_ids.empty? || !current_linked_vehicles.empty?
           OrtoolsVrp::Relation.new(
             type: relation.type.to_s,
             linked_ids: current_linked_ids,
-            linked_vehicles_ids: current_linked_vehicles,
+            linked_vehicle_ids: current_linked_vehicles,
             lapse: relation.lapse || -1
           )
         end

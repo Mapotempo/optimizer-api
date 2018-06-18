@@ -69,7 +69,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :type, :string, 1
     repeated :linked_ids, :string, 2
     optional :lapse, :int32, 3
-    repeated :linked_vehicles_ids, :string, 4
+    repeated :linked_vehicle_ids, :string, 4
   end
   add_message "ortools_vrp.Route" do
     optional :vehicle_id, :string, 1

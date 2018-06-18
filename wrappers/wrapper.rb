@@ -221,7 +221,7 @@ module Wrappers
     end
 
     def assert_no_relations(vrp)
-      vrp.relations.empty? || vrp.relations.all?{ |relation| relation.linked_ids.empty? && relation.linked_vehicles_ids.empty? }
+      vrp.relations.empty? || vrp.relations.all?{ |relation| relation.linked_ids.empty? && relation.linked_vehicle_ids.empty? }
     end
 
     def assert_no_zones(vrp)

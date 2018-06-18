@@ -120,7 +120,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration',
-        linked_vehicles_ids: ['vehicle_0','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_0','vehicle_2'],
         lapse: 2
       }],
       configuration: {
@@ -245,7 +245,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 1
       }],
       configuration: {
@@ -590,7 +590,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -655,7 +655,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -720,7 +720,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 5,
         periodicity: 2
       }],
@@ -785,7 +785,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -850,7 +850,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_months',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -915,7 +915,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_months',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 5,
         periodicity: 2
       }],
@@ -981,7 +981,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_months',
-        linked_vehicles_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
