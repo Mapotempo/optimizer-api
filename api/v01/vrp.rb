@@ -21,7 +21,6 @@ require 'date'
 require 'digest/md5'
 require 'csv'
 
-
 require './api/v01/api_base'
 require './api/v01/entities/status'
 require './api/v01/entities/vrp_result'
@@ -468,7 +467,7 @@ module Api
                   (vrp.send("#{key}+=", params[key]))
                 end
               }
-              if !vrp.valid?
+              if !vrp.valid? || params[:vrp].keys.size == 0
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
                 checksum = Digest::MD5.hexdigest Marshal.dump(params[:vrp])
