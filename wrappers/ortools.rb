@@ -293,7 +293,9 @@ module Wrappers
           shift_preference: (vehicle.force_start ? :force_start : vehicle.shift_preference),
           day_index: vehicle.global_day_index ? vehicle.global_day_index : -1,
           max_ride_time: vehicle.maximum_ride_time || 0,
-          max_ride_distance: vehicle.maximum_ride_distance || 0
+          max_ride_distance: vehicle.maximum_ride_distance || 0,
+          free_approach: vehicle.free_approach ? vehicle.free_approach : false,
+          free_return: vehicle.free_return ? vehicle.free_return : false
         )
       }
 

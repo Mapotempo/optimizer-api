@@ -199,6 +199,9 @@ module Api
         this.optional(:unavailable_work_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
         this.mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
 
+        this.optional(:free_approach, type: Boolean, desc: 'Do not take into account the route leaving the depot in the objective')
+        this.optional(:free_return, type: Boolean, desc: 'Do not take into account the route arriving at the depot in the objective')
+
         this.optional(:start_point_id, type: String, desc: 'Begin of the tour')
         this.optional(:end_point_id, type: String, desc: 'End of the tour')
         this.optional(:capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry') do

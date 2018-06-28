@@ -68,6 +68,9 @@ module Models
 
     field :skills, default: []
 
+    field :free_approach, default: false
+    field :free_return, default: false
+
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
     validates_numericality_of :cost_time_multiplier
