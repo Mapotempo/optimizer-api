@@ -245,29 +245,37 @@ module OptimizerWrapper
 
           File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
-          block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
-          cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
-            block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
-            time_start = Time.now
-            result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
-                if job
-                  actual_result = Result.get(job) || { 'pids' => nil }
-                  if cluster_vrp[:restitution_csv]
-                    actual_result['csv'] = true
+          if vrp.resolution_solver_parameter != -1
+            block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
+            cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
+              block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
+              time_start = Time.now
+              result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
+                  if job
+                    actual_result = Result.get(job) || { 'pids' => nil }
+                    if cluster_vrp[:restitution_csv]
+                      actual_result['csv'] = true
+                    end
+                    actual_result['pids'] = pids
+                    Result.set(job, actual_result)
                   end
-                  actual_result['pids'] = pids
-                  Result.set(job, actual_result)
-                end
-              }) { |wrapper, avancement, total, message, cost, time, solution|
-              block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block
-            }
-            if result.class.name == 'Hash' # result.is_a?(Hash) not working
-              result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-              parse_result(cluster_vrp, result)
-            elsif result.class.name == 'String' # result.is_a?(String) not working
-              raise RuntimeError.new(result) unless result == "Job killed"
-            elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
-              raise RuntimeError.new('No solution provided')
+                }) { |wrapper, avancement, total, message, cost, time, solution|
+                block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block
+              }
+              if result.class.name == 'Hash' # result.is_a?(Hash) not working
+                result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+                parse_result(cluster_vrp, result)
+              elsif result.class.name == 'String' # result.is_a?(String) not working
+                raise RuntimeError.new(result) unless result == "Job killed"
+              elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
+                raise RuntimeError.new('No solution provided')
+              end
+            end
+          else
+            if vrp.restitution_csv
+              actual_result = Result.get(job) || {}
+              actual_result['csv'] = true
+              Result.set(job, actual_result)
             end
           end
         end

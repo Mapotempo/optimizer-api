@@ -43,11 +43,6 @@ module Interpreters
     def self.expand(vrp)
       if vrp.schedule_range_indices || vrp.schedule_range_date
 
-        if vrp.resolution_solver_parameter == -1
-          vrp.resolution_solver_parameter = nil
-          vrp.resolution_duration = 1
-        end
-
         epoch = Date.new(1970,1,1)
         @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - epoch).to_i
         real_schedule_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : (vrp.schedule_range_date[:end].to_date - epoch).to_i
