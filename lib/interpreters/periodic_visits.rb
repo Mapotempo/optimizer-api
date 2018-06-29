@@ -38,6 +38,7 @@ module Interpreters
       @min_nb_scheduled_in_one_day = nil
       @cost = 0
       @travel_time = 0
+      @same_point_day = false
     end
 
     def self.expand(vrp)
@@ -916,6 +917,22 @@ module Interpreters
             @candidate_service_ids.delete(point_to_add[:id])
             services[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
             positions_in_order.insert(point_to_add[:position], point_to_add[:position_in_order])
+
+            if !@common_day[services[point_to_add[:id]][:point_id]] && @same_point_day
+              @common_day[services[point_to_add[:id]][:point_id]] = day%7
+              @candidate_service_ids.select{ |id| services[id][:point_id] == services[point_to_add[:id]][:point_id] }.each{ |id|
+                insertion_costs = compute_insertion_costs(vehicle, day, current_route, positions_in_order, services, route_data, temporary_excluded_services)
+                point = insertion_costs.find{ |service| service[:id] == id }
+                if point
+                  best_index = find_best_index(current_route, services, point[:id], 0, route_data)
+                  insert_point_in_route(current_route, best_index)
+                  @candidate_service_ids.delete(point[:id])
+                  services[point[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+                  positions_in_order.insert(point[:position], point[:position_in_order])
+                end
+              }
+            end
+
             # if heuristic_period
             #   @services_of_period[heuristic_period].delete(point_to_add[:id])
             # end
@@ -1083,7 +1100,10 @@ module Interpreters
     def self.compute_insertion_costs(vehicle, day, route, positions_in_order, services, route_data, excluded)
       insertion_costs = []
 
-      @candidate_service_ids.select{ |service| !excluded.include?(service) && services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } && !services[service][:unavailable_days].include?(day) }.each{ |service_id|
+      @candidate_service_ids.select{ |service| !excluded.include?(service) &&
+                    services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } &&
+                    !services[service][:unavailable_days].include?(day) &&
+                    !@same_point_day || @common_day[services[service][:point_id]].nil? || (@common_day[services[service][:point_id]]) == day%7 }.each{ |service_id|
         period = services[service_id][:heuristic_period]
         n_visits = services[service_id][:nb_visits]
         latest_authorized_day = @schedule_end - (period || 0) * (n_visits - 1)
@@ -1239,7 +1259,7 @@ module Interpreters
                 recompute_times(vehicle, day, services, experiment)
                 if experiment[:current_route].last[:end] + matrix(@candidate_routes[vehicle][day], experiment[:current_route].last[:id], @candidate_routes[vehicle][day][:end_point_id] ) < @candidate_routes[vehicle][day][:tw_end]
                   @candidate_routes[vehicle][day][:current_route] = experiment[:current_route]
-                  @candidate_routes[vehicle][day][:current_route].last[:number_in_sequence] += nb_added
+                  @candidate_routes[vehicle][day][:current_route].find{ |act| act[:id] == service[:id] }[:number_in_sequence] += nb_added
                 else
                   @uninserted["#{service[:id]}_#{service[:number_in_sequence] + nb_added}/#{services[service[:id]][:nb_visits]}"] = {
                     original_service: service[:id]
@@ -1334,7 +1354,9 @@ module Interpreters
       starting_time = Time.now
 
       @limit = 1700
-      
+      @same_point_day = vrp.resolution_same_point_day
+      @common_day = {}
+
       # Solve TSP - Build a large Tour to define an arbitrary insertion order
       solve_tsp(vrp)
 
