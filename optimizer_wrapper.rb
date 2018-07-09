@@ -230,6 +230,9 @@ module OptimizerWrapper
           unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
           vrp.services.delete_if{ |service| unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
 
+          Interpreters::PeriodicVisits.initialize
+          vrp = Interpreters::PeriodicVisits.expand(vrp)
+
           if !(vrp.vehicles.select{ |v| v.overall_duration }.size>0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
             vrp_need_matrix = compute_vrp_need_matrix(vrp)
             vrp = compute_need_matrix(vrp, vrp_need_matrix)

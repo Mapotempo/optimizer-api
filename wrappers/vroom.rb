@@ -98,7 +98,7 @@ module Wrappers
       }.delete_if{ |k,v| !v } : nil] +
       tour.collect{ |i|
         point_index = vrp.services[i].activity.point[:matrix_index]
-        point = vrp.points[point_index]
+        point = vrp.points.select{ |point| point[:id] == vrp.services[i].activity.point[:id] }[0]
         service = vrp.services[i]
         current_activity = {
           service_id: service.id,

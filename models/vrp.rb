@@ -22,6 +22,7 @@ module Models
   class Vrp < Base
     field :name, default: nil
     field :preprocessing_max_split_size, default: nil
+    field :preprocessing_apply_hierarchical_split, default: false
     field :preprocessing_cluster_threshold, default: nil
     field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
@@ -111,6 +112,7 @@ module Models
     def preprocessing=(preprocessing)
       self.preprocessing_force_cluster = preprocessing[:force_cluster]
       self.preprocessing_max_split_size = preprocessing[:max_split_size]
+      self.preprocessing_apply_hierarchical_split = preprocessing[:apply_hierarchical_split]
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
