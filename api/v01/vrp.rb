@@ -355,6 +355,7 @@ module Api
         this.mutually_exclusive :range_indices, :range_date
         this.optional(:unavailable_indices, type: Array[Integer], desc: '[planning] Exclude some days indices from the resolution')
         this.optional(:unavailable_date, type: Array[Date], desc: '[planning] Exclude some days from the resolution')
+        this.optional(:allow_vehicle_change, type: Boolean, desc: '[planning] When service[:visits_number] is bigger than one, authorizes to affect visits to different vehicles')
         this.mutually_exclusive :unavailable_indices, :unavailable_date
       end
 

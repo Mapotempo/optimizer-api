@@ -49,6 +49,7 @@ module Models
     field :schedule_range_date, default: nil
     field :schedule_unavailable_indices, default: nil
     field :schedule_unavailable_date, default: nil
+    field :schedule_allow_vehicle_change, default: false
 
     validates_numericality_of :preprocessing_max_split_size, allow_nil: true
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
@@ -125,6 +126,7 @@ module Models
       self.schedule_range_date = schedule[:range_date]
       self.schedule_unavailable_indices = schedule[:unavailable_indices]
       self.schedule_unavailable_date = schedule[:unavailable_date]
+      self.schedule_allow_vehicle_change = schedule[:schedule_allow_vehicle_change]
     end
 
     def need_matrix_time?
