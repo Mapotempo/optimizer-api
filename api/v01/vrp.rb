@@ -316,7 +316,8 @@ module Api
 
       def self.vrp_request_preprocessing(this)
         this.optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
-        this.optional(:apply_hierarchical_split, type: Boolean, desc: 'Applies hierarchical split before solving')
+        this.optional(:partition_method, type: String, desc: 'Apply partition method before solving : balanced-kmeans, htree')
+        this.optional(:partition_metric, type: Symbol, desc: 'Define the parameter used for partitioning : duration, visits or a unit_id')
         this.optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
         this.optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
         this.optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')

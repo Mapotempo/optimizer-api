@@ -610,8 +610,7 @@ Preprocessing parameters will twist the problem in order to simplify or orient t
   "configuration": {
     "preprocessing": {
       "cluster_threshold": 5,
-      "prefer_short_segment": true,
-      "apply_hierarchical_split": true
+      "prefer_short_segment": true
     }
   }
 ```

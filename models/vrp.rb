@@ -22,7 +22,8 @@ module Models
   class Vrp < Base
     field :name, default: nil
     field :preprocessing_max_split_size, default: nil
-    field :preprocessing_apply_hierarchical_split, default: false
+    field :preprocessing_partition_method, default: nil
+    field :preprocessing_partition_metric, default: nil
     field :preprocessing_cluster_threshold, default: nil
     field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
@@ -62,6 +63,8 @@ module Models
     validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
     validates_numericality_of :resolution_vehicle_limit, allow_nil: true
     validates_numericality_of :resolution_solver_parameter, allow_nil: true
+
+    validates_inclusion_of :preprocessing_partition_method, allow_nil: true, in: %w[hierarchical_tree balanced_kmeans]
 
     has_many :matrices, class_name: 'Models::Matrix'
     has_many :points, class_name: 'Models::Point'
@@ -113,7 +116,8 @@ module Models
     def preprocessing=(preprocessing)
       self.preprocessing_force_cluster = preprocessing[:force_cluster]
       self.preprocessing_max_split_size = preprocessing[:max_split_size]
-      self.preprocessing_apply_hierarchical_split = preprocessing[:apply_hierarchical_split]
+      self.preprocessing_partition_method = preprocessing[:partition_method]
+      self.preprocessing_partition_metric = preprocessing[:partition_metric]
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]

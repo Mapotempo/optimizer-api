@@ -21,6 +21,7 @@ include Ai4r::Clusterers
 
 require './lib/interpreters/periodic_visits.rb'
 require './lib/clusterers/average_tree_linkage.rb'
+require './lib/clusterers/balanced_kmeans.rb'
 
 module Interpreters
   class SplitClustering
@@ -45,8 +46,17 @@ module Interpreters
     def self.split_clusters(services_vrps, job = nil, &block)
       all_vrps = services_vrps.collect{ |service_vrp|
         vrp = service_vrp[:vrp]
-        if vrp.preprocessing_apply_hierarchical_split
-          split_hierarchical(service_vrp, vrp) #give right nb of days : compute it in split_hierarchical ?
+        if vrp.preprocessing_partition_method
+          cut_symbol = vrp.preprocessing_partition_metric == :duration ||
+          vrp.preprocessing_partition_metric == :visits || vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric } ? vrp.preprocessing_partition_metric : :duration
+          case vrp.preprocessing_partition_method
+          when 'balanced_kmeans'
+           split_balanced_kmeans(service_vrp, vrp, cut_symbol)
+          when 'hierarchical_tree'
+            split_hierarchical(service_vrp, vrp, cut_symbol)
+          else
+            raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
+          end
         elsif vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 && vrp.shipments.size == 0 && service_vrp[:problem_size] > vrp.preprocessing_max_split_size &&
         vrp.services.size > vrp.preprocessing_max_split_size && !vrp.schedule_range_indices && !vrp.schedule_range_date
           points = vrp.services.collect.with_index{ |service, index|
@@ -164,6 +174,103 @@ module Interpreters
       end
       graph.delete(node)
       returned
+    end
+
+    def self.split_balanced_kmeans(service_vrp, vrp, cut_symbol = :duration)
+      nb_clusters = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty? && vehicle.sequence_timewindows.size || 7 }.inject(:+)
+
+      # Split using balanced kmeans
+      if vrp.services.all?{ |service| service[:activity] }
+        unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
+
+        cumulated_metrics = {}
+
+        unit_symbols.map{ |unit| cumulated_metrics[unit] = 0 }
+
+        data_items = []
+
+        vrp.points.each{ |point|
+          unit_quantities = {}
+          unit_symbols.each{ |unit| unit_quantities[unit] = 0 }
+          related_services = vrp.services.select{ |service| service[:activity][:point_id] == point[:id] }
+          related_services.each{ |service|
+            unit_quantities[:visits] += 1
+            cumulated_metrics[:visits] += 1
+            unit_quantities[:duration] += service[:activity][:duration] * service[:visits_number]
+            cumulated_metrics[:duration] += service[:activity][:duration] * service[:visits_number]
+
+            service.quantities.each{ |quantity|
+              unit_quantities[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
+              cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
+            }
+          }
+
+          next if related_services.empty?
+          data_items << [point.location.lat, point.location.lon, point.id, unit_quantities]
+        }
+
+        metric_limit = cumulated_metrics[cut_symbol] / nb_clusters
+
+        # Kmeans process
+        start_timer = Time.now
+        c = BalancedKmeans.new
+        c.max_iterations = 100
+        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit)
+        end_timer = Time.now
+        puts "Timer #{end_timer - start_timer}"
+
+        clusters = c.clusters
+        # each node corresponds to a cluster
+        vehicle_to_use = 0
+        vehicle_list = []
+        vrp.vehicles.each{ |vehicle|
+          if vehicle[:timewindow]
+            (0..6).each{ |day|
+              tw = Marshal::load(Marshal.dump(vehicle[:timewindow]))
+              tw[:day_index] = day
+              new_vehicle = Marshal::load(Marshal.dump(vehicle))
+              new_vehicle[:timewindow] = tw
+              vehicle_list << new_vehicle
+            }
+          elsif vehicle[:sequence_timewindows]
+            vehicle[:sequence_timewindows].each{ |tw|
+              new_vehicle = Marshal::load(Marshal.dump(vehicle))
+              new_vehicle[:sequence_timewindows] = [tw]
+              vehicle_list << new_vehicle
+            }
+          end
+        }
+        sub_pbs = []
+        points_seen = []
+        file = File.new("service_with_tags.csv", "w+")
+        file << "name,lat,lng,tags,duration \n"
+        clusters.delete([])
+        clusters.each_with_index{ |cluster, index|
+          services_list = []
+          cluster.data_items.each{ |data_item|
+            point_id = data_item[2]
+            vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
+              file << "#{service[:id]},#{service[:activity][:point][:location][:lat]},#{service[:activity][:point][:location][:lon]},#{index},#{service[:activity][:duration] * service[:visits_number]} \n"
+              points_seen << service[:id]
+              services_list << service[:id]
+            }
+          }
+          vrp_to_send = build_partial_vrp(vrp, services_list)
+          vrp_to_send[:vehicles] = [vehicle_list[vehicle_to_use]]
+          sub_pbs << {
+            service: service_vrp[:service],
+            vrp: vrp_to_send,
+            fleet_id: service_vrp[:fleet_id],
+            problem_size: service_vrp[:problem_size]
+          }
+          vehicle_to_use += 1
+        }
+        file.close
+        sub_pbs
+      else
+        puts "split hierarchical not available when services have activities"
+        [vrp]
+      end
     end
 
     def self.split_hierarchical(service_vrp, vrp, cut_symbol = :duration)
