@@ -473,13 +473,12 @@ module Wrappers
         end
       }
 
-      # check if one service has minimum lapse
+      # unconsistencies for planning
       if vrp.schedule_range_indices || vrp.schedule_range_date
         nb_days = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1 : (vrp.schedule_range_date[:end].to_date - vrp.schedule_range_date[:start].to_date).to_i + 1
-        vrp[:services].select{ |service| service[:minimum_lapse] && service[:visits_number] > 1 }.each{ |service|
-          found = service[:minimum_lapse] < nb_days
+        vrp.services.select{ |service| service[:visits_number] && service[:visits_number] > 1 && service[:minimum_lapse] && nb_days - (service[:visits_number] - 1) * service[:minimum_lapse] <= 0 }.each{ |service|
           if !found && unfeasible.none?{ |unfeas| unfeas[:original_service_id] == service[:id] }
-            add_unassigned(unfeasible, vrp, service, 'Minimum_lapse is too big')
+            add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
           end
         }
       end

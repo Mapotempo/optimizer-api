@@ -229,7 +229,6 @@ module Interpreters
           iteration += 1
         end
         end_timer = Time.now
-        puts "Timer #{end_timer - start_timer}"
 
         # each node corresponds to a cluster
         vehicle_to_use = 0
