@@ -361,15 +361,36 @@ module Wrappers
         (0..matrix.size-1).each{ |index|
           if (column_cpt[index] == matrix.size - 1 && column_cpt[index] > 0) || (line_cpt[index] == matrix.size - 1 && line_cpt[index] > 0)
             vrp[:services].select{ |s| s[:activity][:point][:matrix_index] == index }.each{ |s|
-              unfeasible[s[:id]] = { reason: "Unreachable" }
+              if unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
+                unfeasible << add_unassigned(vrp, s, "Unreachable")
+              end
             }
           end
         }
       end
     end
 
+    def add_unassigned(vrp, service, reason)
+      {
+        service_id: service[:id],
+        point_id: service[:activity] ? service[:activity][:point_id] : nil,
+        detail:{
+          lat: service[:activity] ? service[:activity][:point][:lat] : nil,
+          lon: service[:activity] ? service[:activity][:point][:lon] : nil,
+          setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
+          duration: service[:activity] ? service[:activity][:duration] : nil,
+          timewindows: service[:activity][:timewindows] && !service[:activity][:timewindows].empty? ? [{
+            start: service[:activity][:timewindows][0][:start],
+            end: service[:activity][:timewindows][0][:start],
+          }] : [],
+          quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit], value: qte[:value] } } : nil
+        },
+        reason: reason
+      }
+    end
+
     def detect_unfeasible_services(vrp)
-      unfeasible = {}
+      unfeasible = []
 
       if !vrp[:vehicles] || !vrp[:services]
         return unfeasible
@@ -397,9 +418,9 @@ module Wrappers
         vrp.services.each{ |s|
           s.quantities.select{ |q|
             q.value && !unlimited[q.unit_id] && capacity[q.unit_id] < q.value }.each{ |q|
-            if !(unfeasible.key?(s.id))
-              unfeasible[s.id] = { reason: "Unsufficient #{q[:unit_id]} capacity in vehicles" }
-            end
+              if unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
+                unfeasible << add_unassigned(vrp, s, "Unsufficient #{q[:unit_id]} capacity in vehicles")
+              end
           }
         }
       end
@@ -423,8 +444,8 @@ module Wrappers
           found = find_vehicle(vrp, s, nil, nil, nil)
         end
 
-        if !found
-          unfeasible[s[:id]] = { reason: "No vehicle with compatible timewindow" }
+        if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
+          unfeasible << add_unassigned(vrp, s, "No vehicle with compatible timewindow")
         end
       }
 
@@ -433,8 +454,8 @@ module Wrappers
         nb_days = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1 : (vrp.schedule_range_date[:end].to_date - vrp.schedule_range_date[:start].to_date).to_i + 1
         vrp[:services].select{ |s| s[:minimum_lapse] && s[:visits_number] > 1 }.each{ |s|
           found = !(s[:minimum_lapse] >= nb_days)
-          if !found
-            unfeasible[s[:id]] = { reason: "Minimum_lapse is too big" }
+          if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
+            unfeasible << add_unassigned(vrp, s, "Minimum_lapse is too big")
           end
         }
       end

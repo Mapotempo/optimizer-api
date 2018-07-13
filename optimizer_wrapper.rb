@@ -121,8 +121,8 @@ module OptimizerWrapper
       end
       {
         service: services[:services][:vrp].find{ |s|
-          @unfeasible_services =  config[:services][s].detect_unfeasible_services(vrp)
-          vrp_element.services.delete_if{ |service| @unfeasible_services.key?(service.id)}
+          @unfeasible_services = config[:services][s].detect_unfeasible_services(vrp)
+          vrp_element.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:service_id] == service.id }}
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
           if inapplicable.empty?
             puts "Select service #{s}"
@@ -202,9 +202,21 @@ module OptimizerWrapper
             solvers: [service.to_s],
             iterations: nil,
             routes: [],
-            unassigned: vrp.services.collect{ |service|
+            unassigned: vrp.services.collect{ |service_|
               {
-                service: service[:id],
+                service_id: service_[:id],
+                point_id: service_[:activity] ? service_[:activity][:point_id] : nil,
+                detail:{
+                  lat: service_[:activity] ? service_[:activity][:point][:lat] : nil,
+                  lon: service_[:activity] ? service_[:activity][:point][:lon] : nil,
+                  setup_duration: service_[:activity] ? service_[:activity][:setup_duration] : nil,
+                  duration: service_[:activity] ? service_[:activity][:duration] : nil,
+                  timewindows: service_[:activity][:timewindows] && !service_[:activity][:timewindows].empty? ? [{
+                    start: service_[:activity][:timewindows][0][:start],
+                    end: service_[:activity][:timewindows][0][:start],
+                  }] : [],
+                  quantities: service_[:activity] ? service_[:quantities] : nil ,
+                },
                 reason: "No vehicle available for this service (split)"
               }
             },
@@ -289,22 +301,17 @@ module OptimizerWrapper
           }
         }
       end
+
       cluster_result
     }
+    real_result[:unassigned] = real_result[:unassigned] ? real_result[:unassigned] + @unfeasible_services.to_a : @unfeasible_services
+
     if job
       p = Result.get(job) || {}
       p['result'] = real_result
     end
     Result.set(job, p) if job
 
-    if !@unfeasible_services.empty?
-        @unfeasible_services.keys.each{ |service|
-          real_result[:unassigned] << {
-            service: service,
-            reason: @unfeasible_services[service][:reason]
-          }
-        }
-    end
     real_result
   rescue Resque::Plugins::Status::Killed
     puts 'Job Killed'
