@@ -214,12 +214,23 @@ module Interpreters
         # Kmeans process
         start_timer = Time.now
         c = BalancedKmeans.new
-        c.max_iterations = 100
-        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit)
+        c.max_iterations = 200
+
+        biggest_cluster_size = 0
+        clusters = []
+        iteration = 0
+        while biggest_cluster_size < nb_clusters && iteration < 30
+          c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit)
+          c.clusters.delete([])
+          if c.clusters.size > biggest_cluster_size
+            biggest_cluster_size = c.clusters.size
+            clusters = c.clusters
+          end
+          iteration += 1
+        end
         end_timer = Time.now
         puts "Timer #{end_timer - start_timer}"
 
-        clusters = c.clusters
         # each node corresponds to a cluster
         vehicle_to_use = 0
         vehicle_list = []
