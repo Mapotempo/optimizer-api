@@ -229,6 +229,7 @@ module OptimizerWrapper
             vrp = compute_need_matrix(vrp, vrp_need_matrix)
           end
           @unfeasible_services = config[:services][service].check_distances(vrp, @unfeasible_services)
+          vrp.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:service_id] == service.id }}
 
           File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
