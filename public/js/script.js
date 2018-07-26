@@ -225,6 +225,7 @@ $(document).ready(function() {
           cluster_threshold: 0
         },
         resolution: {
+          solver_parameter: parseInt($('#optim-solver-parameter').val()),
           duration: duration($('#optim-duration').val()) * 1000 || undefined,
           iterations: parseInt($('#optim-iterations').val()) || undefined,
           iterations_without_improvment: parseInt($('#optim-iterations-without-improvment').val()) || undefined

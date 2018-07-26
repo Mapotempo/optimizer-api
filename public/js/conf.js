@@ -15,6 +15,7 @@ var i18n = {
     'optim-duration-label': 'Durée maximale :',
     'optim-iterations-label': 'Nombre maximum d\'itérations :',
     'optim-iterations-without-improvment-label': 'Itérations sans amélioration (arrêt automatique) :',
+    'optim-solver-parameter-label': 'Méthode de résolution :',
     'send-files': 'Envoyer',
     'send-csvs': 'Envoyer',
     'csv-points-label': 'Votre fichier points csv :',
