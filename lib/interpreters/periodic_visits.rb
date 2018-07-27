@@ -799,38 +799,49 @@ module Interpreters
     end
 
     def self.solve_tsp(vrp)
-      vroom = OptimizerWrapper::VROOM
-      problem = {
-        matrices: vrp[:matrices],
-        points: vrp[:points].collect{ |pt|
-          {
-            id: pt.id,
-            matrix_index: pt.matrix_index
-          }
-        },
-        vehicles: [{
-          id: vrp[:vehicles][0][:id],
-          start_point_id: vrp[:vehicles][0][:start_point_id],
-          matrix_id: vrp[:vehicles][0][:matrix_id]
-        }],
-        services: vrp.services.collect{ |s|
-          {
-            id: s[:id],
-            activity: {
-              point_id: s[:activity][:point_id],
-              duration: s[:activity][:duration]
+      if vrp.points.size == 1
+        @order = [vrp.points[0][:location][:id]]
+      else
+        vroom = OptimizerWrapper::VROOM
+
+        # creating services to use
+        services = []
+        vrp.points.each{ |pt|
+          service = vrp.services.find{ |service| service[:activity][:point_id] == pt[:id] }
+          if service
+            services << {
+              id: service[:id],
+              activity: {
+                point_id: service[:activity][:point_id],
+                duration: service[:activity][:duration]
+              }
             }
-          }
+          end
         }
-      }
-      tsp = Models::Vrp.create(problem)
-      progress = 0
-      result = vroom.solve(tsp){ |avancement, total|
-        progress += 1
-      }
-      @order = result[:routes][0][:activities].collect{ |stop|
-        (stop[:service_id] ? stop[:service_id] : (stop[:shipment_id] ? stop[:shipment_id] : stop[:point_id]))
-      }
+        problem = {
+          matrices: vrp[:matrices],
+          points: vrp[:points].collect{ |pt|
+            {
+              id: pt.id,
+              matrix_index: pt.matrix_index
+            }
+          },
+          vehicles: [{
+            id: vrp[:vehicles][0][:id],
+            start_point_id: vrp[:vehicles][0][:start_point_id],
+            matrix_id: vrp[:vehicles][0][:matrix_id]
+          }],
+          services: services
+        }
+        tsp = Models::Vrp.create(problem)
+        progress = 0
+        result = vroom.solve(tsp){ |avancement, total|
+          progress += 1
+        }
+        @order = result[:routes][0][:activities].collect{ |stop| 
+          vrp.points.find{ |pt| pt[:id] == stop[:point_id]}[:location][:id]
+        }
+      end
     end
 
     def self.compute_positions(vehicle, day)
@@ -839,8 +850,8 @@ module Interpreters
       last_inserted = 0
 
       route[:current_route].each{ |point_seen|
-        real_position = @order.index(point_seen[:id])
-        positions << (last_inserted > -1 && real_position >= last_inserted ? @order.index(point_seen[:id]) : -1 )
+        real_position = @order.index(point_seen[:point_id])
+        positions << (last_inserted > -1 && real_position >= last_inserted ? @order.index(point_seen[:point_id]) : -1 )
         last_inserted = positions.last
       }
 
@@ -1125,7 +1136,7 @@ module Interpreters
         latest_authorized_day = @schedule_end - (period || 0) * (n_visits - 1)
         # Verify if the potential nexts visits days are still available
         if period.nil? || day <= latest_authorized_day && (day+period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil?
-          s_position_in_order = @order.index(service_id)
+          s_position_in_order = @order.index(services[service_id][:point_id])
           first_bigger_position_in_sol = positions_in_order.select{ |pos| pos > s_position_in_order }.min
           insertion_index = positions_in_order.index(first_bigger_position_in_sol).nil? ? route.size : positions_in_order.index(first_bigger_position_in_sol)
 
