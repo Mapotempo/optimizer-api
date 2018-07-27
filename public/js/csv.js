@@ -24,7 +24,7 @@ $(document).ready(function() {
     if (filesConfigs.length === 1) {
       $('#send-csvs').attr('disabled', true);
 
-      var problem_data = new FormData( this );
+      var problem_data = new FormData(this);
 
       $.ajax({
         url: '/0.1/vrp/submit.json?api_key=' + getParams()["api_key"],

@@ -48,14 +48,14 @@ $(document).ready(function() {
     },
     ajaxGetJobs: function(timeinterval) {
       var ajaxload = function() {
-        $.ajax( {
+        $.ajax({
           url: '/0.1/vrp/jobs',
           type: 'get',
           dataType: 'json',
           data: { api_key: getParams()['api_key'] },
         }).done(function(data) {
           jobsManager.shouldUpdate(data);
-        }).fail(function(jqXHR, textStatus, errorThrown){
+        }).fail(function(jqXHR, textStatus, errorThrown) {
           clearInterval(window.AjaxGetRequestInterval);
           if (jqXHR.status == 401) {
             $('#optim-list-status').prepend('<div class="error">' + i18n.unauthorizedError + '</div>');
@@ -66,13 +66,12 @@ $(document).ready(function() {
       if (timeinterval) {
         ajaxload();
         window.AjaxGetRequestInterval = setInterval(ajaxload, 5000);
-      }
-      else{
+      } else {
         ajaxload();
       }
     },
-    ajaxDeleteJob:function(uuid) {
-      $.ajax( {
+    ajaxDeleteJob: function(uuid) {
+      $.ajax({
         url: '/0.1/vrp/jobs/' + uuid + '.json',
         type: 'delete',
         dataType: 'json',
@@ -194,7 +193,7 @@ $(document).ready(function() {
   $('#file-vehicles-help .column-value').append('<td>0.9 <i>(défaut : 1.0)</i></td>');
 
   var filterInt = function(value) {
-    if (/^(\-|\+)?([0-9]+|Infinity)$/.test(value))
+    if (/^(-|\+)?([0-9]+|Infinity)$/.test(value))
       return Number(value);
     return NaN;
   };
@@ -349,7 +348,7 @@ $(document).ready(function() {
           cost_waiting_time_multiplier: vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'] && vehicle[mapping.cost_waiting_time_multiplier || 'cost_waiting_time_multiplier'].replace(',', '.'),
           cost_setup_time_multiplier: vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'] && vehicle[mapping.cost_setup_time_multiplier || 'cost_setup_time_multiplier'].replace(',', '.'),
           coef_setup: vehicle[mapping.coef_setup || 'coef_setup'] && vehicle[mapping.coef_setup || 'coef_setup'].replace(',', '.'),
-          capacities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
+          capacities: $.map(quantities.filter(function(n) {return n != undefined;}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key});}),
           skills: $.map(vehicle, function(val, key) {
             if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val && Array(val.split(','));
           }).filter(function(el) {
@@ -396,7 +395,7 @@ $(document).ready(function() {
               setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
               duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
             },
-            quantities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
+            quantities: $.map(quantities.filter(function(n) {return n != undefined;}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key});}),
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
             }).join(',').split(',').filter(function(el) {
@@ -423,7 +422,7 @@ $(document).ready(function() {
               setup_duration: duration(customer[mapping.pickup_setup || 'pickup_setup']) || null,
               duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
             },
-            quantities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
+            quantities: $.map(quantities.filter(function(n) {return n != undefined;}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key});}),
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
             }).join(',').split(',').filter(function(el) {
@@ -450,7 +449,7 @@ $(document).ready(function() {
               setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
               duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
             },
-            quantities: $.map(quantities.filter(function(n){return n != undefined}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key})}),
+            quantities: $.map(quantities.filter(function(n) {return n != undefined;}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key});}),
             skills: $.map(customer, function(val, key) {
               if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
             }).join(',').split(',').filter(function(el) {
