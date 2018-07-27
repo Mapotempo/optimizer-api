@@ -60,6 +60,10 @@ module Wrappers
       vrp.routes += [order_route]
     }
 
+    vrp.vehicles.sort!{ |a, b|
+      a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+    }
+
     problem_units = vrp.units.collect{ |unit|
         {
           unit_id: unit.id,
@@ -244,9 +248,7 @@ module Wrappers
           value: matrix[:value] ? matrix[:value].flatten : []
         )
       }
-      vehicles = vrp.vehicles.sort!{ |a, b|
-        a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
-      }.collect{ |vehicle|
+      vehicles = vrp.vehicles.collect{ |vehicle|
         OrtoolsVrp::Vehicle.new(
           id: vehicle.id,
           cost_fixed: vehicle.cost_fixed,
