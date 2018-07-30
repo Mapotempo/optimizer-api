@@ -121,8 +121,6 @@ module OptimizerWrapper
       end
       {
         service: services[:services][:vrp].find{ |s|
-          @unfeasible_services = config[:services][s].detect_unfeasible_services(vrp)
-          vrp_element.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:service_id] == service.id }}
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
           if inapplicable.empty?
             puts "Select service #{s}"
@@ -166,6 +164,7 @@ module OptimizerWrapper
   end
 
   def self.solve(services_vrps, services_fleets = [], job = nil, &block)
+    @unfeasible_services = []
 
     real_result = join_vrps(services_vrps, block) { |service, vrp, fleet_id, problem_size, block|
       cluster_result = nil
@@ -224,11 +223,15 @@ module OptimizerWrapper
             total_distance: nil
           }
         else
+          unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
+          vrp.services.delete_if{ |service| unfeasible_services.any?{ |sub_service| sub_service[:service_id] == service.id }}
+
           if !(vrp.vehicles.select{ |v| v.overall_duration }.size>0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
             vrp_need_matrix = compute_vrp_need_matrix(vrp)
             vrp = compute_need_matrix(vrp, vrp_need_matrix)
           end
-          @unfeasible_services = config[:services][service].check_distances(vrp, @unfeasible_services)
+          unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
+          @unfeasible_services += unfeasible_services
           vrp.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:service_id] == service.id }}
 
           File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
@@ -305,7 +308,7 @@ module OptimizerWrapper
 
       cluster_result
     }
-    real_result[:unassigned] = real_result[:unassigned] ? real_result[:unassigned] + @unfeasible_services.to_a : @unfeasible_services
+    real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
 
     if job
       p = Result.get(job) || {}
@@ -475,7 +478,11 @@ module OptimizerWrapper
         ["timewindow_start_#{index}", "timewindow_end_#{index}"]
       }.flatten
       csv = CSV.generate{ |out_csv|
-        out_csv << (header + quantities_header + timewindows_header)
+        if solution['unassigned'].size > 0
+          out_csv << (header + quantities_header + timewindows_header + ['unassigned_reason'])
+        else
+          out_csv << (header + quantities_header + timewindows_header )
+        end
         solution['routes'].each{ |route|
           route['activities'].each{ |activity|
             common = [
@@ -530,15 +537,13 @@ module OptimizerWrapper
               nil
             end
           }
-          out_csv << (common + quantities + timewindows)
+          out_csv << (common + quantities + timewindows + [activity['reason'].to_s])
         }
       }
     end
   end
 
   private
-
-  @unfeasible_services = {}
 
   def self.adjust_vehicles_duration(vrp)
       vrp.vehicles.select{ |v| v.duration? && v.rests.size > 0 }.each{ |v|

@@ -2241,7 +2241,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 2, result[:unassigned].size
   end
 
   def test_assert_inapplicable_for_vroom_if_vehicle_distance
