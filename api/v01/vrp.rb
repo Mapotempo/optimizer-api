@@ -67,6 +67,11 @@ module Api
         # this.at_least_one_of :start, :end
       end
 
+      def self.vrp_request_indice_range(this)
+        this.optional(:start, type: Integer, desc: '')
+        this.optional(:end, type: Integer, desc: '')
+      end
+
       def self.vrp_request_date_range(this)
         this.optional(:start, type: Date, desc: '')
         this.optional(:end, type: Date, desc: '')
@@ -334,7 +339,9 @@ module Api
       end
 
       def self.vrp_request_schedule(this)
-        this.optional(:range_indices, type: Hash, desc: '[planning] Day indices within the plan has to be build')
+        this.optional(:range_indices, type: Hash, desc: '[planning] Day indices within the plan has to be build') do
+          Vrp.vrp_request_indice_range(self)
+        end
         this.optional(:range_date, type: Hash, desc: '[planning] Define the total period to consider') do
           Vrp.vrp_request_date_range(self)
         end
