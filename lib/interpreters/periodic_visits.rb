@@ -26,6 +26,10 @@ module Interpreters
       @indices = {}
       @order = []
       @candidate_service_ids = []
+      @to_plan_service_ids = []
+      @same_located = {}
+      @point_available_days = {}
+      @services_unlocked_by = {} # in the case of same_point_day, service with higher heuristic period unlocks others
       @temporary_planning = {}
       @services_of_period = {}
       @problem_vehicles = {}
@@ -858,7 +862,9 @@ module Interpreters
       @candidate_routes[vehicle][day][:positions_in_order] = positions
     end
 
-    def self.insert_point_in_route(current_route, point_to_add)
+    def self.insert_point_in_route(route_data, point_to_add, day, services)
+      current_route = route_data[:current_route]
+      @candidate_service_ids.delete(point_to_add[:id])
       first_at_this_point = current_route.find{ |step| step[:point_id] == point_to_add[:point] }
 
       current_route.insert(point_to_add[:position], {
@@ -875,11 +881,28 @@ module Interpreters
         current_route[point_to_add[:position]+1][:start] = point_to_add[:next_start_time]
         current_route[point_to_add[:position]+1][:end] = point_to_add[:next_final_time]
         current_route[point_to_add[:position]+1][:max_shift] = current_route[point_to_add[:position]+1][:max_shift] ? current_route[point_to_add[:position]+1][:max_shift] - point_to_add[:shift] : nil
-        (point_to_add[:position]+2..current_route.size-1).each{ |point|
-          current_route[point][:start] += point_to_add[:shift]
-          current_route[point][:end] += point_to_add[:shift]
-          current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - point_to_add[:shift] : nil
-        }
+        if !point_to_add[:shift].zero?
+          shift = point_to_add[:shift]
+          (point_to_add[:position]+2..current_route.size-1).each{ |point|
+            if shift > 0
+              initial_shift_with_previous = current_route[point][:start] - (current_route[point-1][:end] - shift )
+              shift = [shift - initial_shift_with_previous, 0].max
+              current_route[point][:start] += shift
+              current_route[point][:end] += shift
+              current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
+            elsif shift < 0
+              puts "shift < 0, not treated"
+            # cas qui n'a pas eu lieu dans les tests pour l'instant
+            #   byebug
+            #   new_potential_start = current_route[point][:start] + shift
+            #   soonest_authorized = services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day%7 && current_route[point][:start] }[:start] - matrix(route_data, current_route[point-1][:id], current_route[point][:id])
+            #   shift = [shift + soonest_authorized - new_potential_start, 0].min
+            #   current_route[point][:start] += shift
+            #   current_route[point][:end] += shift
+            #   current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
+            end
+          }
+        end
       end
 
       # assign setup to the first service at a point
@@ -909,7 +932,7 @@ module Interpreters
       temporary_excluded_services = []
 
       while service_to_insert
-        insertion_costs =  compute_insertion_costs(vehicle, day, current_route, positions_in_order, services, route_data, temporary_excluded_services)
+        insertion_costs = compute_insertion_costs(vehicle, day, current_route, positions_in_order, services, route_data, temporary_excluded_services)
         if !insertion_costs.empty?
           # there are services we can add
           point_to_add = insertion_costs.sort_by{ |s| s[:additional_route_time]/services[s[:id]][:nb_visits]**2 }[0] # au carré?
@@ -933,28 +956,18 @@ module Interpreters
           #   temporary_excluded_services << point_to_add[:id]
           # else
             best_index = find_best_index(current_route, services, point_to_add[:id], 0, route_data)
-            insert_point_in_route(current_route, best_index)
-            @candidate_service_ids.delete(point_to_add[:id])
+
+            if @same_point_day
+              best_index[:end] = best_index[:end] - services[best_index[:id]][:group_duration] + services[best_index[:id]][:duration]
+            end
+
+            insert_point_in_route(route_data, best_index, day, services)
+            @to_plan_service_ids.delete(point_to_add[:id])
             services[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
             if point_to_add[:position] == best_index[:position]
               positions_in_order.insert(point_to_add[:position], point_to_add[:position_in_order])
             else
               positions_in_order.insert(best_index[:position], best_index[:position_in_order])
-            end
-
-            if !@common_day[services[point_to_add[:id]][:point_id]] && @same_point_day
-              @common_day[services[point_to_add[:id]][:point_id]] = day%7
-              @candidate_service_ids.select{ |id| services[id][:point_id] == services[point_to_add[:id]][:point_id] }.each{ |id|
-                insertion_costs = compute_insertion_costs(vehicle, day, current_route, positions_in_order, services, route_data, temporary_excluded_services)
-                point = insertion_costs.find{ |service| service[:id] == id }
-                if point
-                  best_index = find_best_index(current_route, services, point[:id], 0, route_data)
-                  insert_point_in_route(current_route, best_index)
-                  @candidate_service_ids.delete(point[:id])
-                  services[point[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
-                  positions_in_order.insert(point[:position], point[:position_in_order])
-                end
-              }
             end
 
             # if heuristic_period
@@ -987,14 +1000,17 @@ module Interpreters
       end
     end
 
-    def self.find_timewindows(insertion_index, previous_service, previous_service_end, inserted_service, inserted_service_info, route_data)
+    def self.find_timewindows(insertion_index, previous_service, previous_service_end, inserted_service, inserted_service_info, route_data, duration, filling_candidate_route = false)
       list = []
       route_time = (insertion_index == 0 ? matrix(route_data, route_data[:start_point_id], inserted_service) : matrix(route_data, previous_service, inserted_service))
       setup_duration = route_data[:current_route].find{ |step| step[:point_id] == inserted_service_info[:point_id] }.nil? ? inserted_service_info[:setup_duration] : 0
+      if filling_candidate_route
+        duration = inserted_service_info[:duration]
+      end
 
       if inserted_service_info[:tw].nil? || inserted_service_info[:tw].empty?
         start = insertion_index == 0 ? route_data[:tw_start] : previous_service_end
-        final = start + route_time + setup_duration + inserted_service_info[:duration]
+        final = start + route_time + setup_duration + duration
         list << {
           start_time: start,
           final_time: final,
@@ -1005,7 +1021,7 @@ module Interpreters
       else
         inserted_service_info[:tw].each{ |tw|
           start_time = (insertion_index == 0 ? [route_data[:tw_start], tw[:start] - route_time].max : [previous_service_end, tw[:start] - route_time].max)
-          final_time = start_time + route_time + setup_duration + inserted_service_info[:duration]
+          final_time = start_time + route_time + setup_duration + duration
 
           if start_time <= tw[:end] && (tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index] % 7 )
             list << {
@@ -1030,19 +1046,91 @@ module Interpreters
         dist_to_next = matrix(route_data, service_inserted, next_service_id)
         next_start, next_end = compute_tw_for_next(inserted_final_time, services_info[next_service_id], route[next_service][:considered_setup_duration], dist_to_next)
         shift = next_end - route[next_service][:end]
+
         [next_start, next_end, shift]
       else
         [nil, nil, inserted_final_time - route.last[:end]]
       end
     end
 
-    def self.find_best_index(route, services, service, current_indice, route_data)
+    def self.compute_value_at_position(route_data, services, service, position, possibles, duration, position_in_order, filling_candidate_route = false)
+      value_inserted = false
+
+      route = route_data[:current_route]
+      previous_service = (position == 0 ? route_data[:start_point_id] : route[position-1][:id])
+      previous_service_end = (position == 0 ? nil : route[position - 1][:end])
+      list = find_timewindows(position, previous_service, previous_service_end, service, services[service], route_data, duration, filling_candidate_route)
+      list.each{ |current_tw|
+        start_time = current_tw[:start_time]
+        arrival_time = start_time + matrix(route_data, previous_service, service)
+        final_time = current_tw[:final_time]
+        next_id = route[position] ? route[position][:id] : nil
+        next_start, next_end, shift = compute_shift(route_data, route, services, service, final_time, position, next_id)
+        time_back_to_depot = (position == route.size ? final_time + matrix(route_data, service, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + shift )
+        acceptable_shift = (position < route.size ? route[position][:max_shift].nil? || shift < route[position][:max_shift] : true)
+        acceptable_shift_for_itself = (current_tw[:end_tw] ? arrival_time <= current_tw[:end_tw] : true)
+        acceptable_shift_for_group = true
+        if @same_point_day && !filling_candidate_route
+          # all services start on time
+          additional_duration = services[service][:duration]
+          @same_located[service].each{ |id|
+            acceptable_shift_for_group = current_tw[:max_shift] - additional_duration >= 0
+            additional_duration += services[id][:duration]
+          }
+        end
+        if acceptable_shift && time_back_to_depot <= route_data[:tw_end] && acceptable_shift_for_itself && acceptable_shift_for_group
+          value_inserted = true
+          possibles << {
+            id: service,
+            point: services[service][:point_id],
+            shift: shift,
+            start: start_time,
+            end: final_time,
+            position: position,
+            position_in_order: position_in_order,
+            considered_setup_duration: current_tw[:setup_duration],
+            next_start_time: next_start,
+            next_final_time: next_end,
+            potential_shift: current_tw[:max_shift],
+            additional_route_time: [0, shift - duration].max,
+            dist_from_current_route: (0..route.size-1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min,
+            last_service_end: (position == route.size ? final_time : route.last[:end] + shift)
+          }
+        end
+      }
+      [possibles, value_inserted]
+    end
+
+    def self.find_best_index_to_adjust(route_data, services, service)
+      # only called if when adjusting candidate routes, route can not be empty
+      route = route_data[:current_route]
       possibles = []
-      service_duration = services[service][:duration]
+
+      if route.find_index{ |stop| stop[:point_id] == services[service][:point_id] }
+        same_point_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == services[service][:point_id] }
+        possibles, value_inserted = compute_value_at_position(route_data, services, service, same_point_index, possibles, services[service][:duration], -1, true)
+      else
+        previous_point = route_data[:start_point_id]
+        (0..route.size).each{ |position|
+          if position == route.size || route[position][:point_id] != previous_point
+            possibles, value_inserted = compute_value_at_position(route_data, services, service, position, possibles, services[service][:duration], -1, true)
+          end
+          if position < route.size
+            previous_point = route[position][:point_id]
+          end
+        }
+      end
+
+      possibles.sort_by!{ |possible_position| possible_position[:last_service_end] }[0]
+    end
+
+    def self.find_best_index(route, services, service, current_indice, route_data) # remove route from arguments.
+      route = route_data[:current_route]
+      possibles = []
+      duration = @same_point_day ? services[service][:group_duration] : services[service][:duration] # this should always work
 
       if route.empty?
-        # this case is only usefull if we always look for best position instead of looking at the order
-        tw = find_timewindows(0, nil, nil, service, services[service], route_data)[0]
+        tw = find_timewindows(0, nil, nil, service, services[service], route_data, duration)[0]
         if tw[:final_time] + matrix(route_data, service, route_data[:end_point_id]) <= route_data[:tw_end]
           possibles << {
             id: service,
@@ -1060,40 +1148,18 @@ module Interpreters
             dist_from_current_route: (0..route.size-1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min
           }
         end
+      elsif route.find_index{ |stop| stop[:point_id] == services[service][:point_id] }
+        same_point_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == services[service][:point_id] }
+        possibles, value_inserted = compute_value_at_position(route_data, services, service, same_point_index, possibles, duration, -1, false)
       else
+        previous_point = (current_indice.zero? ? route_data[:start_point_id] : route[current_indice - 1][:point_id] )
         (current_indice..route.size).each{ |position|
-          previous_service = (position == 0 ? route_data[:start_point_id] : route[position-1][:id])
-          previous_service_end = (position == 0 ? nil : route[position-1][:end])
-          list = find_timewindows(position, previous_service, previous_service_end, service, services[service], route_data)
-          list.each{ |current_tw|
-            start_time = current_tw[:start_time]
-            arrival_time = start_time + matrix(route_data, previous_service, service)
-            final_time = current_tw[:final_time]
-            next_id = route[position] ? route[position][:id] : nil
-            next_start, next_end, shift = compute_shift(route_data, route, services, service, final_time, position, next_id)
-
-            time_back_to_depot = (position == route.size ? final_time + matrix(route_data, service, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + shift )
-            acceptable_shift = (position < route.size ? route[position][:max_shift].nil? || shift < route[position][:max_shift] : true)
-            acceptable_shift_for_itself = (current_tw[:end_tw] ? arrival_time <= current_tw[:end_tw] : true)
-            if acceptable_shift && time_back_to_depot <= route_data[:tw_end] && acceptable_shift_for_itself
-              possibles << {
-                id: service,
-                point: services[service][:point_id],
-                shift: shift,
-                start: start_time,
-                end: final_time,
-                position: position,
-                position_in_order: -1, # to not consider this service, which does not respect order, to compute first_bigger_position
-                considered_setup_duration: current_tw[:setup_duration],
-                next_start_time: next_start,
-                next_final_time: next_end,
-                potential_shift: current_tw[:max_shift],
-                additional_route_time: [0, shift - services[service][:duration]].max,
-                dist_from_current_route: (0..route.size-1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min,
-                last_service_end: (position == route.size ? final_time : route.last[:end] + shift)
-              }
-            end
-          }
+          if position == route.size || route[position][:point_id] != previous_point
+            possibles, value_inserted = compute_value_at_position(route_data, services, service, position, possibles, duration, -1, false)
+          end
+          if position < route.size
+            previous_point = route[position][:point_id]
+          end
         }
       end
 
@@ -1127,66 +1193,32 @@ module Interpreters
     def self.compute_insertion_costs(vehicle, day, route, positions_in_order, services, route_data, excluded)
       insertion_costs = []
 
-      @candidate_service_ids.select{ |service| !excluded.include?(service) &&
-                    services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } &&
-                    !services[service][:unavailable_days].include?(day) &&
-                    !@same_point_day || @common_day[services[service][:point_id]].nil? || (@common_day[services[service][:point_id]]) == day%7 }.each{ |service_id|
+      @to_plan_service_ids.select{ |service| !excluded.include?(service) &&
+                    (@same_point_day && services[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } || !@same_point_day && services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) &&
+                    (!@same_point_day || @point_available_days[services[service][:point_id]].empty? || @point_available_days[services[service][:point_id]].include?(day)) &&
+                    !services[service][:unavailable_days].include?(day) }.each{ |service_id|
         period = services[service_id][:heuristic_period]
         n_visits = services[service_id][:nb_visits]
+        duration = @same_point_day ? services[service_id][:group_duration] : services[service_id][:duration]
         latest_authorized_day = @schedule_end - (period || 0) * (n_visits - 1)
-        # Verify if the potential nexts visits days are still available
-        if period.nil? || day <= latest_authorized_day && (day+period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil?
+
+        if period.nil? || day <= latest_authorized_day && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil?
           s_position_in_order = @order.index(services[service_id][:point_id])
           first_bigger_position_in_sol = positions_in_order.select{ |pos| pos > s_position_in_order }.min
           insertion_index = positions_in_order.index(first_bigger_position_in_sol).nil? ? route.size : positions_in_order.index(first_bigger_position_in_sol)
 
-          previous_service = insertion_index - 1 if insertion_index > 0
-          previous_service_id = (previous_service ? route[previous_service][:id] : nil )
-          previous_service_end = (previous_service ? route[previous_service][:end] : nil)
-          next_service = insertion_index if !route.empty? && insertion_index < route.size
-          next_service_id = (next_service.nil? ? nil : route[next_service][:id])
+          if route.find{ |stop| stop[:point_id] == services[service_id][:point_id] }
+            insertion_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == services[service_id][:point_id] }
+          end
 
-          potential_tw = find_timewindows(insertion_index, previous_service_id, previous_service_end, service_id, services[service_id], route_data)
+          insertion_costs, index_accepted = compute_value_at_position(route_data, services, service_id, insertion_index, insertion_costs, duration, s_position_in_order, false)
 
-          if !potential_tw.empty?
-            start_time = potential_tw[0][:start_time]
-            arrival_time = start_time + (previous_service_id ? matrix(route_data, previous_service_id, service_id) : matrix(route_data, route_data[:start_point_id], service_id))
-            final_time = potential_tw[0][:final_time]
-            max_shift = potential_tw[0][:max_shift]
-
-            # if we insert at this postion, what would be the planning shift :
-            next_start, next_end, shift = compute_shift(route_data, route, services, service_id, final_time, next_service, next_service_id)
-            acceptable_shift = (next_service ? route[next_service][:max_shift].nil? || shift < route[next_service][:max_shift] : true)
-            acceptable_shift_for_itself = (potential_tw[0][:end_tw] ? arrival_time <= potential_tw[0][:end_tw] : true)
-
-            # do we still have time to go back to depot ?
-            time_back_to_depot = (insertion_index == route.size ? final_time + matrix(route_data, service_id, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + shift)
-            if acceptable_shift && time_back_to_depot <= route_data[:tw_end] && acceptable_shift_for_itself
-              # we can add this service at this position so add in possible services list
-              insertion_costs << {
-                id: service_id,
-                point: services[service_id][:point_id],
-                shift: shift,
-                start: start_time,
-                end: final_time,
-                position: insertion_index,
-                position_in_order: s_position_in_order,
-                considered_setup_duration: potential_tw[0][:setup_duration],
-                next_start_time: next_start,
-                next_final_time: next_end,
-                potential_shift: max_shift,
-                additional_route_time: [0 , shift - services[service_id][:duration]].max,
-                dist_from_current_route: (0..route.size-1).collect{ |current_service| matrix(route_data, service_id, route[current_service][:id]) }.min
-              }
-            else
-              # we can try to find another index
-              if route.size > 0
-                other_indices = find_best_index(route, services, service_id, insertion_index, route_data)
-
-                if !other_indices.nil?
-                  insertion_costs << other_indices
-                end
-              end
+          if !index_accepted && !route.empty? && !route.find{ |stop| stop[:point_id] == services[service_id][:point_id] }
+            # we can try to find another index
+            other_indices = find_best_index(route, services, service_id, insertion_index, route_data) # find_index from 0 ..?
+            # if !other_indices.nil?
+            if other_indices
+              insertion_costs << other_indices
             end
           end
         end
@@ -1195,10 +1227,25 @@ module Interpreters
       insertion_costs
     end
 
+    def self.readjust_times(route, all_services)
+      if (route.collect{ |s| s[:id] } & all_services.collect{ |s| s[:id] }).size == route.size
+        route.collect{ |s| s[:id] }.each_with_index{ |service, i|
+          service_planned = all_services.find{ |s| s[:id] == service }
+          route[i][:start] = service_planned[:start]
+          route[i][:end] = service_planned[:end]
+          route[i][:max_shift] = service_planned[:max_shift]
+        }
+        route.sort_by!{ |s| s[:start] }
+        true
+      else
+        false
+      end
+    end
+
     def self.recompute_times(services, route_data)
       if !route_data[:current_route].empty?
         first_service = route_data[:current_route].first[:id]
-        times = find_timewindows(0, nil, nil, first_service, services[first_service], route_data)[0]
+        times = find_timewindows(0, nil, nil, first_service, services[first_service], route_data, services[first_service][:duration])[0]
 
         services_list = []
         services_list << {
@@ -1232,31 +1279,23 @@ module Interpreters
             }
             previous_service = service
           else
-            @uninserted[service] = {
-              original_service: service
+            (position..route_data[:current_route].size - 1).each{ |new_position|
+              @uninserted[route_data[:current_route][position][:id]] = {
+                original_service: service,
+                reason: 'too many services reported to one day'
+              }
             }
+            break
           end
         }
 
-        route_data[:capacity_left].keys.each{ |unit| route_data[:capacity_left][unit] = route_data[:capacity][unit] }
+        route_data[:capacity_left].keys.each{ |unit| route_data[:capacity_left][unit] = Marshal::load(Marshal.dump(route_data[:capacity][unit])) }
         services_list.each_with_index{ |service, position|
           service[:max_shift] = (position..services_list.size-1).collect{ |other_position| services_list[other_position][:max_shift] }.compact.min
-          services[service[:id]][:capacity].each{ |unit,qty| route_data[:capacity_left][unit] -= qty }
+          services[service[:id]][:capacity].each{ |unit, qty| route_data[:capacity_left][unit] -= qty }
         }
 
         route_data[:current_route] = services_list
-      end
-    end
-
-    def self.readjust_times(route, all_services)
-      if (route.collect{ |s| s[:id] } & all_services.collect{ |s| s[:id] }).size == route.size
-        route.collect{ |s| s[:id] }.each_with_index{ |service, i|
-            service_planned = all_services.find{ |s| s[:id] == service }
-            route[i][:start] = service_planned[:start]
-            route[i][:end] = service_planned[:end]
-            route[i][:max_shift] = service_planned[:max_shift]
-          }
-          route.sort_by!{ |s| s[:start] }
       end
     end
 
@@ -1277,27 +1316,37 @@ module Interpreters
     def self.adjust_candidate_routes(vehicle, day_finished, services, services_to_add, all_services, days_available)
       days_filled = []
       services_to_add.each{ |service|
+
         peri = services[service[:id]][:heuristic_period]
         if peri && peri > 0
-          nb_added = 0
+          added = [1]
+          visit_number = 1
           (day_finished + peri..@schedule_end).step(peri).each{ |day|
             if days_available.include?(day)
-              nb_added += 1
               inserted = false
-              if @candidate_routes[vehicle].keys.include?(day) && !@vehicle_day_completed[vehicle][day] && nb_added < services[service[:id]][:nb_visits]
+              if @candidate_routes[vehicle].keys.include?(day) && !@vehicle_day_completed[vehicle][day] && visit_number < services[service[:id]][:nb_visits]
                 days_filled << day
 
                 experiment = Marshal::load(Marshal.dump(@candidate_routes[vehicle][day]))
                 experiment[:current_route] << Marshal::load(Marshal.dump(service))
-                readjust_times(experiment[:current_route], all_services)
+                readjusted = readjust_times(experiment[:current_route], all_services)
+                if !readjusted
+                  experiment[:current_route].delete_at(-1)
+                  point_to_insert = find_best_index_to_adjust(experiment, services, service[:id])
+                  if point_to_insert
+                    insert_point_in_route(experiment, point_to_insert, day, services)
+                  end
+                end
                 recompute_times(services, experiment)
 
-                if experiment[:current_route].last[:end] + matrix(@candidate_routes[vehicle][day], experiment[:current_route].last[:id], @candidate_routes[vehicle][day][:end_point_id] ) < @candidate_routes[vehicle][day][:tw_end]
+                if (readjusted || point_to_insert) && experiment[:current_route].last[:end] + matrix(@candidate_routes[vehicle][day], experiment[:current_route].last[:id], @candidate_routes[vehicle][day][:end_point_id] ) < @candidate_routes[vehicle][day][:tw_end] && experiment[:capacity_left].none?{ |unit,value| value < 0 }
                   found_service = experiment[:current_route].find{ |act| act[:id] == service[:id] }
                   if found_service
                     inserted = true
+                    added << visit_number + 1
                     @candidate_routes[vehicle][day][:current_route] = experiment[:current_route]
-                    @candidate_routes[vehicle][day][:current_route].find{ |act| act[:id] == service[:id] }[:number_in_sequence] += nb_added
+                    @candidate_routes[vehicle][day][:capacity_left] = experiment[:capacity_left]
+                    @candidate_routes[vehicle][day][:current_route].find{ |act| act[:id] == service[:id] }[:number_in_sequence] += visit_number
                   end
                 elsif @candidate_vehicles.size > 2 && @allow_vehicle_change
                   inserted = try_on_different_vehicle(day, service, all_services)
@@ -1306,25 +1355,28 @@ module Interpreters
                 inserted = try_on_different_vehicle(day, service, all_services)
               end
 
-              if !inserted && nb_added < services[service[:id]][:nb_visits]
-                @uninserted["#{service[:id]}_#{service[:number_in_sequence] + nb_added}/#{services[service[:id]][:nb_visits]}"] = {
+              if !inserted
+                @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}/#{services[service[:id]][:nb_visits]}"] = {
                   original_service: service[:id]
                 }
               end
             end
+            # even if we do not add it we should increment this value in order not to add too many services
+            visit_number += 1
           }
-          if nb_added + 1 < services[service[:id]][:nb_visits]
-            first_missing = nb_added+2
+          if visit_number < services[service[:id]][:nb_visits]
+            first_missing = visit_number + 1
             (first_missing..services[service[:id]][:nb_visits]).each{ |missing_s|
               @uninserted["#{service[:id]}_#{missing_s}/#{services[service[:id]][:nb_visits]}"] = {
-                original_service: service[:id]
+                original_service: service[:id],
+                reason: 'first visit too late to affect other visits'
               }
             }
           end
         end
       }
 
-      days_filled.each{ |d|
+      days_filled.uniq.each{ |d|
         compute_positions(vehicle, d)
       }
     end
@@ -1389,12 +1441,154 @@ module Interpreters
       capacities
     end
 
+    def self.compute_best_common_tw(services, set, group_tw)
+      # all timewindows are assigned to a day
+      group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw| (0..6).each{ |day|
+          group_tw << { day_index: day, start: tw[:start], end: tw[:end] }
+      }}
+      group_tw.delete_if{ |tw| tw[:day_index].nil? }
+
+      # finding minimal common timewindow
+      set.each{ |service|
+        if !services[service[:id]][:tw].empty?
+          # remove all tws with no intersection with this service tws
+          group_tw.delete_if{ |tw1|
+            services[service[:id]][:tw].none?{ |tw2|
+              (tw2[:day_index].nil? || tw2[:day_index] == tw1[:day_index]) &&
+              # intersection :
+              # (tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start] && tw2[:end] >= tw1[:start] || tw2[:start] <= tw1[:end] && tw2[:end] >= tw1[:end])
+              (tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start] && tw2[:end] >= tw1[:end])
+            }
+          }
+
+          if group_tw.size > 0
+            # adjust all tws with intersections with this point tws
+            services[service[:id]][:tw].each{ |tw|
+              intersecting_tws = group_tw.select{ |t| (t[:day_index].nil? || tw[:day_index].nil? || t[:day_index] == tw[:day_index]) && (tw[:start].between?(t[:start], t[:end]) || tw[:end].between?(t[:start], t[:end]) || tw[:start] <= t[:start] && tw[:end] >= t[:start]) }
+              if !intersecting_tws.empty?
+                intersecting_tws.each{ |t|
+                  t[:start] = [t[:start], tw[:start]].max
+                  t[:end] = [t[:end], tw[:end]].min
+                }
+              end
+            }
+          end
+        end
+      }
+
+      group_tw
+    end
+
+    def self.basic_fill(vrp, services_data)
+      while !@candidate_vehicles.empty?
+        current_vehicle = @candidate_vehicles[0]
+        days_available = @candidate_routes[current_vehicle].keys.sort_by!{ |day|
+          [@candidate_routes[current_vehicle][day][:current_route].size, @candidate_routes[current_vehicle][day][:tw_end] - @candidate_routes[current_vehicle][day][:tw_start]]
+        }
+        current_day = days_available[0]
+        recompute_times(services_data, @candidate_routes[current_vehicle][current_day])
+
+        while @candidate_service_ids.size > 0 && !current_day.nil?
+          initial_services = @candidate_routes[current_vehicle][current_day][:current_route].collect{ |s| s[:id] }
+          fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
+          new_services = @planning[current_vehicle][current_day][:services].select{ |s| !initial_services.include?(s[:id]) }
+          days_available.delete(current_day)
+          @candidate_routes[current_vehicle].delete(current_day)
+          adjust_candidate_routes(current_vehicle, current_day, services_data, new_services, @planning[current_vehicle][current_day][:services], days_available)
+          while @candidate_routes[current_vehicle].any?{ |day, day_data| day_data[:current_route].size > 0 }
+            current_day = @candidate_routes[current_vehicle].max_by{ |day, day_data| day_data[:current_route].size }.first
+            # assign each service as soon as possible
+            recompute_times(services_data, @candidate_routes[current_vehicle][current_day]) # change la solution mais devrait pas...
+
+            initial_services = @candidate_routes[current_vehicle][current_day][:current_route].collect{ |s| s[:id] }
+            fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
+            new_services = @planning[current_vehicle][current_day][:services].select{ |s| !initial_services.include?(s[:id]) }
+            adjust_candidate_routes(current_vehicle, current_day, services_data, new_services, @planning[current_vehicle][current_day][:services], days_available)
+
+            days_available.delete(current_day)
+            @candidate_routes[current_vehicle].delete(current_day)
+          end
+
+          current_day = days_available[0]
+        end
+
+        # we have filled all days for current vehicle
+        @candidate_vehicles.delete(current_vehicle)
+      end
+    end
+
+    def self.grouped_fill(vrp, services_data)
+      current_vehicle = @candidate_vehicles[0]
+      # vehicle donné en argt pour boucler sur tous les véhicles ? sinon il faut forbid day ET vehcile ?
+      possible_to_fill = true
+      nb_of_days = @candidate_routes[current_vehicle].keys.size
+      forbbiden_days = []
+
+      while possible_to_fill
+        best_day = @candidate_routes[current_vehicle].select{ |day, route| !forbbiden_days.include?(day) }.sort_by{ |day, route_data| route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{|stop| stop[:end] - stop[:start] }}[0][0]
+        route_data = @candidate_routes[current_vehicle][best_day]
+        insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:current_route], route_data[:positions_in_order], services_data, route_data, [])
+
+        if !insertion_costs.empty?
+          initial_services = @candidate_routes[current_vehicle][best_day][:current_route].collect{ |s| s[:id] }
+          point_to_add = insertion_costs.sort_by{ |s| s[:additional_route_time]/services_data[s[:id]][:nb_visits]**2 }[0]
+          best_index = find_best_index(route_data[:current_route], services_data, point_to_add[:id], 0, route_data)
+          best_index[:end] = best_index[:end] - services_data[best_index[:id]][:group_duration] + services_data[best_index[:id]][:duration]
+
+          insert_point_in_route(route_data, best_index, best_day, services_data)
+
+          services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+          if point_to_add[:position] == best_index[:position]
+            route_data[:positions_in_order].insert(point_to_add[:position], point_to_add[:position_in_order])
+          else
+            route_data[:positions_in_order].insert(best_index[:position], -1)
+          end
+          @to_plan_service_ids.delete(best_index[:id])
+
+          # adding all points of same familly and frequence
+          start = best_index[:end]
+          max_shift = best_index[:potential_shift]
+          additional_duration = services_data[best_index[:id]][:duration] # add setup duration (idem compute_insertion_cost ?) # rename
+          @same_located[best_index[:id]].each_with_index{ |service_id, i|
+            route_data[:current_route].insert(best_index[:position] + i + 1, {
+              id: service_id,
+              point_id: best_index[:point],
+              start: start,
+              end: start + services_data[service_id][:duration],
+              considered_setup_duration: 0,
+              max_shift: max_shift ? max_shift - additional_duration : nil,
+              number_in_sequence: 1
+            })
+            additional_duration += services_data[service_id][:duration]
+            @to_plan_service_ids.delete(service_id)
+            @candidate_service_ids.delete(service_id)
+            start += services_data[service_id][:duration]
+            services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+            route_data[:positions_in_order].insert(best_index[:position] + i + 1, route_data[:positions_in_order][best_index[:position]])
+          }
+
+          new_services = route_data[:current_route].select{ |s| !initial_services.include?(s[:id]) }
+          adjust_candidate_routes(current_vehicle, best_day, services_data, new_services, route_data[:current_route], @candidate_routes[current_vehicle].keys)
+
+          if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty?
+            @to_plan_service_ids += @services_unlocked_by[best_index[:id]]
+            forbbiden_days = [] # new services are available so we may need these days
+          end
+        else
+          forbbiden_days << best_day
+        end
+
+        if @to_plan_service_ids.empty? || forbbiden_days.size == nb_of_days
+          possible_to_fill = false
+        end
+      end
+    end
+
     def self.compute_initial_solution(vrp)
       starting_time = Time.now
 
       @limit = 1700
       @same_point_day = vrp.resolution_same_point_day
-      @common_day = {}
 
       # Solve TSP - Build a large Tour to define an arbitrary insertion order
       solve_tsp(vrp)
@@ -1423,9 +1617,61 @@ module Interpreters
         }
 
         @candidate_service_ids << service.id
+        @to_plan_service_ids << service.id
 
         @indices[service[:id]] = vrp[:points].find{ |pt| pt[:id] == service[:activity][:point][:id] }[:matrix_index]
       }
+
+      if @same_point_day
+        @to_plan_service_ids = []
+        vrp.points.each{ |point|
+          same_located_set = vrp.services.select{ |service| service[:activity][:point][:location][:id] == point[:location][:id] }.sort_by{ |s| s[:visits_number] }
+          reject_familly = false
+
+          if !same_located_set.empty?
+            representative_id = same_located_set.last[:id]
+            group_tw = compute_best_common_tw(services_data, same_located_set, services_data[representative_id][:tw].collect{ |tw| {day_index: tw[:day_index], start: tw[:start], end: tw[:end] } })
+
+            if group_tw.empty?
+              # reject group because no common tw
+              same_located_set.each{ |service|
+                (1..service[:visits_number]).each{ |index|
+                  @candidate_service_ids.delete(service[:id])
+                  @to_plan_service_ids.delete(service[:id])
+                  @uninserted["#{service[:id]}_#{index}/#{service[:visits_number]}"] = {
+                    original_service: service[:id],
+                    reason: 'no timewindow compatible for all services of this point'
+                  }
+                }
+              }
+            else
+              representative_ids = []
+              last_representative = nil
+              # one representative per freq
+              same_located_set.collect{ |service| services_data[service[:id]][:heuristic_period] }.uniq.each{ |period|
+                sub_set = same_located_set.select{ |s| services_data[s[:id]][:heuristic_period] == period }
+                representative_id = sub_set[0][:id]
+                last_representative = representative_id
+                representative_ids << representative_id
+                services_data[representative_id][:tw] = group_tw
+                services_data[representative_id][:group_duration] = sub_set.sum{ |s| s[:activity][:duration] }
+
+                @same_located[representative_id] = sub_set.delete_if{ |s| s[:id] == representative_id }.collect{ |s| s[:id] }
+                services_data[representative_id][:group_capacity] = Marshal::load(Marshal.dump(services_data[representative_id][:capacity]))
+                @same_located[representative_id].each{ |service_id|
+                  services_data[service_id][:capacity].each{ |unit, value| services_data[representative_id][:group_capacity][unit] += value }
+                }
+              }
+
+              # each set has available days
+              @point_available_days[point[:location][:id]] = []
+              @to_plan_service_ids << representative_ids.last
+              @services_unlocked_by[representative_ids.last] = representative_ids.slice(0, representative_ids.size - 1).to_a
+            end
+
+          end
+        }
+      end
 
       @matrices = vrp[:matrices]
       vrp[:vehicles].each{ |vehicle|
@@ -1468,40 +1714,27 @@ module Interpreters
       #   @matrix = vrp[:matrices][0][:distance]
       # end
 
-      while !@candidate_vehicles.empty?
-        current_vehicle = @candidate_vehicles[0]
-        days_available = @candidate_routes[current_vehicle].keys.sort_by!{ |day|
-          [@candidate_routes[current_vehicle][day][:current_route].size, @candidate_routes[current_vehicle][day][:tw_end] - @candidate_routes[current_vehicle][day][:tw_start]]
+      if @same_point_day
+        # group_services here ?
+        grouped_fill(vrp, services_data)
+        vrp.vehicles.each{ |vehicle|
+          @candidate_routes[vehicle[:id]].keys.each{ |day|
+            route_data = @candidate_routes[vehicle[:id]][day]
+            @planning[vehicle[:id]][day] = {
+              vehicle: {
+                vehicle_id: route_data[:vehicle_id],
+                start_point_id: route_data[:start_point_id],
+                end_point_id: route_data[:end_point_id],
+                tw_start: vehicle[:timewindow] ? vehicle[:timewindow][:start] : vehicle[:sequence_timewindows].find{ |tw| tw[:day_index] == day%7 }[:start],
+                tw_end: vehicle[:timewindow] ? vehicle[:timewindow][:end] : vehicle[:sequence_timewindows].find{ |tw| tw[:day_index] == day%7 }[:end],
+                matrix_id: vehicle[:matrix_id]
+              },
+              services: route_data[:current_route]
+            }
+          }
         }
-        current_day = days_available[0]
-        recompute_times(services_data, @candidate_routes[current_vehicle][current_day])
-
-        while @candidate_service_ids.size > 0 && !current_day.nil?
-          initial_services = @candidate_routes[current_vehicle][current_day][:current_route].collect{ |s| s[:id] }
-          fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
-          new_services = @planning[current_vehicle][current_day][:services].select{ |s| !initial_services.include?(s[:id]) }
-          days_available.delete(current_day)
-          @candidate_routes[current_vehicle].delete(current_day)
-          adjust_candidate_routes(current_vehicle, current_day, services_data, new_services, @planning[current_vehicle][current_day][:services], days_available)
-          while @candidate_routes[current_vehicle].any?{ |day, day_data| day_data[:current_route].size > 0 }
-            current_day = @candidate_routes[current_vehicle].max_by{ |day, day_data| day_data[:current_route].size }.first
-            # assign each service as soon as possible
-            recompute_times(services_data, @candidate_routes[current_vehicle][current_day])
-
-            initial_services = @candidate_routes[current_vehicle][current_day][:current_route].collect{ |s| s[:id] }
-            fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
-            new_services = @planning[current_vehicle][current_day][:services].select{ |s| !initial_services.include?(s[:id]) }
-            adjust_candidate_routes(current_vehicle, current_day, services_data, new_services, @planning[current_vehicle][current_day][:services], days_available)
-
-            days_available.delete(current_day)
-            @candidate_routes[current_vehicle].delete(current_day)
-          end
-
-          current_day = days_available[0]
-        end
-
-        # we have filled all days for current vehicle
-        @candidate_vehicles.delete(current_vehicle)
+      else
+        basic_fill(vrp, services_data)
       end
 
       # post-processing
@@ -1515,7 +1748,8 @@ module Interpreters
       @candidate_service_ids.each{ |service_id|
         really_uninserted += services_data[service_id][:nb_visits]
       }
-      puts "uninserted : #{really_uninserted + @uninserted.size} (#{uninserted} missions)"
+
+      puts "uninserted : #{really_uninserted + @uninserted.size}"
 
       tws = services_data.keys.any?{ |s| services_data[s][:tw] && !services_data[s][:tw].empty? }
       routes = []
@@ -1641,7 +1875,7 @@ module Interpreters
               }
             }
           },
-          reason: 'visits unaffected by heuristic'
+          reason: @uninserted[service][:reason] ? @uninserted[service][:reason] : 'visits unaffected by heuristic'
         }
       }
 
