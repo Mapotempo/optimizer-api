@@ -474,7 +474,7 @@ module OptimizerWrapper
   end
 
   def self.build_csv(solution)
-    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'total_travel_time', 'total_travel_distance']
+    header = ['day_week_num', 'day_week', 'vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'total_travel_time', 'total_travel_distance']
     quantities_header = []
     quantities_id = []
     if solution
@@ -517,6 +517,8 @@ module OptimizerWrapper
           route['activities'].each{ |activity|
             type = find_type(activity)
             common = [
+              activity['day_week_num'],
+              activity['day_week'],
               route['vehicle_id'],
               activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
               activity['point_id'],
@@ -550,6 +552,8 @@ module OptimizerWrapper
         solution['unassigned'].each{ |activity|
           type = find_type(activity)
           common = [
+            nil,
+            nil,
             nil,
             activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
             activity['point_id'],

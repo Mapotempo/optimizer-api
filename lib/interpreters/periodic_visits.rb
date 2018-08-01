@@ -871,6 +871,7 @@ module Interpreters
         id: point_to_add[:id],
         point_id: point_to_add[:point],
         start: point_to_add[:start],
+        arrival: point_to_add[:arrival],
         end: point_to_add[:end],
         considered_setup_duration: point_to_add[:considered_setup_duration],
         max_shift: point_to_add[:potential_shift],
@@ -888,6 +889,7 @@ module Interpreters
               initial_shift_with_previous = current_route[point][:start] - (current_route[point-1][:end] - shift )
               shift = [shift - initial_shift_with_previous, 0].max
               current_route[point][:start] += shift
+              current_route[point][:arrival] += shift
               current_route[point][:end] += shift
               current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
             elsif shift < 0
@@ -912,8 +914,10 @@ module Interpreters
         current_route[point_to_add[:position]][:end] += setup_duration
         first_at_this_point[:considered_setup_duration] = 0
         first_at_this_point[:start] += setup_duration
+        first_at_this_point[:arrival] += setup_duration
         (point_to_add[:position] + 1..(current_route.find_index(first_at_this_point) - 1)).each{ |position|
           current_route[position][:start] += setup_duration
+          current_route[position][:arrival] += setup_duration
           current_route[position][:max_shift] -= setup_duration
           current_route[position][:end] += setup_duration
         }
@@ -1085,6 +1089,7 @@ module Interpreters
             point: services[service][:point_id],
             shift: shift,
             start: start_time,
+            arrival: arrival_time,
             end: final_time,
             position: position,
             position_in_order: position_in_order,
@@ -1137,6 +1142,7 @@ module Interpreters
             point: services[service][:point_id],
             shift: matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id]) + services[service][:duration],
             start: tw[:start_time],
+            arrival: tw[:start_time] + matrix(route_data, route_data[:start_point_id], service),
             end: tw[:final_time],
             position: 0,
             position_in_order: -1,
@@ -1253,6 +1259,7 @@ module Interpreters
           id: first_service,
           point_id: services[first_service][:point_id],
           start: times[:start_time],
+          arrival: times[:start_time] + matrix(route_data, route_data[:start_point_id], first_service),
           end: times[:final_time],
           considered_setup_duration: services[first_service][:setup_duration],
           max_shift: (times[:max_shift] ? times[:max_shift] - matrix(route_data, route_data[:start_point_id], first_service) : nil),
@@ -1282,6 +1289,7 @@ module Interpreters
               id: service,
               point_id: services[service][:point_id],
               start: start_time,
+              arrival: start_time + route_time,
               end: final_time,
               considered_setup_duration: considered_setup_duration,
               max_shift: (end_tw.nil? ? nil : end_tw - arrival_time),
@@ -1565,6 +1573,7 @@ module Interpreters
               id: service_id,
               point_id: best_index[:point],
               start: start,
+              arrival: start,
               end: start + services_data[service_id][:duration],
               considered_setup_duration: 0,
               max_shift: max_shift ? max_shift - additional_duration : nil,
@@ -1783,9 +1792,12 @@ module Interpreters
             }
           end
 
+          day_name = { 0 => "mon", 1 => "tue", 2 => "wed", 3 => "thu", 4 => "fri", 5 => "sat", 6 => "sun" }
           route[:services].each{ |point|
             service_in_vrp = vrp.services.find{ |s| s[:id] == point[:id] }
             computed_activities << {
+              day_week_num: "#{day%7}_#{day/7}",
+              day_week: "#{day_name[day%7]}_w#{day/7 + 1}",
               service_id: "#{point[:id]}_#{point[:number_in_sequence]}/#{service_in_vrp[:visits_number]}",
               point_id: service_in_vrp[:activity][:point_id],
               begin_time: point[:end].to_i - service_in_vrp[:activity][:duration],
