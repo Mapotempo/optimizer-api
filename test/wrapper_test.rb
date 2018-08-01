@@ -2370,4 +2370,71 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, Models::Vrp.create(problem), nil)
     assert result
   end
+
+  def test_incorrect_matrix_indices
+    ortools = OptimizerWrapper::ORTOOLS
+    vroom = OptimizerWrapper::VROOM
+    jsprit = OptimizerWrapper::JSPRIT
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        distance: [
+          [0, 5, 11],
+          [5, 0, 11],
+          [11, 11, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        cost_time_multiplier:0,
+        cost_distance_multiplier: 1,
+        distance: 11
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        cost_time_multiplier:0,
+        cost_distance_multiplier: 1,
+        distance: 10
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+        }
+      },{
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert !ortools.inapplicable_solve?(vrp).empty?
+    assert !vroom.inapplicable_solve?(vrp).empty?
+    assert !jsprit.inapplicable_solve?(vrp).empty?
+  end
 end

@@ -203,6 +203,16 @@ module Wrappers
       }.uniq.size == 1
     end
 
+    def assert_correctness_provided_matrix_indices(vrp)
+      dimensions = vrp.vehicles.collect(&:dimensions).flatten.uniq
+      max_matrix_index = vrp.points.collect{ |point| point.matrix_index }.max || 0
+      vrp.matrices.all?{ |matrix|
+        dimensions.all?{ |dimension|
+          matrix[dimension].nil? || matrix[dimension].size > max_matrix_index && matrix[dimension].all?{ |line| line.size > max_matrix_index }
+        }
+      }
+    end
+
     def assert_one_sticky_at_most(vrp)
       (vrp.services.empty? || vrp.services.none?{ |service|
         service.sticky_vehicles.size > 1

@@ -4852,9 +4852,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'point_2',
         matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
       }],
       vehicles: [{
         id: 'vehicle_0',
@@ -4916,9 +4913,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'point_2',
         matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
       }],
       vehicles: [{
         id: 'vehicle_0',

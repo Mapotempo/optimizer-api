@@ -47,6 +47,7 @@ module Wrappers
         :assert_vehicles_no_zero_duration,
         :assert_at_least_one_mission,
         :assert_range_date_if_month_duration,
+        :assert_correctness_provided_matrix_indices,
       ]
     end
 

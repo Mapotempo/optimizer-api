@@ -45,6 +45,7 @@ module Wrappers
         :assert_no_relations,
         :assert_vehicles_no_duration_limit,
         :assert_no_value_matrix,
+        :assert_correctness_provided_matrix_indices,
         :assert_no_routes,
         :assert_only_empty_or_fill_quantities,
         :assert_points_same_definition,

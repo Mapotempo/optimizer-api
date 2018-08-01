@@ -40,6 +40,7 @@ module Wrappers
         :assert_services_no_priority,
         :assert_no_shipments,
         :assert_matrices_only_one,
+        :assert_correctness_provided_matrix_indices,
         :assert_one_vehicle_only_or_no_sticky_vehicle,
         :assert_no_relations,
         :assert_vehicles_no_duration_limit,
