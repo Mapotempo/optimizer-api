@@ -375,15 +375,12 @@ module Wrappers
         service_id: service[:id],
         point_id: service[:activity] ? service[:activity][:point_id] : nil,
         detail:{
-          lat: service[:activity] ? service[:activity][:point][:lat] : nil,
-          lon: service[:activity] ? service[:activity][:point][:lon] : nil,
+          lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
+          lon: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lon] : nil,
           setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
           duration: service[:activity] ? service[:activity][:duration] : nil,
-          timewindows: service[:activity][:timewindows] && !service[:activity][:timewindows].empty? ? [{
-            start: service[:activity][:timewindows][0][:start],
-            end: service[:activity][:timewindows][0][:start],
-          }] : [],
-          quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit], value: qte[:value] } } : nil
+          timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
+          quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit][:id], value: qte[:value] } } : nil
         },
         reason: reason
       }
