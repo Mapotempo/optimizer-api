@@ -584,25 +584,25 @@ module OptimizerWrapper
   def self.route_details(vrp, route, vehicle)
     previous = nil
     details = nil
-    segments = route[:activities].collect{ |activity|
-      if !activity[:rest_id]
-        current = nil
-        if activity[:point_id]
-          current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
-        elsif activity[:service_id]
-          current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
-        elsif activity[:pickup_shipment_id]
-          current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
-        elsif activity[:delivery_shipment_id]
-          current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
-        end
-        segment = if previous && current
-          [previous[:location][:lat], previous[:location][:lon], current[:location][:lat], current[:location][:lon]]
-        end
-        previous = current
-        segment
+    segments = route[:activities].reverse.collect{ |activity|
+      current = nil
+      if activity[:point_id]
+        current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
+      elsif activity[:service_id]
+        current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
+      elsif activity[:pickup_shipment_id]
+        current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
+      elsif activity[:delivery_shipment_id]
+        current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
+      elsif activity[:rest_id]
+        current = previous
       end
-    }.compact
+      segment = if previous && current
+        [current[:location][:lat], current[:location][:lon], previous[:location][:lat], previous[:location][:lon]]
+      end
+      previous = current
+      segment
+    }.reverse.compact
      if segments.size > 0
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
         vehicle[:router_mode].to_sym, vehicle[:router_dimension], segments, vrp.restitution_geometry_polyline, vehicle.router_options)
@@ -628,11 +628,8 @@ module OptimizerWrapper
           r[:total_distance] = details.collect{ |detail| detail.first}.compact.reduce(:+)
           index = 0
           r[:activities][1..-1].each{ |activity|
-            if activity[:rest_id]
-            else
-              activity[:travel_distance] = details[index].first
-              index += 1
-            end
+            activity[:travel_distance] = details[index].first
+            index += 1
           }
         end
       end
