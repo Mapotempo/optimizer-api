@@ -2437,4 +2437,118 @@ class WrapperTest < Minitest::Test
     assert !vroom.inapplicable_solve?(vrp).empty?
     assert !jsprit.inapplicable_solve?(vrp).empty?
   end
+
+  def test_unassigned_presence
+    problem = {
+      units: [{
+        id: 'test',
+        label: 'test'
+      }],
+      matrices: [{
+        id: 'matrix_0',
+        distance: [
+          [0, 5, 2**32],
+          [5, 0, 2**32],
+          [2**32, 2**32, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        cost_time_multiplier: 0,
+        cost_distance_multiplier: 1,
+        capacities: [{
+          unit_id: 'test',
+          limit: 1
+        }],
+        timewindow: {
+          start: 0,
+          end: 100
+        }
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        cost_time_multiplier: 0,
+        cost_distance_multiplier: 1,
+        capacities: [{
+          unit_id: 'test',
+          limit: 1
+        }],
+        timewindow: {
+          start: 0,
+          end: 100
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+        },
+        quantities: [{
+          unit_id: 'test',
+          value: 1
+        }]
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+        },
+        quantities: [{
+          unit_id: 'test',
+          value: 5
+        }]
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_1',
+          timewindows: [{
+            start: 200,
+            end: 205
+          }]
+        }
+      }, {
+        id: 'service_5',
+        visits_number: 2,
+        minimum_lapse: 1,
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
+        },
+        schedule: {
+          range_indices: {
+            start: 0,
+            end: 0
+          }
+        }
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| !activity[:service_id].nil? }.size }.reduce(&:+)
+    assert_equal 5, result[:unassigned].size
+  end
 end
