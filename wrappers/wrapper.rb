@@ -361,7 +361,7 @@ module Wrappers
         column_cpt = Array.new(matrix.size){ |i| 0 }
         matrix.each_with_index{ |vector, line|
           vector.each_with_index{ |value, col|
-            if value == 2**31-1
+            if value.nil? || value >= 2**31-1
               line_cpt[line] += 1
               column_cpt[col] += 1
             end
