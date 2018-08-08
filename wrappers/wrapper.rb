@@ -421,7 +421,7 @@ module Wrappers
         vrp[:vehicles].select{ |v| v[:capacities] && !v[:capacities].empty? }.each{ |v|
           v[:capacities].each{ |c|
             if !unlimited[c[:unit_id]]
-              capacity[c.unit_id] = (capacity[c.unit_id] || 0) + c[:limit]
+              capacity[c.unit_id] = (capacity[c.unit_id] || 0) + c[:limit].to_i
             end
           }
         }
