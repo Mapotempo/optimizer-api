@@ -372,27 +372,32 @@ module Wrappers
           if (column_cpt[index] == matrix.size - 1 && column_cpt[index] > 0) || (line_cpt[index] == matrix.size - 1 && line_cpt[index] > 0)
             vrp[:services].select{ |s| s[:activity][:point][:matrix_index] == index }.each{ |s|
               if unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
-                unfeasible << add_unassigned(vrp, s, "Unreachable")
+                unfeasible += add_unassigned(vrp, s, "Unreachable")
               end
             }
           end
         }
       end
+
+      unfeasible
     end
 
     def add_unassigned(vrp, service, reason)
-      {
-        service_id: service[:id],
-        point_id: service[:activity] ? service[:activity][:point_id] : nil,
-        detail:{
-          lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
-          lon: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lon] : nil,
-          setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
-          duration: service[:activity] ? service[:activity][:duration] : nil,
-          timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
-          quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit][:id], value: qte[:value] } } : nil
-        },
-        reason: reason
+      (1..service.visits_number).collect{ |index|
+        {
+          service_id: service[:id],
+          visit: index,
+          point_id: service[:activity] ? service[:activity][:point_id] : nil,
+          detail:{
+            lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
+            lon: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lon] : nil,
+            setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
+            duration: service[:activity] ? service[:activity][:duration] : nil,
+            timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
+            quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit] } } : nil
+          },
+          reason: reason
+        }
       }
     end
 
@@ -426,7 +431,7 @@ module Wrappers
           s.quantities.select{ |q|
             q.value && !unlimited[q.unit_id] && capacity[q.unit_id] < q.value }.each{ |q|
               if unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
-                unfeasible << add_unassigned(vrp, s, "Unsufficient #{q[:unit_id]} capacity in vehicles")
+                unfeasible += add_unassigned(vrp, s, "Unsufficient capacity in vehicles")
               end
           }
         }
@@ -452,7 +457,7 @@ module Wrappers
         end
 
         if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
-          unfeasible << add_unassigned(vrp, s, "No vehicle with compatible timewindow")
+          unfeasible += add_unassigned(vrp, s, "No vehicle with compatible timewindow")
         end
       }
 
@@ -462,7 +467,7 @@ module Wrappers
         vrp[:services].select{ |s| s[:minimum_lapse] && s[:visits_number] > 1 }.each{ |s|
           found = !(s[:minimum_lapse] >= nb_days)
           if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == s[:id] }
-            unfeasible << add_unassigned(vrp, s, "Minimum_lapse is too big")
+            unfeasible += add_unassigned(vrp, s, "Minimum_lapse is too big")
           end
         }
       end
@@ -472,9 +477,9 @@ module Wrappers
 
     def check_distances(vrp, unfeasible)
       vrp[:matrices].each{ |matrix|
-        check(vrp,matrix[:time],unfeasible)
-        check(vrp,matrix[:distance],unfeasible)
-        check(vrp,matrix[:value],unfeasible)
+        unfeasible = check(vrp,matrix[:time],unfeasible)
+        unfeasible = check(vrp,matrix[:distance],unfeasible)
+        unfeasible = check(vrp,matrix[:value],unfeasible)
       }
 
       unfeasible
