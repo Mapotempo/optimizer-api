@@ -28,6 +28,7 @@ require './lib/routers/router_wrapper.rb'
 require './lib/interpreters/multi_modal.rb'
 require './lib/interpreters/periodic_visits.rb'
 require './lib/interpreters/split_clustering.rb'
+require './lib/interpreters/compute_several_solutions.rb'
 
 require 'ai4r'
 include Ai4r::Data
@@ -159,13 +160,34 @@ module OptimizerWrapper
   end
 
   def self.define_process(services_vrps, services_fleets = [], job = nil, &block)
-    complete_services_vrp = services_vrps.delete_if{ |service_vrp|
-      service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty? }.collect{ |service_vrp|
+    filtered_services = services_vrps.delete_if{ |service_vrp|
+      service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
+    }
 
-      # Split/Clusterize the problem if to large
-      Interpreters::SplitClustering.split_clusters([service_vrp])
-    }.flatten.compact
-    solve(complete_services_vrp, services_fleets, job, block)
+    if services_vrps.any?{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }
+      duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] })
+
+      unduplicated_services = filtered_services - duplicated_services
+      results = duplicated_services.collect{ |service_vrp|
+        define_process([service_vrp], services_fleets, job)
+      }
+      result_global = {
+        result: [],
+      }
+
+      results.each{ |result|
+        result_global[:result] << result
+      }
+      Result.set(job, result_global)
+    else
+      complete_services_vrp = services_vrps.delete_if{ |service_vrp|
+        service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty? }.collect{ |service_vrp|
+
+        # Split/Clusterize the problem if to large
+        Interpreters::SplitClustering.split_clusters([service_vrp])
+      }.flatten.compact
+      solve(complete_services_vrp, services_fleets, job, block)
+    end
   end
 
   def self.solve(services_vrps, services_fleets = [], job = nil, block = nil)
@@ -363,8 +385,8 @@ module OptimizerWrapper
       end
     }
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
+    real_result[:name] = services_vrps[0][:vrp][:name] if real_result
 
-    real_result[:name] = services_vrps[0][:vrp][:name]
     if job
       p = Result.get(job) || {}
       p['result'] = real_result
@@ -468,6 +490,7 @@ module OptimizerWrapper
       unassigned: results.flat_map{ |r| r[:unassigned] }.compact,
       elapsed: results.map{ |r| r[:elapsed] || 0 }.reduce(&:+),
       total_time: results.map{ |r| r[:total_travel_time] }.compact.reduce(&:+),
+      total_value: results.map{ |r| r[:total_travel_value] }.compact.reduce(&:+),
       total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+)
     }
   end
@@ -713,6 +736,9 @@ module OptimizerWrapper
         r[:total_time] = r[:end_time] - r[:start_time]
       elsif vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.time
         r[:total_travel_time] = route_total_dimension(vrp, r, v, :time)
+      end
+      if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.value
+        r[:total_travel_value] = route_total_dimension(vrp, r, v, :value)
       end
       if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.distance
         r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
@@ -987,6 +1013,7 @@ module OptimizerWrapper
             a = {
               point_id: (original_vrp.services[index].activity.point_id if original_vrp.services[index].id),
               travel_time: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0,
+              travel_value: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value] ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0,
               travel_distance: original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? original_vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
               # travel_start_time: 0, # TODO: from matrix_time
               # arrival_time: 0, # TODO: from matrix_time
@@ -1007,6 +1034,7 @@ module OptimizerWrapper
         total_distance: route[:total_distance] ? route[:total_distance] : 0,
         total_time: route[:total_time] ? route[:total_time] : 0,
         total_travel_time: route[:total_travel_time] ? route[:total_travel_time] : 0,
+        total_travel_value: route[:total_travel_value] ? route[:total_travel_value] : 0,
         geometry: route[:geometry]
       }.delete_if{ |k,v| v.nil? }
     }

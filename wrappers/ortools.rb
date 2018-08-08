@@ -551,11 +551,13 @@ module Wrappers
                   service = vrp.services[current_index]
                   earliest_start = activity['start_time'] || 0
                   travel_time = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous_index][point_index] : 0)
+                  travel_value = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value][previous_index][point_index] : 0)
                   travel_distance = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous_index][point_index] : 0)
                   current_activity = {
                     service_id: service.id,
                     point_id: point ? point.id : nil,
                     travel_time: travel_time,
+                    travel_value: travel_value,
                     travel_distance: travel_distance,
                     begin_time: earliest_start,
                     departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity['alternative']][:duration].to_i),
@@ -572,12 +574,14 @@ module Wrappers
                   point = vrp.points[point_index]
                   earliest_start = activity['start_time'] || 0
                   travel_time = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous_index][point_index] : 0)
+                  travel_value = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value][previous_index][point_index] : 0)
                   travel_distance = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous_index][point_index] : 0)
                   current_activity = {
                     pickup_shipment_id: shipment_activity == 0 && shipment.id,
                     delivery_shipment_id: shipment_activity == 1 && shipment.id,
                     point_id: point.id,
                     travel_time: travel_time,
+                    travel_value: travel_value,
                     travel_distance: travel_distance,
                     begin_time: earliest_start,
                     departure_time: earliest_start + (shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i ),

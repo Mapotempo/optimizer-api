@@ -43,6 +43,8 @@ module Models
     field :resolution_same_point_day, default: false
     field :resolution_allow_partial_assignment, default: true
     field :resolution_evaluate_only, default: false
+    field :resolution_several_solutions, default: nil
+    field :resolution_variation_ratio, default: nil
 
     field :restitution_geometry, default: false
     field :restitution_geometry_polyline, default: false
@@ -68,6 +70,8 @@ module Models
     validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
     validates_numericality_of :resolution_vehicle_limit, allow_nil: true
     validates_numericality_of :resolution_solver_parameter, allow_nil: true
+    validates_numericality_of :resolution_several_solutions, allow_nil: true
+    validates_numericality_of :resolution_variation_ratio, allow_nil: true
 
     validates_inclusion_of :preprocessing_partition_method, allow_nil: true, in: %w[hierarchical_tree balanced_kmeans]
 
@@ -119,6 +123,8 @@ module Models
       self.resolution_same_point_day = resolution[:same_point_day]
       self.resolution_allow_partial_assignment = resolution[:allow_partial_assignment]
       self.resolution_evaluate_only = resolution[:evaluate_only]
+      self.resolution_several_solutions = resolution[:several_solutions]
+      self.resolution_variation_ratio = resolution[:variation_ratio]
     end
 
     def preprocessing=(preprocessing)

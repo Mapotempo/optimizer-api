@@ -336,6 +336,8 @@ module Api
         this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if use_periodic_heuristic (preprocessing) is activated. Not available ORtools.')
         this.optional(:allow_partial_assignment, type: Boolean, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
+        this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
+        this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
       end
 
@@ -560,7 +562,7 @@ module Api
                   present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
                 else
                   present({
-                    solutions: [solution['result']],
+                    solutions: [solution['result']].flatten(1),
                     job: {
                       id: id,
                       status: :failed,
@@ -575,7 +577,7 @@ module Api
                   present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
                 else
                   present({
-                    solutions: [solution['result']],
+                    solutions: [solution['result']].flatten(1),
                     job: {
                       id: id,
                       status: job.queued? ? :queued : job.working? ? :working : nil,
@@ -590,7 +592,7 @@ module Api
                   present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
                 else
                   present({
-                    solutions: [solution['result']],
+                    solutions: [solution['result']].flatten(1),
                     job: {
                       id: id,
                       status: :completed,
