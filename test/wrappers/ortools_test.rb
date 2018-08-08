@@ -4615,7 +4615,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
-    puts result.to_json
     assert result
     assert_equal 2, result[:routes].size
     assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][1][:activities].size
