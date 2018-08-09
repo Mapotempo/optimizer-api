@@ -22,6 +22,8 @@ require 'redis'
 require 'json'
 require 'thread'
 
+require './util/job_manager.rb'
+
 require './lib/routers/router_wrapper.rb'
 require './lib/interpreters/multi_modal.rb'
 require './lib/interpreters/periodic_visits.rb'
@@ -107,6 +109,7 @@ module OptimizerWrapper
   def self.wrapper_vrp(api_key, services, vrp, checksum, job_id = nil)
     inapplicable_services = []
     apply_zones(vrp)
+    adjust_vehicles_duration(vrp)
     services_fleets = []
     services_vrps = split_vrp(vrp).map.with_index{ |vrp_element, i|
       if vrp_element[:preprocessing_max_split_size]
@@ -136,12 +139,6 @@ module OptimizerWrapper
         problem_size: vrp_element.services.size + vrp_element.shipments.size
       }
     }
-    adjust_vehicles_duration(vrp)
-
-    if vrp[:matrices] == nil && (vrp.vehicles.select{ |v| v.overall_duration }.size > 0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
-      vrp_need_matrix = compute_vrp_need_matrix(vrp)
-      vrp = compute_need_matrix(vrp, vrp_need_matrix)
-    end
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
@@ -149,12 +146,10 @@ module OptimizerWrapper
       raise DiscordantProblemError.new("Geometry is not available if locations are not defined")
     else
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
-        complete_services_vrp = services_vrps.collect{ |service_vrp|
-          service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
-          Interpreters::SplitClustering.split_clusters([service_vrp])
-        }.flatten
-        solve(complete_services_vrp, services_fleets)
+        # The job seems easy enough to perform it with the server
+        define_process(services_vrps, services_fleets, job_id)
       else
+        # Delegate the job to a worker
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)),
         services_fleets: Base64.encode64(Marshal::dump(services_fleets)), api_key: api_key, checksum: checksum, pids: [])
         JobList.add(api_key, job_id)
@@ -163,18 +158,25 @@ module OptimizerWrapper
     end
   end
 
+  def self.define_process(services_vrps, services_fleets = [], job = nil, &block)
+    complete_services_vrp = services_vrps.delete_if{ |service_vrp|
+      service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty? }.collect{ |service_vrp|
+      # Define subproblem sequence of treatments
+      # Enhance the model if it represents a planning optimisation
+      service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
+
+      # Split/Clusterize the problem if to large
+      Interpreters::SplitClustering.split_clusters([service_vrp])
+    }.flatten.compact
+    solve(complete_services_vrp, services_fleets, job){ block }
+  end
+
   def self.solve(services_vrps, services_fleets = [], job = nil, &block)
     @unfeasible_services = []
 
     real_result = join_vrps(services_vrps, block) { |service, vrp, fleet_id, problem_size, block|
       cluster_result = nil
-      if vrp.services.empty? && vrp.shipments.empty?
-        {
-          solvers: [],
-          costs: 0,
-          routes: []
-        }
-      elsif !vrp.subtours.empty?
+      if !vrp.subtours.empty?
         multi_modal = Interpreters::MultiModal.new(vrp, services_fleets, fleet_id, service)
         cluster_result = multi_modal.multimodal_routes()
       else
@@ -919,102 +921,6 @@ module OptimizerWrapper
     result[:unassigned] = routes.find{ |route| route[:vehicle_id] == "unassigned" } ? routes.find{ |route| route[:vehicle_id] == "unassigned" }[:activities] : []
     result[:routes] = routes.select{ |route| route[:vehicle_id] != "unassigned" }
     result
-  end
-
-  class Job
-    include Resque::Plugins::Status
-
-    def perform
-      services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
-      services_fleets = Marshal.load(Base64.decode64(options['services_fleets']))
-      complete_services_vrp = services_vrps.collect{ |service_vrp|
-        service_vrp[:vrp] = Interpreters::PeriodicVisits.expand(service_vrp[:vrp])
-        Interpreters::SplitClustering.split_clusters([service_vrp])
-      }.flatten
-      result = OptimizerWrapper.solve(complete_services_vrp, services_fleets, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
-        @killed && wrapper.kill && return
-        @wrapper = wrapper
-        at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
-        if avancement && cost
-          p = Result.get(self.uuid) || { 'graph' => [] }
-          p.merge!({ 'graph' => [] }) if !p.has_key?('graph')
-          p['graph'] << {iteration: avancement, cost: cost, time: time}
-          Result.set(self.uuid, p)
-        end
-        if solution
-          p = Result.get(self.uuid) || {}
-          p['result'] = solution
-          Result.set(self.uuid, p)
-        end
-      }
-
-      p = Result.get(self.uuid) || {}
-      if result && !@killed && (!p['result'] || result[:cost] && result[:cost] < p['result']['cost'])
-        p['result'] = result
-      end
-
-      # Add values related to the current solve status
-      if p && p['result'] && p['graph'] && !p['graph'].empty?
-        p['result']['iterations'] = p['graph'].last['iteration']
-        p['result']['elapsed'] = p['graph'].last['time']
-      end
-
-      Result.set(self.uuid, p)
-    end
-
-    def on_killed
-      @wrapper && @wrapper.kill
-      @killed = true
-    end
-  end
-
-  class DiscordantProblemError < StandardError
-    attr_reader :data
-
-    def initialize(data = [])
-      @data = data
-    end
-  end
-  class UnsupportedProblemError < StandardError
-    attr_reader :data
-
-    def initialize(data = [])
-      @data = data
-    end
-  end
-  class UnsupportedRouterModeError < StandardError; end
-  class RouterWrapperError < StandardError; end
-
-  class Result
-    def self.set(key, value)
-      OptimizerWrapper::REDIS.set(key, value.to_json)
-    end
-
-    def self.get(key)
-      result = OptimizerWrapper::REDIS.get(key)
-      if result
-        JSON.parse(result.force_encoding(Encoding::UTF_8)) # On some env string is encoded as ASCII
-      end
-    end
-
-    def self.exist(key)
-      OptimizerWrapper::REDIS.exists(key)
-    end
-
-    def self.remove(api_key, key)
-      OptimizerWrapper::REDIS.del(key)
-      OptimizerWrapper::REDIS.lrem(api_key, 0, key)
-    end
-  end
-
-  class JobList
-    def self.add(api_key, job_id)
-      OptimizerWrapper::REDIS.rpush(api_key, job_id)
-    end
-
-    def self.get(api_key)
-      OptimizerWrapper::REDIS.lrange(api_key, 0, -1)
-    end
   end
 end
 
