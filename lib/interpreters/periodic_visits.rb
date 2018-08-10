@@ -1282,7 +1282,7 @@ module Interpreters
             (position..route_data[:current_route].size - 1).each{ |new_position|
               @uninserted[route_data[:current_route][position][:id]] = {
                 original_service: service,
-                reason: 'too many services reported to one day'
+                reason: 'Too many services shifted to the same day'
               }
             }
             break
@@ -1357,7 +1357,8 @@ module Interpreters
 
               if !inserted
                 @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}/#{services[service[:id]][:nb_visits]}"] = {
-                  original_service: service[:id]
+                  original_service: service[:id],
+                  reason: 'Visit not assignable'
                 }
               end
             end
@@ -1369,7 +1370,7 @@ module Interpreters
             (first_missing..services[service[:id]][:nb_visits]).each{ |missing_s|
               @uninserted["#{service[:id]}_#{missing_s}/#{services[service[:id]][:nb_visits]}"] = {
                 original_service: service[:id],
-                reason: 'first visit too late to affect other visits'
+                reason: 'First visit assigned too late to affect other visits'
               }
             }
           end
@@ -1640,7 +1641,7 @@ module Interpreters
                   @to_plan_service_ids.delete(service[:id])
                   @uninserted["#{service[:id]}_#{index}/#{service[:visits_number]}"] = {
                     original_service: service[:id],
-                    reason: 'no timewindow compatible for all services of this point'
+                    reason: 'Same_point_day option related : services at this geografical point have no compatible timewindow'
                   }
                 }
               }
@@ -1822,7 +1823,6 @@ module Interpreters
       }
 
       @candidate_service_ids.each{ |point|
-        # puts "#{point} uninserted"
         service_in_vrp = vrp.services.find{ |service| service[:id] == point }
         (1..service_in_vrp[:visits_number]).each{ |index|
           unassigned << {
@@ -1846,7 +1846,7 @@ module Interpreters
                 }
               }
             },
-            reason: 'all vehicles are full or no available timewindow matches service timewindow'
+            reason: 'Heuristic could not affect this service before all vehicles are full'
           }
         }
       }
@@ -1875,7 +1875,7 @@ module Interpreters
               }
             }
           },
-          reason: @uninserted[service][:reason] ? @uninserted[service][:reason] : 'visits unaffected by heuristic'
+          reason: @uninserted[service][:reason]
         }
       }
 
