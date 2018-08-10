@@ -291,14 +291,8 @@ $(document).ready(function() {
       var speed_multipliers = [];
       data.vehicles.forEach(function(vehicle) {
         if (router_modes.indexOf(vehicle[mapping.router_mode || 'router_mode']) == -1) router_modes.push(vehicle[mapping.router_mode || 'router_mode']);
-        if (router_modes.length > 1)
-          throw i18n.notSameRouter(router_modes);
         if (router_dimensions.indexOf(vehicle[mapping.router_dimension || 'router_dimension']) == -1) router_dimensions.push(vehicle[mapping.router_dimension || 'router_dimension']);
-        if (router_dimensions.length > 1)
-          throw i18n.notSameRouter(router_dimensions);
         if (speed_multipliers.indexOf(vehicle[mapping.speed_multiplier || 'speed_multiplier']) == -1) speed_multipliers.push(vehicle[mapping.speed_multiplier || 'speed_multiplier']);
-        if (speed_multipliers.length > 1)
-          throw i18n.notSameRouter(speed_multipliers);
 
         if (vehicle[mapping.start_lat || 'start_lat'] && vehicle[mapping.start_lon || 'start_lon']) {
           var refStart = vehicle[mapping.start_lat || 'start_lat'].replace(',', '.') + ',' + vehicle[mapping.start_lon || 'start_lon'].replace(',', '.');
