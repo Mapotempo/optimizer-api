@@ -465,6 +465,12 @@ module Api
                 path = 'test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_')
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
+              checksum = Digest::MD5.hexdigest Marshal.dump(params[:vrp])
+              if params[:points]
+                APIBase.dump_vrp_cache.write([params[:api_key], params[:name], checksum].compact.join('_').parameterize(''), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles] } }.to_json)
+              else
+                APIBase.dump_vrp_cache.write([params[:api_key], params[:name], checksum].compact.join('_').parameterize(''), {vrp: params[:vrp]}.to_json)
+              end
               vrp = ::Models::Vrp.create({})
               [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :subtours, :configuration].each{ |key|
                 if params[:vrp] && params[:vrp][key]
@@ -482,8 +488,6 @@ module Api
                 end
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
-                checksum = Digest::MD5.hexdigest Marshal.dump(params[:vrp])
-                APIBase.dump_vrp_cache.write([params[:api_key], vrp[:name], checksum].compact.join("_").parameterize(''), {vrp: params[:vrp]}.to_json)
                 ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp, checksum)
                 if ret.is_a?(String)
                   #present result, with: VrpResult
