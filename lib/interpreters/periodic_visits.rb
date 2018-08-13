@@ -1228,6 +1228,7 @@ module Interpreters
     end
 
     def self.readjust_times(route, all_services)
+      # readjust each service to the soonest possible
       if (route.collect{ |s| s[:id] } & all_services.collect{ |s| s[:id] }).size == route.size
         route.collect{ |s| s[:id] }.each_with_index{ |service, i|
           service_planned = all_services.find{ |s| s[:id] == service }
@@ -1262,10 +1263,19 @@ module Interpreters
         (1..route_data[:current_route].size - 1).each{ |position|
           service = route_data[:current_route][position][:id]
           route_time = matrix(route_data, previous_service, service)
-          start_time = (services[service][:tw].nil? || services[service][:tw].empty? ? services_list[position-1][:end] : [services_list[position-1][:end], services[service][:tw][0][:start] - route_time].max)
+          start_time = services_list[position-1][:end]
+          if services[service][:tw] && services[service][:tw].none?{ |tw| (tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index]%7 ) && (start_time + route_time).between?(tw[:start], tw[:end] )}
+            possible_tw = services[service][:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index]%7 ) && tw[:end] - route_time > services_list[position-1][:end] }
+            start_time = possible_tw[:start] - route_time
+          end
           arrival_time = start_time + route_time
           considered_setup_duration = services[service][:point_id] == services[previous_service][:point_id] ? 0 : services[service][:setup_duration]
           final_time = start_time + route_time + considered_setup_duration + services[service][:duration]
+          end_tw = nil
+          if services[service][:tw] && !services[service][:tw].empty?
+            chosen_tw = services[service][:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index]%7 ) && (arrival_time).between?(tw[:start], tw[:end]) }
+            end_tw = chosen_tw[:end]
+          end
 
           if final_time < route_data[:tw_end]
             services_list << {
@@ -1274,7 +1284,7 @@ module Interpreters
               start: start_time,
               end: final_time,
               considered_setup_duration: considered_setup_duration,
-              max_shift: (services[service][:tw].nil? || services[service][:tw].empty? ? nil : services[service][:tw][0][:end] - arrival_time),
+              max_shift: (end_tw.nil? ? nil : end_tw - arrival_time),
               number_in_sequence: route_data[:current_route][position][:number_in_sequence]
             }
             previous_service = service
@@ -1786,10 +1796,7 @@ module Interpreters
                 skills: services_data[point[:id]][:skills],
                 setup_duration: point[:considered_setup_duration],
                 duration: service_in_vrp[:activity][:duration],
-                timewindows: service_in_vrp[:activity][:timewindows] && !service_in_vrp[:activity][:timewindows].empty? ? [{
-                  start: service_in_vrp[:activity][:timewindows][0][:start],
-                  end: service_in_vrp[:activity][:timewindows][0][:end],
-                }] : nil,
+                timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
                 quantities: service_in_vrp[:quantities] ? service_in_vrp[:quantities].collect{ |qte| { unit: qte[:unit], value: qte[:value] } } : nil
               }
             }
@@ -1833,10 +1840,7 @@ module Interpreters
               lon: vrp.points.find{ |point| point[:id] == service_in_vrp[:activity][:point_id] }[:location][:lon],
               setup_duration: service_in_vrp[:activity][:setup_duration],
               duration: service_in_vrp[:activity][:duration],
-              timewindows: service_in_vrp[:activity][:timewindows] && !service_in_vrp[:activity][:timewindows].empty? ? [{
-                start: service_in_vrp[:activity][:timewindows][0][:start],
-                end: service_in_vrp[:activity][:timewindows][0][:end],
-              }] : [],
+              timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
               quantities: service_in_vrp[:quantities].collect{ |qte|
                 {
                   id: qte[:id],
@@ -1862,10 +1866,7 @@ module Interpreters
             lon: vrp.points.find{ |point| point[:id] == service_in_vrp[:activity][:point_id] }[:location][:lon],
             setup_duration: service_in_vrp[:activity][:setup_duration],
             duration: service_in_vrp[:activity][:duration],
-            timewindows: service_in_vrp[:activity][:timewindows] && !service_in_vrp[:activity][:timewindows].empty? ? [{
-              start: service_in_vrp[:activity][:timewindows][0][:start],
-              end: service_in_vrp[:activity][:timewindows][0][:start],
-            }] : [],
+            timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
             quantities: service_in_vrp[:quantities].collect{ |qte|
               {
                 id: qte[:id],
@@ -1903,12 +1904,9 @@ module Interpreters
           route[:services].each_with_index{ |s,i|
             if !services_data[s[:id]][:tw].nil? && !services_data[s[:id]][:tw].empty?
               time_to_arrive = ( i == 0 ? matrix(route[:vehicle], route[:vehicle][:start_point_id], s[:id]) : matrix( route[:vehicle], route[:services][i - 1][:id], s[:id] ))
-              tw = services_data[s[:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 }
-              if s[:start] + time_to_arrive < tw[:start]
-                puts "#{day} noooo start : #{s}"
-              end
-              if s[:start] + time_to_arrive > tw[:end]
-                puts "#{day} noooo start overpasses end #{s}"
+              compatible_tw = services_data[s[:id]][:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && (s[:start] + time_to_arrive).between?(tw[:start], tw[:end] ) }
+              if compatible_tw.nil?
+                puts "#{day} noooo : #{s}"
               end
             end
           }
