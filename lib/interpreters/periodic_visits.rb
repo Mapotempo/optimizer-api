@@ -1540,70 +1540,71 @@ module Interpreters
     end
 
     def self.grouped_fill(services_data)
-      current_vehicle = @candidate_vehicles[0]
-      # vehicle donné en argt pour boucler sur tous les véhicles ? sinon il faut forbid day ET vehcile ?
-      possible_to_fill = true
-      nb_of_days = @candidate_routes[current_vehicle].keys.size
-      forbbiden_days = []
+      @candidate_vehicles.each{ |current_vehicle|
+        possible_to_fill = true
+        nb_of_days = @candidate_routes[current_vehicle].keys.size
+        forbbiden_days = []
 
-      while possible_to_fill
-        best_day = @candidate_routes[current_vehicle].reject{ |day, _route| forbbiden_days.include?(day) }.sort_by{ |_day, route_data| route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] } }[0][0]
-        route_data = @candidate_routes[current_vehicle][best_day]
-        insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], services_data, route_data, [])
+        while possible_to_fill
+          best_day = @candidate_routes[current_vehicle].reject{ |day, _route| forbbiden_days.include?(day) }.sort_by{ |_day, route_data| route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] } }[0][0]
+          route_data = @candidate_routes[current_vehicle][best_day]
+          insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], services_data, route_data, [])
 
-        if !insertion_costs.empty?
-          initial_services = @candidate_routes[current_vehicle][best_day][:current_route].collect{ |s| s[:id] }
-          point_to_add = insertion_costs.sort_by{ |s| s[:additional_route_time] / services_data[s[:id]][:nb_visits]**2 }[0]
-          best_index = find_best_index(services_data, point_to_add[:id], route_data)
-          best_index[:end] = best_index[:end] - services_data[best_index[:id]][:group_duration] + services_data[best_index[:id]][:duration]
+          if !insertion_costs.empty?
 
-          insert_point_in_route(route_data, best_index)
+            initial_services = @candidate_routes[current_vehicle][best_day][:current_route].collect{ |s| s[:id] }
+            point_to_add = insertion_costs.sort_by{ |s| s[:additional_route_time] / services_data[s[:id]][:nb_visits]**2 }[0]
+            best_index = find_best_index(services_data, point_to_add[:id], route_data)
+            best_index[:end] = best_index[:end] - services_data[best_index[:id]][:group_duration] + services_data[best_index[:id]][:duration]
 
-          services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
-          if point_to_add[:position] == best_index[:position]
-            route_data[:positions_in_order].insert(point_to_add[:position], point_to_add[:position_in_order])
+            insert_point_in_route(route_data, best_index)
+
+            services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+            if point_to_add[:position] == best_index[:position]
+              route_data[:positions_in_order].insert(point_to_add[:position], point_to_add[:position_in_order])
+            else
+              route_data[:positions_in_order].insert(best_index[:position], -1)
+            end
+            @to_plan_service_ids.delete(best_index[:id])
+
+            # adding all points of same familly and frequence
+            start = best_index[:end]
+            max_shift = best_index[:potential_shift]
+            additional_duration = services_data[best_index[:id]][:duration] # add setup duration (idem compute_insertion_cost ?) # rename
+            @same_located[best_index[:id]].each_with_index{ |service_id, i|
+              route_data[:current_route].insert(best_index[:position] + i + 1,
+                id: service_id,
+                point_id: best_index[:point],
+                start: start,
+                arrival: start,
+                end: start + services_data[service_id][:duration],
+                considered_setup_duration: 0,
+                max_shift: max_shift ? max_shift - additional_duration : nil,
+                number_in_sequence: 1)
+              additional_duration += services_data[service_id][:duration]
+              @to_plan_service_ids.delete(service_id)
+              @candidate_service_ids.delete(service_id)
+              start += services_data[service_id][:duration]
+              services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+              route_data[:positions_in_order].insert(best_index[:position] + i + 1, route_data[:positions_in_order][best_index[:position]])
+            }
+
+            new_services = route_data[:current_route].reject{ |s| initial_services.include?(s[:id]) }
+            adjust_candidate_routes(current_vehicle, best_day, services_data, new_services, route_data[:current_route], @candidate_routes[current_vehicle].keys)
+
+            if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty?
+              @to_plan_service_ids += @services_unlocked_by[best_index[:id]]
+              forbbiden_days = [] # new services are available so we may need these days
+            end
           else
-            route_data[:positions_in_order].insert(best_index[:position], -1)
+            forbbiden_days << best_day
           end
-          @to_plan_service_ids.delete(best_index[:id])
 
-          # adding all points of same familly and frequence
-          start = best_index[:end]
-          max_shift = best_index[:potential_shift]
-          additional_duration = services_data[best_index[:id]][:duration] # add setup duration (idem compute_insertion_cost ?) # rename
-          @same_located[best_index[:id]].each_with_index{ |service_id, i|
-            route_data[:current_route].insert(best_index[:position] + i + 1,
-              id: service_id,
-              point_id: best_index[:point],
-              start: start,
-              arrival: start,
-              end: start + services_data[service_id][:duration],
-              considered_setup_duration: 0,
-              max_shift: max_shift ? max_shift - additional_duration : nil,
-              number_in_sequence: 1)
-            additional_duration += services_data[service_id][:duration]
-            @to_plan_service_ids.delete(service_id)
-            @candidate_service_ids.delete(service_id)
-            start += services_data[service_id][:duration]
-            services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
-            route_data[:positions_in_order].insert(best_index[:position] + i + 1, route_data[:positions_in_order][best_index[:position]])
-          }
-
-          new_services = route_data[:current_route].reject{ |s| initial_services.include?(s[:id]) }
-          adjust_candidate_routes(current_vehicle, best_day, services_data, new_services, route_data[:current_route], @candidate_routes[current_vehicle].keys)
-
-          if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty?
-            @to_plan_service_ids += @services_unlocked_by[best_index[:id]]
-            forbbiden_days = [] # new services are available so we may need these days
+          if @to_plan_service_ids.empty? || forbbiden_days.size == nb_of_days
+            possible_to_fill = false
           end
-        else
-          forbbiden_days << best_day
         end
-
-        if @to_plan_service_ids.empty? || forbbiden_days.size == nb_of_days
-          possible_to_fill = false
-        end
-      end
+      }
     end
 
     def self.compute_initial_solution(vrp)
