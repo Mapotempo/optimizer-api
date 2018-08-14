@@ -860,7 +860,7 @@ module Interpreters
       @candidate_routes[vehicle][day][:positions_in_order] = positions
     end
 
-    def self.insert_point_in_route(route_data, point_to_add)
+    def self.insert_point_in_route(route_data, point_to_add, day, services)
       current_route = route_data[:current_route]
       @candidate_service_ids.delete(point_to_add[:id])
       first_at_this_point = current_route.find{ |step| step[:point_id] == point_to_add[:point] }
@@ -890,14 +890,15 @@ module Interpreters
               current_route[point][:end] += shift
               current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
             elsif shift < 0
-              puts 'shift < 0, not treated'
-              # this case has not been observed in preliminar tests
-              # new_potential_start = current_route[point][:start] + shift
-              # soonest_authorized = services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day%7 && current_route[point][:start] }[:start] - matrix(route_data, current_route[point-1][:id], current_route[point][:id])
-              # shift = [shift + soonest_authorized - new_potential_start, 0].min
-              # current_route[point][:start] += shift
-              # current_route[point][:end] += shift
-              # current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
+              new_potential_start = current_route[point][:start] + shift
+              soonest_authorized = services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:start] }[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
+              if soonest_authorized > new_potential_start
+                # barely tested because very few cases :
+                shift = shift - (soonest_authorized - new_potential_start)
+              end
+              current_route[point][:start] += shift
+              current_route[point][:end] += shift
+              current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
             end
           }
         end
@@ -941,7 +942,7 @@ module Interpreters
               best_index[:end] = best_index[:end] - services[best_index[:id]][:group_duration] + services[best_index[:id]][:duration]
             end
 
-            insert_point_in_route(route_data, best_index)
+            insert_point_in_route(route_data, best_index, day, services)
             @to_plan_service_ids.delete(point_to_add[:id])
             services[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
             if point_to_add[:position] == best_index[:position]
@@ -1357,7 +1358,7 @@ module Interpreters
                   experiment[:current_route].delete_at(-1)
                   point_to_insert = find_best_index_to_adjust(experiment, services, service[:id])
                   if point_to_insert
-                    insert_point_in_route(experiment, point_to_insert)
+                    insert_point_in_route(experiment, point_to_insert, day, services)
                   end
                 end
                 recompute_times(services, experiment)
@@ -1557,7 +1558,7 @@ module Interpreters
             best_index = find_best_index(services_data, point_to_add[:id], route_data)
             best_index[:end] = best_index[:end] - services_data[best_index[:id]][:group_duration] + services_data[best_index[:id]][:duration]
 
-            insert_point_in_route(route_data, best_index)
+            insert_point_in_route(route_data, best_index, best_day, services_data)
 
             services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
             if point_to_add[:position] == best_index[:position]
