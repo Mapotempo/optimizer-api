@@ -73,6 +73,7 @@ GEM
       builder
       minitest (>= 5.0)
       ruby-progressbar
+    minitest-stub_any_instance (1.0.2)
     mono_logger (1.1.0)
     multi_json (1.12.2)
     multi_xml (0.6.0)
@@ -171,6 +172,7 @@ DEPENDENCIES
   i18n
   minitest
   minitest-reporters
+  minitest-stub_any_instance
   nokogiri
   polylines
   puma

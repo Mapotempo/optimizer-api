@@ -37,6 +37,7 @@ group :test do
   gem 'rack-test', '<0.8' # Waiting Ruby 2.2
   gem 'minitest'
   gem 'minitest-reporters'
+  gem 'minitest-stub_any_instance'
   gem 'simplecov', require: false
 end
 

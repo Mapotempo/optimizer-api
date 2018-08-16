@@ -2554,4 +2554,301 @@ class WrapperTest < Minitest::Test
     assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| !activity[:service_id].nil? }.size }.reduce(&:+)
     assert_equal 5, result[:unassigned].size
   end
+
+  def test_all_points_rejected_by_capacity
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      units: [{
+          id: "unit0",
+          label: "kg"
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        capacities: [{
+          unit_id: "unit0",
+          limit: 2
+        }],
+        timewindow: {
+          start: 0,
+          end: 2
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        },
+        quantities: [{
+          unit_id: "unit0",
+          value: 6
+        }]
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        },
+        quantities: [{
+          unit_id: "unit0",
+          value: 3
+        }]
+      }],
+      schedule:{
+        range_indices:{
+          start: 0,
+          end: 2
+        }
+      },
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      assert_equal 2, result[:unassigned].size
+    end
+  end
+
+  def test_all_points_rejected_by_tw
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      units: [{
+          id: "unit0",
+          label: "kg"
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0,
+          end: 2
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        visits_number: 2,
+        activity: {
+          point_id: 'point_1',
+          timewindows: [{
+              start: 3,
+              end: 4
+          }]
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+          timewindows: [{
+              start: 5,
+              end: 6
+          }]
+        }
+      }],
+      schedule:{
+        range_indices:{
+          start: 0,
+          end: 2
+        }
+      },
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      assert_equal 3, result[:unassigned].size
+    end
+  end
+
+  def test_all_points_rejected_by_sequence_tw
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      units: [{
+          id: "unit0",
+          label: "kg"
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        sequence_timewindows: [{
+          start: 6,
+          end: 10,
+          day_index: 2
+        },{
+          start: 0,
+          end: 5,
+          day_index: 0
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          timewindows: [{
+              start: 3,
+              end: 4,
+              day_index: 1
+          }]
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+          timewindows: [{
+              start: 4,
+              end: 5,
+              day_index: 2
+          }]
+        }
+      }],
+      schedule:{
+        range_indices:{
+          start: 0,
+          end: 2
+        }
+      },
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      assert_equal 2, result[:unassigned].size
+    end
+  end
+
+  def test_all_points_rejected_by_lapse
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      units: [{
+          id: "unit0",
+          label: "kg"
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        sequence_timewindows: [{
+          start: 6,
+          end: 10,
+          day_index: 2
+        },{
+          start: 0,
+          end: 5,
+          day_index: 0
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        visits_number: 2,
+        minimum_lapse: 4,
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        visits_number: 4,
+        minimum_lapse: 1,
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      schedule:{
+        range_indices:{
+          start: 0,
+          end: 2
+        }
+      },
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      assert_equal 6, result[:unassigned].size
+    end
+  end
 end

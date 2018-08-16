@@ -36,4 +36,5 @@ require 'grape-swagger'
 require 'grape-entity'
 
 require 'minitest/autorun'
+require 'minitest/stub_any_instance'
 require 'rack/test'
