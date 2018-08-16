@@ -324,24 +324,24 @@ module Wrappers
       }
     end
 
-    def find_vehicle(vrp, s, t_start, t_end, t_day)
+    def find_vehicle(vrp, service, t_start, t_end, t_day)
       vrp[:vehicles].select{ |vehicle| vehicle[:timewindow] }.any?{ |vehicle|
         v_start = vehicle[:timewindow][:start]
         v_end = vehicle[:timewindow][:end]
         v_day = vehicle[:timewindow][:day_index] ? vehicle[:timewindow][:day_index] : nil
         days_compatible = v_day.nil? || t_day.nil? || v_day == t_day
-        if s[:unavailable_visit_day_indices] && s[:unavailable_visit_day_indices].include?(v_day)
+        if service[:unavailable_visit_day_indices] && service[:unavailable_visit_day_indices].include?(v_day)
           days_compatible = false
         end
-        if s[:unavailable_visit_day_date] && v_day >= 0 && s[:unavailable_visit_day_date].include?(vrp[:schedule][:range_date][:start] + v_day)
+        if service[:unavailable_visit_day_date] && v_day >= 0 && service[:unavailable_visit_day_date].include?(vrp[:schedule][:range_date][:start] + v_day)
           days_compatible = false
         end
-        days_compatible = is_there_compatible_day(vrp, s, t_day, vehicle) if v_day.nil? && vrp[:schedule] && days_compatible
+        days_compatible = is_there_compatible_day(vrp, service, t_day, vehicle) if v_day.nil? && vrp[:schedule] && days_compatible
         days_compatible && (t_start.nil? && t_end.nil? ||
           t_start.nil? && (v_start.nil? || v_start <= t_end) ||
           t_end.nil? && (v_end.nil? || v_end >= t_start) ||
           t_start && t_end && (v_start.nil? || v_start <= t_end) && (v_end.nil? || v_end >= t_start))
-      } || vrp[:vehicles].any?{ |v| !v[:timewindow] && !v[:sequence_timewindows]} || vrp[:vehicles].select{ |vehicle| vehicle[:sequence_timewindows] }.any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw|
+      } || vrp[:vehicles].any?{ |vehicle| !vehicle[:timewindow] && !vehicle[:sequence_timewindows]} || vrp[:vehicles].select{ |vehicle| vehicle[:sequence_timewindows] }.any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw|
           v_start = tw[:start]
           v_end = tw[:end]
           v_day = tw[:day_index]
@@ -350,7 +350,7 @@ module Wrappers
             t_start.nil? && (v_start.nil? || v_start <= t_end) ||
             t_end.nil? && (v_end.nil? || v_end >= t_start) ||
             t_start && t_end && v_start <= t_end && v_end >= t_start)
-        }} || vrp[:schedule] && vrp[:vehicles].any?{ |v| is_there_compatible_day(vrp, s, t_day, v) } || vrp[:vehicles].any?{ |vehicle| !vehicle[:cost_late_multiplier].nil? && vehicle[:cost_late_multiplier] > 0 }
+        }} || vrp[:vehicles].any?{ |vehicle| vehicle[:cost_late_multiplier] && vehicle[:cost_late_multiplier] > 0 }
     end
 
     def check(vrp, matrix, unfeasible)
