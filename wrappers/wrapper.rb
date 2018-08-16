@@ -318,10 +318,8 @@ module Wrappers
       first_day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:start] : vrp[:schedule][:range_date][:start]
       last_day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:end] : vrp[:schedule][:range_date][:end]
       (first_day..last_day).any?{ |day|
-        s_ok = (t_day != nil) ? t_day == day : (s[:unavailable_visit_day_indices] && s[:unavailable_visit_day_indices].include?(day)) ||
-          (s[:unavailable_visit_date] && s[:unavailable_visit_day_indices].include?(day)) ? false : true
-        v_ok = (vrp[:vehicles][v][:unavailable_work_day_indices] && vrp[:vehicles][v][:unavailable_work_day_indices].include?(day)) ||
-          (vrp[:vehicles][v][:unavailable_work_date] && vrp[:vehicles][v][:unavailable_work_date].include?(day)) ? false : true
+        s_ok = (t_day != nil) ? t_day == day : (s[:unavailable_visit_day_indices] && s[:unavailable_visit_day_indices].include?(day)) || s[:unavailable_visit_date] && s[:unavailable_visit_day_indices].include?(day)
+        v_ok = v[:unavailable_work_day_indices] && v[:unavailable_work_day_indices].include?(day) || v[:unavailable_work_date] && v[:unavailable_work_date].include?(day)
         s_ok && v_ok
       }
     end
@@ -338,7 +336,7 @@ module Wrappers
         if s[:unavailable_visit_day_date] && v_day >= 0 && s[:unavailable_visit_day_date].include?(vrp[:schedule][:range_date][:start] + v_day)
           days_compatible = false
         end
-        days_compatible = is_there_compatible_day(vrp, s, t_day, v) if v_day.nil? && vrp[:schedule] && days_compatible
+        days_compatible = is_there_compatible_day(vrp, s, t_day, vehicle) if v_day.nil? && vrp[:schedule] && days_compatible
         days_compatible && (t_start.nil? && t_end.nil? ||
           t_start.nil? && (v_start.nil? || v_start <= t_end) ||
           t_end.nil? && (v_end.nil? || v_end >= t_start) ||
