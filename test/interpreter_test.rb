@@ -96,7 +96,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 2, expanded_vrp[:vehicles].size
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
     assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2}
@@ -181,7 +183,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 2, expanded_vrp[:vehicles].size
     assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
@@ -292,7 +296,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 10, expanded_vrp[:vehicles].size
     assert expanded_vrp[:vehicles][0].timewindow[:start] == 1
     assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
@@ -391,7 +397,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 4, expanded_vrp[:vehicles].size
     assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
@@ -496,7 +504,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 4, expanded_vrp[:vehicles].size
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
     assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 }
@@ -594,7 +604,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 2, expanded_vrp[:vehicles].size
     assert_equal expanded_vrp[:vehicles][0].timewindow[:start], 1
     assert_equal expanded_vrp[:vehicles][0].timewindow[:end], 11
@@ -665,7 +677,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 1, expanded_vrp[:vehicles].size
     assert_equal "vehicle_0_1", expanded_vrp[:vehicles].first[:id]
   end
@@ -731,7 +745,9 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    expanded_vrp = Interpreters::PeriodicVisits.send(:expand, Models::Vrp.create(problem))
+    vrp = Models::Vrp.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp)
     assert_equal 1, expanded_vrp[:vehicles].size
     assert_equal "vehicle_0_0", expanded_vrp[:vehicles].last[:id]
   end

@@ -233,8 +233,8 @@ module OptimizerWrapper
           unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
           @unfeasible_services += unfeasible_services
           vrp.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
-          Interpreters::PeriodicVisits.initialize
-          vrp = Interpreters::PeriodicVisits.expand(vrp)
+          periodic = Interpreters::PeriodicVisits.new(vrp)
+          vrp = periodic.expand(vrp)
 
           File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
