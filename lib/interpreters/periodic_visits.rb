@@ -876,6 +876,7 @@ module Interpreters
 
       if point_to_add[:position] < current_route.size - 1
         current_route[point_to_add[:position] + 1][:start] = point_to_add[:next_start_time]
+        current_route[point_to_add[:position] + 1][:arrival] = point_to_add[:next_arrival_time]
         current_route[point_to_add[:position] + 1][:end] = point_to_add[:next_final_time]
         current_route[point_to_add[:position] + 1][:max_shift] = current_route[point_to_add[:position] + 1][:max_shift] ? current_route[point_to_add[:position] + 1][:max_shift] - point_to_add[:shift] : nil
         if !point_to_add[:shift].zero?
@@ -1023,15 +1024,15 @@ module Interpreters
       route = route_data[:current_route]
 
       if route.empty?
-        [nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted) + matrix(route_data, service_inserted, route_data[:end_point_id])]
+        [nil, nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted) + matrix(route_data, service_inserted, route_data[:end_point_id])]
       elsif next_service_id
         dist_to_next = matrix(route_data, service_inserted, next_service_id)
         next_start, next_end = compute_tw_for_next(inserted_final_time, services_info[next_service_id], route[next_service][:considered_setup_duration], dist_to_next)
         shift = next_end - route[next_service][:end]
 
-        [next_start, next_end, shift]
+        [next_start, next_start + dist_to_next, next_end, shift]
       else
-        [nil, nil, inserted_final_time - route.last[:end]]
+        [nil, nil, nil, inserted_final_time - route.last[:end]]
       end
     end
 
@@ -1047,7 +1048,7 @@ module Interpreters
         arrival_time = start_time + matrix(route_data, previous_service, service)
         final_time = current_tw[:final_time]
         next_id = route[position] ? route[position][:id] : nil
-        next_start, next_end, shift = compute_shift(route_data, services, service, final_time, position, next_id)
+        next_start, next_arrival, next_end, shift = compute_shift(route_data, services, service, final_time, position, next_id)
         time_back_to_depot = (position == route.size ? final_time + matrix(route_data, service, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + shift)
         acceptable_shift = route[position] && route[position][:max_shift] ? route[position][:max_shift] >= shift : true
         if acceptable_shift && route[position + 1]
@@ -1084,6 +1085,7 @@ module Interpreters
             position_in_order: position_in_order,
             considered_setup_duration: current_tw[:setup_duration],
             next_start_time: next_start,
+            next_arrival_time: next_arrival,
             next_final_time: next_end,
             potential_shift: current_tw[:max_shift],
             additional_route_time: [0, shift - duration].max,
@@ -1137,6 +1139,7 @@ module Interpreters
             position_in_order: -1,
             considered_setup_duration: tw[:setup_duration],
             next_start_time: nil,
+            next_arrival_time: nil,
             next_final_time: nil,
             potential_shift: tw[:max_shift],
             additional_route_time: matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id]),
