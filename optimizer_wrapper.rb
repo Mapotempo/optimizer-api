@@ -472,10 +472,15 @@ module OptimizerWrapper
       max_timewindows_size = (solution['routes'].collect{ |route|
         route['activities'].collect{ |activity|
           if activity['detail'] && activity['detail']['timewindows']
-            activity['detail']['timewindows'].size
+            activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
           end
         }.compact
-      }.flatten + [0]).max
+      }.flatten +
+      solution['unassigned'].collect{ |activity|
+        if activity['detail'] && activity['detail']['timewindows']
+          activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
+        end
+      }.compact + [0]).max
       timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
         ["timewindow_start_#{index}", "timewindow_end_#{index}"]
       }.flatten
@@ -498,8 +503,9 @@ module OptimizerWrapper
               activity['detail']['additional_value'] || 0,
             ]
             timewindows = (0..max_timewindows_size-1).collect{ |index|
-              if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
-                [formatted_duration(activity['detail']['timewindows'][index]['start']) || nil, formatted_duration(activity['detail']['timewindows'][index]['end']) || nil]
+              if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
+                tw = activity['detail']['timewindows'].select{ |tw| [tw['start'], tw['end']] }.uniq.sort_by{ |t| t['start'] }[index]
+                [tw['start'] && formatted_duration(tw['start']), tw['end'] && formatted_duration(tw['end'])]
               else
                 [nil, nil]
               end
@@ -526,8 +532,9 @@ module OptimizerWrapper
             activity['detail']['additional_value'] || 0,
           ]
           timewindows = (0..max_timewindows_size-1).collect{ |index|
-            if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].size
-              [formatted_duration(activity['detail']['timewindows'][index]['start']) || nil, formatted_duration(activity['detail']['timewindows'][index]['end']) || nil]
+            if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
+              tw = activity['detail']['timewindows'].select{ |tw| [tw['start'], tw['end']] }.uniq.sort_by{ |t| t['start'] }[index]
+              [tw['start'] && formatted_duration(tw['start']), tw['end'] && formatted_duration(tw['end'])]
             else
               [nil, nil]
             end
