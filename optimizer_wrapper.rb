@@ -492,6 +492,9 @@ module OptimizerWrapper
         end
         solution['routes'].each{ |route|
           route['activities'].each{ |activity|
+            if activity['service_id']
+              activity['service_id'].sub!("/", "_") if activity['service_id'].include? '/'
+            end
             common = [
               route['vehicle_id'],
               activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
@@ -521,6 +524,9 @@ module OptimizerWrapper
           }
         }
         solution['unassigned'].each{ |activity|
+          if activity['service_id']
+            activity['service_id'].sub!("/", "_") if activity['service_id'].include? '/'
+          end
           common = [
             nil,
             activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
