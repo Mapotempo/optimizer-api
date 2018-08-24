@@ -450,8 +450,7 @@ module OptimizerWrapper
   end
 
   def self.build_csv(solution)
-
-    header = ['vehicle_id','id', 'point_id', 'lat','lon','setup_duration','duration','additional_value']
+    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'setup_duration', 'duration', 'additional_value', 'total_travel_time', 'total_travel_distance']
     quantities_header = []
     quantities_id = []
     if solution
@@ -504,6 +503,8 @@ module OptimizerWrapper
               formatted_duration(activity['detail']['setup_duration'] || 0),
               formatted_duration(activity['detail']['duration'] || 0),
               activity['detail']['additional_value'] || 0,
+              formatted_duration(route['total_travel_time']),
+              route['total_distance']
             ]
             timewindows = (0..max_timewindows_size-1).collect{ |index|
               if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
@@ -536,6 +537,8 @@ module OptimizerWrapper
             formatted_duration(activity['detail']['setup_duration'] || 0),
             formatted_duration(activity['detail']['duration'] || 0),
             activity['detail']['additional_value'] || 0,
+            nil,
+            nil
           ]
           timewindows = (0..max_timewindows_size-1).collect{ |index|
             if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
