@@ -171,6 +171,7 @@ module OptimizerWrapper
   def self.solve(services_vrps, services_fleets = [], job = nil, block = nil)
     @unfeasible_services = []
 
+    cluster_reference = 0
     real_result = join_vrps(services_vrps, block) { |service, vrp, fleet_id, problem_size, block|
       cluster_result = nil
       if !vrp.subtours.empty?
@@ -233,6 +234,10 @@ module OptimizerWrapper
           unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
           @unfeasible_services += unfeasible_services
           vrp.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
+          @unfeasible_services.each{ |service|
+            next if service[:detail][:skills] && service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
+            service[:detail][:skills] = service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
+          }
 
           if !vrp.services.empty? || !vrp.shipments.empty? || !vrp.rests.empty?
             periodic = Interpreters::PeriodicVisits.new(vrp)
@@ -267,6 +272,7 @@ module OptimizerWrapper
                 end
               end
             else
+              parse_result(vrp, parse_result(vrp, vrp[:preprocessing_heuristic_result]))
               if vrp.restitution_csv
                 actual_result = Result.get(job) || {}
                 actual_result['csv'] = true
@@ -329,6 +335,24 @@ module OptimizerWrapper
         }
       end
 
+      if vrp.preprocessing_partition_method
+        # add associated cluster as skill
+        [cluster_result, vrp.preprocessing_heuristic_result].each{ |solution|
+          if solution && !solution.empty?
+            solution[:routes].each{ |route|
+              route[:activities].each do |stop|
+                next if stop[:service_id].nil?
+                stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
+              end
+            }
+            solution[:unassigned].each do |stop|
+              next if stop[:service_id].nil?
+              stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
+            end
+          end
+        }
+      end
+      cluster_reference += 1
       if vrp.preprocessing_heuristic_result && !vrp.preprocessing_heuristic_result.empty?
         [cluster_result || vrp.preprocessing_heuristic_result, vrp.preprocessing_heuristic_result].sort_by{ |sol| sol[:cost] }[0]
       else
@@ -487,7 +511,7 @@ module OptimizerWrapper
   end
 
   def self.build_csv(solution)
-    header = ['day_week_num', 'day_week', 'vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'total_travel_time', 'total_travel_distance']
+    header = ['day_week_num', 'day_week', 'vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'total_travel_time', 'total_travel_distance']
     quantities_header = []
     quantities_id = []
     if solution
@@ -541,6 +565,7 @@ module OptimizerWrapper
               formatted_duration(activity['detail']['setup_duration'] || 0),
               formatted_duration(activity['detail']['duration'] || 0),
               activity['detail']['additional_value'] || 0,
+              activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
               formatted_duration(route['total_travel_time']),
               route['total_distance']
             ]
@@ -576,6 +601,7 @@ module OptimizerWrapper
             formatted_duration(activity['detail']['setup_duration'] || 0),
             formatted_duration(activity['detail']['duration'] || 0),
             activity['detail']['additional_value'] || 0,
+            activity['detail']['skills'].to_a.flatten.join(','),
             nil,
             nil
           ]
