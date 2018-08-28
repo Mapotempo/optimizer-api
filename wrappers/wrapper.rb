@@ -24,7 +24,9 @@ module Wrappers
     end
 
     def solver_constraints
-      []
+      [
+       :assert_no_pickup_timewindows_after_delivery_timewindows,
+      ]
     end
 
     def inapplicable_solve?(vrp)
@@ -104,6 +106,14 @@ module Wrappers
     def assert_no_shipments_with_multiple_timewindows(vrp)
       vrp.shipments.empty? || vrp.shipments.none? { |shipment|
         shipment.pickup.timewindows.size > 1 || shipment.delivery.timewindows.size > 1
+      }
+    end
+
+    def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
+      vrp.shipments.empty? || vrp.shipments.none? { |shipment|
+        first_open = shipment.pickup.timewindows.sort_by{ |s| s[:start]}.first
+        last_close = shipment.delivery.timewindows.sort_by{ |s| s[:start]}.last
+        (first_open ? first_open.start : 0) + 86400 * (first_open && first_open.day_index ? first_open.day_index : 0) > (last_close ? last_close.start : 0) + 86400 * (last_close && last_close.day_index ? last_close.day_index : 0)
       }
     end
 
