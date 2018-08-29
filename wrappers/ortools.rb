@@ -371,14 +371,15 @@ module Wrappers
       }
     end
 
-    def build_quantities(job, job_loads)
+    def build_quantities(job, job_loads, delivery=nil)
       if job_loads
         job_loads.collect{ |current_load|
-          associated_quantity = job.quantities.find{ |quantity| quantity.unit && quantity.unit.id == current_load[:unit].id} if job
+          associated_quantity = job.quantities.find{ |quantity| quantity.unit && quantity.unit.id == current_load[:unit]} if job
           {
             unit: current_load[:unit],
-            value: associated_quantity && associated_quantity.value,
-            setup_value: current_load[:unit].counting ? associated_quantity && associated_quantity.setup_value : nil,
+            label: current_load[:label],
+            value: associated_quantity && associated_quantity.value && (delivery.nil? ? 1 : -1) * associated_quantity.value,
+            setup_value: current_load[:counting] ? associated_quantity && associated_quantity.setup_value : nil,
             current_load: current_load[:current_load]
           }.delete_if{ |k,v| !v }.compact
         }
@@ -386,8 +387,9 @@ module Wrappers
         job.quantities.collect{ |quantity|
           if quantity.unit
             {
-              unit: quantity.unit,
-              value: quantity.value,
+              unit: quantity.unit.id,
+              label: quantity.unit.label,
+              value: quantity && quantity.value && (delivery.nil? ? 1 : -1) * quantity.value,
               setup_value: quantity.unit.counting ? quantity.setup_value : 0
             }
           end
@@ -402,7 +404,7 @@ module Wrappers
       }
     end
 
-    def build_detail(job, activity, point, day_index, job_load, vehicle)
+    def build_detail(job, activity, point, day_index, job_load, vehicle, delivery=nil)
       {
         lat: point && point.location && point.location.lat,
         lon: point && point.location && point.location.lon,
@@ -411,7 +413,7 @@ module Wrappers
         duration: activity && activity.duration,
         additional_value: activity && activity.additional_value,
         timewindows: activity && build_timewindows(activity, day_index),
-        quantities: build_quantities(job, job_load),
+        quantities: build_quantities(job, job_load, delivery),
         router_mode: vehicle ? vehicle.router_mode : nil,
         speed_multiplier: vehicle ? vehicle.speed_multiplier : nil
       }.delete_if{ |k,v| !v }.compact
@@ -449,7 +451,7 @@ module Wrappers
               shipment_id: "#{shipment.id}",
               type: 'delivery',
               point_id: shipment.delivery.point_id,
-              detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil)
+              detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
             }
           }).flatten + (vrp.rests.collect{ |rest|
             {
@@ -476,7 +478,8 @@ module Wrappers
           previous = nil
           load_status = vrp.units.collect{ |unit|
             {
-              unit: unit,
+              unit: unit.id,
+              label: unit.label,
               current_load: 0
             }
           }
@@ -487,9 +490,12 @@ module Wrappers
           activities: route['activities'].collect{ |activity|
               current_index = activity['index'] || 0
               activity_loads = load_status.collect.with_index{ |load_quantity, index|
+                unit = vrp.units.find{ |unit| unit.id == load_quantity[:unit] }
                 {
-                  unit: vrp.units.find{ |unit| unit.id == load_quantity[:unit].id },
-                  current_load: (activity['quantities'][index] || 0).round(2)
+                  unit: unit.id,
+                  label: unit.label,
+                  current_load: (activity['quantities'][index] || 0).round(2),
+                  counting: unit.counting
                 }
               }
               if activity['type'] == 'start'
@@ -553,7 +559,7 @@ module Wrappers
                     travel_distance: travel_distance,
                     begin_time: earliest_start,
                     departure_time: earliest_start + (shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i ),
-                    detail: build_detail(shipment, shipment_activity == 0 ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads, vehicle)
+                    detail: build_detail(shipment, shipment_activity == 0 ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index%7 : nil, activity_loads, vehicle, shipment_activity == 0 ? nil : true)
                   }.delete_if{ |k,v| !v }
                   earliest_start += shipment_activity == 0 ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i
                   previous_index = point_index
@@ -577,7 +583,8 @@ module Wrappers
             }.compact,
           initial_loads: load_status.collect{ |unit|
             {
-              unit_id: unit[:unit].id,
+              unit: unit[:unit],
+              label: unit[:label],
               value: unit[:current_load]
             }
           }
@@ -601,7 +608,7 @@ module Wrappers
             shipment_id: "#{shipment_id}",
             type: 'delivery',
             point_id: shipment.delivery.point_id,
-            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil)
+            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
           }]
         }.flatten + (vrp.vehicles.collect{ |vehicle| vehicle.rests.collect(&:id) }.flatten - collected_rests_indices.collect{ |index| index < vrp.rests.size && vrp.rests[index].id }).collect{ |rest_id|
           rest = vrp.rests.find{ |rest| rest.id == rest_id }

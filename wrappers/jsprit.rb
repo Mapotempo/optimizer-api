@@ -87,7 +87,8 @@ module Wrappers
     def build_quantities(job)
       job.quantities.collect{ |quantity|
         {
-          unit: quantity.unit,
+          unit: quantity.unit.id,
+          label: quantity.unit.label,
           value: quantity.value,
           setup_value: quantity.unit.counting ? quantity.setup_value : 0
         }

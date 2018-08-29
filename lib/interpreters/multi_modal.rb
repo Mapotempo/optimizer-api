@@ -230,7 +230,7 @@ module Interpreters
               }.flatten.compact.uniq,
               quantities: route[:activities][-2][:detail][:quantities].collect{ |quantity|
                 {
-                  unit: @original_vrp.units.find{ |unit| unit.id == quantity[:unit].id},
+                  unit: @original_vrp.units.find{ |unit| unit.id == quantity[:unit] },
                   value: quantity[:current_load]
                 }
               }
