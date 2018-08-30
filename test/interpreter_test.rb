@@ -1179,7 +1179,7 @@ class InterpreterTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
-    assert_equal 0, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.min
+    assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.min
     assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.max
   end
 
