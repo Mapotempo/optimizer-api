@@ -1394,10 +1394,20 @@ class InterpreterTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
-    assert_equal 3, result[:routes][2][:activities].size
-    assert_equal 3, result[:routes][3][:activities].size
-    assert_equal 3, result[:routes][12][:activities].size
-    assert_equal 3, result[:routes][13][:activities].size
+    route_s01 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_0_1/2' } }
+    route_s02 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_0_2/2' } }
+    route_s11 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_1_1/2' } }
+    route_s12 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_1_2/2' } }
+
+    route_index_s01 = route_s01 && route_s01[:vehicle_id].split('_').last.to_i || -1
+    route_index_s02 = route_s02 && route_s02[:vehicle_id].split('_').last.to_i || -1
+    route_index_s11 = route_s11 && route_s11[:vehicle_id].split('_').last.to_i || 33
+    route_index_s12 = route_s12 && route_s12[:vehicle_id].split('_').last.to_i || 33
+
+    assert route_index_s02 - route_index_s01 >= 15
+    assert route_index_s02 - route_index_s01 <= 32
+    assert route_index_s12 - route_index_s11 >= 11
+    assert route_index_s12 - route_index_s11 <= 22
   end
 
   def test_shipments_and_relation
