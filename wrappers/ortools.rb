@@ -475,7 +475,7 @@ module Wrappers
         iterations: content['iterations'] || 0,
         routes: content['routes'].each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
-          previous = nil
+          previous_index = nil
           load_status = vrp.units.collect{ |unit|
             {
               unit: unit.id,
