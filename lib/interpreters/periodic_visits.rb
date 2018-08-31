@@ -1248,6 +1248,11 @@ module Interpreters
                   reason: 'Visit not assignable by heuristic'
                 }
               end
+            elsif visit_number < services[service[:id]][:nb_visits]
+              @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}/#{services[service[:id]][:nb_visits]}"] = {
+                original_service: service[:id],
+                reason: 'First visit day does not allow to affect this visit'
+              }
             end
             # even if we do not add it we should increment this value in order not to add too many services
             visit_number += 1
