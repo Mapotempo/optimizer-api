@@ -1039,7 +1039,7 @@ module Interpreters
         end
         acceptable_shift_for_itself = (current_tw[:end_tw] ? arrival_time <= current_tw[:end_tw] : true)
         acceptable_shift_for_group = true
-        if @same_point_day && !filling_candidate_route
+        if @same_point_day && !filling_candidate_route && !services[service][:tw].empty?
           # all services start on time
           additional_durations = services[service][:duration] + current_tw[:setup_duration]
           @same_located[service].each{ |id|
@@ -1300,40 +1300,47 @@ module Interpreters
       capacities
     end
 
-    def compute_best_common_tw(services, set, group_tw)
-      # all timewindows are assigned to a day
-      group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw| (0..6).each{ |day|
-          group_tw << { day_index: day, start: tw[:start], end: tw[:end] }
-      }}
-      group_tw.delete_if{ |tw| tw[:day_index].nil? }
+    def compute_best_common_tw(services, set)
+      first_with_tw = set.find{ |service| services[service[:id]][:tw] && !services[service[:id]][:tw].empty? }
+      if first_with_tw
+        group_tw = services[first_with_tw[:id]][:tw].collect{ |tw| {day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
+        # all timewindows are assigned to a day
+        group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw| (0..6).each{ |day|
+            group_tw << { day_index: day, start: tw[:start], end: tw[:end] }
+        }}
+        group_tw.delete_if{ |tw| tw[:day_index].nil? }
 
-      # finding minimal common timewindow
-      set.each{ |service|
-        if !services[service[:id]][:tw].empty?
-          # remove all tws with no intersection with this service tws
-          group_tw.delete_if{ |tw1|
-            services[service[:id]][:tw].none?{ |tw2|
-              (tw2[:day_index].nil? || tw2[:day_index] == tw1[:day_index]) &&
-              (tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start] && tw2[:end] >= tw1[:end])
+        # finding minimal common timewindow
+        set.each{ |service|
+          if !services[service[:id]][:tw].empty?
+            # remove all tws with no intersection with this service tws
+            group_tw.delete_if{ |tw1|
+              services[service[:id]][:tw].none?{ |tw2|
+                (tw2[:day_index].nil? || tw2[:day_index] == tw1[:day_index]) &&
+                (tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start] && tw2[:end] >= tw1[:end])
+              }
             }
-          }
 
-          if !group_tw.empty?
-            # adjust all tws with intersections with this point tws
-            services[service[:id]][:tw].each{ |tw|
-              intersecting_tws = group_tw.select{ |t| (t[:day_index].nil? || tw[:day_index].nil? || t[:day_index] == tw[:day_index]) && (tw[:start].between?(t[:start], t[:end]) || tw[:end].between?(t[:start], t[:end]) || tw[:start] <= t[:start] && tw[:end] >= t[:start]) }
-              if !intersecting_tws.empty?
-                intersecting_tws.each{ |t|
-                  t[:start] = [t[:start], tw[:start]].max
-                  t[:end] = [t[:end], tw[:end]].min
-                }
-              end
-            }
+            if !group_tw.empty?
+              # adjust all tws with intersections with this point tws
+              services[service[:id]][:tw].each{ |tw|
+                intersecting_tws = group_tw.select{ |t| (t[:day_index].nil? || tw[:day_index].nil? || t[:day_index] == tw[:day_index]) && (tw[:start].between?(t[:start], t[:end]) || tw[:end].between?(t[:start], t[:end]) || tw[:start] <= t[:start] && tw[:end] >= t[:start]) }
+                if !intersecting_tws.empty?
+                  intersecting_tws.each{ |t|
+                    t[:start] = [t[:start], tw[:start]].max
+                    t[:end] = [t[:end], tw[:end]].min
+                  }
+                end
+              }
+            end
           end
-        end
-      }
+        }
 
-      group_tw
+        group_tw.delete_if{ |tw| tw[:start] && tw[:end] && tw[:start] == tw[:end] }
+        group_tw
+      else
+        []
+      end
     end
 
     def basic_fill(services_data)
@@ -1478,10 +1485,9 @@ module Interpreters
           same_located_set = vrp.services.select{ |service| service[:activity][:point][:location][:id] == point[:location][:id] }.sort_by{ |s| s[:visits_number] }
 
           if !same_located_set.empty?
-            representative_id = same_located_set.last[:id]
-            group_tw = compute_best_common_tw(services_data, same_located_set, services_data[representative_id][:tw].collect{ |tw| {day_index: tw[:day_index], start: tw[:start], end: tw[:end] } })
+            group_tw = compute_best_common_tw(services_data, same_located_set)
 
-            if group_tw.empty?
+            if group_tw.empty? && !same_located_set.all?{ |service| services_data[service[:id]][:tw].nil? || services_data[service[:id]][:tw].empty? }
               # reject group because no common tw
               same_located_set.each{ |service|
                 (1..service[:visits_number]).each{ |index|
