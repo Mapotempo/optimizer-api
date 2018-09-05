@@ -483,11 +483,11 @@ module Api
                   (vrp.send("#{key}+=", params[key]))
                 end
               }
-              if !vrp.valid? || params[:vrp].nil? || params[:vrp].keys.size == 0
+              if !vrp.valid? || params[:vrp].nil? || params[:vrp].keys.empty?
                 if params[:vrp].nil?
-                  vrp.errors[:empty_file] = "JSON file is empty"
-                elsif params[:vrp].keys.size == 0
-                  vrp.errors[:empty_vrp] = "vrp structure is empty"
+                  vrp.errors[:empty_file] = 'JSON file is empty'
+                elsif params[:vrp].keys.empty?
+                  vrp.errors[:empty_vrp] = 'vrp structure is empty'
                 end
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
