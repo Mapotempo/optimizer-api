@@ -890,7 +890,7 @@ module Interpreters
               current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
             elsif shift < 0
               new_potential_start = current_route[point][:start] + shift
-              soonest_authorized = services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:start] }[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
+              soonest_authorized = services[current_route[point][:id]][:tw].empty? ? new_potential_start : services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:start] }[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
               if soonest_authorized > new_potential_start
                 # barely tested because very few cases :
                 shift = shift - (soonest_authorized - new_potential_start)
@@ -1469,7 +1469,7 @@ module Interpreters
           heuristic_period: (service[:visits_number] == 1 ? nil : (@schedule_end > 7 && has_sequence_timewindows && !has_every_day_index ? (service[:minimum_lapse].to_f / 7).ceil * 7 : (service[:minimum_lapse].nil? ? 1 : service[:minimum_lapse].ceil))),
           nb_visits: service[:visits_number],
           point_id: service[:activity][:point][:location][:id],
-          tw: service[:activity][:timewindows],
+          tw: service[:activity][:timewindows] ?  service[:activity][:timewindows] : [],
           unavailable_days: service[:unavailable_visit_day_indices]
         }
 
@@ -1671,14 +1671,7 @@ module Interpreters
               setup_duration: service_in_vrp[:activity][:setup_duration],
               duration: service_in_vrp[:activity][:duration],
               timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] } }.sort_by{ |t| t[:start] } : [],
-              quantities: service_in_vrp[:quantities].collect{ |qte|
-                {
-                  id: qte[:id],
-                  unit_id: qte[:unit_id],
-                  value: qte[:value],
-                  unit: qte[:unit]
-                }
-              }
+              quantities: service_in_vrp[:quantities] ? service_in_vrp[:quantities].collect{ |qte| { id: qte[:id], unit: qte[:unit], value: qte[:value] } } : nil
             },
             reason: 'Heuristic could not affect this service before all vehicles are full'
           }
@@ -1697,14 +1690,7 @@ module Interpreters
             setup_duration: service_in_vrp[:activity][:setup_duration],
             duration: service_in_vrp[:activity][:duration],
             timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] } }.sort_by{ |t| t[:start] } : [],
-            quantities: service_in_vrp[:quantities].collect{ |qte|
-              {
-                id: qte[:id],
-                unit_id: qte[:unit_id],
-                value: qte[:value],
-                unit: qte[:unit]
-              }
-            }
+            quantities: service_in_vrp[:quantities] ? service_in_vrp[:quantities].collect{ |qte| { id: qte[:id], unit: qte[:unit], value: qte[:value] } } : nil
           },
           reason: @uninserted[service][:reason]
         }
