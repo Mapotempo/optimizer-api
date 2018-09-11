@@ -572,10 +572,12 @@ module OptimizerWrapper
   end
 
   def self.formatted_duration(duration)
-    h = (duration / 3600).to_i
-    m = (duration / 60).to_i % 60
-    s = duration.to_i % 60
-    [h, m, s].map { |t| t.to_s.rjust(2,'0') }.join(':')
+    if duration
+      h = (duration / 3600).to_i
+      m = (duration / 60).to_i % 60
+      s = duration.to_i % 60
+      [h, m, s].map { |t| t.to_s.rjust(2,'0') }.join(':')
+    end
   end
 
   def self.route_total_dimension(vrp, route, vehicle, dimension)
