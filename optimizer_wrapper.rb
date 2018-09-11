@@ -168,10 +168,10 @@ module OptimizerWrapper
       # Split/Clusterize the problem if to large
       Interpreters::SplitClustering.split_clusters([service_vrp])
     }.flatten.compact
-    solve(complete_services_vrp, services_fleets, job){ block }
+    solve(complete_services_vrp, services_fleets, job, block)
   end
 
-  def self.solve(services_vrps, services_fleets = [], job = nil, &block)
+  def self.solve(services_vrps, services_fleets = [], job = nil, block = nil)
     @unfeasible_services = []
 
     real_result = join_vrps(services_vrps, block) { |service, vrp, fleet_id, problem_size, block|
