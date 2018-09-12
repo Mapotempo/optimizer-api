@@ -112,7 +112,7 @@ class Api::V01::VrpTest < Minitest::Test
 
     delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     assert_equal 202, last_response.status, last_response.body
-    
+
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
   end
@@ -585,7 +585,7 @@ class Api::V01::VrpTest < Minitest::Test
         {
             id: 'service_2',
             sticky_vehicle_ids: ['vehicle_1'],
-            'activity':
+            activity:
             {
                 point_id: 'point_2',
                 duration: 600.0
@@ -598,7 +598,7 @@ class Api::V01::VrpTest < Minitest::Test
         }
       }
     }
-    
+
     post('/0.1/vrp/submit', {api_key: 'solvers', vrp: problem}, content_type: :json)
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']

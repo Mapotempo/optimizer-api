@@ -1322,22 +1322,22 @@ class WrapperTest < Minitest::Test
       zones: [{
         id: "zone_0",
         polygon: {
-        "type": "Polygon",
-        "coordinates": [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
+        type: "Polygon",
+        coordinates: [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
         },
         allocations: [["vehicle_0"]]
       }, {
         id: "zone_1",
         polygon: {
-          "type": "Polygon",
-          "coordinates": [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
+          type: "Polygon",
+          coordinates: [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
         },
         allocations: [["vehicle_1"]]
       }, {
         id: "zone_2",
         polygon: {
-          "type": "Polygon",
-          "coordinates": [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
+          type: "Polygon",
+          coordinates: [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
         },
         allocations: [["vehicle_1"]]
       }],
@@ -1409,22 +1409,22 @@ class WrapperTest < Minitest::Test
       zones: [{
         id: "zone_0",
         polygon: {
-        "type": "Polygon",
-        "coordinates": [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
+        type: "Polygon",
+        coordinates: [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
         },
         allocations: [["vehicle_0"]]
       }, {
         id: "zone_1",
         polygon: {
-          "type": "Polygon",
-          "coordinates": [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
+          type: "Polygon",
+          coordinates: [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
         },
         allocations: [["vehicle_1"]]
       }, {
         id: "zone_2",
         polygon: {
-          "type": "Polygon",
-          "coordinates": [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
+          type: "Polygon",
+          coordinates: [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
         },
         allocations: [["vehicle_1"]]
       }],
@@ -1831,7 +1831,7 @@ class WrapperTest < Minitest::Test
         {
             id: 'service_2',
             sticky_vehicle_ids: ['vehicle_1'],
-            'activity':
+            activity:
             {
                 point_id: 'point_2',
                 duration: 600.0
