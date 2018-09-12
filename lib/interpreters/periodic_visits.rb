@@ -47,7 +47,7 @@ module Interpreters
               else
                 ''
               end
-              "#{related_missions[index].id}_#{relation_index}/#{first_service.visits_number || 1}#{additional_tag}"
+              "#{related_missions[index].id}_#{relation_index}_#{first_service.visits_number || 1}#{additional_tag}"
             }
             new_relation
           }
@@ -80,13 +80,13 @@ module Interpreters
             (2..service.visits_number).each{ |index|
               current_lapse = (index -1) * service.minimum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-              :linked_ids => ["#{service.id}_1/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
+              :linked_ids => ["#{service.id}_1_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
               :lapse => current_lapse)
             }
             (2..service.visits_number).each{ |index|
               current_lapse = (index -1) * service.maximum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-              :linked_ids => ["#{service.id}_1/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
+              :linked_ids => ["#{service.id}_1_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
               :lapse => current_lapse)
             }
           else
@@ -94,7 +94,7 @@ module Interpreters
               (2..service.visits_number).each{ |index|
                 current_lapse = service.minimum_lapse.to_i
                 vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-                :linked_ids => ["#{service.id}_#{index-1}/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
+                :linked_ids => ["#{service.id}_#{index-1}_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
                 :lapse => current_lapse)
               }
             end
@@ -102,7 +102,7 @@ module Interpreters
               (2..service.visits_number).each{ |index|
                 current_lapse = service.maximum_lapse.to_i
                 vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-                :linked_ids => ["#{service.id}_#{index-1}/#{service.visits_number}", "#{service.id}_#{index}/#{service.visits_number}"],
+                :linked_ids => ["#{service.id}_#{index-1}_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
                 :lapse => current_lapse)
               }
             end
@@ -115,7 +115,7 @@ module Interpreters
             new_service = nil
             if !service.unavailable_visit_indices || service.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
               new_service = Marshal::load(Marshal.dump(service))
-              new_service.id = "#{new_service.id}_#{visit_index+1}/#{new_service.visits_number}"
+              new_service.id = "#{new_service.id}_#{visit_index+1}_#{new_service.visits_number}"
               new_service.activity.timewindows = if !service.activity.timewindows.empty?
                 new_timewindows = service.activity.timewindows.collect{ |timewindow|
                   if timewindow.day_index
@@ -184,13 +184,13 @@ module Interpreters
             (2..shipment.visits_number).each{ |index|
               current_lapse = (index -1) * shipment.minimum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-              :linked_ids => ["#{shipment.id}_1/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
+              :linked_ids => ["#{shipment.id}_1_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
               :lapse => current_lapse)
             }
             (2..shipment.visits_number).each{ |index|
               current_lapse = (index -1) * shipment.maximum_lapse.to_i
               vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-              :linked_ids => ["#{shipment.id}_1/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
+              :linked_ids => ["#{shipment.id}_1_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
               :lapse => current_lapse)
             }
           else
@@ -198,7 +198,7 @@ module Interpreters
               (2..shipment.visits_number).each{ |index|
                 current_lapse = shipment.minimum_lapse.to_i
                 vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-                :linked_ids => ["#{shipment.id}_#{index-1}/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
+                :linked_ids => ["#{shipment.id}_#{index - 1}_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
                 :lapse => current_lapse)
               }
             end
@@ -206,7 +206,7 @@ module Interpreters
               (2..shipment.visits_number).each{ |index|
                 current_lapse = shipment.maximum_lapse.to_i
                 vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-                :linked_ids => ["#{shipment.id}_#{index-1}/#{shipment.visits_number}", "#{shipment.id}_#{index}/#{shipment.visits_number}"],
+                :linked_ids => ["#{shipment.id}_#{index - 1}_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
                 :lapse => current_lapse)
               }
             end
@@ -219,7 +219,7 @@ module Interpreters
             new_shipment = nil
             if !shipment.unavailable_visit_indices || shipment.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
               new_shipment = Marshal::load(Marshal.dump(shipment))
-              new_shipment.id = "#{new_shipment.id}_#{visit_index+1}/#{new_shipment.visits_number}"
+              new_shipment.id = "#{new_shipment.id}_#{visit_index + 1}_#{new_shipment.visits_number}"
 
               new_shipment.pickup.timewindows = if !shipment.pickup.timewindows.empty?
                 new_timewindows = shipment.pickup.timewindows.collect{ |timewindow|
@@ -478,19 +478,19 @@ module Interpreters
         }
       }
       vrp.services.each{ |service|
-        service_sequence_data = /(.+)_([0-9]+)\/([0-9]+)/.match(service.id).to_a
+        service_sequence_data = /(.+)_([0-9]+)\_([0-9]+)/.match(service.id).to_a
         service_id = service_sequence_data[1]
         current_index = service_sequence_data[2].to_i
         sequence_size = service_sequence_data[-1].to_i
         related_indices = vrp.services.collect{ |r_service|
-          match_result = /(.+)_([0-9]+)\/([0-9]+)/.match(r_service.id).to_a
+          match_result = /(.+)_([0-9]+)\_([0-9]+)/.match(r_service.id).to_a
           match_result[2].to_i if match_result[1] == service_id && match_result[2].to_i < current_index
         }.compact
         previous_service_index = related_indices.max
         gap_with_previous = current_index - previous_service_index if previous_service_index
         previous_service_route = routes.find{ |sub_route|
           !sub_route[:mission_ids].empty? && sub_route[:mission_ids].find{ |id|
-            id == "#{service_id}_#{previous_service_index}/#{sequence_size}"
+            id == "#{service_id}_#{previous_service_index}_#{sequence_size}"
           }
         }
         candidate_route = routes.find{ |route|
@@ -560,7 +560,7 @@ module Interpreters
       end
 
       vrp[:services].each{ |service|
-        service_index, service_total_quantity = service[:id].split("_")[-1].split("/").map{ |x| x.to_i }
+        service_index, service_total_quantity = service[:id].split('_')[-2].to_i, service[:id].split('_')[-1].to_i
 
         day = first_day
         day_index = 0
