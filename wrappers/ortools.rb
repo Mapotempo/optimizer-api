@@ -51,7 +51,8 @@ module Wrappers
         :assert_square_matrix,
         :assert_vehicle_tw_if_schedule,
         :assert_if_sequence_tw_then_schedule,
-        :assert_if_periodic_heuristic_then_schedule
+        :assert_if_periodic_heuristic_then_schedule,
+        :assert_solver_parameter_is_valid
       ]
     end
 

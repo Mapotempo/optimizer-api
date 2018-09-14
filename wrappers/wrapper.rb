@@ -316,6 +316,14 @@ module Wrappers
       !vrp.preprocessing_use_periodic_heuristic || vrp.schedule_range_date || vrp.schedule_range_indices
     end
 
+    def assert_solver_parameter_is_valid(vrp)
+      vrp.resolution_solver_parameter != -1 || vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_planning_heuristic(vrp)
+      !vrp.preprocessing_use_periodic_heuristic
+    end
+
     def solve_synchronous?(vrp)
       false
     end

@@ -50,6 +50,7 @@ module Wrappers
         :assert_at_least_one_mission,
         :assert_no_distance_limitation,
         :assert_no_subtours,
+        :assert_no_planning_heuristic
       ]
     end
 
