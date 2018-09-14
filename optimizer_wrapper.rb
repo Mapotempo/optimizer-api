@@ -511,7 +511,7 @@ module OptimizerWrapper
   end
 
   def self.build_csv(solution)
-    header = ['day_week_num', 'day_week', 'vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'total_travel_time', 'total_travel_distance']
+    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'total_travel_time', 'total_travel_distance']
     quantities_header = []
     quantities_id = []
     if solution
@@ -545,17 +545,20 @@ module OptimizerWrapper
         ["timewindow_start_#{index}", "timewindow_end_#{index}"]
       }.flatten
       csv = CSV.generate{ |out_csv|
+        header += quantities_header + timewindows_header
         if solution['unassigned'].size > 0
-          out_csv << (header + quantities_header + timewindows_header + ['unassigned_reason'])
-        else
-          out_csv << (header + quantities_header + timewindows_header )
+          header += ['unassigned_reason']
         end
+        optim_planning_output = solution['routes'].any?{ |route| route['activities'].any?{ |stop| stop['day_week'] }}
+        if optim_planning_output
+          header = ['day_week_num', 'day_week'] + header
+        end
+        out_csv << header
         solution['routes'].each{ |route|
           route['activities'].each{ |activity|
             type = find_type(activity)
+            days_info = optim_planning_output ? [activity['day_week_num'], activity['day_week']] : []
             common = [
-              activity['day_week_num'],
-              activity['day_week'],
               route['vehicle_id'],
               activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
               activity['point_id'],
@@ -584,14 +587,12 @@ module OptimizerWrapper
                 nil
               end
             }
-            out_csv << (common + quantities + timewindows)
+            out_csv << (days_info + common + quantities + timewindows)
           }
         }
         solution['unassigned'].each{ |activity|
           type = find_type(activity)
           common = [
-            nil,
-            nil,
             nil,
             activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
             activity['point_id'],
@@ -601,10 +602,11 @@ module OptimizerWrapper
             formatted_duration(activity['detail']['setup_duration'] || 0),
             formatted_duration(activity['detail']['duration'] || 0),
             activity['detail']['additional_value'] || 0,
-            activity['detail']['skills'].to_a.flatten.join(','),
+            activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
             nil,
             nil
           ]
+          days_info = optim_planning_output ? [activity['day_week_num'], activity['day_week']] : []
           timewindows = (0..max_timewindows_size-1).collect{ |index|
             if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
               tw = activity['detail']['timewindows'].select{ |tw| [tw['start'], tw['end']] }.uniq.sort_by{ |t| t['start'] }[index]
@@ -620,7 +622,7 @@ module OptimizerWrapper
               nil
             end
           }
-          out_csv << (common + quantities + timewindows + [activity['reason']])
+          out_csv << (days_info + common + quantities + timewindows + [activity['reason']])
         }
       }
     end

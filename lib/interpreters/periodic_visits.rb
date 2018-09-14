@@ -1243,13 +1243,13 @@ module Interpreters
               end
 
               if !inserted
-                @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}/#{services[service[:id]][:nb_visits]}"] = {
+                @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
                   original_service: service[:id],
                   reason: 'Visit not assignable by heuristic'
                 }
               end
             elsif visit_number < services[service[:id]][:nb_visits]
-              @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}/#{services[service[:id]][:nb_visits]}"] = {
+              @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
                 original_service: service[:id],
                 reason: 'First visit day does not allow to affect this visit'
               }
@@ -1260,7 +1260,7 @@ module Interpreters
           if visit_number < services[service[:id]][:nb_visits]
             first_missing = visit_number + 1
             (first_missing..services[service[:id]][:nb_visits]).each{ |missing_s|
-              @uninserted["#{service[:id]}_#{missing_s}/#{services[service[:id]][:nb_visits]}"] = {
+              @uninserted["#{service[:id]}_#{missing_s}_#{services[service[:id]][:nb_visits]}"] = {
                 original_service: service[:id],
                 reason: 'First visit assigned too late to affect other visits'
               }
@@ -1493,7 +1493,7 @@ module Interpreters
                 (1..service[:visits_number]).each{ |index|
                   @candidate_service_ids.delete(service[:id])
                   @to_plan_service_ids.delete(service[:id])
-                  @uninserted["#{service[:id]}_#{index}/#{service[:visits_number]}"] = {
+                  @uninserted["#{service[:id]}_#{index}_#{service[:visits_number]}"] = {
                     original_service: service[:id],
                     reason: 'Same_point_day option related : services at this geografical point have no compatible timewindow'
                   }
@@ -1616,7 +1616,7 @@ module Interpreters
             computed_activities << {
               day_week_num: "#{day%7}_#{day/7}",
               day_week: "#{day_name[day%7]}_w#{day/7 + 1}",
-              service_id: "#{point[:id]}_#{point[:number_in_sequence]}/#{service_in_vrp[:visits_number]}",
+              service_id: "#{point[:id]}_#{point[:number_in_sequence]}_#{service_in_vrp[:visits_number]}",
               point_id: service_in_vrp[:activity][:point_id],
               begin_time: point[:end].to_i - service_in_vrp[:activity][:duration],
               departure_time: point[:end].to_i,
@@ -1630,7 +1630,7 @@ module Interpreters
                 quantities: service_in_vrp[:quantities] ? service_in_vrp[:quantities].collect{ |qte| { unit: qte[:unit], value: qte[:value] } } : nil
               }
             }
-            missions_list << "#{point[:id]}_#{point[:number_in_sequence]}/#{service_in_vrp[:visits_number]}"
+            missions_list << "#{point[:id]}_#{point[:number_in_sequence]}_#{service_in_vrp[:visits_number]}"
           }
 
           if route[:vehicle][:end_point_id]
@@ -1663,7 +1663,7 @@ module Interpreters
         service_in_vrp = vrp.services.find{ |service| service[:id] == point }
         (1..service_in_vrp[:visits_number]).each{ |index|
           unassigned << {
-            service_id: "#{point}_#{index}/#{service_in_vrp[:visits_number]}",
+            service_id: "#{point}_#{index}_#{service_in_vrp[:visits_number]}",
             point_id: service_in_vrp[:activity][:point_id],
             detail: {
               lat: vrp.points.find{ |point| point[:id] == service_in_vrp[:activity][:point_id] }[:location][:lat],
