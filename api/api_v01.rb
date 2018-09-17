@@ -656,6 +656,7 @@ An alternative exist to those parameters in order to define it by date instead o
 More specific parameters are also available when dealing with Schedule Optimisation:
 * **use_periodic_heuristic** : uses our specific heuristic to find the first solution to provide to the solver.
 * **same_point_day** : all services located at the same geografical point will take place on the same day of the week.
+* **allow_partial_assignment** : solution is valid even if only a subset of one service\'s visits are affected. Default : true.
 
 Restitution parameters allow to have some control on the API response
 ```json

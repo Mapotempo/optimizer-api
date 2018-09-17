@@ -523,4 +523,67 @@ class HeuristicTest < Minitest::Test
     assert_equal 1, order.size
   end
 
+  def test_not_allowing_partial_affectation
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      },{
+        id: 'point_1',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        sequence_timewindows: [{
+          start: 28800,
+          end: 54000,
+          day_index: 0
+        },{
+          start: 28800,
+          end: 54000,
+          day_index: 1
+        },{
+          start: 28800,
+          end: 54000,
+          day_index: 3
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        visits_number: 4,
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1,
+          allow_partial_assignment: false
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 4, result[:unassigned].size
+    assert_equal 1, result[:unassigned].collect{ |unassigned| unassigned[:reason] }.uniq.size
+    assert result[:unassigned].collect{ |unassigned| unassigned[:reason] }.include? 'Only partial assignment could be found'
+  end
+
 end

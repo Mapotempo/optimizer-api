@@ -40,6 +40,7 @@ module Models
     field :resolution_vehicle_limit, default: nil
     field :resolution_solver_parameter, default: nil
     field :resolution_same_point_day, default: false
+    field :resolution_allow_partial_assignment, default: true
 
     field :restitution_geometry, default: false
     field :restitution_geometry_polyline, default: false
@@ -111,6 +112,7 @@ module Models
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
       self.resolution_solver_parameter = resolution[:solver_parameter]
       self.resolution_same_point_day = resolution[:same_point_day]
+      self.resolution_allow_partial_assignment = resolution[:allow_partial_assignment]
     end
 
     def preprocessing=(preprocessing)

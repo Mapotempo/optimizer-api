@@ -40,6 +40,7 @@ module Interpreters
       @cost = 0
       @travel_time = 0
       @same_point_day = vrp.resolution_same_point_day
+      @allow_partial_assignment = vrp.resolution_allow_partial_assignment
       @allow_vehicle_change = vrp.schedule_allow_vehicle_change
     end
 
@@ -1211,6 +1212,26 @@ module Interpreters
       }
     end
 
+    def clean_routes(services, service, day_finished, vehicle)
+      peri = services[service][:heuristic_period]
+      (day_finished..@schedule_end).step(peri).each{ |changed_day|
+        if @planning[vehicle] && @planning[vehicle][changed_day]
+          @planning[vehicle][changed_day][:services].delete_if{ |stop| stop[:id] == service }
+        end
+
+        if @candidate_routes[vehicle] && @candidate_routes[vehicle][changed_day]
+          @candidate_routes[vehicle][changed_day][:current_route].delete_if{ |stop| stop[:id] == service }
+        end
+      }
+
+      (1..services[service][:nb_visits]).each{ |number_in_sequence|
+        @uninserted["#{service}_#{number_in_sequence}_#{services[service][:nb_visits]}"] = {
+          original_service: service,
+          reason: 'Only partial assignment could be found'
+        }
+      }
+    end
+
     def adjust_candidate_routes(vehicle, day_finished, services, services_to_add, all_services, days_available)
       days_filled = []
       services_to_add.each{ |service|
@@ -1243,16 +1264,28 @@ module Interpreters
               end
 
               if !inserted
-                @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
-                  original_service: service[:id],
-                  reason: 'Visit not assignable by heuristic'
-                }
+                if !@allow_partial_assignment
+                  clean_routes(services, service[:id], day_finished, vehicle)
+                  visit_number = services[service[:id]][:nb_visits]
+                  break
+                else
+                  @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
+                    original_service: service[:id],
+                    reason: 'Visit not assignable by heuristic'
+                  }
+                end
               end
             elsif visit_number < services[service[:id]][:nb_visits]
-              @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
-                original_service: service[:id],
-                reason: 'First visit day does not allow to affect this visit'
-              }
+              if !@allow_partial_assignment
+                clean_routes(services, service[:id], day_finished, vehicle)
+                visit_number = services[service[:id]][:nb_visits]
+                break
+              else
+                @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
+                  original_service: service[:id],
+                  reason: 'First visit day does not allow to affect this visit'
+                }
+              end
             end
             # even if we do not add it we should increment this value in order not to add too many services
             visit_number += 1
