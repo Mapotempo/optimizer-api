@@ -449,8 +449,20 @@ module OptimizerWrapper
     Result.remove(api_key, id)
   end
 
+  def self.find_type(activity)
+    if activity['service_id'] || activity['delivery_shipment_id'] || activity['delivery_shipment_id']
+      'visit'
+    elsif activity['rest_id']
+      'rest'
+    elsif activity['point_id']
+      'store'
+    else
+      nil
+    end
+  end
+
   def self.build_csv(solution)
-    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'setup_duration', 'duration', 'additional_value', 'total_travel_time', 'total_travel_distance']
+    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'total_travel_time', 'total_travel_distance']
     quantities_header = []
     quantities_id = []
     if solution
@@ -491,12 +503,14 @@ module OptimizerWrapper
         end
         solution['routes'].each{ |route|
           route['activities'].each{ |activity|
+            type = find_type(activity)
             common = [
               route['vehicle_id'],
               activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
               activity['point_id'],
               activity['detail']['lat'],
               activity['detail']['lon'],
+              type,
               formatted_duration(activity['detail']['setup_duration'] || 0),
               formatted_duration(activity['detail']['duration'] || 0),
               activity['detail']['additional_value'] || 0,
@@ -522,12 +536,14 @@ module OptimizerWrapper
           }
         }
         solution['unassigned'].each{ |activity|
+          type = find_type(activity)
           common = [
             nil,
             activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
             activity['point_id'],
             activity['detail']['lat'],
             activity['detail']['lon'],
+            type,
             formatted_duration(activity['detail']['setup_duration'] || 0),
             formatted_duration(activity['detail']['duration'] || 0),
             activity['detail']['additional_value'] || 0,
@@ -549,7 +565,7 @@ module OptimizerWrapper
               nil
             end
           }
-          out_csv << (common + quantities + timewindows + [activity['reason'].to_s])
+          out_csv << (common + quantities + timewindows + [activity['reason']])
         }
       }
     end
