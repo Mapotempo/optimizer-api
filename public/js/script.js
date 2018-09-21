@@ -646,8 +646,8 @@ $(document).ready(function() {
             lat,
             lon,
             d ? d.toHHMMSS() : '',
-            quantity1_1,
-            quantity1_2,
+            value1_1,
+            value1_2,
             start,
             end,
             skills
