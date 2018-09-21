@@ -324,6 +324,10 @@ module Wrappers
       !vrp.preprocessing_use_periodic_heuristic
     end
 
+    def assert_only_force_centroids_if_kmeans_method(vrp)
+      vrp.preprocessing_kmeans_centroids.nil? || vrp.preprocessing_partition_method == 'balanced_kmeans'
+    end
+
     def solve_synchronous?(vrp)
       false
     end

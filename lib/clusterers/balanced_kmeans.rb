@@ -42,12 +42,13 @@ module Ai4r
       # Items will be clustered in "number_of_clusters" different
       # clusters.
 
-      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit)
+      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, output_centroids)
         @data_set = data_set
         @unit_symbols = unit_symbols
         @cut_symbol = cut_symbol
         @cut_limit = cut_limit
         @number_of_clusters = number_of_clusters
+        @output_centroids = output_centroids
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
         raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
         @iterations = 0
@@ -138,6 +139,9 @@ module Ai4r
                 @centroids << @data_set.data_items[random_index]
               end
             end
+          end
+          if @output_centroids
+            puts "[DEBUG] kmeans_centroids : #{tried_indexes}"
           end
         when 'indices' # for initial assignment only (with the :centroid_indices option)
           @centroid_indices.each do |index|

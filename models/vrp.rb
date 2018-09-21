@@ -24,6 +24,7 @@ module Models
     field :preprocessing_max_split_size, default: nil
     field :preprocessing_partition_method, default: nil
     field :preprocessing_partition_metric, default: nil
+    field :preprocessing_kmeans_centroids, default: nil
     field :preprocessing_cluster_threshold, default: nil
     field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
@@ -52,6 +53,8 @@ module Models
     field :schedule_unavailable_indices, default: nil
     field :schedule_unavailable_date, default: nil
     field :schedule_allow_vehicle_change, default: false
+
+    field :debug_output_kmeans_centroids, default: false
 
     validates_numericality_of :preprocessing_max_split_size, allow_nil: true
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
@@ -92,6 +95,7 @@ module Models
       self.resolution = configuration[:resolution] if configuration[:resolution]
       self.schedule = configuration[:schedule] if configuration[:schedule]
       self.restitution = configuration[:restitution] if configuration[:restitution]
+      self.debug = configuration[:debug] if configuration[:debug]
     end
 
     def restitution=(restitution)
@@ -120,6 +124,7 @@ module Models
       self.preprocessing_max_split_size = preprocessing[:max_split_size]
       self.preprocessing_partition_method = preprocessing[:partition_method]
       self.preprocessing_partition_metric = preprocessing[:partition_metric]
+      self.preprocessing_kmeans_centroids = preprocessing[:kmeans_centroids]
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
@@ -133,6 +138,10 @@ module Models
       self.schedule_unavailable_indices = schedule[:unavailable_indices]
       self.schedule_unavailable_date = schedule[:unavailable_date]
       self.schedule_allow_vehicle_change = schedule[:schedule_allow_vehicle_change]
+    end
+
+    def debug=(debug)
+      self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
     end
 
     def need_matrix_time?

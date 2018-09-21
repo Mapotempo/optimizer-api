@@ -215,12 +215,13 @@ module Interpreters
         start_timer = Time.now
         c = BalancedKmeans.new
         c.max_iterations = 200
+        c.centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]
 
         biggest_cluster_size = 0
         clusters = []
         iteration = 0
         while biggest_cluster_size < nb_clusters && iteration < 30
-          c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit)
+          c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit, vrp.debug_output_kmeans_centroids)
           c.clusters.delete([])
           if c.clusters.size > biggest_cluster_size
             biggest_cluster_size = c.clusters.size
