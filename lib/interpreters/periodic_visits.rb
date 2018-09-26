@@ -1505,6 +1505,9 @@ module Interpreters
           tw: service[:activity][:timewindows] ?  service[:activity][:timewindows] : [],
           unavailable_days: service[:unavailable_visit_day_indices]
         }
+        if services_data[service.id][:heuristic_period] == 0
+          services_data[service.id][:heuristic_period] = 7
+        end
 
         @candidate_service_ids << service.id
         @to_plan_service_ids << service.id
