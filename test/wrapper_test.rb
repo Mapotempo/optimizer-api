@@ -1197,23 +1197,22 @@ class WrapperTest < Minitest::Test
   end
 
   def test_geometry_with_rests
-    # conflict with rest
     problem = {
       points: [
         {
             id: "point0",
             location:
             {
-                lat: 5.7,
-                lon: 43.7
+                lat: 43.7,
+                lon: 5.7
             }
         },
         {
             id: "point1",
             location:
             {
-                lat: 6.2,
-                lon: 44.2
+                lat: 44.2,
+                lon: 6.2
             }
         },
         {
@@ -1296,9 +1295,8 @@ class WrapperTest < Minitest::Test
             }
         }
     }
-
     result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
-    assert_equal result[:routes][0][:activities].size, 3
+    assert_equal result[:routes][0][:activities].size, 5
     assert !result[:routes][0][:geometry].nil?
   end
 
@@ -1954,6 +1952,161 @@ class WrapperTest < Minitest::Test
 
     assert !vroom.inapplicable_solve?(vrp).empty?
     assert ortools.inapplicable_solve?(vrp).empty?
+  end
+
+  def test_possible_no_service_too_far_time
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 0, result[:unassigned].size
+  end
+
+  def test_impossible_service_too_far_time
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 1, result[:unassigned].size
+  end
+
+  def test_impossible_service_too_far_distance
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ],
+        distance: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow:{
+          start: 0,
+          end: 30
+        },
+        cost_time_multiplier: 0,
+        cost_distance_multiplier: 1,
+        distance: 10
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 1, result[:unassigned].size
   end
 
   def test_impossible_service_capacity

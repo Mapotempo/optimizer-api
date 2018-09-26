@@ -567,6 +567,36 @@ module Wrappers
         unfeasible = check(vrp, matrix[:value], unfeasible)
       }
 
+      # check distances from vehicle depot is feasible
+      vrp.services.each{ |service|
+        index = vrp.points.find{ |point| point.id == service.activity.point.id }.matrix_index
+        found = vrp.vehicles.find{ |vehicle|
+          if vehicle.start_point_id && vehicle.end_point_id &&
+            (vehicle.cost_time_multiplier > 0 && (vehicle.timewindow && vehicle.timewindow.start && vehicle.timewindow.end || vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?) ||
+            vehicle.cost_distance_multiplier > 0 && vehicle.distance)
+
+            start_index = vrp.points.find{ |pt| pt.id == vehicle.start_point_id }.matrix_index
+            end_index = vrp.points.find{ |pt| pt.id == vehicle.end_point_id }.matrix_index
+
+            metric = vehicle.cost_time_multiplier > 0 ? :time : :distance
+            cost = vrp.matrices[0][metric][start_index][index] + vrp.matrices[0][metric][index][end_index]
+
+            if metric == :time
+              vehicle_available_time = vehicle.timewindow.end - vehicle.timewindow.start if vehicle.timewindow
+              vehicle_available_time = vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max if vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?
+              vehicle_available_time >= cost
+            else
+              vehicle.distance >= cost
+            end
+          else
+            true
+          end
+        }
+        if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
+          add_unassigned(unfeasible, vrp, service, 'Unreachable')
+        end
+      }
+
       unfeasible
     end
 

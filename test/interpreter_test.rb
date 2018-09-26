@@ -758,36 +758,36 @@ class InterpreterTest < Minitest::Test
         {
           id: "point_1",
           location: {
-            lat: 5.8,
-            lon: 43.8
+            lat: 43.8,
+            lon: 5.8
           }
         },
         {
           id: "point_2",
           location: {
-            lat: 5.8,
-            lon: 43.8
+            lat: 43.8,
+            lon: 5.8
           }
         },
         {
           id: "point_3",
           location: {
-            lat: 5.9,
-            lon: 44.2
+            lat: 44.2,
+            lon: 5.9
           }
         },
         {
           id: "point_4",
           location: {
-            lat: 5.8,
-            lon: 43.8
+            lat: 43.8,
+            lon: 5.8
           }
         },
         {
           id: "point5",
           location: {
-            lat: 6.2,
-            lon: 44.1
+            lat: 44.1,
+            lon: 6.2
           }
         },
         {
