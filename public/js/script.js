@@ -633,9 +633,8 @@ $(document).ready(function() {
           previous_lat = lat;
           previous_lon = lon;
         } else if (activity.service_id) {
-          var customer_id = customers.indexOf(activity.service_id);
           stops.push([
-            ref,
+            activity.service_id,
             i,
             route.vehicle_id,
             'visite',
