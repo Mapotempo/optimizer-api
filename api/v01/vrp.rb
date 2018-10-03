@@ -60,21 +60,19 @@ module Api
       default_format :json
 
       def self.vrp_request_timewindow(this)
-        this.optional(:id, type: String)
         this.optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
-        this.optional(:day_index, type: Integer, values: 0..6, desc: '[planning] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
-        # this.at_least_one_of :start, :end
+        this.optional(:day_index, type: Integer, values: 0..6, desc: '[ Planning ] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
       end
 
       def self.vrp_request_indice_range(this)
-        this.optional(:start, type: Integer, desc: '')
-        this.optional(:end, type: Integer, desc: '')
+        this.optional(:start, type: Integer, desc: 'Beginning of the range.')
+        this.optional(:end, type: Integer, desc: 'End of the range.')
       end
 
       def self.vrp_request_date_range(this)
-        this.optional(:start, type: Date, desc: '')
-        this.optional(:end, type: Date, desc: '')
+        this.optional(:start, type: Date, desc: 'Beginning of the range in date format : .') # date format n'est donnable que si on crée vrp au meme endroit que là oùu on résoud, non ?
+        this.optional(:end, type: Date, desc: 'End of the range in date format : .') # date format n'est donnable que si on crée vrp au meme endroit que là oùu on résoud, non ?
       end
 
       def self.vrp_request_matrices(this)
@@ -87,7 +85,7 @@ module Api
       def self.vrp_request_point(this)
         this.requires(:id, type: String)
         this.optional(:matrix_index, type: Integer, desc: 'Index within the matrices, required if the matrices are already given')
-        this.optional(:location, type: Hash, desc: 'Location of the point if the matrices are not given') do
+        this.optional(:location, type: Hash, desc: 'Location of the point if matrices are not given') do
           self.requires(:lat, type: Float, allow_blank: false, desc: 'Latitude coordinate')
           self.requires(:lon, type: Float, allow_blank: false, desc: 'Longitude coordinate')
         end
@@ -97,7 +95,7 @@ module Api
       def self.vrp_request_unit(this)
         this.requires(:id, type: String)
         this.optional(:label, type: String, desc: 'Name of the unit')
-        this.optional(:counting, type: Boolean, desc: 'Define if the unit is a counting one, which allow to count the number of stop in a single route')
+        this.optional(:counting, type: Boolean, desc: 'Define if the unit is a counting one, which allows to count the number of stops in a single route')
       end
 
       def self.vrp_request_rest(this)
@@ -112,18 +110,17 @@ module Api
 
       def self.vrp_request_zone(this)
         this.requires(:id, type: String, desc: '')
-        this.requires(:polygon, type: Hash, desc: 'geometry which describe the area')
-        this.optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle vehicles combination the zone could to be served')
+        this.requires(:polygon, type: Hash, desc: 'Geometry which describes the area')
+        this.optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle or vehicles combination the zone could be served') # ----------- ???
       end
 
       def self.vrp_request_activity(this)
-        this.optional(:duration, types: [String, Float, Integer], desc: 'time in seconds while the current activity stand until it\'s over', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
+        this.optional(:duration, types: [String, Float, Integer], desc: 'Time while the current activity stands until it\'s over (in seconds)', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
-        this.optional(:setup_duration, types: [String, Float, Integer], desc: 'time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
-        this.optional(:late_multiplier, type: Float, desc: 'Override the late_multiplier defined at the vehicle level (ORtools only)')
-        this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '')
-        this.requires(:point_id, type: String, desc: 'reference to the associated point')
-        this.optional(:value_matrix_index, type: Integer, desc: 'associated value matrix index')
+        this.optional(:setup_duration, types: [String, Float, Integer], desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
+        this.optional(:late_multiplier, type: Float, desc: 'Overrides the late_multiplier defined at the vehicle level (ORtools only)')
+        this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '[ DEPRECATED v0.3]')
+        this.requires(:point_id, type: String, desc: 'Reference to the associated point')
         this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may start') do
           Vrp.vrp_request_timewindow(self)
         end
@@ -132,19 +129,19 @@ module Api
       def self.vrp_request_quantity(this)
         this.optional(:id, type: String)
         this.requires(:unit_id, type: String, desc: 'Unit related to this quantity')
-        this.optional(:fill, type: Boolean, desc: 'Allow to fill more quantities than defined in the value field, until the vehicle capacity is full')
-        this.optional(:empty, type: Boolean, desc: 'Allow to empty more quantities than defined in the value field, until the vehicle capacity reach zero')
+        this.optional(:fill, type: Boolean, desc: 'Allows to fill with quantity, until this unit vehicle capacity is full')
+        this.optional(:empty, type: Boolean, desc: 'Allows to empty this quantity, until this unit vehicle capacity reaches zero')
         this.mutually_exclusive :fill, :empty
-        this.optional(:value, type: Float, desc: 'Value of the current quantity')
-        this.optional(:setup_value, type: Integer, desc: 'If the associated unit is a counting one, define the default value to count for this stop (additional quantities for this specific service are to define with the value tag)')
+        this.optional(:value, type: Float, desc: 'Value of current quantity')
+        this.optional(:setup_value, type: Integer, desc: 'If the associated unit is a counting one, defines the default value to count for this stop (additional quantities for this specific service are to define with the value tag)')
       end
 
       def self.vrp_request_capacity(this)
         this.optional(:id, type: String)
         this.requires(:unit_id, type: String, desc: 'Unit of the capacity')
-        this.requires(:limit, type: Float, desc: 'Maximum capacity which could be take away')
-        this.optional(:initial, type: Float, desc: 'Initial quantity value in the vehicle')
-        this.optional(:overload_multiplier, type: Float, desc: 'Allow to exceed the limit against this cost (ORtools only)')
+        this.requires(:limit, type: Float, desc: 'Maximum capacity that can be carried')
+        this.optional(:initial, type: Float, desc: 'Initial quantity value loaded in the vehicle')
+        this.optional(:overload_multiplier, type: Float, desc: 'Allows to exceed the limit against this cost (ORtools only)')
       end
 
       def self.vrp_request_vehicle(this)
@@ -152,26 +149,26 @@ module Api
         this.optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
         this.optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
         this.optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools)')
-        this.optional(:cost_value_multiplier, type: Float, desc: 'multiplier applied to the value matrix and additional activity value')
-        this.optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting in the route (Jsprit Only)')
-        this.optional(:cost_late_multiplier, type: Float, desc: 'Cost applied once a point is deliver late (ORtools only)')
-        this.optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration')
+        this.optional(:cost_value_multiplier, type: Float, desc: 'Multiplier applied to the value matrix and additional activity value')
+        this.optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route (Jsprit Only)')
+        this.optional(:cost_late_multiplier, type: Float, desc: 'Cost applied if a point is delivered late (ORtools only)')
+        this.optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration (Jsprit only)')
         this.optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour, for this vehicle')
         this.optional(:additional_setup, type: Float, desc: 'Constant additional setup duration for all setup defined in the tour, for this vehicle')
         this.optional(:coef_service, type: Float, desc: 'Coefficient applied to every service duration defined in the tour, for this vehicle')
         this.optional(:additional_service, type: Float, desc: 'Constant additional service time for all travel defined in the tour, for this vehicle')
-        this.optional(:force_start, type: Boolean, desc: '[ DEPRECATED ] Force the vehicle to start as soon as the vehicle timewindow is open')
+        this.optional(:force_start, type: Boolean, desc: '[ DEPRECATED v0.3]')
         this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open, as late as possible or let vehicule start at any time ')
 
         this.optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
-        this.optional(:value_matrix_id, type: String, desc: 'Related value matrix, if defined')
+        this.optional(:value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index.')
         this.optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
         this.exactly_one_of :matrix_id, :router_mode
 
         this.optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
-        this.optional(:speed_multiplier, type: Float, desc: 'multiply the vehicle speed, default : 1.0')
+        this.optional(:speed_multiplier, type: Float, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.')
         this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) }} : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (only available for truck mode at this time).'
-        this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 avoid area. Areas separated with pipes (only available for truck mode at this time).'
+        this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :traffic, type: Boolean, default: true, desc: 'Take into account traffic or not.'
         this.optional :track, type: Boolean, default: true, desc: 'Use track or not.'
         this.optional :motorway, type: Boolean, default: true, desc: 'Use motorway or not.'
@@ -222,7 +219,7 @@ module Api
       def self.vrp_request_service(this)
         this.requires(:id, type: String)
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
-        this.optional(:exlusion_cost, type: Integer,  desc: 'Exclusion cost')
+        this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost')
 
         this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
@@ -254,7 +251,7 @@ module Api
       def self.vrp_request_shipment(this)
         this.requires(:id, type: String, desc: '')
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
-        this.optional(:exlusion_cost, type: Integer,  desc: 'Exclusion cost')
+        this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost')
 
         this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
@@ -359,7 +356,6 @@ module Api
         this.mutually_exclusive :range_indices, :range_date
         this.optional(:unavailable_indices, type: Array[Integer], desc: '[planning] Exclude some days indices from the resolution')
         this.optional(:unavailable_date, type: Array[Date], desc: '[planning] Exclude some days from the resolution')
-        this.optional(:allow_vehicle_change, type: Boolean, desc: '[planning] When service[:visits_number] is bigger than one, authorizes to affect visits to different vehicles')
         this.mutually_exclusive :unavailable_indices, :unavailable_date
       end
 

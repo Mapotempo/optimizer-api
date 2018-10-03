@@ -22,8 +22,5 @@ module Models
   class Unit < Base
     field :label
     field :counting, default: false
-
-    has_many :vehicle_unit, class_name: 'Models::Capacity'
-    has_many :service_unit, class_name: 'Models::Quantity'
   end
 end

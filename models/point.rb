@@ -25,8 +25,6 @@ module Models
 
     validates_numericality_of :matrix_index, allow_nil: true
 
-    belongs_to :vehicle_start, class_name: 'Models::Vehicle', inverse_of: :start_point
-    belongs_to :vehicle_end, class_name: 'Models::Vehicle', inverse_of: :end_point
     belongs_to :location, class_name: 'Models::Location'
 
     def self.find_by_vehicle_id(*params)
