@@ -22,7 +22,7 @@ require './models/concerns/validate_timewindows'
 module Models
   class Rest < Base
     field :duration, default: 0
-    field :late_multiplier, default: 1
+    field :late_multiplier, default: 0
     field :exclusion_cost, default: nil
     validates_numericality_of :duration
     validates_numericality_of :late_multiplier

@@ -306,7 +306,9 @@ module Wrappers
                 end: tw.end || 2**56,
               ) },
               duration: rest.duration,
-              id: rest.id
+              id: rest.id,
+              late_multiplier: rest.late_multiplier,
+              exclusion_cost: rest.exclusion_cost ? rest.exclusion_cost : -1
             )
           },
           matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.matrix_id },

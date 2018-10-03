@@ -104,8 +104,8 @@ module Api
         this.optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
           Vrp.vrp_request_timewindow(self)
         end
-        this.optional(:late_multiplier, type: Float, desc: '(not used)')
-        this.optional(:exclusion_cost, type: Float, desc: '(not used)')
+        this.optional(:late_multiplier, type: Float, desc: 'Late multiplier applied for this rest.')
+        this.optional(:exclusion_cost, type: Float, desc: 'Cost induced by non affectation of this rest.')
       end
 
       def self.vrp_request_zone(this)

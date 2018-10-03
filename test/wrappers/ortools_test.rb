@@ -5143,6 +5143,119 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, result[:routes][0][:activities][1][:alternative]
   end
 
+  def test_rest_with_exclusion_cost
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      rests: [{
+        id: 'rest_0',
+        exclusion_cost: 10,
+        duration: 1,
+        timewindows: [{
+          start: 0,
+          end: 1
+        }]
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        rest_ids: ['rest_0'],
+        duration: 2
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          duration: 1,
+          point_id: 'point_1'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 0, result[:unassigned].size
+  end
+
+  def test_rest_with_late_multiplier
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      rests: [{
+        id: 'rest_0',
+        late_multiplier: 0.3,
+        duration: 3,
+        timewindows: [{
+          start: 0,
+          end: 1
+        }]
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        rest_ids: ['rest_0']
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 2,
+          timewindows: [{
+            start: 0,
+            end: 1
+          }]
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 0, result[:unassigned].size
+  end
+
   def test_evaluate_only
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
