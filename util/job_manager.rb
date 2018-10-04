@@ -86,6 +86,7 @@ module OptimizerWrapper
   end
   class UnsupportedRouterModeError < StandardError; end
   class RouterWrapperError < StandardError; end
+  class SchedulingHeuristicError < StandardError; end
 
   class Result
     def self.set(key, value)

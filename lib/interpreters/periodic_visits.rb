@@ -1735,6 +1735,34 @@ module Interpreters
         }
       }
 
+      @planning.each{ |vehicle, all_days_routes|
+        all_days_routes.each{ |day, route|
+          next if route[:services].empty?
+          last_service = route[:services].last[:id]
+          time_back_to_depot = route[:services].last[:end] + matrix(route[:vehicle], last_service, route[:vehicle][:end_point_id])
+          if route[:services][0][:start] < route[:vehicle][:tw_start]
+            raise OptimizerWrapper::SchedulingHeuristicError.new('One vehicle is starting too soon')
+          end
+          if time_back_to_depot > route[:vehicle][:tw_end]
+            raise OptimizerWrapper::SchedulingHeuristicError.new('One vehicle is ending too late')
+          end
+        }
+      }
+
+      @planning.each{ |vehicle, all_days_routes|
+        all_days_routes.each{ |day, route|
+          route[:services].each_with_index{ |s,i|
+            if !services_data[s[:id]][:tw].nil? && !services_data[s[:id]][:tw].empty?
+              time_to_arrive = ( i == 0 ? matrix(route[:vehicle], route[:vehicle][:start_point_id], s[:id]) : matrix( route[:vehicle], route[:services][i - 1][:id], s[:id] ))
+              compatible_tw = services_data[s[:id]][:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && (s[:start] + time_to_arrive).between?(tw[:start], tw[:end] ) }
+              if compatible_tw.nil?
+                raise OptimizerWrapper::SchedulingHeuristicError.new('One service timewindows violated')
+              end
+            end
+          }
+        }
+      }
+
       # providing solution in right form
       vrp[:preprocessing_heuristic_result] = {
         cost: @cost,
