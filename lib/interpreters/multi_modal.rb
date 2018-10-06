@@ -37,6 +37,7 @@ module Interpreters
           isoline = JSON.parse(OptimizerWrapper.router.isoline(OptimizerWrapper.config[:router][:url], tour.router_mode, (tour.time_bounds ? :time : :distance), stop.location.lat, stop.location.lon, (tour.time_bounds || tour.distance_bounds)))
           if isoline
             {
+              id: tour[:id],
               stop_id: stop.id,
               polygon: isoline['features'].first['geometry']
             }
@@ -69,18 +70,29 @@ module Interpreters
       }
     end
 
-    def generate_skills_patterns
-      skills_patterns = []
-      @associated_table.each_value{ |associated_stop|
-        skills_patterns += [associated_stop]
+    def generate_skills_patterns(isolines)
+      patterns = isolines.collect{ |isoline| [isoline[:id]] }
+      isolines.each{ |isoline|
+        isolines.each{ |iso_second|
+          next if iso_second[:id] == isoline[:id]
+
+          if !(isoline[:inside_points] & iso_second[:inside_points]).empty?
+            pattern_first = patterns.find{ |pattern| pattern.include? isoline[:id] }
+            pattern_second = patterns.find{ |pattern| pattern.include? iso_second[:id] }
+            intersect_pattern = pattern_first & pattern_second
+            next if (pattern_first & pattern_second).size == pattern_first.size
+            patterns.delete(pattern_first)
+            pattern_first |= pattern_second
+            patterns << pattern_first
+            patterns.delete(pattern_second)
+          end
+        }
       }
-      skills_patterns.sort_by! { |x| x[0] }.uniq!.compact!
-      skills_patterns.collect{ |skill_pattern|
-        skills_patterns.collect{ |sk_p|
-          sk_p if (skill_pattern & sk_p).empty?
-        }.flatten.uniq.compact
-      }.uniq.compact
-      skills_patterns
+      patterns.collect{ |pattern|
+        pattern.collect{ |iso_id|
+          isolines.find{ |isoline| isoline[:id] == iso_id }[:stop_id]
+        }
+      }
     end
 
     def generate_subproblems(patterns)
@@ -278,7 +290,7 @@ module Interpreters
         isolines = generate_isolines()
         select_services_from_isolines(isolines)
         propagate_associated_stops()
-        skills_patterns = generate_skills_patterns()
+        skills_patterns = generate_skills_patterns(isolines)
         subvrps = generate_subproblems(skills_patterns)
         subresults = solve_subproblems(subvrps)
         result = override_original_vrp(subresults)
