@@ -328,6 +328,22 @@ module Wrappers
       vrp.preprocessing_kmeans_centroids.nil? || vrp.preprocessing_partition_method == 'balanced_kmeans'
     end
 
+    def assert_no_evaluation(vrp)
+      !vrp.resolution_evaluate_only
+    end
+
+    def assert_no_shipments_if_evaluation(vrp)
+      (!vrp.shipments || vrp.shipments.empty?) || !vrp.resolution_evaluate_only
+    end
+
+    def assert_no_scheduling_if_evaluation(vrp)
+      !vrp.schedule_range_indices && !vrp.schedule_range_date || !vrp.resolution_evaluate_only
+    end
+
+    def assert_route_if_evaluation(vrp)
+      !vrp.resolution_evaluate_only || vrp[:routes] && !vrp[:routes].empty?
+    end
+
     def solve_synchronous?(vrp)
       false
     end

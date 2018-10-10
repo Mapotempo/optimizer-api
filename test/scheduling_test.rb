@@ -586,4 +586,132 @@ class HeuristicTest < Minitest::Test
     assert result[:unassigned].collect{ |unassigned| unassigned[:reason] }.include? 'Only partial assignment could be found'
   end
 
+  def test_no_solution_evaluation_if_schedule
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      },{
+        id: 'point_1',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        sequence_timewindows: [{
+          start: 28800,
+          end: 54000,
+          day_index: 0
+        },{
+          start: 28800,
+          end: 54000,
+          day_index: 1
+        },{
+          start: 28800,
+          end: 54000,
+          day_index: 3
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        visits_number: 4,
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1,
+          allow_partial_assignment: false,
+          evaluate_only: true
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 2, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_no_solution_evaluation_if_schedule_even_with_route
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      },{
+        id: 'point_1',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        sequence_timewindows: [{
+          start: 28800,
+          end: 54000,
+          day_index: 0
+        },{
+          start: 28800,
+          end: 54000,
+          day_index: 1
+        },{
+          start: 28800,
+          end: 54000,
+          day_index: 3
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        visits_number: 4,
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+      route:[{
+        mission_ids: ['service_1'],
+        vehicle: ['vehicle_0']
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1,
+          allow_partial_assignment: false,
+          evaluate_only: true
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).include? :assert_no_scheduling_if_evaluation
+  end
+
 end

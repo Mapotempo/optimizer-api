@@ -335,6 +335,7 @@ module Api
         this.optional(:solver_parameter, type: Integer, desc: 'Integer which force the execution of a particular behavior')
         this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if use_periodic_heuristic (preprocessing) is activated')
         this.optional(:allow_partial_assignment, type: Boolean, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true.')
+        this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
       end
 

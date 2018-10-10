@@ -53,7 +53,10 @@ module Wrappers
         :assert_if_sequence_tw_then_schedule,
         :assert_if_periodic_heuristic_then_schedule,
         :assert_solver_parameter_is_valid,
-        :assert_only_force_centroids_if_kmeans_method
+        :assert_only_force_centroids_if_kmeans_method,
+        :assert_no_scheduling_if_evaluation,
+        :assert_route_if_evaluation,
+        :assert_no_shipments_if_evaluation
       ]
     end
 
@@ -638,12 +641,12 @@ module Wrappers
 
       cmd = [
         "#{@exec_ortools} ",
-        (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
+        (vrp.resolution_evaluate_only ? '-time_limit_in_ms 1' : (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s),
         vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
-        vrp.preprocessing_neighbourhood_size ? "-neighbourhood #{vrp.preprocessing_neighbourhood_size}" : nil,
-        (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,
-        (vrp.resolution_initial_time_out || @initial_time_out) && '-initial_time_out_no_solution_improvement ' + (vrp.resolution_initial_time_out || @initial_time_out).to_s,
-        (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
+        (vrp.resolution_evaluate_only ? '-neighbourhood 0' : (vrp.preprocessing_neighbourhood_size ? "-neighbourhood #{vrp.preprocessing_neighbourhood_size}" : nil)),
+        (vrp.resolution_evaluate_only ? '-no_solution_improvement_limit 0' : (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s),
+        (vrp.resolution_evaluate_only ? '-initial_time_out_no_solution_improvement 0' : (vrp.resolution_initial_time_out || @initial_time_out) && '-initial_time_out_no_solution_improvement ' + (vrp.resolution_initial_time_out || @initial_time_out).to_s),
+        (vrp.resolution_evaluate_only ? '-time_out_multiplier 0' : (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s),
         vrp.resolution_vehicle_limit ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
         vrp.resolution_solver_parameter ? "-solver_parameter #{vrp.resolution_solver_parameter}" : nil,
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,

@@ -5142,4 +5142,269 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal [], result[:unassigned]
     assert_equal 0, result[:routes][0][:activities][1][:alternative]
   end
+
+  def test_evaluate_only
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      routes: [{
+        mission_ids: ['service_1','service_2'],
+        vehicle_id: 'vehicle_0'
+      }],
+      configuration: {
+        resolution: {
+          evaluate_only: true,
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 0, result[:unassigned].size
+    assert_equal 3, result[:routes][0][:activities].size
+    assert_equal 2, result[:cost]
+    assert_equal 1, result[:iterations]
+  end
+
+  def test_evaluate_only_not_every_service_has_route
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      routes: [{
+        mission_ids: ['service_1'],
+        vehicle_id: 'vehicle_0'
+      }],
+      configuration: {
+        resolution: {
+          evaluate_only: true,
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 1, result[:unassigned].size
+    assert_equal 65, result[:cost]
+    assert_equal 1, result[:iterations]
+  end
+
+  def test_evaluate_only_not_every_vehicle_has_route
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      routes: [{
+        mission_ids: ['service_1','service_2'],
+        vehicle_id: 'vehicle_0'
+      }],
+      configuration: {
+        resolution: {
+          evaluate_only: true,
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).empty?
+    result = ortools.solve(vrp, 'test')
+    assert result
+    assert_equal 2, result[:routes].size
+    assert_equal 0, result[:unassigned].size
+    assert_equal 2, result[:cost]
+    assert_equal 1, result[:iterations]
+  end
+
+  def test_evaluate_only_with_computed_solution
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 2310, result[:cost]
+
+    problem[:configuration][:resolution][:evaluate_only] = true
+    problem[:routes] = [{
+      mission_ids: ['service_2','service_1'],
+      vehicle_id: 'vehicle_1'
+    }]
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 2310, result[:cost]
+    assert_equal 1, result[:iterations]
+  end
+
 end

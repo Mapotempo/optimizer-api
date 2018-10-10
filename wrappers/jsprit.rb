@@ -51,6 +51,7 @@ module Wrappers
         :assert_points_same_definition,
         :assert_at_least_one_mission,
         :assert_no_subtours,
+        :assert_no_evaluation
       ]
     end
 
