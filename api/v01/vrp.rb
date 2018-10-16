@@ -475,7 +475,7 @@ module Api
                 APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(''), {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
-              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :subtours, :configuration].each{ |key|
+              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
                 if params[:vrp] && params[:vrp][key]
                   (vrp.send "#{key}=", params[:vrp][key])
                 end
