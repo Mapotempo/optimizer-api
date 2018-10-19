@@ -198,6 +198,15 @@ module Wrappers
       }.uniq.size == 1
     end
 
+    def assert_square_matrix(vrp)
+      dimensions = vrp.vehicles.collect(&:dimensions).flatten.uniq
+      vrp.matrices.all?{ |matrix|
+        dimensions.all?{ |dimension|
+          matrix[dimension].nil? || matrix[dimension].all?{ |line| matrix[dimension].size == line.size }
+        }
+      }
+    end
+
     def assert_correctness_provided_matrix_indices(vrp)
       dimensions = vrp.vehicles.collect(&:dimensions).flatten.uniq
       max_matrix_index = vrp.points.collect(&:matrix_index).max || 0
