@@ -17,7 +17,7 @@
 #
 
 class ScheduleType
-  def type_cast(value)
+  def type_cast(value, mandatory = true)
     if !value.nil?
       if /[0-9]+:[0-9]+:[0-9]+/.match(value.to_s)
         pattern = /([0-9]+):([0-9]+):([0-9]+)/.match(value)
@@ -33,6 +33,8 @@ class ScheduleType
         puts 'error'
         raise ArgumentError.new("Invalid Time value")
       end
+    elsif mandatory
+      0
     end
   end
 end

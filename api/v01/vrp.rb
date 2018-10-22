@@ -60,8 +60,8 @@ module Api
       default_format :json
 
       def self.vrp_request_timewindow(this)
-        this.optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
-        this.optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
+        this.optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
+        this.optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
         this.optional(:day_index, type: Integer, values: 0..6, desc: '[ Planning ] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
       end
 
@@ -185,8 +185,8 @@ module Api
         this.optional :snap, type: Float, desc: 'Snap waypoint to junction close by snap distance.'
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
-        this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
-        this.optional(:overall_duration, types: [String, Float, Integer], desc: '[planning] If schedule covers several days, maximum work duration over whole period', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
+        this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
+        this.optional(:overall_duration, types: [String, Float, Integer], desc: '[planning] If schedule covers several days, maximum work duration over whole period', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
         this.optional(:distance, types: Integer, desc: 'Maximum tour distance')
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
