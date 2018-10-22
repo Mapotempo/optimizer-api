@@ -289,6 +289,7 @@ module OptimizerWrapper
               elapsed: nil,
               total_distance: nil
             }
+            vrp.preprocessing_heuristic_result = cluster_result
           end
         end
       end
