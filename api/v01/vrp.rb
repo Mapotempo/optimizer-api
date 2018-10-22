@@ -346,6 +346,7 @@ module Api
         this.optional(:geometry_polyline, type: Boolean, desc: 'Encode the MultiLineString')
         this.optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
         this.optional(:csv, type: Boolean, desc: 'The output is a CSV file')
+        this.optional(:allow_empty_result, type: Boolean, desc: 'Allow no solution from the solver used')
       end
 
       def self.vrp_request_schedule(this)
@@ -365,6 +366,7 @@ module Api
       def self.vrp_request_debug(this)
         this.optional(:output_kmeans_centroids, type: Boolean, desc: '[debug] Outputs centroids used for kmeans clustering if clusters are generated')
         this.optional(:debug_output_clusters_in_csv, type: Boolean, desc: '[debug] Outputs clusters generated in a csv')
+        this.optional(:batch_heuristic, type: Boolean, desc: '[debug] Each heuristic will be computed')
       end
 
       namespace :vrp do

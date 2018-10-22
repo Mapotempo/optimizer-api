@@ -164,24 +164,23 @@ module OptimizerWrapper
       service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
     }
 
-    if services_vrps.any?{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }
-      duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] })
-
-      unduplicated_services = filtered_services - duplicated_services
+    if services_vrps.any?{ |service_vrp| (service_vrp[:vrp][:resolution_several_solutions] || service_vrp[:vrp][:debug_batch_heuristic]) && !service_vrp[:vrp][:restitution_allow_empty_result] }
+      selected_services = filtered_services.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] ||
+                                                                  service_vrp[:vrp][:debug_batch_heuristic]
+                                                  }
+      duplicated_services = Interpreters::SeveralSolutions.expand(selected_services)
+      unduplicated_services = filtered_services - selected_services
       results = duplicated_services.collect{ |service_vrp|
         define_process([service_vrp], services_fleets, job)
       }
-      result_global = {
-        result: [],
-      }
+      results_unduplicated = define_process([unduplicated_services], services_fleets, job) if !unduplicated_services.empty?
 
-      results.each{ |result|
-        result_global[:result] << result
+      result_global = {
+        result: results + [results_unduplicated]
       }
       Result.set(job, result_global)
     else
-      complete_services_vrp = services_vrps.delete_if{ |service_vrp|
-        service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty? }.collect{ |service_vrp|
+      complete_services_vrp = filtered_services.collect{ |service_vrp|
 
         # Split/Clusterize the problem if to large
         Interpreters::SplitClustering.split_clusters([service_vrp])
@@ -292,7 +291,7 @@ module OptimizerWrapper
                 elsif result.class.name == 'String' # result.is_a?(String) not working
                   raise RuntimeError.new(result) unless result == "Job killed"
                 elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
-                  raise RuntimeError.new('No solution provided')
+                  raise RuntimeError.new('No solution provided') unless vrp.restitution_allow_empty_result
                 end
               end
             else
@@ -318,11 +317,11 @@ module OptimizerWrapper
         end
       end
 
-      current_usefull_vehicle = vrp.vehicles.select{ |vehicle|
+      current_usefull_vehicle = cluster_result && vrp.vehicles.select{ |vehicle|
         associated_route = cluster_result[:routes].find{ |route| route[:vehicle_id] == vehicle.id }
         associated_route[:activities].any?{ |activity| activity[:service_id] } if associated_route
-      } if cluster_result
-      if fleet_id && !services_fleets.empty? && !vrp[:vehicles].empty?
+      } || []
+      if cluster_result && fleet_id && !services_fleets.empty? && !vrp[:vehicles].empty?
         current_useless_vehicle = vrp.vehicles - current_usefull_vehicle
         cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet_id && !services_fleets.empty?
         cluster_result[:unassigned].delete_if{ |activity|

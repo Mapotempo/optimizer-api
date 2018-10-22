@@ -50,6 +50,7 @@ module Models
     field :restitution_geometry_polyline, default: false
     field :restitution_intermediate_solutions, default: true
     field :restitution_csv, default: false
+    field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil
     field :schedule_range_date, default: nil
@@ -58,6 +59,7 @@ module Models
 
     field :debug_output_kmeans_centroids, default: false
     field :debug_output_clusters_in_csv, default: false
+    field :debug_batch_heuristic, default: false
 
     validates_numericality_of :preprocessing_max_split_size, allow_nil: true
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
@@ -108,6 +110,7 @@ module Models
       self.restitution_geometry_polyline = restitution[:geometry_polyline]
       self.restitution_intermediate_solutions = restitution[:intermediate_solutions]
       self.restitution_csv = restitution[:csv]
+      self.restitution_allow_empty_result = restitution[:allow_empty_result]
     end
 
     def resolution=(resolution)
@@ -150,6 +153,7 @@ module Models
     def debug=(debug)
       self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
       self.debug_output_clusters_in_csv = debug[:output_clusters_in_csv]
+      self.debug_batch_heuristic = debug[:batch_heuristic]
     end
 
     def need_matrix_time?

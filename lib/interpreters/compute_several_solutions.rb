@@ -67,12 +67,27 @@ module Interpreters
         service_vrp[:vrp].vehicles[j][:cost_value_multiplier] = 1
       }
       service_vrp[:vrp][:name] << '_' << i.to_s if service_vrp[:vrp][:name]
+      service_vrp[:vrp][:restitution_allow_empty_result] = true
 
       service_vrp
     end
 
+    def self.debug_edit_service_vrp(service_vrp, i)
+      service_vrp = service_vrp
+      service_vrp[:vrp][:resolution_solver_parameter] = i
+      service_vrp[:vrp][:restitution_allow_empty_result] = true
+
+      service_vrp            
+    end
+
     def self.expand(service_vrps)
       heuristic_size = 6
+
+      debug_service_vrps = service_vrps.select{ |service_vrp| service_vrp[:vrp][:debug_batch_heuristic] && service_vrp[:vrp][:debug_batch_heuristic] == true }.collect{ |service_vrp|
+        (0..heuristic_size).collect{ |i|
+          debug_edit_service_vrp(Marshal::load(Marshal.dump(service_vrp)), i)
+        }
+      }.flatten
 
       several_service_vrps = service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }.collect{ |service_vrp|
         variate_service_vrp = (0..service_vrp[:vrp][:resolution_several_solutions]).collect{ |i|
@@ -81,7 +96,7 @@ module Interpreters
         variate_service_vrp
       }.flatten.compact
 
-      several_service_vrps
+      debug_service_vrps + several_service_vrps
     end
 
   end
