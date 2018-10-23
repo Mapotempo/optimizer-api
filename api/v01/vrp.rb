@@ -376,7 +376,7 @@ module Api
           }
           params {
             optional(:vrp, type: Hash, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
-              optional(:name, type: String, desc: 'Name of the problem')
+              optional(:name, type: String, desc: 'Name of the problem, used as tag for all element in order to name plan when importing returned .csv file')
               optional(:matrices, type: Array, desc: 'Define all the distances between each point of problem') do
                 Vrp.vrp_request_matrices(self)
               end

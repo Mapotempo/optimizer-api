@@ -362,6 +362,7 @@ module OptimizerWrapper
     }
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
 
+    real_result[:name] = services_vrps[0][:vrp][:name]
     if job
       p = Result.get(job) || {}
       p['result'] = real_result
@@ -512,7 +513,7 @@ module OptimizerWrapper
   end
 
   def self.build_csv(solution)
-    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'total_travel_time', 'total_travel_distance']
+    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance']
     quantities_header = []
     quantities_id = []
     if solution
@@ -570,6 +571,7 @@ module OptimizerWrapper
               formatted_duration(activity['detail']['duration'] || 0),
               activity['detail']['additional_value'] || 0,
               activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
+              solution['name'] ? solution['name'] : nil,
               formatted_duration(route['total_travel_time']),
               route['total_distance']
             ]
@@ -604,6 +606,7 @@ module OptimizerWrapper
             formatted_duration(activity['detail']['duration'] || 0),
             activity['detail']['additional_value'] || 0,
             activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
+            solution['name'] ? solution['name'] : nil,
             nil,
             nil
           ]
