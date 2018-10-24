@@ -890,8 +890,8 @@ module Interpreters
               current_route[point][:end] += shift
               current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
             elsif shift < 0
-              new_potential_start = current_route[point][:start] + shift
-              soonest_authorized = services[current_route[point][:id]][:tw].empty? ? new_potential_start : services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:start] }[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
+              new_potential_start = current_route[point][:arrival] + shift
+              soonest_authorized = services[current_route[point][:id]][:tw].empty? ? new_potential_start : services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:arrival].between?(tw[:start],tw[:end]) }[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
               if soonest_authorized > new_potential_start
                 # barely tested because very few cases :
                 shift = shift - (soonest_authorized - new_potential_start)
@@ -1003,7 +1003,7 @@ module Interpreters
         [nil, nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted) + matrix(route_data, service_inserted, route_data[:end_point_id])]
       elsif next_service_id
         dist_to_next = matrix(route_data, service_inserted, next_service_id)
-        next_start, next_end = compute_tw_for_next(inserted_final_time, services_info[next_service_id], route[next_service][:considered_setup_duration], dist_to_next)
+        next_start, next_end = compute_tw_for_next(inserted_final_time, route[next_service][:arrival], services_info[next_service_id], route[next_service][:considered_setup_duration], dist_to_next, route_data[:global_day_index])
         shift = next_end - route[next_service][:end]
 
         [next_start, next_start + dist_to_next, next_end, shift]
@@ -1130,8 +1130,12 @@ module Interpreters
       possibles.sort_by!{ |possible_position| possible_position[:last_service_end] }[0]
     end
 
-    def compute_tw_for_next(inserted_final_time, next_service_info, next_service_considered_setup, dist_from_inserted)
-      sooner_start = (next_service_info[:tw] && !next_service_info[:tw].empty? ? next_service_info[:tw][0][:start] - dist_from_inserted : inserted_final_time)
+    def compute_tw_for_next(inserted_final_time, next_current_arrival, next_service_info, next_service_considered_setup, dist_from_inserted, current_day)
+      sooner_start = inserted_final_time
+      if next_service_info[:tw] && !next_service_info[:tw].empty?
+        tw = next_service_info[:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == current_day%7) && next_current_arrival.between?(tw[:start], tw[:end]) }
+        sooner_start = tw[:start] - dist_from_inserted
+      end
       new_start = [sooner_start, inserted_final_time].max
       new_end = new_start + dist_from_inserted + next_service_considered_setup + next_service_info[:duration]
 
@@ -1397,7 +1401,6 @@ module Interpreters
             fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
             new_services = @planning[current_vehicle][current_day][:services].reject{ |s| initial_services.include?(s[:id]) }
             adjust_candidate_routes(current_vehicle, current_day, services_data, new_services, @planning[current_vehicle][current_day][:services], days_available)
-
             days_available.delete(current_day)
             @candidate_routes[current_vehicle].delete(current_day)
           end
