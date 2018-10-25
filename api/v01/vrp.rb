@@ -158,7 +158,7 @@ module Api
         this.optional(:coef_service, type: Float, desc: 'Coefficient applied to every service duration defined in the tour, for this vehicle')
         this.optional(:additional_service, type: Float, desc: 'Constant additional service time for all travel defined in the tour, for this vehicle')
         this.optional(:force_start, type: Boolean, desc: '[ DEPRECATED v0.3]')
-        this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open, as late as possible or let vehicule start at any time ')
+        this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open, as late as possible or let vehicule start at any time. Not available with periodic heuristic.')
 
         this.optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
         this.optional(:value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index.')
@@ -185,19 +185,19 @@ module Api
         this.optional :snap, type: Float, desc: 'Snap waypoint to junction close by snap distance.'
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
-        this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
-        this.optional(:overall_duration, types: [String, Float, Integer], desc: '[planning] If schedule covers several days, maximum work duration over whole period', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
-        this.optional(:distance, types: Integer, desc: 'Maximum tour distance')
-        this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
-        this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
-        this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle')
+        this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
+        this.optional(:overall_duration, types: [String, Float, Integer], desc: '[planning] If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
+        this.optional(:distance, types: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
+        this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities. Not available with periodic heuristic.')
+        this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities. Not available with periodic heuristic.')
+        this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. Not available with periodic heuristic.')
 
         this.optional(:unavailable_work_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals indices of unavailabilty')
         this.optional(:unavailable_work_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
         this.mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
 
-        this.optional(:free_approach, type: Boolean, desc: 'Do not take into account the route leaving the depot in the objective')
-        this.optional(:free_return, type: Boolean, desc: 'Do not take into account the route arriving at the depot in the objective')
+        this.optional(:free_approach, type: Boolean, desc: 'Do not take into account the route leaving the depot in the objective. Not available with periodic heuristic.')
+        this.optional(:free_return, type: Boolean, desc: 'Do not take into account the route arriving at the depot in the objective. Not available with periodic heuristic.')
 
         this.optional(:start_point_id, type: String, desc: 'Begin of the tour')
         this.optional(:end_point_id, type: String, desc: 'End of the tour')
@@ -218,8 +218,8 @@ module Api
 
       def self.vrp_request_service(this)
         this.requires(:id, type: String)
-        this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
-        this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost')
+        this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4. 0 is the highest priority level). Not available with same_point_day option.')
+        this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost. Not available with periodic heuristic.')
 
         this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
@@ -331,10 +331,10 @@ module Api
         this.optional(:stable_coefficient, type: Float, desc: 'variation coefficient related to stable_iterations (Jsprit only)')
         this.optional(:initial_time_out, type: Integer, desc: 'minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
         this.optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
-        this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution')
+        this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
         this.optional(:solver_parameter, type: Integer, desc: 'Integer which force the execution of a particular behavior')
-        this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if use_periodic_heuristic (preprocessing) is activated')
-        this.optional(:allow_partial_assignment, type: Boolean, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true.')
+        this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if use_periodic_heuristic (preprocessing) is activated. Not available ORtools.')
+        this.optional(:allow_partial_assignment, type: Boolean, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
       end

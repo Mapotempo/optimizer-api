@@ -92,6 +92,902 @@ class HeuristicTest < Minitest::Test
     assert_equal result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.size, result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.uniq.size
   end
 
+  # Short tests
+  def test_reject_if_vehicle_shift_preference
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        shift_preference: 'force_start'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_duration
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        duration: 10
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_overall_duration
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        overall_duration: 10
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_distance
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        distance: 10
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_maximum_ride_time
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        maximum_ride_time: 10
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_maximum_ride_distance
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        maximum_ride_distance: 10
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_skills
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        skills: ['skill']
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        },
+        skills: ['skill']
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_free_approach_return
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        free_approach: true
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        free_return: true
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_service_priority
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        free_return: true
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        },
+        priority: 1
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          same_point_day: true,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 2, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_service_exclusion_cost
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        },
+        skills: ['skill']
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        },
+        skills: ['skill']
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        },
+        exclusion_cost: 1
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 2, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_vehicle_limit
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          vehicle_limit: 1,
+          solver_parameter: -1
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_same_point_day
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          same_point_day: true
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
+  def test_reject_if_partial_assignement
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48.8418,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 48.8218,
+          lon: 2.5435
+        }
+      }, {
+        id: 'point_2',
+        location: {
+          lat: 48.8318,
+          lon: 2.5435
+        }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      },{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        timewindow:{
+          start: 0,
+          end: 10
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          allow_partial_assignment: false
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert_equal 1, ortools.inapplicable_solve?(vrp).size
+  end
+
   def test_reject_if_no_vehicle_tw_but_heuristic
     ortools = OptimizerWrapper::ORTOOLS
     problem = {

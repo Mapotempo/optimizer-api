@@ -344,6 +344,58 @@ module Wrappers
       !vrp.resolution_evaluate_only || vrp[:routes] && !vrp[:routes].empty?
     end
 
+    def assert_wrong_vehicle_shift_preference_with_heuristic(vrp)
+      (vrp.vehicles.collect{ |vehicle| vehicle[:shift_preference] }.uniq - [:minimize_span] - ['minimize_span']).size == 0 || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_vehicle_duration_if_heuristic(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle[:duration] } || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_vehicle_overall_duration_if_heuristic(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_vehicle_distance_if_heuristic(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle[:distance] } || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_vehicle_maximum_ride_time_if_heuristic(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle[:maximum_ride_time] } || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_vehicle_maximum_ride_distance_if_heuristic(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle[:maximum_ride_distance] } || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_skills_if_heuristic(vrp)
+      vrp.services.none?{ |service| !service[:skills].empty? } || vrp.vehicles.none?{ |vehicle| !vehicle[:skills].empty? } || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle[:free_approach] || vehicle[:free_return] } || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_service_priority_if_same_point_day(vrp)
+      vrp.services.collect{ |service| service[:priority] }.uniq.size == 1 && vrp.services.collect{ |service| service[:priority] }.uniq[0] == 4 || !vrp.resolution_same_point_day
+    end
+
+    def assert_no_service_exclusion_cost_if_heuristic(vrp)
+      vrp.services.collect{ |service| service[:exclusion_cost] }.compact.empty? || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_vehicle_limit_if_heuristic(vrp)
+      vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit >= vrp.vehicles.size || !vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_same_point_day_if_no_heuristic(vrp)
+      !vrp.resolution_same_point_day || vrp.preprocessing_use_periodic_heuristic
+    end
+
+    def assert_no_allow_partial_if_no_heuristic(vrp)
+      vrp.resolution_allow_partial_assignment || vrp.preprocessing_use_periodic_heuristic
+    end
+
     def solve_synchronous?(vrp)
       false
     end

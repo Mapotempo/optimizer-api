@@ -56,7 +56,20 @@ module Wrappers
         :assert_only_force_centroids_if_kmeans_method,
         :assert_no_scheduling_if_evaluation,
         :assert_route_if_evaluation,
-        :assert_no_shipments_if_evaluation
+        :assert_no_shipments_if_evaluation,
+        :assert_wrong_vehicle_shift_preference_with_heuristic,
+        :assert_no_vehicle_duration_if_heuristic,
+        :assert_no_vehicle_overall_duration_if_heuristic,
+        :assert_no_vehicle_distance_if_heuristic,
+        :assert_no_vehicle_maximum_ride_time_if_heuristic,
+        :assert_no_vehicle_maximum_ride_distance_if_heuristic,
+        :assert_no_skills_if_heuristic,
+        :assert_no_vehicle_free_approach_or_return_if_heuristic,
+        :assert_no_service_priority_if_same_point_day,
+        :assert_no_service_exclusion_cost_if_heuristic,
+        :assert_no_vehicle_limit_if_heuristic,
+        :assert_no_same_point_day_if_no_heuristic,
+        :assert_no_allow_partial_if_no_heuristic
       ]
     end
 
