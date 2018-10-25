@@ -42,6 +42,7 @@ module Interpreters
       @same_point_day = vrp.resolution_same_point_day
       @allow_partial_assignment = vrp.resolution_allow_partial_assignment
       @allow_vehicle_change = vrp.schedule_allow_vehicle_change
+      @used_to_adjust = []
     end
 
     def expand(vrp)
@@ -916,7 +917,7 @@ module Interpreters
         insertion_costs = compute_insertion_costs(vehicle, day, positions_in_order, services, route_data, temporary_excluded_services)
         if !insertion_costs.empty?
           # there are services we can add
-          point_to_add = insertion_costs.sort_by{ |s| s[:additional_route_time] / services[s[:id]][:nb_visits]**2 }[0] # au carré?
+          point_to_add = select_point(services, insertion_costs)
           best_index = find_best_index(services, point_to_add[:id], route_data)
 
           if @same_point_day
@@ -1236,9 +1237,11 @@ module Interpreters
       }
     end
 
-    def adjust_candidate_routes(vehicle, day_finished, services, services_to_add, all_services, days_available)
+    def adjust_candidate_routes(vehicle, day_finished, services, all_services)
+      days_available = @candidate_routes[vehicle].keys
       days_filled = []
-      services_to_add.each{ |service|
+      @candidate_routes[vehicle][day_finished][:current_route].select{ |service| !@used_to_adjust.include?(service[:id]) }.sort_by{ |service| services[service[:id]][:priority] }.each{ |service|
+        @used_to_adjust << service[:id]
         peri = services[service[:id]][:heuristic_period]
         if peri && peri > 0
           added = [1]
@@ -1389,18 +1392,14 @@ module Interpreters
         current_day = days_available[0]
 
         until @candidate_service_ids.empty? || current_day.nil?
-          initial_services = @candidate_routes[current_vehicle][current_day][:current_route].collect{ |s| s[:id] }
           fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
-          new_services = @planning[current_vehicle][current_day][:services].reject{ |s| initial_services.include?(s[:id]) }
+          adjust_candidate_routes(current_vehicle, current_day, services_data, @planning[current_vehicle][current_day][:services])
           days_available.delete(current_day)
           @candidate_routes[current_vehicle].delete(current_day)
-          adjust_candidate_routes(current_vehicle, current_day, services_data, new_services, @planning[current_vehicle][current_day][:services], days_available)
           while @candidate_routes[current_vehicle].any?{ |_day, day_data| !day_data[:current_route].empty? }
             current_day = @candidate_routes[current_vehicle].max_by{ |_day, day_data| day_data[:current_route].size }.first
-            initial_services = @candidate_routes[current_vehicle][current_day][:current_route].collect{ |s| s[:id] }
             fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
-            new_services = @planning[current_vehicle][current_day][:services].reject{ |s| initial_services.include?(s[:id]) }
-            adjust_candidate_routes(current_vehicle, current_day, services_data, new_services, @planning[current_vehicle][current_day][:services], days_available)
+            adjust_candidate_routes(current_vehicle, current_day, services_data, @planning[current_vehicle][current_day][:services])
             days_available.delete(current_day)
             @candidate_routes[current_vehicle].delete(current_day)
           end
@@ -1411,6 +1410,11 @@ module Interpreters
         # we have filled all days for current vehicle
         @candidate_vehicles.delete(current_vehicle)
       end
+    end
+
+    def select_point(services, insertion_costs)
+      max_priority = services.collect{ |_id, data| data[:priority] }.max
+      insertion_costs.sort_by{ |s| (services[s[:id]][:priority].to_f / max_priority) * (s[:additional_route_time] / services[s[:id]][:nb_visits]**2) }[0]
     end
 
     def grouped_fill(services_data)
@@ -1425,9 +1429,7 @@ module Interpreters
           insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], services_data, route_data, [])
 
           if !insertion_costs.empty?
-
-            initial_services = @candidate_routes[current_vehicle][best_day][:current_route].collect{ |s| s[:id] }
-            point_to_add = insertion_costs.sort_by{ |s| s[:additional_route_time] / services_data[s[:id]][:nb_visits]**2 }[0]
+            point_to_add = select_point(services_data, insertion_costs)
             best_index = find_best_index(services_data, point_to_add[:id], route_data)
             best_index[:end] = best_index[:end] - services_data[best_index[:id]][:group_duration] + services_data[best_index[:id]][:duration]
 
@@ -1463,8 +1465,7 @@ module Interpreters
               route_data[:positions_in_order].insert(best_index[:position] + i + 1, route_data[:positions_in_order][best_index[:position]])
             }
 
-            new_services = route_data[:current_route].reject{ |s| initial_services.include?(s[:id]) }
-            adjust_candidate_routes(current_vehicle, best_day, services_data, new_services, route_data[:current_route], @candidate_routes[current_vehicle].keys)
+            adjust_candidate_routes(current_vehicle, best_day, services_data, route_data[:current_route])
 
             if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty?
               @to_plan_service_ids += @services_unlocked_by[best_index[:id]]
@@ -1506,7 +1507,8 @@ module Interpreters
           nb_visits: service[:visits_number],
           point_id: service[:activity][:point][:location][:id],
           tw: service[:activity][:timewindows] ?  service[:activity][:timewindows] : [],
-          unavailable_days: service[:unavailable_visit_day_indices]
+          unavailable_days: service[:unavailable_visit_day_indices],
+          priority: service.priority
         }
         if services_data[service.id][:heuristic_period] == 0
           services_data[service.id][:heuristic_period] = 7
