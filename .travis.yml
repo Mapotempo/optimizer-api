@@ -7,17 +7,9 @@ cache: bundle
 
 before_install:
   - export REGISTRY=registry.mapotempo.com/
-  - docker build -t ${REGISTRY}mapotempo/optimizer-api:latest -f docker/Dockerfile --build-arg ORTOOLS_VERSION=v6.5 --build-arg VROOM_VERSION=v1.2.0 --build-arg OPTIMIZER_ORTOOLS_VERSION=dev .
+  - docker build -t ${REGISTRY}mapotempo-ce/optimizer-api:latest -f docker/Dockerfile --build-arg ORTOOLS_VERSION=v6.5 --build-arg VROOM_VERSION=v1.2.0 --build-arg OPTIMIZER_ORTOOLS_VERSION=v6.5 .
   - docker swarm init
   - mkdir -p ./redis
-  - docker stack deploy -c ./docker/docker-compose.yml optimizer
 
 script:
-  - DOCKER_SERVICE_NAME=optimizer_api
-  - CONTAINER=${DOCKER_SERVICE_NAME}.1.$(docker service ps -f "name=${DOCKER_SERVICE_NAME}.1" ${DOCKER_SERVICE_NAME} -q --no-trunc | head -n1)
-  - docker exec -i ${CONTAINER} bash -c 'ls -l test/'
-  - docker exec -i ${CONTAINER} apt update -y > /dev/null
-  - docker exec -i ${CONTAINER} apt install git -y > /dev/null
-  - docker exec -i ${CONTAINER} rm /srv/app/.bundle/config
-  - docker exec -i ${CONTAINER} bundle install
-  - docker exec -i ${CONTAINER} bundle exec rake test
+  - bash ci-utils/travis.sh
