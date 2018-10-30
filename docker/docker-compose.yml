@@ -113,6 +113,7 @@ services:
 
   api:
     <<: *default-service
+    stop_grace_period: 5m
     hostname: optimizer-${EDT}-api
     deploy:
       <<: *default-deploy
@@ -127,6 +128,48 @@ services:
         - "traefik.app.protocol=http"
         - "traefik.docker.network=base"
         - "traefik.enable=true"
+
+  resque-world:
+    <<: *default-service
+    stop_grace_period: 18h
+    hostname: optimizer-initial-${EDT}-resque-world
+    deploy:
+      <<: *default-deploy
+      resources:
+        limits:
+          memory: 22G
+        reservations:
+          memory: 1G
+      update_config:
+        <<: *default-update-config
+        parallelism: 2
+      replicas: 2
+    command: bundle exec rake resque:work
+    environment:
+      <<: *environment-resque
+      QUEUES: WORLD
+    <<: *network-resque
+
+  resque-france:
+    <<: *default-service
+    stop_grace_period: 18h
+    hostname: optimizer-initial-${EDT}-resque-france
+    deploy:
+      <<: *default-deploy
+      resources:
+        limits:
+          memory: 22G
+        reservations:
+          memory: 1G
+      update_config:
+        <<: *default-update-config
+        parallelism: 2
+      replicas: 2
+    command: bundle exec rake resque:work
+    environment:
+      <<: *environment-resque
+      QUEUES: FRANCE
+    <<: *network-resque
 
   resque-test:
     <<: *default-service
@@ -143,6 +186,7 @@ services:
     command: bundle exec rake resque:work
     environment:
       <<: *environment-resque
+      OPTIM_GENERATE_GEOJSON_POLYLINES: 'true'
       QUEUES: TEST
     <<: *network-resque
 
@@ -160,6 +204,7 @@ services:
     command: bundle exec rake resque:work
     environment:
       <<: *environment-resque
+      OPTIM_GENERATE_GEOJSON_POLYLINES: 'true'
       QUEUES: LARGE
     <<: *network-resque
 
@@ -181,6 +226,7 @@ services:
     command: bundle exec rake resque:work
     environment:
       <<: *environment-resque
+      OPTIM_GENERATE_GEOJSON_POLYLINES: 'true'
       QUEUES: SMALL
     <<: *network-resque
 
@@ -199,7 +245,7 @@ services:
     command: bundle exec resque-web -F -d config/initializers/resque.rb
     environment:
       <<: *environment-resque
-      QUEUES: SMALL,LARGE,TEST
+      QUEUES: SMALL,LARGE,TEST,FRANCE,WORLD
 
 networks:
   base:
