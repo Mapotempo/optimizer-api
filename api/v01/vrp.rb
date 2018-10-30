@@ -319,6 +319,7 @@ module Api
         this.optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
         this.optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
         this.optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
+        this.optional(:neighbourhood_size, type: Integer, desc: 'Limit the size of the considered neighbourhood within the search')
       end
 
       def self.vrp_request_resolution(this)
