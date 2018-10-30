@@ -38,7 +38,8 @@ RUN apt-get update > /dev/null && \
   apt-get install -y git libgeos-dev ${libgeos} libicu-dev libglpk-dev nano > /dev/null
 
 COPY --chown=app . /srv/app/
-RUN install -d --owner app /srv/app/archives
+RUN install -d --owner app /tmp/optimizer-api/dump
+RUN install -d --owner app /tmp/optimizer-api/tmp
 
 USER app
 WORKDIR /srv/app
@@ -49,6 +50,7 @@ RUN gem install bundler --version 2.2.24 && \
 
 LABEL maintainer="Mapotempo <tech@mapotempo.com>"
 
+ENV APP_ENV production
 ENV REDIS_HOST redis-cache
 ENV LANG C.UTF-8
 
