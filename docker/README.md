@@ -45,7 +45,7 @@ export REGISTRY='registry.mapotempo.com/'
 **Deploy the services (Access it via http://localhost:8083)**
 
 ```
-mkdir -p ./docker/redis
+mkdir -p ${APP_HOME:-..}/redis-count ${APP_HOME:-..}/redis ${APP_HOME:-..}/archives ${APP_HOME:-..}/config
 docker stack deploy -c ./docker/docker-compose.yml ${PROJECT_NAME}
 ```
 

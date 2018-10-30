@@ -1,0 +1,73 @@
+stages:
+  - test
+  - deliver
+  - deploy
+  - notify
+
+variables:
+  REGISTRY_URL: registry.mapotempo.com
+  PROJECT_NAME: ${CI_PROJECT_NAME}
+
+Deliver image:
+  image: docker:latest
+  needs:
+    - job: "Check Conf"
+      optional: true
+  stage: deliver
+  cache:
+    - key:
+        files:
+          - Gemfile.lock
+        prefix: ${CI_PROJECT_NAME}
+      paths:
+        - vendor/bundle
+      when: 'always'
+    - key: ${CI_PROJECT_NAME}
+      paths:
+        - .buildx-cache
+      when: 'always'
+  services:
+    - docker:dind
+  environment:
+    name: ${CI_COMMIT_REF_NAME}
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_HOST: tcp://docker:2375
+    FOLDER_2_CP: vendor/bundle
+  before_script:
+    - apk update > /dev/null && apk add git bash jq curl rsync > /dev/null
+    - docker login -u $USER -p $PASSWORD $REGISTRY_URL
+  script:
+    - |
+      DOCKER_FILE=docker/Dockerfile \
+      ci-utils/build_app.sh
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(alpha|beta|prod)/
+      when: on_success
+
+Deploy to swarm:
+  image: debian:latest
+  needs:
+    - job: "Deliver image"
+  environment:
+    name: ${CI_COMMIT_REF_NAME}
+  stage: deploy
+  script:
+    - apt-get update -q > /dev/null && apt-get install git bash jq curl rsync -yqq > /dev/null
+    - ci-utils/deploy_app.sh
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(alpha|beta|prod)/
+      when: on_success
+
+Check Conf:
+  image: debian:latest
+  environment:
+    name: ${CI_COMMIT_REF_NAME}
+  stage: test
+  script:
+    - apt-get update -q > /dev/null && apt-get install git bash jq curl rsync -yqq > /dev/null
+    - ci-utils/check_access.sh
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(alpha|beta|prod)/
+      changes:
+        - config/access.rb
