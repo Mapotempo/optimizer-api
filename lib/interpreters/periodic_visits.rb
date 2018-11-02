@@ -840,8 +840,9 @@ module Interpreters
         result = vroom.solve(tsp){
           progress += 1
         }
-        @order = result[:routes][0][:activities].collect{ |stop| 
-          vrp.points.find{ |pt| pt[:id] == stop[:point_id]}[:location][:id]
+        @order = result[:routes][0][:activities].collect{ |stop|
+          associated_point = vrp.points.find{ |pt| pt[:id] == stop[:point_id] }
+          associated_point[:location] ? associated_point[:location][:id] : associated_point[:matrix_index]
         }
       end
     end
@@ -1505,7 +1506,7 @@ module Interpreters
           duration: service[:activity][:duration],
           heuristic_period: (service[:visits_number] == 1 ? nil : (@schedule_end > 7 && has_sequence_timewindows && !has_every_day_index ? (service[:minimum_lapse].to_f / 7).ceil * 7 : (service[:minimum_lapse].nil? ? 1 : service[:minimum_lapse].ceil))),
           nb_visits: service[:visits_number],
-          point_id: service[:activity][:point][:location][:id],
+          point_id: service[:activity][:point][:location] ? service[:activity][:point][:location][:id] : service[:activity][:point][:matrix_index],
           tw: service[:activity][:timewindows] ?  service[:activity][:timewindows] : [],
           unavailable_days: service[:unavailable_visit_day_indices],
           priority: service.priority
@@ -1641,11 +1642,12 @@ module Interpreters
           missions_list = []
           computed_activities = []
           if route[:vehicle][:start_point_id]
+            associated_point = vrp[:points].find{ |point| point[:id] == route[:vehicle][:start_point_id] }
             computed_activities << {
               point_id: route[:vehicle][:start_point_id],
               detail: {
-                lat: vrp[:points].find{ |point| point[:id] == route[:vehicle][:start_point_id] }[:location][:lat],
-                lon: vrp[:points].find{ |point| point[:id] == route[:vehicle][:start_point_id] }[:location][:lon],
+                lat: (associated_point[:location][:lat] if associated_point[:location]),
+                lon: (associated_point[:location][:lon] if associated_point[:location]),
                 quantities: []
               }
             }
@@ -1654,6 +1656,7 @@ module Interpreters
           day_name = { 0 => "mon", 1 => "tue", 2 => "wed", 3 => "thu", 4 => "fri", 5 => "sat", 6 => "sun" }
           route[:services].each{ |point|
             service_in_vrp = vrp.services.find{ |s| s[:id] == point[:id] }
+            associated_point = vrp[:points].find{ |pt| pt[:location] && pt[:location][:id] == point[:point_id] || pt[:matrix_index] == point[:point_id] }
             computed_activities << {
               day_week_num: "#{day%7}_#{day/7}",
               day_week: "#{day_name[day%7]}_w#{day/7 + 1}",
@@ -1662,8 +1665,8 @@ module Interpreters
               begin_time: point[:end].to_i - service_in_vrp[:activity][:duration],
               departure_time: point[:end].to_i,
               detail: {
-                lat: vrp[:points].find{ |pt| pt[:location][:id] == point[:point_id] }[:location][:lat],
-                lon: vrp[:points].find{ |pt| pt[:location][:id] == point[:point_id] }[:location][:lon],
+                lat: (associated_point[:location][:lat] if associated_point[:location]),
+                lon: (associated_point[:location][:lon] if associated_point[:location]),
                 skills: services_data[point[:id]][:skills],
                 setup_duration: point[:considered_setup_duration],
                 duration: service_in_vrp[:activity][:duration],
@@ -1675,11 +1678,12 @@ module Interpreters
           }
 
           if route[:vehicle][:end_point_id]
+            associated_point = vrp[:points].find{ |point| point[:id] == route[:vehicle][:end_point_id] }
             computed_activities << {
               point_id: route[:vehicle][:end_point_id],
               detail: {
-                lat: vrp[:points].find{ |point| point[:id] == route[:vehicle][:end_point_id] }[:location][:lat],
-                lon: vrp[:points].find{ |point| point[:id] == route[:vehicle][:end_point_id] }[:location][:lon],
+                lat: (associated_point[:location][:lat] if associated_point[:location]),
+                lon: (associated_point[:location][:lon] if associated_point[:location]),
                 quantities: []
               }
             }
