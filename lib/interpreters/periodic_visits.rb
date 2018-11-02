@@ -34,7 +34,6 @@ module Interpreters
       @candidate_routes = {}
       @candidate_vehicles = []
       @vehicle_day_completed = {}
-      @limit = 1700
       @uninserted = {}
       @min_nb_scheduled_in_one_day = nil
       @cost = 0
@@ -950,7 +949,8 @@ module Interpreters
               end_point_id: route_data[:end_point_id],
               tw_start: route_data[:tw_start],
               tw_end: route_data[:tw_end],
-              matrix_id: route_data[:matrix_id]
+              matrix_id: route_data[:matrix_id],
+              router_dimension: route_data[:router_dimension]
             },
             services: current_route
           }
@@ -1020,17 +1020,18 @@ module Interpreters
       route = route_data[:current_route]
       previous_service = (position.zero? ? route_data[:start_point_id] : route[position - 1][:id])
       previous_service_end = (position.zero? ? nil : route[position - 1][:end])
+      next_id = route[position] ? route[position][:id] : nil
+      return [possibles, false] if route_data[:maximum_ride_time] && (position > 0 && matrix(route_data, previous_service, service, :time) > route_data[:maximum_ride_time] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :time) > route_data[:maximum_ride_time])
+      return [possibles, false] if route_data[:maximum_ride_distance] && (position > 0 && matrix(route_data, previous_service, service, :distance) > route_data[:maximum_ride_distance] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :distance) > route_data[:maximum_ride_distance])
       list = find_timewindows(position, previous_service, previous_service_end, service, services[service], route_data, duration, filling_candidate_route)
       list.each{ |current_tw|
         start_time = current_tw[:start_time]
         arrival_time = start_time + matrix(route_data, previous_service, service)
         final_time = current_tw[:final_time]
-        next_id = route[position] ? route[position][:id] : nil
         next_start, next_arrival, next_end, shift = compute_shift(route_data, services, service, final_time, position, next_id)
-        time_back_to_depot = (position == route.size ? final_time + matrix(route_data, service, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + shift)
         acceptable_shift = route[position] && route[position][:max_shift] ? route[position][:max_shift] >= shift : true
+        computed_shift = Marshal.load(Marshal.dump(shift))
         if acceptable_shift && route[position + 1]
-          computed_shift = Marshal.load(Marshal.dump(shift))
           (position + 1..route.size - 1).each{ |pos|
             initial_shift_with_previous = route[pos][:start] - (route[pos - 1][:end])
             computed_shift = [shift - initial_shift_with_previous, 0].max
@@ -1040,7 +1041,8 @@ module Interpreters
             end
           }
         end
-        acceptable_shift_for_itself = (current_tw[:end_tw] ? arrival_time <= current_tw[:end_tw] : true)
+        time_back_to_depot = (position == route.size ? final_time + matrix(route_data, service, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + computed_shift)
+        acceptable_shift_for_itself = (current_tw[:end_tw] ? arrival_time <= current_tw[:end_tw] : true) && (route_data[:duration] ? time_back_to_depot - (position == 0 ? start_time : route.first[:start]) <= route_data[:duration] : true)
         acceptable_shift_for_group = true
         if @same_point_day && !filling_candidate_route && !services[service][:tw].empty?
           # all services start on time
@@ -1144,19 +1146,15 @@ module Interpreters
       [new_start, new_end]
     end
 
-    def matrix(route_data, start, arrival)
+    def matrix(route_data, start, arrival, dimension = nil)
       if start.nil? || arrival.nil?
         0
       else
-        if start.is_a?(String)
-          start = @indices[start]
-        end
+        start = @indices[start] if start.is_a?(String)
+        arrival = @indices[arrival] if arrival.is_a?(String)
+        dimension = route_data[:router_dimension] if dimension.nil?
 
-        if arrival.is_a?(String)
-          arrival = @indices[arrival]
-        end
-        # Time matrix is mandatory !
-        @matrices.find{ |matrix| matrix[:id] == route_data[:matrix_id] }[:time][start][arrival]
+        @matrices.find{ |matrix| matrix[:id] == route_data[:matrix_id] }[dimension][start][arrival]
       end
     end
 
@@ -1596,11 +1594,15 @@ module Interpreters
           tw_end: vehicle[:timewindow][:end] < 84600 ? vehicle[:timewindow][:end] : vehicle[:timewindow][:end] - ((vehicle[:global_day_index] + @shift) % 7) * 86400,
           start_point_id: vehicle[:start_point_id],
           end_point_id: vehicle[:end_point_id],
+          duration: vehicle[:duration],
           matrix_id: vehicle[:matrix_id],
           current_route: [],
           capacity: capacity,
           capacity_left: Marshal.load(Marshal.dump(capacity)),
-          positions_in_order: []
+          positions_in_order: [],
+          maximum_ride_time: vehicle[:maximum_ride_time],
+          maximum_ride_distance: vehicle[:maximum_ride_distance],
+          router_dimension: vehicle[:router_dimension].to_sym
         }
         @vehicle_day_completed[original_vehicle_id][vehicle[:global_day_index]] = false
       }
@@ -1620,7 +1622,8 @@ module Interpreters
             end_point_id: route_data[:end_point_id],
             tw_start: route_data[:tw_start],
             tw_end: route_data[:tw_end],
-            matrix_id: route_data[:matrix_id]
+            matrix_id: route_data[:matrix_id],
+            router_dimension: route_data[:router_dimension]
           },
           services: route_data[:current_route]
         }

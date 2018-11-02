@@ -348,10 +348,6 @@ module Wrappers
       (vrp.vehicles.collect{ |vehicle| vehicle[:shift_preference] }.uniq - [:minimize_span] - ['minimize_span']).size == 0 || !vrp.preprocessing_use_periodic_heuristic
     end
 
-    def assert_no_vehicle_duration_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:duration] } || !vrp.preprocessing_use_periodic_heuristic
-    end
-
     def assert_no_vehicle_overall_duration_if_heuristic(vrp)
       vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } || !vrp.preprocessing_use_periodic_heuristic
     end
@@ -360,12 +356,8 @@ module Wrappers
       vrp.vehicles.none?{ |vehicle| vehicle[:distance] } || !vrp.preprocessing_use_periodic_heuristic
     end
 
-    def assert_no_vehicle_maximum_ride_time_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:maximum_ride_time] } || !vrp.preprocessing_use_periodic_heuristic
-    end
-
-    def assert_no_vehicle_maximum_ride_distance_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:maximum_ride_distance] } || !vrp.preprocessing_use_periodic_heuristic
+    def assert_possible_to_get_distances_if_maximum_ride_distance(vrp)
+      !vrp.vehicles.any?{ |vehicle| vehicle[:maximum_ride_distance] } || (vrp.points.all?{ |point| point[:location] && point[:location][:lat] } || vrp.matrices.all?{ |matrix| matrix[:distance] && !matrix[:distance].empty? })
     end
 
     def assert_no_skills_if_heuristic(vrp)

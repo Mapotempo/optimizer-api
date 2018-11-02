@@ -174,75 +174,6 @@ class HeuristicTest < Minitest::Test
     assert_equal 1, ortools.inapplicable_solve?(vrp).size
   end
 
-  def test_reject_if_vehicle_duration
-    ortools = OptimizerWrapper::ORTOOLS
-    problem = {
-      points: [{
-        id: 'point_0',
-        location: {
-          lat: 48.8418,
-          lon: 2.5435
-        }
-      }, {
-        id: 'point_1',
-        location: {
-          lat: 48.8218,
-          lon: 2.5435
-        }
-      }, {
-        id: 'point_2',
-        location: {
-          lat: 48.8318,
-          lon: 2.5435
-        }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        timewindow:{
-          start: 0,
-          end: 10
-        },
-        duration: 10
-      },{
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        timewindow:{
-          start: 0,
-          end: 10
-        },
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      configuration: {
-        preprocessing:{
-          use_periodic_heuristic: true
-        },
-        resolution: {
-          duration: 10,
-          solver_parameter: -1
-        },
-        schedule: {
-          range_indices:{
-            start: 0,
-            end: 3
-          }
-        }
-      }
-    }
-    vrp = Models::Vrp.create(problem)
-    assert_equal 1, ortools.inapplicable_solve?(vrp).size
-  end
-
   def test_reject_if_vehicle_overall_duration
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
@@ -342,144 +273,6 @@ class HeuristicTest < Minitest::Test
           end: 10
         },
         distance: 10
-      },{
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        timewindow:{
-          start: 0,
-          end: 10
-        },
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      configuration: {
-        preprocessing:{
-          use_periodic_heuristic: true
-        },
-        resolution: {
-          duration: 10,
-          solver_parameter: -1
-        },
-        schedule: {
-          range_indices:{
-            start: 0,
-            end: 3
-          }
-        }
-      }
-    }
-    vrp = Models::Vrp.create(problem)
-    assert_equal 1, ortools.inapplicable_solve?(vrp).size
-  end
-
-  def test_reject_if_vehicle_maximum_ride_time
-    ortools = OptimizerWrapper::ORTOOLS
-    problem = {
-      points: [{
-        id: 'point_0',
-        location: {
-          lat: 48.8418,
-          lon: 2.5435
-        }
-      }, {
-        id: 'point_1',
-        location: {
-          lat: 48.8218,
-          lon: 2.5435
-        }
-      }, {
-        id: 'point_2',
-        location: {
-          lat: 48.8318,
-          lon: 2.5435
-        }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        timewindow:{
-          start: 0,
-          end: 10
-        },
-        maximum_ride_time: 10
-      },{
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        timewindow:{
-          start: 0,
-          end: 10
-        },
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      configuration: {
-        preprocessing:{
-          use_periodic_heuristic: true
-        },
-        resolution: {
-          duration: 10,
-          solver_parameter: -1
-        },
-        schedule: {
-          range_indices:{
-            start: 0,
-            end: 3
-          }
-        }
-      }
-    }
-    vrp = Models::Vrp.create(problem)
-    assert_equal 1, ortools.inapplicable_solve?(vrp).size
-  end
-
-  def test_reject_if_vehicle_maximum_ride_distance
-    ortools = OptimizerWrapper::ORTOOLS
-    problem = {
-      points: [{
-        id: 'point_0',
-        location: {
-          lat: 48.8418,
-          lon: 2.5435
-        }
-      }, {
-        id: 'point_1',
-        location: {
-          lat: 48.8218,
-          lon: 2.5435
-        }
-      }, {
-        id: 'point_2',
-        location: {
-          lat: 48.8318,
-          lon: 2.5435
-        }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        timewindow:{
-          start: 0,
-          end: 10
-        },
-        maximum_ride_distance: 10
       },{
         id: 'vehicle_1',
         start_point_id: 'point_0',
@@ -1620,6 +1413,231 @@ class HeuristicTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert ortools.inapplicable_solve?(vrp).include? :assert_no_scheduling_if_evaluation
+  end
+
+  def test_max_ride_time_with_heuristic
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5],
+          [6, 0, 1, 5],
+          [1, 2, 0, 5],
+          [5, 5, 5, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      },{
+        id: 'point_1',
+        matrix_index: 1
+      },{
+        id: 'point_2',
+        matrix_index: 2
+      },{
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 20
+        },
+        maximum_ride_time: 4
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule:{
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 2, result[:routes].find{ |route| route[:activities].collect{ |stop| stop[:point_id] }.include?('point_3') }[:activities].size
+  end
+
+  def test_max_ride_distance_with_heuristic
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5],
+          [6, 0, 1, 5],
+          [1, 2, 0, 5],
+          [5, 5, 5, 0]
+        ],
+        distance: [
+          [0, 4, 5, 2],
+          [6, 0, 5, 3],
+          [5, 5, 0, 5],
+          [1, 2, 5, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      },{
+        id: 'point_1',
+        matrix_index: 1
+      },{
+        id: 'point_2',
+        matrix_index: 2
+      },{
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 20
+        },
+        maximum_ride_distance: 4
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule:{
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 2, result[:routes].find{ |route| route[:activities].collect{ |stop| stop[:point_id] }.include?('point_2') }[:activities].size
+  end
+
+  def test_duration_with_heuristic
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5],
+          [6, 0, 1, 5],
+          [1, 2, 0, 5],
+          [5, 5, 5, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      },{
+        id: 'point_1',
+        matrix_index: 1
+      },{
+        id: 'point_2',
+        matrix_index: 2
+      },{
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 20
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        }
+      }],
+      configuration: {
+        preprocessing:{
+          use_periodic_heuristic: true
+        },
+        resolution: {
+          duration: 10,
+          solver_parameter: -1
+        },
+        schedule:{
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+    assert result
+    assert result[:routes].none?{ |route| route[:activities].collect{ |stop| stop[:departure_time].to_i - stop[:begin_time].to_i + stop[:travel_time].to_i }.sum > 6 }
   end
 
 end
