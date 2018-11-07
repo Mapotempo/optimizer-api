@@ -362,6 +362,7 @@ module Api
 
       def self.vrp_request_debug(this)
         this.optional(:output_kmeans_centroids, type: Boolean, desc: '[debug] Outputs centroids used for kmeans clustering if clusters are generated')
+        this.optional(:debug_output_clusters_in_csv, type: Boolean, desc: '[debug] Outputs clusters generated in a csv')
       end
 
       namespace :vrp do

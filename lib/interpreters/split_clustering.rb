@@ -253,15 +253,19 @@ module Interpreters
         }
         sub_pbs = []
         points_seen = []
-        file = File.new("service_with_tags.csv", "w+")
-        file << "name,lat,lng,tags,duration \n"
+        if vrp.debug_output_clusters_in_csv
+          file = File.new("service_with_tags.csv", "w+")
+          file << "name,lat,lng,tags,duration \n"
+        end
         clusters.delete([])
         clusters.each_with_index{ |cluster, index|
           services_list = []
           cluster.data_items.each{ |data_item|
             point_id = data_item[2]
             vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
-              file << "#{service[:id]},#{service[:activity][:point][:location][:lat]},#{service[:activity][:point][:location][:lon]},#{index},#{service[:activity][:duration] * service[:visits_number]} \n"
+              if vrp.debug_output_clusters_in_csv
+                file << "#{service[:id]},#{service[:activity][:point][:location][:lat]},#{service[:activity][:point][:location][:lon]},#{index},#{service[:activity][:duration] * service[:visits_number]} \n"
+              end
               points_seen << service[:id]
               services_list << service[:id]
             }
@@ -276,7 +280,9 @@ module Interpreters
           }
           vehicle_to_use += 1
         }
-        file.close
+        if vrp.debug_output_clusters_in_csv
+          file.close
+        end
         sub_pbs
       else
         puts "split hierarchical not available when services have activities"
@@ -402,15 +408,19 @@ module Interpreters
         }
         sub_pbs = []
         points_seen = []
-        file = File.new("service_with_tags.csv", "w+")
-        file << "name,lat,lng,tags,duration \n"
+        if vrp.debug_output_clusters_in_csv
+          file = File.new("service_with_tags.csv", "w+")
+          file << "name,lat,lng,tags,duration \n"
+        end
         clusters.delete([])
         clusters.each_with_index{ |cluster, index|
           services_list = []
           cluster.each{ |node|
             point_id = clusterer.graph[node][:point]
             vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
-              file << "#{service[:id]},#{service[:activity][:point][:location][:lat]},#{service[:activity][:point][:location][:lon]},#{index},#{service[:activity][:duration] * service[:visits_number]} \n"
+              if vrp.debug_output_clusters_in_csv
+                file << "#{service[:id]},#{service[:activity][:point][:location][:lat]},#{service[:activity][:point][:location][:lon]},#{index},#{service[:activity][:duration] * service[:visits_number]} \n"
+              end
               points_seen << service[:id]
               services_list << service[:id]
             }
@@ -425,7 +435,9 @@ module Interpreters
           }
           vehicle_to_use += 1
         }
-        file.close
+        if vrp.debug_output_clusters_in_csv
+          file.close
+        end
         sub_pbs
       else
         puts "split hierarchical not available when services have activities"

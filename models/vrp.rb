@@ -55,6 +55,7 @@ module Models
     field :schedule_unavailable_date, default: nil
 
     field :debug_output_kmeans_centroids, default: false
+    field :debug_output_clusters_in_csv, default: false
 
     validates_numericality_of :preprocessing_max_split_size, allow_nil: true
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
@@ -142,6 +143,7 @@ module Models
 
     def debug=(debug)
       self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
+      self.debug_output_clusters_in_csv = debug[:output_clusters_in_csv]
     end
 
     def need_matrix_time?
