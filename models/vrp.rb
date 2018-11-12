@@ -53,7 +53,6 @@ module Models
     field :schedule_range_date, default: nil
     field :schedule_unavailable_indices, default: nil
     field :schedule_unavailable_date, default: nil
-    field :schedule_allow_vehicle_change, default: false
 
     field :debug_output_kmeans_centroids, default: false
 
@@ -139,7 +138,6 @@ module Models
       self.schedule_range_date = schedule[:range_date]
       self.schedule_unavailable_indices = schedule[:unavailable_indices]
       self.schedule_unavailable_date = schedule[:unavailable_date]
-      self.schedule_allow_vehicle_change = schedule[:schedule_allow_vehicle_change]
     end
 
     def debug=(debug)
