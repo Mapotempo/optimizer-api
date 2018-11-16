@@ -125,7 +125,7 @@ module Interpreters
             },
             resolution: {
               duration: @original_vrp.resolution_duration ? @original_vrp.resolution_duration / problem_size * sub_vrp.services.size : nil,
-              initial_time_out: @original_vrp.resolution_initial_time_out ? @original_vrp.resolution_initial_time_out / problem_size * sub_vrp.services.size : nil
+              minimum_duration: @original_vrp.resolution_minimum_duration ? @original_vrp.resolution_minimum_duration / problem_size * sub_vrp.services.size : (@original_vrp.resolution_initial_time_out ? @original_vrp.resolution_initial_time_out / problem_size * sub_vrp.services.size : nil)
             }.delete_if{ |k, v| v.nil? }
         }
 

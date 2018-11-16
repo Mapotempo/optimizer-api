@@ -619,7 +619,7 @@ Resolution parameters will only indicate when stopping the search is tolerated. 
   "configuration": {
     "resolution": {
       "duration": 30000,
-      "initial_time_out": 3000,
+      "minimum_duration": 3000,
       "time_out_multiplier": 2
     }
   }
@@ -632,7 +632,7 @@ Resolution parameters will only indicate when stopping the search is tolerated. 
 The followings paramaters are available :
 * **duration** : ORtools, Jsprit
 * **iterations_without_improvment** : ORtools, Jsprit
-* **initial_time_out** : ORtools
+* **minimum_duration** : ORtools
 * **time_out_multiplier** : ORtools
 * **stable_iterations** : Jsprit
 * **stable_coefficient** : Jsprit

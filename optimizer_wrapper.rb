@@ -206,7 +206,7 @@ module OptimizerWrapper
             vehicle
           }
           vrp.resolution_duration = vrp.resolution_duration / problem_size * vrp.services.size if vrp.resolution_duration
-          vrp.resolution_initial_time_out = vrp.resolution_initial_time_out / problem_size * vrp.services.size if vrp.resolution_initial_time_out
+          vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * vrp.services.size if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
 
           ## Reintroduce fills and empties services
           vrp.services += associated_fleet[:fills] if !associated_fleet[:fills].empty?
@@ -467,7 +467,7 @@ module OptimizerWrapper
           iterations: vrp.resolution_iterations,
           iterations_without_improvment: vrp.resolution_iterations_without_improvment,
           stable_iterations: vrp.resolution_stable_iterations,
-          initial_time_out: vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size,
+          minimum_duration: (vrp.resolution_minimum_duration && vrp.resolution_minimum_duration / vrp.vehicles.size) || (vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size),
           time_out_multiplier: vrp.resolution_time_out_multiplier
         }
       }

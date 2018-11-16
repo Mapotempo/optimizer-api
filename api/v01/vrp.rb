@@ -329,7 +329,8 @@ module Api
         this.optional(:iterations_without_improvment, type: Integer, desc: 'Maximum number of iterations without improvment from the best solution already found')
         this.optional(:stable_iterations, type: Integer, desc: 'maximum number of iterations without variation in the solve bigger than the defined coefficient (Jsprit only)')
         this.optional(:stable_coefficient, type: Float, desc: 'variation coefficient related to stable_iterations (Jsprit only)')
-        this.optional(:initial_time_out, type: Integer, desc: 'minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
+        this.optional(:initial_time_out, type: Integer, desc: '[ DEPRECATED : use minimum_duration instead]')
+        this.optional(:minimum_duration, type: Integer, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
         this.optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
         this.optional(:solver_parameter, type: Integer, desc: 'Integer which force the execution of a particular behavior')
@@ -338,7 +339,8 @@ module Api
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
-        this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out
+        this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
+        this.mutually_exclusive :initial_time_out, :minimum_duration
       end
 
       def self.vrp_request_restitution(this)
