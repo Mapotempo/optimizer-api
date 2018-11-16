@@ -50,7 +50,7 @@ module Interpreters
           }.compact
         end
 
-        if vrp.preprocessing_use_periodic_heuristic
+        if vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
           if vrp.services.empty?
             vrp[:preprocessing_heuristic_result] = {
               cost: nil,
@@ -83,7 +83,7 @@ module Interpreters
         vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
         generate_relations_on_periodic_vehicles(vrp,vehicles_linked_by_duration)
 
-        if !vrp.preprocessing_use_periodic_heuristic
+        if !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
           vrp.routes = generate_routes(vrp)
         end
       end

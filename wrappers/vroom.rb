@@ -51,7 +51,9 @@ module Wrappers
         :assert_no_distance_limitation,
         :assert_no_subtours,
         :assert_no_planning_heuristic,
-        :assert_no_evaluation
+        :assert_no_evaluation,
+        :assert_not_testing_several_heuristics,
+        :assert_solver,
       ]
     end
 

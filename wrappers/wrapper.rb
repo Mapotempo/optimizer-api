@@ -336,7 +336,7 @@ module Wrappers
     end
 
     def assert_vehicle_tw_if_schedule(vrp)
-      !vrp.preprocessing_use_periodic_heuristic && !vrp.schedule_range_indices && !vrp.schedule_range_date ||
+      !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic') && !vrp.schedule_range_indices && !vrp.schedule_range_date ||
       vrp[:vehicles].all?{ |vehicle|
         vehicle[:timewindow] && (vehicle[:timewindow][:start] || vehicle[:timewindow][:end]) ||
         vehicle[:sequence_timewindows] && vehicle[:sequence_timewindows].any?{ |tw| (tw[:start] || tw[:end]) }
@@ -348,15 +348,25 @@ module Wrappers
     end
 
     def assert_if_periodic_heuristic_then_schedule(vrp)
-      !vrp.preprocessing_use_periodic_heuristic || vrp.schedule_range_date || vrp.schedule_range_indices
+      !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')|| vrp.schedule_range_date || vrp.schedule_range_indices
     end
 
     def assert_solver_parameter_is_valid(vrp)
-      vrp.resolution_solver_parameter != -1 || vrp.preprocessing_use_periodic_heuristic
+      vrp.resolution_solver_parameter != -1 || (vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
+    end
+
+    def assert_first_solution_strategy_is_possible(vrp)
+      vrp.preprocessing_first_solution_strategy.nil? || !vrp.resolution_evaluate_only && vrp.resolution_several_solutions.nil? && !vrp.resolution_batch_heuristic && !vrp.resolution_solver_parameter
+    end
+
+    def assert_first_solution_strategy_is_valid(vrp)
+      vrp.preprocessing_first_solution_strategy.nil? ||
+        (vrp.preprocessing_first_solution_strategy[0] != 'self_selection' && vrp.preprocessing_first_solution_strategy[0] != 'periodic' || vrp.preprocessing_first_solution_strategy.size == 1) &&
+          vrp.preprocessing_first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || OptimizerWrapper::HEURISTICS.include?(strategy) }
     end
 
     def assert_no_planning_heuristic(vrp)
-      !vrp.preprocessing_use_periodic_heuristic
+      !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_only_force_centroids_if_kmeans_method(vrp)
@@ -380,15 +390,15 @@ module Wrappers
     end
 
     def assert_wrong_vehicle_shift_preference_with_heuristic(vrp)
-      (vrp.vehicles.collect{ |vehicle| vehicle[:shift_preference] }.uniq - [:minimize_span] - ['minimize_span']).size == 0 || !vrp.preprocessing_use_periodic_heuristic
+      (vrp.vehicles.collect{ |vehicle| vehicle[:shift_preference] }.uniq - [:minimize_span] - ['minimize_span']).size == 0 || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_no_vehicle_overall_duration_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } || !vrp.preprocessing_use_periodic_heuristic
+      vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_no_vehicle_distance_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:distance] } || !vrp.preprocessing_use_periodic_heuristic
+      vrp.vehicles.none?{ |vehicle| vehicle[:distance] } || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_possible_to_get_distances_if_maximum_ride_distance(vrp)
@@ -396,11 +406,11 @@ module Wrappers
     end
 
     def assert_no_skills_if_heuristic(vrp)
-      vrp.services.none?{ |service| !service[:skills].empty? } || vrp.vehicles.none?{ |vehicle| !vehicle[:skills].empty? } || !vrp.preprocessing_use_periodic_heuristic
+      vrp.services.none?{ |service| !service[:skills].empty? } || vrp.vehicles.none?{ |vehicle| !vehicle[:skills].empty? } || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:free_approach] || vehicle[:free_return] } || !vrp.preprocessing_use_periodic_heuristic
+      vrp.vehicles.none?{ |vehicle| vehicle[:free_approach] || vehicle[:free_return] } || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_no_service_priority_if_same_point_day(vrp)
@@ -408,19 +418,35 @@ module Wrappers
     end
 
     def assert_no_service_exclusion_cost_if_heuristic(vrp)
-      vrp.services.collect{ |service| service[:exclusion_cost] }.compact.empty? || !vrp.preprocessing_use_periodic_heuristic
+      vrp.services.collect{ |service| service[:exclusion_cost] }.compact.empty? || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_no_vehicle_limit_if_heuristic(vrp)
-      vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit >= vrp.vehicles.size || !vrp.preprocessing_use_periodic_heuristic
+      vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit >= vrp.vehicles.size || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_no_same_point_day_if_no_heuristic(vrp)
-      !vrp.resolution_same_point_day || vrp.preprocessing_use_periodic_heuristic
+      !vrp.resolution_same_point_day || (vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
     def assert_no_allow_partial_if_no_heuristic(vrp)
-      vrp.resolution_allow_partial_assignment || vrp.preprocessing_use_periodic_heuristic
+      vrp.resolution_allow_partial_assignment || (vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
+    end
+
+    def assert_not_testing_several_heuristics(vrp)
+      vrp.preprocessing_first_solution_strategy.nil?
+    end
+
+    def assert_solver(vrp)
+      vrp.resolution_solver
+    end
+
+    def assert_solver_if_not_periodic(vrp)
+      (vrp.resolution_solver && vrp.resolution_solver_parameter != -1) || vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy && (vrp.preprocessing_first_solution_strategy.first == 'periodic')
+    end
+
+    def assert_clustering_compatible_with_scheduling_heuristic(vrp)
+      !vrp.preprocessing_use_periodic_heuristic && (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic')) || !vrp.preprocessing_cluster_threshold && !vrp.preprocessing_max_split_size
     end
 
     def solve_synchronous?(vrp)

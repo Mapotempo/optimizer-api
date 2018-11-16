@@ -67,7 +67,11 @@ module Wrappers
         :assert_no_service_exclusion_cost_if_heuristic,
         :assert_no_vehicle_limit_if_heuristic,
         :assert_no_same_point_day_if_no_heuristic,
-        :assert_no_allow_partial_if_no_heuristic
+        :assert_no_allow_partial_if_no_heuristic,
+        :assert_solver_if_not_periodic,
+        :assert_first_solution_strategy_is_possible,
+        :assert_first_solution_strategy_is_valid,
+        :assert_clustering_compatible_with_scheduling_heuristic,
       ]
     end
 
@@ -656,6 +660,8 @@ module Wrappers
 
       output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
 
+      correspondant = { 'path_cheapest_arc' => 0, 'global_cheapest_arc' => 1, 'local_cheapest_insertion' => 2, 'savings' => 3, 'parallel_cheapest_insertion' => 4, 'first_unbound' => 5, 'christofides' => 6}
+      raise StandardError.new('Unconsistent first solution strategy used internally') if vrp.preprocessing_first_solution_strategy && correspondant[vrp.preprocessing_first_solution_strategy.first].nil?
       cmd = [
         "#{@exec_ortools} ",
         (vrp.resolution_evaluate_only ? '-time_limit_in_ms 1' : (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s),
@@ -666,7 +672,8 @@ module Wrappers
         (vrp.resolution_evaluate_only ? '-time_out_multiplier 0' : (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s),
         vrp.resolution_vehicle_limit ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
         vrp.resolution_solver_parameter ? "-solver_parameter #{vrp.resolution_solver_parameter}" : nil,
-        vrp.debug_batch_heuristic ? "-only_first_solution #{vrp.debug_batch_heuristic}" : nil,
+        vrp.preprocessing_first_solution_strategy ? "-solver_parameter #{correspondant[vrp.preprocessing_first_solution_strategy.first]}" : nil,
+        vrp.resolution_batch_heuristic ? "-only_first_solution #{vrp.resolution_batch_heuristic}" : nil,
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
         "-instance_file '#{input.path}'",
         "-solution_file '#{output.path}'"].compact.join(' ')

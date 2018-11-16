@@ -2270,4 +2270,245 @@ class InterpreterTest < Minitest::Test
     assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_1' ? activity[:detail][:quantities].first[:value] : 0}.inject(:+)
     assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_0' ? activity[:detail][:quantities].first[:value] : 0}.inject(:+)
   end
+
+  def test_first_solution_acceptance_with_solvers
+    vroom = OptimizerWrapper::VROOM
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        preprocessing: {
+          first_solution_strategy: [1]
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert vroom.inapplicable_solve?(vrp).include? :assert_not_testing_several_heuristics
+    assert !ortools.inapplicable_solve?(vrp).empty?
+  end
+
+  def test_can_not_use_vroom_if_solver_unabbled
+    vroom = OptimizerWrapper::VROOM
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          solver: false
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert vroom.inapplicable_solve?(vrp).include? :assert_solver
+  end
+
+  def test_if_no_solver_then_should_be_periodic
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          solver: false
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert !ortools.inapplicable_solve?(vrp).empty?
+  end
 end

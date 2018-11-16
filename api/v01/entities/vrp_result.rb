@@ -71,6 +71,7 @@ module Api
     end
 
     class VrpResultSolution < Grape::Entity
+      expose :heuristics_synthesis, documentation: { type: Hash, desc: 'When first_solution_strategies are provided, sum up of tryied heuristics and their performance.' }
       expose :solvers, documentation: { type: Array[String], desc: 'Solvers used to perform the optimization' }
       expose :cost, documentation: { type: Float, desc: 'The actual cost of the solution considering all costs' }
       expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }

@@ -164,9 +164,9 @@ module OptimizerWrapper
       service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
     }
 
-    if services_vrps.any?{ |service_vrp| (service_vrp[:vrp][:resolution_several_solutions] || service_vrp[:vrp][:debug_batch_heuristic]) && !service_vrp[:vrp][:restitution_allow_empty_result] }
+    if services_vrps.any?{ |service_vrp| (service_vrp[:vrp][:resolution_several_solutions] || service_vrp[:vrp][:resolution_batch_heuristic]) && !service_vrp[:vrp][:restitution_allow_empty_result] }
       selected_services = filtered_services.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] ||
-                                                                  service_vrp[:vrp][:debug_batch_heuristic]
+                                                                  service_vrp[:vrp][:resolution_batch_heuristic]
                                                   }
       duplicated_services = Interpreters::SeveralSolutions.expand(selected_services)
       unduplicated_services = filtered_services - selected_services
@@ -183,8 +183,12 @@ module OptimizerWrapper
       complete_services_vrp = filtered_services.collect{ |service_vrp|
 
         # Split/Clusterize the problem if to large
-        Interpreters::SplitClustering.split_clusters([service_vrp])
+        split_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp])
+
+        # Select best heuristic
+        Interpreters::SeveralSolutions.find_best_heuristic(split_services_vrps, services_fleets, job)
       }.flatten.compact
+
       solve(complete_services_vrp, services_fleets, job, block)
     end
   end
@@ -268,7 +272,7 @@ module OptimizerWrapper
 
             File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
-            if vrp.resolution_solver_parameter != -1
+            if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver
               block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
               cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
                 block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
@@ -385,6 +389,10 @@ module OptimizerWrapper
     }
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
     real_result[:name] = services_vrps[0][:vrp][:name] if real_result
+    if real_result && services_vrps.any?{ |service| service[:vrp][:preprocessing_first_solution_strategy] }
+      real_result[:heuristic_synthesis] = services_vrps.collect{ |service| service[:vrp][:preprocessing_heuristic_synthesis] }
+      real_result[:heuristic_synthesis].flatten! if services_vrps.size == 1
+    end
 
     if job
       p = Result.get(job) || {}
@@ -455,7 +463,8 @@ module OptimizerWrapper
       sub_vrp.configuration = {
         preprocessing: {
           cluster_threshold: vrp.preprocessing_cluster_threshold,
-          prefer_short_segment: vrp.preprocessing_prefer_short_segment
+          prefer_short_segment: vrp.preprocessing_prefer_short_segment,
+          first_solution_strategy: vrp.preprocessing_first_solution_strategy
         },
         restitution: {
           geometry: vrp.restitution_geometry,

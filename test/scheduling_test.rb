@@ -1628,4 +1628,77 @@ class HeuristicTest < Minitest::Test
     assert result[:routes].none?{ |route| route[:activities].collect{ |stop| stop[:departure_time].to_i - stop[:begin_time].to_i + stop[:travel_time].to_i }.sum > 6 }
   end
 
+  def test_heuristic_called_with_first_sol_param
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5],
+          [6, 0, 1, 5],
+          [1, 2, 0, 5],
+          [5, 5, 5, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      },{
+        id: 'point_1',
+        matrix_index: 1
+      },{
+        id: 'point_2',
+        matrix_index: 2
+      },{
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 20
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          solver: false
+        },
+        preprocessing: {
+          first_solution_strategy: ['periodic']
+        },
+        schedule:{
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+    assert result
+    assert result[:routes].none?{ |route| route[:activities].collect{ |stop| stop[:departure_time].to_i - stop[:begin_time].to_i + stop[:travel_time].to_i }.sum > 6 }
+  end
+
 end

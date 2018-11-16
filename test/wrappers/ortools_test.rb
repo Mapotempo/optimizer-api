@@ -5520,4 +5520,249 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:iterations]
   end
 
+  def test_try_several_heuristics_to_fix_solver_parameter
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 1000
+        },
+        preprocessing: {
+          first_solution_strategy: ['global_cheapest_arc', 'local_cheapest_insertion', 'savings']
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 3, result[:heuristic_synthesis].size
+    assert result[:heuristic_synthesis].sort_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[0][:used]
+  end
+
+  def test_self_selection_first_solution_strategy
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        overall_duration: 10,
+        timewindow: {
+          start: 0
+        },
+        force_start: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 1000
+        },
+        preprocessing: {
+          first_solution_strategy: ['self_selection']
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 3, result[:heuristic_synthesis].size
+    assert result[:heuristic_synthesis].sort_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[0][:used]
+  end
+
+  def test_no_solver_with_ortools_single_heuristic
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        preprocessing: {
+          first_solution_strategy: ['first_unbound']
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert result
+    assert_equal 8, result.size
+  end
 end

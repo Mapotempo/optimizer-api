@@ -320,7 +320,8 @@ module Api
         this.optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
         this.optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
         this.optional(:neighbourhood_size, type: Integer, desc: 'Limit the size of the considered neighbourhood within the search')
-        this.optional(:use_periodic_heuristic, type: Boolean, desc: '[planning] Calls specific heuristic, either to return its result or to provide it as initial solution to the solver')
+        this.optional(:use_periodic_heuristic, type: Boolean, desc: '[ DEPRECATED : use first_solution_strategy instead, with value \'periodic\' ]')
+        this.optional(:first_solution_strategy, types: Array[String], desc: 'Forces first solution strategy. Either one value to force specific behavior, or a list in order to test several ones and select the best. If string is \'internal\', we will choose among pre-selected behaviors. There can not be more than three behaviors (ORtools only)', coerce_with: ->(value) { FirstSolType.new.type_cast(value) })
       end
 
       def self.vrp_request_resolution(this)
@@ -333,7 +334,8 @@ module Api
         this.optional(:minimum_duration, type: Integer, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
         this.optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
-        this.optional(:solver_parameter, type: Integer, desc: 'Integer which force the execution of a particular behavior')
+        this.optional(:solver_parameter, type: Integer, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
+        this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called.')
         this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if use_periodic_heuristic (preprocessing) is activated. Not available ORtools.')
         this.optional(:allow_partial_assignment, type: Boolean, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')

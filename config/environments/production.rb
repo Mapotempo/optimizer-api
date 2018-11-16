@@ -28,6 +28,7 @@ module OptimizerWrapper
   ActiveSupport::Cache.lookup_store :redis_store
   CACHE = CacheManager.new(ActiveSupport::Cache::RedisStore.new(host: ENV['REDIS_HOST'] || 'localhost', namespace: 'router', expires_in: 60*60*24*1, raise_errors: true))
 
+  HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides]
   DEMO = Wrappers::Demo.new(CACHE, threads: 4)
   VROOM = Wrappers::Vroom.new(CACHE, threads: 4)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location

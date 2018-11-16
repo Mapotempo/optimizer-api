@@ -28,6 +28,7 @@ require './lib/cache_manager'
 module OptimizerWrapper
   CACHE = CacheManager.new(ActiveSupport::Cache::NullStore.new)
 
+  HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides]
   DEMO = Wrappers::Demo.new(CACHE)
   VROOM = Wrappers::Vroom.new(CACHE)
   JSPRIT = Wrappers::Jsprit.new(CACHE)

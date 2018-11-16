@@ -31,6 +31,7 @@ module Models
     field :preprocessing_neighbourhood_size, default: nil
     field :preprocessing_use_periodic_heuristic, default: false
     field :preprocessing_heuristic_result, defaul: {}
+    field :preprocessing_first_solution_strategy, default: nil
     field :resolution_duration, default: nil
     field :resolution_iterations, default: nil
     field :resolution_iterations_without_improvment, default: nil
@@ -41,11 +42,13 @@ module Models
     field :resolution_time_out_multiplier, default: nil
     field :resolution_vehicle_limit, default: nil
     field :resolution_solver_parameter, default: nil
+    field :resolution_solver, default: true
     field :resolution_same_point_day, default: false
     field :resolution_allow_partial_assignment, default: true
     field :resolution_evaluate_only, default: false
     field :resolution_several_solutions, default: nil
     field :resolution_variation_ratio, default: nil
+    field :resolution_batch_heuristic, default: false
 
     field :restitution_geometry, default: false
     field :restitution_geometry_polyline, default: false
@@ -60,7 +63,6 @@ module Models
 
     field :debug_output_kmeans_centroids, default: false
     field :debug_output_clusters_in_csv, default: false
-    field :debug_batch_heuristic, default: false
 
     validates_numericality_of :preprocessing_max_split_size, allow_nil: true
     validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
@@ -126,11 +128,13 @@ module Models
       self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
       self.resolution_solver_parameter = resolution[:solver_parameter]
+      self.resolution_solver = resolution[:solver]
       self.resolution_same_point_day = resolution[:same_point_day]
       self.resolution_allow_partial_assignment = resolution[:allow_partial_assignment]
       self.resolution_evaluate_only = resolution[:evaluate_only]
       self.resolution_several_solutions = resolution[:several_solutions]
       self.resolution_variation_ratio = resolution[:variation_ratio]
+      self.resolution_batch_heuristic = resolution[:batch_heuristic]
     end
 
     def preprocessing=(preprocessing)
@@ -143,6 +147,7 @@ module Models
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
       self.preprocessing_use_periodic_heuristic = preprocessing[:use_periodic_heuristic]
+      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
       self.preprocessing_heuristic_result = {}
     end
 
@@ -156,7 +161,6 @@ module Models
     def debug=(debug)
       self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
       self.debug_output_clusters_in_csv = debug[:output_clusters_in_csv]
-      self.debug_batch_heuristic = debug[:batch_heuristic]
     end
 
     def need_matrix_time?

@@ -27,6 +27,7 @@ require './lib/cache_manager'
 module OptimizerWrapper
   CACHE = CacheManager.new(ActiveSupport::Cache::FileStore.new(File.join(Dir.tmpdir, 'mapotempo-optimizer-api'), namespace: 'mapotempo-optimizer-api', expires_in: 60*60*24*1))
 
+  HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides]
   DEMO = Wrappers::Demo.new(CACHE)
   VROOM = Wrappers::Vroom.new(CACHE)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
