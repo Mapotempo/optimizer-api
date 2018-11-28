@@ -247,13 +247,15 @@ class RealCasesTest < Minitest::Test
 
     # La Roche-Sur-Yon - A single route with a single double timewindow
     def test_ortools_one_route_with_single_mtws
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size + result[:unassigned].size - 1, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].select{ |u| u[:reason].nil? }.size
+      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal 1, result[:unassigned].select{ |u| !u[:reason].nil? }.size
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
