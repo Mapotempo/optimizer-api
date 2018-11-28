@@ -10,6 +10,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :start_time, :int32, 3
     optional :type, :string, 4
     optional :alternative, :int32, 5
+    optional :current_distance, :int32, 6
   end
   add_message "ortools_result.Route" do
     repeated :activities, :message, 1, "ortools_result.Activity"
