@@ -68,6 +68,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :additional_setup, :int64, 26
     optional :free_approach, :bool, 27
     optional :free_return, :bool, 28
+    optional :type_index, :int64, 29
   end
   add_message "ortools_vrp.Relation" do
     optional :type, :string, 1

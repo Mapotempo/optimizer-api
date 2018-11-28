@@ -285,6 +285,67 @@ module Wrappers
           value: matrix[:value] ? matrix[:value].flatten : []
         )
       }
+
+      v_types = []
+      vrp.vehicles.each{ |vehicle|
+        v_type_id = [
+          vehicle.cost_fixed,
+          vehicle.cost_distance_multiplier,
+          vehicle.cost_time_multiplier,
+          vehicle.cost_waiting_time_multiplier || vehicle.cost_time_multiplier,
+          vehicle.cost_value_multiplier || 0,
+          vehicle.cost_late_multiplier || 0,
+          vehicle.coef_service || 1,
+          vehicle.coef_setup || 1,
+          vehicle.additional_service || 0,
+          vehicle.additional_setup || 0,
+          vrp.units.collect{ |unit|
+            q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
+            [
+              q && q.limit && q.limit < 1e+22 ? unit.counting ? q.limit : (q.limit*1000+0.5).to_i : -2147483648,
+              (q && q.overload_multiplier) || 0,
+              (unit && unit.counting) || false
+            ]
+          }.flatten.compact,
+          [
+            (vehicle.timewindow && vehicle.timewindow.start) || 0,
+            (vehicle.timewindow && vehicle.timewindow.end) || 2147483647,
+          ],
+          vehicle.rests.collect{ |rest|
+            [
+              rest.timewindows.collect{ |tw|
+                [
+                  tw.start || -2**56,
+                  end: tw.end || 2**56,
+                ]
+              },
+              rest.duration,
+            ].flatten.compact
+          },
+          vehicle.skills,
+          vehicle.matrix_id,
+          vehicle.value_matrix_id,
+          vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
+          vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
+          vehicle.duration ? vehicle.duration : -1,
+          vehicle.distance ? vehicle.distance : -1,
+          (vehicle.force_start ? 'force_start' : vehicle.shift_preference.to_s),
+          vehicle.global_day_index ? vehicle.global_day_index : -1,
+          vehicle.maximum_ride_time || 0,
+          vehicle.maximum_ride_distance || 0,
+          vehicle.free_approach ? vehicle.free_approach : false,
+          vehicle.free_return ? vehicle.free_return : false
+        ].flatten
+
+        v_type_checksum = Digest::MD5.hexdigest(Marshal.dump(v_type_id))
+        v_type_index = v_types.index(v_type_checksum)
+        if v_type_index &&
+          vehicle.type_index = v_type_index
+        else
+          vehicle.type_index = v_types.size
+          v_types << v_type_checksum
+        end
+      }
       vehicles = vrp.vehicles.collect{ |vehicle|
         OrtoolsVrp::Vehicle.new(
           id: vehicle.id,
@@ -333,7 +394,8 @@ module Wrappers
           max_ride_time: vehicle.maximum_ride_time || 0,
           max_ride_distance: vehicle.maximum_ride_distance || 0,
           free_approach: vehicle.free_approach ? vehicle.free_approach : false,
-          free_return: vehicle.free_return ? vehicle.free_return : false
+          free_return: vehicle.free_return ? vehicle.free_return : false,
+          type_index: vehicle.type_index
         )
       }
 

@@ -71,6 +71,7 @@ module Models
 
     field :free_approach, default: false
     field :free_return, default: false
+    field :type_index, default: nil
 
     validates_numericality_of :cost_fixed
     validates_numericality_of :cost_distance_multiplier
