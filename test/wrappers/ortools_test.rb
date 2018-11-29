@@ -3010,7 +3010,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        shift_preference: 'force_start'
+        shift_preference: 'force_start',
+        timewindow: {
+          start: 0
+        }
       }],
       services: [{
         id: 'service_0',
