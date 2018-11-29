@@ -593,18 +593,21 @@ module Wrappers
                   counting: unit.counting
                 }
               }
+              earliest_start = activity['start_time'] || 0
               if activity['type'] == 'start'
                 load_status = build_quantities(nil, activity_loads)
                 if  vehicle.start_point
                   previous_index = points[vehicle.start_point.id].matrix_index
                   {
                     point_id: vehicle.start_point.id,
+                    begin_time: earliest_start,
                     detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
                   }.delete_if{ |k,v| !v }
                 end
               elsif activity['type'] == 'end'  && vehicle.end_point
                 vehicle.end_point && {
                   point_id: vehicle.end_point.id,
+                  begin_time: earliest_start,
                   detail: vehicle.end_point.location ? {
                     lat: vehicle.end_point.location.lat,
                     lon: vehicle.end_point.location.lon,
@@ -622,7 +625,6 @@ module Wrappers
                   point_index = services[current_index].matrix_index
                   point = vrp.points[point_index]
                   service = vrp.services[current_index]
-                  earliest_start = activity['start_time'] || 0
                   travel_time = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:time][previous_index][point_index] : 0)
                   travel_value = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:value][previous_index][point_index] : 0)
                   travel_distance = (previous_index && point_index && vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance] ? vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }[:distance][previous_index][point_index] : 0)
