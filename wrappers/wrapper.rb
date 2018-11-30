@@ -583,6 +583,28 @@ module Wrappers
         }
       end
 
+      max_shift = nil
+      if vrp.vehicles.any?{ |vehicle| vehicle.timewindow || vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?}
+        max_shift = vrp.vehicles.collect{ |vehicle|
+          if vehicle[:timewindow]
+            if vehicle[:timewindow][:start] && vehicle[:timewindow][:end]
+              vehicle[:timewindow][:end] - vehicle[:timewindow][:start]
+            else
+              nil
+            end
+          elsif vehicle[:sequence_timewindows]
+            if vehicle[:sequence_timewindows].all?{ |tw| tw[:start] && tw[:end] }
+              vehicle[:sequence_timewindows].collect{ |tw| tw[:end] - tw[:start] }.max
+            else
+              nil
+            end
+          else
+            nil
+          end
+        }
+        max_shift = (max_shift.include?(nil) ? nil : max_shift.max)
+      end
+
       # no need to check service and vehicle skills compatibility
       # if no vehicle has the skills for a given service we consider service's skills are unconsistent for current problem
 
@@ -603,6 +625,12 @@ module Wrappers
 
         if !found && unfeasible.none?{ |unfeas| unfeas[:original_service_id] == service[:id] }
           add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow')
+        end
+
+        # reasonable duration
+        if found && !max_shift.nil? && service[:activity][:duration] > max_shift
+          add_unassigned(unfeasible, vrp, service, 'Duration bigger than any vehicle timewindow shift')
+          found = false
         end
 
         # unconsistencies for planning
