@@ -34,7 +34,6 @@ module SchedulingHeuristic
     @matrices = vrp[:matrices]
     @order = nil
     @planning = {}
-    @point_available_days = {}
     @same_located = {}
     @services_unlocked_by = {} # in the case of same_point_day, service with higher heuristic period unlocks others
     @starting_time = Time.now
@@ -269,7 +268,6 @@ module SchedulingHeuristic
             same_located_set.each{ |service|
               (1..service[:visits_number]).each{ |index|
                 @candidate_service_ids.delete(service[:id])
-                @to_plan_service_ids.delete(service[:id])
                 @uninserted["#{service[:id]}_#{index}_#{service[:visits_number]}"] = {
                   original_service: service[:id],
                   reason: 'Same_point_day option related : services at this geografical point have no compatible timewindow'
@@ -295,12 +293,9 @@ module SchedulingHeuristic
               }
             }
 
-            # each set has available days
-            @point_available_days[point[:location][:id]] = []
             @to_plan_service_ids << representative_ids.last
             @services_unlocked_by[representative_ids.last] = representative_ids.slice(0, representative_ids.size - 1).to_a
           end
-
         end
       }
     end
@@ -369,14 +364,15 @@ module SchedulingHeuristic
     routes
   end
 
-  def self.compute_insertion_costs(vehicle, day, positions_in_order, services, route_data, excluded)
+  def self.compute_insertion_costs(vehicle, day, positions_in_order, services, route_data)
     ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
     route = route_data[:current_route]
     insertion_costs = []
 
-    @to_plan_service_ids.select{ |service| !excluded.include?(service) &&
+    @to_plan_service_ids.select{ |service|
+                  # quantities are respected
                   (@same_point_day && services[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } || !@same_point_day && services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) &&
-                  (!@same_point_day || @point_available_days[services[service][:point_id]].empty? || @point_available_days[services[service][:point_id]].include?(day)) &&
+                  # service is available at this day
                   !services[service][:unavailable_days].include?(day) }.each{ |service_id|
       period = services[service_id][:heuristic_period]
       n_visits = services[service_id][:nb_visits]
@@ -561,18 +557,13 @@ module SchedulingHeuristic
     current_route = route_data[:current_route]
     positions_in_order = route_data[:positions_in_order]
     service_to_insert = true
-    temporary_excluded_services = []
 
     while service_to_insert
-      insertion_costs = compute_insertion_costs(vehicle, day, positions_in_order, services, route_data, temporary_excluded_services)
+      insertion_costs = compute_insertion_costs(vehicle, day, positions_in_order, services, route_data)
       if !insertion_costs.empty?
         # there are services we can add
         point_to_add = select_point(services, insertion_costs)
         best_index = find_best_index(services, point_to_add[:id], route_data)
-
-        if @same_point_day
-          best_index[:end] = best_index[:end] - services[best_index[:id]][:group_duration] + services[best_index[:id]][:duration]
-        end
 
         insert_point_in_route(route_data, best_index, day, services)
         @to_plan_service_ids.delete(point_to_add[:id])
@@ -617,7 +608,7 @@ module SchedulingHeuristic
       while possible_to_fill
         best_day = @candidate_routes[current_vehicle].reject{ |day, _route| forbbiden_days.include?(day) }.sort_by{ |_day, route_data| route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] } }[0][0]
         route_data = @candidate_routes[current_vehicle][best_day]
-        insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], services_data, route_data, [])
+        insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], services_data, route_data)
 
         if !insertion_costs.empty?
           point_to_add = select_point(services_data, insertion_costs)

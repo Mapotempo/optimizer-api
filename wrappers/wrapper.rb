@@ -388,10 +388,6 @@ module Wrappers
       vrp.vehicles.none?{ |vehicle| vehicle[:free_approach] || vehicle[:free_return] } || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
 
-    def assert_no_service_priority_if_same_point_day(vrp)
-      vrp.services.collect{ |service| service[:priority] }.uniq.size == 1 && vrp.services.collect{ |service| service[:priority] }.uniq[0] == 4 || !vrp.resolution_same_point_day
-    end
-
     def assert_no_service_exclusion_cost_if_heuristic(vrp)
       vrp.services.collect{ |service| service[:exclusion_cost] }.compact.empty? || !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
     end
