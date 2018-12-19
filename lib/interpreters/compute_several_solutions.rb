@@ -154,7 +154,7 @@ module Interpreters
             first_results.each_with_index{ |result, i|
               synthesis << {
                 heuristic: expanded_service_vrp[i][:vrp][:preprocessing_first_solution_strategy].first,
-                quality: result.nil? ? nil : result[:cost] * Math.sqrt([1, result[:unassigned].size].max),
+                quality: result.nil? ? nil : result[:cost].to_i * Math.sqrt([1, result[:unassigned].size].max),
                 finished: !result.nil?,
                 used: false,
                 cost: result ? result[:cost] : nil,
