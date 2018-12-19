@@ -362,7 +362,7 @@ module Wrappers
     def assert_first_solution_strategy_is_valid(vrp)
       vrp.preprocessing_first_solution_strategy.nil? ||
         (vrp.preprocessing_first_solution_strategy[0] != 'self_selection' && vrp.preprocessing_first_solution_strategy[0] != 'periodic' || vrp.preprocessing_first_solution_strategy.size == 1) &&
-          vrp.preprocessing_first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || OptimizerWrapper::HEURISTICS.include?(strategy) }
+          vrp.preprocessing_first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || strategy == 'periodic' || OptimizerWrapper::HEURISTICS.include?(strategy) }
     end
 
     def assert_no_planning_heuristic(vrp)

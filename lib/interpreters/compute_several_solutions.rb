@@ -88,6 +88,8 @@ module Interpreters
           [mandatory_heuristic, verified('local_cheapest_insertion'), verified('global_cheapest_arc')]
         elsif mandatory_heuristic == 'savings'
           [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
+        elsif mandatory_heuristic == 'parallel_cheapest_insertion'
+          [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
         else
           [mandatory_heuristic]
         end
@@ -145,8 +147,12 @@ module Interpreters
             }
             expanded_service_vrp.first
           else
+            times = []
             first_results = expanded_service_vrp.collect{ |s_vrp|
-              OptimizerWrapper.solve([s_vrp], services_fleets, job, block)
+              time_start = Time.now
+              heuristic_solution = OptimizerWrapper.solve([s_vrp], Marshal.load(Marshal.dump(services_fleets)), nil, block)
+              times << (Time.now - time_start) * 1000
+              heuristic_solution
             }
             raise DiscordantProblemError.new('Heuristics selected through first_solution_strategy parameter did not provide a solution') if first_results.all?{ |res| res.nil? }
 
@@ -158,11 +164,11 @@ module Interpreters
                 finished: !result.nil?,
                 used: false,
                 cost: result ? result[:cost] : nil,
-                time_spent: result ? result[:elapsed] : nil
+                time_spent: times[i],
+                solution: result
               }
             }
-
-            sorted_heuristics = synthesis.sort_by{ |element| element[:quality].nil? ? synthesis.collect{ |data| data[:quality] }.compact.max + 10 : element[:quality] }
+            sorted_heuristics = synthesis.sort_by{ |element| element[:quality].nil? ? synthesis.collect{ |data| data[:quality] }.compact.max * 10 : element[:quality] }
             best_heuristic = if sorted_heuristics[0][:heuristic] == 1 && sorted_heuristics[0][:quality] == sorted_heuristics[1][:quality]
                                 sorted_heuristics[1][:heuristic]
                               else
@@ -171,9 +177,14 @@ module Interpreters
 
             synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:used] = true
 
+            service_vrp[:vrp][:preprocessing_heuristic_result] = synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:solution]
+            service_vrp[:vrp][:preprocessing_heuristic_result][:solvers].each{ |solver|
+              solver = 'preprocessing_' + solver
+            }
+            synthesis.each{ |synth| synth.delete(:solution) }
             service_vrp[:vrp][:preprocessing_first_solution_strategy] = [best_heuristic]
             service_vrp[:vrp][:preprocessing_heuristic_synthesis] = synthesis
-            service_vrp[:vrp][:resolution_duration] = service_vrp[:vrp][:resolution_duration] ? (service_vrp[:vrp][:resolution_duration] - synthesis.collect{ |heur| heur[:time_spent] }.compact.sum).floor : nil
+            service_vrp[:vrp][:resolution_duration] = service_vrp[:vrp][:resolution_duration] ? (service_vrp[:vrp][:resolution_duration] - times.sum).floor : nil
             service_vrp
           end
         else
@@ -187,7 +198,16 @@ module Interpreters
       services = vrp[:services] || []
       shipments = vrp[:shipments] || []
 
-      loop_route = vehicles.any?{ |vehicle| vehicle[:start_point_id] == vehicle[:end_point_id] }
+      loop_route = vehicles.any?{ |vehicle|
+        start_point_id = vehicle[:start_point_id]
+        start_point = vrp.points.find{ |pt| pt[:id] == start_point_id }
+        end_point_id = vehicle[:end_point_id]
+        end_point = vrp.points.find{ |pt| pt[:id] == end_point_id }
+
+        start_point_id == end_point_id ||
+        start_point[:location] && end_point[:location] && start_point[:location][:lat] == end_point[:location][:lat] && start_point[:location][:lon] == end_point[:location][:lon] ||
+        vrp[:matrices] && start_point[:matrix_index] && end_point[:matrix_index] && vrp[:matrices].all?{ |matrix| matrix[:time] && matrix[:time][start_point[:matrix_index]][end_point[:matrix_index]] == 0 }
+      }
       size_mtws = services.select{ |service| service[:timewindows].to_a.size > 1 }.size
       size_rest = vehicles.collect{ |vehicle| vehicle[:rests].to_a.size }.sum
       unique_configuration = vehicles.collect{ |vehicle| vehicle[:router_mode] }.uniq.size == 1 && vehicles.collect{ |vehicle| vehicle[:router_dimension] }.uniq.size == 1 &&

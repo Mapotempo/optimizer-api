@@ -21,6 +21,8 @@ class FirstSolType
       if value.is_a?(String)
         value.delete!(' ') if value.include?(' ')
         value.split(',')
+      elsif value.is_a?(Array)
+        value
       else
         raise ArgumentError.new('Invalid first_solution_value value')
       end

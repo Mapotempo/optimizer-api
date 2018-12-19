@@ -382,11 +382,16 @@ module OptimizerWrapper
       end
       cluster_reference += 1
       if vrp.preprocessing_heuristic_result && !vrp.preprocessing_heuristic_result.empty?
-        [cluster_result || vrp.preprocessing_heuristic_result, vrp.preprocessing_heuristic_result].sort_by{ |sol| sol[:cost] }[0]
+        if [cluster_result, vrp.preprocessing_heuristic_result].all?{ |result| result.nil? || result[:routes].empty? }
+          cluster_result || vrp.preprocessing_heuristic_result
+        else
+          [cluster_result || vrp.preprocessing_heuristic_result, vrp.preprocessing_heuristic_result].select{ |result| !result[:routes].empty? }.sort_by{ |sol| sol[:cost] }.first
+        end
       else
         cluster_result
       end
     }
+
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
     real_result[:name] = services_vrps[0][:vrp][:name] if real_result
     if real_result && services_vrps.any?{ |service| service[:vrp][:preprocessing_first_solution_strategy] }
