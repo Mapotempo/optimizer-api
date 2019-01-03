@@ -110,7 +110,9 @@ module Interpreters
 
     def self.custom_heuristics(service_vrps)
       service_vrps.collect{ |service_vrp|
-        if service_vrp[:vrp][:preprocessing_first_solution_strategy] && !service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('periodic')
+        if service_vrp[:vrp][:preprocessing_first_solution_strategy].nil? && Interpreters::Assemble.assemble_candidate([service_vrp])
+          Interpreters::Assemble.assemble_heuristic([service_vrp])
+        elsif service_vrp[:vrp][:preprocessing_first_solution_strategy] && !service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('periodic')
           find_best_heuristic(service_vrp)
         else
           service_vrp

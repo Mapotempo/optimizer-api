@@ -5838,4 +5838,71 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert result.key?(:cost)
   end
+
+  def test_assemble_heuristic
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        cost_late_multiplier: 0,
+        shift_preference: 'force_start'
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        cost_late_multiplier: 0,
+        shift_preference: 'force_start'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          late_multiplier: 0,
+          timewindows: [{
+            start: 0,
+            end: 2
+          }]
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+          late_multiplier: 0
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    service_vrp = {
+      service: ortools,
+      vrp: vrp,
+      fleet_id: [],
+      problem_size: 2
+    }
+    assert Interpreters::Assemble.assemble_candidate([service_vrp])
+  end
 end

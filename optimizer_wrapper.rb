@@ -29,6 +29,7 @@ require './lib/interpreters/multi_modal.rb'
 require './lib/interpreters/periodic_visits.rb'
 require './lib/interpreters/split_clustering.rb'
 require './lib/interpreters/compute_several_solutions.rb'
+require './lib/interpreters/assemble_heuristic.rb'
 
 require 'ai4r'
 include Ai4r::Data
@@ -495,14 +496,14 @@ module OptimizerWrapper
     }
 
     services_vrps.size == 1 ? results[0] : {
-      solvers: results.flat_map{ |r| r[:solvers] }.compact,
-      cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
-      routes: results.flat_map{ |r| r[:routes] }.compact,
-      unassigned: results.flat_map{ |r| r[:unassigned] }.compact,
-      elapsed: results.map{ |r| r[:elapsed] || 0 }.reduce(&:+),
-      total_time: results.map{ |r| r[:total_travel_time] }.compact.reduce(&:+),
-      total_value: results.map{ |r| r[:total_travel_value] }.compact.reduce(&:+),
-      total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+)
+      solvers: results.flat_map{ |r| r && r[:solvers]  }.compact,
+      cost: results.map{ |r| r && r[:cost]  }.compact.reduce(&:+),
+      routes: results.flat_map{ |r| r && r[:routes]  }.compact,
+      unassigned: results.flat_map{ |r| r && r[:unassigned]  }.compact,
+      elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
+      total_time: results.map{ |r| r && r[:total_travel_time]  }.compact.reduce(&:+),
+      total_value: results.map{ |r| r && r[:total_travel_value]  }.compact.reduce(&:+),
+      total_distance: results.map{ |r| r && r[:total_distance]  }.compact.reduce(&:+)
     }
   end
 
