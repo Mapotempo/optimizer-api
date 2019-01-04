@@ -5766,6 +5766,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
     assert result
-    assert_equal 8, result.size
+    assert result.key?(:cost)
   end
 end

@@ -163,34 +163,26 @@ module OptimizerWrapper
     filtered_services = services_vrps.delete_if{ |service_vrp|
       service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
     }
+    unduplicated_services, duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services)
+    duplicated_results = duplicated_services.compact.collect{ |service_vrp|
+      define_process([service_vrp], services_fleets, job)
+    }
+    definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
 
-    if services_vrps.any?{ |service_vrp| (service_vrp[:vrp][:resolution_several_solutions] || service_vrp[:vrp][:resolution_batch_heuristic]) && !service_vrp[:vrp][:restitution_allow_empty_result] }
-      selected_services = filtered_services.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] ||
-                                                                  service_vrp[:vrp][:resolution_batch_heuristic]
-                                                  }
-      duplicated_services = Interpreters::SeveralSolutions.expand(selected_services)
-      unduplicated_services = filtered_services - selected_services
-      results = duplicated_services.collect{ |service_vrp|
-        define_process([service_vrp], services_fleets, job)
-      }
-      results_unduplicated = define_process([unduplicated_services], services_fleets, job) if !unduplicated_services.empty?
+      # Split/Clusterize the problem if to large
+      split_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp])
 
-      result_global = {
-        result: results + [results_unduplicated]
-      }
-      Result.set(job, result_global)
-    else
-      complete_services_vrp = filtered_services.collect{ |service_vrp|
+      # Select best heuristic
+      Interpreters::SeveralSolutions.custom_heuristics(split_services_vrps)
+    }.flatten.compact
+    result = solve(definitive_service_vrps, services_fleets, job, block)
+    result_global = {
+      result: [result] + duplicated_results
+    }
+    result_global[:csv] = true if result_global[:result].any?{ |result| result && result[:csv] == true}
 
-        # Split/Clusterize the problem if to large
-        split_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp])
-
-        # Select best heuristic
-        Interpreters::SeveralSolutions.find_best_heuristic(split_services_vrps, services_fleets, job)
-      }.flatten.compact
-
-      solve(complete_services_vrp, services_fleets, job, block)
-    end
+    Result.set(job, result_global)
+    result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end
 
   def self.solve(services_vrps, services_fleets = [], job = nil, block = nil)
@@ -281,7 +273,7 @@ module OptimizerWrapper
                     if job
                       actual_result = Result.get(job) || { 'pids' => nil }
                       if cluster_vrp[:restitution_csv]
-                        actual_result['csv'] = true
+                        actual_result[:csv] = true
                       end
                       actual_result['pids'] = pids
                       Result.set(job, actual_result)
@@ -302,7 +294,7 @@ module OptimizerWrapper
               parse_result(vrp, parse_result(vrp, vrp[:preprocessing_heuristic_result]))
               if vrp.restitution_csv
                 actual_result = Result.get(job) || {}
-                actual_result['csv'] = true
+                actual_result[:csv] = true
                 Result.set(job, actual_result)
               end
             end
@@ -392,11 +384,17 @@ module OptimizerWrapper
       end
     }
 
+
+
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
     real_result[:name] = services_vrps[0][:vrp][:name] if real_result
     if real_result && services_vrps.any?{ |service| service[:vrp][:preprocessing_first_solution_strategy] }
       real_result[:heuristic_synthesis] = services_vrps.collect{ |service| service[:vrp][:preprocessing_heuristic_synthesis] }
       real_result[:heuristic_synthesis].flatten! if services_vrps.size == 1
+    end
+
+    if real_result && services_vrps.any?{ |service_vrp| service_vrp[:vrp][:restitution_csv] }
+      real_result[:csv] = true
     end
 
     if job
@@ -550,56 +548,99 @@ module OptimizerWrapper
     end
   end
 
-  def self.build_csv(solution)
+  def self.build_csv(solutions)
     header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance']
     quantities_header = []
     quantities_id = []
-    if solution
-      solution['routes'].each{ |route|
-        route['activities'].each{ |activity|
-          if activity['detail'] && activity['detail']['quantities']
-            activity['detail']['quantities'].each{ |quantity|
-              quantities_id << quantity['unit']['attributes']['id']
-              quantities_header << "quantity_#{quantity['unit']['attributes']['label']}"
-            }
-          end
+    optim_planning_output = nil
+    max_timewindows_size = 0
+    reasons = nil
+    if solutions
+      (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
+        solution['routes'].each{ |route|
+          route['activities'].each{ |activity|
+            if activity['detail'] && activity['detail']['quantities']
+              activity['detail']['quantities'].each{ |quantity|
+                quantities_id << quantity['unit']['attributes']['id']
+                quantities_header << "quantity_#{quantity['unit']['attributes']['label']}"
+              }
+            end
+          }
         }
-      }
+        quantities_header.uniq!
+        quantities_id.uniq!
 
-      quantities_header.uniq!
-      quantities_id.uniq!
-
-      max_timewindows_size = (solution['routes'].collect{ |route|
-        route['activities'].collect{ |activity|
+        max_timewindows_size = ([max_timewindows_size] + solution['routes'].collect{ |route|
+          route['activities'].collect{ |activity|
+            if activity['detail'] && activity['detail']['timewindows']
+              activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
+            end
+          }.compact
+        }.flatten +
+        solution['unassigned'].collect{ |activity|
           if activity['detail'] && activity['detail']['timewindows']
             activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
           end
-        }.compact
-      }.flatten +
-      solution['unassigned'].collect{ |activity|
-        if activity['detail'] && activity['detail']['timewindows']
-          activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
-        end
-      }.compact + [0]).max
-      timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
-        ["timewindow_start_#{index}", "timewindow_end_#{index}"]
-      }.flatten
+        }.compact).max
+        timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
+          ["timewindow_start_#{index}", "timewindow_end_#{index}"]
+        }.flatten
+          header += quantities_header + timewindows_header
+          reasons = true if solution['unassigned'].size > 0
+
+          optim_planning_output = solution['routes'].any?{ |route| route['activities'].any?{ |stop| stop['day_week'] }}
+
+      }
       csv = CSV.generate{ |out_csv|
-        header += quantities_header + timewindows_header
-        if solution['unassigned'].size > 0
-          header += ['unassigned_reason']
-        end
-        optim_planning_output = solution['routes'].any?{ |route| route['activities'].any?{ |stop| stop['day_week'] }}
+        out_csv << header
         if optim_planning_output
           header = ['day_week_num', 'day_week'] + header
         end
-        out_csv << header
-        solution['routes'].each{ |route|
-          route['activities'].each{ |activity|
+        if reasons
+          header << 'unassigned_reason'
+        end
+        (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
+          solution['routes'].each{ |route|
+            route['activities'].each{ |activity|
+              type = find_type(activity)
+              days_info = optim_planning_output ? [activity['day_week_num'], activity['day_week']] : []
+              common = [
+                route['vehicle_id'],
+                activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
+                activity['point_id'],
+                activity['detail']['lat'],
+                activity['detail']['lon'],
+                type,
+                formatted_duration(activity['detail']['setup_duration'] || 0),
+                formatted_duration(activity['detail']['duration'] || 0),
+                activity['detail']['additional_value'] || 0,
+                activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
+                solution['name'] ? solution['name'] : nil,
+                formatted_duration(route['total_travel_time']),
+                route['total_distance']
+              ]
+              timewindows = (0..max_timewindows_size-1).collect{ |index|
+                if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
+                  tw = activity['detail']['timewindows'].select{ |tw| [tw['start'], tw['end']] }.uniq.sort_by{ |t| t['start'] }[index]
+                  [tw['start'] && formatted_duration(tw['start']), tw['end'] && formatted_duration(tw['end'])]
+                else
+                  [nil, nil]
+                end
+              }.flatten
+              quantities = quantities_id.collect{ |id|
+                if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes']['id'] == id }
+                  activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
+                else
+                  nil
+                end
+              }
+              out_csv << (days_info + common + quantities + timewindows)
+            }
+          }
+          solution['unassigned'].each{ |activity|
             type = find_type(activity)
-            days_info = optim_planning_output ? [activity['day_week_num'], activity['day_week']] : []
             common = [
-              route['vehicle_id'],
+              nil,
               activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
               activity['point_id'],
               activity['detail']['lat'],
@@ -610,9 +651,10 @@ module OptimizerWrapper
               activity['detail']['additional_value'] || 0,
               activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
               solution['name'] ? solution['name'] : nil,
-              formatted_duration(route['total_travel_time']),
-              route['total_distance']
+              nil,
+              nil
             ]
+            days_info = optim_planning_output ? [activity['day_week_num'], activity['day_week']] : []
             timewindows = (0..max_timewindows_size-1).collect{ |index|
               if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
                 tw = activity['detail']['timewindows'].select{ |tw| [tw['start'], tw['end']] }.uniq.sort_by{ |t| t['start'] }[index]
@@ -628,43 +670,8 @@ module OptimizerWrapper
                 nil
               end
             }
-            out_csv << (days_info + common + quantities + timewindows)
+            out_csv << (days_info + common + quantities + timewindows + [activity['reason']])
           }
-        }
-        solution['unassigned'].each{ |activity|
-          type = find_type(activity)
-          common = [
-            nil,
-            activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
-            activity['point_id'],
-            activity['detail']['lat'],
-            activity['detail']['lon'],
-            type,
-            formatted_duration(activity['detail']['setup_duration'] || 0),
-            formatted_duration(activity['detail']['duration'] || 0),
-            activity['detail']['additional_value'] || 0,
-            activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
-            solution['name'] ? solution['name'] : nil,
-            nil,
-            nil
-          ]
-          days_info = optim_planning_output ? [activity['day_week_num'], activity['day_week']] : []
-          timewindows = (0..max_timewindows_size-1).collect{ |index|
-            if activity['detail']['timewindows'] && index < activity['detail']['timewindows'].collect{ |tw| [tw['start'], tw['end']] }.uniq.size
-              tw = activity['detail']['timewindows'].select{ |tw| [tw['start'], tw['end']] }.uniq.sort_by{ |t| t['start'] }[index]
-              [tw['start'] && formatted_duration(tw['start']), tw['end'] && formatted_duration(tw['end'])]
-            else
-              [nil, nil]
-            end
-          }.flatten
-          quantities = quantities_id.collect{ |id|
-            if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes']['id'] == id }
-              activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
-            else
-              nil
-            end
-          }
-          out_csv << (days_info + common + quantities + timewindows + [activity['reason']])
         }
       }
     end
