@@ -205,7 +205,7 @@ module OptimizerWrapper
       else
         if services_fleets.one?{ |service_fleet| service_fleet[:id] == fleet_id }
           associated_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
-          vrp.vehicles = associated_fleet[:fleet].collect{ |vehicle|
+          vrp.vehicles = associated_fleet[:fleet].select{ |vehicle| vrp.vehicles.collect{ |v| v[:id] }.include?(vehicle[:id]) }.collect{ |vehicle|
             vehicle.matrix_id = nil
             vehicle
           }
@@ -334,7 +334,7 @@ module OptimizerWrapper
 
         vrp.vehicles = current_usefull_vehicle
         current_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
-        current_usefull_vehicle.each{ |vehicle| current_fleet[:fleet].delete(vehicle) }
+        current_usefull_vehicle.each{ |vehicle| current_fleet[:fleet].delete(vehicle) } unless vrp.preprocessing_partitions.collect{ |partition| %w[balanced_kmeans hierarchical_tree].include? partition[:method] }.size > 1
 
         cluster_result[:routes].each{ |route|
 

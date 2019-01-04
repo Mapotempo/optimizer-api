@@ -32,6 +32,8 @@ module Models
     field :preprocessing_use_periodic_heuristic, default: false
     field :preprocessing_heuristic_result, defaul: {}
     field :preprocessing_first_solution_strategy, default: nil
+    has_many :preprocessing_partitions, class_name: 'Models::Partition'
+
     field :resolution_duration, default: nil
     field :resolution_iterations, default: nil
     field :resolution_iterations_without_improvment, default: nil
@@ -148,6 +150,7 @@ module Models
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
       self.preprocessing_use_periodic_heuristic = preprocessing[:use_periodic_heuristic]
       self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
+      self.preprocessing_partitions = preprocessing[:partitions]
       self.preprocessing_heuristic_result = {}
     end
 

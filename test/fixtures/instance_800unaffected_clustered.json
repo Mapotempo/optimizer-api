@@ -92550,8 +92550,15 @@
       "preprocessing": {
         "use_periodic_heuristic": true,
         "prefer_short_segment": true,
-        "partition_method": "balanced_kmeans",
-        "partition_metric": "duration"
+        "partitions": [{
+          "method": "balanced_kmeans",
+          "metric": "duration",
+          "entity": "vehicle"
+        },{
+          "method": "balanced_kmeans",
+          "metric": "duration",
+          "entity": "work_day"
+        }]
       },
       "resolution": {
         "solver_parameter": -1,

@@ -449,6 +449,42 @@ module Wrappers
       !vrp.preprocessing_use_periodic_heuristic && (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic')) || !vrp.preprocessing_cluster_threshold && !vrp.preprocessing_max_split_size
     end
 
+    def assert_lat_lon_for_partition(vrp)
+      vrp.preprocessing_partition_method.nil? || vrp.points.all?{ |pt| pt[:location] && pt[:location][:lat] && pt[:location][:lon] }
+    end
+
+    def assert_work_day_partitions_only_schedule(vrp)
+      vrp.preprocessing_partitions.empty? || vrp.preprocessing_partitions.size < 2 ||
+      (vrp.schedule_range_indices || vrp.schedule_range_date) &&
+      (vrp.services.none?{ |service| service[:minimum_lapse] } || vrp.services.collect{ |service| service[:minimum_lapse] }.compact.min >= 7)
+    end
+
+    def assert_deprecated_partitions(vrp)
+      !((vrp.preprocessing_partition_method || vrp.preprocessing_partition_metric) && !vrp.preprocessing_partitions.empty?)
+    end
+
+    def assert_partitions_entity(vrp)
+      vrp.preprocessing_partitions.empty? || vrp.preprocessing_partitions.all?{ |partition| partition[:method] != 'balanced_kmeans' || partition[:entity] }
+    end
+
+    def assert_no_partitions(vrp)
+      vrp.preprocessing_partitions.empty?
+    end
+
+    def assert_no_initial_centroids_with_partitions(vrp)
+      vrp.preprocessing_partitions.empty? || vrp.preprocessing_kmeans_centroids.nil?
+    end
+
+    def assert_valid_partitions(vrp)
+      vrp.preprocessing_partitions.size < 3 &&
+      (vrp.preprocessing_partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.preprocessing_partitions.size)
+    end
+
+    def assert_first_partitions_entity_is_vehicle(vrp)
+      hierarchical_or_kmeans_partitions = vrp.preprocessing_partitions.select{ |p| %w[hierarchical_tree balanced_kmeans].include? p[:method] }
+      hierarchical_or_kmeans_partitions.empty? || hierarchical_or_kmeans_partitions.first.entity == 'vehicle'
+    end
+
     def solve_synchronous?(vrp)
       false
     end

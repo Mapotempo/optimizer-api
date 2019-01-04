@@ -614,6 +614,35 @@ Preprocessing parameters will twist the problem in order to simplify or orient t
     }
   }
 ```
+
+You can ask to apply some clustering method before solving. **partitions** structure specifies which clustering steps should be performed.
+Each partition step should be defined by a method:
+  * **balanced_kmeans**
+  * **hierarchical_tree**
+Each partition step should be defined by a metric, which will be used to partition:
+  * **duration**
+  * **visits**
+  * any existing unit
+Each partition step should be defined by a entity:
+  * **vehicle**
+  * **work_day**
+
+```json
+  "configuration": {
+    "preprocessing": {
+      "partitions": [{
+        "method": "balanced_kmeans",
+        "metric": "duration",
+        "entity": "vehicle"
+      },{
+        "method": "hierarchical_tree",
+        "metric": "visits",
+        "entity": "work_day"
+      }]
+    }
+  }
+```
+
 Resolution parameters will only indicate when stopping the search is tolerated. In this case, the solve will last at most 30 seconds and at least 3. If it doesn`t find a new better solution within a time lapse of twice times the duration it takes to find the previous solution, the solve is interrupted.
 ```json
   "configuration": {

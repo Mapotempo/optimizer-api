@@ -311,16 +311,26 @@ module Api
         this.requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route')
       end
 
+      def self.vrp_request_partition(this)
+        this.requires(:method, type: String, values: %w[hierarchical_tree balanced_kmeans], desc: 'Method used to partition')
+        this.optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
+        this.optional(:entity, type: String, values: %w[vehicle work_day], desc: 'Describes what the partition corresponds to. Only available if method in [balanced_kmeans hierarchical_tree]')
+        this.optional(:threshold, type: Integer, desc: 'Maximum size of partition. Only available if method in [iterative_kmean clique]')
+      end
+
       def self.vrp_request_preprocessing(this)
         this.optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
-        this.optional(:partition_method, type: String, desc: 'Apply partition method before solving : balanced-kmeans, htree')
-        this.optional(:partition_metric, type: Symbol, desc: 'Define the parameter used for partitioning : duration, visits or a unit_id')
-        this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method')
+        this.optional(:partition_method, type: String, desc: '[ DEPRECATED : use partitions structure instead ]')
+        this.optional(:partition_metric, type: Symbol, desc: '[ DEPRECATED : use partitions structure instead ]')
+        this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available with deprecated partition_method')
         this.optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
         this.optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
         this.optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
         this.optional(:neighbourhood_size, type: Integer, desc: 'Limit the size of the considered neighbourhood within the search')
         this.optional(:use_periodic_heuristic, type: Boolean, desc: '[ DEPRECATED : use first_solution_strategy instead, with value \'periodic\' ]')
+        this.optional(:partitions, type: Array, desc: 'Describes partition process to perform before solving. Partitions will be performed in provided order') do
+          Vrp.vrp_request_partition(self)
+        end
         this.optional(:first_solution_strategy, types: Array[String], desc: 'Forces first solution strategy. Either one value to force specific behavior, or a list in order to test several ones and select the best. If string is \'internal\', we will choose among pre-selected behaviors. There can not be more than three behaviors (ORtools only)', coerce_with: ->(value) { FirstSolType.new.type_cast(value) })
       end
 
@@ -369,7 +379,7 @@ module Api
 
       def self.vrp_request_debug(this)
         this.optional(:output_kmeans_centroids, type: Boolean, desc: '[debug] Outputs centroids used for kmeans clustering if clusters are generated')
-        this.optional(:debug_output_clusters_in_csv, type: Boolean, desc: '[debug] Outputs clusters generated in a csv')
+        this.optional(:output_clusters_in_csv, type: Boolean, desc: '[debug] Outputs clusters generated in a csv')
         this.optional(:batch_heuristic, type: Boolean, desc: '[debug] Each heuristic will be computed')
       end
 

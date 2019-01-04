@@ -54,6 +54,7 @@ module Wrappers
         :assert_no_evaluation,
         :assert_not_testing_several_heuristics,
         :assert_solver,
+        :assert_no_partitions,
       ]
     end
 

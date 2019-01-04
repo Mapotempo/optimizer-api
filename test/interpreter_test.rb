@@ -2511,4 +2511,191 @@ class InterpreterTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     assert !ortools.inapplicable_solve?(vrp).empty?
   end
+
+  def test_second_stage_allowed
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        preprocessing: {
+          partitions:[{
+            method: 'balanced_kmeans',
+            metric: 'duration',
+            entity: 'vehicle'
+          },{
+            method: 'balanced_kmeans',
+            metric: 'duration',
+            entity: 'work_day'
+          }]
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    assert ortools.inapplicable_solve?(vrp).include? :assert_work_day_partitions_only_schedule
+  end
+
+  def test_second_stage_allowed_small_lapses
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 2, 2],
+          [2, 0, 2],
+          [2, 2, 0]
+        ]
+      }],
+      points: [{
+        id: 'depot',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0
+        },
+        duration: 6
+      }],
+      services: [{
+        id: 'service_1',
+        visits_number: 3,
+        minimum_lapse: 1,
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_1',
+          duration: 1
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_1',
+          duration: 2
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_2',
+          duration: 2
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_2',
+          duration: 1
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        preprocessing: {
+          partitions:[{
+            method: 'balanced_kmeans',
+            metric: 'duration',
+            entity: 'vehicle'
+          },{
+            method: 'balanced_kmeans',
+            metric: 'duration',
+            entity: 'work_day'
+          }]
+        },
+        schedule: {
+          range_indices:{
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    puts "inapplicable : #{ortools.inapplicable_solve?(vrp)}"
+    assert ortools.inapplicable_solve?(vrp).include? :assert_work_day_partitions_only_schedule
+  end
 end

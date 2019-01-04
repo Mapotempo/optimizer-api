@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
-require './lib/output_helper.rb'
+require './lib/helper.rb'
 
 module SchedulingHeuristic
   def self.initialize(vrp, real_schedule_start, schedule_end, shift, expanded_vehicles)
@@ -923,8 +923,8 @@ module SchedulingHeuristic
           service_in_vrp = vrp.services.find{ |s| s[:id] == point[:id] }
           associated_point = vrp[:points].find{ |pt| pt[:location] && pt[:location][:id] == point[:point_id] || pt[:matrix_index] == point[:point_id] }
           computed_activities << {
-            day_week_num: "#{day % 7}_#{OutputHelper.string_padding(day / 7 + 1, size_weeks)}",
-            day_week: "#{day_name[day % 7]}_w#{OutputHelper.string_padding(day / 7 + 1, size_weeks)}",
+            day_week_num: "#{day % 7}_#{Helper.string_padding(day / 7 + 1, size_weeks)}",
+            day_week: "#{day_name[day % 7]}_w#{Helper.string_padding(day / 7 + 1, size_weeks)}",
             service_id: "#{point[:id]}_#{point[:number_in_sequence]}_#{service_in_vrp[:visits_number]}",
             point_id: service_in_vrp[:activity][:point_id],
             begin_time: point[:end].to_i - service_in_vrp[:activity][:duration],
