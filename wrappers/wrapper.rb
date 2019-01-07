@@ -107,14 +107,6 @@ module Wrappers
       }
     end
 
-    def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
-      vrp.shipments.empty? || vrp.shipments.none? { |shipment|
-        first_open = shipment.pickup.timewindows.sort_by{ |s| s[:start]}.first
-        last_close = shipment.delivery.timewindows.sort_by{ |s| s[:start]}.last
-        (first_open ? first_open.start : 0) + 86400 * (first_open && first_open.day_index ? first_open.day_index : 0) > (last_close ? last_close.start : 0) + 86400 * (last_close && last_close.day_index ? last_close.day_index : 0)
-      }
-    end
-
     def assert_services_no_skills(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         !service.skills.empty?
@@ -143,18 +135,6 @@ module Wrappers
       vrp.services.empty? || vrp.services.all?{ |service|
         service.priority == 4
       }
-    end
-
-    def assert_positive_quantities(vrp)
-      vrp.services.empty? || vrp.services.all?{ |service|
-        service.quantities.none?{ |quantity|
-          quantity.value && quantity.value < 0 && quantity.empty?
-        }
-      }
-    end
-
-    def assert_too_many_services_and_no_split(vrp)
-      vrp.services.empty? || !(vrp.services.size > 1000 && (!vrp.preprocessing_max_split_size || vrp.preprocessing_max_split_size == 0 || vrp.preprocessing_max_split_size.nil? || vrp.preprocessing_max_split_size > vrp.services.size))
     end
 
     def assert_vehicles_objective(vrp)
@@ -194,12 +174,6 @@ module Wrappers
       }
     end
 
-    def assert_uniq_vehicles(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.collect{ |vehicle|
-        vehicle.id
-      }.uniq.size == vrp.vehicles.size
-    end
-
     def assert_services_no_late_multiplier(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         service.activity.late_multiplier && service.activity.late_multiplier > 0
@@ -222,15 +196,6 @@ module Wrappers
       vrp.vehicles.collect{ |vehicle|
         vehicle.matrix_id || [vehicle.router_mode.to_sym, vehicle.router_dimension, vehicle.speed_multiplier]
       }.uniq.size == 1
-    end
-
-    def assert_matrix_size_greater_than_expected(vrp)
-      dimensions = vrp.vehicles.collect(&:dimensions).flatten.uniq
-      vrp.matrices.none?{ |matrix|
-        dimensions.all?{ |dimension|
-          matrix[dimension].nil? || matrix[dimension].size > (vrp.services.size + vrp.vehicles.size)
-        }
-      }
     end
 
     def assert_square_matrix(vrp)
@@ -736,22 +701,6 @@ module Wrappers
       end
 
       vrp
-    end
-
-    def unfeasible_services_with_lapse(vrp)
-      unfeasible = []
-      vrp.relations.select{ |r| r[:type] == "minimum_day_lapse" }.each{ |relation|
-        vrp[:services].select{ |s| s[:id] == relation[:linked_ids][1] && s[:minimum_lapse] && s[:maximum_lapse] && s[:visits_number] > 1 }.each{ |service|
-          day_indices = []
-          service[:activity][:timewindows].each { |tw|
-            day_indices << (tw[:start]/(24*3600)).to_i
-          }
-          if vrp.schedule_unavailable_indices && (relation[:lapse]..(relation[:lapse] + (service[:maximum_lapse] - service[:minimum_lapse])*(relation[:lapse]/service[:minimum_lapse]))).all?{ |i| vrp.schedule_unavailable_indices.include?(i) || !day_indices.include?(i % 7) }
-            unfeasible << add_unassigned(vrp, service, "Days between min lapse and max lapse unavailable")
-          end
-        }
-      }
-      unfeasible
     end
 
     def kill
