@@ -64,28 +64,19 @@ module Interpreters
           vrp.preprocessing_partitions.each{ |partition|
             cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
 
-            nb_clusters = case partition[:entity]
-            when 'vehicle'
-              vrp.vehicles.size
-            when 'work_day'
-              vrp.vehicles.first.sequence_timewindows && !vrp.vehicles.first.sequence_timewindows.empty? && vrp.vehicles.first.sequence_timewindows.size || 7
-            else
-              raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition entity #{partition[:entity]}")
-            end
-
             case partition[:method]
             when 'balanced_kmeans'
               generated_vrps = current_vrps.collect{ |s_v|
                 current_vrp = s_v[:vrp]
                 current_vrp.vehicles = list_vehicles(current_vrp.vehicles.first) if partition[:entity] == 'work_day'
-                split_balanced_kmeans(s_v, current_vrp, nb_clusters, cut_symbol, partition[:entity])
+                split_balanced_kmeans(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
               }
               current_vrps = generated_vrps.flatten
             when 'hierarchical_tree'
               generated_vrps = current_vrps.collect{ |s_v|
                 current_vrp = s_v[:vrp]
                 current_vrp.vehicles = list_vehicles(current_vrp.vehicles.first) if partition[:entity] == 'work_day'
-                split_hierarchical(s_v, current_vrp, nb_clusters, cut_symbol, partition[:entity])
+                split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
               }
               current_vrps = generated_vrps.flatten
             else
