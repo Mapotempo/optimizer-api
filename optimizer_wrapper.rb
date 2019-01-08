@@ -302,7 +302,7 @@ module OptimizerWrapper
           else
             cluster_result = {
               cost: nil,
-              solvers: nil,
+              solvers: [service.to_s],
               iterations: nil,
               routes: [],
               unassigned: [],
