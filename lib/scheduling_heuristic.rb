@@ -17,6 +17,7 @@
 #
 
 require './lib/helper.rb'
+require './lib/tsp_helper.rb'
 
 module SchedulingHeuristic
   def self.initialize(vrp, real_schedule_start, schedule_end, shift, expanded_vehicles)
@@ -981,41 +982,8 @@ module SchedulingHeuristic
     if vrp.points.size == 1
       @order = [vrp.points[0][:location][:id]]
     else
-      vroom = OptimizerWrapper::VROOM
-
-      # creating services to use
-      services = []
-      vrp.points.each{ |pt|
-        service = vrp.services.find{ |service_| service_[:activity][:point_id] == pt[:id] }
-        next if !service
-        services << {
-          id: service[:id],
-          activity: {
-            point_id: service[:activity][:point_id],
-            duration: service[:activity][:duration]
-          }
-        }
-      }
-      problem = {
-        matrices: vrp[:matrices],
-        points: vrp[:points].collect{ |pt|
-          {
-            id: pt.id,
-            matrix_index: pt.matrix_index
-          }
-        },
-        vehicles: [{
-          id: vrp[:vehicles][0][:id],
-          start_point_id: vrp[:vehicles][0][:start_point_id],
-          matrix_id: vrp[:vehicles][0][:matrix_id]
-        }],
-        services: services
-      }
-      tsp = Models::Vrp.create(problem)
-      progress = 0
-      result = vroom.solve(tsp){
-        progress += 1
-      }
+      tsp = TSPHelper::create_tsp(vrp, vrp[:vehicles][0])
+      result = TSPHelper::solve(tsp)
       @order = result[:routes][0][:activities].collect{ |stop|
         associated_point = vrp.points.find{ |pt| pt[:id] == stop[:point_id] }
         associated_point[:location] ? associated_point[:location][:id] : associated_point[:matrix_index]
