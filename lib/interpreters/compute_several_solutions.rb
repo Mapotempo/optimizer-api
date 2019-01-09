@@ -137,50 +137,52 @@ module Interpreters
 
     def self.find_best_heuristic(service_vrp)
       strategies = service_vrp[:vrp][:preprocessing_first_solution_strategy]
-      service_vrp[:vrp][:resolution_batch_heuristic] = true
-      service_vrp[:vrp][:resolution_initial_time_out] = nil
-      service_vrp[:vrp][:resolution_min_duration] = nil
-      service_vrp[:vrp][:resolution_duration] = (service_vrp[:vrp][:resolution_duration].to_f / strategies.size).floor
       custom_heuristics = collect_heuristics(service_vrp[:vrp], strategies)
-      batched_service_vrps = batch_heuristic(service_vrp, custom_heuristics)
-      times = []
-      first_results = batched_service_vrps.collect{ |s_vrp|
-        time_start = Time.now
-        heuristic_solution = OptimizerWrapper.solve([s_vrp])
-        times << (Time.now - time_start) * 1000
-        heuristic_solution
-      }
-      raise DiscordantProblemError.new('Heuristics selected through first_solution_strategy parameter did not provide a solution') if first_results.all?{ |res| res.nil? }
-      synthesis = []
-      first_results.each_with_index{ |result, i|
-        synthesis << {
-          heuristic: batched_service_vrps[i][:vrp][:preprocessing_first_solution_strategy].first,
-          quality: result.nil? ? nil : result[:cost].to_i * Math.sqrt([1, result[:unassigned].size].max),
-          finished: !result.nil?,
-          used: false,
-          cost: result ? result[:cost] : nil,
-          time_spent: times[i],
-          solution: result
+      if custom_heuristics.size > 1
+        batched_service_vrps = batch_heuristic(service_vrp, custom_heuristics)
+        times = []
+        first_results = batched_service_vrps.collect{ |s_vrp|
+          s_vrp[:vrp][:resolution_batch_heuristic] = true
+          s_vrp[:vrp][:resolution_initial_time_out] = nil
+          s_vrp[:vrp][:resolution_min_duration] = nil
+          s_vrp[:vrp][:resolution_duration] = (service_vrp[:vrp][:resolution_duration].to_f / custom_heuristics.size).floor
+          time_start = Time.now
+          heuristic_solution = OptimizerWrapper.solve([s_vrp])
+          times << (Time.now - time_start) * 1000
+          heuristic_solution
         }
-      }
-      sorted_heuristics = synthesis.sort_by{ |element| element[:quality].nil? ? synthesis.collect{ |data| data[:quality] }.compact.max * 10 : element[:quality] }
-      best_heuristic = if sorted_heuristics[0][:heuristic] == 1 && sorted_heuristics[0][:quality] == sorted_heuristics[1][:quality]
-                          sorted_heuristics[1][:heuristic]
-                        else
-                          sorted_heuristics[0][:heuristic]
-                        end
+        raise DiscordantProblemError.new('Heuristics selected through first_solution_strategy parameter did not provide a solution') if first_results.all?{ |res| res.nil? }
+        synthesis = []
+        first_results.each_with_index{ |result, i|
+          synthesis << {
+            heuristic: batched_service_vrps[i][:vrp][:preprocessing_first_solution_strategy].first,
+            quality: result.nil? ? nil : result[:cost].to_i * Math.sqrt([1, result[:unassigned].size].max),
+            finished: !result.nil?,
+            used: false,
+            cost: result ? result[:cost] : nil,
+            time_spent: times[i],
+            solution: result
+          }
+        }
+        sorted_heuristics = synthesis.sort_by{ |element| element[:quality].nil? ? synthesis.collect{ |data| data[:quality] }.compact.max * 10 : element[:quality] }
+        best_heuristic = if sorted_heuristics[0][:heuristic] == 1 && sorted_heuristics[0][:quality] == sorted_heuristics[1][:quality]
+                            sorted_heuristics[1][:heuristic]
+                          else
+                            sorted_heuristics[0][:heuristic]
+                          end
 
-      synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:used] = true
+        synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:used] = true
 
-      service_vrp[:vrp][:preprocessing_heuristic_result] = synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:solution]
-      service_vrp[:vrp][:preprocessing_heuristic_result][:solvers].each{ |solver|
-        solver = 'preprocessing_' + solver
-      }
-      synthesis.each{ |synth| synth.delete(:solution) }
-      service_vrp[:vrp][:resolution_batch_heuristic] = nil
-      service_vrp[:vrp][:preprocessing_first_solution_strategy] = [best_heuristic]
-      service_vrp[:vrp][:preprocessing_heuristic_synthesis] = synthesis
-      service_vrp[:vrp][:resolution_duration] = service_vrp[:vrp][:resolution_duration] ? (service_vrp[:vrp][:resolution_duration] - times.sum).floor : nil
+        service_vrp[:vrp][:preprocessing_heuristic_result] = synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:solution]
+        service_vrp[:vrp][:preprocessing_heuristic_result][:solvers].each{ |solver|
+          solver = 'preprocessing_' + solver
+        }
+        synthesis.each{ |synth| synth.delete(:solution) }
+        service_vrp[:vrp][:resolution_batch_heuristic] = nil
+        service_vrp[:vrp][:preprocessing_first_solution_strategy] = [best_heuristic]
+        service_vrp[:vrp][:preprocessing_heuristic_synthesis] = synthesis
+        service_vrp[:vrp][:resolution_duration] = service_vrp[:vrp][:resolution_duration] ? (service_vrp[:vrp][:resolution_duration] - times.sum).floor : nil
+      end
       service_vrp
     end
 
