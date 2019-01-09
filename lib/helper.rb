@@ -36,6 +36,8 @@ module Helper
                      Math.sin(lon_distance / 2) * Math.sin(lon_distance / 2)
 
       fly_distance = 1000 * r * 2 * Math.atan2(Math.sqrt(intermediate), Math.sqrt(1 - intermediate))
+    else
+      0.0
     end
   end
 
