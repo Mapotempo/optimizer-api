@@ -356,7 +356,7 @@ module OptimizerWrapper
         }
       end
 
-      if vrp.preprocessing_partition_method
+      if vrp.preprocessing_partition_method || !vrp.preprocessing_partitions.empty?
         # add associated cluster as skill
         [cluster_result, vrp.preprocessing_heuristic_result].each{ |solution|
           if solution && !solution.empty?
@@ -590,16 +590,15 @@ module OptimizerWrapper
           reasons = true if solution['unassigned'].size > 0
 
           optim_planning_output = solution['routes'].any?{ |route| route['activities'].any?{ |stop| stop['day_week'] }}
-
       }
       csv = CSV.generate{ |out_csv|
-        out_csv << header
         if optim_planning_output
           header = ['day_week_num', 'day_week'] + header
         end
         if reasons
           header << 'unassigned_reason'
         end
+        out_csv << header
         (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
           solution['routes'].each{ |route|
             route['activities'].each{ |activity|
