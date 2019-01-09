@@ -108,11 +108,11 @@ module Interpreters
       [untouched_service_vrps, (several_service_vrps + batched_service_vrps) || []]
     end
 
-    def self.custom_heuristics(service_vrps)
+    def self.custom_heuristics(service_vrps, block)
       service_vrps.collect{ |service_vrp|
         if (service_vrp[:vrp][:preprocessing_first_solution_strategy] && service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('self_selection') && Interpreters::Assemble.assemble_candidate([service_vrp])) ||
             service_vrp[:vrp][:preprocessing_first_solution_strategy] && service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('assemble_heuristic')
-          Interpreters::Assemble.assemble_heuristic([service_vrp])
+          Interpreters::Assemble.assemble_heuristic([service_vrp], block)
         elsif service_vrp[:vrp][:preprocessing_first_solution_strategy] && !service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('periodic')
           find_best_heuristic(service_vrp)
         else

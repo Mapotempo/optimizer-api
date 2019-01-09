@@ -174,7 +174,7 @@ module OptimizerWrapper
       split_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp])
 
       # Select best heuristic
-      Interpreters::SeveralSolutions.custom_heuristics(split_services_vrps)
+      Interpreters::SeveralSolutions.custom_heuristics(split_services_vrps, block)
     }.flatten.compact
     result = solve(definitive_service_vrps, services_fleets, job, block)
     result_global = {

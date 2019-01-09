@@ -118,7 +118,7 @@ module Interpreters
       }.flatten
     end
 
-    def self.assemble_heuristic(true_services_vrps)
+    def self.assemble_heuristic(true_services_vrps, block)
       services_vrps = Marshal.load(Marshal.dump(true_services_vrps))
 
       all_vrps = kmeans(services_vrps)
@@ -131,16 +131,21 @@ module Interpreters
         service_vrp[:vrp].vehicles.each{ |vehicle| vehicle[:free_approach] = true }
       }
 
-      results = OptimizerWrapper.solve(all_vrps)
+      results = all_vrps.collect.with_index{ |service_vrp, indice|
+        block.call(:ortools, indice + 1, nil, "process #{indice + 1}/#{all_vrps.size} - " + 'run optimization', nil, nil, nil)
+        OptimizerWrapper.solve([service_vrp])
+      }
 
       services_vrps = services_vrps.collect{ |service_vrp|
-        routes = results[:routes].collect{ |route|
-          {
-            vehicle: {
-              id: route[:vehicle_id]
-            },
-            mission_ids: route[:activities].select{ |activity| activity[:service_id] || activity[:rest_id] }.collect{ |activity|
-              activity[:service_id] || activity[:rest_id]
+        routes = results.collect{ |result|
+          result[:routes].collect{ |route|
+            {
+              vehicle: {
+                id: route[:vehicle_id]
+              },
+              mission_ids: route[:activities].select{ |activity| activity[:service_id] || activity[:rest_id] }.collect{ |activity|
+                activity[:service_id] || activity[:rest_id]
+              }
             }
           }
         }.flatten
