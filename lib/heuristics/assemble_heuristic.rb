@@ -16,7 +16,9 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
+require './lib/interpreters/split_clustering.rb'
 require './lib/clusterers/balanced_kmeans.rb'
+require './lib/tsp_helper.rb'
 
 module Interpreters
   class Assemble
@@ -77,25 +79,22 @@ module Interpreters
             }
           }
 
-          metric_limit = cumulated_metrics[cut_symbol] / nb_clusters
-
-          # Kmeans process
           start_timer = Time.now
-          c = BalancedKmeans.new
-          c.max_iterations = 500
-          c.centroid_indices = []
-
           # Consider only one sticky vehicle
+          centroid_indices = []
           if data_items.any?{ |data| data[4] }
             vrp.vehicles.each{ |vehicle|
               data = data_items.find{ |data|
                 data[4] && data[4].include?(vehicle[:id])
               }
-              c.centroid_indices << data_items.index(data)
+              centroid_indices << data_items.index(data)
             }
           else
-            c.centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]
+            centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] # really ?
           end
+
+          clusters = SplitClustering::kmeans_process(centroid_indices, 500, 50, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, build_incompatibility_set(vrp))
+          end_timer = Time.now
 
           vehicle_list = []
           vrp.vehicles.each{ |vehicle|
@@ -104,55 +103,20 @@ module Interpreters
             new_vehicle[:timewindow] = tw
             vehicle_list << new_vehicle
           }
-
-          biggest_cluster_size = 0
-          clusters = []
-          iteration = 0
-          while biggest_cluster_size < nb_clusters && iteration < 50
-            c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit, vrp.debug_output_kmeans_centroids, build_incompatibility_set(vrp))
-            c.clusters.delete([])
-            if c.clusters.size > biggest_cluster_size
-              biggest_cluster_size = c.clusters.size
-              clusters = c.clusters
-            end
-            iteration += 1
-          end
-          end_timer = Time.now
-
-          # each node corresponds to a cluster
-          sub_problem = []
-          points_seen = []
-          clusters.delete([])
+          sub_problem = SplitClustering::create_sub_pbs(service_vrp, vrp, clusters)
           clusters.each_with_index{ |cluster, index|
-            services_list = []
-            cluster.data_items.each{ |data_item|
-              point_id = data_item[2]
-              vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
-                points_seen << service[:id]
-                services_list << service[:id]
-              }
-            }
-            vrp_to_send = Interpreters::SplitClustering.build_partial_vrp(vrp, services_list)
-
-            # If services have no sticky vehicle or no skills, then we affect vehicle greedily
-            data_sticky = clusters[index].data_items.collect{ |data| data[4] }.compact
-            data_skills = clusters[index].data_items.collect{ |data| data[5] }.compact
-            vrp_to_send[:vehicles] = if !data_sticky.empty?
+            data_sticky = cluster.data_items.collect{ |data| data[4] }.compact
+            data_skills = cluster.data_items.collect{ |data| data[5] }.compact
+            sub_problem[index][:vrp][:vehicles] = if !data_sticky.empty?
               [vehicle_list.find{ |vehicle| vehicle[:id] == data_sticky.flatten.first }].compact
             elsif data_sticky.empty? && !data_skills.empty? && vehicle_list.any?{ |vehicle| vehicle[:skills] && !vehicle[:skills].first.empty? }
               [vehicle_list.find{ |vehicle| vehicle[:skills] && !vehicle[:skills].first.empty? && ([data_skills.flatten.first] & (vehicle[:skills].first)).size > 0 }]
             else
               [vehicle_list.last] # TODO : function that return the best vehicle for this cluster
             end
-            vehicle_list -= vrp_to_send[:vehicles]
-
-            sub_problem << {
-              service: service_vrp[:service],
-              vrp: vrp_to_send,
-              fleet_id: service_vrp[:fleet_id],
-              problem_size: service_vrp[:problem_size]
-            }
+            vehicle_list -= sub_problem[index][:vrp][:vehicles]
           }
+
           sub_problem
         else
           puts "split hierarchical not available when services have activities"
