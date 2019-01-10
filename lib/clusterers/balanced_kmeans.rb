@@ -43,13 +43,14 @@ module Ai4r
       # Items will be clustered in "number_of_clusters" different
       # clusters.
 
-      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, output_centroids)
+      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, output_centroids, incompatibility_set = nil)
         @data_set = data_set
         @unit_symbols = unit_symbols
         @cut_symbol = cut_symbol
         @cut_limit = cut_limit
         @number_of_clusters = number_of_clusters
         @output_centroids = output_centroids
+        @incompatibility_set = incompatibility_set
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
         raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
         @iterations = 0
@@ -77,13 +78,17 @@ module Ai4r
 
       def distance(a, b, cluster_index)
         fly_distance = Helper::flying_distance(a, b)
-
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
-        balance = if cut_value > @cut_limit
+        balance = if (a[4] && b[4] && b[4] != a[4]) || (a[5] && b[5] && b[5] != a[5]) # if service sticky or skills are different than centroids sticky/skills, or if services skills have no match
+          2 ** 32
+        elsif (b[4].nil? || a[4].nil?) && (b[5].nil? || a[5].nil?) && cut_value > @cut_limit
           ((cut_value - @cut_limit) / @cut_limit) * 1000 * fly_distance
         else
-         0
+          0
         end
+        b[4] = a[4] if (b[4].nil? && a[4])
+        b[5] = a[5] if (b[5].nil? && a[5] && !@incompatibility_set.empty?)
+
         fly_distance + balance
       end
 
