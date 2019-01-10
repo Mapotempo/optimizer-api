@@ -202,8 +202,6 @@ module OptimizerWrapper
             vehicle.matrix_id = nil
             vehicle
           }
-          vrp.resolution_duration = vrp.resolution_duration / problem_size * vrp.services.size if vrp.resolution_duration
-          vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * vrp.services.size if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
 
           ## Reintroduce fills and empties services
           vrp.services += associated_fleet[:fills] if !associated_fleet[:fills].empty?

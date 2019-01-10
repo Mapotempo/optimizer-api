@@ -98,6 +98,8 @@ module Interpreters
 
         elsif vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 && vrp.shipments.size == 0 && service_vrp[:problem_size] > vrp.preprocessing_max_split_size &&
         vrp.services.size > vrp.preprocessing_max_split_size && !vrp.schedule_range_indices && !vrp.schedule_range_date
+          problem_size = vrp.services.size + vrp.shipments.size
+
           points = vrp.services.collect.with_index{ |service, index|
             service.activity.point.matrix_index = index
             [service.activity.point.location.lat, service.activity.point.location.lon]
@@ -106,8 +108,12 @@ module Interpreters
           result_cluster = clustering(vrp, 2)
 
           sub_first = build_partial_vrp(vrp, result_cluster[0])
+          sub_first.resolution_duration = vrp.resolution_duration / problem_size * (sub_first.services.size + sub_first.shipments.size)
+          sub_first.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * (sub_first.services.size + sub_first.shipments.size) if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
 
           sub_second = build_partial_vrp(vrp, result_cluster[1]) if result_cluster[1]
+          sub_second.resolution_duration = (vrp.resolution_duration / problem_size) * (sub_second.services.size + sub_second.shipments.size) if sub_second
+          sub_first.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * (sub_first.services.size + sub_first.shipments.size) if sub_second && (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)
 
           deeper_search = [{
             service: service_vrp[:service],
