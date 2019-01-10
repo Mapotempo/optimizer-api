@@ -29,7 +29,7 @@ require './lib/interpreters/multi_modal.rb'
 require './lib/interpreters/periodic_visits.rb'
 require './lib/interpreters/split_clustering.rb'
 require './lib/interpreters/compute_several_solutions.rb'
-require './lib/interpreters/assemble_heuristic.rb'
+require './lib/heuristics/assemble_heuristic.rb'
 require './lib/filters.rb'
 
 require 'ai4r'

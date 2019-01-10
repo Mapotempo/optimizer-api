@@ -15,7 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './lib/scheduling_heuristic.rb'
+require './lib/heuristics/scheduling_heuristic.rb'
 
 module Interpreters
   class PeriodicVisits

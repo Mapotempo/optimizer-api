@@ -232,11 +232,11 @@ module Interpreters
       end
     end
 
-    def self.create_sub_pbs(service_vrp, vrp, clusters, vehicle_for_cluster, clusterer = nil)
+    def self.create_sub_pbs(service_vrp, vrp, clusters, clusterer = nil)
       sub_pbs = []
       points_seen = []
       clusters.delete([])
-      clusters.each_with_index{ |cluster, index|
+      clusters.each{ |cluster|
         services_list = []
         if clusterer
           cluster.each{ |node|
@@ -256,7 +256,6 @@ module Interpreters
           }
         end
         vrp_to_send = build_partial_vrp(vrp, services_list)
-        vrp_to_send[:vehicles] = [vehicle_for_cluster[index]]
         sub_pbs << {
           service: service_vrp[:service],
           vrp: vrp_to_send,
@@ -267,16 +266,16 @@ module Interpreters
       sub_pbs
     end
 
-    def self.kmeans_process(c_max_iterations, max_iterations, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp)
+    def self.kmeans_process(centroids, c_max_iterations, max_iterations, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp, incompatibility_set = nil)
       c = BalancedKmeans.new
       c.max_iterations = c_max_iterations
-      c.centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
+      c.centroid_indices = centroids if centroids
 
       biggest_cluster_size = 0
       clusters = []
       iteration = 0
       while biggest_cluster_size < nb_clusters && iteration < max_iterations
-        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit, vrp.debug_output_kmeans_centroids)
+        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit, vrp.debug_output_kmeans_centroids, incompatibility_set)
         c.clusters.delete([])
         if c.clusters.size > biggest_cluster_size
           biggest_cluster_size = c.clusters.size
@@ -299,7 +298,7 @@ module Interpreters
           vehicle_list << new_vehicle
         }
       elsif vehicle[:sequence_timewindows]
-        vehicle[:sequence_timewindows].each_with_index{ |tw, index|
+        vehicle[:sequence_timewindows].each{ |tw|
           new_vehicle = Marshal::load(Marshal.dump(vehicle))
           new_vehicle[:sequence_timewindows] = [tw]
           vehicle_list << new_vehicle
@@ -386,6 +385,13 @@ module Interpreters
       returned
     end
 
+    def self.affect_vehicle(sub_pbs, vehicle_for_cluster)
+      sub_pbs.each_with_index{ |spb, i|
+        spb[:vrp][:vehicles] = [vehicle_for_cluster[i]]
+      }
+      sub_pbs
+    end
+
     def self.split_balanced_kmeans(service_vrp, vrp, nb_clusters, cut_symbol = :duration, entity = "")
       # Split using balanced kmeans
       if vrp.services.all?{ |service| service[:activity] }
@@ -395,10 +401,12 @@ module Interpreters
 
         data_items, cumulated_metrics = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
 
-        clusters = kmeans_process(200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
+        centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
+        clusters = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
         clusters.delete_if{ |cluster| cluster.data_items.empty? }
         vehicle_for_cluster = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
-        create_sub_pbs(service_vrp, vrp, clusters, vehicle_for_cluster)
+        sub_pbs = create_sub_pbs(service_vrp, vrp, clusters)
+        affect_vehicle(sub_pbs, vehicle_for_cluster)
       else
         puts "split hierarchical not available when services have activities"
         [vrp]
@@ -469,7 +477,7 @@ module Interpreters
           }
         }
         vehicle_for_cluster = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, modified_clusters, entity, false)
-        create_sub_pbs(service_vrp, vrp, clusters, vehicle_for_cluster, clusterer)
+        create_sub_pbs(service_vrp, vrp, clusters, clusterer)
       else
         puts "split hierarchical not available when services have activities"
         [vrp]
