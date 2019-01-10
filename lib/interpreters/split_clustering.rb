@@ -197,6 +197,97 @@ module Interpreters
       value + (parent.nil? ? 0 : (count_metric(graph, graph[parent][:left], symbol) + count_metric(graph, graph[parent][:right], symbol)))
     end
 
+    def self.collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics, max_cut_metrics = nil)
+      data_items = []
+
+      vrp.points.each{ |point|
+        unit_quantities = {}
+        unit_symbols.each{ |unit| unit_quantities[unit] = 0 }
+        related_services = vrp.services.select{ |service| service[:activity][:point_id] == point[:id] }
+        related_services.each{ |service|
+          unit_quantities[:visits] += 1
+          cumulated_metrics[:visits] += 1
+          unit_quantities[:duration] += service[:activity][:duration] * service[:visits_number]
+          cumulated_metrics[:duration] += service[:activity][:duration] * service[:visits_number]
+
+          service.quantities.each{ |quantity|
+            unit_quantities[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
+            cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
+          }
+        }
+        if max_cut_metrics
+          unit_symbols.each{ |unit|
+            max_cut_metrics[unit] = [unit_quantities[unit], max_cut_metrics[unit]].max
+          }
+        end
+
+        next if related_services.empty?
+        data_items << [point.location.lat, point.location.lon, point.id, unit_quantities]
+      }
+
+      if max_cut_metrics
+        [data_items, cumulated_metrics, max_cut_metrics]
+      else
+        [data_items, cumulated_metrics]
+      end
+    end
+
+    def self.create_sub_pbs(service_vrp, vrp, clusters, vehicle_for_cluster, clusterer = nil)
+      sub_pbs = []
+      points_seen = []
+      clusters.delete([])
+      clusters.each_with_index{ |cluster, index|
+        services_list = []
+        if clusterer
+          cluster.each{ |node|
+            point_id = clusterer.graph[node][:point]
+            vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
+              points_seen << service[:id]
+              services_list << service[:id]
+            }
+          }
+        else
+          cluster.data_items.each{ |data_item|
+            point_id = data_item[2]
+            vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
+              points_seen << service[:id]
+              services_list << service[:id]
+            }
+          }
+        end
+        vrp_to_send = build_partial_vrp(vrp, services_list)
+        vrp_to_send[:vehicles] = [vehicle_for_cluster[index]]
+        sub_pbs << {
+          service: service_vrp[:service],
+          vrp: vrp_to_send,
+          fleet_id: service_vrp[:fleet_id],
+          problem_size: service_vrp[:problem_size]
+        }
+      }
+      sub_pbs
+    end
+
+    def self.kmeans_process(c_max_iterations, max_iterations, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp)
+      c = BalancedKmeans.new
+      c.max_iterations = c_max_iterations
+      c.centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
+
+      biggest_cluster_size = 0
+      clusters = []
+      iteration = 0
+      while biggest_cluster_size < nb_clusters && iteration < max_iterations
+        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit, vrp.debug_output_kmeans_centroids)
+        c.clusters.delete([])
+        if c.clusters.size > biggest_cluster_size
+          biggest_cluster_size = c.clusters.size
+          clusters = c.clusters
+        end
+        iteration += 1
+      end
+
+      clusters
+    end
+
     def self.list_vehicles(vehicle)
       vehicle_list = []
       if vehicle[:timewindow]
@@ -298,78 +389,16 @@ module Interpreters
     def self.split_balanced_kmeans(service_vrp, vrp, nb_clusters, cut_symbol = :duration, entity = "")
       # Split using balanced kmeans
       if vrp.services.all?{ |service| service[:activity] }
-        unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
-
         cumulated_metrics = {}
-
+        unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
         unit_symbols.map{ |unit| cumulated_metrics[unit] = 0 }
 
-        data_items = []
+        data_items, cumulated_metrics = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
 
-        vrp.points.each{ |point|
-          unit_quantities = {}
-          unit_symbols.each{ |unit| unit_quantities[unit] = 0 }
-          related_services = vrp.services.select{ |service| service[:activity][:point_id] == point[:id] }
-          related_services.each{ |service|
-            unit_quantities[:visits] += 1
-            cumulated_metrics[:visits] += 1
-            unit_quantities[:duration] += service[:activity][:duration] * service[:visits_number]
-            cumulated_metrics[:duration] += service[:activity][:duration] * service[:visits_number]
-
-            service.quantities.each{ |quantity|
-              unit_quantities[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
-              cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
-            }
-          }
-
-          next if related_services.empty?
-          data_items << [point.location.lat, point.location.lon, point.id, unit_quantities]
-        }
-
-        metric_limit = cumulated_metrics[cut_symbol] / nb_clusters
-
-        # Kmeans process
-        c = BalancedKmeans.new
-        c.max_iterations = 200
-        c.centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
-
-        biggest_cluster_size = 0
-        clusters = []
-        iteration = 0
-        while biggest_cluster_size < nb_clusters && iteration < 30
-          c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, metric_limit, vrp.debug_output_kmeans_centroids)
-          c.clusters.delete([])
-          if c.clusters.size > biggest_cluster_size
-            biggest_cluster_size = c.clusters.size
-            clusters = c.clusters
-          end
-          iteration += 1
-        end
-
+        clusters = kmeans_process(200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
         clusters.delete_if{ |cluster| cluster.data_items.empty? }
         vehicle_for_cluster = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
-        sub_pbs = []
-        points_seen = []
-        clusters.delete([])
-        clusters.each_with_index{ |cluster, index|
-          services_list = []
-          cluster.data_items.each{ |data_item|
-            point_id = data_item[2]
-            vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
-              points_seen << service[:id]
-              services_list << service[:id]
-            }
-          }
-          vrp_to_send = build_partial_vrp(vrp, services_list)
-          vrp_to_send[:vehicles] = [vehicle_for_cluster[index]]
-          sub_pbs << {
-            service: service_vrp[:service],
-            vrp: vrp_to_send,
-            fleet_id: service_vrp[:fleet_id],
-            problem_size: service_vrp[:problem_size]
-          }
-        }
-        sub_pbs
+        create_sub_pbs(service_vrp, vrp, clusters, vehicle_for_cluster)
       else
         puts "split hierarchical not available when services have activities"
         [vrp]
@@ -379,40 +408,14 @@ module Interpreters
     def self.split_hierarchical(service_vrp, vrp, nb_clusters, cut_symbol = :duration, entity = "")
       # splits using hierarchical tree method
       if vrp.services.all?{ |service| service[:activity] }
-        unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
-
+        max_cut_metrics = {}
         cumulated_metrics = {}
 
+        unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
         unit_symbols.map{ |unit| cumulated_metrics[unit] = 0 }
-
-        max_cut_metrics = {}
         unit_symbols.map{ |unit| max_cut_metrics[unit] = 0 }
 
-        # one node per point
-        data_items = []
-
-        vrp.points.each{ |point|
-          unit_quantities = {}
-          unit_symbols.each{ |unit| unit_quantities[unit] = 0 }
-          related_services = vrp.services.select{ |service| service[:activity][:point_id] == point[:id] }
-          related_services.each{ |service|
-            unit_quantities[:visits] += 1
-            cumulated_metrics[:visits] += 1
-            unit_quantities[:duration] += service[:activity][:duration] * service[:visits_number]
-            cumulated_metrics[:duration] += service[:activity][:duration] * service[:visits_number]
-
-            service.quantities.each{ |quantity|
-              unit_quantities[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
-              cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
-            }
-          }
-          unit_symbols.each{ |unit|
-            max_cut_metrics[unit] = [unit_quantities[unit], max_cut_metrics[unit]].max
-          }
-
-          next if related_services.empty?
-          data_items << [point.location.lat, point.location.lon, point.id, unit_quantities]
-        }
+        data_items, cumulated_metrics, max_cut_metrics = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics, max_cut_metrics)
 
         custom_distance = lambda do |a, b|
           custom_distance(a, b)
@@ -466,28 +469,7 @@ module Interpreters
           }
         }
         vehicle_for_cluster = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, modified_clusters, entity, false)
-        sub_pbs = []
-        points_seen = []
-        clusters.delete([])
-        clusters.each_with_index{ |cluster, index|
-          services_list = []
-          cluster.each{ |node|
-            point_id = clusterer.graph[node][:point]
-            vrp.services.select{ |serv| serv[:activity][:point_id] == point_id }.each{ |service|
-              points_seen << service[:id]
-              services_list << service[:id]
-            }
-          }
-          vrp_to_send = build_partial_vrp(vrp, services_list)
-          vrp_to_send[:vehicles] = [vehicle_for_cluster[index]]
-          sub_pbs << {
-            service: service_vrp[:service],
-            vrp: vrp_to_send,
-            fleet_id: service_vrp[:fleet_id],
-            problem_size: service_vrp[:problem_size]
-          }
-        }
-        sub_pbs
+        create_sub_pbs(service_vrp, vrp, clusters, vehicle_for_cluster, clusterer)
       else
         puts "split hierarchical not available when services have activities"
         [vrp]
