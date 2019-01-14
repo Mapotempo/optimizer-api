@@ -734,16 +734,16 @@ module Wrappers
       raise StandardError.new('Unconsistent first solution strategy used internally') if vrp.preprocessing_first_solution_strategy && correspondant[vrp.preprocessing_first_solution_strategy.first].nil?
       cmd = [
         "#{@exec_ortools} ",
-        (vrp.resolution_evaluate_only ? '-time_limit_in_ms 1' : (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s),
+        (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
         vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
         (vrp.resolution_evaluate_only ? '-neighbourhood 0' : (vrp.preprocessing_neighbourhood_size ? "-neighbourhood #{vrp.preprocessing_neighbourhood_size}" : nil)),
-        (vrp.resolution_evaluate_only ? '-no_solution_improvement_limit 0' : (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s),
-        (vrp.resolution_evaluate_only ? '-minimum_duration 0' : (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) && '-minimum_duration ' + (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out).to_s),
-        (vrp.resolution_evaluate_only ? '-time_out_multiplier 0' : (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s),
+        (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,
+        (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) && '-minimum_duration ' + (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out).to_s,
+        (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
         vrp.resolution_vehicle_limit ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
         vrp.resolution_solver_parameter ? "-solver_parameter #{vrp.resolution_solver_parameter}" : nil,
         vrp.preprocessing_first_solution_strategy ? "-solver_parameter #{correspondant[vrp.preprocessing_first_solution_strategy.first]}" : nil,
-        vrp.resolution_batch_heuristic ? "-only_first_solution #{vrp.resolution_batch_heuristic}" : nil,
+        vrp.resolution_evaluate_only || vrp.resolution_batch_heuristic ? '-only_first_solution': nil,
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
         "-instance_file '#{input.path}'",
         "-solution_file '#{output.path}'"].compact.join(' ')

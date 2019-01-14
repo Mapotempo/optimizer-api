@@ -5673,6 +5673,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
     assert result[:heuristic_synthesis].sort_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[0][:used]
+    assert result[:cost]
   end
 
   def test_self_selection_first_solution_strategy

@@ -146,9 +146,8 @@ module Interpreters
           s_vrp[:vrp][:resolution_initial_time_out] = nil
           s_vrp[:vrp][:resolution_min_duration] = nil
           s_vrp[:vrp][:resolution_duration] = (service_vrp[:vrp][:resolution_duration].to_f / custom_heuristics.size).floor
-          time_start = Time.now
           heuristic_solution = OptimizerWrapper.solve([s_vrp])
-          times << (Time.now - time_start) * 1000
+          times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
         }
         raise DiscordantProblemError.new('Heuristics selected through first_solution_strategy parameter did not provide a solution') if first_results.all?{ |res| res.nil? }
