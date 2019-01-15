@@ -30,6 +30,7 @@ require './lib/interpreters/periodic_visits.rb'
 require './lib/interpreters/split_clustering.rb'
 require './lib/interpreters/compute_several_solutions.rb'
 require './lib/interpreters/assemble_heuristic.rb'
+require './lib/filters.rb'
 
 require 'ai4r'
 include Ai4r::Data
@@ -146,6 +147,8 @@ module OptimizerWrapper
         problem_size: vrp_element.services.size + vrp_element.shipments.size
       }
     }
+
+    services_vrps = Filters::filter(services_vrps)
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
