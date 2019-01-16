@@ -181,6 +181,8 @@ module Interpreters
         service_vrp[:vrp][:preprocessing_first_solution_strategy] = [best_heuristic]
         service_vrp[:vrp][:preprocessing_heuristic_synthesis] = synthesis
         service_vrp[:vrp][:resolution_duration] = service_vrp[:vrp][:resolution_duration] ? (service_vrp[:vrp][:resolution_duration] - times.sum).floor : nil
+      else
+        service_vrp[:vrp][:preprocessing_first_solution_strategy] = custom_heuristics
       end
       service_vrp
     end
