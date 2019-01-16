@@ -200,7 +200,7 @@ module Interpreters
               }
             }
           } if result
-        }.flatten
+        }.flatten.compact
         service_vrp[:vrp].routes = routes
         service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration / all_vrps.size
         service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration / all_vrps.size if service_vrp[:vrp].resolution_minimum_duration
