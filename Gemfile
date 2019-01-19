@@ -38,6 +38,7 @@ group :test do
   gem 'minitest'
   gem 'minitest-reporters'
   gem 'minitest-stub_any_instance'
+  gem 'minitest-focus'
   gem 'simplecov', require: false
 end
 

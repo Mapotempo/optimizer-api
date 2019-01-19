@@ -37,4 +37,5 @@ require 'grape-entity'
 
 require 'minitest/autorun'
 require 'minitest/stub_any_instance'
+require 'minitest/focus'
 require 'rack/test'

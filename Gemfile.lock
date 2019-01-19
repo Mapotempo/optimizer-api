@@ -68,6 +68,8 @@ GEM
     mime-types-data (3.2016.0521)
     mini_portile2 (2.3.0)
     minitest (5.10.3)
+    minitest-focus (1.1.2)
+      minitest (>= 4, < 6)
     minitest-reporters (1.1.19)
       ansi
       builder
@@ -171,6 +173,7 @@ DEPENDENCIES
   grape_logging
   i18n
   minitest
+  minitest-focus
   minitest-reporters
   minitest-stub_any_instance
   nokogiri
@@ -194,4 +197,4 @@ DEPENDENCIES
   thin
 
 BUNDLED WITH
-   1.16.1
+   1.16.4
