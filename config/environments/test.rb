@@ -47,52 +47,44 @@ module OptimizerWrapper
       jsprit: JSPRIT,
       ortools: ORTOOLS,
     },
-    profiles: [{
-      api_keys: ['demo'],
-      queue: 'DEFAULT',
-      services: {
-        vrp: [:demo, :vroom, :jsprit, :ortools]
-      }
-    }, {
-      api_keys: ['solvers'],
-      queue: 'DEFAULT',
-      services: {
-        vrp: [:vroom, :ortools]
-      }
-    }, {
-      api_keys: ['vroom'],
-      queue: 'DEFAULT',
-      services: {
-        vrp: [:vroom]
-      }
-    }, {
-      api_keys: ['ortools'],
-      queue: 'DEFAULT',
-      services: {
-        vrp: [:ortools]
-      }
-    }, {
-      api_keys: ['jsprit'],
-      queue: 'DEFAULT',
-      services: {
-        vrp: [:jsprit]
-      }
-    }],
+    profiles: {
+      demo: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:demo, :vroom, :jsprit, :ortools]
+        }
+      },
+      solvers: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:vroom, :ortools]
+        }
+      },
+      vroom: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:vroom]
+        }
+      },
+      ortools: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:ortools]
+        }
+      },
+      jsprit: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:jsprit]
+        }
+      },
+    },
     router: {
       api_key: ENV['ROUTER_API_KEY'] || 'demo',
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
     },
     solve_synchronously: true
   }
-
-  @@c[:api_keys] = Hash[@@c[:profiles].flat_map{ |profile|
-    profile[:api_keys].collect{ |api_key|
-      [api_key, {
-        queue: profile[:queue],
-        services: profile[:services]
-      }]
-    }
-  }]
 
   DUMP_VRP = false
 end

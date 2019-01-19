@@ -46,6 +46,11 @@ module OptimizerWrapper
     @@c
   end
 
+  def self.access(force_load = false)
+    load './config/access.rb' if force_load
+    @access_by_api_key
+  end
+
   def self.dump_vrp_cache
     @@dump_vrp_cache
   end

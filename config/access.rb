@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2018
 #
 # This file is part of Mapotempo.
 #
@@ -15,26 +15,12 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'grape'
-require 'grape-swagger'
-
-require 'require_all'
-require_all 'models'
-
-module Api
-  module V01
-    class APIBase < Grape::API
-
-      private
-
-      def self.dump_vrp_cache
-        ::OptimizerWrapper::dump_vrp_cache
-      end
-
-      def self.services(api_key)
-        raise 'Profile missing in configuration' unless ::OptimizerWrapper::config[:profiles].key? ::OptimizerWrapper::access[api_key][:profile]
-        ::OptimizerWrapper::config[:profiles][::OptimizerWrapper::access[api_key][:profile]]
-      end
-    end
-  end
+module OptimizerWrapper
+  @access_by_api_key = {
+    'demo' => { profile: :demo },
+    'solvers' => { profile: :solvers },
+    'vroom' => { profile: :vroom },
+    'ortools' => { profile: :ortools },
+    'jsprit' => { profile: :jsprit },
+  }
 end
