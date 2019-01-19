@@ -23,7 +23,6 @@ class RouterError < StandardError; end
 
 module Routers
   class RouterWrapper
-
     attr_accessor :cache_request, :cache_result, :api_key
 
     def initialize(cache_request, cache_result, api_key)
@@ -46,7 +45,7 @@ module Routers
       if !nocache_segments.empty?
         format = polyline ? 'json' : 'geojson'
         nocache_segments.each_slice(50){ |slice_segments|
-          resource = RestClient::Resource.new(url + "/0.1/routes.#{format}", timeout: nil)
+          resource = RestClient::Resource.new(url + "/routes.#{format}", timeout: nil)
           request = resource.post(params(mode, dimension, options).merge({
             locs: slice_segments.collect{ |segment| segment.join(',') }.join('|')
           })) { |response, request, result, &block|
@@ -112,7 +111,7 @@ module Routers
 
       request = @cache_request.read(key)
       if !request
-        resource = RestClient::Resource.new(url + '/0.1/matrix.json', timeout: nil)
+        resource = RestClient::Resource.new(url + '/matrix.json', timeout: nil)
         request = resource.post(params(mode, dimensions.join('_'), options).merge({
           src: row.flatten.join(','),
           dst: row != column ? column.flatten.join(',') : nil,
@@ -151,7 +150,7 @@ module Routers
 
       request = @cache_request.read(key)
       if !request
-        resource = RestClient::Resource.new(url + '/0.1/isoline.json', timeout: nil)
+        resource = RestClient::Resource.new(url + '/isoline.json', timeout: nil)
         request = resource.post(params(mode, dimension, options).merge({
           loc: [lat, lng].join(','),
           size: size,

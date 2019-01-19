@@ -79,20 +79,20 @@ module OptimizerWrapper
       }
     }],
     router: {
-      api_key: 'demo',
-      url: 'http://router.mapotempo.com'
+      api_key: ENV['ROUTER_API_KEY'] || 'demo',
+      url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
     },
     solve_synchronously: true
   }
 
-  @@c[:api_keys] = Hash[@@c[:profiles].collect{ |profile|
+  @@c[:api_keys] = Hash[@@c[:profiles].flat_map{ |profile|
     profile[:api_keys].collect{ |api_key|
       [api_key, {
         queue: profile[:queue],
         services: profile[:services]
       }]
     }
-  }.flatten(1)]
+  }]
 
   DUMP_VRP = false
 end

@@ -17,7 +17,6 @@
 #
 require './models/base'
 
-
 module Models
   class Vrp < Base
     field :name, default: nil
