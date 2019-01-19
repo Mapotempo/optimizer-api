@@ -4,7 +4,11 @@ Run an optimizer depending of contraints for a Vehicle Routing Problem (VRP).
 
 ## Prerequisite
 
-* Ruby 2.2+ (RVM is recommanded)
+For ruby, bundler and gems, rbenv or rvm are recommanded.
+
+### On Ubuntu
+
+* Ruby 2.1+ (if not using rbenv/rvm)
 ```
 sudo apt install ruby-full
 ```
@@ -17,6 +21,12 @@ sudo apt install redis-server
 sudo apt install libgeos-dev
 ```
 
+#### On Mac OS
+
+```
+brew install redis
+brew install geos
+```
 
 ## Installation
 
@@ -24,7 +34,7 @@ sudo apt install libgeos-dev
 bundle install
 ```
 
-This project requires some solver and interface projects in order to be fully functionnal !
+This project requires some solver and interface projects in order to be fully functionnal!
 * [Vroom actual master](https://github.com/VROOM-Project/vroom)
 * [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v6.5](https://github.com/google/or-tools/tree/v6.5)
 * (optional) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
@@ -63,9 +73,9 @@ curl -X POST --header "Content-Type:application/json" --data '{"vrp":{vehicles":
 
 ## Test
 
-Run tests :
+Run tests:
 ```
-APP_ENV=test bundle exec rake test
+APP_ENV=test ROUTER_URL=http://localhost:4899 bundle exec rake test
 ```
 
 You can add your own tests on specific Vehicle Routing Problem (for instance data from real cases). Let's see how to create a new test called "new_test".
