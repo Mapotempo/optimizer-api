@@ -45,27 +45,19 @@ module OptimizerWrapper
       vroom: VROOM,
       ortools: ORTOOLS,
     },
-    profiles: [{
-      api_keys: ['demo'],
-      queue: 'DEFAULT',
-      services: {
-        vrp: [:vroom, :ortools]
+    profiles: {
+      demo: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:vroom, :ortools]
+        }
       }
-    }],
+    },
     router: {
       api_key: ENV['ROUTER_API_KEY'] || 'demo',
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
     }
   }
-
-  @@c[:api_keys] = Hash[@@c[:profiles].flat_map{ |profile|
-    profile[:api_keys].collect{ |api_key|
-      [api_key, {
-        queue: profile[:queue],
-        services: profile[:services]
-      }]
-    }
-  }]
 
   DUMP_VRP = false
 end

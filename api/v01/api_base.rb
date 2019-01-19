@@ -32,7 +32,8 @@ module Api
       end
 
       def self.services(api_key)
-        ::OptimizerWrapper::config[:api_keys][api_key]
+        raise 'Profile missing in configuration' unless ::OptimizerWrapper::config[:profiles].key? ::OptimizerWrapper::access[api_key][:profile]
+        ::OptimizerWrapper::config[:profiles][::OptimizerWrapper::access[api_key][:profile]]
       end
     end
   end
