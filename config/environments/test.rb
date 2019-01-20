@@ -35,6 +35,8 @@ module OptimizerWrapper
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
 
+  PARAMS_LIMIT = { points: 100, vehicles: 10 }
+
   @@dump_vrp_cache = CacheManager.new(ActiveSupport::Cache::NullStore.new)
 
   @@c = {
@@ -52,31 +54,36 @@ module OptimizerWrapper
         queue: 'DEFAULT',
         services: {
           vrp: [:demo, :vroom, :jsprit, :ortools]
-        }
+        },
+        params_limit: PARAMS_LIMIT
       },
       solvers: {
         queue: 'DEFAULT',
         services: {
           vrp: [:vroom, :ortools]
-        }
+        },
+        params_limit: PARAMS_LIMIT
       },
       vroom: {
         queue: 'DEFAULT',
         services: {
           vrp: [:vroom]
-        }
+        },
+        params_limit: PARAMS_LIMIT
       },
       ortools: {
         queue: 'DEFAULT',
         services: {
           vrp: [:ortools]
-        }
+        },
+        params_limit: PARAMS_LIMIT
       },
       jsprit: {
         queue: 'DEFAULT',
         services: {
           vrp: [:jsprit]
-        }
+        },
+        params_limit: PARAMS_LIMIT
       },
     },
     router: {
