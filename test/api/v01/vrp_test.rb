@@ -98,6 +98,13 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 401, last_response.status, last_response.body
   end
 
+  def test_exceed_params_limit
+    vrp = simple_vrp
+    vrp[:points] *= 101
+    post '/0.1/vrp/submit', api_key: 'vroom', vrp: vrp
+    assert_equal 400, last_response.status, last_response.body
+  end
+
   def test_ignore_unknown_parameters
     vrp = simple_vrp
     vrp[:points][0][:unknown_parameter] = 'test'

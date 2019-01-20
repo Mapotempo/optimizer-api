@@ -506,19 +506,19 @@ module Api
                 APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(''), {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
+              params_limit = APIBase.services(params[:api_key])[:params_limit].merge(OptimizerWrapper.access[params[:api_key]][:params_limit] || {})
               [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
-                if params[:vrp] && params[:vrp][key]
-                  (vrp.send "#{key}=", params[:vrp][key])
+                value = params[:vrp] ? params[:vrp][key] : params[key]
+                if params_limit[key] && value.size > params_limit[key]
+                  error!({status: 'Exceeded params limit', detail: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."}, 400)
                 end
-                if params[key]
-                  (vrp.send("#{key}+=", params[key]))
-                end
+                (vrp.send "#{key}=", value) if value
               }
               if !vrp.valid? || params[:vrp].nil? || params[:vrp].keys.empty?
                 if params[:vrp].nil?
                   vrp.errors[:empty_file] = 'JSON file is empty'
                 elsif params[:vrp].keys.empty?
-                  vrp.errors[:empty_vrp] = 'vrp structure is empty'
+                  vrp.errors[:empty_vrp] = 'VRP structure is empty'
                 end
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else

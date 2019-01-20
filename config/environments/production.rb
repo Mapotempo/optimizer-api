@@ -34,6 +34,8 @@ module OptimizerWrapper
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple', threads: 4)
 
+  PARAMS_LIMIT = { points: 100000, vehicles: 1000 }
+
   @@dump_vrp_cache = CacheManager.new(ActiveSupport::Cache::FileStore.new(File.join(Dir.tmpdir, 'mapotempo-optimizer-api'), namespace: 'vrp', expires_in: 60*60*24*10))
 
   @@c = {
@@ -50,7 +52,8 @@ module OptimizerWrapper
         queue: 'DEFAULT',
         services: {
           vrp: [:vroom, :ortools]
-        }
+        },
+        params_limit: PARAMS_LIMIT
       }
     },
     router: {
