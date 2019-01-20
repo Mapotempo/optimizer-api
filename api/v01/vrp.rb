@@ -391,7 +391,7 @@ module Api
             failure: [
               {code: 404, message: 'Not Found', model: ::Api::V01::Status}
             ],
-            detail: ''
+            detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
           }
           params {
             optional(:vrp, type: Hash, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
@@ -557,21 +557,21 @@ module Api
             failure: [
               {code: 404, message: 'Not Found', model: ::Api::V01::Status}
             ],
-            detail: 'Get the Job status and details, contains progress avancement. Returns the best actual solutions currently found.'
+            detail: 'Get the job status and details, contains progress avancement. Return the best actual solutions currently found.'
           }
           params {
-            requires :id, type: String, desc: 'Job id returned by create VRP problem.'
+            requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
           }
           get ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             if !job
-              error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
+              error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
             else
               solution = OptimizerWrapper::Result.get(id) || {}
               if job.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
                 status 404
-                error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
+                error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
               elsif job.failed?
                 status 202
                 if solution['csv']
@@ -641,20 +641,20 @@ module Api
             detail: 'Kill the job. This operation may have delay.'
           }
           params {
-            requires :id, type: String, desc: 'Job id returned by create VRP problem.'
+            requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
           }
           delete ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
-            if !job
+            if !job || OptimizerWrapper.job_list(params[:api_key]).map{ |j| j['uuid'] }.exclude?(id)
               status 404
-              error!({status: 'Not Found', detail: "Not found job with id='#{id}'"}, 404)
+              error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
               solution = OptimizerWrapper::Result.get(id) || {}
               if solution && !solution.empty?
                 status 202
-                job.status = "killed"
+                job.status = 'killed'
                 if solution['csv']
                   present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
                 else

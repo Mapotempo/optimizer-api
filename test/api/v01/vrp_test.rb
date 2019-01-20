@@ -19,7 +19,6 @@ require './test/test_helper'
 
 require './api/root'
 
-
 class Api::V01::VrpTest < Minitest::Test
   include Rack::Test::Methods
 
@@ -27,11 +26,8 @@ class Api::V01::VrpTest < Minitest::Test
     Api::Root
   end
 
-  def test_submit_vrp
-    OptimizerWrapper.config[:solve_synchronously] = false
-    Resque.inline = false
-
-    vrp = {
+  def simple_vrp
+    {
       points: [{
         id: 'p1',
         location: {
@@ -57,64 +53,140 @@ class Api::V01::VrpTest < Minitest::Test
         }
       }
     }
-    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
-    assert_equal 201, last_response.status, last_response.body
-    job_id = JSON.parse(last_response.body)['job']['id']
-    assert job_id
+  end
 
+  def solve_asynchronously
+    OptimizerWrapper.config[:solve_synchronously] = false
+    Resque.inline = false
+    yield
+  ensure
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
+  end
 
-    delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
+  def submit_vrp(params)
+    post '/0.1/vrp/submit', params
+    assert 200 || 201 == last_response.status
+    assert last_response.body
+    if last_response.status == 201
+      job_id = JSON.parse(last_response.body)['job']['id']
+      assert job_id
+      job_id
+    else
+      response = JSON.parse(last_response.body)
+      assert response['job']['status']['completed'] || response['job']['status']['queued']
+    end
+  end
+
+  def delete_job(job_id, params)
+    delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'demo'
     assert_equal 202, last_response.status, last_response.body
+  end
 
-    get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
-    assert_equal 404, last_response.status, last_response.body
-    assert_equal JSON.parse(last_response.body)['status'], "Not Found"
+  # Unit tests
+
+  def test_submit_vrp_in_queue
+    solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: simple_vrp
+    end
+  ensure
+    delete_job @job_id, api_key: 'demo'
+  end
+
+  def test_cannot_submit_vrp
+    post '/0.1/vrp/submit', api_key: '!', vrp: simple_vrp
+    assert_equal 401, last_response.status, last_response.body
+  end
+
+  def test_ignore_unknown_parameters
+    vrp = simple_vrp
+    vrp[:points][0][:unknown_parameter] = 'test'
+    vrp[:configuration][:unknown_parameter] = 'test'
+    vrp[:unknown_parameter] = 'test'
+    submit_vrp api_key: 'demo', vrp: vrp
+  end
+
+  def test_time_parameters
+    vrp = simple_vrp
+    vrp[:vehicles][0][:duration] = '12:00'
+    vrp[:services][0][:activity] = {
+      point_id: 'p1',
+      duration: '00:20:00',
+      timewindows: [{
+        start: 80,
+        end: 800.0
+      }]
+    }
+    OptimizerWrapper.stub(:wrapper_vrp,
+      lambda { |_api_key, _services, vrp, _checksum|
+        assert_equal 12 * 3600, vrp.vehicles.first.duration
+        assert_equal 20 * 60, vrp.services.first.activity.duration
+        assert_equal 80, vrp.services.first.activity.timewindows.first.start
+        assert_equal 800, vrp.services.first.activity.timewindows.first.end
+        'job_id'
+      }
+    ) do
+      submit_vrp api_key: 'demo', vrp: vrp
+    end
+  end
+
+  def test_first_solution_strategie_param
+    vrp = simple_vrp
+    vrp[:configuration].merge!(preprocessing: { first_solution_strategy: 'a, b ' })
+    OptimizerWrapper.stub(:wrapper_vrp,
+      lambda { |_api_key, _services, vrp, _checksum|
+        assert_equal ['a', 'b'], vrp.preprocessing_first_solution_strategy
+        'job_id'
+      }
+    ) do
+      submit_vrp api_key: 'demo', vrp: vrp
+    end
   end
 
   def test_list_vrp
-    OptimizerWrapper.config[:solve_synchronously] = false
-    Resque.inline = false
+    solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: simple_vrp
+    end
 
-    vrp = {
-      points: [{
-        id: 'p1',
-        location: {
-          lat: 1,
-          lon: 2
-        }
-      }],
-      vehicles: [{
-        id: 'v1',
-        router_mode: 'car',
-        router_dimension: 'time'
-      }],
-      services: [{
-        id: 's1',
-        type: 'service',
-        activity: {
-          point_id: 'p1'
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 1
-        }
-      }
-    }
-    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
-    job_id = JSON.parse(last_response.body)['job']['id']
-
-    get '/0.1/vrp/jobs', {api_key: 'demo'}
+    get '/0.1/vrp/jobs', api_key: 'demo'
     assert_equal 200, last_response.status, last_response.body
-    assert JSON.parse(last_response.body)[0]
+    assert_includes JSON.parse(last_response.body).map{ |a| a['uuid'] }, @job_id
+  ensure
+    delete_job @job_id, api_key: 'demo'
+  end
 
-    delete "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
-    assert_equal 202, last_response.status, last_response.body
+  def test_cannot_list_vrp
+    solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: simple_vrp
+    end
 
-    Resque.inline = true
-    OptimizerWrapper.config[:solve_synchronously] = true
+    get '/0.1/vrp/jobs', api_key: 'vroom'
+    assert_equal 200, last_response.status, last_response.body
+    refute_includes JSON.parse(last_response.body).map{ |a| a['uuid'] }, @job_id
+  ensure
+    delete_job @job_id, api_key: 'demo'
+  end
+
+  def test_delete_vrp
+    solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: simple_vrp
+    end
+
+    delete_job @job_id, api_key: 'demo'
+    get "0.1/vrp/jobs/#{@job_id}.json", api_key: 'demo'
+    assert_equal 404, last_response.status, last_response.body
+    assert_equal JSON.parse(last_response.body)['status'], 'Not Found'
+  end
+
+  def test_cannot_delete_vrp
+    solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: simple_vrp
+    end
+
+    delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'vroom'
+    assert_equal 404, last_response.status, last_response.body
+  ensure
+    delete_job @job_id, api_key: 'demo'
   end
 
   def test_real_problem_without_matrix
@@ -274,9 +346,8 @@ class Api::V01::VrpTest < Minitest::Test
       }]
     }
 
-    post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
-    assert_equal 201, last_response.status, last_response.body
-    job_id = JSON.parse(last_response.body)['job']['id']
+    job_id = submit_vrp api_key: 'ortools', vrp: vrp
+
     get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     previous_response = nil
     while last_response.body
@@ -294,40 +365,6 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 202, last_response.status, last_response.body
     assert !JSON.parse(previous_response.body)["solutions"].nil? && !JSON.parse(previous_response.body)["solutions"].empty? ||
     !JSON.parse(last_response.body)["solutions"].nil? && !JSON.parse(last_response.body)["solutions"].empty?
-  end
-
-  def test_ignore_unknown_parameters
-    vrp = {
-        points: [{
-                     id: 'p1',
-                     location: {
-                         lat: 1,
-                         lon: 2
-                     },
-                     unknow_parameter: 'test'
-                 }],
-        vehicles: [{
-                       id: 'v1',
-                       router_mode: 'car',
-                       router_dimension: 'time'
-                   }],
-        services: [{
-                       id: 's1',
-                       type: 'service',
-                       activity: {
-                           point_id: 'p1'
-                       }
-                   }],
-        configuration: {
-            resolution: {
-                duration: 1
-            }
-        }
-    }
-    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
-    assert 200 || 201 == last_response.status
-    assert last_response.body
-    assert JSON.parse(last_response.body)['job']['status']['completed'] || JSON.parse(last_response.body)['job']['status']['queued']
   end
 
   # Optimize each 5 routes
@@ -361,9 +398,9 @@ class Api::V01::VrpTest < Minitest::Test
     Resque.inline = false
 
     vrp = JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']
-    post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
-    assert_equal 201, last_response.status, last_response.body
-    job_id = JSON.parse(last_response.body)['job']['id']
+
+    job_id = submit_vrp api_key: 'ortools', vrp: vrp
+
     get "0.1/vrp/jobs/#{job_id}.json", {api_key: 'demo'}
     while last_response.body
       sleep(1)
@@ -466,9 +503,7 @@ class Api::V01::VrpTest < Minitest::Test
       }]
     }
 
-    post '/0.1/vrp/submit', {api_key: 'ortools', vrp: vrp}
-    assert_equal 201, last_response.status, last_response.body
-    job_id = JSON.parse(last_response.body)['job']['id']
+    job_id = submit_vrp api_key: 'ortools', vrp: vrp
 
     get "0.1/vrp/jobs/#{job_id}.csv", {api_key: 'demo'}
     while last_response.status
@@ -485,47 +520,7 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 9, last_response.body.count("\n")
   end
 
-  def test_time_parameters
-    vrp = {
-        points: [{
-                     id: 'p1',
-                     location: {
-                         lat: 1,
-                         lon: 2
-                     }
-                 }],
-        vehicles: [{
-                       id: 'v1',
-                       router_mode: 'car',
-                       router_dimension: 'time',
-                       duration: '12:00'
-                   }],
-        services: [{
-                       id: 's1',
-                       type: 'service',
-                       activity: {
-                           point_id: 'p1',
-                           duration: "00:20:00",
-                           timewindows: [{
-                              start: 80,
-                              end: 800.0
-                           }]
-                       }
-                   }],
-        configuration: {
-            resolution: {
-                duration: 1
-            }
-        }
-    }
-    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp}
-    assert 200 || 201 == last_response.status
-    assert last_response.body
-    assert JSON.parse(last_response.body)['job']['status']['completed'] || JSON.parse(last_response.body)['job']['status']['queued']
-  end
-
   def test_using_two_solver
-
     OptimizerWrapper.config[:solve_synchronously] = false
     Resque.inline = false
     problem={
