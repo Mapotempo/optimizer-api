@@ -29,6 +29,7 @@ module OptimizerWrapper
     def perform
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
       services_fleets = Marshal.load(Base64.decode64(options['services_fleets']))
+
       result = OptimizerWrapper.define_process(services_vrps, services_fleets, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
@@ -46,15 +47,13 @@ module OptimizerWrapper
         end
       }
 
-      p = Result.get(self.uuid) || {}
-
       # Add values related to the current solve status
       if services_vrps.size == 1 && p && p['result'] && p['graph'] && !p['graph'].empty?
+        p = Result.get(self.uuid) || {}
         p['result'].first['iterations'] = p['graph'].last['iteration']
         p['result'].first['elapsed'] = p['graph'].last['time']
+        Result.set(self.uuid, p)
       end
-
-      Result.set(self.uuid, p)
     rescue => e
       puts e
       puts e.backtrace
@@ -67,20 +66,15 @@ module OptimizerWrapper
     end
   end
 
-  class DiscordantProblemError < StandardError
+  class ProblemError < StandardError
     attr_reader :data
 
     def initialize(data = [])
       @data = data
     end
   end
-  class UnsupportedProblemError < StandardError
-    attr_reader :data
-
-    def initialize(data = [])
-      @data = data
-    end
-  end
+  class DiscordantProblemError < ProblemError; end
+  class UnsupportedProblemError < ProblemError; end
   class UnsupportedRouterModeError < StandardError; end
   class RouterWrapperError < StandardError; end
   class SchedulingHeuristicError < StandardError; end
