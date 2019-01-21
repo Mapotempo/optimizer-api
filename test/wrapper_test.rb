@@ -643,7 +643,7 @@ class WrapperTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    [:ortools, :jsprit, :vroom].each{ |o|
+    [:ortools, ENV['SKIP_JSPRIT'] ? nil : :jsprit, :vroom].compact.each{ |o|
       result = OptimizerWrapper.solve([service: o, vrp: vrp])
       assert_equal size - 1 + 1, result[:routes][0][:activities].size, "[#{o}] "
       services = result[:routes][0][:activities].collect{ |a| a[:service_id] }
@@ -1535,11 +1535,13 @@ class WrapperTest < Minitest::Test
     assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
     assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
 
-    result = OptimizerWrapper.solve([service: :jsprit, vrp: Models::Vrp.create(problem)])
-    assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
-    assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
-    assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
-    assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
+    if !ENV['SKIP_JSPRIT']
+      result = OptimizerWrapper.solve([service: :jsprit, vrp: Models::Vrp.create(problem)])
+      assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
+      assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
+      assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
+      assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
+    end
   end
 
   def test_assert_inapplicable_relations_without_relations
