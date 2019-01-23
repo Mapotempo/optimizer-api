@@ -604,7 +604,7 @@ class HeuristicTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
     assert_equal 4, result[:unassigned].size
     assert_equal 1, result[:unassigned].collect{ |unassigned| unassigned[:reason] }.uniq.size
-    assert result[:unassigned].collect{ |unassigned| unassigned[:reason] }.include? 'Only partial assignment could be found'
+    assert result[:unassigned].any?{ |unassigned| unassigned[:reason].include? 'Only partial assignment could be found' }
   end
 
   def test_max_ride_time_with_heuristic

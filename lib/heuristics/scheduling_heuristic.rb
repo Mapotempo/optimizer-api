@@ -83,7 +83,7 @@ module SchedulingHeuristic
             else
               @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
                 original_service: service[:id],
-                reason: 'Visit not assignable by heuristic'
+                reason: "Visit not assignable by heuristic, first visit assigned at day #{day_finished}"
               }
             end
           end
@@ -101,7 +101,7 @@ module SchedulingHeuristic
               (first_missing..services[service[:id]][:nb_visits]).each{ |missing_s|
                 @uninserted["#{service[:id]}_#{missing_s}_#{services[service[:id]][:nb_visits]}"] = {
                   original_service: service[:id],
-                  reason: 'First visit assigned too late to affect other visits'
+                  reason: "First visit assigned at day #{day_finished} : too late to affect other visits"
                 }
               }
             end
@@ -191,12 +191,15 @@ module SchedulingHeuristic
   def self.clean_routes(services, service, day_finished, vehicle)
     ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
     peri = services[service][:heuristic_period]
+    removed = 0
     (day_finished..@schedule_end).step(peri).each{ |changed_day|
       if @planning[vehicle] && @planning[vehicle][changed_day]
+        removed += 1 if @planning[vehicle][changed_day][:services].any?{ |stop| stop[:id] == service }
         @planning[vehicle][changed_day][:services].delete_if{ |stop| stop[:id] == service }
       end
 
       if @candidate_routes[vehicle] && @candidate_routes[vehicle][changed_day]
+        removed += 1 if @candidate_routes[vehicle][changed_day][:current_route].any?{ |stop| stop[:id] == service }
         @candidate_routes[vehicle][changed_day][:current_route].delete_if{ |stop| stop[:id] == service }
       end
     }
@@ -204,7 +207,7 @@ module SchedulingHeuristic
     (1..services[service][:nb_visits]).each{ |number_in_sequence|
       @uninserted["#{service}_#{number_in_sequence}_#{services[service][:nb_visits]}"] = {
         original_service: service,
-        reason: 'Only partial assignment could be found'
+        reason: "Only partial assignment could be found (#{removed} visits had been assigned from day #{day_finished})"
       }
     }
   end
@@ -261,7 +264,7 @@ module SchedulingHeuristic
                 @candidate_service_ids.delete(service[:id])
                 @uninserted["#{service[:id]}_#{index}_#{service[:visits_number]}"] = {
                   original_service: service[:id],
-                  reason: 'Same_point_day option related : services at this geografical point have no compatible timewindow'
+                  reason: 'Same_point_day conflict : services at this geografical point have no compatible timewindow'
                 }
               }
             }
