@@ -905,4 +905,28 @@ class HeuristicTest < Minitest::Test
     assert result[:routes].none?{ |route| route[:activities].collect{ |stop| stop[:departure_time].to_i - stop[:begin_time].to_i + stop[:travel_time].to_i }.sum > 6 }
   end
 
+  def test_visit_every_day
+    problem = VRP.scheduling
+    problem[:services].first[:visits_number] = 10
+    problem[:services].first[:minimum_lapse] = 1
+    problem[:configuration][:schedule] = {
+      range_indices: {
+        start: 0,
+        end: 10
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    assert result[:routes].none?{ |r| r[:activities].collect{ |a| a[:point_id] }.size > r[:activities].collect{ |a| a[:point_id] }.uniq.size }
+
+    problem[:configuration][:resolution][:allow_partial_assignment] = false
+    problem[:configuration][:schedule] = {
+      range_indices: {
+        start: 0,
+        end: 5
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    assert_equal 10, result[:unassigned].size
+  end
 end
