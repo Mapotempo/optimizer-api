@@ -78,6 +78,8 @@ module Wrappers
         :assert_no_initial_centroids_with_partitions,
         :assert_valid_partitions,
         :assert_first_partitions_entity_is_vehicle, # TODO: tmp
+        :assert_no_relation_with_scheduling_heuristic,
+        :assert_only_one_activity_with_scheduling_heuristic,
       ]
     end
 
