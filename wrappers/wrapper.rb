@@ -456,6 +456,14 @@ module Wrappers
       hierarchical_or_kmeans_partitions.empty? || hierarchical_or_kmeans_partitions.first.entity == 'vehicle'
     end
 
+    def assert_no_relation_with_scheduling_heuristic(vrp)
+      !vrp.preprocessing_use_periodic_heuristic && (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic')) || (!vrp.relations || vrp.relations.empty?)
+    end
+
+    def assert_only_one_activity_with_scheduling_heuristic(vrp)
+      vrp.services.none?{ |s| !s.activities.to_a.empty? } || !vrp.preprocessing_use_periodic_heuristic && (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic'))
+    end
+
     def solve_synchronous?(vrp)
       false
     end

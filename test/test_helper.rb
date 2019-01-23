@@ -39,3 +39,78 @@ require 'minitest/autorun'
 require 'minitest/stub_any_instance'
 require 'minitest/focus'
 require 'rack/test'
+
+module FCT
+  def self.create(problem)
+    Models::Vrp.create(problem)
+  end
+end
+
+module VRP
+  def self.scheduling
+    {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5],
+          [6, 0, 1, 5],
+          [1, 2, 0, 5],
+          [5, 5, 5, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 20
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          solver: false
+        },
+        preprocessing: {
+          first_solution_strategy: ['periodic']
+        },
+        schedule: {
+          range_indices: {
+            start: 0,
+            end: 3
+          }
+        }
+      }
+    }
+  end
+end
