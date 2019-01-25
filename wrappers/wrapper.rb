@@ -326,10 +326,6 @@ module Wrappers
       !(vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')|| vrp.schedule_range_date || vrp.schedule_range_indices
     end
 
-    def assert_solver_parameter_is_valid(vrp)
-      vrp.resolution_solver_parameter != -1 || (vrp.preprocessing_use_periodic_heuristic || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic')
-    end
-
     def assert_first_solution_strategy_is_possible(vrp)
       vrp.preprocessing_first_solution_strategy.nil? || !vrp.resolution_evaluate_only && vrp.resolution_several_solutions.nil? && !vrp.resolution_batch_heuristic && !vrp.resolution_solver_parameter
     end

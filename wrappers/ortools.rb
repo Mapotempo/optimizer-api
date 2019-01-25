@@ -52,7 +52,6 @@ module Wrappers
         :assert_vehicle_tw_if_schedule,
         :assert_if_sequence_tw_then_schedule,
         :assert_if_periodic_heuristic_then_schedule,
-        :assert_solver_parameter_is_valid,
         :assert_only_force_centroids_if_kmeans_method,
         :assert_no_scheduling_if_evaluation,
         :assert_route_if_evaluation,
