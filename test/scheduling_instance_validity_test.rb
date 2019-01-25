@@ -18,6 +18,42 @@
 require './test/test_helper'
 
 class InstanceValidityTest < Minitest::Test
+  def test_reject_if_no_heuristic_neither_first_sol_strategy
+    problem = VRP.scheduling
+    problem[:configuration][:preprocessing][:first_solution_strategy] = []
+    problem[:configuration][:resolution][:solver_parameter] = -1
+
+    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(FCT.create(problem)).include? :assert_solver_if_not_periodic
+  end
+
+  def test_reject_if_partial_assignement
+    problem = VRP.scheduling
+    problem[:configuration][:resolution][:allow_partial_assignment] = false
+    problem[:configuration][:preprocessing][:first_solution_strategy] = nil
+
+    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(FCT.create(problem)).include?(:assert_no_allow_partial_if_no_heuristic)
+  end
+
+  def test_reject_if_same_point_day
+    problem = VRP.scheduling
+    problem[:configuration][:resolution][:same_point_day] = true
+    problem[:configuration][:preprocessing][:first_solution_strategy] = nil
+
+    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(FCT.create(problem)).include?(:assert_no_same_point_day_if_no_heuristic)
+  end
+
+  def test_do_not_solve_if_range_index_and_month_duration
+    problem = VRP.scheduling
+    problem[:relations] = [{
+      type: 'vehicle_group_duration_on_months',
+      linked_vehicle_ids: %w[vehicle_1 vehicle_2],
+      lapse: 5,
+      periodicity: 1
+    }]
+
+    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(FCT.create(problem)).include?(:assert_range_date_if_month_duration)
+  end
+
   def test_reject_if_relation
     problem = VRP.scheduling
     problem[:relations] = {

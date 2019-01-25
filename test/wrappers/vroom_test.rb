@@ -55,7 +55,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     progress = 0
     result = vroom.solve(vrp) { |avancement, total|
       progress += 1
@@ -124,7 +123,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -189,7 +187,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -250,7 +247,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -298,7 +294,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -377,7 +372,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -458,7 +452,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -539,7 +532,6 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    assert vroom.inapplicable_solve?(vrp).empty?
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size

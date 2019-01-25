@@ -64,7 +64,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -921,71 +920,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:unassigned].size
   end
 
-  def test_do_not_solve_if_range_index_and_month_duration
-    ortools = OptimizerWrapper::ORTOOLS
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 2, 2],
-          [2, 0, 2],
-          [2, 2, 0]
-        ]
-      }],
-      points: [{
-        id: 'depot',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_1',
-        start_point_id: 'depot',
-        end_point_id: 'depot',
-        matrix_id: 'matrix_0',
-      }, {
-        id: 'vehicle_2',
-        start_point_id: 'depot',
-        end_point_id: 'depot',
-        matrix_id: 'matrix_0',
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      relations: [{
-        type: 'vehicle_group_duration_on_months',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
-        lapse: 5,
-        periodicity: 1
-      }],
-      configuration: {
-        resolution: {
-          duration: 10,
-        },
-        schedule: {
-          range_indices:{
-            start: 0,
-            end: 2
-          }
-        }
-      }
-    }
-    vrp = Models::Vrp.create(problem)
-    assert !ortools.inapplicable_solve?(vrp).empty?
-  end
-
   def test_alternative_stop_conditions
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
@@ -1035,7 +969,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1108,7 +1041,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1179,7 +1111,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1242,7 +1173,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1310,7 +1240,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -1372,7 +1301,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1442,7 +1370,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1503,7 +1430,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1564,7 +1490,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1635,7 +1560,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -1707,7 +1631,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1783,7 +1706,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1853,7 +1775,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1929,7 +1850,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -2043,7 +1963,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2114,7 +2033,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2187,7 +2105,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -2281,7 +2198,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2370,7 +2286,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2455,7 +2370,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -2561,7 +2475,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -2678,7 +2591,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2793,7 +2705,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -2878,7 +2789,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:unassigned].size
@@ -2968,7 +2878,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -3062,7 +2971,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -3153,7 +3061,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -3244,7 +3151,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -3310,7 +3216,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -3391,7 +3296,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 5, result[:routes].size
@@ -3514,7 +3418,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 5, result[:routes].size
@@ -3611,7 +3514,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -3692,7 +3594,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
@@ -3782,7 +3683,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} + 1 == result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
@@ -3866,7 +3766,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal result[:routes][0][:activities].find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1, result[:routes][0][:activities].find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
@@ -3948,7 +3847,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
@@ -4030,7 +3928,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
@@ -4137,7 +4034,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 4, result[:routes][0][:activities].size
@@ -4297,7 +4193,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4376,7 +4271,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4455,7 +4349,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }]
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
     assert result
     assert_equal 4, result[:routes][0][:activities].size
@@ -4528,7 +4421,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -4599,7 +4491,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 3, result[:routes].size
@@ -4671,7 +4562,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4739,7 +4629,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4823,7 +4712,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal problem[:services].size, result[:routes][0][:activities].size
@@ -4881,7 +4769,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -4943,7 +4830,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal problem[:services].size + 1 , result[:routes][1][:activities].size
@@ -5007,7 +4893,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert_equal result[:routes][0][:activities].size , result[:routes][1][:activities].size
   end
@@ -5069,7 +4954,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -5149,7 +5033,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     # Initial routes are soft assignment
@@ -5209,7 +5092,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal [], result[:unassigned]
@@ -5378,7 +5260,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -5436,7 +5317,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -5497,7 +5377,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert ortools.inapplicable_solve?(vrp).empty?
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
