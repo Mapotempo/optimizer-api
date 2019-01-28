@@ -44,9 +44,47 @@ module FCT
   def self.create(problem)
     Models::Vrp.create(problem)
   end
+
+  def self.solve_asynchronously
+    OptimizerWrapper.config[:solve_synchronously] = false
+    Resque.inline = false
+    yield
+  ensure
+    Resque.inline = true
+    OptimizerWrapper.config[:solve_synchronously] = true
+  end
 end
 
 module VRP
+  def self.toy
+    {
+      points: [{
+        id: 'p1',
+        location: {
+          lat: 1,
+          lon: 2
+        }
+      }],
+      vehicles: [{
+        id: 'v1',
+        router_mode: 'car',
+        router_dimension: 'time'
+      }],
+      services: [{
+        id: 's1',
+        type: 'service',
+        activity: {
+          point_id: 'p1'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 1
+        }
+      }
+    }
+  end
+
   def self.basic
     {
       matrices: [{
@@ -97,6 +135,82 @@ module VRP
           duration: 10
         },
         preprocessing: {}
+      }
+    }
+  end
+
+  def self.lat_lon
+    {
+      points: [{
+        id: 'point_0',
+        location: {lat: 45.288798, lon: 4.951565}
+      }, {
+        id: 'point_1',
+        location: {lat: 45.6047844887, lon: 4.7589656711}
+      }, {
+        id: 'point_2',
+        location: {lat: 45.6047844887, lon: 4.7589656711}
+      }, {
+        id: 'point_3',
+        location: {lat: 45.344334, lon: 4.817731}
+      }, {
+        id: 'point_4',
+        location: {lat: 45.5764120817, lon: 4.8056146502}
+      }, {
+        id: 'point_5',
+        location: {lat: 45.5764120817, lon: 4.8056146502}
+      }, {
+        id: 'point_6',
+        location: {lat: 45.2583248913, lon: 4.6873225272}
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        router_mode: 'car',
+        router_dimension: 'distance',
+      }],
+      services: [{
+        id: 'service_1',
+        type: 'service',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        type: 'service',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        type: 'service',
+        activity: {
+          point_id: 'point_3'
+        }
+      }, {
+        id: 'service_4',
+        type: 'service',
+        activity: {
+          point_id: 'point_4'
+        }
+      }, {
+        id: 'service_5',
+        type: 'service',
+        activity: {
+          point_id: 'point_5'
+        }
+      }, {
+        id: 'service_6',
+        type: 'service',
+        activity: {
+          point_id: 'point_6'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 2000
+        }
       }
     }
   end

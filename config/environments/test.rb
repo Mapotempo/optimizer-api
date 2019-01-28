@@ -35,7 +35,7 @@ module OptimizerWrapper
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
 
-  PARAMS_LIMIT = { points: 100, vehicles: 10 }
+  PARAMS_LIMIT = { points: 150, vehicles: 10 }
 
   @@dump_vrp_cache = CacheManager.new(ActiveSupport::Cache::NullStore.new)
 
