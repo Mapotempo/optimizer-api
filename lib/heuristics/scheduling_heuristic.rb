@@ -55,6 +55,8 @@ module SchedulingHeuristic
       @vehicle_day_completed[vehicle.id] = {}
       @planning[vehicle.id] = {}
     }
+
+    self
   end
 
   def self.adjust_candidate_routes(vehicle, day_finished, services)
@@ -78,7 +80,7 @@ module SchedulingHeuristic
 
           if !inserted
             if !@allow_partial_assignment
-              clean_routes(services, service[:id], day_finished, vehicle)
+              clean_routes(services, service[:id], day_finished, vehicle, days_available)
               visit_number = services[service[:id]][:nb_visits]
             else
               @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
@@ -94,7 +96,7 @@ module SchedulingHeuristic
 
         if visit_number < services[service[:id]][:nb_visits]
           if !@allow_partial_assignment
-              clean_routes(services, service[:id], day_finished, vehicle)
+              clean_routes(services, service[:id], day_finished, vehicle, days_available)
               visit_number = services[service[:id]][:nb_visits]
             else
               first_missing = visit_number + 1
@@ -188,11 +190,15 @@ module SchedulingHeuristic
     }
   end
 
-  def self.clean_routes(services, service, day_finished, vehicle)
+  def self.clean_routes(services, service, day_finished, vehicle, days_available)
     ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
     peri = services[service][:heuristic_period]
     removed = 0
-    (day_finished..@schedule_end).step(peri).each{ |changed_day|
+    counter = 0
+    changed_day = day_finished
+    while changed_day && changed_day <= @schedule_end && counter < services[service][:nb_visits]
+      changed_day = days_available.select{ |day| day >= changed_day }.min if peri < 4
+
       if @planning[vehicle] && @planning[vehicle][changed_day]
         removed += 1 if @planning[vehicle][changed_day][:services].any?{ |stop| stop[:id] == service }
         @planning[vehicle][changed_day][:services].delete_if{ |stop| stop[:id] == service }
@@ -202,7 +208,10 @@ module SchedulingHeuristic
         removed += 1 if @candidate_routes[vehicle][changed_day][:current_route].any?{ |stop| stop[:id] == service }
         @candidate_routes[vehicle][changed_day][:current_route].delete_if{ |stop| stop[:id] == service }
       end
-    }
+
+      changed_day += peri
+      counter += 1
+    end
 
     (1..services[service][:nb_visits]).each{ |number_in_sequence|
       @uninserted["#{service}_#{number_in_sequence}_#{services[service][:nb_visits]}"] = {

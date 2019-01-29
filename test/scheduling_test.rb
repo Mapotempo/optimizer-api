@@ -766,4 +766,42 @@ class HeuristicTest < Minitest::Test
       assert_equal 7, data_services['service_4'][:heuristic_period]
     end
   end
+
+  def test_clean_routes
+    vrp = VRP.scheduling_seq_timewindows
+    vrp[:services][0][:visits_number] = 2
+    vrp[:services][0][:minimum_lapse] = 7
+
+    vrp = FCT.create(vrp)
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise }) do
+      s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+      s.instance_variable_set(:@planning, {'vehicle_0' => {0 => { services: [{id: 'service_1'}] }, 7 => { services: [{id: 'service_1'}] } } })
+      data_services = SchedulingHeuristic.collect_services_data(vrp)
+      assert_equal 7, data_services['service_1'][:heuristic_period]
+      cleaned_route = s.clean_routes(data_services, 'service_1', 0, 'vehicle_0', [0, 1, 2, 3, 4, 7, 8, 9, 10, 11])
+      assert_equal 0, s.instance_variable_get(:@planning)['vehicle_0'][0][:services].size
+    end
+  end
+
+  def test_clean_routes_small_lapses
+    vrp = VRP.scheduling_seq_timewindows
+    vrp[:services][0][:visits_number] = 4
+    vrp[:services][0][:minimum_lapse] = 3
+    vrp[:configuration][:schedule] = {
+      range_indices: {
+        start: 0,
+        end: 14
+      }
+    }
+
+    vrp = FCT.create(vrp)
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise }) do
+      s = SchedulingHeuristic.initialize(vrp, 0, 14, 0, [])
+      s.instance_variable_set(:@planning, { 'vehicle_0' => {0 => { services: [{id: 'service_1'}] }, 3 => { services: [{id: 'service_1'}] }, 7 => { services: [{id: 'service_1'}] }, 10 => { services: [{id: 'service_1'}] } } })
+      data_services = SchedulingHeuristic.collect_services_data(vrp)
+      assert_equal 3, data_services['service_1'][:heuristic_period]
+      cleaned_route = s.clean_routes(data_services, 'service_1', 0, 'vehicle_0', [0, 1, 2, 3, 4, 7, 8, 9, 10, 11])
+      assert s.instance_variable_get(:@planning).all?{ |key, data| data.all?{ |k, d| d[:services].empty? }}
+    end
+  end
 end
