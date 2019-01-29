@@ -261,7 +261,8 @@ module SchedulingHeuristic
     if @same_point_day
       @to_plan_service_ids = []
       vrp.points.each{ |point|
-        same_located_set = vrp.services.select{ |service| service[:activity][:point][:location][:id] == point[:location][:id] }.sort_by{ |s| s[:visits_number] }
+        same_located_set = vrp.services.select{ |service| service[:activity][:point][:location] && service[:activity][:point][:location][:id] == point[:location][:id] ||
+                                                          service[:activity][:point_id] == point[:id] }.sort_by{ |s| s[:visits_number] }
 
         if !same_located_set.empty?
           group_tw = best_common_tw(services_data, same_located_set)
@@ -982,7 +983,7 @@ module SchedulingHeuristic
 
   def self.solve_tsp(vrp)
     if vrp.points.size == 1
-      @order = [vrp.points[0][:location][:id]]
+      @order = [vrp.points[0][:location] ? vrp.points[0][:location][:id] : vrp.points[0][:matrix_index]]
     else
       tsp = TSPHelper::create_tsp(vrp, vrp[:vehicles][0])
       result = TSPHelper::solve(tsp)
