@@ -281,4 +281,115 @@ module VRP
       }
     }
   end
+
+  def self.scheduling_seq_timewindows
+    {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5, 7, 2, 3],
+          [6, 0, 1, 5, 2, 2, 4],
+          [1, 2, 0, 5, 1, 6, 8],
+          [5, 5, 5, 0, 2, 3, 3],
+          [5, 5, 5, 2, 0, 3, 3],
+          [5, 5, 5, 2, 3, 0, 3],
+          [5, 5, 5, 2, 3, 3, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }, {
+        id: 'point_4',
+        matrix_index: 4
+      }, {
+        id: 'point_5',
+        matrix_index: 5
+      }, {
+        id: 'point_6',
+        matrix_index: 6
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        sequence_timewindows: [{
+          start: 0,
+          end: 20,
+          day_index: 0
+        }, {
+          start: 0,
+          end: 20,
+          day_index: 1
+        }, {
+          start: 0,
+          end: 20,
+          day_index: 2
+        }, {
+          start: 0,
+          end: 20,
+          day_index: 3
+        }, {
+          start: 0,
+          end: 20,
+          day_index: 4
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        }
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_4'
+        }
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_5'
+        }
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_6'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+          solver: false
+        },
+        preprocessing: {
+          first_solution_strategy: ['periodic']
+        },
+        schedule: {
+          range_indices: {
+            start: 0,
+            end: 10
+          }
+        }
+      }
+    }
+  end
 end
