@@ -509,11 +509,17 @@ module Api
               params_limit = APIBase.services(params[:api_key])[:params_limit].merge(OptimizerWrapper.access[params[:api_key]][:params_limit] || {})
               [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
                 value = params[:vrp] ? params[:vrp][key] : params[key]
-                if params_limit[key] && value.size > params_limit[key]
+                if params_limit[key] && value && value.size > params_limit[key]
                   error!({status: 'Exceeded params limit', detail: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."}, 400)
                 end
-                (vrp.send "#{key}=", value) if value
+                if params[:vrp] && params[:vrp][key]
+                  (vrp.send "#{key}=", params[:vrp][key])
+                end
+                if params[key]
+                  (vrp.send("#{key}+=", params[key]))
+                end
               }
+
               if !vrp.valid? || params[:vrp].nil? || params[:vrp].keys.empty?
                 if params[:vrp].nil?
                   vrp.errors[:empty_file] = 'JSON file is empty'
