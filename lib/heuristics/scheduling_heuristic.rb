@@ -70,7 +70,7 @@ module SchedulingHeuristic
 
         while day_to_insert && day_to_insert <= @schedule_end && visit_number < services[service[:id]][:nb_visits]
           inserted = false
-          day_to_insert = days_available.select{ |day| day >= day_to_insert }.min if peri < 7
+          day_to_insert = days_available.select{ |day| day >= day_to_insert }.min if peri < 4
 
           if day_to_insert && days_available.include?(day_to_insert)
             inserted, days_filled = try_to_insert_at(vehicle, day_to_insert, services, service, visit_number, days_filled)
@@ -226,7 +226,7 @@ module SchedulingHeuristic
       has_every_day_index = has_sequence_timewindows && !vrp.vehicles[0].sequence_timewindows.empty? && ((vrp.vehicles[0].sequence_timewindows.collect{ |tw| tw.day_index }.uniq & (0..6).to_a).size == 7)
       period = if service[:visits_number] == 1
                   nil
-                elsif service[:minimum_lapse].to_f > 7 && @schedule_end > 7 && has_sequence_timewindows && !has_every_day_index
+                elsif service[:minimum_lapse].to_f > 3 && @schedule_end > 3 && has_sequence_timewindows && !has_every_day_index
                   (service[:minimum_lapse].to_f / 7).ceil * 7
                 else
                   service[:minimum_lapse].nil? ? 1 : service[:minimum_lapse].ceil

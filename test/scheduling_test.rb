@@ -741,4 +741,29 @@ class HeuristicTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
     assert_equal 10, result[:unassigned].size
   end
+
+  def test_compute_service_lapse
+    vrp = VRP.scheduling_seq_timewindows
+    vrp[:services][0][:visits_number] = 1
+    vrp[:services][0][:minimum_lapse] = 10
+
+    vrp[:services][1][:visits_number] = 2
+    vrp[:services][1][:minimum_lapse] = 7
+
+    vrp[:services][2][:visits_number] = 2
+    vrp[:services][2][:minimum_lapse] = 10
+
+    vrp[:services][3][:visits_number] = 2
+    vrp[:services][3][:minimum_lapse] = 6
+    vrp = FCT.create(vrp)
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise }) do
+      SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+      data_services = SchedulingHeuristic.collect_services_data(vrp)
+      assert_equal 6, data_services.size
+      assert_equal nil, data_services['service_1'][:heuristic_period]
+      assert_equal 7, data_services['service_2'][:heuristic_period]
+      assert_equal 14, data_services['service_3'][:heuristic_period]
+      assert_equal 7, data_services['service_4'][:heuristic_period]
+    end
+  end
 end
