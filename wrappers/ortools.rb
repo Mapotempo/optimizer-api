@@ -642,7 +642,7 @@ module Wrappers
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
         "-instance_file '#{input.path}'",
         "-solution_file '#{output.path}'"].compact.join(' ')
-      puts cmd
+      puts (@job ? @job + ' - ' : '') + cmd
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
@@ -706,7 +706,7 @@ module Wrappers
         end
       elsif @thread.value == 9
         out = "Job killed"
-        puts out # Keep trace in worker
+        puts (@job ? @job + ' - ' : '') + out # Keep trace in worker
         if cost && !result.include?('Iteration : ')
           [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
         else
