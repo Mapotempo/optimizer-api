@@ -161,7 +161,7 @@ module OptimizerWrapper
       else
         # Delegate the job to a worker
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)),
-        services_fleets: Base64.encode64(Marshal::dump(services_fleets)), api_key: api_key, checksum: checksum, pids: [])
+          services_fleets: Base64.encode64(Marshal::dump(services_fleets)), api_key: api_key, checksum: checksum, pids: [])
         JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end
@@ -511,8 +511,8 @@ module OptimizerWrapper
 
   def self.job_list(api_key)
     jobs = (JobList.get(api_key) || []).collect{ |e|
-      if Resque::Plugins::Status::Hash.get(e)
-        Resque::Plugins::Status::Hash.get(e)
+      if job = Resque::Plugins::Status::Hash.get(e)
+        job
       else
         Result.remove(api_key, e)
       end
@@ -532,11 +532,12 @@ module OptimizerWrapper
       }
     end
     @killed = true
-    Job.dequeue(Job, id)
   end
 
   def self.job_remove(api_key, id)
     Result.remove(api_key, id)
+    Job.dequeue(Job, id)
+    Resque::Plugins::Status::Hash.remove(id)
   end
 
   def self.find_type(activity)
