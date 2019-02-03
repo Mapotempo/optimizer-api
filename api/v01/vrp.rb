@@ -574,6 +574,14 @@ module Api
             if !job
               error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
             else
+              # If job has been killed by restarting queues, need to update job status to 'killed'
+              if job.working?
+                job_ids = Resque.workers.map{ |w| w.job && w.job['payload'] && w.job['payload']['args'].first }
+                unless job_ids.include? id
+                  OptimizerWrapper.job_remove(params[:api_key], id)
+                  job.status = 'killed'
+                end
+              end
               solution = OptimizerWrapper::Result.get(id) || {}
               if job.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
                 status 404
