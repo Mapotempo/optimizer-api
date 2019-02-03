@@ -27,6 +27,8 @@ module OptimizerWrapper
     include Resque::Plugins::Status
 
     def perform
+      tick('Starting job') # Important to kill job before any code
+
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
       services_fleets = Marshal.load(Base64.decode64(options['services_fleets']))
 

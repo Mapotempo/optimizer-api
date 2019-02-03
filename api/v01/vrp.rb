@@ -644,7 +644,7 @@ module Api
             failure: [
               {code: 404, message: 'Not Found', model: ::Api::V01::Status}
             ],
-            detail: 'Kill the job. This operation may have delay.'
+            detail: 'Kill the job. This operation may have delay, since if the job is working it will be killed during the next iteration.'
           }
           params {
             requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
@@ -657,10 +657,10 @@ module Api
               error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
-              solution = OptimizerWrapper::Result.get(id) || {}
+              job.status = 'killed'
+              solution = OptimizerWrapper::Result.get(id)
               if solution && !solution.empty?
                 status 202
-                job.status = 'killed'
                 if solution['csv']
                   present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
                 else
