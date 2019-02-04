@@ -2983,11 +2983,11 @@
             "preprocessing":
             {
                 "prefer_short_segment": true,
-                "use_periodic_heuristic": true
+                "first_solution_strategy": ["periodic"]
             },
             "resolution":
             {
-                "solver_parameter": -1,
+                "solver": false,
                 "duration": 2000000,
                 "initial_time_out": 31500,
                 "time_out_multiplier": 2,
