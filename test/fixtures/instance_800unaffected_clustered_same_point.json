@@ -92548,7 +92548,7 @@
     ],
     "configuration": {
       "preprocessing": {
-        "use_periodic_heuristic": true,
+        "first_solution_strategy": ["periodic"],
         "prefer_short_segment": true,
         "partitions": [{
           "method": "balanced_kmeans",
@@ -92562,7 +92562,7 @@
       },
       "resolution": {
         "same_point_day": true,
-        "solver_parameter": -1,
+        "solver": false,
         "duration": 225000,
         "initial_time_out": 112500,
         "time_out_multiplier": 2,

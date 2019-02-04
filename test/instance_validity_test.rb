@@ -105,8 +105,7 @@ class InstanceValidityTest < Minitest::Test
   end
 
   def test_assert_inapplicable_vroom_with_periodic_heuristic
-    problem = VRP.basic
-    problem[:configuration][:preprocessing][:use_periodic_heuristic] = true
+    problem = VRP.scheduling
 
     assert OptimizerWrapper::VROOM.inapplicable_solve?(FCT.create(problem)).include? :assert_no_planning_heuristic
   end

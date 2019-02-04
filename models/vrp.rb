@@ -28,7 +28,6 @@ module Models
     field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
     field :preprocessing_neighbourhood_size, default: nil
-    field :preprocessing_use_periodic_heuristic, default: false
     field :preprocessing_heuristic_result, defaul: {}
     field :preprocessing_first_solution_strategy, default: nil
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
@@ -146,7 +145,6 @@ module Models
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
-      self.preprocessing_use_periodic_heuristic = preprocessing[:use_periodic_heuristic]
       self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
       self.preprocessing_partitions = preprocessing[:partitions]
       self.preprocessing_heuristic_result = {}
