@@ -84,7 +84,7 @@ module Wrappers
         matrix_indices +
         (!vehicle_loop && vehicle_have_end ? [points[vehicle.end_point_id].matrix_index] : [])
 
-      result = run_vroom(vrp.vehicles, vrp.services, points, vrp.matrices, [:time, :distance], vrp.preprocessing_prefer_short_segment) { |avancement, total|
+      result = run_vroom(vrp.vehicles, vrp.services, points, vrp.matrices, [:time, :distance], vrp.preprocessing_prefer_short_segment, job) { |avancement, total|
         block.call(self, avancement, total, nil, nil) if block
       }
       return if !result
@@ -179,7 +179,7 @@ module Wrappers
       }.delete_if{ |k, v| v.nil? }
     end
 
-    def run_vroom(vehicles, services, points, matrices, dimensions, prefer_short)
+    def run_vroom(vehicles, services, points, matrices, dimensions, prefer_short, job)
       input = Tempfile.new('optimize-vroom-input', tmpdir=@tmp_dir)
       problem = { vehicles:[], jobs:[], matrix:[] }
       vehicle = vehicles.first
@@ -209,7 +209,7 @@ module Wrappers
       output.close
 
       cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}'"
-      puts cmd
+      puts (job ? job + ' - ' : '') + cmd
       system(cmd)
 
       if $?.exitstatus == 0
