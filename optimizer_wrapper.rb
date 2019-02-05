@@ -516,7 +516,7 @@ module OptimizerWrapper
       else
         Result.remove(api_key, e)
       end
-    }.compact
+    }.compact || []
   end
 
   def self.job_kill(api_key, id)
