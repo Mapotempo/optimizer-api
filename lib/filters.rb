@@ -83,7 +83,7 @@ module Filters
         new_timewindows.each{ |tw|
           tw.end = nil if tw.end == Float::INFINITY
         }
-        service.activity.timewindows = new_timewindows.delete_if{ |tw| deleted_timewindows.any?{ |tw2| tw.start == tw2.start && tw.end == tw2.end }}.uniq
+        service.activity.timewindows = new_timewindows
       }
     }
   end
