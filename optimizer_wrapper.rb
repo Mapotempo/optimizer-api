@@ -747,7 +747,7 @@ module OptimizerWrapper
         vehicle[:router_mode].to_sym, vehicle[:router_dimension], segments, vrp.restitution_geometry_polyline, vehicle.router_options)
       raise RouterWrapperError unless details
     end
-    details.each{ |d| d[0] = (d[0] / 1000).round(4) if d[0] }
+    details.each{ |d| d[0] = (d[0] / 1000).round(4) if d[0] } if details
     details
   end
 
