@@ -5785,4 +5785,158 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     assert Interpreters::Assemble.assemble_candidate([service_vrp])
   end
+
+  def test_insert_with_order
+    vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/instance_order.json').to_a.join)['vrp']))
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, vrp, nil)
+    assert result
+    previous_index = nil
+    index_inserted = result[:routes][0][:activities].collect.with_index{ |activity, index| index if !vrp[:relations][0][:linked_ids].include?(activity[:service_id]) }.compact
+    vrp[:relations][0][:linked_ids].each{ |service_id|
+      current_index = result[:routes][0][:activities].find_index{ |activity| activity[:service_id] == service_id}
+      assert (previous_index || -1) < current_index if current_index
+      previous_index = current_index
+    }
+  end
+
+  def test_ordre_with_2_vehicles
+    ortools = OptimizerWrapper::ORTOOLS
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1, 1, 1, 1],
+          [1, 0, 1, 1, 1, 1],
+          [1, 1, 0, 1, 1, 1],
+          [1, 1, 1, 0, 1, 1],
+          [1, 1, 1, 1, 0, 1],
+          [1, 1, 1, 1, 1, 0]
+        ]
+      }],
+      units: [{
+        id: 'unit_0',
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }, {
+        id: 'point_4',
+        matrix_index: 4
+      }, {
+        id: 'point_5',
+        matrix_index: 5
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        cost_time_multiplier: 1,
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        capacities: [{
+          unit_id: 'unit_0',
+          limit: 5
+        }]
+      }, {
+        id: 'vehicle_1',
+        cost_time_multiplier: 1,
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        capacities: [{
+          unit_id: 'unit_0',
+          limit: 5
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          value: 2,
+        }]
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          value: 2,
+        }]
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          value: 1,
+        }]
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_4'
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          value: 2,
+        }]
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_5'
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          value: 2,
+        }]
+      }],
+      routes: [{
+        vehicle_id: 'vehicle_0',
+        mission_ids: ['service_1', 'service_2', 'service_3']
+      }, {
+        vehicle_id: 'vehicle_1',
+        mission_ids: ['service_4', 'service_5']
+      }],
+      relations: [{
+        id: 1,
+        type: 'order',
+        linked_ids: ['service_1', 'service_2', 'service_3']
+      }, {
+        id: 2,
+        type: 'order',
+        linked_ids: ['service_4', 'service_5']
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = ortools.solve(vrp, 'test')
+    vrp[:relations].each_with_index{ |relation, index|
+      previous_index = nil
+      relation[:linked_ids].each{ |service_id|
+        current_index = result[:routes][index][:activities].find_index{ |activity| activity[:service_id] == service_id }
+        assert (previous_index || -1) < current_index if current_index
+        previous_index = current_index
+      }
+    }
+
+  end
 end

@@ -95,7 +95,7 @@ module Wrappers
           mission_ids: relation.linked_ids
         }
         vrp.routes += [order_route]
-      }
+      } if vrp.routes.empty? && order_relations.size == 1
 
       vrp.vehicles.sort!{ |a, b|
         a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
@@ -421,7 +421,11 @@ module Wrappers
         if !route.vehicle.nil? && !route.mission_ids.empty?
           OrtoolsVrp::Route.new(
             vehicle_id: route.vehicle.id,
-            service_ids: route.mission_ids
+            service_ids: route.mission_ids.select{ |mission_id|
+              vrp.services.one? { |service| service.id == mission_id } ||
+              vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
+              vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
+            }.uniq
           )
         end
       }
