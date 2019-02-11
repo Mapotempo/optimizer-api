@@ -464,6 +464,7 @@ module OptimizerWrapper
       sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
       sub_vrp.vehicles = vrp.vehicles.select{ |v| v.id == vehicle.id }
       sub_vrp.services = services
+      sub_vrp.routes = vrp.routes.select{ |route| sub_vrp.vehicles.one?{ |vehicle| vehicle.id == route.vehicle.id }}
       sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id }}}
       sub_vrp.subtours = vrp.subtours
       sub_vrp.configuration = {
