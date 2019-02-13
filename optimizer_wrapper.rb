@@ -772,7 +772,7 @@ module OptimizerWrapper
           r[:total_distance] = details.map(&:first).compact.reduce(:+)
           index = 0
           r[:activities][1..-1].each{ |activity|
-            activity[:travel_distance] = details[index].first
+            activity[:travel_distance] = details[index].first if details[index]
             index += 1
           }
         end
