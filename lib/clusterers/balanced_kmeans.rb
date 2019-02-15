@@ -81,13 +81,11 @@ module Ai4r
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
         balance = if (a[4] && b[4] && b[4] != a[4]) || (a[5] && b[5] && b[5] != a[5]) # if service sticky or skills are different than centroids sticky/skills, or if services skills have no match
           2 ** 32
-        elsif (b[4].nil? || a[4].nil?) && (b[5].nil? || a[5].nil?) && cut_value > @cut_limit
+        elsif cut_value > @cut_limit
           ((cut_value - @cut_limit) / @cut_limit) * 1000 * fly_distance
         else
           0
         end
-        b[4] = a[4] if (b[4].nil? && a[4])
-        b[5] = a[5] if (b[5].nil? && a[5] && !@incompatibility_set.empty?)
 
         fly_distance + balance
       end
