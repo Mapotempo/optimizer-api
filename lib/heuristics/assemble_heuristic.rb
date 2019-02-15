@@ -48,12 +48,9 @@ module Interpreters
 
         # Split using balanced kmeans
         if vrp.services.all?{ |service| service[:activity] }
-          unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration
-
+          unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
           cumulated_metrics = {}
-
           unit_symbols.map{ |unit| cumulated_metrics[unit] = 0 }
-
           data_items = []
 
           vrp.points.each{ |point|
@@ -61,8 +58,14 @@ module Interpreters
             unit_symbols.each{ |unit| unit_quantities[unit] = 0 }
             related_services = vrp.services.select{ |service| service[:activity][:point_id] == point[:id] }
             related_services.each{ |service|
+              unit_quantities[:visits] += 1
+              cumulated_metrics[:visits] += 1
               unit_quantities[:duration] += service[:activity][:duration]
               cumulated_metrics[:duration] += service[:activity][:duration]
+              service.quantities.each{ |quantity|
+                unit_quantities[quantity.unit_id.to_sym] += quantity.value
+                cumulated_metrics[quantity.unit_id.to_sym] += quantity.value
+              }
             }
 
             next if related_services.empty?
@@ -82,18 +85,20 @@ module Interpreters
           start_timer = Time.now
           # Consider only one sticky vehicle
           centroid_indices = []
-          if data_items.any?{ |data| data[4] }
-            vrp.vehicles.each{ |vehicle|
-              data = data_items.find{ |data|
-                data[4] && data[4].include?(vehicle[:id])
-              }
+          skills = build_incompatibility_set(vrp)
+          data_for = Marshal.load(Marshal.dump(data_items))
+
+          if data_items.any?{ |data| data[5] } && !skills.empty?
+            skills.each{ |skill|
+              data = data_for.find{ |data| skill.include?(data[5]) }
               centroid_indices << data_items.index(data)
+              data_for = data_for - [data]
             }
           else
             centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] # really ?
           end
 
-          clusters = SplitClustering::kmeans_process(centroid_indices, 500, 50, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, build_incompatibility_set(vrp))
+          clusters = SplitClustering::kmeans_process(centroid_indices, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, nil)
           end_timer = Time.now
 
           vehicle_list = []
@@ -125,13 +130,11 @@ module Interpreters
       }.flatten
     end
 
-    def self.assemble_heuristic(true_services_vrps, block = nil)
-      services_vrps = Marshal.load(Marshal.dump(true_services_vrps))
-
+    def self.assemble_routes(services_vrps, block)
       all_vrps = kmeans(services_vrps)
       all_vrps.each{ |service_vrp|
         service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration / all_vrps.size
-        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration / all_vrps.size if service_vrp[:vrp].resolution_minimum_duration
+        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration / all_vrps.size
         service_vrp[:vrp].restitution_allow_empty_result = true
         service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
         service_vrp[:vrp].vehicles.each{ |vehicle| vehicle[:free_approach] = true }
@@ -156,14 +159,58 @@ module Interpreters
           } if result
         }.flatten.compact
         service_vrp[:vrp].routes = routes
+        service_vrp[:vrp].relations = routes.collect.with_index{ |route, ind|
+          {
+            id: 'order_' + ind.to_s,
+            type: 'order',
+            linked_ids: route[:mission_ids]
+          }
+        }
         service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration / all_vrps.size
-        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration / all_vrps.size if service_vrp[:vrp].resolution_minimum_duration
+        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration / all_vrps.size
         service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
+        service_vrp[:vrp].vehicles.each{ |vehicle| vehicle[:free_approach] = true }
 
         service_vrp
       }.flatten
 
       services_vrps
+    end
+
+    def self.single_solve(services_vrps)
+      services_vrps.each{ |service_vrp|
+        service_vrp[:vrp].routes = service_vrp[:vrp].vehicles.collect{ |vehicle|
+          {
+            vehicle: {
+              id: vehicle[:id]
+            },
+            mission_ids: service_vrp[:vrp].services.collect{ |service|
+              service.id if service[:sticky_vehicle_ids] && service[:sticky_vehicle_ids].include?(vehicle[:id])
+            }.compact
+          }
+        }
+        service_vrp[:vrp].relations = service_vrp[:vrp].vehicles.collect.with_index{ |vehicle, index|
+          {
+            id: 'order_' + index.to_s,
+            type: 'order',
+            linked_ids: service_vrp[:vrp].routes[index][:mission_ids]
+          }
+        }
+        service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
+      }
+
+      services_vrps
+    end
+
+    def self.assemble_heuristic(true_services_vrps, block = nil)
+      if true_services_vrps.all?{ |service_vrp| service_vrp[:vrp].services.all?{ |service| service[:sticky_vehicle_ids] }}
+      elsif true_services_vrps.any?{ |service_vrp| service_vrp[:vrp].services.any?{ |service| service[:sticky_vehicle_ids] }}
+        single_solve(true_services_vrps)
+      else
+        assemble_routes(true_services_vrps, block)
+      end
+
+      true_services_vrps
     end
 
     def self.assemble_candidate(services_vrps)
