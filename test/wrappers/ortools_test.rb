@@ -5937,6 +5937,84 @@ class Wrappers::OrtoolsTest < Minitest::Test
         previous_index = current_index
       }
     }
+  end
 
+  def test_regroup_timewindows
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0,
+          day_index: 0
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          late_multiplier: 0,
+          timewindows: [{
+            start: 0,
+            end: 2,
+            day_index: 0
+          },
+          {
+            start: 2,
+            end: 5,
+            day_index: 0
+          }]
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+          late_multiplier: 0,
+          timewindows: [{
+            start: 0,
+            end: 2,
+            day_index: 0
+          },
+          {
+            start: 4,
+            end: 5,
+            day_index: 0
+          }]
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        },
+        schedule:{
+          range_indices:{
+            start: 0,
+            end: 1
+          }
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert result[:routes][0][:activities].find{ |activity| activity[:service_id] == 'service_1_1_1' }[:detail][:timewindows].size == 1
   end
 end

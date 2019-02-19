@@ -65,13 +65,11 @@ module Filters
                 main_tw.end = [main_tw.end, to_group_tw.end].max
                 equivalent[deleted_timewindows.last] = Marshal.load(Marshal.dump(main_tw))
                 new_timewindows << Marshal.load(Marshal.dump(main_tw))
-                new_timewindows << Marshal.load(Marshal.dump(to_group_tw))
               else
                 deleted_timewindows << Marshal.load(Marshal.dump(to_group_tw))
                 to_group_tw.start = [main_tw.start, to_group_tw.start].min
                 to_group_tw.end = [main_tw.end, to_group_tw.end].max
                 equivalent[deleted_timewindows.last] = Marshal.load(Marshal.dump(to_group_tw))
-                new_timewindows << Marshal.load(Marshal.dump(main_tw))
                 new_timewindows << Marshal.load(Marshal.dump(to_group_tw))
               end
             else
