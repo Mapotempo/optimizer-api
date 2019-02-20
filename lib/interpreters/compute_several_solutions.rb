@@ -150,7 +150,7 @@ module Interpreters
           times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
         }
-        raise DiscordantProblemError.new('Heuristics selected through first_solution_strategy parameter did not provide a solution') if first_results.all?{ |res| res.nil? }
+        raise RuntimeError.new('No solution found') if first_results.all?{ |res| res.nil? }
         synthesis = []
         first_results.each_with_index{ |result, i|
           synthesis << {
