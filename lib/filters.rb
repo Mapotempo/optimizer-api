@@ -15,73 +15,61 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+require './models/timewindow.rb'
+
 module Filters
   def self.filter(services_vrps)
-    services_vrps = group_tws(services_vrps)
+    services_vrps = merge_timewindows(services_vrps)
 
     services_vrps
   end
 
-  def self.group_tws(services_vrps)
+  def self.merge_timewindows(services_vrps)
+
     services_vrps.each{ |service_vrp|
       service_vrp[:vrp].services.each{ |service|
         next if !service.activity
+        unified_timewindows = {}
+        inter = {}
         new_timewindows = []
-        deleted_timewindows = []
-        equivalent = {}
-        service.activity.timewindows.each_with_index{ |activity_tw1, i1|
-          tw1 = Marshal.load(Marshal.dump(activity_tw1))
-          if deleted_timewindows.include?(tw1) && equivalent[tw1]
-            tw1 = Marshal.load(Marshal.dump(equivalent[tw1]))
-          end
-          tw1.start = 0 if tw1.start.nil?
-          tw1.end = Float::INFINITY if tw1.end.nil?
-
-          if service.activity.timewindows.size == 1
-            new_timewindows << Marshal.load(Marshal.dump(tw1))
-          end
-          service.activity.timewindows.slice(i1 + 1, service.activity.timewindows.size).each{ |activity_tw2|
-            tw2 = Marshal.load(Marshal.dump(activity_tw2))
-            tw2.start = 0 if tw2.start.nil?
-            tw2.end = Float::INFINITY if tw2.end.nil?
-            compatible_day = tw1.day_index == tw2.day_index || tw1.day_index.nil? || tw2.day_index.nil?
-
-            if compatible_day && (tw2.start.between?(tw1.start, tw1.end) || tw1.start.between?(tw2.start, tw2.end))
-              main_tw = tw1
-              to_group_tw = tw2
-              if tw1.start.between?(tw2.start, tw2.end)
-                main_tw = tw2
-                to_group_tw = tw1
-              end
-
-              if main_tw.day_index.nil? && to_group_tw.day_index.nil? || (!main_tw.day_index.nil? && !to_group_tw.day_index.nil?)
-                deleted_timewindows << Marshal.load(Marshal.dump(main_tw))
-                main_tw.end = [main_tw.end, to_group_tw.end].max
-                equivalent[deleted_timewindows.last] = Marshal.load(Marshal.dump(main_tw))
-                new_timewindows << Marshal.load(Marshal.dump(main_tw))
-                deleted_timewindows << to_group_tw
-              elsif main_tw.day_index
-                deleted_timewindows << Marshal.load(Marshal.dump(main_tw))
-                main_tw.end = [main_tw.end, to_group_tw.end].max
-                equivalent[deleted_timewindows.last] = Marshal.load(Marshal.dump(main_tw))
-                new_timewindows << Marshal.load(Marshal.dump(main_tw))
-              else
-                deleted_timewindows << Marshal.load(Marshal.dump(to_group_tw))
-                to_group_tw.start = [main_tw.start, to_group_tw.start].min
-                to_group_tw.end = [main_tw.end, to_group_tw.end].max
-                equivalent[deleted_timewindows.last] = Marshal.load(Marshal.dump(to_group_tw))
-                new_timewindows << Marshal.load(Marshal.dump(to_group_tw))
-              end
-            else
-              new_timewindows << Marshal.load(Marshal.dump(tw1))
-              new_timewindows << Marshal.load(Marshal.dump(tw2))
-            end
+        if service.activity.timewindows.size > 1
+          service.activity.timewindows.each.with_index{ |timewindow, index|
+            unified_timewindows[timewindow.id] = {
+              start: timewindow.start && ((timewindow.day_index || 0) * 86400 + timewindow.start) || (0 + (day_index || 0) * 86400),
+              end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end)  || (0 + (1 + (day_index || 6)) * 86400)
+            }
+            inter[timewindow.id] = []
           }
-        }
-        new_timewindows.each{ |tw|
-          tw.end = nil if tw.end == Float::INFINITY
-        }
-        service.activity.timewindows = new_timewindows
+          unified_timewindows.each{ |key, value|
+            unified_timewindows.each{ |s_key, s_value|
+              next if key == s_key || s_value.include?(key) || value.include?(s_key)
+              if !((value[:start]..value[:end]).to_a & (s_value[:start]..s_value[:end]).to_a).empty?
+                inter[key].each{ |k_value| inter[k_value] << s_key }
+                inter[s_key].each{ |k_value| inter[k_value] << key }
+                inter[key] << s_key
+                inter[s_key] << key
+              end
+            }
+          }
+          to_merge_ids = []
+          if inter.any?{ |key, value| !value.empty? }
+            inter.each{ |key, value|
+              to_merge_ids = ([key] + value).uniq
+              to_merge_ids.each{ |id| inter.delete(id) }
+              inter.delete(to_merge_ids)
+              to_merge_tws = service.activity.timewindows.select{ |timewindow| to_merge_ids.include?(timewindow.id)}
+              day_indices = to_merge_tws.collect{ |tw| tw.day_index }
+              starts = to_merge_tws.collect{ |tw| tw.start }
+              ends = to_merge_tws.collect{ |tw| tw.end }
+              earliest_day_index = day_indices.include?(nil) ? nil : day_indices.min
+              latest_day_index = day_indices.include?(nil) ? nil : day_indices.max
+              earliest_start = starts.include?(nil)? nil : starts.min
+              latest_end = ends.include?(nil)? nil: ends.max
+              new_timewindows << Models::Timewindow.new(start: earliest_start, end: latest_end, day_index:earliest_day_index)
+            }
+            service.activity.timewindows = new_timewindows
+          end
+        end
       }
     }
   end
