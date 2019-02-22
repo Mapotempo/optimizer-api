@@ -6035,4 +6035,68 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
     assert result[:routes][0][:activities].find{ |activity| activity[:service_id] == 'service_1_1_1' }[:detail][:timewindows].size == 1
   end
+
+  def test_subproblem_with_one_vehicle_and_service
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5],
+          [4, 0, 4],
+          [8, 4, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        timewindow: {
+          start: 0,
+          end: 10
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+          late_multiplier: 0,
+          timewindows: [{
+            start: 0,
+            end: 2,
+          }]
+        }
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2',
+          late_multiplier: 0,
+          duration: 3,
+          timewindows: [{
+            start: 0,
+            end: 6,
+          }]
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 10,
+        }
+      }
+    }
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert result
+    assert result[:cost].nil?
+  end
 end
