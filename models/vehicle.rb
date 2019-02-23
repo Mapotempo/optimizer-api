@@ -58,6 +58,7 @@ module Models
 
     field :force_start, default: false
     field :shift_preference, default: :minimize_span
+    field :trips, default: nil
     field :duration, default: nil
     field :overall_duration, default: nil
     field :distance, default: nil
@@ -90,6 +91,7 @@ module Models
     validates_numericality_of :global_day_index, allow_nil: true
     validates_inclusion_of :router_dimension, in: %w( time distance )
     validates_inclusion_of :shift_preference, in: %w( force_start force_end minimize_span )
+    validates_numericality_of :trips, greater_than_or_equal_to: 0
     validates_numericality_of :speed_multiplier
     validates_numericality_of :duration, greater_than_or_equal_to: 0
     validates_numericality_of :overall_duration, greater_than_or_equal_to: 0

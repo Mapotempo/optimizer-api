@@ -158,6 +158,7 @@ module Api
         this.optional(:additional_service, type: Float, desc: 'Constant additional service time for all travel defined in the tour, for this vehicle')
         this.optional(:force_start, type: Boolean, desc: '[ DEPRECATED v0.3]')
         this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open, as late as possible or let vehicule start at any time. Not available with periodic heuristic.')
+        this.optional(:trips, type: Integer, desc: 'Describe the number of return to the depot a vehicle is allowed to perform within its route')
 
         this.optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
         this.optional(:value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index.')

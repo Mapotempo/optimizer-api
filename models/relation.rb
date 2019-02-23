@@ -28,6 +28,6 @@ module Models
 
     validates_numericality_of :lapse, allow_nil: true
     validates_numericality_of :periodicity, greater_than_or_equal_to: 1
-    validates_inclusion_of :type, :in => %i(same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse force_first never_first force_end vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months)
+    validates_inclusion_of :type, :in => %i(same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse force_first never_first force_end vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months vehicle_trips)
   end
 end
