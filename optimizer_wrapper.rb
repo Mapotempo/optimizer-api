@@ -487,8 +487,8 @@ module OptimizerWrapper
           time_out_multiplier: vrp.resolution_time_out_multiplier
         }
       }
-      sub_vrp
-    } : [vrp]
+      sub_vrp if !sub_vrp.services.empty?
+    }.compact : [vrp]
   end
 
   def self.join_vrps(services_vrps, callback)
