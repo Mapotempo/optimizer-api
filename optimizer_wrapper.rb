@@ -265,10 +265,10 @@ module OptimizerWrapper
           vrp = config[:services][service].simplify_constraints(vrp)
 
           if !vrp.services.empty? || !vrp.shipments.empty? || !vrp.rests.empty?
+            File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
+
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp)
-
-            File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
 
             if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver
               block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
