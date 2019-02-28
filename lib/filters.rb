@@ -35,15 +35,15 @@ module Filters
         if service.activity.timewindows.size > 1
           service.activity.timewindows.each.with_index{ |timewindow, index|
             unified_timewindows[timewindow.id] = {
-              start: timewindow.start && ((timewindow.day_index || 0) * 86400 + timewindow.start) || (0 + (day_index || 0) * 86400),
-              end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end)  || (0 + (1 + (day_index || 6)) * 86400)
+              start: timewindow.start && ((timewindow.day_index || 0) * 86400 + timewindow.start) || (0 + (timewindow.day_index || 0) * 86400),
+              end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end)  || (0 + (1 + (timewindow.day_index || 6)) * 86400)
             }
             inter[timewindow.id] = []
           }
           unified_timewindows.each{ |key, value|
             unified_timewindows.each{ |s_key, s_value|
               next if key == s_key || s_value.include?(key) || value.include?(s_key)
-              if !((value[:start]..value[:end]).to_a & (s_value[:start]..s_value[:end]).to_a).empty?
+              if !((value[:start].to_i..value[:end].to_i).to_a & (s_value[:start].to_i..s_value[:end].to_i).to_a).empty?
                 inter[key].each{ |k_value| inter[k_value] << s_key }
                 inter[s_key].each{ |k_value| inter[k_value] << key }
                 inter[key] << s_key
