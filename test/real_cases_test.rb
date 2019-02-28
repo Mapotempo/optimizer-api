@@ -26,7 +26,7 @@ class RealCasesTest < Minitest::Test
     # ########## TEST PATTERN
     # ##################################
     # def test_***
-    #   vrp = ENV['DUMP_VRP'] ? 
+    #   vrp = ENV['DUMP_VRP'] ?
     #     Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
     #     Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
     #   result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
@@ -47,9 +47,10 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - 25 services with time window - dimension distance car - no late for vehicle
     def test_ortools_one_route_without_rest
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -57,7 +58,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, result[:routes].size
 
       # Check activities
-      assert_equal vrp.services.size + 2, result[:routes][0][:activities].size
+      assert_equal check_vrp.services.size + 2, result[:routes][0][:activities].size
 
       # Check total distance
       assert result[:total_distance] < 150000, "Too long distance: #{result[:total_distance]}"
@@ -68,9 +69,10 @@ class RealCasesTest < Minitest::Test
 
     # Strasbourg - 107 services with few time windows - dimension distance car - late for services & vehicles
     def test_ortools_one_route_without_rest_2
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -78,7 +80,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, result[:routes].size
 
       # Check activities
-      assert_equal vrp.services.size + 2, result[:routes][0][:activities].size
+      assert_equal check_vrp.services.size + 2, result[:routes][0][:activities].size
 
       # Check total distance
       assert result[:total_distance] < 265000, "Too long distance: #{result[:total_distance]}"
@@ -89,9 +91,10 @@ class RealCasesTest < Minitest::Test
 
     # Béziers - 203 services with time window - dimension time car - late for services & vehicles - force start and no wait cost
     def test_ortools_one_route_many_stops
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -99,7 +102,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, result[:routes].size
 
       # Check activities
-      assert_equal vrp.services.size + 2, result[:routes][0][:activities].size
+      assert_equal check_vrp.services.size + 2, result[:routes][0][:activities].size
 
       # Check total travel time
       assert result[:routes][0][:total_travel_time] < 21050, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
@@ -110,9 +113,10 @@ class RealCasesTest < Minitest::Test
 
     # Lyon - 65 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_one_route_with_rest
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -120,7 +124,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, result[:routes].size
 
       # Check activities
-      assert_equal vrp.services.size + 2 + 1, result[:routes][0][:activities].size
+      assert_equal check_vrp.services.size + 2 + 1, result[:routes][0][:activities].size
 
       # Check total travel time
       assert result[:routes][0][:total_travel_time] < 25000, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
@@ -138,6 +142,7 @@ class RealCasesTest < Minitest::Test
       vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -147,20 +152,21 @@ class RealCasesTest < Minitest::Test
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 5000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
       # Check activities
-      assert_equal vrp.services.size + 2 + 1, result[:routes][0][:activities].size
+      assert_equal check_vrp.services.size + 2 + 1, result[:routes][0][:activities].size
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Lyon - 769 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_ten_routes_with_rest
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
       services_by_routes.each{ |k, v|
         assert_equal v.size, result[:routes].find{ |r| r[:vehicle_id] == k[0] }[:activities].select{ |a| a[:service_id] }.size
@@ -178,7 +184,7 @@ class RealCasesTest < Minitest::Test
 
     # Lille - 141 services with time window and quantity - no late for services
     def test_ortools_global_six_routes_without_rest
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
@@ -200,13 +206,14 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - 81 services with time window - late for services & vehicles
     def test_ortools_global_ten_routes_without_rest
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
       assert_equal 4, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
@@ -220,9 +227,10 @@ class RealCasesTest < Minitest::Test
 
     # Angers - Route duration and vehicle timewindow are identical
     def test_ortools_global_with_identical_route_duration_and_vehicle_window
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -233,13 +241,13 @@ class RealCasesTest < Minitest::Test
       assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service88' || unassigned[:service_id] == 'service89' }
       assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1169'}
       assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183'}
-      assert_equal vrp.services.size - 6, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp.services.size - 6, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
       assert_equal 29, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 176000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 176000, "Too long travel time:# {result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 8000, "Too long elapsed time: #{result[:elapsed]}"
@@ -250,13 +258,14 @@ class RealCasesTest < Minitest::Test
       vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].select{ |u| u[:reason].nil? }.size
+      assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].size
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       assert_equal 1, result[:unassigned].select{ |u| !u[:reason].nil? }.size
-      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
+      services_by_routes = check_vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 6300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
@@ -267,14 +276,15 @@ class RealCasesTest < Minitest::Test
 
     # Haute-Savoie - A single route with a visit with 2 open timewindows (0 ; x] [y ; ∞)
     def test_ortools_open_timewindows
-      vrp = ENV['DUMP_VRP'] ? 
+      vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
+      assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      services_by_routes = check_vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 13000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
@@ -288,10 +298,11 @@ class RealCasesTest < Minitest::Test
       vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       expected_ids = vrp.relations.first.linked_ids
@@ -346,10 +357,11 @@ class RealCasesTest < Minitest::Test
       vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       assert 2 <= result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_eugene_leroy' }.size }.reduce(&:+)
 
       # Check total cost
@@ -364,10 +376,11 @@ class RealCasesTest < Minitest::Test
       vrp = ENV['DUMP_VRP'] ?
         Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
         Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       assert 2 <= result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_thiers' }.size }.reduce(&:+)
 
       # Check total cost
