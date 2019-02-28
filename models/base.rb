@@ -50,9 +50,9 @@ module Models
           if val.is_a?(c)
             val
           else
-            c.create(val)
+            c.create(val) if !val.empty?
           end
-        }) || []
+        }.compact) || []
       end
 
       define_method("#{name}+=") do |vals|
@@ -62,9 +62,9 @@ module Models
           if val.is_a?(c)
             val
           else
-            c.create(val)
+            c.create(val) if !val.empty?
           end
-        }) || []
+        }.compact) || []
       end
 
       define_method("#{name[0..-2]}_ids=") do |vals|
