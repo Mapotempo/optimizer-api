@@ -190,27 +190,17 @@ module Interpreters
               new_service.activity.timewindows = if !service.activity.timewindows.empty?
                 new_timewindows = service.activity.timewindows.collect{ |timewindow|
                   if timewindow.day_index
-                    {
-                      id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
-                      start: timewindow[:start] + timewindow.day_index * 86400,
-                      end: timewindow[:end] + timewindow.day_index * 86400
-                    }.delete_if { |k, v| !v }
+                    Models::Timewindow.new(start: timewindow.start + timewindow.day_index * 86400,
+                                           end: timewindow.end + timewindow.day_index * 86400)
                   elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
                     (0..[6, @schedule_end].min).collect{ |day_index|
-                      {
-                        id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
-                        start: timewindow[:start] + (day_index).to_i * 86400,
-                        end: timewindow[:end] + (day_index).to_i * 86400
-                      }.delete_if { |k, v| !v }
+                      Models::Timewindow.new(start: timewindow.start + (day_index).to_i * 86400,
+                                             end: timewindow.end + (day_index).to_i * 86400)
                     }
                   else
-                    {
-                      id: (timewindow[:id] if timewindow[:id] && !timewindow[:id].nil?),
-                      start: timewindow[:start],
-                      end: timewindow[:end]
-                    }.delete_if { |k, v| !v }
+                    Models::Timewindow.new(start: timewindow.start, end: timewindow.end)
                   end
-                }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
+                }.flatten.sort_by{ |timewindow| timewindow.start }.compact.uniq
                 if new_timewindows.size > 0
                   new_timewindows
                 end
@@ -295,25 +285,22 @@ module Interpreters
               new_shipment.pickup.timewindows = if !shipment.pickup.timewindows.empty?
                 new_timewindows = shipment.pickup.timewindows.collect{ |timewindow|
                   if timewindow.day_index
-                    {
-                      id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
+                    Models::Timewindow.new(
                       start: timewindow[:start] + timewindow.day_index * 86400,
                       end: timewindow[:end] + timewindow.day_index * 86400
-                    }.delete_if { |k, v| !v }
+                    )
                   elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
                     (0..[6, @schedule_end].min).collect{ |day_index|
-                      {
-                        id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
+                      Models::Timewindow.new(
                         start: timewindow[:start] + (day_index).to_i * 86400,
                         end: timewindow[:end] + (day_index).to_i * 86400
-                      }.delete_if { |k, v| !v }
+                      )
                     }
                   else
-                    {
-                      id: (timewindow[:id] if timewindow[:id] && !timewindow[:id].nil?),
+                    Models::Timewindow.new(
                       start: timewindow[:start],
                       end: timewindow[:end]
-                    }.delete_if { |k, v| !v }
+                    )
                   end
                 }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
                 if new_timewindows.size > 0
@@ -324,27 +311,17 @@ module Interpreters
               new_shipment.delivery.timewindows = if !shipment.delivery.timewindows.empty?
                 new_timewindows = shipment.delivery.timewindows.collect{ |timewindow|
                   if timewindow.day_index
-                    {
-                      id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
-                      start: timewindow[:start] + timewindow.day_index * 86400,
-                      end: timewindow[:end] + timewindow.day_index * 86400
-                    }.delete_if { |k, v| !v }
+                    Models::Timewindow.new(start: timewindow.start + timewindow.day_index * 86400,
+                                           end: timewindow.end + timewindow.day_index * 86400)
                   elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
                     (0..[6, @schedule_end].min).collect{ |day_index|
-                      {
-                        id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
-                        start: timewindow[:start] + (day_index).to_i * 86400,
-                        end: timewindow[:end] + (day_index).to_i * 86400
-                      }.delete_if { |k, v| !v }
+                      Models::Timewindow.new(start: timewindow.start + (day_index).to_i * 86400,
+                                             end: timewindow.end + (day_index).to_i * 86400)
                     }
                   else
-                    {
-                      id: (timewindow[:id] if timewindow[:id] && !timewindow[:id].nil?),
-                      start: timewindow[:start],
-                      end: timewindow[:end]
-                    }.delete_if { |k, v| !v }
+                    Models::Timewindow.new(start: timewindow.start, end: timewindow.end)
                   end
-                }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
+                }.flatten.sort_by{ |timewindow| timewindow.start }.compact.uniq
                 if new_timewindows.size > 0
                   new_timewindows
                 end
