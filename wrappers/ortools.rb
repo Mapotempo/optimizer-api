@@ -339,7 +339,7 @@ module Wrappers
 
         v_type_checksum = Digest::MD5.hexdigest(Marshal.dump(v_type_id))
         v_type_index = v_types.index(v_type_checksum)
-        if v_type_index &&
+        if v_type_index
           vehicle.type_index = v_type_index
         else
           vehicle.type_index = v_types.size
