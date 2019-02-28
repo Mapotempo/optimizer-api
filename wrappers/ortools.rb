@@ -166,7 +166,7 @@ module Wrappers
           },
           problem_index: service_index,
         )
-        elsif
+        elsif service.activities
           service.activities.each{ |possible_activity|
             services << OrtoolsVrp::Service.new(
               time_windows: possible_activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
@@ -214,13 +214,13 @@ module Wrappers
             end
           }.compact
         end
-        relations <<  OrtoolsVrp::Relation.new(
+        relations << OrtoolsVrp::Relation.new(
           type: "shipment",
           linked_ids: [shipment.id + "pickup", shipment.id + "delivery"],
           lapse: -1
         )
         if shipment.maximum_inroute_duration && shipment.maximum_inroute_duration > 0
-          relations <<  OrtoolsVrp::Relation.new(
+          relations << OrtoolsVrp::Relation.new(
             type: "maximum_duration_lapse",
             linked_ids: [shipment.id + "pickup", shipment.id + "delivery"],
             lapse: shipment.maximum_inroute_duration
@@ -507,7 +507,7 @@ module Wrappers
       {
         lat: point && point.location && point.location.lat,
         lon: point && point.location && point.location.lon,
-        skills: job && job.skills ,
+        skills: job && job.skills,
         setup_duration: activity && activity.setup_duration,
         duration: activity && activity.duration,
         additional_value: activity && activity.additional_value,
@@ -600,7 +600,7 @@ module Wrappers
             earliest_start = activity['start_time'] || 0
             if activity['type'] == 'start'
               load_status = build_quantities(nil, activity_loads)
-              if  vehicle.start_point
+              if vehicle.start_point
                 previous_index = points[vehicle.start_point.id].matrix_index
                 {
                   point_id: vehicle.start_point.id,
@@ -608,7 +608,7 @@ module Wrappers
                   detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
                 }.delete_if{ |k,v| !v }
               end
-            elsif activity['type'] == 'end'  && vehicle.end_point
+            elsif activity['type'] == 'end' && vehicle.end_point
               vehicle.end_point && {
                 point_id: vehicle.end_point.id,
                 begin_time: earliest_start,
