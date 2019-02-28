@@ -449,11 +449,6 @@ module Wrappers
       (vrp.preprocessing_partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.preprocessing_partitions.size)
     end
 
-    def assert_first_partitions_entity_is_vehicle(vrp)
-      hierarchical_or_kmeans_partitions = vrp.preprocessing_partitions.select{ |p| %w[hierarchical_tree balanced_kmeans].include? p[:method] }
-      hierarchical_or_kmeans_partitions.empty? || hierarchical_or_kmeans_partitions.first.entity == 'vehicle'
-    end
-
     def assert_no_relation_with_scheduling_heuristic(vrp)
       (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic')) || (!vrp.relations || vrp.relations.empty?)
     end

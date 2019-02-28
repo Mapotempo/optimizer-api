@@ -68,7 +68,7 @@ module Interpreters
             when 'balanced_kmeans'
               generated_vrps = current_vrps.collect{ |s_v|
                 current_vrp = s_v[:vrp]
-                current_vrp.vehicles = list_vehicles(current_vrp.vehicles.first) if partition[:entity] == 'work_day'
+                current_vrp.vehicles = list_vehicles(current_vrp.vehicles) if partition[:entity] == 'work_day'
                 split_balanced_kmeans(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
               }
               current_vrps = generated_vrps.flatten
@@ -283,27 +283,28 @@ module Interpreters
         end
         iteration += 1
       end
-
       clusters
     end
 
-    def self.list_vehicles(vehicle)
+    def self.list_vehicles(vehicles)
       vehicle_list = []
-      if vehicle[:timewindow]
-        (0..6).each{ |day|
-          tw = Marshal::load(Marshal.dump(vehicle[:timewindow]))
-          tw[:day_index] = day
-          new_vehicle = Marshal::load(Marshal.dump(vehicle))
-          new_vehicle[:timewindow] = tw
-          vehicle_list << new_vehicle
-        }
-      elsif vehicle[:sequence_timewindows]
-        vehicle[:sequence_timewindows].each{ |tw|
-          new_vehicle = Marshal::load(Marshal.dump(vehicle))
-          new_vehicle[:sequence_timewindows] = [tw]
-          vehicle_list << new_vehicle
-        }
-      end
+      vehicles.each{ |vehicle|
+        if vehicle[:timewindow]
+          (0..6).each{ |day|
+            tw = Marshal::load(Marshal.dump(vehicle[:timewindow]))
+            tw[:day_index] = day
+            new_vehicle = Marshal::load(Marshal.dump(vehicle))
+            new_vehicle[:timewindow] = tw
+            vehicle_list << new_vehicle
+          }
+        elsif vehicle[:sequence_timewindows]
+          vehicle[:sequence_timewindows].each{ |tw|
+            new_vehicle = Marshal::load(Marshal.dump(vehicle))
+            new_vehicle[:sequence_timewindows] = [tw]
+            vehicle_list << new_vehicle
+          }
+        end
+      }
       vehicle_list
     end
 
