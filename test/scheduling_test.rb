@@ -138,4 +138,21 @@ class HeuristicTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
     assert result[:unassigned].first[:service_id] == 'service_1_0_0'
   end
+
+  def test_visit_every_day
+    problem = VRP.scheduling
+    problem[:services].first[:visits_number] = 1
+    problem[:services].first[:activity][:timewindows] = [{start: 0, end: 10, day_index: 1}]
+    problem[:vehicles].first[:timewindow] = nil
+    problem[:vehicles].first[:sequence_timewindows] = [{start: 0, end: 100, day_index: 2}]
+    problem[:configuration][:schedule] = {
+      range_indices: {
+        start: 0,
+        end: 2
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    assert result[:unassigned].first[:service_id] == "service_1_1_1"
+  end
 end
