@@ -66,6 +66,14 @@ module Ai4r
         self
       end
 
+      def recompute_centroids
+        @old_centroids = @centroids
+        data_size = @centroids.collect{ |data| data[6] }
+        @iterations += 1
+        @centroids = @centroid_function.call(@clusters)
+        @centroids.each_with_index{ |data, index| data[6] = data_size[index] }
+      end
+
       # Classifies the given data item, returning the cluster index it belongs
       # to (0-based).
       def eval(data_item)
@@ -79,10 +87,17 @@ module Ai4r
       def distance(a, b, cluster_index)
         fly_distance = Helper::flying_distance(a, b)
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
+        # b[6] contains the weight associated to the current centroid. share represents the sum of all of the weight over the problem.
+        share = @centroids.collect{ |centroid| centroid[6] }.sum if b[6]
+        limit = if @cut_limit.is_a? Array
+          @cut_limit[cluster_index]
+        else
+          @cut_limit
+        end
         balance = if (a[4] && b[4] && b[4] != a[4]) || (a[5] && b[5] && b[5] != a[5]) # if service sticky or skills are different than centroids sticky/skills, or if services skills have no match
           2 ** 32
-        elsif cut_value > @cut_limit
-          ((cut_value - @cut_limit) / @cut_limit) * 1000 * fly_distance
+        elsif cut_value > limit
+          ((cut_value - limit) / limit) * 1000 * fly_distance
         else
           0
         end
@@ -101,7 +116,11 @@ module Ai4r
           @clusters[c] << data_item
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
-            @cluster_metrics[c][unit] += data_item[3][unit]
+            if unit == :visits
+              @cluster_metrics[c][unit] += data_item[3][unit]
+            else
+              @cluster_metrics[c][unit] += data_item[3][unit] * data_item[3][:visits]
+            end
           }
         end
         manage_empty_clusters if has_empty_cluster?
