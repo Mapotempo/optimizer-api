@@ -95,7 +95,8 @@ module Interpreters
           when 'balanced_kmeans'
             generated_vrps = current_vrps.collect{ |s_v|
               current_vrp = s_v[:vrp]
-              current_vrp.vehicles = list_vehicles([current_vrp.vehicles.first]) if partition[:entity] == 'work_day'
+              current_vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
+              current_vrp.vehicles = list_vehicles(current_vrp.vehicles) if partition[:entity] == 'work_day'
               split_balanced_kmeans(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
             }
             current_vrps = generated_vrps.flatten
@@ -275,7 +276,6 @@ module Interpreters
           cumulated_metrics[:visits] += 1
           unit_quantities[:duration] += service[:activity][:duration] * service[:visits_number]
           cumulated_metrics[:duration] += service[:activity][:duration] * service[:visits_number]
-
           service.quantities.each{ |quantity|
             unit_quantities[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
             cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * service[:visits_number]
@@ -288,7 +288,7 @@ module Interpreters
         end
 
         next if related_services.empty?
-        data_items << [point.location.lat, point.location.lon, point.id, unit_quantities]
+        data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, nil, nil]
       }
 
       if max_cut_metrics
@@ -374,7 +374,7 @@ module Interpreters
 
     def self.assign_vehicle_to_clusters(vehicles, points, clusters, entity = '', kmeans = true)
       vehicle_for_cluster = {}
-      if entity == 'work_day'
+      if entity == 'work_day' || entity == 'vehicle' && vehicles.collect{ |vehicle| vehicle[:sequence_timewindows] && vehicle[:sequence_timewindows].size }.compact.uniq.size > 1
         vehicles.each_with_index{ |vehicle, i|
           vehicle_for_cluster[i] = vehicle
         }
@@ -465,9 +465,23 @@ module Interpreters
         unit_symbols.map{ |unit| cumulated_metrics[unit] = 0 }
 
         data_items, cumulated_metrics = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
-
+        centroids = []
+        limits = []
+        if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
+          vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
+          share = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum if entity == 'vehicle'
+          vrp.vehicles.each_with_index{ |vehicle, index|
+            centroids << index
+            data_items[index][6] = vehicle[:sequence_timewindows].size
+            limits << cumulated_metrics[cut_symbol].to_f / (share.to_f / data_items[index][6].to_f)
+          }
+        else
+          limits = cumulated_metrics[cut_symbol] / nb_clusters
+        end
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
-        clusters = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
+
+        clusters = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
+        clusters.sort_by!{ |cluster| cluster.data_items.size }
         clusters.delete_if{ |cluster| cluster.data_items.empty? }
         vehicle_for_cluster = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
         sub_pbs = create_sub_pbs(service_vrp, vrp, clusters)
