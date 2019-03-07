@@ -563,15 +563,6 @@ module Wrappers
         return unfeasible
       end
 
-      vrp.services.each{ |service|
-        add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky_ids') if service[:skills] &&
-        !service[:skills].empty? && service[:sticky_vehicle_ids] && vrp.vehicles.none?{ |vehicle|
-          service[:skills].all?{ |skill|
-            vehicle[:skills] && !vehicle[:skills].first.empty? && vehicle[:skills].first.include?(skill)
-          } && service[:sticky_vehicle_ids].include?(vehicle[:id])
-        }
-      }
-
       # check enough capacity
       if vrp[:units] && !vrp[:units].empty?
         # compute vehicle capacities
@@ -669,6 +660,17 @@ module Wrappers
           add_unassigned(unfeasible, vrp, service, 'Visits number is 0')
         end
       }
+
+      #When every service have a single sticky vehicle, the problem is cutted and skills doesn't matter
+      if vrp.services.any?{ |service| service.sticky_vehicles && service.sticky_vehicles.size != 0 } &&
+         vrp.services.any?{ |service| service.sticky_vehicles && service.sticky_vehicles.size != 1 }
+        vrp.services.each{ |service|
+          if service.sticky_vehicles && service.skills && !service.skills.empty? &&
+             service.sticky_vehicles.all?{ |vehicle| vehicle.skills.none?{ |alternative| (service.skills & alternative).size == service.skills.size}}
+            add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky_ids')
+          end
+        }
+      end
 
       unfeasible
     end
