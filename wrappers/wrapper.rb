@@ -540,7 +540,8 @@ module Wrappers
         next if service.visits_number > 0 && index == 0
         {
           original_service_id: service[:id],
-          service_id: "#{service.id}_#{index}_#{service.visits_number}",
+          service_id: ((vrp.schedule_range_indices.nil? || vrp.schedule_range_indices.empty?) &&
+                       (vrp.schedule_range_date.nil? || vrp.schedule_range_date.empty?)) ? service[:id] : "#{service.id}_#{index}_#{service.visits_number}",
           point_id: service[:activity] ? service[:activity][:point_id] : nil,
           detail:{
             lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
