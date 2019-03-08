@@ -346,10 +346,22 @@ module OptimizerWrapper
   end
 
   def self.split_vrp(vrp)
-    # Don't split vrp in case of dump to compute matrix if needed
-    (!ENV['DUMP_VRP'] && vrp.vehicles.size > 1 && vrp.services.size > 1 && vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }) ? vrp.vehicles.map{ |vehicle|
-      sub_vrp = ::Models::Vrp.create({}, false)
+    # Don't split vrp if
+    return [vrp] if ENV['DUMP_VRP'] || # Dump to compute matrix is needed
+                    (vrp.vehicles.size <= 1) ||
+                    (vrp.services.empty? && vrp.shipments.empty?) || # there might be zero services or shipments (check together)
+                    !vrp.services.all?{ |s| s.sticky_vehicles.size == 1 } ||
+                    !vrp.shipments.all?{ |s| s.sticky_vehicles.size == 1 }
+
+    # Intead of map{}.compact() or collect{}.compact() reduce([]){} or each_with_object([]){} is more efficient
+    # when there are items to skip in the loop because it makes one pass of the array instead of two
+    sub_vrps = vrp.vehicles.each_with_object([]) { |vehicle, sub_vrps|
       services = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle.id] }
+      shipments = vrp.shipments.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle.id] }
+
+      next if services.empty? && shipments.empty? # No need to create this sub_problem if there is no shipment nor service in it
+
+      sub_vrp = ::Models::Vrp.create({}, false)
       [:matrices, :units].each{ |key|
         (sub_vrp.send "#{key}=", vrp.send(key)) if vrp.send(key)
       }
@@ -358,6 +370,7 @@ module OptimizerWrapper
       sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
       sub_vrp.vehicles = vrp.vehicles.select{ |v| v.id == vehicle.id }
       sub_vrp.services = services
+      sub_vrp.shipments = shipments
       sub_vrp.routes = vrp.routes.select{ |route| sub_vrp.vehicles.one?{ |vehicle| vehicle.id == route.vehicle.id }}
       sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id }}}
       sub_vrp.subtours = vrp.subtours
@@ -381,8 +394,9 @@ module OptimizerWrapper
           time_out_multiplier: vrp.resolution_time_out_multiplier
         }
       }
-      sub_vrp if !sub_vrp.services.empty?
-    }.compact : [vrp]
+      sub_vrps.push(sub_vrp)
+    }
+    sub_vrps
   end
 
   def self.join_vrps(services_vrps, callback)
