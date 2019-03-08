@@ -179,9 +179,6 @@ module OptimizerWrapper
     definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
       # Split/Clusterize the problem if to large
       split_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp])
-
-      # Select best heuristic
-      Interpreters::SeveralSolutions.custom_heuristics(split_services_vrps, block)
     }.flatten.compact
     result = solve(definitive_service_vrps, services_fleets, job, block)
     result_global = {
@@ -271,6 +268,9 @@ module OptimizerWrapper
             vrp = periodic.expand(vrp)
 
             if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver
+              block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
+              # Select best heuristic
+              Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
               block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
               cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
                 block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block

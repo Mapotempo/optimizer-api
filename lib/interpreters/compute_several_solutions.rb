@@ -108,17 +108,16 @@ module Interpreters
       [untouched_service_vrps, (several_service_vrps + batched_service_vrps) || []]
     end
 
-    def self.custom_heuristics(service_vrps, block)
-      service_vrps.collect{ |service_vrp|
-        if (service_vrp[:vrp][:preprocessing_first_solution_strategy] && service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('self_selection') && Interpreters::Assemble.assemble_candidate([service_vrp])) ||
-            service_vrp[:vrp][:preprocessing_first_solution_strategy] && service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('assemble_heuristic')
-          Interpreters::Assemble.assemble_heuristic([service_vrp], block)
-        elsif service_vrp[:vrp][:preprocessing_first_solution_strategy] && !service_vrp[:vrp][:preprocessing_first_solution_strategy].include?('periodic')
-          find_best_heuristic(service_vrp)
-        else
-          service_vrp
-        end
-      }.flatten
+    def self.custom_heuristics(service, vrp, block)
+      service_vrp = { vrp: vrp, service: service }
+      if (vrp.preprocessing_first_solution_strategy && vrp.preprocessing_first_solution_strategy.include?('self_selection') && Interpreters::Assemble.assemble_candidate([service_vrp])) ||
+          vrp.preprocessing_first_solution_strategy && vrp.preprocessing_first_solution_strategy.include?('assemble_heuristic')
+        Interpreters::Assemble.assemble_heuristic([service_vrp], block)
+      elsif vrp.preprocessing_first_solution_strategy && !vrp.preprocessing_first_solution_strategy.include?('periodic')
+        find_best_heuristic(service_vrp)
+      else
+        service_vrp
+      end
     end
 
     def self.batch_heuristic(service_vrp, custom_heuristics = nil)
@@ -136,8 +135,9 @@ module Interpreters
     end
 
     def self.find_best_heuristic(service_vrp)
-      strategies = service_vrp[:vrp][:preprocessing_first_solution_strategy]
-      custom_heuristics = collect_heuristics(service_vrp[:vrp], strategies)
+      vrp = service_vrp[:vrp]
+      strategies = vrp.preprocessing_first_solution_strategy
+      custom_heuristics = collect_heuristics(vrp, strategies)
       if custom_heuristics.size > 1
         batched_service_vrps = batch_heuristic(service_vrp, custom_heuristics)
         times = []
@@ -172,17 +172,17 @@ module Interpreters
 
         synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:used] = true
 
-        service_vrp[:vrp][:preprocessing_heuristic_result] = synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:solution]
-        service_vrp[:vrp][:preprocessing_heuristic_result][:solvers].each{ |solver|
+        vrp.preprocessing_heuristic_result = synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:solution]
+        vrp.preprocessing_heuristic_result[:solvers].each{ |solver|
           solver = 'preprocessing_' + solver
         }
         synthesis.each{ |synth| synth.delete(:solution) }
-        service_vrp[:vrp][:resolution_batch_heuristic] = nil
-        service_vrp[:vrp][:preprocessing_first_solution_strategy] = [best_heuristic]
-        service_vrp[:vrp][:preprocessing_heuristic_synthesis] = synthesis
-        service_vrp[:vrp][:resolution_duration] = service_vrp[:vrp][:resolution_duration] ? (service_vrp[:vrp][:resolution_duration] - times.sum).floor : nil
+        vrp.resolution_batch_heuristic = nil
+        vrp.preprocessing_first_solution_strategy = [best_heuristic]
+        vrp[:preprocessing_heuristic_synthesis] = synthesis
+        vrp.resolution_duration = vrp.resolution_duration ? (vrp.resolution_duration - times.sum).floor : nil
       else
-        service_vrp[:vrp][:preprocessing_first_solution_strategy] = custom_heuristics
+        vrp.preprocessing_first_solution_strategy = custom_heuristics
       end
       service_vrp
     end
