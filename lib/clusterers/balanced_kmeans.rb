@@ -68,9 +68,19 @@ module Ai4r
 
       def recompute_centroids
         @old_centroids = @centroids
+        data_sticky = @centroids.collect{ |data| data[4] }
+        data_skill = @centroids.collect{ |data| data[5] }
         data_size = @centroids.collect{ |data| data[6] }
+        @centroids.collect{ |centroid|
+          centroid[4] = nil
+          centroid[5] = nil
+          centroid[6] = nil
+          centroid.compact
+        }
         @iterations += 1
         @centroids = @centroid_function.call(@clusters)
+        @centroids.each_with_index{ |data, index| data[4] = data_sticky[index] }
+        @centroids.each_with_index{ |data, index| data[5] = data_skill[index] }
         @centroids.each_with_index{ |data, index| data[6] = data_size[index] }
       end
 
@@ -116,10 +126,10 @@ module Ai4r
           @clusters[c] << data_item
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
-            if unit == :visits
-              @cluster_metrics[c][unit] += data_item[3][unit]
-            else
+            if unit != :visits && data_item[3][:visits] != 1
               @cluster_metrics[c][unit] += data_item[3][unit] * data_item[3][:visits]
+            else
+              @cluster_metrics[c][unit] += data_item[3][unit]
             end
           }
         end
