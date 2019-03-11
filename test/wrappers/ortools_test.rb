@@ -4108,7 +4108,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = Models::Vrp.create(problem)
     assert !ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
-    result = ortools.solve(vrp, 'test')
+    vrp[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
+    assert ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
   end
 
   def test_value_matrix
