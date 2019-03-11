@@ -111,10 +111,10 @@ module Wrappers
 
     def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
       vrp.shipments.empty? || vrp.shipments.none? { |shipment|
-        first_open = shipment.pickup.timewindows.sort_by{ |s| s[:start]}.first
-        last_close = shipment.delivery.timewindows.sort_by{ |s| s[:end]}.last
-        first_open && last_close && (first_open ? first_open.start.to_i : 0) + 86400 * (first_open && first_open.day_index ? first_open.day_index : 0) >
-        (last_close.start ? last_close.start.to_i : last_close.end ? last_close.end.to_i : 86399 ) + 86400 * (last_close && last_close.day_index ? last_close.day_index : 0)
+        first_open = shipment.pickup.timewindows.min_by(&:start)
+        last_close = shipment.delivery.timewindows.max_by(&:end)
+        first_open && last_close && (first_open.start.to_i || 0) + 86400 * (first_open.day_index || 0) >
+          (last_close.end.to_i || 86399 ) + 86400 * (last_close.day_index || 0)
       }
     end
 
