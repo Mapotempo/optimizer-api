@@ -17,10 +17,13 @@
 #
 require './models/base'
 
-
 module Models
   class Unit < Base
     field :label
     field :counting, default: false
+
+    # Internal: to make (capacity, quantity) float->int transformation
+    # and balacing of the capacities of different units
+    field :precision_coef, default: 1.0r
   end
 end
