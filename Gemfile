@@ -35,6 +35,17 @@ gem 'google-protobuf', '>=3'
 
 group :development, :test do
   gem 'byebug'
+
+  # For linting and offline code analysis in vscode
+  gem 'rubocop', '<0.58' # TODO: Waiting Ruby 2.2
+  gem 'solargraph'
+
+  ## Next gems to use the debuger of vscode directly
+  ## but due to a bug in rubyide/vscode-ruby it doesn't
+  ## work at the moment with rake::workers
+  # gem 'psych', '<3.0.2' # TODO: Waiting Ruby 2.2
+  # gem 'ruby-debug-ide'
+  # gem 'debase'
 end
 
 group :test do
