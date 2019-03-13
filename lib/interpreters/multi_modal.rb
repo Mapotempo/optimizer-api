@@ -21,10 +21,8 @@ require 'rgeo/geo_json'
 module Interpreters
   class MultiModal
 
-    def initialize(vrp, fleets, fleet_id, selected_service)
+    def initialize(vrp, selected_service)
       @original_vrp = Marshal::load(Marshal.dump(vrp))
-      @fleets = Marshal::load(Marshal.dump(fleets))
-      @fleet_id = fleet_id
       @selected_service = selected_service
       @sub_service_ids = Array.new
       @associated_table = Hash.new
@@ -208,12 +206,10 @@ module Interpreters
       subvrps.collect{ |sub_vrp|
         vrp_service = {
           service: @selected_service,
-          vrp: sub_vrp,
-          fleet_id: nil,
-          problem_size: sub_vrp.services.size + sub_vrp.shipments.size
+          vrp: sub_vrp
         }
         puts "Solve #{sub_vrp.id} sub problem"
-        result = OptimizerWrapper.solve([vrp_service], [])
+        result = OptimizerWrapper.solve([vrp_service])
         result[:routes].each{ |route|
           @convert_table[route[:vehicle_id]] = route[:activities]
           route[:activities].each{ |activity|
@@ -258,11 +254,9 @@ module Interpreters
 
       vrp_service = {
         service: @selected_service,
-        vrp: new_vrp,
-        fleet_id: @fleet_id,
-        problem_size: new_vrp.services.size + new_vrp.shipments.size
+        vrp: new_vrp
       }
-      OptimizerWrapper.solve([vrp_service], @fleets)
+      OptimizerWrapper.solve([vrp_service])
     end
 
     def rebuild_entire_route(subresults, result)

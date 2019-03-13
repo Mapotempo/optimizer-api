@@ -57,95 +57,160 @@ module Interpreters
     end
 
     def self.split_clusters(services_vrps, job = nil, &block)
+      split_results = []
       all_vrps = services_vrps.collect{ |service_vrp|
         vrp = service_vrp[:vrp]
+        empties_or_fills = (vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.fill }} +
+                            vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.empty }}).uniq
         if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
-          current_vrps = [service_vrp]
-          vrp.preprocessing_partitions.each{ |partition|
-            cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
-
-            case partition[:method]
-            when 'balanced_kmeans'
-              generated_vrps = current_vrps.collect{ |s_v|
-                current_vrp = s_v[:vrp]
-                current_vrp.vehicles = list_vehicles(current_vrp.vehicles) if partition[:entity] == 'work_day'
-                split_balanced_kmeans(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
-              }
-              current_vrps = generated_vrps.flatten
-            when 'hierarchical_tree'
-              generated_vrps = current_vrps.collect{ |s_v|
-                current_vrp = s_v[:vrp]
-                current_vrp.vehicles = list_vehicles(current_vrp.vehicles.first) if partition[:entity] == 'work_day'
-                split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
-              }
-              current_vrps = generated_vrps.flatten
-            else
-              raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
-            end
-          }
-          current_vrps
-        elsif vrp.preprocessing_partition_method
-          cut_symbol = vrp.preprocessing_partition_metric == :duration ||
-          vrp.preprocessing_partition_metric == :visits || vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric } ? vrp.preprocessing_partition_metric : :duration
-          case vrp.preprocessing_partition_method
-          when 'balanced_kmeans'
-           split_balanced_kmeans(service_vrp, vrp, vrp.vehicles.size, cut_symbol)
-          when 'hierarchical_tree'
-            split_hierarchical(service_vrp, vrp, vrp.vehicles.size, cut_symbol)
-          else
-            raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
-          end
-
-        elsif vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 && vrp.shipments.size == 0 && service_vrp[:problem_size] > vrp.preprocessing_max_split_size &&
-        vrp.services.size > vrp.preprocessing_max_split_size && !vrp.schedule_range_indices && !vrp.schedule_range_date
-          problem_size = vrp.services.size + vrp.shipments.size
-
-          points = vrp.services.collect.with_index{ |service, index|
-            service.activity.point.matrix_index = index
-            [service.activity.point.location.lat, service.activity.point.location.lon]
-          }
-
-          result_cluster = clustering(vrp, 2)
-
-          sub_first = build_partial_vrp(vrp, result_cluster[0])
-          sub_first.resolution_duration = vrp.resolution_duration / problem_size * (sub_first.services.size + sub_first.shipments.size)
-          sub_first.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * (sub_first.services.size + sub_first.shipments.size) if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
-
-          sub_second = build_partial_vrp(vrp, result_cluster[1]) if result_cluster[1]
-          sub_second.resolution_duration = (vrp.resolution_duration / problem_size) * (sub_second.services.size + sub_second.shipments.size) if sub_second
-          sub_first.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * (sub_first.services.size + sub_first.shipments.size) if sub_second && (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)
-
-          deeper_search = [{
-            service: service_vrp[:service],
-            vrp: sub_first,
-            fleet_id: service_vrp[:fleet_id],
-            problem_size: service_vrp[:problem_size]
-          }]
-          deeper_search << {
-            service: service_vrp[:service],
-            vrp: sub_second,
-            fleet_id: service_vrp[:fleet_id],
-            problem_size: service_vrp[:problem_size]
-          } if sub_second
-          split_clusters(deeper_search, job)
+          generate_split_vrps(service_vrp, job, block)
+        elsif vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 && vrp.shipments.size == 0 && vrp.services.size - empties_or_fills.size > vrp.preprocessing_max_split_size &&
+             !vrp.schedule_range_indices && !vrp.schedule_range_date
+          split_results << split_solve(service_vrp)
+          nil
         else
           {
             service: service_vrp[:service],
-            vrp: vrp,
-            fleet_id: service_vrp[:fleet_id],
-            problem_size: service_vrp[:problem_size]
+            vrp: vrp
           }
         end
-      }.flatten
-
+      }.compact
       two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
       output_clusters(all_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps[0][:vrp][:debug_output_clusters_in_csv]
-
-      all_vrps
+      [all_vrps, split_results]
     rescue => e
       puts e
       puts e.backtrace
       raise
+    end
+
+    def self.generate_split_vrps(service_vrp, job = nil, block)
+      vrp = service_vrp[:vrp]
+      if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
+        current_vrps = [service_vrp]
+        vrp.preprocessing_partitions.each{ |partition|
+          cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
+
+          case partition[:method]
+          when 'balanced_kmeans'
+            generated_vrps = current_vrps.collect{ |s_v|
+              current_vrp = s_v[:vrp]
+              current_vrp.vehicles = list_vehicles(current_vrp.vehicles) if partition[:entity] == 'work_day'
+              split_balanced_kmeans(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
+            }
+            current_vrps = generated_vrps.flatten
+          when 'hierarchical_tree'
+            generated_vrps = current_vrps.collect{ |s_v|
+              current_vrp = s_v[:vrp]
+              current_vrp.vehicles = list_vehicles(current_vrp.vehicles.first) if partition[:entity] == 'work_day'
+              split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
+            }
+            current_vrps = generated_vrps.flatten
+          else
+            raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
+          end
+        }
+        current_vrps
+      elsif vrp.preprocessing_partition_method
+        cut_symbol = vrp.preprocessing_partition_metric == :duration ||
+        vrp.preprocessing_partition_metric == :visits || vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric } ? vrp.preprocessing_partition_metric : :duration
+        case vrp.preprocessing_partition_method
+        when 'balanced_kmeans'
+         split_balanced_kmeans(service_vrp, vrp, vrp.vehicles.size, cut_symbol)
+        when 'hierarchical_tree'
+          split_hierarchical(service_vrp, vrp, vrp.vehicles.size, cut_symbol)
+        else
+          raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
+        end
+      end
+    end
+
+    def self.merge_results(results)
+      results.flatten!
+      {
+        solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
+        cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
+        routes: results.flat_map{ |r| r && r[:routes] }.compact,
+        unassigned: results.flat_map{ |r| r && r[:unassigned] }.compact,
+        elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
+        total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
+        total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
+        total_distance: results.map{ |r| r && r[:total_distance] }.compact.reduce(&:+)
+      }
+    end
+
+    def self.split_solve(service_vrp, job = nil, &block)
+      vrp = service_vrp[:vrp]
+      problem_size = vrp.services.size + vrp.shipments.size
+      empties_or_fills = (vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.fill }} +
+                          vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.empty }}).uniq
+
+      vrp.services -= empties_or_fills
+
+      points = vrp.services.collect.with_index{ |service, index|
+        service.activity.point.matrix_index = index
+        [service.activity.point.location.lat, service.activity.point.location.lon]
+      }
+      available_vehicles = vrp.vehicles.collect{ |vehicle| vehicle.id }
+      result_cluster = clustering(vrp, 2)
+
+      sub_first = build_partial_vrp(vrp, result_cluster[0], available_vehicles)
+      sub_first.resolution_duration = vrp.resolution_duration / problem_size * (sub_first.services.size + sub_first.shipments.size)
+      sub_first.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size *
+                                              (sub_first.services.size + sub_first.shipments.size) if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
+      sub_first.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.2 + sub_first.services.size.to_f / vrp.services.size)).to_i
+      #Reintroduce fills and empties
+      sub_first.services += empties_or_fills
+
+      first_side = [{
+        service: service_vrp[:service],
+        vrp: sub_first
+      }]
+      first_result = merge_results([OptimizerWrapper::define_process(first_side, job)])
+      remove_poor_routes(sub_first, first_result)
+      empties_or_fills -= remove_used_empties_and_refills(sub_first, first_result)
+      available_vehicles.delete_if{ |id| first_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
+
+      sub_second = build_partial_vrp(vrp, result_cluster[1], available_vehicles) if result_cluster[1]
+      if sub_second
+        sub_second.resolution_duration = (vrp.resolution_duration / problem_size) * (sub_second.services.size + sub_second.shipments.size)
+        sub_second.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size *
+                                                 (sub_second.services.size + sub_second.shipments.size) if (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)
+        sub_second.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.2 + sub_second.services.size.to_f / vrp.services.size)).to_i
+              #Reintroduce fills and empties
+        sub_second.services += empties_or_fills
+
+        second_side = [{
+          service: service_vrp[:service],
+          vrp: sub_second
+        }]
+        second_result = merge_results([OptimizerWrapper::define_process(second_side, job)])
+        remove_poor_routes(sub_second, second_result)
+        available_vehicles.delete_if{ |id| first_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
+
+        merge_results([first_result, second_result])
+      end
+    end
+
+    def self.remove_used_empties_and_refills(vrp, result)
+      result[:routes].collect{ |route|
+        current_service = nil
+        current_point = nil
+        route[:activities].select{ |activity| activity[:service_id] }.collect{ |activity|
+          current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
+          current_service if current_service && current_service.quantities.any?{ |quantity| quantity.fill } || current_service.quantities.any?{ |quantity| quantity.empty }
+        }
+      }.flatten
+    end
+
+    def self.remove_poor_routes(vrp, result)
+      if result
+        remove_empty_routes(result)
+      end
+    end
+
+    def self.remove_empty_routes(result)
+      result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] }}
     end
 
     def self.clustering(vrp, n)
@@ -182,12 +247,13 @@ module Interpreters
       result
     end
 
-    def self.build_partial_vrp(vrp, cluster_services)
+    def self.build_partial_vrp(vrp, cluster_services, available_vehicles = nil)
       sub_vrp = Marshal::load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
       services = vrp.services.select{ |service| cluster_services.include?(service.id) }.compact
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact
       sub_vrp.services = services
+      sub_vrp.vehicles.delete_if{ |vehicle| !available_vehicles.include?(vehicle.id) } if available_vehicles
       sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten ).compact.uniq
       sub_vrp
     end
@@ -258,9 +324,7 @@ module Interpreters
         vrp_to_send = build_partial_vrp(vrp, services_list)
         sub_pbs << {
           service: service_vrp[:service],
-          vrp: vrp_to_send,
-          fleet_id: service_vrp[:fleet_id],
-          problem_size: service_vrp[:problem_size]
+          vrp: vrp_to_send
         }
       }
       sub_pbs

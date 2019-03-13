@@ -30,9 +30,7 @@ module OptimizerWrapper
       tick('Starting job') # Important to kill job before any code
 
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
-      services_fleets = Marshal.load(Base64.decode64(options['services_fleets']))
-
-      result = OptimizerWrapper.define_process(services_vrps, services_fleets, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+      result = OptimizerWrapper.define_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))

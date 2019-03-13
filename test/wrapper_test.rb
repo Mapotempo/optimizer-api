@@ -2277,7 +2277,7 @@ class WrapperTest < Minitest::Test
     assert_equal 2, result[:unassigned].size
   end
 
-  def test_should_handle_result_without_unassigned
+  def test_wrong_matrix_and_points_definitions
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2343,8 +2343,9 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, Models::Vrp.create(problem), nil)
-    assert result
+    vrp = Models::Vrp.create(problem)
+    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
+    assert OptimizerWrapper::VROOM.inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
   end
 
   def test_unassigned_presence
