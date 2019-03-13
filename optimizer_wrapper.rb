@@ -174,7 +174,7 @@ module OptimizerWrapper
       multi = Interpreters::MultiTrips.new
       multi.expand(service_vrp[:vrp])
     }
-    result = solve(definitive_service_vrps, services_fleets, job, block)
+    result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty?
     result_global = {
       result: ([result] + duplicated_results + split_results).compact
     }
