@@ -228,6 +228,10 @@ module Wrappers
       }
     end
 
+    def assert_correctness_matrices_vehicles_and_points_definition(vrp)
+      vrp.matrices.count{ |matrix| matrix[:time] || matrix[:distance] } == 0 || vrp.points.none?{ |point| point.matrix_index.nil? }
+    end
+
     def assert_one_sticky_at_most(vrp)
       (vrp.services.empty? || vrp.services.none?{ |service|
         service.sticky_vehicles.size > 1

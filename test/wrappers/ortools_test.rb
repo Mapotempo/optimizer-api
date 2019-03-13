@@ -5780,9 +5780,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     service_vrp = {
       service: ortools,
-      vrp: vrp,
-      fleet_id: [],
-      problem_size: 2
+      vrp: vrp
     }
     assert Interpreters::Assemble.assemble_candidate([service_vrp])
   end

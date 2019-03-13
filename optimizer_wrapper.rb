@@ -31,6 +31,7 @@ require './lib/interpreters/split_clustering.rb'
 require './lib/interpreters/compute_several_solutions.rb'
 require './lib/heuristics/assemble_heuristic.rb'
 require './lib/filters.rb'
+require './lib/cleanse.rb'
 
 require 'ai4r'
 include Ai4r::Data
@@ -74,7 +75,6 @@ module OptimizerWrapper
         vrp_need_matrix.include?(dimension) && (vehicle.matrix_id.nil? || vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
       }
     }
-
     if need_matrix.size > 0
       points = vrp.points.each_with_index.collect{ |point, index|
         point.matrix_index = index
@@ -118,18 +118,7 @@ module OptimizerWrapper
     inapplicable_services = []
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
-    services_fleets = []
     services_vrps = split_vrp(vrp).map.with_index{ |vrp_element, i|
-      if vrp_element[:preprocessing_max_split_size]
-        services_fleets << {
-          id: "fleet_#{i}",
-          fleet: vrp_element.vehicles,
-          fills: vrp_element.services.select{ |service| service.quantities.any?{ |quantity| quantity.fill }},
-          empties: vrp_element.services.select{ |service| service.quantities.any?{ |quantity| quantity.empty }}
-        }
-        ## Remove fills and empties services
-        vrp_element.services.delete_if{ |service| service.quantities.any?{ |quantity| quantity.fill || quantity.empty }}
-      end
       {
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
@@ -142,9 +131,7 @@ module OptimizerWrapper
             false
           end
         },
-        vrp: vrp_element,
-        fleet_id: "fleet_#{i}",
-        problem_size: vrp_element.services.size + vrp_element.shipments.size
+        vrp: vrp_element
       }
     }
 
@@ -157,32 +144,34 @@ module OptimizerWrapper
     else
       if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         # The job seems easy enough to perform it with the server
-        define_process(services_vrps, services_fleets, job_id)
+        define_process(services_vrps, job_id)
       else
         # Delegate the job to a worker
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)),
-          services_fleets: Base64.encode64(Marshal::dump(services_fleets)), api_key: api_key, checksum: checksum, pids: [])
+          api_key: api_key, checksum: checksum, pids: [])
         JobList.add(api_key, job_id)
         Result.get(job_id) || job_id
       end
     end
   end
 
-  def self.define_process(services_vrps, services_fleets = [], job = nil, &block)
+  def self.define_process(services_vrps, job = nil, &block)
     filtered_services = services_vrps.delete_if{ |service_vrp|
       service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
     }
     unduplicated_services, duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services)
     duplicated_results = duplicated_services.compact.collect{ |service_vrp|
-      define_process([service_vrp], services_fleets, job)
+      define_process([service_vrp], job)
     }
+    split_results = nil
     definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
       # Split/Clusterize the problem if to large
-      split_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp])
+      unsplitted_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp])
+      unsplitted_vrps
     }.flatten.compact
-    result = solve(definitive_service_vrps, services_fleets, job, block)
+    result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty?
     result_global = {
-      result: [result] + duplicated_results
+      result: ([result] + duplicated_results + split_results).compact
     }
     result_global[:csv] = true if result_global[:result].any?{ |result| result && result[:csv] == true }
 
@@ -190,31 +179,16 @@ module OptimizerWrapper
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end
 
-  def self.solve(services_vrps, services_fleets = [], job = nil, block = nil)
+  def self.solve(services_vrps, job = nil, block = nil)
     @unfeasible_services = []
 
     cluster_reference = 0
-    real_result = join_vrps(services_vrps, block) { |service, vrp, fleet_id, problem_size, block|
+    real_result = join_vrps(services_vrps, block) { |service, vrp, block|
       cluster_result = nil
       if !vrp.subtours.empty?
-        multi_modal = Interpreters::MultiModal.new(vrp, services_fleets, fleet_id, service)
+        multi_modal = Interpreters::MultiModal.new(vrp, service)
         cluster_result = multi_modal.multimodal_routes()
       else
-        if services_fleets.one?{ |service_fleet| service_fleet[:id] == fleet_id }
-          associated_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
-          vrp.vehicles = associated_fleet[:fleet].select{ |vehicle| vrp.vehicles.collect{ |v| v[:id] }.include?(vehicle[:id]) }.collect{ |vehicle|
-            vehicle.matrix_id = nil
-            vehicle
-          }
-
-          ## Reintroduce fills and empties services
-          vrp.services += associated_fleet[:fills] if !associated_fleet[:fills].empty?
-          vrp.points += associated_fleet[:fills].collect{ |fill| fill[:activity].point } if !associated_fleet[:fills].empty?
-          vrp.services += associated_fleet[:empties] if !associated_fleet[:empties].empty?
-          vrp.points += associated_fleet[:empties].collect{ |empty| empty[:activity].point } if !associated_fleet[:empties].empty?
-          vrp.services.uniq!
-        end
-
         if vrp.vehicles.empty?
           cluster_result = {
             cost: nil,
@@ -263,10 +237,8 @@ module OptimizerWrapper
 
           if !vrp.services.empty? || !vrp.shipments.empty? || !vrp.rests.empty?
             File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
-
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp)
-
             if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver
               block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
               # Select best heuristic
@@ -297,7 +269,7 @@ module OptimizerWrapper
                 end
               end
             else
-              parse_result(vrp, parse_result(vrp, vrp[:preprocessing_heuristic_result]))
+              cluster_result = parse_result(vrp, vrp[:preprocessing_heuristic_result])
               if vrp.restitution_csv
                 actual_result = Result.get(job) || {}
                 actual_result[:csv] = true
@@ -318,48 +290,6 @@ module OptimizerWrapper
           end
         end
       end
-
-      current_usefull_vehicle = cluster_result && vrp.vehicles.select{ |vehicle|
-        associated_route = cluster_result[:routes].find{ |route| route[:vehicle_id] == vehicle.id }
-        associated_route[:activities].any?{ |activity| activity[:service_id] } if associated_route
-      } || []
-      if cluster_result && fleet_id && !services_fleets.empty? && !vrp[:vehicles].empty?
-        current_useless_vehicle = vrp.vehicles - current_usefull_vehicle
-        cluster_result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id]}} if fleet_id && !services_fleets.empty?
-        cluster_result[:unassigned].delete_if{ |activity|
-          activity[:rest_id] && current_useless_vehicle.any?{ |vehicle| vehicle.rests.any?{ |rest| rest.id == activity[:rest_id] }}
-        } if cluster_result[:unassigned]
-
-        vrp.vehicles = current_usefull_vehicle
-        current_fleet = services_fleets.find{ |service_fleet| service_fleet[:id] == fleet_id }
-        current_usefull_vehicle.each{ |vehicle| current_fleet[:fleet].delete(vehicle) } unless vrp.preprocessing_partitions.collect{ |partition| %w[balanced_kmeans hierarchical_tree].include? partition[:method] }.size > 1
-
-        cluster_result[:routes].each{ |route|
-          vehicle = vrp.vehicles.find{ |vehicle| vehicle.id == route[:vehicle_id] }
-          capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
-          previous = nil
-          previous_point = nil
-          route[:activities].delete_if{ |activity|
-            current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
-            current_point = current_service.activity.point if current_service
-
-            if previous && current_service && same_position(vrp, previous_point, current_point) && same_empty_units(capacities_units, previous, current_service) &&
-            !same_fill_units(capacities_units, previous, current_service)
-              current_fleet[:empties].delete(previous)
-              true
-            elsif previous && current_service && same_position(vrp, previous_point, current_point) && same_fill_units(capacities_units, previous, current_service) &&
-            !same_empty_units(capacities_units, previous, current_service)
-              current_fleet[:fills].delete(previous)
-              true
-            else
-              previous = current_service if previous.nil? || activity[:service_id]
-              previous_point = current_point if previous.nil? || activity[:service_id]
-              false
-            end
-          }
-        }
-      end
-
       if vrp.preprocessing_partition_method || !vrp.preprocessing_partitions.empty?
         # add associated cluster as skill
         [cluster_result, vrp.preprocessing_heuristic_result].each{ |solution|
@@ -387,6 +317,8 @@ module OptimizerWrapper
       else
         cluster_result
       end
+      Cleanse::cleanse(vrp, cluster_result)
+      cluster_result
     }
 
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
@@ -413,42 +345,6 @@ module OptimizerWrapper
     puts e
     puts e.backtrace
     raise
-  end
-
-  def self.same_position(vrp, previous, current)
-    previous.matrix_index && current.matrix_index && (vrp.matrices.first[:time].nil? || vrp.matrices.first[:time] && vrp.matrices.first[:time][previous.matrix_index][current.matrix_index] == 0) &&
-    (vrp.matrices.first[:distance].nil? || vrp.matrices.first[:distance] && vrp.matrices.first[:distance][previous.matrix_index][current.matrix_index] == 0) ||
-    previous.location && current.location && previous.location.lat == current.location.lat && previous.location.lon == current.location.lon
-  end
-
-  def self.same_empty_units(capacities, previous, current)
-    if previous && current
-      previous_empty_units = previous.quantities.collect{ |quantity|
-        quantity.unit.id if quantity.empty
-      }.compact if previous
-      useful_units = (current.quantities.collect{ |quantity|
-        quantity.unit.id
-      }.compact & capacities) if current
-      current_empty_units = current.quantities.collect{ |quantity|
-        quantity.unit.id if quantity.empty
-      }.compact if current
-      !previous_empty_units.empty? && !current_empty_units.empty? && (useful_units & previous_empty_units & current_empty_units == useful_units)
-    end
-  end
-
-  def self.same_fill_units(capacities, previous, current)
-    if previous && current
-      previous_fill_units = previous.quantities.collect{ |quantity|
-        quantity.unit.id if quantity.fill
-      }.compact if previous
-      useful_units = (current.quantities.collect{ |quantity|
-        quantity.unit.id
-      }.compact & capacities) if current
-      current_fill_units = current.quantities.collect{ |quantity|
-        quantity.unit.id if quantity.fill
-      }.compact if current
-      !previous_fill_units.empty? && !current_fill_units.empty? && (useful_units & previous_fill_units & current_fill_units == useful_units)
-    end
   end
 
   def self.split_vrp(vrp)
@@ -493,7 +389,7 @@ module OptimizerWrapper
 
   def self.join_vrps(services_vrps, callback)
     results = services_vrps.each_with_index.map{ |sv, i|
-      yield(sv[:service], sv[:vrp], sv[:fleet_id], sv[:problem_size], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
+      yield(sv[:service], sv[:vrp], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
         callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
       } : nil)
     }
