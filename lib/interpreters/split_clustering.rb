@@ -206,11 +206,27 @@ module Interpreters
     def self.remove_poor_routes(vrp, result)
       if result
         remove_empty_routes(result)
+        remove_poorly_populated_routes(vrp, result)
       end
     end
 
     def self.remove_empty_routes(result)
       result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] }}
+    end
+
+    def self.remove_poorly_populated_routes(vrp, result)
+      result[:routes].delete_if{ |route|
+        vehicle = vrp.vehicles.find{ |vehicle| vehicle.id == route[:vehicle_id] }
+        loads = route[:activities].last[:detail][:quantities]
+        load_flag = vehicle.capacities.empty? || vehicle.capacities.all?{ |capacity|
+          current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
+          current_load[:value] / capacity.limit < 0.2 if capacity.limit && current_load && capacity.limit > 0
+        }
+        time_flag = vehicle.timewindow.end.nil? || vehicle.timewindow.start.nil? ||
+        (route[:activities].last[:begin_time] - route[:activities].first[:begin_time]) < 0.2 * (vehicle.timewindow.end - vehicle.timewindow.start).to_f
+        result[:unassigned] += route[:activities].select{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] } if load_flag && time_flag
+        load_flag && time_flag
+      }
     end
 
     def self.clustering(vrp, n)
