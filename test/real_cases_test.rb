@@ -104,8 +104,11 @@ class RealCasesTest < Minitest::Test
       # Check activities
       assert_equal check_vrp.services.size + 2, result[:routes][0][:activities].size
 
+      # Check latest first activity
+      assert result[:routes].collect{ |route| route[:activities][1][:begin_time] - route[:activities].first[:begin_time] }.max < 3400
+
       # Check total travel time
-      assert result[:routes][0][:total_travel_time] < 21050, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
+      assert result[:routes][0][:total_travel_time] < 23000, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
 
       # Check elapsed time
       assert result[:elapsed] < 60000, "Too long elapsed time: #{result[:elapsed]}"
