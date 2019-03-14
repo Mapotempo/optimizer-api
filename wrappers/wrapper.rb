@@ -541,7 +541,8 @@ module Wrappers
     end
 
     def add_unassigned(unfeasible, vrp, service, reason)
-      unfeasible << (1..service.visits_number).collect{ |index|
+      unfeasible << (0..service.visits_number).collect{ |index|
+        next if service.visits_number > 0 && index == 0
         {
           original_service_id: service[:id],
           service_id: service.visits_number == 1 ? service[:id] : "#{service.id}_#{index}_#{service.visits_number}",
@@ -665,6 +666,23 @@ module Wrappers
 
         if !found && unfeasible.none?{ |unfeas| unfeas[:original_service_id] == service[:id] }
           add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
+        end
+      }
+
+      #When every service have a single sticky vehicle, the problem is cutted and skills doesn't matter
+      if vrp.services.any?{ |service| service.sticky_vehicles && service.sticky_vehicles.size != 0 } &&
+         vrp.services.any?{ |service| service.sticky_vehicles && service.sticky_vehicles.size != 1 }
+        vrp.services.each{ |service|
+          if service.sticky_vehicles && service.skills && !service.skills.empty? &&
+             service.sticky_vehicles.all?{ |vehicle| vehicle.skills.none?{ |alternative| (service.skills & alternative).size == service.skills.size}}
+            add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky_ids')
+          end
+        }
+      end
+
+      vrp.services.each{ |service|
+        if service[:visits_number] && service[:visits_number] == 0
+          add_unassigned(unfeasible, vrp, service, 'Visits number is 0')
         end
       }
 

@@ -130,4 +130,12 @@ class HeuristicTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
     assert_equal 10, result[:unassigned].size
   end
+
+  def test_visits_number_0
+    problem = VRP.scheduling
+    problem[:services].first[:visits_number] = 0
+
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    assert result[:unassigned].first[:service_id] == 'service_1_0_0'
+  end
 end
