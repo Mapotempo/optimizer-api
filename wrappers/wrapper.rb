@@ -557,7 +557,7 @@ module Wrappers
           },
           reason: reason
         }
-      }
+      }.compact
       unfeasible.flatten!
     end
 
@@ -668,17 +668,6 @@ module Wrappers
           add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
         end
       }
-
-      #When every service have a single sticky vehicle, the problem is cutted and skills doesn't matter
-      if vrp.services.any?{ |service| service.sticky_vehicles && service.sticky_vehicles.size != 0 } &&
-         vrp.services.any?{ |service| service.sticky_vehicles && service.sticky_vehicles.size != 1 }
-        vrp.services.each{ |service|
-          if service.sticky_vehicles && service.skills && !service.skills.empty? &&
-             service.sticky_vehicles.all?{ |vehicle| vehicle.skills.none?{ |alternative| (service.skills & alternative).size == service.skills.size}}
-            add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky_ids')
-          end
-        }
-      end
 
       vrp.services.each{ |service|
         if service[:visits_number] && service[:visits_number] == 0
