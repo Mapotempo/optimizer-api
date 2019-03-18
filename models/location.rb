@@ -17,12 +17,14 @@
 #
 require './models/base'
 
-
 module Models
   class Location < Base
     field :lat, default: nil
     field :lon, default: nil
-    validates_numericality_of :lat
-    validates_numericality_of :lon
+
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :lat
+    # validates_numericality_of :lon
   end
 end

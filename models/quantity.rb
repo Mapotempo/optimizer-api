@@ -17,15 +17,17 @@
 #
 require './models/base'
 
-
 module Models
   class Quantity < Base
     field :fill, default: false
     field :empty, default: false
     field :value
     field :setup_value, default: 1
-    validates_numericality_of :value
-    validates_numericality_of :setup_value
+
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :value
+    # validates_numericality_of :setup_value
 
     belongs_to :unit, class_name: 'Models::Unit'
   end

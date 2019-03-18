@@ -17,19 +17,21 @@
 #
 require './models/base'
 
-
 module Models
   class Shipment < Base
     field :priority, default: 4
     field :exclusion_cost, default: nil
     field :maximum_inroute_duration, default: nil
-    validates_numericality_of :priority, allow_nil: true
-    validates_numericality_of :exclusion_cost, allow_nil: true
-    validates_numericality_of :maximum_inroute_duration, allow_nil: true
+
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :priority, allow_nil: true
+    # validates_numericality_of :exclusion_cost, allow_nil: true
+    # validates_numericality_of :maximum_inroute_duration, allow_nil: true
 
     field :visits_number, default: 1
 
-    validates_numericality_of :visits_number
+    # validates_numericality_of :visits_number
 
     field :unavailable_visit_indices, default: nil
 
@@ -39,9 +41,8 @@ module Models
     field :minimum_lapse, default: nil
     field :maximum_lapse, default: nil
 
-    validates_numericality_of :minimum_lapse
-    validates_numericality_of :maximum_lapse
-
+    # validates_numericality_of :minimum_lapse
+    # validates_numericality_of :maximum_lapse
 
     field :skills, default: []
 

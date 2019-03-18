@@ -18,7 +18,6 @@
 require './models/base'
 require './models/concerns/validate_timewindows'
 
-
 module Models
   class Vehicle < Base
     field :vehicle_id, default: nil
@@ -77,25 +76,27 @@ module Models
     field :free_return, default: false
     field :type_index, default: nil
 
-    validates_numericality_of :cost_fixed
-    validates_numericality_of :cost_distance_multiplier
-    validates_numericality_of :cost_time_multiplier
-    validates_numericality_of :cost_waiting_time_multiplier
-    validates_numericality_of :cost_value_multiplier
-    validates_numericality_of :cost_late_multiplier, allow_nil: true
-    validates_numericality_of :cost_setup_time_multiplier
-    validates_numericality_of :coef_setup
-    validates_numericality_of :coef_service
-    validates_numericality_of :additional_setup
-    validates_numericality_of :additional_travel_time
-    validates_numericality_of :global_day_index, allow_nil: true
-    validates_inclusion_of :router_dimension, in: %w( time distance )
-    validates_inclusion_of :shift_preference, in: %w( force_start force_end minimize_span )
-    validates_numericality_of :trips, greater_than_or_equal_to: 0
-    validates_numericality_of :speed_multiplier
-    validates_numericality_of :duration, greater_than_or_equal_to: 0
-    validates_numericality_of :overall_duration, greater_than_or_equal_to: 0
-    validates_numericality_of :distance, greater_than_or_equal_to: 0
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :cost_fixed
+    # validates_numericality_of :cost_distance_multiplier
+    # validates_numericality_of :cost_time_multiplier
+    # validates_numericality_of :cost_waiting_time_multiplier
+    # validates_numericality_of :cost_value_multiplier
+    # validates_numericality_of :cost_late_multiplier, allow_nil: true
+    # validates_numericality_of :cost_setup_time_multiplier
+    # validates_numericality_of :coef_setup
+    # validates_numericality_of :coef_service
+    # validates_numericality_of :additional_setup
+    # validates_numericality_of :additional_travel_time
+    # validates_numericality_of :global_day_index, allow_nil: true
+    # validates_inclusion_of :router_dimension, in: %w( time distance )
+    # validates_inclusion_of :shift_preference, in: %w( force_start force_end minimize_span )
+    # validates_numericality_of :trips, greater_than_or_equal_to: 0
+    # validates_numericality_of :speed_multiplier
+    # validates_numericality_of :duration, greater_than_or_equal_to: 0
+    # validates_numericality_of :overall_duration, greater_than_or_equal_to: 0
+    # validates_numericality_of :distance, greater_than_or_equal_to: 0
 
     has_many :sequence_timewindows, class_name: 'Models::Timewindow'
 
@@ -103,7 +104,7 @@ module Models
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
     belongs_to :timewindow, class_name: 'Models::Timewindow'
     has_many :capacities, class_name: 'Models::Capacity'
-    include ValidateTimewindows
+    # include ValidateTimewindows #<- This doesn't work
     has_many :rests, class_name: 'Models::Rest'
 
     def need_matrix_time?

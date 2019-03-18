@@ -17,13 +17,14 @@
 #
 require './models/base'
 
-
 module Models
   class Point < Base
     field :matrix_index
     field :associated_stops, default: []
 
-    validates_numericality_of :matrix_index, allow_nil: true
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :matrix_index, allow_nil: true
 
     belongs_to :location, class_name: 'Models::Location'
 
