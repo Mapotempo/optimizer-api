@@ -18,17 +18,19 @@
 require './models/base'
 require './models/concerns/validate_timewindows'
 
-
 module Models
   class Rest < Base
     field :duration, default: 0
     field :late_multiplier, default: 0
     field :exclusion_cost, default: nil
-    validates_numericality_of :duration
-    validates_numericality_of :late_multiplier
-    validates_numericality_of :exclusion_cost, allow_nil: true
+
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :duration
+    # validates_numericality_of :late_multiplier
+    # validates_numericality_of :exclusion_cost, allow_nil: true
 
     has_many :timewindows, class_name: 'Models::Timewindow'
-    include ValidateTimewindows
+    # include ValidateTimewindows
   end
 end

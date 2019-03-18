@@ -66,22 +66,25 @@ module Models
     field :debug_output_kmeans_centroids, default: false
     field :debug_output_clusters_in_csv, default: false
 
-    validates_numericality_of :preprocessing_max_split_size, allow_nil: true
-    validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
-    validates_numericality_of :resolution_duration, allow_nil: true
-    validates_numericality_of :resolution_iterations, allow_nil: true
-    validates_numericality_of :resolution_iterations_without_improvment, allow_nil: true
-    validates_numericality_of :resolution_stable_iterations, allow_nil: true
-    validates_numericality_of :resolution_stable_coefficient, allow_nil: true
-    validates_numericality_of :resolution_initial_time_out, allow_nil: true
-    validates_numericality_of :resolution_minimum_duration, allow_nil: true
-    validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
-    validates_numericality_of :resolution_vehicle_limit, allow_nil: true
-    validates_numericality_of :resolution_solver_parameter, allow_nil: true
-    validates_numericality_of :resolution_several_solutions, allow_nil: true
-    validates_numericality_of :resolution_variation_ratio, allow_nil: true
-
-    validates_inclusion_of :preprocessing_partition_method, allow_nil: true, in: %w[hierarchical_tree balanced_kmeans]
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    #
+    # validates_numericality_of :preprocessing_max_split_size, allow_nil: true
+    # validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
+    # validates_numericality_of :resolution_duration, allow_nil: true
+    # validates_numericality_of :resolution_iterations, allow_nil: true
+    # validates_numericality_of :resolution_iterations_without_improvment, allow_nil: true
+    # validates_numericality_of :resolution_stable_iterations, allow_nil: true
+    # validates_numericality_of :resolution_stable_coefficient, allow_nil: true
+    # validates_numericality_of :resolution_initial_time_out, allow_nil: true
+    # validates_numericality_of :resolution_minimum_duration, allow_nil: true
+    # validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
+    # validates_numericality_of :resolution_vehicle_limit, allow_nil: true
+    # validates_numericality_of :resolution_solver_parameter, allow_nil: true
+    # validates_numericality_of :resolution_several_solutions, allow_nil: true
+    # validates_numericality_of :resolution_variation_ratio, allow_nil: true
+    #
+    # validates_inclusion_of :preprocessing_partition_method, allow_nil: true, in: %w[hierarchical_tree balanced_kmeans]
 
     has_many :matrices, class_name: 'Models::Matrix'
     has_many :points, class_name: 'Models::Point'

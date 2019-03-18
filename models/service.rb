@@ -17,13 +17,14 @@
 #
 require './models/base'
 
-
 module Models
   class Service < Base
     field :priority, default: 4
     field :exclusion_cost, default: nil
-    validates_numericality_of :priority
-    validates_numericality_of :exclusion_cost, allow_nil: true
+    # ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :priority
+    # validates_numericality_of :exclusion_cost, allow_nil: true
     field :type, default: :service
 
     field :first_possible_day, default: nil
@@ -31,7 +32,7 @@ module Models
 
     field :visits_number, default: 1
 
-    validates_numericality_of :visits_number
+    # validates_numericality_of :visits_number
 
     field :unavailable_visit_indices, default: nil
 
@@ -41,10 +42,10 @@ module Models
     field :minimum_lapse, default: nil
     field :maximum_lapse, default: nil
 
-    validates_numericality_of :minimum_lapse
-    validates_numericality_of :maximum_lapse
+    # validates_numericality_of :minimum_lapse
+    # validates_numericality_of :maximum_lapse
 
-    validates_inclusion_of :type, :in => %i(service pickup delivery)
+    # validates_inclusion_of :type, :in => %i(service pickup delivery)
 
     field :skills, default: []
 

@@ -18,7 +18,6 @@
 require './models/base'
 require './models/concerns/validate_timewindows'
 
-
 module Models
   class Activity < Base
     @@id = 0
@@ -29,12 +28,19 @@ module Models
     field :additional_value, default: 0
     field :timewindow_start_day_shift_number, default: 0
     field :late_multiplier, default: nil
-    validates_numericality_of :duration, greater_than_or_equal_to: 0
-    validates_numericality_of :setup_duration
-    validates_numericality_of :late_multiplier, allow_nil: true
+
+    # FIXME: ActiveHash doesn't validate the validator of the associated objects
+    # Forced to do the validation in Grape params
+    # validates_numericality_of :duration, greater_than_or_equal_to: 0
+    # validates_numericality_of :setup_duration
+    # validates_numericality_of :late_multiplier, allow_nil: true
 
     belongs_to :point, class_name: 'Models::Point'
     has_many :timewindows, class_name: 'Models::Timewindow'
-    include ValidateTimewindows
+    # include ValidateTimewindows # FIXME: <- This is commented out because of the above reason.
+                                  # Commenting out would make the ActivityTest::test_timewindows pass; however,
+                                  # the code would continue to accept invalid time windows thorugh API because
+                                  # vrp.valid? doesn't call the validator of activity
+                                  # We need to implement a check inside Api::V01::Vrp and fix the ActivityTest::test_timewindows accordingly
   end
 end
