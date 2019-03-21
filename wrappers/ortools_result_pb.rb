@@ -16,7 +16,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     repeated :activities, :message, 1, "ortools_result.Activity"
   end
   add_message "ortools_result.Result" do
-    optional :cost, :int64, 1
+    optional :cost, :float, 1
     optional :duration, :float, 2
     optional :iterations, :int32, 3
     repeated :routes, :message, 4, "ortools_result.Route"
