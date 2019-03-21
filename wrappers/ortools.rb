@@ -144,7 +144,7 @@ module Wrappers
           quantities: vrp.units.collect{ |unit|
             is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = service.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (is_empty_unit ? -1 : 1) * (service.type.to_s == "delivery" ? -1 : 1) * (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
+            q && q.value ? (is_empty_unit ? -1 : 1) * (service.type.to_s == "delivery" ? -1 : 1) * (q.value * (unit.counting ? 1 : 1000)).round : 0
           },
           duration: service.activity.duration,
           additional_value: service.activity.additional_value,
@@ -157,7 +157,7 @@ module Wrappers
           late_multiplier: service.activity.late_multiplier || 0,
           setup_quantities: vrp.units.collect{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.setup_value && unit.counting ? (q.setup_value).to_i : 0
+            q && q.setup_value && unit.counting ? q.setup_value.to_i : 0
           },
           exclusion_cost: service.exclusion_cost && service.exclusion_cost.to_i || -1,
           refill_quantities: vrp.units.collect{ |unit|
@@ -176,7 +176,7 @@ module Wrappers
               quantities: vrp.units.collect{ |unit|
                 is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
                 q = service.quantities.find{ |quantity| quantity.unit == unit }
-                q && q.value ? (is_empty_unit ? -1 : 1) * (service.type.to_s == "delivery" ? -1 : 1) * (q.value*(unit.counting ? 1 : 1000)+0.5).to_i : 0
+                q && q.value ? (is_empty_unit ? -1 : 1) * (service.type.to_s == "delivery" ? -1 : 1) * (q.value * (unit.counting ? 1 : 1000)).round : 0
               },
               duration: possible_activity.duration,
               additional_value: possible_activity.additional_value,
@@ -189,7 +189,7 @@ module Wrappers
               late_multiplier: possible_activity.late_multiplier || 0,
               setup_quantities: vrp.units.collect{ |unit|
                 q = service.quantities.find{ |quantity| quantity.unit == unit }
-                q && q.setup_value && unit.counting ? (q.setup_value).to_i : 0
+                q && q.setup_value && unit.counting ? q.setup_value.to_i : 0
               },
               exclusion_cost: service.exclusion_cost || -1,
               refill_quantities: vrp.units.collect{ |unit|
@@ -234,7 +234,7 @@ module Wrappers
           quantities: vrp.units.collect{ |unit|
             is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (is_empty_unit ? -1 : 1) * (q.value*1000+0.5).to_i : 0
+            q && q.value ? (is_empty_unit ? -1 : 1) * (q.value * 1000).round : 0
           },
           duration: shipment.pickup.duration,
           additional_value: shipment.pickup.additional_value,
@@ -256,7 +256,7 @@ module Wrappers
           quantities: vrp.units.collect{ |unit|
             is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? - (is_empty_unit ? -1 : 1) * (q.value*1000+0.5).to_i : 0
+            q && q.value ? - (is_empty_unit ? -1 : 1) * (q.value * 1000).round : 0
           },
           duration: shipment.delivery.duration,
           additional_value: shipment.delivery.additional_value,
@@ -302,7 +302,7 @@ module Wrappers
           vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             [
-              q && q.limit && q.limit < 1e+22 ? unit.counting ? q.limit : (q.limit*1000+0.5).to_i : -2147483648,
+              q && q.limit && q.limit < 1e+22 ? unit.counting ? q.limit : (q.limit * 1000).round : -2147483648,
               (q && q.overload_multiplier) || 0,
               (unit && unit.counting) || false
             ]
@@ -362,7 +362,7 @@ module Wrappers
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
-              limit: q && q.limit && q.limit < 1e+22 ? unit.counting ? q.limit : (q.limit*1000+0.5).to_i : -2147483648,
+              limit: q && q.limit && q.limit < 1e+22 ? unit.counting ? q.limit : (q.limit * 1000).round : -2147483648,
               overload_multiplier: (q && q.overload_multiplier) || 0,
               counting: (unit && unit.counting) || false
             )
@@ -527,7 +527,7 @@ module Wrappers
     end
 
     def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
-      if vrp.vehicles.size == 0 || (vrp.services.nil? || vrp.services.size == 0) && (vrp.shipments.nil? || vrp.shipments.size == 0)
+      if vrp.vehicles.empty? || (vrp.services.nil? || vrp.services.empty?) && (vrp.shipments.nil? || vrp.shipments.empty?)
         empty_result = {
           solvers: ['ortools'],
           cost: 0,
@@ -564,6 +564,14 @@ module Wrappers
 
       content = OrtoolsResult::Result.decode(output.read)
       output.rewind
+
+      # Currently, we continue to multiply by 1000 so we divide by 1000.0
+      # but this needs to be updated by unit.precision_coef
+      content['routes'].each{ |route|
+        route['activities'].each{ |activity|
+          activity['quantities'].collect!{ |val| val / 1000.0 }
+        }
+      }
 
       return @previous_result if content['routes'].empty? && @previous_result
       collected_indices = []
@@ -785,7 +793,7 @@ module Wrappers
         r = /^Iteration : ([0-9]+)/.match(line)
         r && (iterations = Integer(r[1]))
         s = / Cost : ([0-9.eE+]+)/.match(line)
-        s && (cost = Integer(s[1]))
+        s && (cost = Float(s[1]))
         t = / Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
         @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
