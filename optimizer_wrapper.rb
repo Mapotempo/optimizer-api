@@ -566,8 +566,8 @@ module OptimizerWrapper
           route['activities'].each{ |activity|
             if activity['detail'] && activity['detail']['quantities']
               activity['detail']['quantities'].each{ |quantity|
-                quantities_id << quantity['unit']
-                quantities_header << "quantity_#{quantity['unit']}"
+                quantities_id << quantity['unit']['attributes']['id']
+                quantities_header << "quantity_#{quantity['unit']['attributes']['label']}"
               }
             end
           }
@@ -632,8 +632,8 @@ module OptimizerWrapper
                 end
               }.flatten
               quantities = quantities_id.collect{ |id|
-                if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit'] == id }
-                  activity['detail']['quantities'].find{ |quantity| quantity['unit'] == id }['value']
+                if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes']['id'] == id }
+                  activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
                 else
                   nil
                 end
@@ -668,10 +668,10 @@ module OptimizerWrapper
               end
             }.flatten
             quantities = quantities_id.collect{ |id|
-              if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit'] == id }
-                activity['detail']['quantities'].find{ |quantity| quantity['unit'] == id }['value']
+              if activity['detail']['quantities'] && activity['detail']['quantities'].index{ |quantity| quantity['unit']['attributes'] && quantity['unit']['attributes']['id'] == id }
+                activity['detail']['quantities'].find{ |quantity| quantity['unit']['attributes']['id'] == id }['value']
               else
-                nil
+                activity['detail']['quantities'].find{ |quantity| quantity['unit'] == id }['value']
               end
             }
             out_csv << (days_info + common + quantities + timewindows + [activity['reason']])
