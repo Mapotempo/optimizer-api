@@ -802,7 +802,7 @@ module SchedulingHeuristic
         tw_end: vehicle.timewindow.end < 84600 ? vehicle.timewindow.end : vehicle.timewindow.end - ((vehicle.global_day_index + @shift) % 7) * 86400,
         start_point_id: vehicle[:start_point_id],
         end_point_id: vehicle[:end_point_id],
-        duration: vehicle[:duration],
+        duration: vehicle[:duration] ? vehicle[:duration] : (vehicle.timewindow.end - vehicle.timewindow.start),
         matrix_id: vehicle[:matrix_id],
         current_route: [],
         capacity: capacity,
