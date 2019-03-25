@@ -76,14 +76,14 @@ module Api
       end
 
       def self.vrp_request_matrices(this)
-        this.requires(:id, type: String)
+        this.requires(:id, type: String, allow_blank: false)
         this.optional(:time, type: Array[Array[Float]], desc: 'Matrix of time, travel duration between each pair of point in the problem')
         this.optional(:distance, type: Array[Array[Float]], desc: 'Matrix of distance, travel distance between each pair of point in the problem')
         this.optional(:value, type: Array[Array[Float]], desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related')
       end
 
       def self.vrp_request_point(this)
-        this.requires(:id, type: String)
+        this.requires(:id, type: String, allow_blank: false)
         this.optional(:matrix_index, type: Integer, desc: 'Index within the matrices, required if the matrices are already given')
         this.optional(:location, type: Hash, desc: 'Location of the point if matrices are not given') do
           self.requires(:lat, type: Float, allow_blank: false, desc: 'Latitude coordinate')
@@ -93,13 +93,13 @@ module Api
       end
 
       def self.vrp_request_unit(this)
-        this.requires(:id, type: String)
+        this.requires(:id, type: String, allow_blank: false)
         this.optional(:label, type: String, desc: 'Name of the unit')
         this.optional(:counting, type: Boolean, desc: 'Define if the unit is a counting one, which allows to count the number of stops in a single route')
       end
 
       def self.vrp_request_rest(this)
-        this.requires(:id, type: String)
+        this.requires(:id, type: String, allow_blank: false)
         this.requires(:duration, types: [String, Float, Integer], desc: 'Duration of the vehicle rest', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
           Vrp.vrp_request_timewindow(self)
@@ -109,7 +109,7 @@ module Api
       end
 
       def self.vrp_request_zone(this)
-        this.requires(:id, type: String, desc: '')
+        this.requires(:id, type: String, allow_blank: false, desc: '')
         this.requires(:polygon, type: Hash, desc: 'Geometry which describes the area')
         this.optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle or vehicles combination the zone could be served') # ----------- ???
       end
@@ -120,7 +120,7 @@ module Api
         this.optional(:setup_duration, types: [String, Float, Integer], desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:late_multiplier, type: Float, desc: 'Overrides the late_multiplier defined at the vehicle level (ORtools only)')
         this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '[ DEPRECATED v0.3]')
-        this.requires(:point_id, type: String, desc: 'Reference to the associated point')
+        this.requires(:point_id, type: String, allow_blank: false, desc: 'Reference to the associated point')
         this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may start') do
           Vrp.vrp_request_timewindow(self)
         end
@@ -128,7 +128,7 @@ module Api
 
       def self.vrp_request_quantity(this)
         this.optional(:id, type: String)
-        this.requires(:unit_id, type: String, desc: 'Unit related to this quantity')
+        this.requires(:unit_id, type: String, allow_blank: false, desc: 'Unit related to this quantity')
         this.optional(:fill, type: Boolean, desc: 'Allows to fill with quantity, until this unit vehicle capacity is full')
         this.optional(:empty, type: Boolean, desc: 'Allows to empty this quantity, until this unit vehicle capacity reaches zero')
         this.mutually_exclusive :fill, :empty
@@ -138,14 +138,14 @@ module Api
 
       def self.vrp_request_capacity(this)
         this.optional(:id, type: String)
-        this.requires(:unit_id, type: String, desc: 'Unit of the capacity')
-        this.requires(:limit, type: Float, desc: 'Maximum capacity that can be carried')
+        this.requires(:unit_id, type: String, allow_blank: false, desc: 'Unit of the capacity')
+        this.requires(:limit, type: Float, allow_blank: false, desc: 'Maximum capacity that can be carried')
         this.optional(:initial, type: Float, desc: 'Initial quantity value loaded in the vehicle')
         this.optional(:overload_multiplier, type: Float, desc: 'Allows to exceed the limit against this cost (ORtools only)')
       end
 
       def self.vrp_request_vehicle(this)
-        this.requires(:id, type: String)
+        this.requires(:id, type: String, allow_blank: false)
         this.optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
         this.optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
         this.optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools)')
@@ -217,7 +217,7 @@ module Api
       end
 
       def self.vrp_request_service(this)
-        this.requires(:id, type: String)
+        this.requires(:id, type: String, allow_blank: false)
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4. 0 is the highest priority level). Not available with same_point_day option.')
         this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost. Not available with periodic heuristic.')
 
@@ -249,7 +249,7 @@ module Api
       end
 
       def self.vrp_request_shipment(this)
-        this.requires(:id, type: String, desc: '')
+        this.requires(:id, type: String, allow_blank: false, desc: '')
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
         this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost')
 
@@ -267,10 +267,10 @@ module Api
         this.optional(:maximum_inroute_duration, type: Integer,  desc: 'Maximum in route duration of this particular shipment (Must be feasible !)')
         this.optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this shipment')
-        this.requires(:pickup, type: Hash, desc: 'Activity of collection') do
+        this.requires(:pickup, type: Hash, allow_blank: false, desc: 'Activity of collection') do
           Vrp.vrp_request_activity(self)
         end
-        this.requires(:delivery, type: Hash, desc: 'Activity of drop off') do
+        this.requires(:delivery, type: Hash, allow_blank: false, desc: 'Activity of drop off') do
           Vrp.vrp_request_activity(self)
         end
         this.optional(:quantities, type: Array, desc: 'Define the entities which are taken and dropped') do
@@ -279,7 +279,7 @@ module Api
       end
 
       def self.vrp_request_subtour(this)
-        this.requires(:id, type: String, desc: '')
+        this.requires(:id, type: String, allow_blank: false, desc: '')
         this.optional(:time_bounds, type: Integer, desc: 'Time limit from the transmodal points (Isochrone)')
         this.optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistanche)')
         this.optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
@@ -297,8 +297,9 @@ module Api
       end
 
       def self.vrp_request_relation(this)
-        this.requires(:id, type: String, desc: '')
-        this.requires(:type, type: String, desc: 'same_route, sequence, order, minimum_day_lapse, maximum_day_lapse, shipment, meetup, maximum_duration_lapse, force_first, never_first, force_end, vehicle_group_duration, vehicle_group_duration_on_weeks or vehicle_group_duration_on_months')
+        this.requires(:id, type: String, allow_blank: false, desc: '')
+        this.requires(:type, type: String, allow_blank: false, values: %w[same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse force_first never_first force_end vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months],
+                             desc: 'Relations allow to define constraints explicitly between activities and/or vehicles. It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse, shipment, meetup, maximum_duration_lapse, force_first, never_first, force_end, vehicle_group_duration, vehicle_group_duration_on_weeks or vehicle_group_duration_on_months')
         this.optional(:lapse, type: Integer, desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
         this.optional(:linked_ids, type: Array[String], desc: 'List of activities involved in the relation')
         this.optional(:linked_vehicle_ids, type: Array[String], desc: 'List of vehicles involved in the relation')
