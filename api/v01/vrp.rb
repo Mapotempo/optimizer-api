@@ -460,35 +460,35 @@ module Api
 
             optional :name, type: String, desc: 'Name of the problem'
 
-            optional :points, type: Array, desc: 'Particular place in the map', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+            optional :points, type: Array, desc: 'Particular place in the map', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_point(self)
             end
 
-            optional :units, type: Array, desc: 'The name of a Capacity/Quantity', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+            optional :units, type: Array, desc: 'The name of a Capacity/Quantity', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_unit(self)
             end
 
-            optional :timewindows, type: Array, desc: 'Time slot while the activity may be performed', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+            optional :timewindows, type: Array, desc: 'Time slot while the activity may be performed', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_timewindow(self)
             end
 
-            optional :capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+            optional :capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_capacity(self)
             end
 
-            optional :quantities, type: Array, desc: 'Define the entities which are taken or dropped', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+            optional :quantities, type: Array, desc: 'Define the entities which are taken or dropped', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_quantity(self)
             end
 
-            optional :services, type: Array, desc: 'Independant activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) } do
+            optional :services, type: Array, desc: 'Independant activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_service(self)
             end
 
-            optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) }) do
+            optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) }) do
               Vrp.vrp_request_shipment(self)
             end
 
-            optional(:vehicles, type: Array, desc: 'Usually represent a work day of a particular driver/vehicle', coerce_with: ->(c) { CSVParser.call(c.tempfile.read, nil) }) do
+            optional(:vehicles, type: Array, desc: 'Usually represent a work day of a particular driver/vehicle', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) }) do
               Vrp.vrp_request_vehicle(self)
             end
           }
