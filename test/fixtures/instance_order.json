@@ -758,7 +758,8 @@
             {
                 "lat": 47.895, "lon": -1.835
             }
-        }], "vehicles": [
+        }],
+        "vehicles": [
         {
             "id": "19610",
             "router_mode": "car",
@@ -780,11 +781,13 @@
             "motorway": true,
             "max_walk_distance": 750,
             "approach": "unrestricted"
-        }], "units": [
+        }],
+        "units": [
         {
             "id": "ex",
             "label": "exemple"
-        }], "services": [
+        }],
+        "services": [
         {
             "id": "service_0",
             "activity":
@@ -2151,7 +2154,8 @@
                 "unit_id": "ex",
                 "value": 1.0
             }]
-        }], "relations": [
+        }],
+        "relations": [
         {
             "id": "0",
             "type": "order",
@@ -2161,14 +2165,19 @@
             "id": "1",
             "type": "order",
             "linked_ids": ["service_105"]
-        }], "configuration":
+        }],
+        "configuration":
         {
             "preprocessing":
             {
                 "prefer_short_segment": true
-            }, "resolution":
+            },
+            "resolution":
             {
-                "duration": 100000, "initial_time_out": 30000, "time_out_multiplier": 2, "solver_parameter": 0
+                "duration": 100000,
+                "initial_time_out": 3000,
+                "time_out_multiplier": 2,
+                "solver_parameter": 0
             }
         }
     }

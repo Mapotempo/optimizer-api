@@ -28,17 +28,16 @@ require './api/v01/entities/vrp_result'
 module Api
   module V01
     module CSVParser
-      def self.call(object, env)
-        # TODO use encoding from Content-Type or detect it.
+      def self.call(object, _env)
+        # TODO: use encoding from Content-Type or detect it.
         CSV.parse(object.force_encoding('utf-8'), headers: true).collect{ |row|
           r = row.to_h
 
           r.keys.each{ |key|
-            if key.include?('.')
-              part = key.split('.', 2)
-              r.deep_merge!({part[0] => {part[1] => r[key]}})
-              r.delete(key)
-            end
+            next unless key.include?('.')
+            part = key.split('.', 2)
+            r.deep_merge!(part[0] => {part[1] => r[key]})
+            r.delete(key)
           }
 
           json = r['json']
@@ -219,7 +218,7 @@ module Api
       def self.vrp_request_service(this)
         this.requires(:id, type: String, allow_blank: false)
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4. 0 is the highest priority level). Not available with same_point_day option.')
-        this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost. Not available with periodic heuristic.')
+        this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost. Not available with periodic heuristic.')
 
         this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
@@ -251,7 +250,7 @@ module Api
       def self.vrp_request_shipment(this)
         this.requires(:id, type: String, allow_blank: false, desc: '')
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
-        this.optional(:exclusion_cost, type: Integer,  desc: 'Exclusion cost')
+        this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost')
 
         this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
@@ -264,7 +263,7 @@ module Api
         this.optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
         this.optional(:maximum_lapse, type: Float, desc: 'Maximum day lapse between two visits')
 
-        this.optional(:maximum_inroute_duration, type: Integer,  desc: 'Maximum in route duration of this particular shipment (Must be feasible !)')
+        this.optional(:maximum_inroute_duration, type: Integer, desc: 'Maximum in route duration of this particular shipment (Must be feasible !)')
         this.optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this shipment')
         this.requires(:pickup, type: Hash, allow_blank: false, desc: 'Activity of collection') do
@@ -513,10 +512,10 @@ module Api
                   error!({status: 'Exceeded params limit', detail: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."}, 400)
                 end
                 if params[:vrp] && params[:vrp][key]
-                  (vrp.send "#{key}=", params[:vrp][key])
+                  vrp.send("#{key}=", params[:vrp][key])
                 end
                 if params[key]
-                  (vrp.send("#{key}+=", params[key]))
+                  vrp.send("#{key}+=", params[key])
                 end
               }
 
@@ -571,68 +570,67 @@ module Api
           get ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
-            if !job
-              error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
-            else
-              # If job has been killed by restarting queues, need to update job status to 'killed'
-              if job.working?
-                job_ids = Resque.workers.map{ |w| w.job && w.job['payload'] && w.job['payload']['args'].first }
-                unless job_ids.include? id
-                  OptimizerWrapper.job_remove(params[:api_key], id)
-                  job.status = 'killed'
-                end
-              end
-              solution = OptimizerWrapper::Result.get(id) || {}
-              if job.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
-                status 404
-                error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
-              elsif job.failed?
-                status 202
-                if solution['csv']
-                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
-                else
-                  present({
-                    solutions: [solution['result']].flatten(1),
-                    job: {
-                      id: id,
-                      status: :failed,
-                      avancement: job.message,
-                      graph: solution['graph']
-                    }
-                  }, with: Grape::Presenters::Presenter)
-                end
-              elsif !job.completed?
-                status 206
-                if solution['csv']
-                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
-                else
-                  present({
-                    solutions: [solution['result']].flatten(1),
-                    job: {
-                      id: id,
-                      status: job.queued? ? :queued : job.working? ? :working : nil,
-                      avancement: job.message,
-                      graph: solution['graph']
-                    }
-                  }, with: Grape::Presenters::Presenter)
-                end
-              else
-                status 200
-                if solution['csv']
-                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
-                else
-                  present({
-                    solutions: [solution['result']].flatten(1),
-                    job: {
-                      id: id,
-                      status: :completed,
-                      avancement: job.message,
-                      graph: solution['graph']
-                    }
-                  }, with: Grape::Presenters::Presenter)
-                end
+
+            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job
+
+            # If job has been killed by restarting queues, need to update job status to 'killed'
+            if job.working?
+              job_ids = Resque.workers.map{ |w| w.job && w.job['payload'] && w.job['payload']['args'].first }
+              unless job_ids.include? id
                 OptimizerWrapper.job_remove(params[:api_key], id)
+                job.status = 'killed'
               end
+            end
+            solution = OptimizerWrapper::Result.get(id) || {}
+            if job.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
+              status 404
+              error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
+            elsif job.failed?
+              status 202
+              if solution['csv']
+                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+              else
+                present({
+                  solutions: [solution['result']].flatten(1),
+                  job: {
+                    id: id,
+                    status: :failed,
+                    avancement: job.message,
+                    graph: solution['graph']
+                  }
+                }, with: Grape::Presenters::Presenter)
+              end
+            elsif !job.completed?
+              status 206
+              if solution['csv']
+                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+              else
+                present({
+                  solutions: [solution['result']].flatten(1),
+                  job: {
+                    id: id,
+                    status: ['queued', 'working'].include?(job.status) ? job.status.to_sym : nil,
+                    avancement: job.message,
+                    graph: solution['graph']
+                  }
+                }, with: Grape::Presenters::Presenter)
+              end
+            else
+              status 200
+              if solution['csv']
+                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+              else
+                present({
+                  solutions: [solution['result']].flatten(1),
+                  job: {
+                    id: id,
+                    status: :completed,
+                    avancement: job.message,
+                    graph: solution['graph']
+                  }
+                }, with: Grape::Presenters::Presenter)
+              end
+              OptimizerWrapper.job_remove(params[:api_key], id)
             end
           end
 
@@ -667,8 +665,8 @@ module Api
               OptimizerWrapper.job_kill(params[:api_key], id)
               job.status = 'killed'
               solution = OptimizerWrapper::Result.get(id)
+              status 202
               if solution && !solution.empty?
-                status 202
                 if solution['csv']
                   present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
                 else
@@ -683,7 +681,6 @@ module Api
                   }, with: Grape::Presenters::Presenter)
                 end
               else
-                status 202
                 present({
                   job: {
                     id: id,
