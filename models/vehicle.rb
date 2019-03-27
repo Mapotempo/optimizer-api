@@ -103,7 +103,7 @@ module Models
 
     def need_matrix_time?
       cost_time_multiplier != 0 || cost_late_multiplier && cost_late_multiplier != 0 || cost_setup_time_multiplier != 0 ||
-      !rests.empty? || maximum_ride_time || duration || overall_duration
+        !rests.empty? || maximum_ride_time || duration || overall_duration
     end
 
     def need_matrix_distance?
@@ -130,9 +130,9 @@ module Models
       matrix_indices.collect{ |i|
         matrix_indices.collect{ |j|
           if i && j
-            (dimensions.include?(:time) && matrix.time ? matrix.time[i][j] * (options[:cost_time_multiplier] || 1) : 0) +
-            (dimensions.include?(:distance) && matrix.distance ? matrix.distance[i][j] * (options[:cost_distance_multiplier] || 1) : 0) +
-            (dimensions.include?(:value) && matrix.value ? matrix.value[i][j] * (options[:value_matrix_multiplier] || 1) : 0)
+            blend = (dimensions.include?(:time) && matrix.time ? matrix.time[i][j] * (options[:cost_time_multiplier] || 1) : 0) + # rubocop:disable Lint/UselessAssignment
+                    (dimensions.include?(:distance) && matrix.distance ? matrix.distance[i][j] * (options[:cost_distance_multiplier] || 1) : 0) +
+                    (dimensions.include?(:value) && matrix.value ? matrix.value[i][j] * (options[:value_matrix_multiplier] || 1) : 0)
           else
             0
           end

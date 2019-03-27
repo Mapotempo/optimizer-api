@@ -3399,12 +3399,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'maximum_lapse_1',
-        type: "maximum_day_lapse",
+        type: 'maximum_day_lapse',
         lapse: 1,
         linked_ids: ['service_1', 'service_2']
       },{
         id: 'maximum_lapse_2',
-        type: "maximum_day_lapse",
+        type: 'maximum_day_lapse',
         lapse: 1,
         linked_ids: ['service_1', 'service_3']
       }],
@@ -3425,7 +3425,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert problem[:vehicles].find{ |vehicle| result[:routes].find{ |route|
       route[:activities].one?{ |activity| activity[:service_id] == ('service_2' || 'service_3') }
     }[:vehicle_id] == vehicle[:id] }[:global_day_index] - problem[:vehicles].find{ |vehicle| result[:routes].find{ |route|
-      route[:activities].one?{ |activity| activity[:service_id]  == 'service_1' }
+      route[:activities].one?{ |activity| activity[:service_id] == 'service_1' }
     }[:vehicle_id] == vehicle[:id] }[:global_day_index] == 1
   end
 
@@ -4283,9 +4283,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     ortools = OptimizerWrapper::ORTOOLS
     problem = {
       configuration: {
-          resolution: {
+        resolution: {
               duration: 100
-          },
+        },
         restitution: {
           intermediate_solutions: false,
         }
@@ -4367,54 +4367,73 @@ class Wrappers::OrtoolsTest < Minitest::Test
           [1, 1, 0]
         ]
       }],
-      units: [{
-        id: 'kg',
-        label: 'Kg'
-      }, {
-        id: 'l',
-        label: 'L'
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        capacities: [{
-          unit_id: 'kg',
-          limit: 5
-        }]
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
+      units: [
+        {
+          id: 'kg',
+          label: 'Kg'
         },
-        quantities: [{
-          unit_id: 'kg',
-          value: -5
-        }]
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
+        {
+          id: 'l',
+          label: 'L'
+        }
+      ],
+      points: [
+        {
+          id: 'point_0',
+          matrix_index: 0
         },
-        quantities: [{
-          unit_id: 'kg',
-          value: 4
-        },{
-          unit_id: 'l',
-          value: -1
-        }]
-      }],
+        {
+          id: 'point_1',
+          matrix_index: 1
+        },
+        {
+          id: 'point_2',
+          matrix_index: 2
+        }
+      ],
+      vehicles: [
+        {
+          id: 'vehicle_0',
+          start_point_id: 'point_0',
+          matrix_id: 'matrix_0',
+          capacities: [
+              {
+              unit_id: 'kg',
+              limit: 5
+            }
+          ]
+        }
+      ],
+      services: [
+        {
+          id: 'service_1',
+          activity: {
+            point_id: 'point_1'
+          },
+          quantities: [
+            {
+              unit_id: 'kg',
+              value: -5
+            }
+          ]
+        },
+        {
+          id: 'service_2',
+          activity: {
+            point_id: 'point_2'
+          },
+          quantities: [
+            {
+              unit_id: 'kg',
+              value: 4
+            },
+            {
+              unit_id: 'l',
+              value: -1
+            }
+          ]
+        }
+      ],
       configuration: {
         resolution: {
           duration: 10,

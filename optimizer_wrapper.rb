@@ -648,12 +648,12 @@ module OptimizerWrapper
       previous = current
       segment
     }.reverse.compact
-     if segments.size > 0
+    unless segments.empty?
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
         vehicle[:router_mode].to_sym, vehicle[:router_dimension], segments, vrp.restitution_geometry_polyline, vehicle.router_options)
       raise RouterWrapperError unless details
     end
-    details.each{ |d| d[0] = (d[0] / 1000).round(4) if d[0] } if details
+    details.each{ |d| d[0] = (d[0] / 1000.0).round(4) if d[0] } if details
     details
   end
 

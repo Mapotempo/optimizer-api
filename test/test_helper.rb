@@ -20,12 +20,11 @@ SimpleCov.start
 
 ENV['APP_ENV'] ||= 'test'
 require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
-Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].each{|file| require file }
+Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].each{ |file| require file }
 
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].each{|file| require file }
+Dir[File.dirname(__FILE__) + '/../models/*.rb'].each{ |file| require file }
 require './optimizer_wrapper'
 require './api/root'
-
 
 require 'minitest/reporters'
 Minitest::Reporters.use!
