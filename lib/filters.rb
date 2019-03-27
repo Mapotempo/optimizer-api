@@ -29,8 +29,8 @@ module Filters
         new_timewindows = []
         deleted_timewindows = []
         equivalent = {}
-        service.activity.timewindows.each_with_index{ |tw1, i1|
-          tw1 = Marshal.load(Marshal.dump(tw1))
+        service.activity.timewindows.each_with_index{ |activity_tw1, i1|
+          tw1 = Marshal.load(Marshal.dump(activity_tw1))
           if deleted_timewindows.include?(tw1) && equivalent[tw1]
             tw1 = Marshal.load(Marshal.dump(equivalent[tw1]))
           end
@@ -40,10 +40,10 @@ module Filters
           if service.activity.timewindows.size == 1
             new_timewindows << Marshal.load(Marshal.dump(tw1))
           end
-          service.activity.timewindows.slice(i1 + 1, service.activity.timewindows.size).each{ |tw2|
-            tw2 = Marshal.load(Marshal.dump(tw2))
+          service.activity.timewindows.slice(i1 + 1, service.activity.timewindows.size).each{ |activity_tw2|
+            tw2 = Marshal.load(Marshal.dump(activity_tw2))
             tw2.start = 0 if tw2.start.nil?
-            tw2.end = Float::INFINITY if tw1.end.nil?
+            tw2.end = Float::INFINITY if tw2.end.nil?
             compatible_day = tw1.day_index == tw2.day_index || tw1.day_index.nil? || tw2.day_index.nil?
 
             if compatible_day && (tw2.start.between?(tw1.start, tw1.end) || tw1.start.between?(tw2.start, tw2.end))
