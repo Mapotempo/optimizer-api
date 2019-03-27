@@ -402,8 +402,8 @@ module Wrappers
       vrp.resolution_allow_partial_assignment || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
     end
 
-    def assert_not_testing_several_heuristics(vrp)
-      vrp.preprocessing_first_solution_strategy.nil?
+    def assert_no_first_solution_strategy(vrp)
+      vrp.preprocessing_first_solution_strategy.nil? || vrp.preprocessing_first_solution_strategy.empty? || vrp.preprocessing_first_solution_strategy == ['self_selection']
     end
 
     def assert_solver(vrp)
