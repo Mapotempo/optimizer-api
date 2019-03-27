@@ -52,7 +52,7 @@ module Wrappers
         :assert_no_subtours,
         :assert_no_planning_heuristic,
         :assert_no_evaluation,
-        :assert_not_testing_several_heuristics,
+        :assert_no_first_solution_strategy,
         :assert_solver,
         :assert_no_partitions,
       ]
