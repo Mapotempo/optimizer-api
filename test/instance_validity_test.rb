@@ -34,8 +34,8 @@ class InstanceValidityTest < Minitest::Test
     problem[:configuration][:preprocessing][:first_solution_strategy] = [1]
 
     vrp = FCT.create(problem)
-    assert OptimizerWrapper::VROOM.inapplicable_solve?(vrp).include?(:assert_not_testing_several_heuristics)
-    assert !OptimizerWrapper::ORTOOLS.inapplicable_solve?(vrp).include?(:assert_not_testing_several_heuristics)
+    assert OptimizerWrapper::VROOM.inapplicable_solve?(vrp).include?(:assert_no_first_solution_strategy)
+    assert !OptimizerWrapper::ORTOOLS.inapplicable_solve?(vrp).include?(:assert_no_first_solution_strategy)
   end
 
   def test_solver_needed
