@@ -229,7 +229,10 @@ module Wrappers
     end
 
     def assert_correctness_matrices_vehicles_and_points_definition(vrp)
-      vrp.matrices.count{ |matrix| matrix[:time] || matrix[:distance] } == 0 || vrp.points.none?{ |point| point.matrix_index.nil? }
+      # Either there is no matrix and all points are with a location
+      # or all points and vehicles have matrix_index and matrix_id, respectively
+      (vrp.matrices.count{ |matrix| matrix[:time] || matrix[:distance] }.zero? && vrp.points.all?(&:location)) ||
+        (vrp.points.all?(&:matrix_index) && vrp.vehicles.all?(&:matrix_id))
     end
 
     def assert_one_sticky_at_most(vrp)
