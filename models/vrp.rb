@@ -21,6 +21,7 @@ module Models
   class Vrp < Base
     field :name, default: nil
     field :preprocessing_max_split_size, default: nil
+    field :preprocessing_split_number, default: 1.0
     field :preprocessing_partition_method, default: nil
     field :preprocessing_partition_metric, default: nil
     field :preprocessing_kmeans_centroids, default: nil
@@ -141,6 +142,7 @@ module Models
     def preprocessing=(preprocessing)
       self.preprocessing_force_cluster = preprocessing[:force_cluster]
       self.preprocessing_max_split_size = preprocessing[:max_split_size]
+      self.preprocessing_split_number = preprocessing[:split_number]
       self.preprocessing_partition_method = preprocessing[:partition_method]
       self.preprocessing_partition_metric = preprocessing[:partition_metric]
       self.preprocessing_kmeans_centroids = preprocessing[:kmeans_centroids]

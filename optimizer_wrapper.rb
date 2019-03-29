@@ -31,6 +31,7 @@ require './lib/interpreters/periodic_visits.rb'
 require './lib/interpreters/split_clustering.rb'
 require './lib/interpreters/compute_several_solutions.rb'
 require './lib/heuristics/assemble_heuristic.rb'
+require './lib/heuristics/dichotomious_approach.rb'
 require './lib/filters.rb'
 require './lib/cleanse.rb'
 
@@ -170,13 +171,19 @@ module OptimizerWrapper
       unsplitted_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp])
       unsplitted_vrps
     }.flatten.compact
+    dico_results = []
+    definitive_service_vrps.delete_if{ |service_vrp|
+      dico_vrp, dico_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, block)
+      dico_results << dico_result
+      dico_result
+    }
     definitive_service_vrps.each{ |service_vrp|
       multi = Interpreters::MultiTrips.new
       multi.expand(service_vrp[:vrp])
     }
-    result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty?
+    result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty? && dico_results.compact.empty?
     result_global = {
-      result: ([result] + duplicated_results + split_results).compact
+      result: ([result] + duplicated_results + split_results + dico_results).compact
     }
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end

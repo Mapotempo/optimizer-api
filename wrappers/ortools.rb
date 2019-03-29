@@ -122,12 +122,13 @@ module Wrappers
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
       relations = []
       services = []
+      candidate = Interpreters::Dichotomious.dichotomious_candidate({ vrp: vrp, service: :ortools })
       vrp.services.each_with_index{ |service, service_index|
         vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) && service[:unavailable_visit_day_indices].empty?
           []
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
-            if (service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) &&
+            if (service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) && !candidate &&
             check_services_compatible_days(vrp, vehicle, service)) && (service.unavailable_visit_day_indices.empty? || !service.unavailable_visit_day_indices.include?(vehicle.global_day_index))
               index
             else

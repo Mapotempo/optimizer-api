@@ -158,8 +158,9 @@ module Interpreters
       sub_first.resolution_duration = vrp.resolution_duration / problem_size * (sub_first.services.size + sub_first.shipments.size)
       sub_first.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size *
                                               (sub_first.services.size + sub_first.shipments.size) if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
-      sub_first.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.2 + sub_first.services.size.to_f / vrp.services.size)).to_i
-      #Reintroduce fills and empties
+      sub_first.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.05 + sub_first.services.size.to_f / vrp.services.size)).to_i
+      sub_first.preprocessing_split_number -= vrp.preprocessing_split_number / 2.0
+      # Reintroduce fills and empties
       sub_first.services += empties_or_fills
 
       first_side = [{
@@ -176,8 +177,9 @@ module Interpreters
         sub_second.resolution_duration = (vrp.resolution_duration / problem_size) * (sub_second.services.size + sub_second.shipments.size)
         sub_second.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size *
                                                  (sub_second.services.size + sub_second.shipments.size) if (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)
-        sub_second.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.2 + sub_second.services.size.to_f / vrp.services.size)).to_i
-              #Reintroduce fills and empties
+        sub_second.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.05 + sub_second.services.size.to_f / vrp.services.size)).to_i
+        sub_second.preprocessing_split_number = vrp.preprocessing_split_number
+        # Reintroduce fills and empties
         sub_second.services += empties_or_fills
 
         second_side = [{
@@ -223,7 +225,7 @@ module Interpreters
           current_load[:value] / capacity.limit < 0.2 if capacity.limit && current_load && capacity.limit > 0
         }
         time_flag = vehicle.timewindow.end.nil? || vehicle.timewindow.start.nil? ||
-        (route[:activities].last[:begin_time] - route[:activities].first[:begin_time]) < 0.2 * (vehicle.timewindow.end - vehicle.timewindow.start).to_f
+        (route[:activities].last[:begin_time] - route[:activities].first[:begin_time]) < 0.3 * (vehicle.timewindow.end - vehicle.timewindow.start).to_f
         result[:unassigned] += route[:activities].select{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] } if load_flag && time_flag
         load_flag && time_flag
       }

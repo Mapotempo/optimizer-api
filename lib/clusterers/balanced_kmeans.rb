@@ -104,7 +104,7 @@ module Ai4r
         else
           @cut_limit
         end
-        balance = if (a[4] && b[4] && b[4] != a[4]) || (a[5] && b[5] && b[5] != a[5]) # if service sticky or skills are different than centroids sticky/skills, or if services skills have no match
+        balance = if (a[4] && b[4] && b[4] != a[4]) || (a[5] && b[5] && (b[5] & a[5]).size < b[5].size) # if service sticky or skills are different than centroids sticky/skills, or if services skills have no match
           2 ** 32
         elsif cut_value > limit
           ((cut_value - limit) / limit) * 1000 * fly_distance
@@ -127,7 +127,7 @@ module Ai4r
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
             if unit != :visits && data_item[3][:visits] != 1
-              @cluster_metrics[c][unit] += data_item[3][unit] * data_item[3][:visits]
+              @cluster_metrics[c][unit] += data_item[3][unit]
             else
               @cluster_metrics[c][unit] += data_item[3][unit]
             end
