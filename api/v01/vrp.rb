@@ -322,6 +322,7 @@ module Api
 
       def self.vrp_request_preprocessing(this)
         this.optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
+        this.optional(:split_number, type: Float, desc: 'Give number of precess for block call')
         this.optional(:partition_method, type: String, desc: '[ DEPRECATED : use partitions structure instead ]')
         this.optional(:partition_metric, type: Symbol, desc: '[ DEPRECATED : use partitions structure instead ]')
         this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available with deprecated partition_method')
