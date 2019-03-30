@@ -269,7 +269,6 @@ module Api
                           cluster_threshold: 0
                       },
                       resolution: {
-                          initial_time_out: 18000,
                           duration: 600000 ,
                           iterations: 1000,
                           iterations_without_improvment: 100,
