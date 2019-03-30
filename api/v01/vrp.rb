@@ -393,6 +393,7 @@ module Api
             ],
             detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
           }
+
           params {
             optional(:vrp, type: Hash, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
               optional(:name, type: String, desc: 'Name of the problem, used as tag for all element in order to name plan when importing returned .csv file')
@@ -500,6 +501,7 @@ module Api
                 File.write(path + '.json', {vrp: params[:vrp]}.to_json)
               end
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
+
               if params[:points]
                 APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(''), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles], configuration: params[:vrp][:configuration] } }.to_json)
               else

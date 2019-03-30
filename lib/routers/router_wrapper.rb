@@ -31,6 +31,7 @@ module Routers
     end
 
     def compute_batch(url, mode, dimension, segments, polyline, options = {})
+
       results = {}
       nocache_segments = []
       segments.each{ |s|
@@ -46,6 +47,7 @@ module Routers
         format = polyline ? 'json' : 'geojson'
         nocache_segments.each_slice(50){ |slice_segments|
           resource = RestClient::Resource.new(url + "/routes.#{format}", timeout: nil)
+
           request = resource.post(params(mode, dimension, options).merge({
             locs: slice_segments.collect{ |segment| segment.join(',') }.join('|')
           })) { |response, request, result, &block|

@@ -19,6 +19,7 @@ require 'grape'
 require 'grape-swagger'
 
 require './api/v01/vrp'
+require './api/v01/buildroute'
 
 module Api
   module V01
@@ -58,6 +59,7 @@ module Api
       end
 
       mount Vrp
+      mount Buildroute
     end
   end
 end
