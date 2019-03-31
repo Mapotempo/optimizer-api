@@ -371,11 +371,7 @@ module Api
                   end
                 end
               end
-              responseData = {
-                  "status": 'success',
-                  "vrp": vrp,
-                  "result": result
-              }
+              result
           end
         end
       end
