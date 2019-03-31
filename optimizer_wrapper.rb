@@ -149,22 +149,23 @@ module OptimizerWrapper
     }
 
     services_vrps = Filters::filter(services_vrps)
-
+   # byebug
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
     elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
       raise DiscordantProblemError.new("Geometry is not available if locations are not defined")
     else
-      if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
-        # The job seems easy enough to perform it with the server
-        define_process(services_vrps, services_fleets, job_id)
-      else
-        # Delegate the job to a worker
-        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)),
-          services_fleets: Base64.encode64(Marshal::dump(services_fleets)), api_key: api_key, checksum: checksum, pids: [])
-        JobList.add(api_key, job_id)
-        Result.get(job_id) || job_id
-      end
+      # if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
+      #   # The job seems easy enough to perform it with the server
+      #
+      # else
+      #   # Delegate the job to a worker
+      #   job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal::dump(services_vrps)),
+      #     services_fleets: Base64.encode64(Marshal::dump(services_fleets)), api_key: api_key, checksum: checksum, pids: [])
+      #   JobList.add(api_key, job_id)
+      #   Result.get(job_id) || job_id
+      # end
+      define_process(services_vrps, services_fleets, job_id)
     end
   end
 
@@ -188,7 +189,7 @@ module OptimizerWrapper
       result: [result] + duplicated_results
     }
     result_global[:csv] = true if result_global[:result].any?{ |result| result && result[:csv] == true }
-
+    byebug
     Result.set(job, result_global)
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end

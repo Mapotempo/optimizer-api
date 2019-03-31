@@ -871,11 +871,14 @@ $(document).ready(function() {
   };
 
   var beforeFn = function(file, inputElem) {
+    console.log("Parsing file: ", file)
     if (debug) console.log("Parsing file: ", file);
     data[inputElem.id.replace('file-', '')] = [];
   };
 
   $('#send-files').click(function(e) {
+    console.log("Parsing file: ", file)
+    alert("ok go now");
     var filesCustomers = $('#file-customers')[0].files;
     var filesVehicles = $('#file-vehicles')[0].files;
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
