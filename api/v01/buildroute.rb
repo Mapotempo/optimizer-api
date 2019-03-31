@@ -366,7 +366,10 @@ module Api
                   end
                 end
               end
-              result
+              responseData = {
+                  "vrp": vrp,
+                  "result": result
+              }
           end
         end
       end
