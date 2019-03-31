@@ -189,7 +189,6 @@ module OptimizerWrapper
       result: [result] + duplicated_results
     }
     result_global[:csv] = true if result_global[:result].any?{ |result| result && result[:csv] == true }
-    byebug
     Result.set(job, result_global)
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end

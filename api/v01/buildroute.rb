@@ -60,8 +60,15 @@ module Api
       content_type :csv, 'text/csv;'
       parser :csv, CSVParser
       default_format :json
-
+      def self.getDuration(time)
+        seconds = 0
+        if dt = Time.parse(time) rescue false
+          seconds = dt.hour * 3600 + dt.min * 60 + dt.sec#=> 37800
+        end
+        seconds
+      end
       namespace :buildroute do
+
         resource :routes do
           desc 'Submit Buildroute problem', {
               nickname: 'Buildroute',
@@ -206,20 +213,20 @@ module Api
                       pickup: {
                           point_id: pickupRefe,
                           timewindows: [{
-                              start: order[:pickup_start].to_s.to_i || 0,
-                              end: order[:pickup_end].to_s.to_i || 0
+                              start: Buildroute.getDuration(order[:pickup_start].to_s || ""),
+                              end: Buildroute.getDuration(order[:pickup_end].to_s || "")
                           }],
-                          setup_duration: order[:pickup_setup].to_s.to_d || 0,
-                          duration: order[:pickup_duration].to_s.to_d || 0
+                          setup_duration: order[:pickup_setup].to_s.to_i || 0,
+                          duration: order[:pickup_duration].to_s.to_i || 0
                       },
                       delivery: {
                           point_id: deliverRef,
                           timewindows: [{
-                              start: order[:delivery_start].to_s.to_i,
-                              end: order[:delivery_end].to_s.to_i
+                              start: Buildroute.getDuration(order[:delivery_start].to_s || ""),
+                              end: Buildroute.getDuration(order[:delivery_end].to_s || "")
                           }],
-                          setup_duration: order[:delivery_setup].to_s.to_d || 0,
-                          duration: order[:delivery_duration].to_s.to_d || 0
+                          setup_duration: order[:delivery_setup].to_s.to_i || 0,
+                          duration: order[:delivery_duration].to_s.to_i || 0
                       },
                       quantities: [
                         {
@@ -237,11 +244,11 @@ module Api
                       activity: {
                           point_id: pickupRefe,
                           timewindows: [{
-                              start: order[:pickup_start].to_s.to_i,
-                              end: order[:pickup_end].to_s.to_i
+                              start: Buildroute.getDuration(order[:pickup_start].to_s),
+                              end: Buildroute.getDuration(order[:pickup_end].to_s)
                           }],
-                          setup_duration: order[:pickup_setup].to_s.to_d || 0,
-                          duration: order[:pickup_duration].to_s.to_d || 0
+                          setup_duration: order[:pickup_setup].to_s.to_i || 0,
+                          duration: order[:pickup_duration].to_s.to_i || 0
                       },
                       quantities: [
                         {
@@ -259,11 +266,11 @@ module Api
                       activity: {
                           point_id: deliverRef,
                           timewindows: [{
-                              start: order[:delivery_start].to_s.to_i,
-                              end: order[:delivery_end].to_s.to_i
+                              start: Buildroute.getDuration(order[:delivery_start].to_s),
+                              end: Buildroute.getDuration(order[:delivery_end].to_s)
                           }],
-                          setup_duration: order[:delivery_setup].to_s.to_d || 0,
-                          duration: order[:delivery_duration].to_s.to_d || 0
+                          setup_duration: order[:delivery_setup].to_s.to_i || 0,
+                          duration: order[:delivery_duration].to_s.to_i || 0
                       },
                       quantities: 1,
                       skills: ''
@@ -315,10 +322,9 @@ module Api
                     end_point_id: endRef,
                     capacities: capacities,
                     timewindows: [{
-                        start: v[:start_time].to_s.to_i || 0,
-                        end: v[:end_time].to_s.to_i || 0
+                        start: Buildroute.getDuration(v[:start_time].to_s),
+                        end: Buildroute.getDuration(v[:end_time].to_s)
                     }],
-                    duration: v[:duration] || 0,
                     router_mode: v[:router_mode] || 'crow',
                     router_dimension: v[:router_dimension] || 'time',
                     speed_multiplier: v[:speed_multiplie] || 1
@@ -334,7 +340,6 @@ module Api
                   vehicles: vehicles,
                   configuration: configParams
               }
-
               rooturl = "http://localhost:1791/0.1/"
               resource_vrp = RestClient::Resource.new(rooturl + 'vrp/submit.json', timeout: nil)
               json = resource_vrp.post({api_key: apikey, vrp: vrp}.to_json, content_type: :json, accept: :json) { |response, request, result, &block|
@@ -367,6 +372,7 @@ module Api
                 end
               end
               responseData = {
+                  "status": 'success',
                   "vrp": vrp,
                   "result": result
               }
