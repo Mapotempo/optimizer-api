@@ -92491,7 +92491,7 @@
         "id": "vehicule1",
         "start_point_id": "depot",
         "end_point_id": "depot",
-        "router_mode": "car",
+        "router_mode": "crow",
         "cost_time_multiplier": 1.0,
         "router_dimension": "time",
         "cost_distance_multiplier": 1.0,

@@ -62,6 +62,73 @@ module Api
       default_format :json
 
       namespace :buildroute do
+        resource :routes do
+          desc 'Submit Buildroute problem', {
+              nickname: 'Buildroute',
+              succs: VrpResult,
+              failure: [
+                  {code: 404, message: 'Not Found', model: ::Api::V01::Status}
+              ],
+              detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
+          }
+          post do
+            begin
+              orders = params[:orders]
+              vehiclesInput = params[:vehicles]
+              apikey = params[:api_key]
+              points = []
+
+              #get location coordinate
+              orders.collect { |order|
+                pickup_lat = order[:pickup_lat].to_s || ''
+                pickup_lng = order[:pickup_lng].to_s || ''
+                delivery_lat = order[:delivery_lat].to_s || ''
+                delivery_lng = order[:delivery_lng].to_s || ''
+
+                if (pickup_lat.length > 0 && pickup_lng.length > 0)
+                  points.push(pickup_lat + ',' + pickup_lng)
+                end
+                if (delivery_lat.length > 0 &&  delivery_lng.length > 0)
+                  points.push(delivery_lat + ',' + delivery_lng)
+                end
+              }
+              vehiclesInput.collect{ |v|
+                sLat = v[:start_lat].to_s || ''
+                sLon = v[:start_lng].to_s || ''
+                eLat = v[:end_lat].to_s || ''
+                eLon = v[:end_lng].to_s || ''
+                if (sLat.length > 0 && sLon.length > 0)
+                  points.push(sLat + ',' + sLon)
+                end
+
+                if (eLat.length > 0 && eLon.length > 0)
+                  points.push(eLat + ',' + eLon)
+                end
+              }
+              puts "points count = #{points.count}"
+              locs = points.join(",")
+              # requestParans = {
+              #     api_key: apikey,
+              #     locs: locs,
+              #     currency: 'FR'
+              # }
+              #
+              # rooturl = "http://localhost:4899/0.1/"
+              # resource = RestClient::Resource.new(rooturl + 'routes.json', timeout: nil)
+              # json = resource.post({api_key: apikey, locs: locs}.to_json, content_type: :json, accept: :json) { |response, request, result, &block|
+              #
+              #   json = response
+              # }
+              # json
+              # if json != ''
+              #   datas = JSON.parse json
+              # else
+              #   raise  'Unexpected error'
+              # end
+            end
+          end
+        end
+
         resource :submit do
           desc 'Submit Buildroute problem', {
               nickname: 'Buildroute',
@@ -75,6 +142,7 @@ module Api
 
           post do
             begin
+              configParams = params[:configuration]
               orders = params[:orders]
               vehiclesInput = params[:vehicles]
               apikey = params[:api_key]
@@ -165,7 +233,7 @@ module Api
                 elsif (pickup != nil)
                   service = {
                       id: order[:reference],
-                      type: 'pickup',
+                      type: 'service',
                       activity: {
                           point_id: pickupRefe,
                           timewindows: [{
@@ -187,7 +255,7 @@ module Api
                 elsif (delivery != nil)
                   service = {
                       id: order[:reference],
-                      type: 'delivery',
+                      type: 'service',
                       activity: {
                           point_id: deliverRef,
                           timewindows: [{
@@ -264,18 +332,9 @@ module Api
                   shipments: shipments,
                   services: services,
                   vehicles: vehicles,
-                  configuration: {
-                      preprocessing: {
-                          cluster_threshold: 0
-                      },
-                      resolution: {
-                          duration: 600000 ,
-                          iterations: 1000,
-                          iterations_without_improvment: 100,
-                          minimum_duration: 3000
-                      }
-                  }
+                  configuration: configParams
               }
+
               rooturl = "http://localhost:1791/0.1/"
               resource_vrp = RestClient::Resource.new(rooturl + 'vrp/submit.json', timeout: nil)
               json = resource_vrp.post({api_key: apikey, vrp: vrp}.to_json, content_type: :json, accept: :json) { |response, request, result, &block|
