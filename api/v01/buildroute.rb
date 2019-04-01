@@ -175,6 +175,27 @@ module Api
                 delivery_lat = order[:delivery_lat].to_s.to_f || 0
                 delivery_lng = order[:delivery_lng].to_s.to_f || 0
 
+                inputpickup_timewindows = order[:pickup_timewindows]
+                inputdelivery_timewindows = order[:delivery_timewindows]
+
+                pickTimeWindows = []
+                deliveryTimeWindows = []
+                inputpickup_timewindows.collect { |t|
+                    time = {
+                        start: Buildroute.getDuration(t[:pickup_start].to_s || ""),
+                        end: Buildroute.getDuration(t[:pickup_end].to_s || "")
+                    }
+                  pickTimeWindows.push(time)
+                }
+
+                inputdelivery_timewindows.collect { |t|
+                  time = {
+                      start: Buildroute.getDuration(t[:delivery_start].to_s || ""),
+                      end: Buildroute.getDuration(t[:delivery_end].to_s || "")
+                  }
+                  deliveryTimeWindows.push(time)
+                }
+
                 if (pickup_lat != 0 && pickup_lng != 0)
                   pLon = order[:pickup_lng]
                   id = pickup_lat.to_s + ',' + pickup_lng.to_s
@@ -212,19 +233,13 @@ module Api
                       maximum_inroute_duration: nil,
                       pickup: {
                           point_id: pickupRefe,
-                          timewindows: [{
-                              start: Buildroute.getDuration(order[:pickup_start].to_s || ""),
-                              end: Buildroute.getDuration(order[:pickup_end].to_s || "")
-                          }],
+                          timewindows: pickTimeWindows,
                           setup_duration: order[:pickup_setup].to_s.to_i || 0,
                           duration: order[:pickup_duration].to_s.to_i || 0
                       },
                       delivery: {
                           point_id: deliverRef,
-                          timewindows: [{
-                              start: Buildroute.getDuration(order[:delivery_start].to_s || ""),
-                              end: Buildroute.getDuration(order[:delivery_end].to_s || "")
-                          }],
+                          timewindows: deliveryTimeWindows,
                           setup_duration: order[:delivery_setup].to_s.to_i || 0,
                           duration: order[:delivery_duration].to_s.to_i || 0
                       },
@@ -243,10 +258,7 @@ module Api
                       type: 'service',
                       activity: {
                           point_id: pickupRefe,
-                          timewindows: [{
-                              start: Buildroute.getDuration(order[:pickup_start].to_s),
-                              end: Buildroute.getDuration(order[:pickup_end].to_s)
-                          }],
+                          timewindows: pickTimeWindows,
                           setup_duration: order[:pickup_setup].to_s.to_i || 0,
                           duration: order[:pickup_duration].to_s.to_i || 0
                       },
@@ -265,10 +277,7 @@ module Api
                       type: 'service',
                       activity: {
                           point_id: deliverRef,
-                          timewindows: [{
-                              start: Buildroute.getDuration(order[:delivery_start].to_s),
-                              end: Buildroute.getDuration(order[:delivery_end].to_s)
-                          }],
+                          timewindows: deliveryTimeWindows,
                           setup_duration: order[:delivery_setup].to_s.to_i || 0,
                           duration: order[:delivery_duration].to_s.to_i || 0
                       },
