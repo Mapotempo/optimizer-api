@@ -2,1113 +2,712 @@
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 {\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\margl1440\margr1440\vieww17080\viewh12840\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
 \f0\fs24 \cf0 \{\
+	"configuration": \{\
+		"preprocessing": \{\
+			"cluster_threshold": 0.0,\
+			"prefer_short_segment": true\
+		\},\
+		"resolution": \{\
+			"duration": 600000,\
+			"iterations_without_improvment": 100\
+		\},\
+		"restitution": \{\
+			"intermediate_solutions": false\
+		\}\
+	\},\
+	"vehicles": [\{\
+			"reference": 1,\
+			"start_lat": 49.282416,\
+			"start_lng": -123.120244,\
+			"end_lat": 49.038297,\
+			"end_lng": -122.305888,\
+			"fix_cost": "",\
+			"distance_cost": "",\
+			"time_cost": "",\
+			"wait_cost": "",\
+			"setup_cost": "",\
+			"setup_multiplier": "",\
+			"start_time": "8:00",\
+			"end_time": "23:00",\
+			"quantity 1": 1,\
+			"quantity 2": 1,\
+			"initial quantity 1": 1,\
+			"initial quantity 2": 1,\
+			"skills 1": "Tag1",\
+			"skills 2": "",\
+			"router_mode": "crow",\
+			"router_dimension": "time",\
+			"speed_multiplie": 0.8\
+		\},\
+		\{\
+			"reference": 2,\
+			"start_lat": 49.282416,\
+			"start_lng": -123.120244,\
+			"end_lat": 49.038297,\
+			"end_lng": -122.305888,\
+			"fix_cost": "",\
+			"distance_cost": "",\
+			"time_cost": "",\
+			"wait_cost": "",\
+			"setup_cost": "",\
+			"setup_multiplier": "",\
+			"start_time": "8:00",\
+			"end_time": "23:00",\
+			"quantity 1": 1,\
+			"quantity 2": 1,\
+			"initial quantity 1": 1,\
+			"initial quantity 2": 1,\
+			"skills 1": "Tag1",\
+			"skills 2": "",\
+			"router_mode": "crow",\
+			"router_dimension": "time",\
+			"speed_multiplie": 0.8\
+		\}\
+	],\
 \
-"vehicles": [\
- \{\
- 	"reference": 1,\
-   "start_lat": 49.282416,\
-   "start_lng": -123.120244,\
-   "end_lat": 49.038297,\
-   "end_lng": -122.305888,\
-   "fix_cost": "",\
-   "distance_cost": "",\
-   "time_cost": "",\
-   "wait_cost": "",\
-   "setup_cost": "",\
-   "setup_multiplier": "",\
-   "start_time": "8:00",\
-   "end_time": "15:00",\
-   "duration": 6000,\
-   "quantity 1": 1,\
-   "quantity 2": 1,\
-   "initial quantity 1": 1,\
-   "initial quantity 2": 1,\
-   "skills 1": "Tag1",\
-   "skills 2": "",\
-   "router_mode": "crow",\
-   "router_dimension": "time",\
-   "speed_multiplie": 0.8\
- \},\
- \{\
- 	"reference": 2,\
-   "start_lat": 49.282416,\
-   "start_lng": -123.120244,\
-   "end_lat": 49.038297,\
-   "end_lng": -122.305888,\
-   "fix_cost": "",\
-   "distance_cost": "",\
-   "time_cost": "",\
-   "wait_cost": "",\
-   "setup_cost": "",\
-   "setup_multiplier": "",\
-   "start_time": "15:00",\
-   "end_time": "17:00",\
-   "duration": 6000,\
-   "quantity 1": 1,\
-   "quantity 2": 1,\
-   "initial quantity 1": 1,\
-   "initial quantity 2": 1,\
-   "skills 1": "Tag2",\
-   "skills 2": "",\
-   "router_mode": "crow",\
-   "router_dimension": "time",\
-   "speed_multiplie": 0.8\
- \}\
-],\
-	"services": [\
-\{\
-"start_lat": 49.282416,\
-"start_lng": -123.120244,\
-"end_lat": 49.038297,\
-"end_lng": -122.305888,\
-"fix_cost": "",\
-"distance_cost": "",\
-"time_cost": "",\
-"wait_cost": "",\
-"setup_cost": "",\
-"setup_multiplier": "",\
-"start_time": "8:00",\
-"end_time": "15:00",\
-"duration": "6:00",\
-"quantity 1": 1,\
-"quantity 2": 1,\
-"initial quantity 1": 1,\
-"initial quantity 2": 1,\
-"skills 1": "Tag1",\
-"skills 2": "",\
-"router_mode": "crow",\
-"router_dimension": "time",\
-"speed_multiplie": ""\
-\},\
-\{\
-"start_lat": 49.282416,\
-"start_lng": -123.120244,\
-"end_lat": 49.038297,\
-"end_lng": -122.305888,\
-"fix_cost": "",\
-"distance_cost": "",\
-"time_cost": "",\
-"wait_cost": "",\
-"setup_cost": "",\
-"setup_multiplier": "",\
-"start_time": "15:00",\
-"end_time": "17:00",\
-"duration": "2:00",\
-"quantity 1": 1,\
-"quantity 2": 1,\
-"initial quantity 1": 1,\
-"initial quantity 2": 1,\
-"skills 1": "Tag2",\
-"skills 2": "",\
-"router_mode": "crow",\
-"router_dimension": "time",\
-"speed_multiplie": ""\
-\}\
-],\
-	"orders": [\
-  \{\
-    "reference": 1,\
-    "name": "Client 1",\
-    "pickup_lat": 51.66909,\
-    "pickup_lng": -1.28324,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 2,\
-    "name": "Client 2",\
-    "pickup_lat": 51.6443538,\
-    "pickup_lng": -1.1663188,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 3,\
-    "name": "Client 3",\
-    "pickup_lat": 51.6292,\
-    "pickup_lng": -1.70946,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 4,\
-    "name": "Client 4",\
-    "pickup_lat": 51.785187,\
-    "pickup_lng": -1.4851982,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 5,\
-    "name": "Client 5",\
-    "pickup_lat": 51.5431349,\
-    "pickup_lng": -1.9027188,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 6,\
-    "name": "Client 6",\
-    "pickup_lat": 51.61433,\
-    "pickup_lng": -1.64216,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 7,\
-    "name": "Client 7",\
-    "pickup_lat": 51.59416,\
-    "pickup_lng": -1.82453,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 8,\
-    "name": "Client 8",\
-    "pickup_lat": 51.54193,\
-    "pickup_lng": -1.90438,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 9,\
-    "name": "Client 9",\
-    "pickup_lat": 51.776385,\
-    "pickup_lng": -1.2642974,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 10,\
-    "name": "Client 10",\
-    "pickup_lat": 51.75101,\
-    "pickup_lng": -1.29682,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 11,\
-    "name": "Client 11",\
-    "pickup_lat": 51.86228,\
-    "pickup_lng": -1.61295,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 12,\
-    "name": "Client 12",\
-    "pickup_lat": 51.87344,\
-    "pickup_lng": -1.47584,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 13,\
-    "name": "Client 13",\
-    "pickup_lat": 51.88827,\
-    "pickup_lng": -1.75563,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 14,\
-    "name": "Client 14",\
-    "pickup_lat": 51.90991,\
-    "pickup_lng": -1.15648,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 15,\
-    "name": "Client 15",\
-    "pickup_lat": 51.8244908,\
-    "pickup_lng": -1.3943066,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 16,\
-    "name": "Client 16",\
-    "pickup_lat": 51.889036,\
-    "pickup_lng": -2.0791662,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 17,\
-    "name": "Client 17",\
-    "pickup_lat": 51.8554379,\
-    "pickup_lng": -2.1871197,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 18,\
-    "name": "Client 18",\
-    "pickup_lat": 51.8736105,\
-    "pickup_lng": -2.2122727,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 19,\
-    "name": "Client 19",\
-    "pickup_lat": 51.8776387,\
-    "pickup_lng": -2.0771539,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 20,\
-    "name": "Client 20",\
-    "pickup_lat": 51.71239,\
-    "pickup_lng": -1.32967,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 21,\
-    "name": "Client 21",\
-    "pickup_lat": 51.9541237,\
-    "pickup_lng": -1.9649185,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 22,\
-    "name": "Client 22",\
-    "pickup_lat": 51.6376732,\
-    "pickup_lng": -2.352872,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 23,\
-    "name": "Client 23",\
-    "pickup_lat": 51.74649,\
-    "pickup_lng": -2.28284,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 24,\
-    "name": "Client 24",\
-    "pickup_lat": 51.6996751,\
-    "pickup_lng": -0.7397233,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 25,\
-    "name": "Client 25",\
-    "pickup_lat": 51.3767658,\
-    "pickup_lng": -0.8560287,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 26,\
-    "name": "Client 26",\
-    "pickup_lat": 51.27846,\
-    "pickup_lng": -0.37334,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 27,\
-    "name": "Client 27",\
-    "pickup_lat": 51.7594395,\
-    "pickup_lng": -1.2655578,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 28,\
-    "name": "Client 28",\
-    "pickup_lat": 51.6447482,\
-    "pickup_lng": -1.0044526,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 29,\
-    "name": "Client 29",\
-    "pickup_lat": 51.9411587,\
-    "pickup_lng": -1.5451682,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 30,\
-    "name": "Client 30",\
-    "pickup_lat": 51.6371054,\
-    "pickup_lng": -1.5056119,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 31,\
-    "name": "Client 31",\
-    "pickup_lat": 51.8860996,\
-    "pickup_lng": -2.0493428,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 32,\
-    "name": "Client 32",\
-    "pickup_lat": 51.70758,\
-    "pickup_lng": -1.78124,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 33,\
-    "name": "Client 33",\
-    "pickup_lat": 51.8470238,\
-    "pickup_lng": -1.3540224,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 34,\
-    "name": "Client 34",\
-    "pickup_lat": 51.8785,\
-    "pickup_lng": -1.70646,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 35,\
-    "name": "Client 35",\
-    "pickup_lat": 51.74653,\
-    "pickup_lng": -2.32866,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 36,\
-    "name": "Client 36",\
-    "pickup_lat": 51.8952316,\
-    "pickup_lng": -2.082613,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 37,\
-    "name": "Client 37",\
-    "pickup_lat": 51.80422,\
-    "pickup_lng": -0.85991,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 38,\
-    "name": "Client 38",\
-    "pickup_lat": 52.36706,\
-    "pickup_lng": -2.697,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 39,\
-    "name": "Client 39",\
-    "pickup_lat": 51.69483,\
-    "pickup_lng": -2.21935,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 40,\
-    "name": "Client 40",\
-    "pickup_lat": 51.79208,\
-    "pickup_lng": -1.4657,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 41,\
-    "name": "Client 41",\
-    "pickup_lat": 51.6990875,\
-    "pickup_lng": -0.9139467,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 42,\
-    "name": "Client 42",\
-    "pickup_lat": 52.73116,\
-    "pickup_lng": -2.82049,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 43,\
-    "name": "Client 43",\
-    "pickup_lat": 52.53772,\
-    "pickup_lng": -2.80719,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 44,\
-    "name": "Client 44",\
-    "pickup_lat": 52.69831,\
-    "pickup_lng": -2.77735,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 45,\
-    "name": "Client 45",\
-    "pickup_lat": 52.70666,\
-    "pickup_lng": -2.79486,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 46,\
-    "name": "Client 46",\
-    "pickup_lat": 52.50578,\
-    "pickup_lng": -2.17853,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 47,\
-    "name": "Client 47",\
-    "pickup_lat": 52.3756975,\
-    "pickup_lng": -2.3161467,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 48,\
-    "name": "Client 48",\
-    "pickup_lat": 52.59211,\
-    "pickup_lng": -2.1847,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 49,\
-    "name": "Client 49",\
-    "pickup_lat": 52.4476603,\
-    "pickup_lng": -2.2275656,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \},\
-  \{\
-    "reference": 50,\
-    "name": "Client 50",\
-    "pickup_lat": 52.5910807,\
-    "pickup_lng": -2.1780198,\
-    "pickup_start": "",\
-    "pickup_end": "",\
-    "pickup_duration": 120,\
-    "pickup_setup": "",\
-    "delivery_lat": "",\
-    "delivery_lng": "",\
-    "delivery_start": "",\
-    "delivery_end": "",\
-    "delivery_duration": "",\
-    "delivery_setup": "",\
-    "quantity 1": "",\
-    "quantity 2": "",\
-    "skills": "",\
-    "maximum_inroute_duration": ""\
-  \}\
-]\
+	"orders": [\{\
+			"reference": 1,\
+			"name": "Client 1",\
+			"pickup_lat": 51.66909,\
+			"pickup_lng": -1.28324,\
+			"pickup_start": "08:30:30",\
+			"pickup_end": "9:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 2,\
+			"name": "Client 2",\
+			"pickup_lat": 51.6443538,\
+			"pickup_lng": -1.1663188,\
+			"pickup_start": "09:30:30",\
+			"pickup_end": "11:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 3,\
+			"name": "Client 3",\
+			"pickup_lat": 51.6292,\
+			"pickup_lng": -1.70946,\
+			"pickup_start": "09:30:30",\
+			"pickup_end": "12:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 4,\
+			"name": "Client 4",\
+			"pickup_lat": 51.785187,\
+			"pickup_lng": -1.4851982,\
+			"pickup_start": "09:40:30",\
+			"pickup_end": "11:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 5,\
+			"name": "Client 5",\
+			"pickup_lat": 51.5431349,\
+			"pickup_lng": -1.9027188,\
+			"pickup_start": "10:00",\
+			"pickup_end": "11:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 6,\
+			"name": "Client 6",\
+			"pickup_lat": 51.61433,\
+			"pickup_lng": -1.64216,\
+			"pickup_start": "10:30:30",\
+			"pickup_end": "13:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 7,\
+			"name": "Client 7",\
+			"pickup_lat": 51.59416,\
+			"pickup_lng": -1.82453,\
+			"pickup_start": "10:30:30",\
+			"pickup_end": "12:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 8,\
+			"name": "Client 8",\
+			"pickup_lat": 51.54193,\
+			"pickup_lng": -1.90438,\
+			"pickup_start ": "11: 00 ",\
+			"pickup_end": "13:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 9,\
+			"name": "Client 9",\
+			"pickup_lat": 51.776385,\
+			"pickup_lng": -1.2642974,\
+			"pickup_start": "12:30:30",\
+			"pickup_end": "14:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 10,\
+			"name": "Client 10",\
+			"pickup_lat": 51.75101,\
+			"pickup_lng": -1.29682,\
+			"pickup_start": "8:30:30",\
+			"pickup_end": "14:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 11,\
+			"name": "Client 11",\
+			"pickup_lat": 51.86228,\
+			"pickup_lng": -1.61295,\
+			"pickup_start": "8:30:30",\
+			"pickup_end": "9:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 12,\
+			"name": "Client 12",\
+			"pickup_lat": 51.87344,\
+			"pickup_lng": -1.47584,\
+			"pickup_start": "18:30:30",\
+			"pickup_end": "19:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 13,\
+			"name": "Client 13",\
+			"pickup_lat": 51.88827,\
+			"pickup_lng": -1.75563,\
+			"pickup_start": "18:30:30",\
+			"pickup_end": "21:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 14,\
+			"name": "Client 14",\
+			"pickup_lat": 51.90991,\
+			"pickup_lng": -1.15648,\
+			"pickup_start": "14:30:30",\
+			"pickup_end": "16:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 15,\
+			"name": "Client 15",\
+			"pickup_lat": 51.8244908,\
+			"pickup_lng": -1.3943066,\
+			"pickup_start": "16:30:30",\
+			"pickup_end": "18:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 16,\
+			"name": "Client 16",\
+			"pickup_lat": 51.889036,\
+			"pickup_lng": -2.0791662,\
+			"pickup_start": "21:30:30",\
+			"pickup_end": "22:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 17,\
+			"name": "Client 17",\
+			"pickup_lat": 51.8554379,\
+			"pickup_lng": -2.1871197,\
+			"pickup_start": "21:30:30",\
+			"pickup_end": "23:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 18,\
+			"name": "Client 18",\
+			"pickup_lat": 51.8736105,\
+			"pickup_lng": -2.2122727,\
+			"pickup_start": "18:30:30",\
+			"pickup_end": "22:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 19,\
+			"name": "Client 19",\
+			"pickup_lat": 51.8776387,\
+			"pickup_lng": -2.0771539,\
+			"pickup_start": "11:30:30",\
+			"pickup_end": "16:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 20,\
+			"name": "Client 20",\
+			"pickup_lat": 51.71239,\
+			"pickup_lng": -1.32967,\
+			"pickup_start": "13:30:30",\
+			"pickup_end": "16:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 21,\
+			"name": "Client 21",\
+			"pickup_lat": 51.9541237,\
+			"pickup_lng": -1.9649185,\
+			"pickup_start": "17:30:30",\
+			"pickup_end": "19:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 22,\
+			"name": "Client 22",\
+			"pickup_lat": 51.6376732,\
+			"pickup_lng": -2.352872,\
+			"pickup_start": "12:30:30",\
+			"pickup_end": "15:00",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 23,\
+			"name": "Client 23",\
+			"pickup_lat": 51.74649,\
+			"pickup_lng": -2.28284,\
+			"pickup_start": "15:40:30",\
+			"pickup_end": "16:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 24,\
+			"name": "Client 24",\
+			"pickup_lat": 51.6996751,\
+			"pickup_lng": -0.7397233,\
+			"pickup_start": "21:40:30",\
+			"pickup_end": "22:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 25,\
+			"name": "Client 25",\
+			"pickup_lat": 51.3767658,\
+			"pickup_lng": -0.8560287,\
+			"pickup_start": "20:40:30",\
+			"pickup_end": "22:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 26,\
+			"name": "Client 26",\
+			"pickup_lat": 51.27846,\
+			"pickup_lng": -0.37334,\
+			"pickup_start": "13:40:30",\
+			"pickup_end": "18:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 27,\
+			"name": "Client 27",\
+			"pickup_lat": 51.7594395,\
+			"pickup_lng": -1.2655578,\
+			"pickup_start": "10:40:30",\
+			"pickup_end": "12:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 28,\
+			"name": "Client 28",\
+			"pickup_lat": 51.6447482,\
+			"pickup_lng": -1.0044526,\
+			"pickup_start": "16:10:30",\
+			"pickup_end": "19:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 29,\
+			"name": "Client 29",\
+			"pickup_lat": 51.9411587,\
+			"pickup_lng": -1.5451682,\
+			"pickup_start": "09:40:30",\
+			"pickup_end": "10:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 30,\
+			"name": "Client 30",\
+			"pickup_lat": 51.6371054,\
+			"pickup_lng": -1.5056119,\
+			"pickup_start": "17:40:30",\
+			"pickup_end": "20:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 31,\
+			"name": "Client 31",\
+			"pickup_lat": 51.8860996,\
+			"pickup_lng": -2.0493428,\
+			"pickup_start": "13:40:30",\
+			"pickup_end": "22:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\},\
+		\{\
+			"reference": 32,\
+			"name": "Client 32",\
+			"pickup_lat": 51.70758,\
+			"pickup_lng": -1.78124,\
+			"pickup_start": "08:40:30",\
+			"pickup_end": "10:20",\
+			"pickup_duration": 600,\
+			"pickup_setup": 300,\
+			"delivery_lat": "",\
+			"delivery_lng": "",\
+			"delivery_start": "",\
+			"delivery_end": "",\
+			"delivery_duration": 0,\
+			"delivery_setup": "",\
+			"quantity 1": "",\
+			"quantity 2": "",\
+			"skills": "",\
+			"maximum_inroute_duration": ""\
+		\}\
+	]\
 \}}
