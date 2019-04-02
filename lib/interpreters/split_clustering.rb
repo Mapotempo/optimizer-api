@@ -102,7 +102,7 @@ module Interpreters
           when 'hierarchical_tree'
             generated_vrps = current_vrps.collect{ |s_v|
               current_vrp = s_v[:vrp]
-              current_vrp.vehicles = list_vehicles(current_vrp.vehicles.first) if partition[:entity] == 'work_day'
+              current_vrp.vehicles = list_vehicles([current_vrp.vehicles.first]) if partition[:entity] == 'work_day'
               split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
             }
             current_vrps = generated_vrps.flatten
@@ -361,6 +361,7 @@ module Interpreters
         if c.clusters.size > biggest_cluster_size
           biggest_cluster_size = c.clusters.size
           clusters = c.clusters
+          centroids = c.centroid_indices
         end
         iteration += 1
       end
@@ -467,9 +468,15 @@ module Interpreters
       returned
     end
 
-    def self.affect_vehicle(sub_pbs, vehicle_for_cluster)
+    def self.affect_vehicle(sub_pbs, vehicle_for_cluster, clusters)
+      vec = []
       sub_pbs.each_with_index{ |spb, i|
-        spb[:vrp][:vehicles] = [vehicle_for_cluster[i]]
+        if clusters[i].data_items.compact.any?{ |data| data[5] }
+          spb[:vrp][:vehicles] = [vehicle_for_cluster.find{ |day, vehicle| clusters[i].data_items.compact.all?{ |data| data[5].nil? || ([day] & data[5]).size > 0 }}[1]]
+          vehicle_for_cluster.delete_if{ |day, vehicle| day == spb[:vrp][:vehicles][0][:sequence_timewindows][0][:day_index] }
+        else
+          spb[:vrp][:vehicles] = [vehicle_for_cluster[i]]
+        end
       }
       sub_pbs
     end
@@ -484,7 +491,7 @@ module Interpreters
         data_items, cumulated_metrics = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
         centroids = []
         limits = []
-        if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
+        if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] } && vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.uniq.size != 1
           vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
           share = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum if entity == 'vehicle'
           vrp.vehicles.each_with_index{ |vehicle, index|
@@ -492,21 +499,73 @@ module Interpreters
             data_items[index][6] = vehicle[:sequence_timewindows].size
             limits << cumulated_metrics[cut_symbol].to_f / (share.to_f / data_items[index][6].to_f)
           }
+        elsif entity == 'work_day' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
+          data_items.each{ |data|
+            data[5] = vrp.services.find{ |service| service.activity.point_id == data[2] }.activity.timewindows.collect{ |timewindow| timewindow[:day_index] }.uniq
+          }
+          data_items.sort_by!{ |data| data[5].size }
+          centroids_skills = data_items.collect{ |data| data[5] }.uniq
+          skills_index = 0
+          vrp.vehicles.each_with_index{ |vehicle, index|
+            skills_index += 1 if vrp.vehicles.size - centroids_skills.size < index
+            centroids += [data_items.index(data_items.find{ |data| data[5] == centroids_skills[skills_index] && !centroids.include?(data_items.index(data)) })]
+          }
+          limits = cumulated_metrics[cut_symbol] / nb_clusters
         else
           limits = cumulated_metrics[cut_symbol] / nb_clusters
         end
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
 
         clusters = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
-        clusters.sort_by!{ |cluster| cluster.data_items.size }
         clusters.delete_if{ |cluster| cluster.data_items.empty? }
         vehicle_for_cluster = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
+        adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
         sub_pbs = create_sub_pbs(service_vrp, vrp, clusters)
-        affect_vehicle(sub_pbs, vehicle_for_cluster)
+        affect_vehicle(sub_pbs, vehicle_for_cluster, clusters)
       else
         puts "split hierarchical not available when services have activities"
         [vrp]
       end
+    end
+
+    # Adjust cluster if they are disparate - only called when entity == 'work_day'
+    def self.adjust_clusters(clusters, limits, cut_symbol, centroids, data_items)
+      clusters.each_with_index{ |cluster, index|
+        centroids[index] = data_items[centroids[index]]
+      }
+      clusters.each_with_index{ |cluster, index|
+        count = 0
+        cluster.data_items.sort_by!{ |data| Helper::flying_distance(data, centroids[index]) }
+        cluster.data_items.each{ |data|
+          count += data[3][cut_symbol]
+          if count > limits && !centroids.include?(data)
+            c = find_cluster(clusters, cluster, cut_symbol, data, limits)
+            if c
+              cluster.data_items.delete(data)
+              c.data_items.insert(c.data_items.size, data)
+              count -= data[3][cut_symbol]
+            end
+          end
+        }
+      }
+    end
+
+    # Find the nearest cluster to add data_to_insert - because the other is full
+    def self.find_cluster(clusters, original_cluster, cut_symbol, data_to_insert, limit)
+      c = nil
+      dist = 2 ** 32
+      clusters.each{ |cluster|
+        next if cluster == original_cluster
+        cluster.data_items.each{ |data|
+          if dist > Helper::flying_distance(data, data_to_insert) && cluster.data_items.collect{ |data| data[3][cut_symbol] }.sum < limit &&
+             cluster.data_items.all?{ |d| data_to_insert[5].nil? || d[5] && (data_to_insert[5] & d[5]).size >= d[5].size }
+            dist = Helper::flying_distance(data, data_to_insert)
+            c = cluster
+          end
+        }
+      }
+
+      c
     end
 
     def self.split_hierarchical(service_vrp, vrp, nb_clusters, cut_symbol = :duration, entity = "")
