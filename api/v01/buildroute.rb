@@ -198,7 +198,7 @@ module Api
 
                 if (pickup_lat != 0 && pickup_lng != 0)
                   pLon = order[:pickup_lng]
-                  id = pickup_lat.to_s + ',' + pickup_lng.to_s
+                  id = order[:reference].to_s + '_' + pickup_lat.to_s + ',' + pickup_lng.to_s
                   pickupRefe = id
                   sPoint = {
                       id: id,
@@ -214,7 +214,7 @@ module Api
                   dLat = delivery_lat
                   puts "delivery lat = #{delivery_lat}"
                   dLon = delivery_lng
-                  id = delivery_lat.to_s + ',' + delivery_lng.to_s
+                  id = order[:reference].to_s + '_' + delivery_lat.to_s + ',' + delivery_lng.to_s
                   deliverRef = id
                   sPoint = {
                       id: id,
@@ -281,7 +281,12 @@ module Api
                           setup_duration: order[:delivery_setup].to_s.to_i || 0,
                           duration: order[:delivery_duration].to_s.to_i || 0
                       },
-                      quantities: 1,
+                      quantities: [
+                          {
+                              unit_id: 'unit_1',
+                              value: 10.92
+                          }
+                      ],
                       skills: ''
                   }
                   services.push(service)
