@@ -79,9 +79,16 @@ module Ai4r
         }
         @iterations += 1
         @centroids = @centroid_function.call(@clusters)
-        @centroids.each_with_index{ |data, index| data[4] = data_sticky[index] }
-        @centroids.each_with_index{ |data, index| data[5] = data_skill[index] }
-        @centroids.each_with_index{ |data, index| data[6] = data_size[index] }
+        @old_centroids.each_with_index{ |data, index|
+          data[4] = data_sticky[index]
+          data[5] = data_skill[index]
+          data[6] = data_size[index]
+        }
+        @centroids.each_with_index{ |data, index|
+          data[4] = data_sticky[index]
+          data[5] = data_skill[index]
+          data[6] = data_size[index]
+        }
       end
 
       # Classifies the given data item, returning the cluster index it belongs
