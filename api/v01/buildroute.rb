@@ -163,8 +163,10 @@ module Api
                       id: 'unit_1'
                   }
               ]
-
               #get location coordinate
+              soonestTime = -1
+              soonestLatidue = 0.0
+              soonestLongtidue = 0.0
               orders.collect { |order|
                 pickup = nil
                 delivery = nil
@@ -178,17 +180,30 @@ module Api
                 inputpickup_timewindows = order[:pickup_timewindows]
                 inputdelivery_timewindows = order[:delivery_timewindows]
 
+
                 pickTimeWindows = []
                 deliveryTimeWindows = []
                 inputpickup_timewindows.collect { |t|
+                   startTime = Buildroute.getDuration(t[:pickup_start].to_s || "")
+                   if ((soonestTime == -1 || soonestTime > startTime) && pickup_lat != 0 && pickup_lng != 0)
+                     soonestTime = startTime
+                     soonestLatidue = pickup_lat
+                     soonestLongtidue = pickup_lng
+                   end
                     time = {
-                        start: Buildroute.getDuration(t[:pickup_start].to_s || ""),
+                        start: startTime,
                         end: Buildroute.getDuration(t[:pickup_end].to_s || "")
                     }
                   pickTimeWindows.push(time)
                 }
 
                 inputdelivery_timewindows.collect { |t|
+                  dstartime = Buildroute.getDuration(t[:delivery_start].to_s || "")
+                  if ((soonestTime == -1 || soonestTime > dstartime) && delivery_lat != 0 && delivery_lng != 0)
+                    soonestTime = dstartime
+                    soonestLatidue = delivery_lat
+                    soonestLongtidue = delivery_lng
+                  end
                   time = {
                       start: Buildroute.getDuration(t[:delivery_start].to_s || ""),
                       end: Buildroute.getDuration(t[:delivery_end].to_s || "")
@@ -292,9 +307,21 @@ module Api
                   services.push(service)
                  end
               }
+
+              #Auto assign start/end depot to vehicles
+              # If Vehicles have no start/end => we will use soonest order of this day.
+
+
               vehiclesInput.collect{ |v|
                 startRef = ''
                 endRef = ''
+                if (v[:start_lat] == nil || v[:start_lng] == nil)
+                  v[:start_lat] = soonestLatidue
+                  v[:start_lng] = soonestLongtidue
+                  v[:end_lat] = soonestLatidue
+                  v[:end_lng] = soonestLongtidue
+                end
+
                 if ((v[:start_lat]) && (v[:start_lng]))
                   sLat = v[:start_lat]
                   sLon = v[:start_lng]
@@ -345,6 +372,7 @@ module Api
                 }
                 vehicles.push(vehicle)
               }
+
 
               vrp = {
                   points: points,
