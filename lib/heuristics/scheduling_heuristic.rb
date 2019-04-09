@@ -63,52 +63,43 @@ module SchedulingHeuristic
     ### assigns all visits of services in [services] that where newly scheduled on [vehicle] at [day_finished] ###
     days_available = @candidate_routes[vehicle].keys
     days_filled = []
-    @candidate_routes[vehicle][day_finished][:current_route].select{ |service| !@used_to_adjust.include?(service[:id]) }.sort_by{ |service| services[service[:id]][:priority] }.each{ |service|
+    @candidate_routes[vehicle][day_finished][:current_route].select{ |service|
+      !@used_to_adjust.include?(service[:id])
+    }.sort_by{ |service|
+      services[service[:id]][:priority]
+    }.each{ |service|
       @used_to_adjust << service[:id]
-      peri = services[service[:id]][:heuristic_period]
-      if peri && peri > 0
-        visit_number = 1
-        day_to_insert = day_finished + peri
+      peri = [services[service[:id]][:heuristic_period], 1].compact.max
+      day_to_insert = (peri % 7) > 0 ? days_available.select{ |day| day >= day_finished + peri }.min : day_finished + peri
+      (1..services[service[:id]][:nb_visits]-1).each{ |visit_number|
+        inserted_day = nil
+        while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end
+          inserted_day = try_to_insert_at(vehicle, day_to_insert, services, service, visit_number, days_filled) if days_available.include?(day_to_insert)
 
-        while day_to_insert && day_to_insert <= @schedule_end && visit_number < services[service[:id]][:nb_visits]
-          inserted = false
-          day_to_insert = days_available.select{ |day| day >= day_to_insert }.min if peri < 4
-
-          if day_to_insert && days_available.include?(day_to_insert)
-            inserted, days_filled = try_to_insert_at(vehicle, day_to_insert, services, service, visit_number, days_filled)
+          if (peri % 7) > 0
+            day_to_insert = days_available.select{ |day| day >= day_to_insert + peri }.min
+          else
+            day_to_insert += peri
           end
-
-          if !inserted
-            if !@allow_partial_assignment
-              clean_routes(services, service[:id], day_finished, vehicle, days_available)
-              visit_number = services[service[:id]][:nb_visits]
-            else
-              @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
-                original_service: service[:id],
-                reason: "Visit not assignable by heuristic, first visit assigned at day #{day_finished}"
-              }
-            end
-          end
-
-          visit_number += 1
-          day_to_insert += peri
         end
 
-        if visit_number < services[service[:id]][:nb_visits]
+        if inserted_day.nil?
           if !@allow_partial_assignment
-              clean_routes(services, service[:id], day_finished, vehicle, days_available)
-              visit_number = services[service[:id]][:nb_visits]
-            else
-              first_missing = visit_number + 1
-              (first_missing..services[service[:id]][:nb_visits]).each{ |missing_s|
-                @uninserted["#{service[:id]}_#{missing_s}_#{services[service[:id]][:nb_visits]}"] = {
-                  original_service: service[:id],
-                  reason: "First visit assigned at day #{day_finished} : too late to affect other visits"
-                }
-              }
-            end
+            clean_routes(services, service[:id], day_finished, vehicle, days_available)
+            break
+          elsif day_to_insert.nil? || day_to_insert > @schedule_end
+            @uninserted["#{service[:id]}_#{visit_number}_#{services[service[:id]][:nb_visits]}"] = {
+              original_service: service[:id],
+              reason: "First visit assigned at day #{day_finished} : too late to affect other visits"
+            }
+          else
+            @uninserted["#{service[:id]}_#{service[:number_in_sequence] + visit_number}_#{services[service[:id]][:nb_visits]}"] = {
+              original_service: service[:id],
+              reason: "Visit not assignable by heuristic, first visit assigned at day #{day_finished}"
+            }
+          end
         end
-      end
+      }
     }
 
     days_filled.uniq.each{ |d|
@@ -190,33 +181,18 @@ module SchedulingHeuristic
     }
   end
 
-  def self.clean_routes(services, service, day_finished, vehicle, days_available)
+  def self.clean_routes(services, service_id, day_finished, vehicle, days_available)
     ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-    peri = services[service][:heuristic_period]
-    removed = 0
-    counter = 0
-    changed_day = day_finished
-    while changed_day && changed_day <= @schedule_end && counter < services[service][:nb_visits]
-      changed_day = days_available.select{ |day| day >= changed_day }.min if peri < 4
+    peri = services[service_id][:heuristic_period] || 1
+    removed_size = @planning[vehicle].collect{ |day, day_route|
+      remove_index = day_route[:services].find_index{ |stop| stop[:id] == service_id }
+      day_route[:services].slice!(remove_index) if remove_index
+    }.size
 
-      if @planning[vehicle] && @planning[vehicle][changed_day]
-        removed += 1 if @planning[vehicle][changed_day][:services].any?{ |stop| stop[:id] == service }
-        @planning[vehicle][changed_day][:services].delete_if{ |stop| stop[:id] == service }
-      end
-
-      if @candidate_routes[vehicle] && @candidate_routes[vehicle][changed_day]
-        removed += 1 if @candidate_routes[vehicle][changed_day][:current_route].any?{ |stop| stop[:id] == service }
-        @candidate_routes[vehicle][changed_day][:current_route].delete_if{ |stop| stop[:id] == service }
-      end
-
-      changed_day += peri
-      counter += 1
-    end
-
-    (1..services[service][:nb_visits]).each{ |number_in_sequence|
-      @uninserted["#{service}_#{number_in_sequence}_#{services[service][:nb_visits]}"] = {
-        original_service: service,
-        reason: "Only partial assignment could be found (#{removed} visits had been assigned from day #{day_finished})"
+    (1..services[service_id][:nb_visits]).each{ |number_in_sequence|
+      @uninserted["#{service_id}_#{number_in_sequence}_#{services[service_id][:nb_visits]}"] = {
+        original_service: service_id,
+        reason: "Only partial assignment could be found (#{removed_size} visits had been assigned from day #{day_finished})"
       }
     }
   end
@@ -611,7 +587,9 @@ module SchedulingHeuristic
       forbbiden_routes = []
 
       while possible_to_fill
-        best_day = @candidate_routes[current_vehicle].reject{ |day, _route| forbbiden_days.include?(day) }.sort_by{ |_day, route_data| route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] } }[0][0]
+        best_day = @candidate_routes[current_vehicle].reject{ |day, _route| forbbiden_days.include?(day) }.sort_by{ |_day, route_data|
+          route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] }
+        }[0][0]
         route_data = @candidate_routes[current_vehicle][best_day]
         insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], services_data, route_data)
 
@@ -1025,12 +1003,8 @@ module SchedulingHeuristic
 
         services[service[:id]][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
         days_filled << day
-        [true, days_filled]
-      else
-        [false, days_filled]
+        day
       end
-    else
-      [false, days_filled]
     end
   end
 
