@@ -175,6 +175,7 @@ module Interpreters
         vrp: sub_first
       }]
       first_result = merge_results([OptimizerWrapper::define_process(first_side, job)])
+      first_result = Interpreters::Dichotomious.third_stage(first_side, [first_result]) if sub_first.services.size < sub_first.preprocessing_max_split_size
       remove_poor_routes(sub_first, first_result)
       empties_or_fills -= remove_used_empties_and_refills(sub_first, first_result)
       available_vehicles.delete_if{ |id| first_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
@@ -194,8 +195,9 @@ module Interpreters
           vrp: sub_second
         }]
         second_result = merge_results([OptimizerWrapper::define_process(second_side, job)])
+        second_result = Interpreters::Dichotomious.third_stage(second_side, [second_result]) if sub_second.services.size < sub_second.preprocessing_max_split_size
         remove_poor_routes(sub_second, second_result)
-        available_vehicles.delete_if{ |id| first_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
+        available_vehicles.delete_if{ |id| second_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
 
         merge_results([first_result, second_result])
       end

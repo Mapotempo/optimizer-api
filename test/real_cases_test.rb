@@ -393,6 +393,14 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    def test_spliting
+      service_vrp = Marshal.load(File.binread('test/fixtures/service_vrp_dichotomious.dump'))
+      service_vrp[:vrp].preprocessing_max_split_size = 250
+
+
+      r = OptimizerWrapper::define_process([service_vrp])
+    end
+
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_g1g2
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))

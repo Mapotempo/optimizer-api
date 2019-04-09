@@ -40,7 +40,7 @@ module Interpreters
         solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
         cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
         routes: results.flat_map{ |r| r && r[:routes] }.compact,
-        unassigned: results.flat_map{ |r| r && r[:unassigned] }.compact,
+        unassigned: results.flat_map{ |r| r && r[:unassigned] }.compact.uniq,
         elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
         total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
         total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
@@ -77,6 +77,7 @@ module Interpreters
       service_vrp[:vrp].restitution_allow_empty_result = true
       service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 2 : 120000
       service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
+      service_vrp[:vrp].resolution_init_duration = 30000
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
 
       service_vrp
@@ -99,39 +100,58 @@ module Interpreters
     end
 
     def self.build_services_vrps(services_vrps, routes)
-      all_services_vrps = routes.collect{ |route|
+      all_services_vrps = []
+      while !routes.empty?
         service_vrp = Marshal.load(Marshal.dump(services_vrps[0]))
-        service_vrp[:vrp].services = route[:mission_ids].collect{ |mission| services_vrps[0][:vrp].services.find{ |service| service.id == mission }}
-        service_vrp[:vrp].vehicles = [route.vehicle.id].collect{ |id| services_vrps[0][:vrp].vehicles.find{ |vehicle| vehicle.id == id }}
-        service_vrp[:vrp].points = service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle[:start_point_id] == point[:id] }}
-        service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle[:end_point_id] == point[:id] }}
-        service_vrp
-      }
+        service_vrp[:vrp].services = []
+        service_vrp[:vrp].vehicles = []
+        service_vrp[:vrp].routes = []
+        while service_vrp[:vrp].vehicles.size < 3 && !routes.empty?
+          service_vrp[:vrp].services += routes.first[:mission_ids].collect{ |mission| services_vrps[0][:vrp].services.find{ |service| service.id == mission }}
+          service_vrp[:vrp].vehicles += [routes.first.vehicle.id].collect{ |id| services_vrps[0][:vrp].vehicles.find{ |vehicle| vehicle.id == id }}
+          service_vrp[:vrp].routes += [routes.first]
+          routes -= [routes.first]
+        end
+        all_services_vrps += [service_vrp]
+      end
 
       all_services_vrps
     end
 
-    def self.third_stage(services_vrps, routes, results)
+    def self.third_stage(services_vrps, results)
       result_inter = []
-      results = results.collect{ |result| result[:result] }.flatten
+      unassigned_inter = []
       build_route(services_vrps[0], results)
-      all_services_vrps = build_services_vrps(services_vrps, services_vrps[0][:vrp].routes)
+      services_vrps[0][:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
 
-      unassigned = results.collect{ |result| result[:unassigned] }
-      all_services_vrps.collect{ |service_vrp|
-        unassigned -= result_inter.collect{ |result| result[:unassigned] }
-        service_vrp[:vrp].services += unassigned.collect{ |una| services_vrps[0][:vrp].services.find{ |service| una[:service_id] == service.id }}
-        service_vrp[:vrp].services.uniq
-        service_vrp[:vrp].points += service_vrp[:vrp].services.collect{ |service| services_vrps[0][:vrp].points.find{ |point| service.activity.point_id == point[:id] }}
-        service_vrp[:vrp].points += service_vrp[:vrp].services.collect{ |service| services_vrps[0][:vrp].points.find{ |point| service.activity.point_id == point[:id] }}
-        service_vrp[:vrp].points.uniq
-        service_vrp[:vrp].resolution_duration = 6000
-        service_vrp[:vrp].resolution_minimum_duration = 4500
+      unassigned = results.collect{ |result| result[:unassigned] }.flatten
+      if unassigned.size != 0
+        all_services_vrps = build_services_vrps(services_vrps, services_vrps[0][:vrp].routes)
+        all_services_vrps.each{ |service_vrp|
+          service_vrp[:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
+          service_vrp[:vrp].vehicles.each{ |vehicle|
+            vehicle[:free_approach] = true
+          }
+          service_vrp[:vrp].services += unassigned.collect{ |una| services_vrps[0][:vrp].services.find{ |service| una[:service_id] == service.id }}
+          service_vrp[:vrp].services.uniq
+          service_vrp[:vrp].points = service_vrp[:vrp].services.collect{ |service| services_vrps[0][:vrp].points.find{ |point| service.activity.point_id == point.id }}
+          service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle.start_point_id == point.id }}
+          service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle.end_point_id == point.id }}
+          service_vrp[:vrp].resolution_duration = 90000
+          service_vrp[:vrp].resolution_minimum_duration = 60000
+          service_vrp[:vrp].resolution_vehicle_limit = service_vrp[:vrp].vehicles.size
+          service_vrp[:vrp].vehicles.each{ |vehicle| vehicle[:free_approach] = true }
+          service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
 
-        result_inter += OptimizerWrapper::solve([service_vrp])
-      }
+          result_inter += [OptimizerWrapper::solve([service_vrp])]
+          result_inter = [merge_results(result_inter)]
+          unassigned = result_inter.collect{ |result| result[:unassigned] }.flatten if !result_inter.empty?
+        }
 
-      merge_results(result_inter)
+        result_inter[0]
+      else
+        results
+      end
     end
 
     def self.build_incompatibility_set(vrp)
@@ -162,7 +182,6 @@ module Interpreters
     def self.split_vehicle(service_vrp)
       vrp = service_vrp[:vrp]
       skills = build_incompatibility_set(vrp)
-
       # Represent a matrix of vehicle skills
       matrices_cluster = []
       skills.uniq.each{ |skill|
@@ -189,8 +208,9 @@ module Interpreters
           vehicles_skills_2 += matrice_cluster[rounded_mean..-1]
         end
       }
-      vehicles_vrp_1 = extract(vrp.vehicles, vehicles_skills_1.compact)
-      vehicles_vrp_2 = extract(vrp.vehicles, vehicles_skills_2.compact)
+      vehicles = Marshal.load(Marshal.dump(vrp.vehicles))
+      vehicles_vrp_1 = extract(vehicles, vehicles_skills_1.compact)
+      vehicles_vrp_2 = extract(vehicles, vehicles_skills_2.compact)
       [vehicles_vrp_1, vehicles_vrp_2]
     end
 
