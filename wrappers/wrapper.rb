@@ -483,11 +483,12 @@ module Wrappers
       }
     end
 
-    def find_vehicle(vrp, service, t_start, t_end, t_day)
+    def find_vehicle(vrp, service, t_start, t_end, t_day, t_late)
       vrp[:vehicles].select{ |vehicle| vehicle[:timewindow] }.any?{ |vehicle|
         v_start = vehicle[:timewindow][:start]
         v_end = vehicle[:timewindow][:end]
         v_day = vehicle[:timewindow][:day_index]
+        v_late = vehicle[:cost_late_multiplier] && vehicle[:cost_late_multiplier] > 0
         days_compatible = v_day.nil? || t_day.nil? || v_day == t_day
         if service[:unavailable_visit_day_indices] && service[:unavailable_visit_day_indices].include?(v_day)
           days_compatible = false
@@ -496,19 +497,18 @@ module Wrappers
           days_compatible = false
         end
         days_compatible = compatible_day?(vrp, service, t_day, vehicle) if v_day.nil? && vrp[:schedule] && days_compatible
-        days_compatible && (t_start.nil? && (t_end.nil? || v_start.nil? || v_start <= t_end) ||
-                            t_end.nil? && (v_end.nil? || t_start <= v_end) ||
-                            t_start && t_end && (v_start.nil? || v_start <= t_end) && (v_end.nil? || t_start <= v_end))
+        days_compatible && !(v_end && t_start && !v_late && t_start > v_end) && # Incompatible if timewindow starts after vehicle end
+                           !(t_end && v_start && !t_late && v_start > t_end)    # Incompatible if timewindow ends before vehicle start
       } || vrp[:vehicles].none?{ |vehicle| vehicle[:timewindow] || vehicle[:sequence_timewindows] } ||
         vrp[:vehicles].select{ |vehicle| vehicle[:sequence_timewindows] }.any?{ |vehicle|
           vehicle[:sequence_timewindows].any?{ |tw|
             v_start = tw[:start]
             v_end = tw[:end]
             v_day = tw[:day_index]
+            v_late = vehicle[:cost_late_multiplier] && vehicle[:cost_late_multiplier] > 0
             days_compatible = v_day.nil? || t_day.nil? || v_day == t_day
-            days_compatible && (t_start.nil? && (t_end.nil? || v_start.nil? || v_start <= t_end) ||
-                                t_end.nil? && (v_end.nil? || v_end >= t_start) ||
-                                t_start && t_end && v_start <= t_end && v_end >= t_start)
+            days_compatible && !(v_end && t_start && !v_late && t_start > v_end) &&
+                               !(t_end && v_start && !t_late && v_start > t_end)
           }
         } || vrp[:vehicles].any?{ |vehicle| vehicle[:cost_late_multiplier] && vehicle[:cost_late_multiplier] > 0 }
     end
@@ -631,10 +631,11 @@ module Wrappers
             t_start = timewindow[:start]
             t_end = timewindow[:end]
             t_day = timewindow[:day_index]
-            found = find_vehicle(vrp, service, t_start, t_end, t_day)
+            t_late = service[:activity][:late_multiplier]
+            found = find_vehicle(vrp, service, t_start, t_end, t_day, t_late)
           }
         else
-          found = find_vehicle(vrp, service, nil, nil, nil)
+          found = find_vehicle(vrp, service, nil, nil, nil, nil)
         end
 
         if !found && unfeasible.none?{ |unfeas| unfeas[:original_service_id] == service[:id] }
