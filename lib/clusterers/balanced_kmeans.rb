@@ -71,7 +71,7 @@ module Ai4r
         data_sticky = @centroids.collect{ |data| data[4] }
         data_skill = @centroids.collect{ |data| data[5] }
         data_size = @centroids.collect{ |data| data[6] }
-        @centroids.collect{ |centroid|
+        @centroids.collect!{ |centroid|
           centroid[4] = nil
           centroid[5] = nil
           centroid[6] = nil
@@ -88,6 +88,9 @@ module Ai4r
           data[4] = data_sticky[index]
           data[5] = data_skill[index]
           data[6] = data_size[index]
+        }
+        @centroids.each_with_index{ |centroid, index|
+          @centroid_indices[index] = @data_set.data_items.find_index{ |data| data[2] == centroid[2] }
         }
       end
 
