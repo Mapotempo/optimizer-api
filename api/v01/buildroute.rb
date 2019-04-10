@@ -381,7 +381,6 @@ module Api
                 if (endRef != '')
                   v[:end_point_id] = endRef
                 end
-                puts v
                 vehicles.push(vehicle)
               }
 
