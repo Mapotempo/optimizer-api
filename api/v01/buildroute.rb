@@ -375,6 +375,12 @@ module Api
                     router_dimension: v[:router_dimension] || 'time',
                     speed_multiplier: v[:speed_multiplie] || 1
                 }
+                if (startRef != '')
+                  v[:start_point_id] = startRef
+                end
+                if (endRef != '')
+                  v[:end_point_id] = endRef
+                end
                 vehicles.push(vehicle)
               }
 
