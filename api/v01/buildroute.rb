@@ -317,18 +317,18 @@ module Api
               vehiclesInput.collect{ |v|
                 startRef = ''
                 endRef = ''
-
-                #if have no start point
-                if (v[:start_lat] == nil || v[:start_lng] == nil)
-                  v[:start_lat] = soonestLatidue
-                  v[:start_lng] = soonestLongtidue
-                end
-
-                #If have start point but have no end point
-                if ((v[:end_lat] == nil || v[:end_lng] == nil) && v[:start_lat] && v[:start_lng])
-                  v[:end_lat] = v[:start_lat]
-                  v[:end_lng] = v[:start_lng]
-                end
+                #
+                # #if have no start point
+                # if (v[:start_lat] == nil || v[:start_lng] == nil)
+                #   v[:start_lat] = soonestLatidue
+                #   v[:start_lng] = soonestLongtidue
+                # end
+                #
+                # #If have start point but have no end point
+                # if ((v[:end_lat] == nil || v[:end_lng] == nil) && v[:start_lat] && v[:start_lng])
+                #   v[:end_lat] = v[:start_lat]
+                #   v[:end_lng] = v[:start_lng]
+                # end
                 if ((v[:start_lat]) && (v[:start_lng]))
                   sLat = v[:start_lat]
                   sLon = v[:start_lng]
@@ -381,6 +381,7 @@ module Api
                 if (endRef != '')
                   v[:end_point_id] = endRef
                 end
+                puts v
                 vehicles.push(vehicle)
               }
 
