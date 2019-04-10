@@ -59,7 +59,7 @@ module Interpreters
           sub_service_vrp = []
           loop do
             sub_service_vrp, centroid_indices = split(single_vrp, old_centroids.compact)
-            old_centroids += Marshal::load(Marshal.dump(centroid_indices))
+            old_centroids += Marshal::load(Marshal.dump(centroid_indices)) if centroid_indices
             break if sub_service_vrp.size == 2
           end
           results = sub_service_vrp.collect{ |lonely_vrp|
@@ -339,9 +339,8 @@ module Interpreters
             # data_items[centroid_indices.last][5] = skill.flatten.uniq if data
           }
         else
-          centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] # really ?
+          centroid_indices = (vrp[:preprocessing_kmeans_centroids] && vrp[:preprocessing_kmeans_centroids].size == nb_clusters) ? vrp[:preprocessing_kmeans_centroids] : []
         end
-        centroid_indices = nil if centroid_indices.empty?
         clusters = SplitClustering::kmeans_process(centroid_indices, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, nil)
         end_timer = Time.now
 
