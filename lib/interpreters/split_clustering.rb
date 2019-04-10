@@ -62,9 +62,13 @@ module Interpreters
         vrp = service_vrp[:vrp]
         empties_or_fills = (vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.fill }} +
                             vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.empty }}).uniq
+        depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
+        ship_candidates = vrp.shipments.select{ |shipment|
+          depot_ids.include?(shipment.pickup.point_id) || depot_ids.include?(shipment.delivery.point_id)
+        }
         if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
           generate_split_vrps(service_vrp, job, block)
-        elsif vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 && vrp.shipments.size == 0 && vrp.services.size - empties_or_fills.size > vrp.preprocessing_max_split_size &&
+        elsif vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 && vrp.shipments.size == ship_candidates.size && (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size &&
              !vrp.schedule_range_indices && !vrp.schedule_range_date
           split_results << split_solve(service_vrp)
           nil
@@ -145,11 +149,14 @@ module Interpreters
       empties_or_fills = (vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.fill }} +
                           vrp.services.select{ |service| service.quantities.any?{ |quantity| quantity.empty }}).uniq
 
+      depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
       vrp.services -= empties_or_fills
 
       points = vrp.services.collect.with_index{ |service, index|
         service.activity.point.matrix_index = index
         [service.activity.point.location.lat, service.activity.point.location.lon]
+      } + vrp.shipments.collect{ |shipment|
+        depot_ids.include?(shipment.pickup.point_id) ? [shipment.pickup.point.location.lat, shipment.pickup.point.location.lon] : [shipment.delivery.point.location.lat, shipment.delivery.point.location.lon]
       }
       available_vehicles = vrp.vehicles.collect{ |vehicle| vehicle.id }
       result_cluster = clustering(vrp, 2)
@@ -232,8 +239,11 @@ module Interpreters
     end
 
     def self.clustering(vrp, n)
+      depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
       vector = vrp.services.collect{ |service|
         [service.id, service.activity.point.location.lat, service.activity.point.location.lon]
+      } + vrp.shipments.collect{ |shipment|
+        depot_ids.include?(shipment.pickup.point_id) ? [shipment.id, shipment.pickup.point.location.lat, shipment.pickup.point.location.lon] : [shipment.id, shipment.delivery.point.location.lat, shipment.delivery.point.location.lon]
       }
       data_set = DataSet.new(data_items: vector.size.times.collect{ |i| [i] })
       c = KMeans.new
@@ -261,7 +271,7 @@ module Interpreters
           vector[i[0]][0]
         }
       }
-      puts "Split #{vrp.services.size} into #{result[0].size} & #{result[1] ? result[1].size : 0}"
+      puts "Split #{vrp.services.size + vrp.shipments.size} into #{result[0].size} & #{result[1] ? result[1].size : 0}"
       result
     end
 
@@ -269,8 +279,10 @@ module Interpreters
       sub_vrp = Marshal::load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
       services = vrp.services.select{ |service| cluster_services.include?(service.id) }.compact
-      points_ids = services.map{ |s| s.activity.point.id }.uniq.compact
+      shipments = vrp.shipments.select{ |shipment| cluster_services.include?(shipment.id) }.compact
+      points_ids = services.map{ |s| s.activity.point.id }.uniq.compact + shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
       sub_vrp.services = services
+      sub_vrp.shipments = shipments
       sub_vrp.vehicles.delete_if{ |vehicle| !available_vehicles.include?(vehicle.id) } if available_vehicles
       sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten ).compact.uniq
       sub_vrp
