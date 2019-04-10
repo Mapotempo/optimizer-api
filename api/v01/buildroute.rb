@@ -366,8 +366,6 @@ module Api
                 ]
                 vehicle = {
                     id: v[:reference],
-                    start_point_id: startRef,
-                    end_point_id: endRef,
                     capacities: capacities,
                     timewindows: [{
                         start: Buildroute.getDuration(v[:start_time].to_s),
