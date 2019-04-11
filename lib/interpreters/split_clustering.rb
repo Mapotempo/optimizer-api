@@ -472,8 +472,8 @@ module Interpreters
       vec = []
       sub_pbs.each_with_index{ |spb, i|
         if clusters[i].data_items.compact.any?{ |data| data[5] }
-          spb[:vrp][:vehicles] = [vehicle_for_cluster.find{ |day, vehicle| clusters[i].data_items.compact.all?{ |data| data[5].nil? || ([day] & data[5]).size > 0 }}[1]]
-          vehicle_for_cluster.delete_if{ |day, vehicle| day == spb[:vrp][:vehicles][0][:sequence_timewindows][0][:day_index] }
+          spb[:vrp][:vehicles] = [vehicle_for_cluster.find{ |day, vehicle| clusters[i].data_items.compact.all?{ |data| data[5].nil? || ([vehicle[:sequence_timewindows].first[:day_index]] & data[5]).size > 0 }}[1]]
+          vehicle_for_cluster.delete_if{ |day, vehicle| vehicle[:sequence_timewindows].first[:day_index] == spb[:vrp][:vehicles][0][:sequence_timewindows][0][:day_index] }
         else
           spb[:vrp][:vehicles] = [vehicle_for_cluster[i]]
         end
