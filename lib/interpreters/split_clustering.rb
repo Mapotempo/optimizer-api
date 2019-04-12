@@ -503,7 +503,7 @@ module Interpreters
           data_items.each{ |data|
             data[5] = vrp.services.find{ |service| service.activity.point_id == data[2] }.activity.timewindows.collect{ |timewindow| timewindow[:day_index] }.uniq
           }
-          data_items.sort_by!{ |data| data[5].size }
+          data_items.sort_by!{ |data| data[5].size }.reverse!
           centroids_skills = data_items.collect{ |data| data[5] }.uniq
           skills_index = 0
           vrp.vehicles.each_with_index{ |vehicle, index|
