@@ -168,6 +168,7 @@ module Api
               soonestLatidue = 0.0
               soonestLongtidue = 0.0
               orders.collect { |order|
+                stickyVehicles = order[:sticky_vehicle_ids]
                 pickup = nil
                 delivery = nil
                 pickupRefe = ''
@@ -269,8 +270,8 @@ module Api
                       skills: ''
                   }
                   #"sticky_vehicle_ids": ["vehicle_52"],
-                  if (order[:sticky_vehicle_ids])
-                      shipment[:sticky_vehicle_ids] = order[:sticky_vehicle_ids]
+                  if (stickyVehicles != null)
+                      shipment[:sticky_vehicle_ids] = stickyVehicles
                   end
                   shipments.push(shipment)
                 elsif (pickup != nil)
@@ -291,8 +292,8 @@ module Api
                       ],
                       skills: ''
                   }
-                  if (order[:sticky_vehicle_ids])
-                    services[:sticky_vehicle_ids] = order[:sticky_vehicle_ids]
+                  if (stickyVehicles != null)
+                    service[:sticky_vehicle_ids] = stickyVehicles
                   end
                   services.push(service)
                 elsif (delivery != nil)
@@ -313,8 +314,8 @@ module Api
                       ],
                       skills: ''
                   }
-                  if (order[:sticky_vehicle_ids])
-                    services[:sticky_vehicle_ids] = order[:sticky_vehicle_ids]
+                  if (stickyVehicles != null)
+                    service[:sticky_vehicle_ids] = stickyVehicles
                   end
                   services.push(service)
                  end
