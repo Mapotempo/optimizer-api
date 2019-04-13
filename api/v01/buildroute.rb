@@ -268,6 +268,10 @@ module Api
                       ],
                       skills: ''
                   }
+                  #"sticky_vehicle_ids": ["vehicle_52"],
+                  if (order[:sticky_vehicle_ids])
+                      shipment[:sticky_vehicle_ids] = order[:sticky_vehicle_ids]
+                  end
                   shipments.push(shipment)
                 elsif (pickup != nil)
                   service = {
@@ -287,6 +291,9 @@ module Api
                       ],
                       skills: ''
                   }
+                  if (order[:sticky_vehicle_ids])
+                    services[:sticky_vehicle_ids] = order[:sticky_vehicle_ids]
+                  end
                   services.push(service)
                 elsif (delivery != nil)
                   service = {
@@ -306,6 +313,9 @@ module Api
                       ],
                       skills: ''
                   }
+                  if (order[:sticky_vehicle_ids])
+                    services[:sticky_vehicle_ids] = order[:sticky_vehicle_ids]
+                  end
                   services.push(service)
                  end
               }
