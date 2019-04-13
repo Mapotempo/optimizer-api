@@ -270,7 +270,7 @@ module Api
                       skills: ''
                   }
                   #"sticky_vehicle_ids": ["vehicle_52"],
-                  if (stickyVehicles != null)
+                  if (stickyVehicles != nil)
                       shipment[:sticky_vehicle_ids] = stickyVehicles
                   end
                   shipments.push(shipment)
@@ -292,7 +292,7 @@ module Api
                       ],
                       skills: ''
                   }
-                  if (stickyVehicles != null)
+                  if (stickyVehicles != nil)
                     service[:sticky_vehicle_ids] = stickyVehicles
                   end
                   services.push(service)
@@ -314,7 +314,7 @@ module Api
                       ],
                       skills: ''
                   }
-                  if (stickyVehicles != null)
+                  if (stickyVehicles != nil)
                     service[:sticky_vehicle_ids] = stickyVehicles
                   end
                   services.push(service)
