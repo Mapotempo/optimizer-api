@@ -508,7 +508,7 @@ module Interpreters
           skills_index = 0
           vrp.vehicles.each_with_index{ |vehicle, index|
             skills_index += 1 if vrp.vehicles.size - centroids_skills.size < index
-            centroids += [data_items.index(data_items.find{ |data| data[5] == centroids_skills[skills_index] && !centroids.include?(data_items.index(data)) })]
+            centroids += [data_items.index(data_items.find{ |data| data[5] == centroids_skills[skills_index] && (data_items.length < nb_clusters || !centroids.include?(data_items.index(data))) })]
           }
           limits = cumulated_metrics[cut_symbol] / nb_clusters
         else
