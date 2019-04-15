@@ -39,6 +39,7 @@ module Models
     field :resolution_stable_coefficient, default: nil
     field :resolution_initial_time_out, default: nil
     field :resolution_minimum_duration, default: nil
+    field :resolution_init_duration, default: nil
     field :resolution_time_out_multiplier, default: nil
     field :resolution_vehicle_limit, default: nil
     field :resolution_solver_parameter, default: nil
@@ -124,6 +125,7 @@ module Models
       self.resolution_stable_iterations = resolution[:stable_iterations]
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
       self.resolution_minimum_duration = resolution[:initial_time_out] || resolution[:minimum_duration]
+      self.resolution_init_duration = resolution[:init_duration]
       self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
       self.resolution_solver_parameter = resolution[:solver_parameter]
