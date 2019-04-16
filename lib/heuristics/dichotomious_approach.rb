@@ -121,11 +121,11 @@ module Interpreters
     def self.third_stage(services_vrps, results)
       result_inter = []
       unassigned_inter = []
-      build_route(services_vrps[0], results)
-      services_vrps[0][:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
-
       unassigned = results.collect{ |result| result[:unassigned] }.flatten
-      if unassigned.size != 0
+
+      if unassigned.size != 0 && dichotomious_candidate(services_vrps[0])
+        build_route(services_vrps[0], results)
+        services_vrps[0][:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
         all_services_vrps = build_services_vrps(services_vrps, services_vrps[0][:vrp].routes)
         all_services_vrps.each{ |service_vrp|
           service_vrp[:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
@@ -150,7 +150,7 @@ module Interpreters
 
         result_inter[0]
       else
-        results
+        results[0]
       end
     end
 
