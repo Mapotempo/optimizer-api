@@ -168,7 +168,7 @@ module Api
               soonestLatidue = 0.0
               soonestLongtidue = 0.0
               orders.collect { |order|
-                stickyVehicles = order[:sticky_vehicle_ids]
+                stickyVehicles = order[:sticky_vehicle_ids] || []
                 pickup = nil
                 delivery = nil
                 pickupRefe = ''
@@ -230,7 +230,6 @@ module Api
                 end
                 if (delivery_lat != 0 &&  delivery_lng != 0)
                   dLat = delivery_lat
-                  puts "delivery lat = #{delivery_lat}"
                   dLon = delivery_lng
                   id = order[:reference].to_s + '_' + delivery_lat.to_s + ',' + delivery_lng.to_s
                   deliverRef = id
@@ -267,10 +266,10 @@ module Api
                           value: 10.92
                         }
                       ],
-                      skills: ''
+                      skills: ["Skill1"]
                   }
                   #"sticky_vehicle_ids": ["vehicle_52"],
-                  if (stickyVehicles != nil)
+                  if (stickyVehicles.count > 0)
                       shipment[:sticky_vehicle_ids] = stickyVehicles
                   end
                   shipments.push(shipment)
@@ -290,9 +289,9 @@ module Api
                           value: 10.92
                         }
                       ],
-                      skills: ''
+                      skills: ["Skill1"]
                   }
-                  if (stickyVehicles != nil)
+                  if (stickyVehicles.count > 0)
                     service[:sticky_vehicle_ids] = stickyVehicles
                   end
                   services.push(service)
@@ -312,9 +311,9 @@ module Api
                               value: 10.92
                           }
                       ],
-                      skills: ''
+                      skills: ["Skill1"]
                   }
-                  if (stickyVehicles != nil)
+                  if (stickyVehicles.count > 0)
                     service[:sticky_vehicle_ids] = stickyVehicles
                   end
                   services.push(service)
@@ -377,14 +376,17 @@ module Api
                 ]
                 vehicle = {
                     id: v[:reference],
-                    capacities: capacities,
                     timewindows: [{
                         start: Buildroute.getDuration(v[:start_time].to_s),
                         end: Buildroute.getDuration(v[:end_time].to_s)
                     }],
                     router_mode: v[:router_mode] || 'crow',
                     router_dimension: v[:router_dimension] || 'time',
-                    speed_multiplier: v[:speed_multiplie] || 1
+                    speed_multiplier: v[:speed_multiplie] || 1,
+                    skills: [
+                        ["Skill1"]
+                    ],
+                    capacities: capacities
                 }
                 if (startRef != '')
                   vehicle[:start_point_id] = startRef
