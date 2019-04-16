@@ -175,7 +175,9 @@ module SchedulingHeuristic
           if !services_data[s[:id]][:tw].nil? && !services_data[s[:id]][:tw].empty?
             time_to_arrive = ( i == 0 ? matrix(route[:vehicle], route[:vehicle][:start_point_id], s[:id]) : matrix( route[:vehicle], route[:services][i - 1][:id], s[:id] ))
             compatible_tw = services_data[s[:id]][:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && (s[:start] + time_to_arrive).between?(tw[:start], tw[:end] ) }
-            if compatible_tw.nil?
+            if compatible_tw.nil? && services_data[s[:id]][:tw].each{ |tw| (s[:start] + time_to_arrive) < tw[:start] }
+              s[:start] = services_data[s[:id]][:tw].collect{ |tw| tw[:start] }.min - time_to_arrive
+            elsif compatible_tw.nil?
               raise OptimizerWrapper::SchedulingHeuristicError.new('One service timewindows violated')
             end
           end
@@ -428,7 +430,7 @@ module SchedulingHeuristic
     sooner_start = inserted_final_time
     if next_service_info[:tw] && !next_service_info[:tw].empty?
       tw = next_service_info[:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == current_day%7) && next_current_arrival.between?(tw[:start], tw[:end]) }
-      sooner_start = tw[:start] - dist_from_inserted
+      sooner_start = tw[:start] - dist_from_inserted if tw
     end
     new_start = [sooner_start, inserted_final_time].max
     new_end = new_start + dist_from_inserted + next_service_considered_setup + next_service_info[:duration]
