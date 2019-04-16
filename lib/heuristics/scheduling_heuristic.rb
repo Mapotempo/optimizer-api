@@ -62,7 +62,7 @@ module SchedulingHeuristic
   def self.adjust_candidate_routes(vehicle, day_finished, services)
     ### assigns all visits of services in [services] that where newly scheduled on [vehicle] at [day_finished] ###
     days_available = @candidate_routes[vehicle].keys
-    days_filled = []
+    days_filled = [day_finished]
     @candidate_routes[vehicle][day_finished][:current_route].select{ |service|
       !@used_to_adjust.include?(service[:id])
     }.sort_by{ |service|
@@ -654,7 +654,6 @@ module SchedulingHeuristic
               services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
               route_data[:positions_in_order].insert(best_index[:position] + i + 1, route_data[:positions_in_order][best_index[:position]])
             }
-
             adjust_candidate_routes(current_vehicle, best_day, services_data)
 
             if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty?
@@ -871,7 +870,8 @@ module SchedulingHeuristic
             current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
           elsif shift < 0
             new_potential_start = current_route[point][:arrival] + shift
-            soonest_authorized = services[current_route[point][:id]][:tw].empty? ? new_potential_start : services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:arrival].between?(tw[:start],tw[:end]) }[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
+            service_tw = services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:arrival].between?(tw[:start],tw[:end]) }
+            soonest_authorized = (services[current_route[point][:id]][:tw].empty? || !service_tw) ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
             if soonest_authorized > new_potential_start
               # barely tested because very few cases :
               shift = shift - (soonest_authorized - new_potential_start)
