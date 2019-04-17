@@ -135,9 +135,9 @@ module Interpreters
           }
           service_vrp[:vrp].services += unassigned.collect{ |una| services_vrps[0][:vrp].services.find{ |service| una[:service_id] == service.id }}
           service_vrp[:vrp].services.uniq
-          service_vrp[:vrp].points = service_vrp[:vrp].services.collect{ |service| services_vrps[0][:vrp].points.find{ |point| service.activity.point_id == point.id }}
-          service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle.start_point_id == point.id }}
-          service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle.end_point_id == point.id }}
+          service_vrp[:vrp].points = service_vrp[:vrp].services.collect{ |service| service.activity.point }
+          service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.start_point }.compact
+          service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.end_point }.compact
           service_vrp[:vrp].resolution_duration = 60000
           service_vrp[:vrp].resolution_minimum_duration = 30000
           service_vrp[:vrp].resolution_vehicle_limit = service_vrp[:vrp].vehicles.size
