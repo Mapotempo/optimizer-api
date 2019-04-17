@@ -77,7 +77,7 @@ module Interpreters
       service_vrp[:vrp].restitution_allow_empty_result = true
       service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 2 : 120000
       service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
-      service_vrp[:vrp].resolution_init_duration = 30000
+      service_vrp[:vrp].resolution_init_duration = 45000
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
 
       service_vrp
@@ -137,10 +137,9 @@ module Interpreters
           service_vrp[:vrp].points = service_vrp[:vrp].services.collect{ |service| services_vrps[0][:vrp].points.find{ |point| service.activity.point_id == point.id }}
           service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle.start_point_id == point.id }}
           service_vrp[:vrp].points += service_vrp[:vrp].vehicles.collect{ |vehicle| services_vrps[0][:vrp].points.find{ |point| vehicle.end_point_id == point.id }}
-          service_vrp[:vrp].resolution_duration = 90000
-          service_vrp[:vrp].resolution_minimum_duration = 60000
+          service_vrp[:vrp].resolution_duration = 60000
+          service_vrp[:vrp].resolution_minimum_duration = 30000
           service_vrp[:vrp].resolution_vehicle_limit = service_vrp[:vrp].vehicles.size
-          service_vrp[:vrp].vehicles.each{ |vehicle| vehicle[:free_approach] = true }
           service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
 
           result_inter += [OptimizerWrapper::solve([service_vrp])]
@@ -253,11 +252,11 @@ module Interpreters
 
         sub_first.vehicles.each{ |vehicle|
           vehicle[:free_approach] = true
-          vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000
+          vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000000
         }
         sub_second.vehicles.each{ |vehicle|
           vehicle[:free_approach] = true
-          vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000
+          vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000000
         }
 
         sub_service_vrp = [{
