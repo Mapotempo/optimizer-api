@@ -658,7 +658,7 @@ module Api
           delete ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
-            if !job || OptimizerWrapper.job_list(params[:api_key]).map{ |j| j['uuid'] }.exclude?(id)
+            if !job || OptimizerWrapper.job_list(params[:api_key]).map{ |j| j[:uuid] }.exclude?(id)
               status 404
               error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
             else
