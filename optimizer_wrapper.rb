@@ -409,7 +409,13 @@ module OptimizerWrapper
   def self.job_list(api_key)
     jobs = (JobList.get(api_key) || []).collect{ |e|
       if job = Resque::Plugins::Status::Hash.get(e)
-        job
+        {
+          time: job.time,
+          uuid: job.uuid,
+          status: job.status,
+          avancement: job.message,
+          checksum: job.options['checksum']
+        }
       else
         Result.remove(api_key, e)
       end
