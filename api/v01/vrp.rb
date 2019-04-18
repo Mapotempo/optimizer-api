@@ -76,9 +76,9 @@ module Api
 
       def self.vrp_request_matrices(this)
         this.requires(:id, type: String, allow_blank: false)
-        this.optional(:time, type: Array[Array[Float]], desc: 'Matrix of time, travel duration between each pair of point in the problem')
-        this.optional(:distance, type: Array[Array[Float]], desc: 'Matrix of distance, travel distance between each pair of point in the problem')
-        this.optional(:value, type: Array[Array[Float]], desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related')
+        this.optional(:time, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of time, travel duration between each pair of point in the problem')
+        this.optional(:distance, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of distance, travel distance between each pair of point in the problem')
+        this.optional(:value, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related')
       end
 
       def self.vrp_request_point(this)
