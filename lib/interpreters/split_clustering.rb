@@ -77,7 +77,8 @@ module Interpreters
         else
           {
             service: service_vrp[:service],
-            vrp: vrp
+            vrp: vrp,
+            level: (service_vrp[:level] || 0)
           }
         end
       }.compact
@@ -168,6 +169,7 @@ module Interpreters
           service: service_vrp[:service]
         }
         sub_vrp.services += empties_or_fills
+        Dichotomious.initialize
         sub_result = OptimizerWrapper.define_process([sub_problem], job)
         available_vehicles.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         remove_poor_routes(sub_vrp, sub_result)
@@ -207,7 +209,7 @@ module Interpreters
           current_load[:value] / capacity.limit < 0.2 if capacity.limit && current_load && capacity.limit > 0
         }
         time_flag = vehicle.timewindow.end.nil? || vehicle.timewindow.start.nil? ||
-        (route[:activities].last[:begin_time] - route[:activities].first[:begin_time]) < 0.75 * (vehicle.timewindow.end - vehicle.timewindow.start).to_f
+        (route[:activities].last[:begin_time] - route[:activities].first[:begin_time]) < 0.7 * (vehicle.timewindow.end - vehicle.timewindow.start).to_f
         result[:unassigned] += route[:activities].select{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] } if load_flag && time_flag
         load_flag && time_flag
       }

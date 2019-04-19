@@ -133,7 +133,8 @@ module OptimizerWrapper
             false
           end
         },
-        vrp: vrp_element
+        vrp: vrp_element,
+        level: 0
       }
     }
 
@@ -168,12 +169,12 @@ module OptimizerWrapper
     split_results = nil
     definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
       # Split/Clusterize the problem if to large
-      unsplitted_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp])
+      unsplitted_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp], job)
       unsplitted_vrps
     }.flatten.compact
     dico_results = []
     definitive_service_vrps.delete_if{ |service_vrp|
-      dico_vrp, dico_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, block)
+      dico_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job)
       dico_results << dico_result
       dico_result
     }
