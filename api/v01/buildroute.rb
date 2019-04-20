@@ -386,6 +386,7 @@ module Api
                     skills: [
                         ["Skill1"]
                     ],
+                    maximum_ride_time: 50000,
                     capacities: capacities
                 }
                 if (startRef != '')
