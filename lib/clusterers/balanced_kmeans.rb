@@ -66,6 +66,64 @@ module Ai4r
         self
       end
 
+      def num_attributes(data_items)
+        return (data_items.empty?) ? 0 : data_items.first.size
+      end
+
+      # Get the sample mean
+      def mean(data_items, index)
+        sum = 0.0
+        data_items.each { |item| sum += item[index] }
+        return sum / data_items.length
+      end
+
+      # Get the sample mode.
+      def mode(data_items, index)
+        count = Hash.new {0}
+        max_count = 0
+        mode = nil
+        data_items.each do |data_item|
+          attr_value = data_item[index]
+          attr_count = (count[attr_value] += 1)
+          if attr_count > max_count
+            mode = attr_value
+            max_count = attr_count
+          end
+        end
+        return mode
+      end
+
+      def mode_not_nil(data_items, index)
+        count = Hash.new {0}
+        max_count = 0
+        mode = nil
+        data_items.each do |data_item|
+          attr_value = data_item[index]
+          attr_count = (count[attr_value] += attr_value.nil? ? 0 : 1)
+          if attr_count > max_count
+            mode = attr_value
+            max_count = attr_count
+          end
+        end
+        return mode
+      end
+
+      def get_mean_or_mode(data_set)
+        data_items = data_set.data_items
+        mean = []
+        num_attributes(data_items).times do |i|
+          mean[i] =
+                  if data_items.first[i].is_a?(Numeric)
+                    mean(data_items, i)
+                  elsif i == 4
+                    mode_not_nil(data_items, i)
+                  else
+                    mode(data_items, i)
+                  end
+        end
+        return mean
+      end
+
       def recompute_centroids
         @old_centroids = @centroids
         data_sticky = @centroids.collect{ |data| data[4] }
@@ -78,6 +136,11 @@ module Ai4r
           centroid.compact
         }
         @iterations += 1
+
+        @centroid_function = lambda do |clusters|
+          clusters.collect{ |data_set| get_mean_or_mode(data_set) }
+        end
+
         @centroids = @centroid_function.call(@clusters)
         @old_centroids.each_with_index{ |data, index|
           data[4] = data_sticky[index]
@@ -114,7 +177,8 @@ module Ai4r
         else
           @cut_limit
         end
-        balance = if (a[4] && b[4] && b[4] != a[4]) || (a[5] && b[5] && (b[5] & a[5]).size < b[5].size) # if service sticky or skills are different than centroids sticky/skills, or if services skills have no match
+        balance = if a[4] && b[4] && (b[4] & a[4]).empty? || # if service sticky or skills are different than centroids sticky/skills,
+                     a[5] && b[5] && (b[5] & a[5]).size < b[5].size # or if services skills have no match
           2 ** 32
         elsif cut_value > limit
           ((cut_value - limit) / limit) * 1000 * fly_distance
