@@ -86,6 +86,7 @@ module Interpreters
     def self.build_route(service_vrp, results)
       routes = results.collect{ |result|
         result[:routes].collect{ |route|
+          next if route[:activities].empty?
           {
             vehicle: {
               id: route[:vehicle_id]
@@ -93,7 +94,7 @@ module Interpreters
             mission_ids: route[:activities].select{ |activity| activity[:service_id] || activity[:rest_id] }.collect{ |activity|
               activity[:service_id] || activity[:rest_id]
             }
-          } if !route[:activities].empty?
+          }
         }
       }.flatten.compact
       service_vrp[:vrp].routes = routes
@@ -233,12 +234,14 @@ module Interpreters
       if result_cluster.compact.size != 1
         # Kmeans return 2 vrps
         vrp.resolution_vehicle_limit = vrp.vehicles.size if !vrp.resolution_vehicle_limit
-        sub_first = SplitClustering::build_partial_vrp(vrp, result_cluster[0])
+        sub_service_first = SplitClustering::build_partial_service_vrp(vrp, result_cluster[0])
+        sub_first = sub_service_first[:vrp]
         sub_first.points = vrp.points
         sub_first.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (sub_first.services.size.to_f / vrp.services.size.to_f)).to_i
         sub_first.preprocessing_first_solution_strategy = ['self_selection']
 
-        sub_second = SplitClustering::build_partial_vrp(vrp, result_cluster[1])
+        sub_service_second = SplitClustering::build_partial_service_vrp(vrp, result_cluster[1])
+        sub_second = sub_service_second[:vrp]
         sub_second.points = vrp.points
         sub_second.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (sub_second.services.size.to_f / vrp.services.size.to_f)).to_i
         sub_second.preprocessing_first_solution_strategy = ['self_selection']
@@ -259,37 +262,23 @@ module Interpreters
           vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000000
         }
 
-        sub_service_vrp = [{
-          service: service_vrp[:service],
-          vrp: sub_first,
-          fleet_id: service_vrp[:fleet_id],
-          problem_size: service_vrp[:problem_size]
-        }]
-        sub_service_vrp << {
-          service: service_vrp[:service],
-          vrp: sub_second,
-          fleet_id: service_vrp[:fleet_id],
-          problem_size: service_vrp[:problem_size]
-        } if sub_second
+        sub_service_vrps = [sub_service_first]
+        sub_service_vrps << sub_service_second if sub_service_second
 
       else
         # Kmeans return 1 vrp
-        sub_first = SplitClustering::build_partial_vrp(vrp, result_cluster[0])
+        sub_service_first = SplitClustering::build_partial_service_vrp(vrp, result_cluster[0])
+        sub_first = sub_service_first[:vrp]
         sub_first.points = vrp.points
         sub_first.vehicles = vehicles_splited[0] + vehicles_splited[1]
         sub_first.vehicles.each{ |vehicle|
           vehicle[:free_approach] = true
           vehicle[:cost_fixed] = 100000
         }
-        sub_service_vrp = [{
-          service: service_vrp[:service],
-          vrp: sub_first,
-          fleet_id: service_vrp[:fleet_id],
-          problem_size: service_vrp[:problem_size]
-        }]
+        sub_service_vrps = [sub_service_first]
       end
 
-      [sub_service_vrp, centroid_indices]
+      [sub_service_vrps, centroid_indices]
     end
 
     def self.kmeans(services_vrps, vehicles, cut_symbol, old_centroids = nil)
@@ -374,6 +363,5 @@ module Interpreters
         [vrp]
       end
     end
-
   end
 end
