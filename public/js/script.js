@@ -141,7 +141,7 @@ $(document).ready(function() {
   $('#file-customers-help .column-name').append('<td>' + mapping.quantity + ' 2</td>');
   $('#file-customers-help .column-value').append('<td>1.234</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.skills + '</td>');
-  $('#file-customers-help .column-value').append('<td>"tag1,tag2"</td>');
+  $('#file-customers-help .column-value').append('<td>tag1,tag2</td>');
   $('#file-customers-help .column-name').append('<td>' + mapping.shipment_inroute + '</td>');
   $('#file-customers-help .column-value').append('<td>HH:MM:SS</td>');
 
@@ -182,9 +182,9 @@ $(document).ready(function() {
   $('#file-vehicles-help .column-name').append('<td>' + mapping.initial_quantity + ' 2</td>');
   $('#file-vehicles-help .column-value').append('<td>1.234</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.skills + ' 1</td>');
-  $('#file-vehicles-help .column-value').append('<td>"tag1,tag2"</td>');
+  $('#file-vehicles-help .column-value').append('<td>tag1,tag2</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.skills + ' 2</td>');
-  $('#file-vehicles-help .column-value').append('<td>"tag1,tag3"</td>');
+  $('#file-vehicles-help .column-value').append('<td>tag1,tag3</td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.router_mode + '</td>');
   $('#file-vehicles-help .column-value').append('<td>car</i></td>');
   $('#file-vehicles-help .column-name').append('<td>' + mapping.router_dimension + '</td>');
