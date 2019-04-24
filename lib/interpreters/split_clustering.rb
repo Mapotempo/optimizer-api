@@ -360,7 +360,7 @@ module Interpreters
 
     def self.assign_vehicle_to_clusters(vehicles, points, clusters, entity = '', kmeans = true)
       cluster_vehicles = Array.new(clusters.size, [])
-      if entity == 'work_day' || entity == 'vehicle' && vehicles.collect{ |vehicle| vehicle[:sequence_timewindows] && vehicle[:sequence_timewindows].size }.compact.uniq.size > 1
+      if entity == 'work_day' || entity == 'vehicle' && vehicles.collect{ |vehicle| vehicle[:sequence_timewindows] && vehicle[:sequence_timewindows].size }.compact.uniq.size >= 1
         vehicles.each_with_index{ |vehicle, i|
           cluster_vehicles[i] = vehicle.id
         }
