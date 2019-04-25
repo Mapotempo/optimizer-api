@@ -169,9 +169,10 @@ module Interpreters
           service: service_vrp[:service]
         }
         sub_vrp.services += empties_or_fills
+        sub_vrp.vehicles.select!{ |vehicle| available_vehicles.include?(vehicle.id) }
         sub_result = OptimizerWrapper.define_process([sub_problem], job)
-        available_vehicles.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         remove_poor_routes(sub_vrp, sub_result)
+        available_vehicles.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         empties_or_fills -= remove_used_empties_and_refills(sub_vrp, sub_result)
         result = merge_results([result, sub_result])
       }
