@@ -171,7 +171,7 @@ module Ai4r
         fly_distance = Helper::flying_distance(a, b)
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
         # b[6] contains the weight associated to the current centroid. share represents the sum of all of the weight over the problem.
-        share = @centroids.collect{ |centroid| centroid[6] }.sum if b[6]
+        share = @centroids.collect{ |centroid| centroid[6] }.compact.sum if b[6]
         limit = if @cut_limit.is_a? Array
           @cut_limit[cluster_index]
         else
