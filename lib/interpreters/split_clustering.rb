@@ -221,11 +221,15 @@ module Interpreters
       sub_vrp.id = Random.new
       services = vrp.services.select{ |service| cluster_missions.include?(service.id) }.compact
       shipments = vrp.shipments.select{ |shipment| cluster_missions.include?(shipment.id) }.compact
+      # TODO: Within Scheduling Vehicles require to have unduplicated ids
+      sub_vrp.vehicles = available_vehicles.collect{ |vehicle_id|
+        vehicle_index = sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
+        vrp.vehicles.slice!(vehicle_index)
+      } if available_vehicles
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact + shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
       sub_vrp.services = services
       sub_vrp.shipments = shipments
-      sub_vrp.vehicles.select!{ |vehicle| available_vehicles.nil? || available_vehicles.include?(vehicle.id) }
-      sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten ).compact.uniq
+      sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + sub_vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten).compact.uniq
       {
         vrp: sub_vrp,
         service: service_vrp[:service]
@@ -362,7 +366,7 @@ module Interpreters
       cluster_vehicles = Array.new(clusters.size, [])
       if entity == 'work_day' || entity == 'vehicle' && vehicles.collect{ |vehicle| vehicle[:sequence_timewindows] && vehicle[:sequence_timewindows].size }.compact.uniq.size >= 1
         vehicles.each_with_index{ |vehicle, i|
-          cluster_vehicles[i] = vehicle.id
+          cluster_vehicles[i] = [vehicle.id]
         }
       else
         available_clusters = []
