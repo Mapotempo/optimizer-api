@@ -25,10 +25,6 @@ require 'ai4r'
 module Interpreters
   class Dichotomious
 
-    def self.initialize
-      @time_saved = 0
-    end
-
     def self.dichotomious_candidate(service_vrp)
       service_vrp[:vrp].vehicles.size > 1 &&
       service_vrp[:vrp].shipments.empty? &&
@@ -55,12 +51,7 @@ module Interpreters
     def self.dichotomious_heuristic(service_vrp, job)
       if dichotomious_candidate(service_vrp)
         create_config(service_vrp)
-        start_time = Time.now
         result = OptimizerWrapper::solve([service_vrp], job)
-        end_time = Time.now
-        if end_time - start_time < service_vrp[:vrp].resolution_minimum_duration
-          @time_saved += [service_vrp[:vrp].resolution_duration - (end_time - start_time) * 1000, 0].max
-        end
 
         if result.nil?
           old_centroids = []
@@ -76,6 +67,7 @@ module Interpreters
           result = merge_results(results)
           if service_vrp[:level] == 0
             result = Interpreters::Dichotomious.third_stage(service_vrp, [result], job)
+            Interpreters::SplitClustering.remove_poor_routes(service_vrp[:vrp], result)
           end
         end
         result
@@ -157,8 +149,8 @@ module Interpreters
           sub_service_vrp[:vrp].points = sub_service_vrp[:vrp].services.collect{ |service| service.activity.point }
           sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.start_point }.compact
           sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.end_point }.compact
-          sub_service_vrp[:vrp].resolution_duration = (@time_saved / all_services_vrps.size).to_i
-          sub_service_vrp[:vrp].resolution_minimum_duration = (@time_saved / (all_services_vrps.size * 2)).to_i
+          sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / service_vrp[:vrp].resolution_vehicle_limit) * sub_service_vrp[:vrp].vehicles.size
+          sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / service_vrp[:vrp].resolution_vehicle_limit) * sub_service_vrp[:vrp].vehicles.size
           sub_service_vrp[:vrp].restitution_allow_empty_result = true
           sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
           sub_service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
