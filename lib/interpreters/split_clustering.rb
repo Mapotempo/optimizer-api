@@ -192,7 +192,7 @@ module Interpreters
     def self.remove_poor_routes(vrp, result)
       if result
         remove_empty_routes(result)
-        remove_poorly_populated_routes(vrp, result)
+        remove_poorly_populated_routes(vrp, result) if !Interpreters::Dichotomious.dichotomious_candidate({vrp: vrp, service: :ortools})
       end
     end
 

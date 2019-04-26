@@ -39,7 +39,7 @@ module Interpreters
       {
         solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
         cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
-        routes: results.flat_map{ |r| r && r[:routes] }.compact,
+        routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,
         unassigned: results.flat_map{ |r| r && r[:unassigned] }.compact.uniq,
         elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
         total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
@@ -55,20 +55,21 @@ module Interpreters
 
         if result.nil?
           old_centroids = []
-          sub_service_vrp = []
+          sub_service_vrps = []
           loop do
-            sub_service_vrp, centroid_indices = split(service_vrp, old_centroids.compact)
+            sub_service_vrps, centroid_indices = split(service_vrp, old_centroids.compact)
             old_centroids += centroid_indices if centroid_indices
-            break if sub_service_vrp.size == 2
+            break if sub_service_vrps.size == 2
           end
-          results = sub_service_vrp.collect{ |lonely_vrp|
+          results = sub_service_vrps.collect{ |lonely_vrp|
             OptimizerWrapper::define_process([lonely_vrp], job)
           }
           result = merge_results(results)
-          if service_vrp[:level] == 0
-            result = Interpreters::Dichotomious.third_stage(service_vrp, [result], job)
-            Interpreters::SplitClustering.remove_poor_routes(service_vrp[:vrp], result)
-          end
+        end
+        if service_vrp[:level] == 0
+          result = third_stage(service_vrp, result, job)
+          Interpreters::SplitClustering.remove_empty_routes(result)
+          Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result)
         end
         result
       end
@@ -102,50 +103,49 @@ module Interpreters
       service_vrp[:vrp].routes = routes
     end
 
-    def self.build_services_vrps(service_vrp, routes)
+    def self.build_service_vrps(service_vrp, routes)
       all_services_vrps = []
       vehicles = Marshal.load(Marshal.dump(service_vrp[:vrp].vehicles))
-      sub_service_vrp = Marshal.load(Marshal.dump(service_vrp))
       while !routes.empty?
-        sub_service_vrp[:vrp].services = []
-        sub_service_vrp[:vrp].vehicles = []
-        sub_service_vrp[:vrp].routes = []
-        while sub_service_vrp[:vrp].vehicles.size < 3 && !routes.empty?
+        sub_service_vrp_first = Marshal.load(Marshal.dump(service_vrp))
+        sub_service_vrp_first[:vrp].services = []
+        sub_service_vrp_first[:vrp].vehicles = []
+        sub_service_vrp_first[:vrp].routes = []
+        while sub_service_vrp_first[:vrp].vehicles.size < 3 && !routes.empty?
           route = routes.slice!(0)
-          sub_service_vrp[:vrp].routes << route
-          sub_service_vrp[:vrp].vehicles << vehicles.slice!(vehicles.find_index{ |vehicle| vehicle.id == route.vehicle.id })
-          sub_service_vrp[:vrp].services += service_vrp[:vrp].services.select{ |service| route[:mission_ids].include?(service.id) }
+          sub_service_vrp_first[:vrp].routes << route
+          sub_service_vrp_first[:vrp].vehicles << vehicles.slice!(vehicles.find_index{ |vehicle| vehicle.id == route.vehicle.id })
+          sub_service_vrp_first[:vrp].services += service_vrp[:vrp].services.select{ |service| route[:mission_ids].include?(service.id) }
         end
-        all_services_vrps += [sub_service_vrp]
+        all_services_vrps += [sub_service_vrp_first]
       end
       size = all_services_vrps.collect{ |service_vrp| service_vrp[:vrp].vehicles.size }.sum
       (0..service_vrp[:vrp].resolution_vehicle_limit - size - 1).each{ |_index|
         next if service_vrp[:vrp].resolution_vehicle_limit - size - 1 < 0 || vehicles.nil? || vehicles.empty?
-        sub_service_vrp[:vrp].services = []
-        sub_service_vrp[:vrp].vehicles = []
-        sub_service_vrp[:vrp].routes = []
-        sub_service_vrp[:vrp].vehicles << vehicles.slice!(0)
-        all_services_vrps += [sub_service_vrp]
+        sub_service_vrp_second = Marshal.load(Marshal.dump(service_vrp))
+        sub_service_vrp_second[:vrp].services = []
+        sub_service_vrp_second[:vrp].vehicles = []
+        sub_service_vrp_second[:vrp].routes = []
+        sub_service_vrp_second[:vrp].vehicles << vehicles.slice!(0)
+        all_services_vrps += [sub_service_vrp_second]
       }
 
       all_services_vrps
     end
 
-    def self.third_stage(service_vrp, results, job = nil)
+    def self.third_stage(service_vrp, result, job = nil)
       result_inter = []
       unassigned_inter = []
-      unassigned = results.collect{ |result| result[:unassigned] }.flatten
-      if !unassigned.empty? && dichotomious_candidate(service_vrp)
-        build_route(service_vrp, results)
+      unassigned_service_ids = result[:unassigned].collect{ |activity| activity[:service_id] }
+      if !result[:unassigned].empty? && dichotomious_candidate(service_vrp)
+        build_route(service_vrp, [result])
         service_vrp[:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
-        all_services_vrps = build_services_vrps(service_vrp, service_vrp[:vrp].routes)
-        all_services_vrps.each{ |sub_service_vrp|
-          sub_service_vrp[:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
+        all_services_vrps = build_service_vrps(service_vrp, service_vrp[:vrp].routes)
+        intermediate_results = all_services_vrps.collect{ |sub_service_vrp|
           sub_service_vrp[:vrp].vehicles.each{ |vehicle|
             vehicle[:free_approach] = true
           }
-          sub_service_vrp[:vrp].services += unassigned.collect{ |una| service_vrp[:vrp].services.find{ |service| una[:service_id] == service.id }}
-          sub_service_vrp[:vrp].services.uniq
+          sub_service_vrp[:vrp].services += service_vrp[:vrp].services.select{ |service| unassigned_service_ids.include?(service[:id]) }
           sub_service_vrp[:vrp].points = sub_service_vrp[:vrp].services.collect{ |service| service.activity.point }
           sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.start_point }.compact
           sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.end_point }.compact
@@ -154,16 +154,19 @@ module Interpreters
           sub_service_vrp[:vrp].restitution_allow_empty_result = true
           sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
           sub_service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
-
-          result_inter += [OptimizerWrapper::solve([sub_service_vrp], job)]
-          result_inter = [merge_results(result_inter)]
-          result_inter[0][:unassigned].delete_if{ |unassigned| result_inter[0][:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] }}.flatten.include?(unassigned[:service_id]) }
-          unassigned = result_inter.collect{ |result| result[:unassigned] }.flatten if !result_inter.empty?
+          result_inter = OptimizerWrapper::solve([sub_service_vrp], job)
+          unassigned_service_ids.delete_if{ |unassigned|
+            result_inter[:routes].any?{ |route|
+              route[:activities].any?{ |activity|
+                activity[:service_id] == unassigned
+              }
+            }
+          } if result_inter
+          result_inter
         }
-
-        result_inter[0]
+        merge_results(intermediate_results.compact)
       else
-        results[0]
+        result
       end
     end
 
