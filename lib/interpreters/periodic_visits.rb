@@ -23,14 +23,14 @@ module Interpreters
     def initialize(vrp)
       @periods = []
       @equivalent_vehicles = {}
+      @epoch = Date.new(1970, 1, 1)
     end
 
     def expand(vrp)
       if vrp.schedule_range_indices || vrp.schedule_range_date
 
-        epoch = Date.new(1970,1,1)
-        @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - epoch).to_i
-        real_schedule_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : (vrp.schedule_range_date[:end].to_date - epoch).to_i
+        @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - @epoch).to_i
+        real_schedule_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : (vrp.schedule_range_date[:end].to_date - @epoch).to_i
         @shift = vrp.schedule_range_indices ? @real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
         @schedule_end = real_schedule_end - @real_schedule_start
         @schedule_start = 0
@@ -46,7 +46,7 @@ module Interpreters
           }.compact
         elsif vrp.schedule_unavailable_date
           vrp.schedule_unavailable_date.collect{ |date|
-            (date - epoch).to_i - @real_schedule_start if (date - epoch).to_i >= @real_schedule_start
+            (date - @epoch).to_i - @real_schedule_start if (date - @epoch).to_i >= @real_schedule_start
           }.compact
         end
 
@@ -134,9 +134,9 @@ module Interpreters
           }.compact
         end
         if service.unavailable_visit_day_date
-          epoch = Date.new(1970,1,1)
+          @epoch = Date.new(1970,1,1)
           service.unavailable_visit_day_indices += service.unavailable_visit_day_date.collect{ |unavailable_date|
-            (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
+            (unavailable_date.to_date - @epoch).to_i - @real_schedule_start if (unavailable_date.to_date - @epoch).to_i >= @real_schedule_start
           }.compact
         end
         if @unavailable_indices
@@ -228,9 +228,8 @@ module Interpreters
           }.compact
         end
         if shipment.unavailable_visit_day_date
-          epoch = Date.new(1970,1,1)
           shipment.unavailable_visit_day_indices = shipment.unavailable_visit_day_date.collect{ |unavailable_date|
-            (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
+            (unavailable_date.to_date - @epoch).to_i - @real_schedule_start if (unavailable_date.to_date - @epoch).to_i >= @real_schedule_start
           }.compact
         end
         if @unavailable_indices
@@ -342,107 +341,71 @@ module Interpreters
       }.flatten
     end
 
+    def build_vehicle_unavailable_work_day_indices(vehicle)
+      if vehicle.unavailable_work_date
+        vehicle.unavailable_work_day_indices = vehicle.unavailable_work_date.collect{ |unavailable_date|
+          (unavailable_date.to_date - @epoch).to_i - @real_schedule_start if (unavailable_date.to_date - @epoch).to_i >= @real_schedule_start
+        }.compact
+      end
+      if @unavailable_indices
+        vehicle.unavailable_work_day_indices += @unavailable_indices.collect{ |unavailable_index|
+          unavailable_index
+        }
+        vehicle.unavailable_work_day_indices.uniq!
+      end
+    end
+
+    def build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations, same_vehicle_list, lapses_list)
+      new_vehicle = Marshal::load(Marshal.dump(vehicle))
+      new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
+      @equivalent_vehicles[vehicle.id] << new_vehicle.id
+      if vehicle.overall_duration
+        same_vehicle_list[-1].push(new_vehicle.id)
+        lapses_list[-1] = vehicle.overall_duration
+      end
+      new_vehicle.global_day_index = vehicle_day_index
+      new_vehicle.skills = associate_skills(new_vehicle, vehicle_day_index)
+      new_vehicle.rests = generate_rests(vehicle, (vehicle_day_index + @shift) % 7, rests_durations)
+      new_vehicle.sequence_timewindows = nil
+      vrp.rests += new_vehicle.rests
+      vrp.services.select{ |service| service.sticky_vehicles.any?{ sticky_vehicle == vehicle }}.each{ |service|
+        service.sticky_vehicles.insert(-1, new_vehicle)
+      }
+      new_vehicle
+    end
+
     def generate_vehicles(vrp)
       same_vehicle_list = []
       lapses_list = []
-      rests_durations = []
+      rests_durations = Array.new(vrp.vehicles.size, 0)
+      vrp.vehicles.each{ |vehicle|
+        vehicle.original_id = vehicle.id if vehicle.original_id.nil?
+      }
       new_vehicles = vrp.vehicles.collect{ |vehicle|
+        build_vehicle_unavailable_work_day_indices(vehicle)
         @equivalent_vehicles[vehicle.id] = []
         if vehicle.overall_duration
-          same_vehicle_list.push([])
+          same_vehicle_list << []
           lapses_list.push(-1)
         end
-        rests_durations.push(0)
-        if vehicle.unavailable_work_date
-          epoch = Date.new(1970,1,1)
-          vehicle.unavailable_work_day_indices = vehicle.unavailable_work_date.collect{ |unavailable_date|
-            (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
-          }.compact
-        end
-        if @unavailable_indices
-          vehicle.unavailable_work_day_indices += @unavailable_indices.collect{ |unavailable_index|
-            unavailable_index
-          }
-          vehicle.unavailable_work_day_indices.uniq!
-        end
-
         if vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?
-          new_periodic_vehicle = []
-          (@schedule_start..@schedule_end).each{ |vehicle_day_index|
-            if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index == vehicle_day_index}
-              vehicle.sequence_timewindows.select{ |timewindow| !timewindow[:day_index] || timewindow[:day_index] == (vehicle_day_index + @shift) % 7 }.each{ |associated_timewindow|
-                new_vehicle = Marshal::load(Marshal.dump(vehicle))
-                new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
-                new_vehicle.vehicle_id = vehicle.id
-                @equivalent_vehicles[vehicle.id] << "#{vehicle.id}_#{vehicle_day_index}"
-                if vehicle.overall_duration
-                  same_vehicle_list[-1].push(new_vehicle.id)
-                  lapses_list[-1] = vehicle.overall_duration
-                end
-                new_vehicle.timewindow = Marshal::load(Marshal.dump(associated_timewindow))
-                new_vehicle.timewindow.id = ("#{associated_timewindow[:id]} #{(vehicle_day_index + @shift) % 7}" if associated_timewindow[:id] && !associated_timewindow[:id].nil?),
-                new_vehicle.timewindow.start = (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:start]),
-                new_vehicle.timewindow.end = (((vehicle_day_index + @shift) % 7 )* 86400 + associated_timewindow[:end])
-                new_vehicle.timewindow.day_index = nil
-                new_vehicle.global_day_index = vehicle_day_index
-                new_vehicle.sequence_timewindows = nil
-                new_vehicle.rests = generate_rests(vehicle, (vehicle_day_index + @shift) % 7, rests_durations)
-                new_vehicle.skills = associate_skills(new_vehicle, vehicle_day_index)
-                vrp.rests += new_vehicle.rests
-                vrp.services.select{ |service| service.sticky_vehicles.any?{ sticky_vehicle == vehicle }}.each{ |service|
-                  service.sticky_vehicles.insert(-1, new_vehicle)
-                }
-                new_periodic_vehicle << new_vehicle
-              }
-            end
-          }
-          new_periodic_vehicle
-        elsif !@have_services_day_index && !@have_shipments_day_index
-          new_periodic_vehicle = (@schedule_start..@schedule_end).collect{ |vehicle_day_index|
-            if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index == vehicle_day_index}
-              new_vehicle = Marshal::load(Marshal.dump(vehicle))
-              new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
-              @equivalent_vehicles[vehicle.id] << "#{vehicle.id}_#{vehicle_day_index}"
-              if vehicle.overall_duration
-                same_vehicle_list[-1].push(new_vehicle.id)
-                lapses_list[-1] = vehicle.overall_duration
-              end
-              new_vehicle.global_day_index = vehicle_day_index
-              new_vehicle.rests = generate_rests(vehicle, (vehicle_day_index + @shift) % 7, rests_durations)
-              vrp.rests += new_vehicle.rests
-              new_vehicle.skills = associate_skills(new_vehicle, vehicle_day_index)
-              vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle }}.each{ |service|
-                service.sticky_vehicles.insert(-1, new_vehicle)
-              }
+          (@schedule_start..@schedule_end).collect{ |vehicle_day_index|
+            next if vehicle.unavailable_work_day_indices && vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
+            vehicle.sequence_timewindows.select{ |timewindow| timewindow[:day_index].nil? || timewindow[:day_index] == (vehicle_day_index + @shift) % 7 }.collect{ |associated_timewindow|
+              new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations, same_vehicle_list, lapses_list)
+              t_start = ((vehicle_day_index + @shift) % 7) * 86400 + associated_timewindow[:start]
+              t_end = ((vehicle_day_index + @shift) % 7) * 86400 + associated_timewindow[:end]
+              new_vehicle.timewindow = Models::Timewindow.new(start: t_start, end: t_end)
+              new_vehicle.timewindow.day_index = nil
               new_vehicle
-            end
+            }
           }.compact
-          new_periodic_vehicle
-        elsif vehicle.timewindow
-          new_periodic_vehicle = []
-          (@schedule_start..@schedule_end).each{ |vehicle_day_index|
-            if !vehicle.unavailable_work_day_indices || vehicle.unavailable_work_day_indices.none?{ |index| index == vehicle_day_index }
-              new_vehicle = Marshal::load(Marshal.dump(vehicle))
-              new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
-              new_vehicle.vehicle_id = vehicle.id
-              new_vehicle.timewindow.id = ("#{new_vehicle.timewindow[:id]} #{(vehicle_day_index + @shift) % 7}" if new_vehicle.timewindow[:id] && !new_vehicle.timewindow[:id].nil?),
-              new_vehicle.global_day_index = vehicle_day_index
-              new_vehicle.sequence_timewindows = nil
-              new_vehicle.rests = generate_rests(vehicle, (vehicle_day_index + @shift) % 7, rests_durations)
-              vrp.rests += new_vehicle.rests
-              new_vehicle.skills = associate_skills(new_vehicle, vehicle_day_index)
-              @equivalent_vehicles[vehicle.id] << "#{vehicle.id}_#{vehicle_day_index}"
-              if vehicle.overall_duration
-                same_vehicle_list[-1].push(new_vehicle.id)
-                lapses_list[-1] = vehicle.overall_duration
-              end
-              vrp.services.select{ |service| service.sticky_vehicles.any?{ sticky_vehicle == vehicle }}.each{ |service|
-                service.sticky_vehicles.insert(-1, new_vehicle)
-              }
-              new_periodic_vehicle << new_vehicle
-            end
-          }
-          new_periodic_vehicle
+        elsif !@have_services_day_index.nil? && !@have_shipments_day_index || vehicle.timewindow
+          (@schedule_start..@schedule_end).collect{ |vehicle_day_index|
+            next if vehicle.unavailable_work_day_indices && vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
+            new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations, same_vehicle_list, lapses_list)
+            new_vehicle
+          }.compact
         else
           @equivalent_vehicles[vehicle.id] << vehicle.id
           if vehicle.overall_duration
@@ -454,11 +417,11 @@ module Interpreters
       }.flatten
       same_vehicle_list.each.with_index{ |list, index|
         if lapses_list[index] && lapses_list[index] != -1
-          new_relation = Models::Relation.new({
+          new_relation = Models::Relation.new(
             type: 'vehicle_group_duration',
             linked_vehicle_ids: list,
             lapse: lapses_list[index] + rests_durations[index]
-          })
+          )
           vrp.relations << new_relation
       end
       }

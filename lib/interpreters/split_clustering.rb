@@ -350,6 +350,7 @@ module Interpreters
             tw = Marshal.load(Marshal.dump(vehicle[:timewindow]))
             tw[:day_index] = day
             new_vehicle = Marshal.load(Marshal.dump(vehicle))
+            new_vehicle.original_id =  vehicle.id
             new_vehicle[:timewindow] = tw
             vehicle_list << new_vehicle
           }
@@ -357,6 +358,7 @@ module Interpreters
           vehicle[:sequence_timewindows].each{ |tw|
             new_vehicle = Marshal.load(Marshal.dump(vehicle))
             new_vehicle[:sequence_timewindows] = [tw]
+            new_vehicle.original_id = vehicle.id
             vehicle_list << new_vehicle
           }
         end
