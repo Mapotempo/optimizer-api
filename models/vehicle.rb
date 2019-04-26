@@ -20,7 +20,7 @@ require './models/concerns/validate_timewindows'
 
 module Models
   class Vehicle < Base
-    field :vehicle_id, default: nil
+    field :original_id, default: nil
     field :cost_fixed, default: 0
     field :cost_distance_multiplier, default: 0
     field :cost_time_multiplier, default: 1
