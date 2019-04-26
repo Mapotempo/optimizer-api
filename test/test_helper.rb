@@ -283,6 +283,9 @@ module VRP
 
   def self.lat_lon_scheduling
     {
+      units: [{
+        id: 'kg'
+      }],
       points: [{
         id: 'point_0',
         location: {lat: 45.288798, lon: 4.951565}

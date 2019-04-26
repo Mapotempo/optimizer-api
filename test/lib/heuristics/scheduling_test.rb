@@ -271,6 +271,64 @@ class HeuristicTest < Minitest::Test
     assert result[:routes].collect{ |route| route[:vehicle_id] }.uniq.include?('vehicle_0_0')
     assert result[:routes].collect{ |route| route[:vehicle_id] }.uniq.include?('vehicle_1_0')
     assert result[:routes].collect{ |route| route[:vehicle_id] }.size == result[:routes].collect{ |route| route[:vehicle_id] }.uniq.size
+  end
 
+  def test_multiple_reason
+    problem = VRP.lat_lon_scheduling
+    problem[:services][0][:visits_number] = 1
+    problem[:services][0][:minimum_lapse] = 84
+    problem[:services][0][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][1][:visits_number] = 1
+    problem[:services][1][:minimum_lapse] = 84
+    problem[:services][1][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][2][:visits_number] = 1
+    problem[:services][2][:minimum_lapse] = 84
+    problem[:services][2][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][3][:visits_number] = 1
+    problem[:services][3][:minimum_lapse] = 84
+    problem[:services][3][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][4][:visits_number] = 1
+    problem[:services][4][:minimum_lapse] = 84
+    problem[:services][4][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][5][:visits_number] = 1
+    problem[:services][5][:minimum_lapse] = 84
+    problem[:services][5][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][5][:activity][:duration] = 28000
+    problem[:services][5][:quantities] = [{unit_id: "kg", value: 5000}]
+    problem[:vehicles] = [{
+      id: 'vehicle_0',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      router_mode: 'car',
+      router_dimension: 'distance',
+      sequence_timewindows: [{start: 0, end: 24500, day_index: 1}],
+      duration: 24500,
+      capacities: [{unit_id: "kg", limit: 1100}],
+    }]
+    problem[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    }, {
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    problem[:configuration][:resolution] = {
+      duration: 10,
+      solver: false,
+      same_point_day: true,
+      allow_partial_assignment: false
+    }
+    problem[:configuration][:schedule] = {
+      range_indices: {
+        start: 0,
+        end: 83
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    assert result[:unassigned].collect{ |una| una[:original_service_id] }.compact.size == result[:unassigned].collect{ |una| una[:original_service_id] }.compact.uniq.size
+    assert result[:unassigned].collect{ |una| una[:service_id] }.compact.size == result[:unassigned].collect{ |una| una[:service_id] }.compact.uniq.size
   end
 end
