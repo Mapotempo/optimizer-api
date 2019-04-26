@@ -544,7 +544,9 @@ module Wrappers
 
     def add_unassigned(unfeasible, vrp, service, reason)
       unfeasible << (0..service.visits_number).collect{ |index|
-        next if service.visits_number > 0 && index == 0
+        service_unassigned = unfeasible.find{ |una| una[:original_service_id] == service[:id] }
+        service_unassigned[:reason] += " && #{reason}" if service_unassigned
+        next if service_unassigned || service.visits_number > 0 && index == 0
         {
           original_service_id: service[:id],
           service_id: ((vrp.schedule_range_indices.nil? || vrp.schedule_range_indices.empty?) &&
