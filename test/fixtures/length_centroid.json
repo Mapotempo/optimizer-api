@@ -1,0 +1,983 @@
+{
+    "vrp":
+    {
+        "points": [
+        {
+            "id": "1095177",
+            "location":
+            {
+                "lat": 48.7782,
+                "lon": 2.8341
+            }
+        },
+        {
+            "id": "1050281",
+            "location":
+            {
+                "lat": 48.847093,
+                "lon": 2.327869
+            }
+        },
+        {
+            "id": "startvehicule1",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "startvehicule2",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "startvehicule3",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "startvehicule4",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "startvehicule5",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "startvehicule6",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "startvehicule7",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "endvehicule1",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "endvehicule2",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "endvehicule3",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "endvehicule4",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "endvehicule5",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "endvehicule6",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        },
+        {
+            "id": "endvehicule7",
+            "location":
+            {
+                "lat": 48.7878,
+                "lon": 2.4388
+            }
+        }],
+        "units": [
+        {
+            "id": "kg",
+            "label": "kg"
+        },
+        {
+            "id": "l",
+            "label": "l"
+        },
+        {
+            "id": "qte",
+            "label": "qte"
+        }],
+        "services": [
+        {
+            "id": "1095177_SAV_84_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 4.4
+            },
+            {
+                "unit_id": "l",
+                "value": 4.0
+            },
+            {
+                "unit_id": "qte",
+                "value": 4.0
+            }],
+            "visits_number": 1,
+            "minimum_lapse": 84.0,
+            "activity":
+            {
+                "point_id": "1095177",
+                "duration": 16,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 0
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 1
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 2
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 3
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        },
+        {
+            "id": "1095177_PCP_28_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 1.68
+            },
+            {
+                "unit_id": "l",
+                "value": 0.0
+            },
+            {
+                "unit_id": "qte",
+                "value": 8.0
+            }],
+            "visits_number": 3,
+            "minimum_lapse": 28.0,
+            "activity":
+            {
+                "point_id": "1095177",
+                "duration": 32,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 0
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 1
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 2
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 3
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        },
+        {
+            "id": "1095177_PH_28_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 4.2
+            },
+            {
+                "unit_id": "l",
+                "value": 51.2
+            },
+            {
+                "unit_id": "qte",
+                "value": 4.0
+            }],
+            "visits_number": 3,
+            "minimum_lapse": 28.0,
+            "activity":
+            {
+                "point_id": "1095177",
+                "duration": 32,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 0
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 1
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 2
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 3
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        },
+        {
+            "id": "1095177_BOB_28_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 19.8
+            },
+            {
+                "unit_id": "l",
+                "value": 55.8
+            },
+            {
+                "unit_id": "qte",
+                "value": 9.0
+            }],
+            "visits_number": 3,
+            "minimum_lapse": 28.0,
+            "activity":
+            {
+                "point_id": "1095177",
+                "duration": 117,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 0
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 1
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 2
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 3
+                },
+                {
+                    "start": 28800,
+                    "end": 64800,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        },
+        {
+            "id": "1050281_SAV_28_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 1.1
+            },
+            {
+                "unit_id": "l",
+                "value": 1.0
+            },
+            {
+                "unit_id": "qte",
+                "value": 1.0
+            }],
+            "visits_number": 3,
+            "minimum_lapse": 28.0,
+            "activity":
+            {
+                "point_id": "1050281",
+                "duration": 4,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 0
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 1
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 2
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 3
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        },
+        {
+            "id": "1050281_PCP_14_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 2.01
+            },
+            {
+                "unit_id": "l",
+                "value": 12.6
+            },
+            {
+                "unit_id": "qte",
+                "value": 6.0
+            }],
+            "visits_number": 6,
+            "minimum_lapse": 14.0,
+            "activity":
+            {
+                "point_id": "1050281",
+                "duration": 24,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 0
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 1
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 2
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 3
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        },
+        {
+            "id": "1050281_BOB_14_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 8.8
+            },
+            {
+                "unit_id": "l",
+                "value": 24.8
+            },
+            {
+                "unit_id": "qte",
+                "value": 4.0
+            }],
+            "visits_number": 6,
+            "minimum_lapse": 14.0,
+            "activity":
+            {
+                "point_id": "1050281",
+                "duration": 52,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 0
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 1
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 2
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 3
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        },
+        {
+            "id": "1050281_SNC_28_3FF",
+            "quantities": [
+            {
+                "unit_id": "kg",
+                "value": 1.4
+            },
+            {
+                "unit_id": "l",
+                "value": 15.0
+            },
+            {
+                "unit_id": "qte",
+                "value": 1.0
+            }],
+            "visits_number": 3,
+            "minimum_lapse": 28.0,
+            "activity":
+            {
+                "point_id": "1050281",
+                "duration": 90,
+                "setup_duration": 120,
+                "timewindows": [
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 0
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 1
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 2
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 3
+                },
+                {
+                    "start": 32400,
+                    "end": 61200,
+                    "day_index": 4
+                }]
+            },
+            "type": "service"
+        }],
+        "vehicles": [
+        {
+            "id": "vehicule1",
+            "start_point_id": "startvehicule1",
+            "end_point_id": "endvehicule1",
+            "router_mode": "car",
+            "speed_multiplier": 0.75,
+            "cost_time_multiplier": 1.0,
+            "router_dimension": "time",
+            "sequence_timewindows": [
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 0
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 1
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 2
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 3
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 4
+            }],
+            "capacities": [
+            {
+                "unit_id": "kg",
+                "limit": 1050.0
+            },
+            {
+                "unit_id": "l",
+                "limit": 7435.0
+            },
+            {
+                "unit_id": "qte",
+                "limit": 9999.0
+            }],
+            "unavailable_work_day_indices": [],
+            "traffic": true,
+            "track": true,
+            "motorway": true,
+            "toll": true,
+            "max_walk_distance": 750,
+            "approach": "unrestricted"
+        },
+        {
+            "id": "vehicule2",
+            "start_point_id": "startvehicule2",
+            "end_point_id": "endvehicule2",
+            "router_mode": "car",
+            "speed_multiplier": 0.75,
+            "cost_time_multiplier": 1.0,
+            "router_dimension": "time",
+            "sequence_timewindows": [
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 0
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 1
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 2
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 3
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 4
+            }],
+            "capacities": [
+            {
+                "unit_id": "kg",
+                "limit": 1050.0
+            },
+            {
+                "unit_id": "l",
+                "limit": 7435.0
+            },
+            {
+                "unit_id": "qte",
+                "limit": 9999.0
+            }],
+            "unavailable_work_day_indices": [],
+            "traffic": true,
+            "track": true,
+            "motorway": true,
+            "toll": true,
+            "max_walk_distance": 750,
+            "approach": "unrestricted"
+        },
+        {
+            "id": "vehicule3",
+            "start_point_id": "startvehicule3",
+            "end_point_id": "endvehicule3",
+            "router_mode": "car",
+            "speed_multiplier": 0.75,
+            "cost_time_multiplier": 1.0,
+            "router_dimension": "time",
+            "sequence_timewindows": [
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 0
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 1
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 2
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 3
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 4
+            }],
+            "capacities": [
+            {
+                "unit_id": "kg",
+                "limit": 1050.0
+            },
+            {
+                "unit_id": "l",
+                "limit": 7435.0
+            },
+            {
+                "unit_id": "qte",
+                "limit": 9999.0
+            }],
+            "unavailable_work_day_indices": [],
+            "traffic": true,
+            "track": true,
+            "motorway": true,
+            "toll": true,
+            "max_walk_distance": 750,
+            "approach": "unrestricted"
+        },
+        {
+            "id": "vehicule4",
+            "start_point_id": "startvehicule4",
+            "end_point_id": "endvehicule4",
+            "router_mode": "car",
+            "speed_multiplier": 0.75,
+            "cost_time_multiplier": 1.0,
+            "router_dimension": "time",
+            "sequence_timewindows": [
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 0
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 1
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 2
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 3
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 4
+            }],
+            "capacities": [
+            {
+                "unit_id": "kg",
+                "limit": 1050.0
+            },
+            {
+                "unit_id": "l",
+                "limit": 7435.0
+            },
+            {
+                "unit_id": "qte",
+                "limit": 9999.0
+            }],
+            "unavailable_work_day_indices": [],
+            "traffic": true,
+            "track": true,
+            "motorway": true,
+            "toll": true,
+            "max_walk_distance": 750,
+            "approach": "unrestricted"
+        },
+        {
+            "id": "vehicule5",
+            "start_point_id": "startvehicule5",
+            "end_point_id": "endvehicule5",
+            "router_mode": "car",
+            "speed_multiplier": 0.75,
+            "cost_time_multiplier": 1.0,
+            "router_dimension": "time",
+            "sequence_timewindows": [
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 0
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 1
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 2
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 3
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 4
+            }],
+            "capacities": [
+            {
+                "unit_id": "kg",
+                "limit": 1050.0
+            },
+            {
+                "unit_id": "l",
+                "limit": 7435.0
+            },
+            {
+                "unit_id": "qte",
+                "limit": 9999.0
+            }],
+            "unavailable_work_day_indices": [],
+            "traffic": true,
+            "track": true,
+            "motorway": true,
+            "toll": true,
+            "max_walk_distance": 750,
+            "approach": "unrestricted"
+        },
+        {
+            "id": "vehicule6",
+            "start_point_id": "startvehicule6",
+            "end_point_id": "endvehicule6",
+            "router_mode": "car",
+            "speed_multiplier": 0.75,
+            "cost_time_multiplier": 1.0,
+            "router_dimension": "time",
+            "sequence_timewindows": [
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 0
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 1
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 2
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 3
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 4
+            }],
+            "capacities": [
+            {
+                "unit_id": "kg",
+                "limit": 1050.0
+            },
+            {
+                "unit_id": "l",
+                "limit": 7435.0
+            },
+            {
+                "unit_id": "qte",
+                "limit": 9999.0
+            }],
+            "unavailable_work_day_indices": [],
+            "traffic": true,
+            "track": true,
+            "motorway": true,
+            "toll": true,
+            "max_walk_distance": 750,
+            "approach": "unrestricted"
+        },
+        {
+            "id": "vehicule7",
+            "start_point_id": "startvehicule7",
+            "end_point_id": "endvehicule7",
+            "router_mode": "car",
+            "speed_multiplier": 0.75,
+            "cost_time_multiplier": 1.0,
+            "router_dimension": "time",
+            "sequence_timewindows": [
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 0
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 1
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 2
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 3
+            },
+            {
+                "start": 23400,
+                "end": 50400,
+                "day_index": 4
+            }],
+            "capacities": [
+            {
+                "unit_id": "kg",
+                "limit": 1050.0
+            },
+            {
+                "unit_id": "l",
+                "limit": 7435.0
+            },
+            {
+                "unit_id": "qte",
+                "limit": 9999.0
+            }],
+            "unavailable_work_day_indices": [],
+            "traffic": true,
+            "track": true,
+            "motorway": true,
+            "toll": true,
+            "max_walk_distance": 750,
+            "approach": "unrestricted"
+        }],
+        "configuration":
+        {
+            "preprocessing":
+            {
+                "first_solution_strategy": ["periodic"],
+                "prefer_short_segment": true,
+                "partitions": [
+                {
+                    "method": "balanced_kmeans",
+                    "metric": "duration",
+                    "entity": "vehicle"
+                },
+                {
+                    "method": "balanced_kmeans",
+                    "metric": "duration",
+                    "entity": "work_day"
+                }]
+            },
+            "resolution":
+            {
+                "same_point_day": true,
+                "solver": false,
+                "duration": 225000,
+                "initial_time_out": 112500,
+                "time_out_multiplier": 2,
+                "allow_partial_assignment": false
+            },
+            "schedule":
+            {
+                "range_indices":
+                {
+                    "start": 0,
+                    "end": 83
+                }
+            },
+            "restitution":
+            {
+                "csv": true,
+                "intermediate_solutions": false
+            }
+        }
+    }
+}

@@ -335,6 +335,7 @@ module Interpreters
           clusters = c.clusters
           centroids = c.centroid_indices
         end
+        c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
         iteration += 1
       end
       clusters
