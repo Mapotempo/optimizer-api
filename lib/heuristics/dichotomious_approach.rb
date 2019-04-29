@@ -90,14 +90,14 @@ module Interpreters
       routes = results.collect{ |result|
         result[:routes].collect{ |route|
           next if route[:activities].empty?
-          {
+          Models::Route.new(
             vehicle: {
               id: route[:vehicle_id]
             },
             mission_ids: route[:activities].select{ |activity| activity[:service_id] || activity[:rest_id] }.collect{ |activity|
               activity[:service_id] || activity[:rest_id]
             }
-          }
+          )
         }
       }.flatten.compact
       service_vrp[:vrp].routes = routes
