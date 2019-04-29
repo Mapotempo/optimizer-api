@@ -142,5 +142,18 @@ class HeuristicTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
     end
+
+    def test_vrp_allow_partial_assigment_false
+      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/vrp_allow_partial_assigment_false.json').to_a.join)['vrp']))
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+
+      unassigned = result[:unassigned].collect{ |una| una[:service_id] }
+      assert_includes unassigned, '1091268_SNC_28_3IG_1_3', 'Missing mission 1091268_SNC_28_3IG_1_3 in unassigned'
+      assert_includes unassigned, '1091268_SNC_28_3IG_2_3', 'Missing mission 1091268_SNC_28_3IG_2_3 in unassigned'
+      assert_includes unassigned, '1091268_SNC_28_3IG_3_3', 'Missing mission 1091268_SNC_28_3IG_3_3 in unassigned'
+      assert_includes unassigned, '1091268_SNC_84_3IK_1_1', 'Missing mission 1091268_SNC_84_3IK_1_1 in unassigned'
+      assert_equal result[:unassigned].find{ |una| una[:service_id] == '1091268_SNC_84_3IK_1_1' }[:reason], 'Service 1091268_SNC_84_3IK at the same location is already unassigned, and partial_assigments are unauthorized'
+      assert !result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] }}.flatten.include?('1091268_SNC_84_3IK_1_1')
+    end
   end
 end

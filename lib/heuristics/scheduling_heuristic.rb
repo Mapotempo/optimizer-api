@@ -205,6 +205,23 @@ module SchedulingHeuristic
         reason: "Only partial assignment could be found (#{removed_size} visits had been assigned from day #{day_finished})"
       }
     }
+
+    @to_plan_service_ids.delete_if{ |service_id|
+      services[service_id][:point_id] == service[:point_id]
+    }
+    @candidate_service_ids.each{ |candidate_service|
+      if services[candidate_service][:point_id] == service[:point_id]
+        (0..services[candidate_service][:nb_visits] - 1).each{ |visit|
+          @uninserted["#{candidate_service}_#{visit + 1}_#{services[candidate_service][:nb_visits]}"] = {
+            original_service: candidate_service,
+            reason: "Service #{candidate_service} at the same location is already unassigned, and partial_assigments are unauthorized"
+          }
+        }
+      end
+    }
+    @candidate_service_ids.delete_if{ |service_id|
+      services[service_id][:point_id] == service[:point_id]
+    }
   end
 
   def self.collect_services_data(vrp)
@@ -360,6 +377,7 @@ module SchedulingHeuristic
     insertion_costs = []
 
     @to_plan_service_ids.select{ |service|
+                  @candidate_service_ids.include?(service) &&
                   # quantities are respected
                   (@same_point_day && services[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } || !@same_point_day && services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) &&
                   # service is available at this day
