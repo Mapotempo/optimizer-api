@@ -558,6 +558,43 @@ module Api
           end
         end
 
+        resource :jobs_completed do
+          desc 'Fetch vrp result', {
+            nickname: 'jobCompleted',
+            success: VrpResult,
+            failure: [
+              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
+            ],
+            detail: 'Get the job result for completed jobs only.'
+          }
+          params {
+            requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
+          }
+          get ':id' do
+            id = params[:id]
+            solution = APIBase.dump_vrp_cache.read("#{id}.solution")
+            if solution
+              status 200
+              if solution['csv'] || env['api.format'] == :csv
+                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+              else
+                present({
+                  solutions: [solution['result']].flatten(1),
+                  job: {
+                    id: id,
+                    status: :completed,
+                    avancement: nil,
+                    graph: solution['graph']
+                  }
+                }, with: Grape::Presenters::Presenter)
+              end
+            else
+              status 404
+              error!({status: 'Not Found', detail: "Result from job with id='#{id}' not found"}, 404)
+            end
+          end
+        end
+
         resource :jobs do
           desc 'Fetch vrp job status', {
             nickname: 'job',
@@ -619,6 +656,7 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             else
+              APIBase.dump_vrp_cache.write("#{id}.solution", solution)
               status 200
               if solution['csv']
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
