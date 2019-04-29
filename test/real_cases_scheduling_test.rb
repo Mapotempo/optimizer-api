@@ -154,6 +154,14 @@ class HeuristicTest < Minitest::Test
       assert_includes unassigned, '1091268_SNC_84_3IK_1_1', 'Missing mission 1091268_SNC_84_3IK_1_1 in unassigned'
       assert_equal result[:unassigned].find{ |una| una[:service_id] == '1091268_SNC_84_3IK_1_1' }[:reason], 'Service 1091268_SNC_84_3IK at the same location is already unassigned, and partial_assigments are unauthorized'
       assert !result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] }}.flatten.include?('1091268_SNC_84_3IK_1_1')
+
+      result[:routes].each{ |route|
+        route[:activities].each_with_index{ |activity, index|
+          next if index == 0 || index > route[:activities].size - 3
+          assert route[:activities][index + 1][:begin_time] == route[:activities][index + 1][:detail][:timewindows].first[:start] + route[:activities][index + 1][:detail][:setup_duration] ? true :
+          (assert_equal route[:activities][index + 1][:begin_time], activity[:departure_time] + route[:activities][index + 1][:travel_time] + route[:activities][index + 1][:detail][:setup_duration])
+        }
+      }
     end
   end
 end

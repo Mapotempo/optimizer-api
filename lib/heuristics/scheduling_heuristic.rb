@@ -88,7 +88,7 @@ module SchedulingHeuristic
 
         if inserted_day.nil?
           if !@allow_partial_assignment
-            clean_routes(services, service[:id], day_finished, vehicle, days_available)
+            clean_routes(services, service, day_finished, vehicle, days_available)
             cleaned_service = true
           elsif day_to_insert.nil? || day_to_insert > @schedule_end
             @uninserted["#{service[:id]}_#{visit_number}_#{services[service[:id]][:nb_visits]}"] = {
@@ -186,22 +186,36 @@ module SchedulingHeuristic
     }
   end
 
-  def self.clean_routes(services, service_id, day_finished, vehicle, days_available)
+  def self.update_route(remove_index, day_route, vehicle, day, matrix_id)
+    return day_route if !remove_index || !day_route[remove_index + 1]
+    duration = day_route[remove_index + 1][:end] - day_route[remove_index + 1][:arrival]
+    arrival = @indices[day_route[remove_index + 1][:id]]
+    index = remove_index.zero? ? remove_index : remove_index - 1
+    start = @indices[day_route[index][:id]]
+    day_route[remove_index + 1][:start] = day_route[index][:end]
+    day_route[remove_index + 1][:arrival] = day_route[index][:end] + @matrices.find{ |matrix| matrix[:id] == matrix_id }[:time][start][arrival]
+    day_route[remove_index + 1][:end] = day_route[remove_index + 1][:arrival] + duration
+    day_route
+  end
+
+  def self.clean_routes(services, service, day_finished, vehicle, days_available)
     ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-    peri = services[service_id][:heuristic_period] || 1
-    removed_size = @planning[vehicle].collect{ |_day, day_route|
-      remove_index = day_route[:services].find_index{ |stop| stop[:id] == service_id }
+    peri = services[service[:id]][:heuristic_period] || 1
+    removed_size = @planning[vehicle].collect{ |day, day_route|
+      remove_index = day_route[:services].find_index{ |stop| stop[:id] == service[:id] }
+      day_route[:services] = update_route(remove_index, day_route[:services], vehicle, day, @planning[vehicle][day][:vehicle][:matrix_id])
       day_route[:services].slice!(remove_index) if remove_index
     }.compact.size
 
-    removed_size += @candidate_routes[vehicle].collect{ |_day, day_route|
-      remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service_id }
+    removed_size += @candidate_routes[vehicle].collect{ |day, day_route|
+      remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service[:id] }
+      day_route[:current_route] = update_route(remove_index, day_route[:current_route], vehicle, day, @candidate_routes[vehicle][day][:matrix_id])
       day_route[:current_route].slice!(remove_index) if remove_index
     }.compact.size
 
-    (1..services[service_id][:nb_visits]).each{ |number_in_sequence|
-      @uninserted["#{service_id}_#{number_in_sequence}_#{services[service_id][:nb_visits]}"] = {
-        original_service: service_id,
+    (1..services[service[:id]][:nb_visits]).each{ |number_in_sequence|
+      @uninserted["#{service[:id]}_#{number_in_sequence}_#{services[service[:id]][:nb_visits]}"] = {
+        original_service: service[:id],
         reason: "Only partial assignment could be found (#{removed_size} visits had been assigned from day #{day_finished})"
       }
     }
