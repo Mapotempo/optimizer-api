@@ -34,13 +34,13 @@ module Interpreters
       service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? }
     end
 
-    def self.merge_results(results)
+    def self.merge_results(results, merge_unassigned)
       results.flatten!
       {
         solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
         cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
         routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,
-        unassigned: results.flat_map{ |r| r && r[:unassigned] }.compact.uniq,
+        unassigned: merge_unassigned ? results.flat_map{ |r| r && r[:unassigned] }.compact.uniq : results.last[:unassigned],
         elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
         total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
         total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
@@ -51,7 +51,7 @@ module Interpreters
     def self.dichotomious_heuristic(service_vrp, job)
       if dichotomious_candidate(service_vrp)
         create_config(service_vrp)
-        result = OptimizerWrapper::solve([service_vrp], job)
+        result = OptimizerWrapper.solve([service_vrp], job)
 
         if result.nil?
           old_centroids = []
@@ -62,17 +62,17 @@ module Interpreters
             break if sub_service_vrps.size == 2
           end
           results = sub_service_vrps.collect{ |lonely_vrp|
-            OptimizerWrapper::define_process([lonely_vrp], job)
+            OptimizerWrapper.define_process([lonely_vrp], job)
           }
-          result = merge_results(results)
+          result = merge_results(results, true)
         end
-        if service_vrp[:level] == 0
+        if service_vrp[:level].zero?
           result = third_stage(service_vrp, result, job)
           Interpreters::SplitClustering.remove_empty_routes(result)
           Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result)
         end
-        result
       end
+      result
     end
 
     def self.create_config(service_vrp)
@@ -135,39 +135,37 @@ module Interpreters
 
     def self.third_stage(service_vrp, result, job = nil)
       result_inter = []
-      unassigned_inter = []
-      unassigned_service_ids = result[:unassigned].collect{ |activity| activity[:service_id] }
       if !result[:unassigned].empty? && dichotomious_candidate(service_vrp)
         build_route(service_vrp, [result])
         service_vrp[:vrp].routes.delete_if{ |route| route[:mission_ids].empty? }
         all_services_vrps = build_service_vrps(service_vrp, service_vrp[:vrp].routes)
         intermediate_results = all_services_vrps.collect{ |sub_service_vrp|
-          sub_service_vrp[:vrp].vehicles.each{ |vehicle|
-            vehicle[:free_approach] = true
+          sub_service_vrp[:vrp].vehicles.each{ |vehicle| vehicle[:free_approach] = true }
+          sub_service_vrp[:vrp].services += service_vrp[:vrp].services.select{ |service|
+            result[:unassigned].any?{ |unass_act| unass_act[:service_id] == service[:id] }
           }
-          sub_service_vrp[:vrp].services += service_vrp[:vrp].services.select{ |service| unassigned_service_ids.include?(service[:id]) }
           sub_service_vrp[:vrp].points = sub_service_vrp[:vrp].services.collect{ |service| service.activity.point }
-          sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.start_point }.compact
-          sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect{ |vehicle| vehicle.end_point }.compact
+          sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect(&:start_point).compact
+          sub_service_vrp[:vrp].points += sub_service_vrp[:vrp].vehicles.collect(&:end_point).compact
           sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / service_vrp[:vrp].resolution_vehicle_limit) * sub_service_vrp[:vrp].vehicles.size
           sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / service_vrp[:vrp].resolution_vehicle_limit) * sub_service_vrp[:vrp].vehicles.size
           sub_service_vrp[:vrp].restitution_allow_empty_result = true
           sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
           sub_service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
-          result_inter = OptimizerWrapper::solve([sub_service_vrp], job)
-          unassigned_service_ids.delete_if{ |unassigned|
-            result_inter[:routes].any?{ |route|
-              route[:activities].any?{ |activity|
-                activity[:service_id] == unassigned
+          result_inter = OptimizerWrapper.solve([sub_service_vrp], job)
+          if result_inter
+            result[:unassigned].delete_if{ |unassigned_activity|
+              unassigned_id = unassigned_activity[:service_id]
+              result_inter[:routes].any?{ |route|
+                route[:activities].any?{ |activity| activity[:service_id] == unassigned_id }
               }
             }
-          } if result_inter
+          end
           result_inter
-        }
-        merge_results(intermediate_results.compact)
-      else
-        result
+        }.compact
+        result = merge_results(intermediate_results, false)
       end
+      result
     end
 
     def self.build_incompatibility_set(vrp)
