@@ -650,7 +650,7 @@ module SchedulingHeuristic
             day = routes.sort_by!{ |_day, route_data|
               route_data && route_data[:current_route].empty? ? 0 : route_data[:current_route].size
             }[0][0] if !routes.empty?
-            if day
+            if day && day <= @schedule_end - (services_data[point_to_add[:id]][:heuristic_period] || 0) * (services_data[point_to_add[:id]][:nb_visits] - 1)
               best_day = day
               route_data = @candidate_routes[current_vehicle][best_day]
             end
