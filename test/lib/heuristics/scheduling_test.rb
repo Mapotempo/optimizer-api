@@ -331,4 +331,71 @@ class HeuristicTest < Minitest::Test
     assert result[:unassigned].collect{ |una| una[:original_service_id] }.compact.size == result[:unassigned].collect{ |una| una[:original_service_id] }.compact.uniq.size
     assert result[:unassigned].collect{ |una| una[:service_id] }.compact.size == result[:unassigned].collect{ |una| una[:service_id] }.compact.uniq.size
   end
+
+  def test_day_closed_on_work_day
+    problem = VRP.lat_lon_scheduling
+    problem[:services][0][:visits_number] = 3
+    problem[:services][0][:minimum_lapse] = 7
+    problem[:services][0][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 0}]
+    problem[:services][1][:visits_number] = 2
+    problem[:services][1][:minimum_lapse] = 12
+    problem[:services][1][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 0}]
+    problem[:services][2][:visits_number] = 2
+    problem[:services][2][:minimum_lapse] = 12
+    problem[:services][2][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 0}]
+    problem[:services][3][:visits_number] = 3
+    problem[:services][3][:minimum_lapse] = 7
+    problem[:services][3][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 0}]
+    problem[:services][4][:visits_number] = 3
+    problem[:services][4][:minimum_lapse] = 7
+    problem[:services][4][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][5][:visits_number] = 2
+    problem[:services][5][:minimum_lapse] = 12
+    problem[:services][5][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][1][:activity][:duration] = 1000
+    problem[:vehicles] = [{
+      id: 'vehicle_0',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      router_mode: 'car',
+      router_dimension: 'time',
+      sequence_timewindows: [{start: 0, end: 7000, day_index: 0}, {start: 0, end: 7000, day_index: 1}],
+      duration: 50000,
+      capacities: [{unit_id: "kg", limit: 1100}],
+    },
+    {
+      id: 'vehicle_1',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      router_mode: 'car',
+      router_dimension: 'time',
+      sequence_timewindows: [{start: 0, end: 7000, day_index: 0}, {start: 0, end: 7000, day_index: 1}],
+      duration: 50000,
+      capacities: [{unit_id: "kg", limit: 1100}],
+    }]
+    problem[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    }, {
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    problem[:configuration][:resolution] = {
+      duration: 10,
+      solver: false,
+      same_point_day: true,
+      allow_partial_assignment: true
+    }
+    problem[:configuration][:schedule] = {
+      range_indices: {
+        start: 0,
+        end: 27
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    assert !result[:unassigned].collect{ |una| una[:reason] }.uniq.include?('No vehicle with compatible timewindow')
+  end
 end
