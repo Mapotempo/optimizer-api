@@ -143,9 +143,10 @@ module Ai4r
 
         @centroids = @centroid_function.call(@clusters)
         @old_centroids.each_with_index{ |data, index|
-          data[4] = data_sticky[index]
-          data[5] = data_skill[index]
-          data[6] = data_size[index]
+          data_item = @data_set.data_items.find{ |data_item| data_item[2] == data[2] }
+          data_item[4] = data_sticky[index]
+          data_item[5] = data_skill[index]
+          data_item[6] = data_size[index]
         }
         @centroids.each_with_index{ |data, index|
           data[4] = data_sticky[index]

@@ -216,6 +216,7 @@ module Interpreters
     end
 
     def self.build_partial_service_vrp(service_vrp, cluster_missions, available_vehicles = nil)
+      day_indices = service_vrp[:vrp].services.select{ |service| cluster_missions.include?(service.id) }.collect{ |service| service.activity.timewindows.collect{ |tw| tw.day_index }}.flatten.uniq
       vrp = service_vrp[:vrp]
       sub_vrp = Marshal::load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
@@ -223,7 +224,8 @@ module Interpreters
       shipments = vrp.shipments.select{ |shipment| cluster_missions.include?(shipment.id) }.compact
       # TODO: Within Scheduling Vehicles require to have unduplicated ids
       sub_vrp.vehicles = available_vehicles.collect{ |vehicle_id|
-        vehicle_index = sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
+        vehicle_index = sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id && (vehicle.sequence_timewindows.collect{ |tw| tw.day_index } & day_indices).size > 0 } ||
+                        sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
         vrp.vehicles.slice!(vehicle_index)
       } if available_vehicles
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact + shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
