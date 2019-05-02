@@ -210,6 +210,9 @@ class HeuristicTest < Minitest::Test
   end
 
   def test_two_stage_cluster
+    skip "This test fails. The test is created for Test-Driven Development.
+          The functionality is not ready yet, it is skipped for devs not working on the functionality.
+          Expectation: "
     problem = VRP.lat_lon_scheduling
     problem[:services][0][:visits_number] = 1
     problem[:services][0][:minimum_lapse] = 84
