@@ -1960,9 +1960,9 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_multi_modal_route_with_skills_intersection
-    skip "This test fails.
-          The test is created for Test-Driven Development
-          and the functionality is not ready yet."
+    skip "This test fails. The test is created for Test-Driven Development.
+          The functionality is not ready yet, it is skipped for devs not working on the functionality.
+          Expectation: "
     problem = {
       points: [
         {

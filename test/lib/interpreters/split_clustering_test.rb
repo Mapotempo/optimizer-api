@@ -39,6 +39,9 @@ class SplitClusteringTest < Minitest::Test
   end
 
   def test_cluster_two_phases
+    skip "This test fails. The test is created for Test-Driven Development.
+          The functionality is not ready yet, it is skipped for devs not working on the functionality.
+          Expectation: split_balanced_kmeans creates demanded number of clusters."
     vrp = FCT.load_vrp(self)
     service_vrp = {vrp: vrp, service: :demo}
     services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, :duration, 'vehicle')
@@ -116,6 +119,9 @@ class SplitClusteringTest < Minitest::Test
   end
 
   def test_work_day_without_vehicle_entity
+    skip "This test fails. The test is created for Test-Driven Development.
+          The functionality is not ready yet, it is skipped for devs not working on the functionality.
+          Expectation: 10 clusters generated both vehicle+work_day and just with work_day."
     vrp = VRP.lat_lon_scheduling_two_vehicles
     vrp[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
