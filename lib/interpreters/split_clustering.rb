@@ -324,7 +324,7 @@ module Interpreters
     def self.kmeans_process(centroids, c_max_iterations, max_iterations, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp, incompatibility_set = nil)
       c = BalancedKmeans.new
       c.max_iterations = c_max_iterations
-      c.centroid_indices = centroids if centroids
+      c.centroid_indices = centroids if centroids.size == nb_clusters
 
       biggest_cluster_size = 0
       clusters = []
@@ -341,7 +341,7 @@ module Interpreters
         c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
         iteration += 1
       end
-      clusters
+      [clusters, centroids]
     end
 
     def self.list_vehicles(vehicles)
@@ -473,15 +473,15 @@ module Interpreters
           skills_index = 0
           vrp.vehicles.each_with_index{ |_vehicle, index|
             skills_index += 1 if vrp.vehicles.size - centroids_skills.size < index
-            centroids += [data_items.index(data_items.find{ |data| data[5] == centroids_skills[skills_index] && (data_items.length < nb_clusters || !centroids.include?(data_items.index(data))) })]
+            centroids << data_items.index(data_items.find{ |data| data[5] == centroids_skills[skills_index] && (data_items.length < nb_clusters || !centroids.include?(data_items.index(data))) })
           }
           limits = cumulated_metrics[cut_symbol] / nb_clusters
         else
           limits = cumulated_metrics[cut_symbol] / nb_clusters
         end
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
-
-        clusters = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
+        clusters, centroids = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
+        adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
           cluster.data_items.collect{ |i|
             linked_objects[i[2]]
@@ -491,7 +491,6 @@ module Interpreters
         puts 'Balanced K-Means : Splited ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
         cluster_vehicles = nil
         cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity) if entity != ''
-        adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }

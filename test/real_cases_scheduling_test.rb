@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './test/test_helper'
+require './lib/interpreters/split_clustering.rb'
 
 class HeuristicTest < Minitest::Test
 
@@ -161,6 +162,26 @@ class HeuristicTest < Minitest::Test
           assert route[:activities][index + 1][:begin_time] == route[:activities][index + 1][:detail][:timewindows].first[:start] + route[:activities][index + 1][:detail][:setup_duration] ? true :
           (assert_equal route[:activities][index + 1][:begin_time], activity[:departure_time] + route[:activities][index + 1][:travel_time] + route[:activities][index + 1][:detail][:setup_duration])
         }
+      }
+    end
+
+    def test_cluster_two_phases
+      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/Instance_cluster_2_phases.json').to_a.join)['vrp']))
+      service_vrp = {vrp: vrp, service: :ortools}
+      services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, :duration, 'vehicle')
+
+      durations = []
+      services_vrps_vehicles.each{ |service_vrp_vehicle|
+        durations << service_vrp_vehicle[:vrp].services.collect{ |service| service[:activity][:duration] * service[:visits_number] }.sum
+      }
+
+      services_vrps_days = services_vrps_vehicles.each{ |services_vrps|
+        durations = []
+        services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, :duration, 'work_day')
+        services_vrps.each{ |service_vrp|
+          durations << service_vrp[:vrp].services.collect{ |service| service[:activity][:duration] * service[:visits_number] }.sum
+        }
+        durations.each{ |duration| assert duration < (limit + 2 * limit)  }
       }
     end
   end
