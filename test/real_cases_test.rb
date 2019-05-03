@@ -363,10 +363,28 @@ class RealCasesTest < Minitest::Test
 
     def test_spliting
       service_vrp = Marshal.load(File.binread('test/fixtures/service_vrp_dichotomious.dump'))
-      service_vrp[:vrp].preprocessing_max_split_size = 250
+      vrp = service_vrp[:vrp]
+      vrp.preprocessing_max_split_size = 250
 
+      result = OptimizerWrapper.define_process([service_vrp])
+      routes = result[:routes]
+      unassigned = result[:unassigned]
 
-      r = OptimizerWrapper::define_process([service_vrp])
+      result_num = {}
+      result_num[:points] = (routes.flat_map{ |route| route[:activities].collect{ |act| act[:point_id] } } + unassigned.collect{ |unass| unass[:point_id] }).compact.uniq.size
+      result_num[:services] = (routes.flat_map{ |route| route[:activities].reject{ |act| act[:service_id].nil? } } + unassigned.reject{ |unass| unass[:service_id].nil? }).compact.uniq.size
+      result_num[:shipments] = (routes.flat_map{ |route| route[:activities].reject{ |act| act[:delivery_shipment_id].nil? && act[:pickup_shipment_id].nil? } } + unassigned.reject{ |unass| unass[:shipment_id].nil? }).compact.uniq.size
+      result_num[:rests] = (routes.flat_map{ |route| route[:activities].reject{ |act| act[:rest_id].nil? } } + unassigned.reject{ |unass| unass[:rest_id].nil? }).compact.uniq.size
+
+      %i[services shipments rests].each { |type|
+        if vrp[type].nil?
+          assert result_num[type].zero?, "Created additional #{type}"
+        else
+          assert result_num[type] <= vrp[type].size, "Created additional #{type}"
+          assert result_num[type] >= vrp[type].size, "Lost some #{type}"
+        end
+      }
+      assert result_num[:points] <= vrp[:points].size, 'Created additional points'
     end
 
     # North West of France - at the fastest with distance minimization
