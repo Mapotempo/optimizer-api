@@ -19,10 +19,11 @@ require 'ai4r'
 include Ai4r::Data
 include Ai4r::Clusterers
 
-require './lib/helper.rb'
-require './lib/interpreters/periodic_visits.rb'
 require './lib/clusterers/average_tree_linkage.rb'
 require './lib/clusterers/balanced_kmeans.rb'
+require './lib/helper.rb'
+require './lib/hull.rb'
+require './lib/interpreters/periodic_visits.rb'
 
 module Interpreters
   class SplitClustering
@@ -33,27 +34,78 @@ module Interpreters
       fly_distance #+ units_distance + timewindows_distance
     end
 
-    def self.output_clusters(all_service_vrps, vehicles, two_stages)
-      file = File.new('generated_clusters.csv', 'w+')
-      file << "name,lat,lng,tags,start depot,end depot\n"
-      if two_stages
+    def self.csv_line(vrp, service, cluster_index, prefix = nil)
+      [
+        service.id,
+        service.activity.point.location.lat,
+        service.activity.point.location.lon,
+        (prefix || '') + cluster_index.to_s,
+        vrp.vehicles.first && vrp.vehicles.first.start_point && vrp.vehicles.first.start_point.id,
+        vrp.vehicles.first && vrp.vehicles.first.end_point && vrp.vehicles.first.end_point.id
+      ]
+    end
+
+    def self.output_clusters(all_service_vrps, vehicles = [], two_stages = false)
+      cache = OptimizerWrapper::CACHE
+      polygons = []
+      csv_lines = [['name', 'lat', 'lng', 'tags', 'start depot', 'end depot']]
+      if !two_stages && !vehicles.empty?
         # clustering for each vehicle and each day
         vehicles.each_with_index{ |vehicle, v_index|
-          all_service_vrps.select{ |service| service[:vrp][:vehicles][0][:id] == vehicle[:id] }.each_with_index{ |sub_pb, s_index|
-            sub_pb[:vrp][:services].each{ |service|
-              file << "#{service[:id]},#{service[:activity][:point][:location][:lat]},#{service[:activity][:point][:location][:lon]},v#{v_index}_pb#{s_index},#{sub_pb[:vrp][:vehicles].first[:start_point_id]},#{sub_pb[:vrp][:vehicles].first[:end_point_id]}\n"
+          all_service_vrps.select{ |service| service[:vrp].vehicles.first.id == vehicle.id }.each_with_index{ |service_vrp, cluster_index|
+            polygons << collect_hulls(service_vrp) unless service_vrp[:vrp].services.empty?
+            service_vrp[:vrp].services.each{ |service|
+              csv_lines << csv_line(service_vrp[:vrp], service, cluster_index, 'v' + v_index.to_s + '_pb')
             }
           }
         }
       else
         # clustering for each vehicle
-        all_service_vrps.each_with_index{ |sub_pb, s_index|
-          sub_pb[:vrp][:services].each{ |service|
-            file << "#{service[:id]},#{service[:activity][:point][:location][:lat]},#{service[:activity][:point][:location][:lon]},#{s_index},#{sub_pb[:vrp][:vehicles].first[:start_point_id]},#{sub_pb[:vrp][:vehicles].first[:end_point_id]}\n"
+        all_service_vrps.each_with_index{ |service_vrp, cluster_index|
+          polygons << collect_hulls(service_vrp) unless service_vrp[:vrp].services.empty?
+          service_vrp[:vrp].services.each{ |service|
+            csv_lines << csv_line(service_vrp[:vrp], service, cluster_index)
           }
         }
       end
-      file.close
+      checksum = Digest::MD5.hexdigest Marshal.dump(polygons)
+      vrp_name = all_service_vrps.first[:vrp].name
+      filename = 'generated_clusters_' + (vrp_name ? vrp_name + '_' : '') + checksum
+      cache.write(filename + '_geojson', {
+        type: 'FeatureCollection',
+        features: polygons.compact
+      }.to_json)
+      csv_string = CSV.generate do |out_csv|
+        csv_lines.each{ |line| out_csv << line }
+      end
+      cache.write(filename + '_csv', csv_string)
+      puts 'Clusters saved : ' + filename
+    end
+
+    def self.collect_hulls(service_vrp)
+      vector = service_vrp[:vrp].services.collect{ |service|
+        [service.activity.point.location.lon, service.activity.point.location.lat]
+      }
+      hull = Hull.get_hull(vector)
+      return nil if hull.nil?
+      unit_objects = service_vrp[:vrp].units.collect{ |unit|
+        {
+          unit_id: unit.id,
+          value: service_vrp[:vrp].services.collect{ |service|
+            service_quantity = service.quantities.find{ |quantity| quantity.unit_id == unit.id }
+            service_quantity && service_quantity.value || 0
+          }.reduce(&:+)
+        }
+      }
+      {
+        type: 'Feature',
+        properties: unit_objects.collect{ |unit_object| { unit_object[:unit_id].to_sym => unit_object[:value] } } +
+          [{ duration: service_vrp[:vrp].services.collect{ |service| service.activity.duration * service.visits_number }.reduce(&:+) }],
+        geometry: {
+          type: 'Polygon',
+          coordinates: [hull + [hull.first]]
+        }
+      }
     end
 
     def self.split_clusters(services_vrps, job = nil, &block)
@@ -81,9 +133,9 @@ module Interpreters
             level: (service_vrp[:level] || 0)
           }
         end
-      }.compact
+      }.flatten.compact
       two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
-      output_clusters(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps[0][:vrp][:debug_output_clusters_in_csv]
+      output_clusters(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps.size > 1 && services_vrps[0][:vrp][:debug_output_clusters]
       [all_service_vrps, split_results]
     rescue => e
       puts e
@@ -142,6 +194,7 @@ module Interpreters
                           vrp.services.select{ |service| service.quantities.any?(&:empty) }).uniq
       vrp.services -= empties_or_fills
       sub_service_vrps = split_balanced_kmeans(service_vrp, 2)
+      output_clusters(sub_service_vrps) if service_vrp[:vrp][:debug_output_clusters]
       result = []
       sub_service_vrps.each{ |sub_service_vrp|
         sub_vrp = sub_service_vrp[:vrp]

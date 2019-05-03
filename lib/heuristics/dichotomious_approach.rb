@@ -270,6 +270,7 @@ module Interpreters
           level: service_vrp[:level]
         }
       end
+      SplitClustering.output_clusters(split_service_vrps) if service_vrp[:vrp][:debug_output_clusters]
 
       split_service_vrps
     end

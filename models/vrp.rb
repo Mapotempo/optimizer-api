@@ -64,7 +64,7 @@ module Models
     field :schedule_unavailable_date, default: nil
 
     field :debug_output_kmeans_centroids, default: false
-    field :debug_output_clusters_in_csv, default: false
+    field :debug_output_clusters, default: false
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -196,7 +196,7 @@ module Models
 
     def debug=(debug)
       self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
-      self.debug_output_clusters_in_csv = debug[:output_clusters_in_csv]
+      self.debug_output_clusters = debug[:output_clusters]
     end
 
     def need_matrix_time?
