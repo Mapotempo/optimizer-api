@@ -796,8 +796,8 @@ module Wrappers
         s && (cost = Float(s[1]))
         t = / Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
-        @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
         if block && r && s && t && vrp.restitution_intermediate_solutions
+          @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
           block.call(self, iterations, nil, nil, cost, t, @previous_result)
         end
       }
