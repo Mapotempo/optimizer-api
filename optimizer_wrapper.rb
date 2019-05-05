@@ -351,8 +351,8 @@ module OptimizerWrapper
     return [vrp] if ENV['DUMP_VRP'] || # Dump to compute matrix is needed
                     (vrp.vehicles.size <= 1) ||
                     (vrp.services.empty? && vrp.shipments.empty?) || # there might be zero services or shipments (check together)
-                    !vrp.services.all?{ |s| s.sticky_vehicles.size == 1 } ||
-                    !vrp.shipments.all?{ |s| s.sticky_vehicles.size == 1 }
+                    vrp.services.any?{ |s| s.sticky_vehicles.size != 1 } ||
+                    vrp.shipments.any?{ |s| s.sticky_vehicles.size != 1 }
 
     # Intead of map{}.compact() or collect{}.compact() reduce([]){} or each_with_object([]){} is more efficient
     # when there are items to skip in the loop because it makes one pass of the array instead of two
@@ -375,26 +375,14 @@ module OptimizerWrapper
       sub_vrp.routes = vrp.routes.select{ |route| sub_vrp.vehicles.one?{ |vehicle| vehicle.id == route.vehicle.id }}
       sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id }}}
       sub_vrp.subtours = vrp.subtours
-      sub_vrp.configuration = {
-        preprocessing: {
-          cluster_threshold: vrp.preprocessing_cluster_threshold,
-          prefer_short_segment: vrp.preprocessing_prefer_short_segment,
-          first_solution_strategy: vrp.preprocessing_first_solution_strategy
-        },
-        restitution: {
-          geometry: vrp.restitution_geometry,
-          geometry_polyline: vrp.restitution_geometry_polyline,
-          intermediate_solutions: vrp.restitution_intermediate_solutions
-        },
-        resolution: {
-          duration: vrp.resolution_duration && vrp.resolution_duration / vrp.vehicles.size,
-          iterations: vrp.resolution_iterations,
-          iterations_without_improvment: vrp.resolution_iterations_without_improvment,
-          stable_iterations: vrp.resolution_stable_iterations,
-          minimum_duration: (vrp.resolution_minimum_duration && vrp.resolution_minimum_duration / vrp.vehicles.size) || (vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size),
-          time_out_multiplier: vrp.resolution_time_out_multiplier
+      [:preprocessing, :restitution, :resolution].each{ |c|
+        vrp.methods.select{ |m| m.to_s.start_with?("#{c}_") && !m.to_s.end_with?('?') && !m.to_s.end_with?('=') }.each{ |m|
+          v = vrp.send(m)
+          sub_vrp.send("#{m}=", v) unless v.nil?
         }
       }
+      sub_vrp.resolution_duration = vrp.resolution_duration && vrp.resolution_duration / vrp.vehicles.size
+      sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration && vrp.resolution_minimum_duration / vrp.vehicles.size) || (vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size)
       sub_vrps.push(sub_vrp)
     }
     sub_vrps
