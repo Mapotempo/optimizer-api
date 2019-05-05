@@ -575,7 +575,7 @@ module Api
             solution = APIBase.dump_vrp_cache.read("#{id}.solution")
             if solution
               status 200
-              if solution['csv'] || env['api.format'] == :csv
+              if env['api.format'] == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
               else
                 present({
