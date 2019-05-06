@@ -2812,4 +2812,31 @@ class WrapperTest < Minitest::Test
       assert_equal 6, result[:unassigned].size
     end
   end
+
+  def test_impossible_service_too_long
+    vrp = VRP.toy
+
+    assert_empty OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp))
+
+    vrp[:vehicles].first[:timewindow] = {
+      start: 0,
+      end: 10
+    }
+    vrp[:services].first[:activity][:duration] = 15
+    assert_equal OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp)).size, 1
+
+    vrp[:vehicles].first[:timewindow] = nil
+    vrp[:vehicles].first[:sequence_timewindows] = [{
+      start: 0,
+      end: 10
+    }]
+    vrp[:services].first[:activity][:duration] = 15
+    assert_equal OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp)).size, 1
+
+    vrp[:vehicles].first[:sequence_timewindows] << {
+      start: 0,
+      end: 20
+    }
+    assert_empty OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp))
+  end
 end

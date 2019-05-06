@@ -602,6 +602,20 @@ module Wrappers
         }
       end
 
+      # check needed time
+      vrp.services.each{ |service|
+        duration = service.activity.duration if service.activity
+        duration = service.activities.collect{ |act| act.duration }.min if service.activities
+
+        if duration && vrp.vehicles.none?{ |vehicle| vehicle.timewindow.nil? && vehicle.sequence_timewindows.empty? ||
+          vehicle.timewindow && vehicle.timewindow.end - vehicle.timewindow.start >= duration ||
+          !vehicle.sequence_timewindows.empty? && vehicle.sequence_timewindows.any?{ |timewindow|
+            vehicle.timewindow.end - vehicle.timewindow.start >= duration
+          }}
+          add_unassigned(unfeasible, vrp, service, 'Service duration too long regarding vehicles availability')
+        end
+      }
+
       max_shift = nil
       if vrp.vehicles.any?{ |vehicle| vehicle.timewindow || vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?}
         max_shift = vrp.vehicles.collect{ |vehicle|
