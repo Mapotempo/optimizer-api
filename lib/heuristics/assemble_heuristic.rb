@@ -98,7 +98,7 @@ module Interpreters
             centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] # really ?
           end
 
-          clusters = SplitClustering::kmeans_process(centroid_indices, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, nil)
+          clusters, centroid_indices = SplitClustering::kmeans_process(centroid_indices, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, nil)
           end_timer = Time.now
 
           vehicle_list = []
