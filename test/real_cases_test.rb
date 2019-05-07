@@ -26,9 +26,7 @@ class RealCasesTest < Minitest::Test
     # ########## TEST PATTERN
     # ##################################
     # def test_***
-    #   vrp = ENV['DUMP_VRP'] ?
-    #     Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-    #     Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+    #   vrp = FCT.load_vrp(self)
     #   result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
     #   assert result
 
@@ -47,9 +45,7 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - 25 services with time window - dimension distance car - no late for vehicle
     def test_ortools_one_route_without_rest
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -69,9 +65,7 @@ class RealCasesTest < Minitest::Test
 
     # Strasbourg - 107 services with few time windows - dimension distance car - late for services & vehicles
     def test_ortools_one_route_without_rest_2
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -91,9 +85,7 @@ class RealCasesTest < Minitest::Test
 
     # Béziers - 203 services with time window - dimension time car - late for services & vehicles - force start and no wait cost
     def test_ortools_one_route_many_stops
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -116,9 +108,7 @@ class RealCasesTest < Minitest::Test
 
     # Lyon - 65 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_one_route_with_rest
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -142,9 +132,7 @@ class RealCasesTest < Minitest::Test
 
     # Mont-de-Marsan - 61 services with time window + rest - dimension time car - late for services & vehicles
     def test_ortools_one_route_with_rest_and_waiting_time
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -162,9 +150,7 @@ class RealCasesTest < Minitest::Test
 
     # Lyon - 769 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_ten_routes_with_rest
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -187,9 +173,7 @@ class RealCasesTest < Minitest::Test
 
     # Lille - 141 services with time window and quantity - no late for services
     def test_ortools_global_six_routes_without_rest
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -209,9 +193,7 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - 81 services with time window - late for services & vehicles
     def test_ortools_global_ten_routes_without_rest
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -230,9 +212,7 @@ class RealCasesTest < Minitest::Test
 
     # Angers - Route duration and vehicle timewindow are identical
     def test_ortools_global_with_identical_route_duration_and_vehicle_window
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -258,9 +238,7 @@ class RealCasesTest < Minitest::Test
 
     # La Roche-Sur-Yon - A single route with a single double timewindow
     def test_ortools_one_route_with_single_mtws
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -279,9 +257,7 @@ class RealCasesTest < Minitest::Test
 
     # Haute-Savoie - A single route with a visit with 2 open timewindows (0 ; x] [y ; ∞)
     def test_ortools_open_timewindows
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -298,9 +274,7 @@ class RealCasesTest < Minitest::Test
 
     # Nantes - A single route with an order defining the most part of the route
     def test_ortools_single_route_with_route_order
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -328,9 +302,7 @@ class RealCasesTest < Minitest::Test
 
     # Nice - A single route with an order defining the most part of the route, many stops
     def test_ortools_single_route_with_route_order_2
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       # Check activities
@@ -357,9 +329,7 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - route  with transmodality point
     def test_ortools_multimodal_route
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
       assert result
@@ -376,9 +346,7 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - route with transmodality point
     def test_ortools_multimodal_route2
-      vrp = ENV['DUMP_VRP'] ?
-        Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp'])) :
-        Marshal.load(Base64.decode64(File.open('test/fixtures/' + self.name[5..-1] + '.dump').to_a.join))
+      vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
       assert result
