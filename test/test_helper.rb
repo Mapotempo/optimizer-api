@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'simplecov'
-SimpleCov.start
+SimpleCov.start if ENV['COV']
 
 ENV['APP_ENV'] ||= 'test'
 require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)

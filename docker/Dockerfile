@@ -1,88 +1,60 @@
-FROM mapotempo/nginx-passenger:2.0.1
-
-LABEL maintainer="Mapotempo <contact@mapotempo.com>"
-
-ARG ORTOOLS_VERSION
-ENV ORTOOLS_VERSION ${ORTOOLS_VERSION:-v6.5}
-
-ARG VROOM_VERSION
-ENV VROOM_VERSION ${VROOM_VERSION:-v1.0.0}
-
-ENV RAILS_ENV production
-ENV ROUTER_URL https://router.mapotempo.com
-
-ENV REDIS_HOST redis-cache
-
-ADD . /srv/app
-
-# Install app
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y git build-essential zlib1g-dev \
-            zlib1g && \
-    cd /srv/app && \
-    rm -rf .git && \
-    bundle install --full-index --without test development && \
-    \
-# Fix permissions
-    chown -R www-data:www-data . && \
-    \
-# Cleanup Debian packages
-    apt-get remove -y git build-essential zlib1g-dev && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    echo -n > /var/lib/apt/extended_states && \
-    rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
+ARG CI_COMMIT_REF_NAME=latest
+ARG ORTOOLS_VERSION=${ORTOOLS_VERSION:-latest}
+ARG VROOM_VERSION=${VROOM_VERSION:-latest}
+ARG REGISTRY=${REGISTRY:-registry.mapotempo.com/}
 
 # Install ORTools
+FROM ${REGISTRY}mapotempo/ortools:${ORTOOLS_VERSION} as ortools
+
 RUN apt-get update && \
-    apt-get install -y git bison flex python-setuptools python-dev autoconf \
-            libtool zlib1g-dev texinfo help2man gawk g++ curl texlive cmake subversion unzip gettext && \
-    \
-# Override IP address for this mirror because the other one is buggy.
-    echo "90.147.160.69 mirror2.mirror.garr.it" >> /etc/hosts && \
-    \
-# Get source code
-    git clone https://github.com/google/or-tools.git --branch ${ORTOOLS_VERSION} /srv/or-tools && \
-    \
-# Build
-    cd /srv/or-tools && \
-    make third_party && \
-    make cc && \
-    \
-# Get wrapper source code
-    git clone https://github.com/mapotempo/optimizer-ortools.git /srv/optimizer-ortools && \
-    \
+  apt-get install -y git bison flex python-setuptools python-dev autoconf \
+  libtool zlib1g-dev texinfo help2man gawk g++ curl texlive cmake subversion unzip gettext
+
+RUN if [ "$CI_COMMIT_REF_NAME" == "beta"]; \
+  then export OPTIMIZER_ORTOOLS_VERSION=dev; \
+  fi
+
 # Build wrapper
-    cd /srv/optimizer-ortools && \
-    make tsp_simple && \
-    \
-# Cleanup Debian packages
-    apt-get remove -y git bison flex python-setuptools python-dev autoconf \
-            libtool zlib1g-dev texinfo help2man gawk g++ curl texlive cmake subversion unzip && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    echo -n > /var/lib/apt/extended_states && \
-    rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
+RUN  git clone https://github.com/mapotempo/optimizer-ortools.git --branch ${OPTIMIZER_ORTOOLS_VERSION:-master} /srv/optimizer-ortools && \
+  cd /srv/optimizer-ortools && \
+  make tsp_simple
+
+# Install Rake
+FROM mapotempo/nginx-passenger:2.0.1 as rake
+
+ENV APP_ENV production
+
+ADD . /srv/app
+RUN apt-get update && \
+  apt-get upgrade -y && \
+  apt-get install -y git build-essential zlib1g-dev zlib1g nano
+RUN which nano
+
+RUN cd /srv/app && \
+  gem install --no-rdoc --no-ri bundler && \
+  bundle check --path vendor/bundle --without development || bundle install --full-index --without development --path vendor/bundle && \
+  chown -R www-data:www-data .
 
 # Install Vroom
-RUN apt-get update && \
-    apt-get install -y git build-essential libboost-all-dev libboost-dev && \
-    \
-# Get Source code
-    git clone https://github.com/VROOM-Project/vroom --branch ${VROOM_VERSION} /srv/vroom && \
-    cd /srv/vroom/src && \
-    mkdir -p ../build ../bin && \
-    make && \
-    \
-# Cleanup Debian packages
-    apt-get remove -y git build-essential && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    echo -n > /var/lib/apt/extended_states && \
-    rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
+FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} as vroom
 
+RUN echo ${VROOM_VERSION}
 
+# Final image
+FROM mapotempo/nginx-passenger:2.0.1
+LABEL maintainer="Mapotempo <contact@mapotempo.com>"
+
+ENV REDIS_HOST redis-cache
 ADD docker/env.d/* /etc/nginx/env.d/
+
+COPY --from=ortools /srv/or-tools/lib srv/or-tools/lib
+COPY --from=ortools /srv/or-tools/bin srv/or-tools/bin
+COPY --from=ortools /srv/optimizer-ortools /srv/optimizer-ortools
+COPY --from=vroom /srv/vroom/bin /srv/vroom/bin
+COPY --from=vroom /usr/lib/x86_64-linux-gnu/libboost* /usr/lib/x86_64-linux-gnu/
+COPY --from=rake /srv/app /srv/app
+COPY --from=rake /usr/local/bin /usr/local/bin
+COPY --from=rake /var/lib/gems /var/lib/gems
+COPY --from=rake /bin/nano /bin/nano
 
 WORKDIR /srv/app

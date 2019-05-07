@@ -1,40 +1,67 @@
-Using Docker Compose to deploy Mapotempo Optimizer API
-======================================================
+# Building images
 
-Building images
----------------
+```
+export REGISTRY='registry.mapotempo.com/'
+```
 
-The followings commands will get the source code and build the optimize-api
-and needed images:
+## Required images
+Optimizer requires the two following images that must be manually built.
 
-    git clone https://github.com/mapotempo/optimizer-api
-    cd optimizer-api/docker
-    docker-compose build
+### Ortools
 
-Publishing images
------------------
+```
+export ORTOOLS_VERSION=v6.5
+docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
+  -f ./docker/ortools/Dockerfile -t ${REGISTRY}mapotempo/ortools:${ORTOOLS_VERSION} .
+```
 
-To pull them from another host, we need to push the built images to
-hub.docker.com:
+#### Vroom
+```
+export VROOM_VERSION=v1.2.0
+docker build --build-arg VROOM_VERSION=${VROOM_VERSION} \
+  -f ./docker/vroom/Dockerfile -t ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} .
+```
 
-    docker login
-    docker-compose push
+## Build API
 
-Running on a docker host
-------------------------
+```
+export ORTOOLS_VERSION=v6.5
+export VROOM_VERSION=v1.2.0
+export CI_COMMIT_REF_NAME=latest
+docker build \
+  --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
+  --build-arg VROOM_VERSION=${VROOM_VERSION} \
+  --build-arg CI_COMMIT_REF_NAME=${CI_COMMIT_REF_NAME} \
+  -f ./docker/Dockerfile -t ${REGISTRY}mapotempo/optimizer-api:${CI_COMMIT_REF_NAME} .
+```
 
-First, we need to retrieve the source code and the prebuilt images:
+## Running services
+This project uses swarm to launch
 
-    git clone https://github.com/mapotempo/optimizer-api
-    cd optimizer-api/docker
-    docker-compose pull
+```
+docker swarm init
+```
 
-Then use the configuration file and edit it to match your needs:
+Optimizer requires router matrix, you can define variables that the container will use to hit.
 
-    cp ../config/environments/production.rb ./
+```
+export PROJECT_NAME='optimizer'
+export ROUTER_API_KEY=''
+export ROUTER_URL='http://localhost:4899/0.1'
+export REGISTRY='registry.mapotempo.com/'
+```
 
-    # Edit production.rb
+**Deploy the services (Access it via http://localhost:8083)**
 
-Finally run the services:
+```
+mkdir -p ./docker/redis
+docker stack deploy -c ./docker/docker-compose.yml ${PROJECT_NAME}
+```
 
-    docker-compose -p optimizer up -d
+**Execute something inside the api container**
+
+```
+DOCKER_SERVICE_NAME=${PROJECT_NAME}_api
+CONTAINER=${DOCKER_SERVICE_NAME}.1.$(docker service ps -f "name=${DOCKER_SERVICE_NAME}.1" ${DOCKER_SERVICE_NAME} -q --no-trunc | head -n1)
+docker exec -i ${CONTAINER} ls -l /var/log
+```

@@ -6,6 +6,7 @@
 /pkg/
 /spec/reports/
 /test/tmp/
+redis/
 /test/version_tmp/
 /tmp/
 
