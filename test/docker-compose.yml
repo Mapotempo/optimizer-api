@@ -2,12 +2,9 @@ version: '3.3'
 
 services:
   api:
-    image: ${REGISTRY}mapotempo/optimizer-api:latest
-    ports:
-      - mode: host
-        target: 80
-        published: 8083
+    image: mapotempo/optimizer-api:latest
     environment:
+      APP_ENV: test
       REDIS_HOST: redis-cache
       RESQUE_REDIS_HOST: redis
       SKIP_JSPRIT: 'true'
@@ -16,7 +13,7 @@ services:
       - resque
 
   resque-default:
-    image: ${REGISTRY}mapotempo/optimizer-api:latest
+    image: mapotempo/optimizer-api:latest
     working_dir: /srv/app
     command: bundle exec rake resque:workers
     hostname: resque-default
@@ -27,6 +24,7 @@ services:
       REDIS_HOST: redis-cache
       COUNT: 5
       QUEUES: DEFAULT
+      APP_ENV: test
     networks:
       - redis_cache
       - resque
