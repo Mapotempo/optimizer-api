@@ -331,7 +331,8 @@ module Interpreters
       iteration = 0
       while biggest_cluster_size < nb_clusters && iteration < max_iterations
         ratio = 0.5 + 0.5 * (max_iterations - iteration) / max_iterations
-        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio * metric_limit, vrp.debug_output_kmeans_centroids, incompatibility_set)
+        ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
+        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, incompatibility_set)
         c.clusters.delete([])
         if c.clusters.size > biggest_cluster_size
           biggest_cluster_size = c.clusters.size
