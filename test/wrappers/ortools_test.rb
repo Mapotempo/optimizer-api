@@ -5820,7 +5820,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_insert_with_order
-    vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/instance_order.json').to_a.join)['vrp']))
+    vrp = FCT.load_vrp(self, fixture_file: 'instance_order.json')
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, vrp, nil)
     assert result
     previous_index = nil

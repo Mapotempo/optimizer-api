@@ -255,46 +255,23 @@ module Interpreters
       points.uniq!
       linked_objects = {}
       points.each{ |point|
-        unit_quantities = {}
-        unit_symbols.each{ |unit| unit_quantities[unit] = 0 }
-        related_services = vrp.services.select{ |service| service.activity.point.id == point.id }
-        point_objects = related_services.collect{ |service|
-          unit_quantities[:visits] += 1
-          cumulated_metrics[:visits] += 1
-          unit_quantities[:duration] += service.activity.duration * service.visits_number
-          cumulated_metrics[:duration] += service.activity.duration * service.visits_number
-          service.quantities.each{ |quantity|
-            unit_quantities[quantity.unit_id.to_sym] += quantity.value * service.visits_number
-            cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * service.visits_number
+        unit_quantities = Hash.new(0)
+        point_object_ids = []
+        [[:services, :activity], [:shipments, :pickup], [:shipments, :delivery]].each do |attributes|
+          point_object_ids << vrp.send(attributes[0]).select{ |s| s.send(attributes[1]).point.id == point.id }.map.with_index{ |s, i|
+            unit_quantities[:visits] += 1
+            cumulated_metrics[:visits] += 1
+            duration = ((i.zero? ? s.send(attributes[1]).setup_duration : 0) + s.send(attributes[1]).duration) * s.visits_number
+            unit_quantities[:duration] += duration
+            cumulated_metrics[:duration] += duration
+            s.quantities.each{ |quantity|
+              unit_quantities[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+              cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+            }
+            s.id
           }
-          service.id
-        }
-        related_pickups = vrp.shipments.select{ |shipment| shipment.pickup.point.id == point.id }
-        point_objects << related_pickups.collect{ |shipment|
-          unit_quantities[:visits] += 1
-          cumulated_metrics[:visits] += 1
-          unit_quantities[:duration] += shipment.pickup.duration
-          cumulated_metrics[:duration] += shipment.pickup.duration
-          shipment.quantities.each{ |quantity|
-            unit_quantities[quantity.unit_id.to_sym] += quantity.value * shipment.visits_number
-            cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * shipment.visits_number
-          }
-          shipment.id
-        }
-
-        related_deliveries = vrp.shipments.select{ |shipment| shipment.delivery.point.id == point.id }
-        point_objects << related_deliveries.collect{ |shipment|
-          unit_quantities[:visits] += 1
-          cumulated_metrics[:visits] += 1
-          unit_quantities[:duration] += shipment.pickup.duration
-          cumulated_metrics[:duration] += shipment.pickup.duration
-          shipment.quantities.each{ |quantity|
-            unit_quantities[quantity.unit_id.to_sym] += quantity.value * shipment.visits_number
-            cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * shipment.visits_number
-          }
-          shipment.id
-        }
-        linked_objects[point.id] = point_objects
+        end
+        linked_objects[point.id] = point_object_ids
 
         if max_cut_metrics
           unit_symbols.each{ |unit|
@@ -302,7 +279,8 @@ module Interpreters
           }
         end
 
-        next if related_services.empty? && related_pickups.empty? && related_deliveries.empty?
+        next if point_object_ids.empty?
+        # next if related_services.empty? && related_pickups.empty? && related_deliveries.empty?
         # Data items structure
         # 0 : Latitude
         # 1 : Longitude
@@ -450,16 +428,15 @@ module Interpreters
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
       if vrp.services.all?{ |service| service[:activity] }
-        cumulated_metrics = {}
+        cumulated_metrics = Hash.new(0)
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
-        unit_symbols.map{ |unit| cumulated_metrics[unit] = 0 }
 
         data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
         centroids = []
         limits = []
         if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] } && vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.uniq.size != 1
           vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
-          share = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum if entity == 'vehicle'
+          share = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum
           vrp.vehicles.each_with_index{ |vehicle, index|
             centroids << index
             data_items[index][6] = vehicle[:sequence_timewindows].size
@@ -488,8 +465,7 @@ module Interpreters
             linked_objects[i[2]]
           }.flatten
         }
-
-        puts 'Balanced K-Means : Splited ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
+        puts 'Balanced K-Means : Splited ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][cut_symbol] || 0 }.inject(0, :+) })" }.join(' & ')
         cluster_vehicles = nil
         cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity) if entity != ''
         result_items.collect.with_index{ |result_item, result_index|
@@ -543,12 +519,10 @@ module Interpreters
       vrp = service_vrp[:vrp]
       # splits using hierarchical tree method
       if vrp.services.all?{ |service| service[:activity] }
-        max_cut_metrics = {}
-        cumulated_metrics = {}
+        max_cut_metrics = Hash.new(0)
+        cumulated_metrics = Hash.new(0)
 
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
-        unit_symbols.map{ |unit| cumulated_metrics[unit] = 0 }
-        unit_symbols.map{ |unit| max_cut_metrics[unit] = 0 }
 
         data_items, cumulated_metrics, linked_objects, max_cut_metrics = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics, max_cut_metrics)
 
