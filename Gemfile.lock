@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/Mapotempo/active_hash.git
-  revision: 907de1c970c32bd8054724e095717045cfb04c88
+  revision: ed1faced2e4aac535b47f533a7dee84c0cd039a4
   specs:
     active_hash (1.4.1)
       activesupport (>= 2.2.2)
