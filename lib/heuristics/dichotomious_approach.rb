@@ -81,6 +81,7 @@ module Interpreters
       service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 2 : 120000
       service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
       service_vrp[:vrp].resolution_init_duration = 25000
+      service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
 
       service_vrp
