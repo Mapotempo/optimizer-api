@@ -339,13 +339,13 @@ module Interpreters
           next if related_services.empty?
           related_services.each{ |related_service|
             if related_service[:sticky_vehicle_ids] && related_service[:skills] && !related_service[:skills].empty?
-              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], related_service[:skills], nil]
+              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], related_service[:skills], 0]
             elsif related_service[:sticky_vehicle_ids] && related_service[:skills] && related_service[:skills].empty?
-                data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], nil, nil]
+                data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], nil, 0]
             elsif related_service[:skills] && !related_service[:skills].empty? && !related_service[:sticky_vehicle_ids]
-              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, related_service[:skills], nil]
+              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, related_service[:skills], 0]
             else
-              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, nil, nil]
+              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, nil, 0]
             end
           }
         }
