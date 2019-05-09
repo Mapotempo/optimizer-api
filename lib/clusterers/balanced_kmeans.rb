@@ -132,7 +132,7 @@ module Ai4r
         @centroids.collect!{ |centroid|
           centroid[4] = nil
           centroid[5] = nil
-          centroid[6] = nil
+          centroid[6] = 0
           centroid.compact
         }
         @iterations += 1

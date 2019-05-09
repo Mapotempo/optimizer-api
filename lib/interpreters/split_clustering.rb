@@ -289,7 +289,7 @@ module Interpreters
         # 4 : Sticky vehicles
         # 5 : Skills
         # 6 : Sequence timewindows size
-        data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, nil, nil]
+        data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, nil, 0]
       }
 
       if max_cut_metrics
