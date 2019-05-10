@@ -34,20 +34,6 @@ module Interpreters
       service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? }
     end
 
-    def self.merge_results(results, merge_unassigned)
-      results.flatten!
-      {
-        solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
-        cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
-        routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,
-        unassigned: merge_unassigned ? results.flat_map{ |r| r && r[:unassigned] }.compact.uniq : results.map{ |r| r && r[:unassigned] }.compact.last,
-        elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
-        total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
-        total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
-        total_distance: results.map{ |r| r && r[:total_distance] }.compact.reduce(&:+)
-      }
-    end
-
     def self.dichotomious_heuristic(service_vrp, job)
       if dichotomious_candidate(service_vrp)
         create_config(service_vrp)
@@ -64,7 +50,7 @@ module Interpreters
           results = sub_service_vrps.collect{ |lonely_vrp|
             OptimizerWrapper.define_process([lonely_vrp], job)
           }
-          result = merge_results(results, true)
+          result = Helper.merge_results(results)
         end
         if service_vrp[:level].zero?
           result = third_stage(service_vrp, result, job)
@@ -164,7 +150,7 @@ module Interpreters
           end
           result_inter
         }.compact
-        result = merge_results(intermediate_results, false)
+        result = Helper.merge_results(intermediate_results, false)
       end
       result
     end
