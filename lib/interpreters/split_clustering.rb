@@ -132,20 +132,6 @@ module Interpreters
       end
     end
 
-    def self.merge_results(results)
-      results.flatten!
-      {
-        solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
-        cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
-        routes: results.flat_map{ |r| r && r[:routes] }.compact,
-        unassigned: results.flat_map{ |r| r && r[:unassigned] }.compact,
-        elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
-        total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
-        total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
-        total_distance: results.map{ |r| r && r[:total_distance] }.compact.reduce(&:+)
-      }
-    end
-
     def self.split_solve(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
 
@@ -174,7 +160,7 @@ module Interpreters
         remove_poor_routes(sub_vrp, sub_result)
         available_vehicles.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         empties_or_fills -= remove_used_empties_and_refills(sub_vrp, sub_result)
-        result = merge_results([result, sub_result])
+        result = Helper.merge_results([result, sub_result])
       }
       result
     end
