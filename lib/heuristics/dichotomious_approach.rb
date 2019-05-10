@@ -40,7 +40,7 @@ module Interpreters
         solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
         cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
         routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,
-        unassigned: merge_unassigned ? results.flat_map{ |r| r && r[:unassigned] }.compact.uniq : results.last[:unassigned],
+        unassigned: merge_unassigned ? results.flat_map{ |r| r && r[:unassigned] }.compact.uniq : results.map{ |r| r && r[:unassigned] }.compact.last,
         elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
         total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
         total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
