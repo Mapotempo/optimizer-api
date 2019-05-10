@@ -70,4 +70,73 @@ class SplitClusteringTest < Minitest::Test
 
     result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
   end
+
+  def test_work_day_without_vehicle_entity_small
+    vrp = VRP.lat_lon_scheduling
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    }]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    assert_equal 1, generated_services_vrps.size
+
+    vrp[:vehicles] << {
+      id: 'vehicle_1',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      router_mode: 'car',
+      router_dimension: 'distance',
+      sequence_timewindows: [{
+        start: 0,
+        end: 20,
+        day_index: 0
+      }, {
+        start: 0,
+        end: 20,
+        day_index: 1
+      }, {
+        start: 0,
+        end: 20,
+        day_index: 2
+      }, {
+        start: 0,
+        end: 20,
+        day_index: 3
+      }, {
+        start: 0,
+        end: 20,
+        day_index: 4
+      }]
+    }
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    assert_equal generated_services_vrps.size, 2
+  end
+
+  def test_work_day_without_vehicle_entity
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    },{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    assert_equal generated_services_vrps.size, 10
+
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    assert_equal generated_services_vrps.size, 10
+  end
 end

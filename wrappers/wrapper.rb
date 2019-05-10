@@ -435,6 +435,12 @@ module Wrappers
       (vrp.services.none?{ |service| service[:minimum_lapse] } || vrp.services.collect{ |service| service[:minimum_lapse] }.compact.min >= 7)
     end
 
+    def assert_vehicle_entity_only_before_work_day(vrp)
+      vehicle_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == 'vehicle' }
+      work_day_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == 'work_day' }
+      vehicle_entity_index.nil? || work_day_entity_index.nil? || vehicle_entity_index < work_day_entity_index
+    end
+
     def assert_deprecated_partitions(vrp)
       !((vrp.preprocessing_partition_method || vrp.preprocessing_partition_metric) && !vrp.preprocessing_partitions.empty?)
     end
