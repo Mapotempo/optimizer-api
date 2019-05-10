@@ -2839,4 +2839,21 @@ class WrapperTest < Minitest::Test
     }
     assert_empty OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp))
   end
+
+  def test_work_day_entity_after_eventual_vehicle
+    problem = VRP.lat_lon_scheduling_two_vehicles
+    problem[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(Models::Vrp.create(problem)).empty?
+
+    problem[:configuration][:preprocessing][:partitions] << {
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    }
+    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(Models::Vrp.create(problem)).include?(:assert_vehicle_entity_only_before_work_day)
+  end
 end

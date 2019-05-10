@@ -102,7 +102,7 @@ module Interpreters
           when 'balanced_kmeans'
             generated_service_vrps = current_service_vrps.collect{ |s_v|
               current_vrp = s_v[:vrp]
-              current_vrp.vehicles = list_vehicles([current_vrp.vehicles.first]) if partition[:entity] == 'work_day'
+              current_vrp.vehicles = list_vehicles(current_vrp.vehicles) if partition[:entity] == 'work_day'
               split_balanced_kmeans(s_v, current_vrp.vehicles.size, cut_symbol, partition[:entity])
             }
             current_service_vrps = generated_service_vrps.flatten
