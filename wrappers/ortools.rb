@@ -757,6 +757,7 @@ module Wrappers
     end
 
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
+      log "----> run_ortools services(#{services.size}) preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
       if vrp.vehicles.size == 0 || (vrp.services.nil? || vrp.services.size == 0) && (vrp.shipments.nil? || vrp.shipments.size == 0)
         return [0, 0, @previous_result = parse_output(vrp, services, points, matrix_indices, 0, 0, nil)]
       end
@@ -784,7 +785,7 @@ module Wrappers
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
         "-instance_file '#{input.path}'",
         "-solution_file '#{output.path}'"].compact.join(' ')
-      log (@job ? @job + ' - ' : '') + cmd
+      log cmd
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
@@ -811,14 +812,14 @@ module Wrappers
       time = 0.0
       # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
-        log (@job ? @job + ' - ' : '') + line
-        out = out + line
         r = /^Iteration : ([0-9]+)/.match(line)
         r && (iterations = Integer(r[1]))
         s = / Cost : ([0-9.eE+]+)/.match(line)
         s && (cost = Float(s[1]))
         t = / Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
+        log line.strip, level: /Final Iteration :/.match(line) ? :info : r || s || t ? :debug : :error
+        out = out + line
         if block && r && s && t && vrp.restitution_intermediate_solutions
           begin
             @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
@@ -854,7 +855,7 @@ module Wrappers
         [cost, iterations, @previous_result]
       elsif @thread.value == 9
         out = "Job killed"
-        log (@job ? @job + ' - ' : '') + out # Keep trace in worker
+        log out, level: :fatal # Keep trace in worker
         if cost && !result.include?('Iteration : ')
           [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
         else

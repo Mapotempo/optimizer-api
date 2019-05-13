@@ -108,6 +108,8 @@ module Interpreters
             Interpreters::SplitClustering.remove_empty_routes(result)
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.5)
           end
+
+          log "dicho - level(#{service_vrp[:level]}) unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
         end
       else
         service_vrp[:vrp].resolution_init_duration = nil
@@ -214,7 +216,9 @@ module Interpreters
     end
 
     def self.end_stage_insert_unassigned(service_vrp, result, job = nil)
+      log "---> dicho::end_stage - level(#{service_vrp[:level]})", level: :debug
       if !result[:unassigned].empty?
+        log "try to insert #{result[:unassigned].size} unassigned from #{service_vrp[:vrp].services.size} services"
         service_vrp[:vrp].routes = build_initial_routes([result])
         service_vrp[:vrp].resolution_init_duration = nil
         unassigned_services = service_vrp[:vrp].services.select{ |s| result[:unassigned].map{ |a| a[:service_id] }.include?(s.id) }
@@ -295,13 +299,16 @@ module Interpreters
           service_vrp[:vrp].routes += new_routes
         }
       end
+      log "<--- dicho::end_stage - level(#{service_vrp[:level]})", level: :debug
       result
     end
 
     def self.split_vehicles(vrp, services_by_cluster)
+      log "---> dicho::split_vehicles #{vrp.vehicles.size}", level: :debug
       services_skills_by_clusters = services_by_cluster.map{ |services|
         services.map{ |s| s.skills.empty? ? nil : s.skills.uniq.sort }.compact.uniq
       }
+      log "services_skills_by_clusters #{services_skills_by_clusters}", level: :debug
       vehicles_by_clusters = [[], []]
       vrp.vehicles.each{ |v|
         cluster_index = nil
@@ -337,10 +344,12 @@ module Interpreters
         empty_side << nonempty_side.delete(nonempty_side.group_by{ |v| v.skills.uniq.sort }.to_a.max_by{ |vec_group| vec_group[1].size }.last.first)
       end
 
+      log "<--- dicho::split_vehicles #{vehicles_by_clusters.map(&:size)}", level: :debug
       vehicles_by_clusters
     end
 
     def self.split(service_vrp, job = nil)
+      log "---> dicho::split - level(#{service_vrp[:level]})", level: :debug
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
       services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }
@@ -384,6 +393,7 @@ module Interpreters
       end
       OutputHelper::Clustering.generate_files(split_service_vrps) if OptimizerWrapper.config[:debug][:output_clusters]
 
+      log "<--- dicho::split - level(#{service_vrp[:level]})", level: :debug
       split_service_vrps
     end
 
@@ -432,7 +442,7 @@ module Interpreters
         }
         services_by_cluster
       else
-        log 'Split not available when services have no activities'
+        log 'Split not available when services have no activities', level: :error
         [vrp]
       end
     end

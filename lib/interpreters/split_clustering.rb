@@ -113,6 +113,7 @@ module Interpreters
     def self.split_solve(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
       available_vehicle_ids = vrp.vehicles.collect{ |vehicle| vehicle.id }
+      log "available_vehicle_ids: #{available_vehicle_ids.size} - #{available_vehicle_ids}", level: :debug
 
       problem_size = vrp.services.size + vrp.shipments.size
       empties_or_fills = (vrp.services.select{ |service| service.quantities.any?(&:fill) } +
@@ -136,6 +137,7 @@ module Interpreters
         sub_vrp.vehicles.select!{ |vehicle| available_vehicle_ids.include?(vehicle.id) }
         sub_result = OptimizerWrapper.define_process([sub_problem], job, &block)
         remove_poor_routes(sub_vrp, sub_result)
+        log "sub vrp (size: #{sub_problem[:vrp][:services].size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
         raise 'Incorrect activities count' if sub_problem[:vrp][:services].size != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.size
         available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         empties_or_fills_used = remove_used_empties_and_refills(sub_vrp, sub_result).compact
@@ -171,6 +173,7 @@ module Interpreters
         }
         vehicle_worktime = vehicle.duration || vehicle.timewindow&.start && vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start)
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
+        log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime}"
         time_flag = vehicle_worktime && route_duration < limit * vehicle_worktime
         if load_flag && time_flag
           result[:unassigned] += route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact
@@ -285,8 +288,8 @@ module Interpreters
         }.sum
         checksum = Digest::MD5.hexdigest Marshal.dump(values)
         if !score_hash.key?(checksum)
-          log "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric} iterations: #{c.iterations}"
-          log "Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
+          log "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric} iterations: #{c.iterations}", level: :debug
+          log "Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%", level: :debug
           score_hash[checksum] = { iterations: c.iterations, limit_score: limit_score, restart: restart, ratio_metric: ratio_metric, min: values.min, max: values.max, sum: values.sum, size: values.size }
         end
         restart += 1
