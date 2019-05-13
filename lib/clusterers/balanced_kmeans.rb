@@ -24,22 +24,24 @@ module Ai4r
 
       attr_reader :cluster_metrics
 
-      parameters_info max_iterations: "Maximum number of iterations to " \
-        "build the clusterer. By default it is uncapped.",
-        centroid_function: "Custom implementation to calculate the " \
-          "centroid of a cluster. It must be a closure receiving an array of " \
-          "data sets, and return an array of data items, representing the " \
-          "centroids of for each data set. " \
-          "By default, this algorithm returns a data items using the mode "\
-          "or mean of each attribute on each data set.",
-        centroid_indices: "Indices of data items (indexed from 0) to be " \
-          "the initial centroids.  Otherwise, the initial centroids will be " \
-          "assigned randomly from the data set.",
-        on_empty: "Action to take if a cluster becomes empty, with values " \
-          "'eliminate' (the default action, eliminate the empty cluster), " \
-          "'terminate' (terminate with error), 'random' (relocate the " \
-          "empty cluster to a random point), 'outlier' (relocate the " \
-          "empty cluster to the point furthest from its centroid)."
+      parameters_info max_iterations: 'Maximum number of iterations to ' \
+                      'build the clusterer. By default it is uncapped.',
+                      centroid_function: 'Custom implementation to calculate the ' \
+                        'centroid of a cluster. It must be a closure receiving an array of ' \
+                        'data sets, and return an array of data items, representing the ' \
+                        'centroids of for each data set. ' \
+                        'By default, this algorithm returns a data items using the mode '\
+                        'or mean of each attribute on each data set.',
+                      centroid_indices: 'Indices of data items (indexed from 0) to be ' \
+                        'the initial centroids.  Otherwise, the initial centroids will be ' \
+                        'assigned randomly from the data set.',
+                      on_empty: 'Action to take if a cluster becomes empty, with values ' \
+                        "'eliminate' (the default action, eliminate the empty cluster), " \
+                        "'terminate' (terminate with error), 'random' (relocate the " \
+                        "empty cluster to a random point), 'outlier' (relocate the " \
+                        "empty cluster to the point furthest from its centroid).",
+                      possible_caracteristics_combination: 'Set of skills we can combine in the same cluster.',
+                      impossible_day_combination: 'Maximum set of conflicting days.'
 
       # Build a new clusterer, using data examples found in data_set.
       # Items will be clustered in "number_of_clusters" different
@@ -143,18 +145,19 @@ module Ai4r
         data_size = @centroids.collect{ |data| data[6] }
         @centroids.collect!{ |centroid|
           centroid[4] = nil
-          centroid[5] = nil
+          centroid[5] = []
           centroid[6] = 0
           centroid.compact
         }
         @iterations += 1
 
         @centroids = @centroid_function.call(@clusters)
-        @old_centroids.each_with_index{ |data, index|
+        @old_centroids.collect!.with_index{ |data, index|
           data_item = @data_set.data_items.find{ |data_item| data_item[2] == data[2] }
           data_item[4] = data_sticky[index]
           data_item[5] = data_skill[index]
           data_item[6] = data_size[index]
+          data_item
         }
         @centroids.each_with_index{ |data, index|
           data[4] = data_sticky[index]
@@ -176,26 +179,59 @@ module Ai4r
 
       protected
 
+      def compute_compatibility(caracteristics_a, caracteristics_b)
+        # TODO : not differenciate day skills and skills and simplify
+        hard_violation = false
+        non_common_number = 0
+
+        if !(caracteristics_a - caracteristics_b).empty? # all required skills are not available in centroid
+          new_day_caracteristics = (caracteristics_a + caracteristics_b).select{ |car| car.include?('not_day') }.uniq
+          if new_day_caracteristics.uniq.size == @impossible_day_combination.size
+            hard_violation = true
+          else
+            non_common_number += (new_day_caracteristics - caracteristics_b).size
+          end
+
+          new_caracteristics = (caracteristics_a + caracteristics_b).reject{ |car| car.include?('not_day') }.uniq
+          if !@possible_caracteristics_combination.any?{ |combination| new_caracteristics.all?{ |car| combination.include?(car) } }
+            hard_violation = true
+          else
+            non_common_number += (new_caracteristics - caracteristics_b).size
+          end
+        end
+
+        [hard_violation, non_common_number]
+      end
+
       def distance(a, b, cluster_index)
-        fly_distance = Helper::flying_distance(a, b)
+        # TODO : rename a & b ?
+        fly_distance = Helper.flying_distance(a, b)
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
-        # b[6] contains the weight associated to the current centroid. share represents the sum of all of the weight over the problem.
-        share = @centroids.collect{ |centroid| centroid[6] }.compact.sum if b[6]
         limit = if @cut_limit.is_a? Array
           @cut_limit[cluster_index]
         else
           @cut_limit
         end
-        balance = if a[4] && b[4] && (b[4] & a[4]).empty? || # if service sticky or skills are different than centroids sticky/skills,
-                     a[5] && b[5] && (b[5] & a[5]).size < b[5].size # or if services skills have no match
-          2 ** 32
-        elsif cut_value > limit
-          ((cut_value - limit) / limit) * 10 * @number_of_clusters * fly_distance
+
+        # caracteristics compatibility
+        hard_violation, non_common_number = a[5].empty? ? [false, 0] : compute_compatibility(a[5], b[5])
+        compatibility = if a[4] && b[4] && (b[4] & a[4]).empty? || # if service sticky or skills are different than centroids sticky/skills,
+                           hard_violation # or if services skills have no match
+          2**32
+        elsif non_common_number > 0 # if services skills have no intersection but could have one
+          2**(16 + non_common_number)
         else
           0
         end
 
-        fly_distance + balance
+        # balance between clusters computation
+        balance = if cut_value > limit * 1.2
+          ((cut_value - limit) / limit) * 5 * @number_of_clusters * fly_distance
+        else
+          0
+        end 
+
+        fly_distance + balance + compatibility
       end
 
       def calculate_membership_clusters
@@ -205,18 +241,20 @@ module Ai4r
         end
         @cluster_indices = Array.new(@number_of_clusters) {[]}
 
-        @data_set.data_items.each_with_index do |data_item, data_index|
+        @data_set.data_items.shuffle.each_with_index do |data_item, data_index|
           c = eval(data_item)
           @clusters[c] << data_item
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
             @cluster_metrics[c][unit] += data_item[3][unit]
           }
+          update_centroid_properties(c, data_item) # TODO : only if missing caracteristics. Returned through eval ?
         end
         manage_empty_clusters if has_empty_cluster?
       end
 
       def calc_initial_centroids
+        @centroid_indices = [] # TODO : move or remove
         @centroids, @old_centroids = [], nil
         if @centroid_indices.empty?
           populate_centroids('random')
@@ -285,6 +323,12 @@ module Ai4r
       def stop_criteria_met
         @old_centroids == @centroids ||
           (@max_iterations && (@max_iterations <= @iterations))
+      end
+
+      private
+
+      def update_centroid_properties(centroid_index, new_item)
+        @centroids[centroid_index][5] |= new_item[5]
       end
     end
   end

@@ -59,6 +59,10 @@ module OptimizerWrapper
     @@dump_vrp_cache
   end
 
+  def self.dump_vrp_cache=(cache)
+    @@dump_vrp_cache = cache
+  end    
+
   def self.router
     @router ||= Routers::RouterWrapper.new(ActiveSupport::Cache::NullStore.new, ActiveSupport::Cache::NullStore.new, config[:router][:api_key])
   end

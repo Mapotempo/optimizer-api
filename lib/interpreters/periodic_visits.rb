@@ -379,6 +379,7 @@ module Interpreters
       lapses_list = []
       rests_durations = Array.new(vrp.vehicles.size, 0)
       vrp.vehicles.each{ |vehicle|
+        vehicle.id = vehicle.original_id if vehicle.original_id # if we used work_day clustering
         vehicle.original_id = vehicle.id if vehicle.original_id.nil?
       }
       new_vehicles = vrp.vehicles.collect{ |vehicle|
