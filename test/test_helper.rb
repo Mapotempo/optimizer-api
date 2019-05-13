@@ -395,7 +395,7 @@ module VRP
         location: {lat: 45.6047844887, lon: 4.7589656711}
       }, {
         id: 'point_2',
-        location: {lat: 45.6047844887, lon: 4.7589656711}
+        location: {lat: 45.604784488, lon: 4.7589656711}
       }, {
         id: 'point_3',
         location: {lat: 45.344334, lon: 4.817731}
@@ -404,7 +404,7 @@ module VRP
         location: {lat: 45.5764120817, lon: 4.8056146502}
       }, {
         id: 'point_5',
-        location: {lat: 45.5764120817, lon: 4.8056146502}
+        location: {lat: 45.576412081, lon: 4.8056146502}
       }, {
         id: 'point_6',
         location: {lat: 45.2583248913, lon: 4.6873225272}
@@ -451,7 +451,7 @@ module VRP
           end: 20,
           day_index: 4
         }]
-      },{
+      }, {
         id: 'vehicle_1',
         start_point_id: 'point_0',
         end_point_id: 'point_0',

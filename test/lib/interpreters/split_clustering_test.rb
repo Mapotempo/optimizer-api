@@ -157,14 +157,14 @@ class SplitClusteringTest < Minitest::Test
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'vehicle'
-    },{
+    }, {
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'work_day'
     }]
     service_vrp = {vrp: FCT.create(vrp), service: :demo}
     generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
-    assert_equal generated_services_vrps.size, 10
+    assert_equal 9, generated_services_vrps.size
 
     vrp[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
@@ -173,44 +173,143 @@ class SplitClusteringTest < Minitest::Test
     }]
     service_vrp = {vrp: FCT.create(vrp), service: :demo}
     generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
-    assert_equal generated_services_vrps.size, 10
+    assert_equal 10, generated_services_vrps.size
   end
 
-  def test_same_point_incompatible_work_days
-    vrp = VRP.scheduling_seq_timewindows
+  def test_unavailable_days_taken_into_account_work_day
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
 
-    vrp[:points] = (0..6).collect{ |index|
-      {
-        id: 'point_' << index.to_s,
-        location: { lat: index, lon: index }
-      }
-    }
+    vrp[:services][0][:activity][:timewindows] = [{start: 0, end: 10, day_index: 0}]
+    vrp[:services][3][:activity][:timewindows] = [{start: 0, end: 10, day_index: 1}]
+    vrp[:preprocessing_kmeans_centroids] = [1, 2]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
+    assert only_monday_cluster != only_tuesday_cluster
 
-    vrp[:services] << {
-      id: 'test_same_point0',
-      activity: {
-        point_id: 'point_1',
-        timewindows: [{
-          day_index: 0
-        }]
-      }
-    }
-    vrp[:services] << {
-      id: 'test_same_point1',
-      activity: {
-        point_id: 'point_1',
-        timewindows: [{
-          day_index: 1
-        }]
-      }
-    }
-    service_vrp = {
-      service: :demo,
-      vrp: Models::Vrp.create(vrp)
-    }
-    Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, :duration, 'work_day')
-  rescue StandardError => error
-    assert error.class.name.match 'OptimizerWrapper::UnsupportedProblemError'
-    assert error.data.include?('Work_day partition expects missions at point point_1 to have at least one identical day index')
+    vrp[:preprocessing_kmeans_centroids] = [9, 10]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
+    assert only_monday_cluster != only_tuesday_cluster
+  end
+
+  def test_unavailable_days_taken_into_account_vehicle_work_day
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    }, {
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+
+    vrp[:services][0][:activity][:timewindows] = [{start: 0, end: 10, day_index: 0}]
+    vrp[:services][3][:activity][:timewindows] = [{start: 0, end: 10, day_index: 1}]
+    vrp[:preprocessing_kmeans_centroids] = [0, 2]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
+    assert only_monday_cluster != only_tuesday_cluster
+
+    vrp[:services][0][:activity][:timewindows] = [{start: 0, end: 10, day_index: 0}]
+    vrp[:services][3][:activity][:timewindows] = [{start: 0, end: 10, day_index: 1}]
+    vrp[:preprocessing_kmeans_centroids] = [9, 10]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
+    assert only_monday_cluster != only_tuesday_cluster
+  end
+
+  def test_skills_taken_into_account
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    }, {
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+
+    vrp[:services][0][:activity][:skills] = ['cold']
+    vrp[:services][3][:activity][:skills] = ['hot']
+    vrp[:preprocessing_kmeans_centroids] = [0, 2]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    cold_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
+    assert cold_cluster != hot_cluster
+
+    vrp[:services][0][:activity][:skills] = ['cold']
+    vrp[:services][3][:activity][:skills] = ['hot']
+    vrp[:preprocessing_kmeans_centroids] = [9, 10]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    cold_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
+    assert cold_cluster != hot_cluster
+  end
+
+  def test_good_vehicle_assignment
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicles'
+    }]
+    vrp[:preprocessing_kmeans_centroids] = [1, 2]
+    vrp[:services][0][:activity][:timewindows] = [{start: 0, end: 10, day_index: 0}]
+    vrp[:vehicles].first[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? }
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    only_monday_cluster = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    assert only_monday_cluster[:vrp][:vehicles].any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw| tw[:day_index] == 0 } }
+  end
+
+  def test_good_vehicle_assignment_two_phases
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'vehicle'
+    }, {
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    vrp[:preprocessing_kmeans_centroids] = [9, 10]
+
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    assert_equal generated_services_vrps.collect{ |service| [service[:vrp][:vehicles].first[:id], service[:vrp][:vehicles].first[:global_day_index]] }.uniq.size, generated_services_vrps.size
+  end
+
+  def test_good_vehicle_assignment_skills
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    vrp[:services].first[:skills] = ['skill']
+    vrp[:vehicles][0][:skills] = ['skill']
+    vrp[:preprocessing_kmeans_centroids] = [1, 2]
+    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    cluster_with_skill = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
+    assert cluster_with_skill[:vrp][:vehicles].any?{ |v| v[:skills].include?('skill') }
   end
 end
