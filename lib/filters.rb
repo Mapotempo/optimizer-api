@@ -20,8 +20,9 @@ require './models/timewindow.rb'
 module Filters
   def self.filter(services_vrps)
     services_vrps = merge_timewindows(services_vrps)
+    filter_skills(services_vrps)
 
-    calculate_unit_precision
+    calculate_unit_precision # TODO: treat only input vrp, not all models in memory from other vrps
 
     services_vrps
   end
@@ -209,6 +210,18 @@ module Filters
             service.activity.timewindows = new_timewindows
           end
         end
+      }
+    }
+  end
+
+  def self.filter_skills(services_vrps)
+    services_vrps.each{ |service_vrp|
+      vrp = service_vrp[:vrp]
+      vrp.services.each{ |service|
+        service.skills = service.skills.uniq.sort unless service.skills.empty?
+      }
+      vrp.vehicles.each{ |vehicle|
+        vehicle.skills = vehicle.skills.map{ |or_skills| or_skills.uniq.sort unless or_skills.empty? }.uniq.compact
       }
     }
   end

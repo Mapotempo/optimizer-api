@@ -135,7 +135,7 @@ module Interpreters
     def self.split_solve(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
 
-      available_vehicles = vrp.vehicles.collect{ |vehicle| vehicle.id }
+      available_vehicle_ids = vrp.vehicles.collect{ |vehicle| vehicle.id }
 
       problem_size = vrp.services.size + vrp.shipments.size
       empties_or_fills = (vrp.services.select{ |service| service.quantities.any?(&:fill) } +
@@ -155,10 +155,11 @@ module Interpreters
           service: service_vrp[:service]
         }
         sub_vrp.services += empties_or_fills
-        sub_vrp.vehicles.select!{ |vehicle| available_vehicles.include?(vehicle.id) }
+        sub_vrp.vehicles.select!{ |vehicle| available_vehicle_ids.include?(vehicle.id) }
         sub_result = OptimizerWrapper.define_process([sub_problem], job)
         remove_poor_routes(sub_vrp, sub_result)
-        available_vehicles.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
+        raise 'Incorrect activities count' if sub_problem[:vrp][:services].size != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.size
+        available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         empties_or_fills -= remove_used_empties_and_refills(sub_vrp, sub_result)
         result = Helper.merge_results([result, sub_result])
       }
@@ -192,28 +193,31 @@ module Interpreters
         loads = route[:activities].last[:detail][:quantities]
         load_flag = vehicle.capacities.empty? || vehicle.capacities.all?{ |capacity|
           current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
-          current_load[:value] / capacity.limit < 0.2 if capacity.limit && current_load && capacity.limit > 0
+          current_load[:value] / capacity.limit < 0.7 if capacity.limit && current_load && capacity.limit > 0
         }
-        time_flag = vehicle.timewindow.end.nil? || vehicle.timewindow.start.nil? ||
-        (route[:activities].last[:begin_time] - route[:activities].first[:begin_time]) < 0.7 * (vehicle.timewindow.end - vehicle.timewindow.start).to_f
-        result[:unassigned] += route[:activities].select{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] } if load_flag && time_flag
-        load_flag && time_flag
+        vehicle_worktime = vehicle.timewindow.start && vehicle.timewindow.end && (vehicle.duration || (vehicle.timewindow.end - vehicle.timewindow.start))
+        route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
+        time_flag = !vehicle_worktime || route_duration < 0.7 * vehicle_worktime
+        if load_flag && time_flag
+          result[:unassigned] += route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact
+          true
+        end
       }
     end
 
-    def self.build_partial_service_vrp(service_vrp, cluster_missions, available_vehicles = nil)
-      day_indices = service_vrp[:vrp].services.select{ |service| cluster_missions.include?(service.id) }.collect{ |service| service.activity.timewindows.collect{ |tw| tw.day_index }}.flatten.uniq
+    def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicle_ids = nil)
+      day_indices = service_vrp[:vrp].services.select{ |service| partial_service_ids.include?(service.id) }.collect{ |service| service.activity.timewindows.collect{ |tw| tw.day_index }}.flatten.uniq
       vrp = service_vrp[:vrp]
       sub_vrp = Marshal::load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
-      services = vrp.services.select{ |service| cluster_missions.include?(service.id) }.compact
-      shipments = vrp.shipments.select{ |shipment| cluster_missions.include?(shipment.id) }.compact
+      services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
+      shipments = vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
       # TODO: Within Scheduling Vehicles require to have unduplicated ids
-      sub_vrp.vehicles = available_vehicles.collect{ |vehicle_id|
+      sub_vrp.vehicles = available_vehicle_ids.collect{ |vehicle_id|
         vehicle_index = sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id && (vehicle.sequence_timewindows.collect{ |tw| tw.day_index } & day_indices).size > 0 } ||
                         sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
-        vrp.vehicles.slice!(vehicle_index)
-      } if available_vehicles
+        sub_vrp.vehicles.slice!(vehicle_index)
+      } if available_vehicle_ids
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact + shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
       sub_vrp.services = services
       sub_vrp.shipments = shipments
