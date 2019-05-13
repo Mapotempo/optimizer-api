@@ -45,6 +45,7 @@ module OptimizerWrapper
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
+        log "avancement: #{message} #{avancement}"
         if avancement && cost
           p = Result.get(self.uuid) || { 'graph' => [] }
           p['graph'] = [] if !p.key?('graph')
