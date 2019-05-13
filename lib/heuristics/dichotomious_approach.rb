@@ -78,7 +78,9 @@ module Interpreters
 
     def self.build_initial_routes(results)
       results.flat_map{ |result|
+        next if result.nil?
         result[:routes].map{ |route|
+          next if route.nil?
           mission_ids = route[:activities].map{ |activity| activity[:service_id] || activity[:rest_id] }.compact
           next if mission_ids.empty?
           Models::Route.new(
