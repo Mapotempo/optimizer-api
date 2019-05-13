@@ -120,7 +120,7 @@ module OptimizerWrapper
     inapplicable_services = []
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
-    services_vrps = split_vrp(vrp).map.with_index{ |vrp_element, i|
+    services_vrps = split_independant_vrp(vrp).map.with_index{ |vrp_element, i|
       {
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
@@ -158,8 +158,9 @@ module OptimizerWrapper
     end
   end
 
+  # Recursive method
   def self.define_process(services_vrps, job = nil, &block)
-    filtered_services = services_vrps.delete_if{ |service_vrp|
+    filtered_services = services_vrps.delete_if{ |service_vrp| # TODO remove ?
       service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
     }
     unduplicated_services, duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services)
@@ -168,23 +169,23 @@ module OptimizerWrapper
     }
     split_results = nil
     definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
-      # Split/Clusterize the problem if to large
-      unsplitted_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp], job)
-      unsplitted_vrps
+      # Split/Clusterize the problem if too large
+      unsplit_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp], job) # Call recursively define_process
+      unsplit_vrps
     }.flatten.compact
-    dico_results = []
+    dicho_results = []
     definitive_service_vrps.delete_if{ |service_vrp|
-      dico_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job)
-      dico_results << dico_result
-      dico_result
+      dicho_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job) # Call recursively define_process
+      dicho_results << dicho_result
+      dicho_result
     }
-    definitive_service_vrps.each{ |service_vrp|
+    definitive_service_vrps.each{ |service_vrp| # TODO avant dicho ou dans solve ?
       multi = Interpreters::MultiTrips.new
       multi.expand(service_vrp[:vrp])
     }
-    result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty? && dico_results.compact.empty?
+    result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty? && dicho_results.compact.empty?
     result_global = {
-      result: ([result] + duplicated_results + split_results + dico_results).compact
+      result: ([result] + duplicated_results + split_results + dicho_results).compact
     }
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end
@@ -193,13 +194,13 @@ module OptimizerWrapper
     @unfeasible_services = []
 
     cluster_reference = 0
-    real_result = join_vrps(services_vrps, block) { |service, vrp, block|
+    real_result = join_independant_vrps(services_vrps, block) { |service, vrp, block|
       cluster_result = nil
       if !vrp.subtours.empty?
         multi_modal = Interpreters::MultiModal.new(vrp, service)
         cluster_result = multi_modal.multimodal_routes()
       else
-        if vrp.vehicles.empty?
+        if vrp.vehicles.empty? # TODO remove ?
           cluster_result = {
             cost: nil,
             solvers: [service.to_s],
@@ -281,7 +282,7 @@ module OptimizerWrapper
             else
               cluster_result = parse_result(vrp, vrp[:preprocessing_heuristic_result])
             end
-          else
+          else # TODO remove ?
             cluster_result = {
               cost: nil,
               solvers: [service.to_s],
@@ -346,7 +347,7 @@ module OptimizerWrapper
     raise
   end
 
-  def self.split_vrp(vrp)
+  def self.split_independant_vrp(vrp)
     # Don't split vrp if
     return [vrp] if ENV['DUMP_VRP'] || # Dump to compute matrix is needed
                     (vrp.vehicles.size <= 1) ||
@@ -388,7 +389,7 @@ module OptimizerWrapper
     sub_vrps
   end
 
-  def self.join_vrps(services_vrps, callback)
+  def self.join_independant_vrps(services_vrps, callback)
     results = services_vrps.each_with_index.map{ |sv, i|
       yield(sv[:service], sv[:vrp], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
         callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
