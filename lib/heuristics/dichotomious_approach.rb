@@ -26,9 +26,10 @@ module Interpreters
   class Dichotomious
 
     def self.dichotomious_candidate(service_vrp)
-      service_vrp[:vrp].vehicles.size > 1 &&
+      service_vrp[:vrp].vehicles.size > 3 &&
+      service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > 50 &&
       service_vrp[:vrp].shipments.empty? &&
-      (service_vrp[:vrp].vehicles.all?(&:force_start) || service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle[:shift_preference] == 'force_start' }) &&
+      # (service_vrp[:vrp].vehicles.all?(&:force_start) || service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle[:shift_preference] == 'force_start' }) &&
       service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier == 0 } &&
       service_vrp[:vrp].services.all?{ |service| service.activity.late_multiplier.nil? || service.activity.late_multiplier == 0 } &&
       service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? }
@@ -69,7 +70,7 @@ module Interpreters
       service_vrp[:vrp].restitution_allow_empty_result = true
       service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 2 : 120000
       service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
-      service_vrp[:vrp].resolution_init_duration = 25000
+      service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
 
@@ -105,8 +106,9 @@ module Interpreters
             v.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
           }
           sticky_vehicle_ids = unassigned_services.flat_map(&:sticky_vehicles).compact.map(&:id)
+          # In case services has incoherent sticky and skills, sticky is the winner
           unless sticky_vehicle_ids.empty?
-            vehicles_with_skills |= service_vrp[:vrp].vehicles.select{ |v| sticky_vehicle_ids.include?(v.id) }
+            vehicles_with_skills = service_vrp[:vrp].vehicles.select{ |v| sticky_vehicle_ids.include?(v.id) }
           end
           # Priorize existing vehicles already assigned
           vehicles_with_skills.sort_by{ |v| service_vrp[:vrp].routes.map{ |r| r.vehicle.id }.include?(v.id) ? 0 : 1 }
@@ -119,7 +121,7 @@ module Interpreters
 
             sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles.map(&:id))
             sub_service_vrp[:vrp].vehicles.each{ |vehicle|
-              vehicle[:free_approach] = true # ???
+              # vehicle[:free_approach] = true # ???
               vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000000
             }
             rate_vehicles = sub_service_vrp[:vrp].vehicles.size / service_vrp[:vrp].vehicles.size.to_f
@@ -192,7 +194,7 @@ module Interpreters
           sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, service_ids_by_cluster[i])[:vrp]
           sub_vrp.vehicles = vehicles_by_cluster[i]
           sub_vrp.vehicles.each{ |vehicle| # ???
-            vehicle[:free_approach] = true
+            # vehicle[:free_approach] = true
             vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000000
           }
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
@@ -230,7 +232,6 @@ module Interpreters
 
     def self.kmeans(vrp, cut_symbol, old_centroids = nil)
       nb_clusters = 2
-      cut_symbol = :duration
       # Split using balanced kmeans
       if vrp.services.all?{ |service| service[:activity] }
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
