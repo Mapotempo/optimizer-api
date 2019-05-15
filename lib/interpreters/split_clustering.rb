@@ -349,18 +349,18 @@ module Interpreters
       c = BalancedKmeans.new
       c.max_iterations = c_max_iterations
       c.centroid_indices = centroids if centroids.size == nb_clusters
+      c.on_empty = 'random'
 
       biggest_cluster_size = 0
       clusters = []
       iteration = 0
-
       best_limit_score = nil
-      while biggest_cluster_size < nb_clusters && iteration < max_iterations
+      while iteration < max_iterations
         ratio = 0.5 + 0.5 * (max_iterations - iteration) / max_iterations
         ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids)
         c.clusters.delete([])
-        limit_score = Math.sqrt((0..nb_clusters - 1).collect{ |cluster_index|
+        limit_score = Math.sqrt((0..c.cluster_metrics.size - 1).collect{ |cluster_index|
           cluster_metric = c.cluster_metrics[cluster_index][cut_symbol]
           if metric_limit.is_a?(Array)
             (metric_limit[cluster_index] - cluster_metric)**2
@@ -368,8 +368,11 @@ module Interpreters
             (metric_limit - cluster_metric)**2
           end
         }.reduce(&:+))
-
-        if c.clusters.size >= biggest_cluster_size && (best_limit_score.nil? || limit_score <= best_limit_score)
+        empty_clusters_score = c.cluster_metrics.size < nb_clusters && (c.cluster_metrics.size..nb_clusters - 1).collect{ |cluster_index|
+            metric_limit.is_a?(Array) ? metric_limit[cluster_index] : metric_limit
+        }.reduce(&:+) || 0
+        limit_score += empty_clusters_score
+        if best_limit_score.nil? || c.clusters.size > biggest_cluster_size || (c.clusters.size >= biggest_cluster_size && limit_score < best_limit_score)
           best_limit_score = limit_score
           puts best_limit_score.to_s + ' -> New best cluster metric (' + c.cluster_metrics.collect{ |cluster_metric| cluster_metric[cut_symbol] }.join(', ') + ')'
           biggest_cluster_size = c.clusters.size
@@ -531,7 +534,7 @@ module Interpreters
         data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
         limits, centroids = centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
-        clusters, centroids = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
+        clusters, centroids = kmeans_process(centroids, 100, 30, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
         adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
           cluster.data_items.collect{ |i|
