@@ -270,11 +270,8 @@ module OptimizerWrapper
               end
             else
               cluster_result = parse_result(vrp, vrp[:preprocessing_heuristic_result])
-              if vrp.restitution_csv
-                actual_result = Result.get(job) || {}
-                actual_result[:csv] = true
-                Result.set(job, actual_result)
-              end
+              actual_result = Result.get(job) || {}
+              Result.set(job, actual_result)
             end
           else
             cluster_result = {
