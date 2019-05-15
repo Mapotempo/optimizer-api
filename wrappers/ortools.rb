@@ -835,6 +835,10 @@ module Wrappers
     ensure
       input && input.unlink
       output && output.unlink
+      @thread.value # wait for the termination of the thread just in case
+      stdin.close
+      stdout_and_stderr.close
+      pipe.close
     end
   end
 end
