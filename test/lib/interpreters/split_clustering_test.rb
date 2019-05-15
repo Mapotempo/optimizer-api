@@ -20,7 +20,8 @@ require './lib/interpreters/split_clustering.rb'
 
 class SplitClusteringTest < Minitest::Test
 
-  def test_cluster_one_phase
+  def test_cluster_one_phase_to_edit
+    skip 'Require changes into the entity and into the duration calculation'
     vrp = FCT.load_vrp(self)
     service_vrp = {vrp: vrp, service: :demo}
     services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 80, :duration, 'vehicle')
@@ -35,6 +36,35 @@ class SplitClusteringTest < Minitest::Test
     average_duration = durations.inject(0, :+) / durations.size
     durations.each{ |duration|
       assert (duration < (average_duration + 1/2 * average_duration)) && duration > (average_duration - 1/2 * average_duration)
+    }
+  end
+
+  def test_cluster_one_phase
+    vrp = FCT.load_vrp(self)
+    service_vrp = { vrp: vrp, service: :demo }
+
+    total_durations = vrp.points.collect{ |point|
+      vrp.services.select{ |service| service.activity.point.id == point.id }.map.with_index{ |service, i|
+        service.visits_number * (service.activity.duration + (i.zero? ? service.activity.setup_duration : 0))
+      }.sum
+    }.sum
+    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, :duration, 'vehicle')
+    assert_equal 5, services_vrps_days.size
+
+    durations = []
+    services_vrps_days.each{ |service_vrp_vehicle|
+      durations << service_vrp[:vrp].points.collect{ |point|
+        service_vrp_vehicle[:vrp].services.select{ |service| service.activity.point.id == point.id }.map.with_index{ |service, i|
+          service.visits_number * (service.activity.duration + (i.zero? ? service.activity.setup_duration : 0))
+        }.sum
+      }.sum
+    }
+    cluster_weight_sum = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.sum
+    minimum_sequence_timewindows = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.min
+    maximum_sequence_timewindows = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.max
+    durations.each{ |duration|
+      assert duration < (maximum_sequence_timewindows + 1) * total_durations / cluster_weight_sum
+      assert duration > (minimum_sequence_timewindows - 1) * total_durations / cluster_weight_sum
     }
   end
 
