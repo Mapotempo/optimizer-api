@@ -470,6 +470,44 @@ module Interpreters
       returned
     end
 
+    def self.centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
+      limits = []
+      centroids = []
+      if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] } &&
+         vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.uniq.size != 1
+        vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
+        total_shares = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum.to_f
+        vrp.vehicles.each_with_index{ |vehicle, index|
+          centroids << index
+          vehicle_share = vehicle[:sequence_timewindows].size
+          data_items[index][6] = vehicle_share # affect sequence timewindow size to initial centroids
+          limits << cumulated_metrics[cut_symbol].to_f * (vehicle_share / total_shares)
+        }
+      elsif entity == 'work_day' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
+        data_items.each{ |data|
+          linked_services = vrp.services.select{ |service| service.activity.point_id == data[2] }
+          day_indices = linked_services.first.activity.timewindows.collect(&:day_index).uniq
+          linked_services.each{ |service|
+            day_indices &= service.activity.timewindows.collect{ |timewindow| timewindow[:day_index] }.uniq
+          }
+          #TODO: Verify earlier the compatibility & reactivate this raise
+          # raise OptimizerWrapper::UnsupportedProblemError.new("Work_day partition expects missions at point #{data[2]} to have at least one identical day index") if day_indices.empty?
+          data[5] = day_indices
+        }
+        data_items.sort_by!{ |data| data[5].size }.reverse!
+        centroids_skills = data_items.collect{ |data| data[5] }.uniq
+        skills_index = 0
+        vrp.vehicles.each_with_index{ |_vehicle, index|
+          skills_index += 1 if vrp.vehicles.size - centroids_skills.size < index
+          centroids << data_items.index(data_items.find{ |data| data[5] == centroids_skills[skills_index] && (data_items.length < nb_clusters || !centroids.include?(data_items.index(data))) })
+        }
+        limits = cumulated_metrics[cut_symbol] / nb_clusters
+      else
+        limits = cumulated_metrics[cut_symbol] / nb_clusters
+      end
+      [limits, centroids]
+    end
+
     def self.split_balanced_kmeans(service_vrp, nb_clusters, cut_symbol = :duration, entity = '')
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
@@ -478,31 +516,7 @@ module Interpreters
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
         data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
-        centroids = []
-        limits = []
-        if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] } && vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.uniq.size != 1
-          vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
-          share = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum
-          vrp.vehicles.each_with_index{ |vehicle, index|
-            centroids << index
-            data_items[index][6] = vehicle[:sequence_timewindows].size
-            limits << cumulated_metrics[cut_symbol].to_f / (share.to_f / data_items[index][6].to_f)
-          }
-        elsif entity == 'work_day' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
-          data_items.each{ |data|
-            data[5] = vrp.services.find{ |service| service.activity.point_id == data[2] }.activity.timewindows.collect{ |timewindow| timewindow[:day_index] }.uniq
-          }
-          data_items.sort_by!{ |data| data[5].size }.reverse!
-          centroids_skills = data_items.collect{ |data| data[5] }.uniq
-          skills_index = 0
-          vrp.vehicles.each_with_index{ |_vehicle, index|
-            skills_index += 1 if vrp.vehicles.size - centroids_skills.size < index
-            centroids << data_items.index(data_items.find{ |data| data[5] == centroids_skills[skills_index] && (data_items.length < nb_clusters || !centroids.include?(data_items.index(data))) })
-          }
-          limits = cumulated_metrics[cut_symbol] / nb_clusters
-        else
-          limits = cumulated_metrics[cut_symbol] / nb_clusters
-        end
+        limits, centroids = centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
         clusters, centroids = kmeans_process(centroids, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
         adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
