@@ -145,4 +145,42 @@ class SplitClusteringTest < Minitest::Test
     generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
     assert_equal generated_services_vrps.size, 10
   end
+
+  def test_same_point_incompatible_work_days
+    vrp = VRP.scheduling_seq_timewindows
+
+    vrp[:points] = (0..6).collect{ |index|
+      {
+        id: 'point_' << index.to_s,
+        location: { lat: index, lon: index }
+      }
+    }
+
+    vrp[:services] << {
+      id: 'test_same_point0',
+      activity: {
+        point_id: 'point_1',
+        timewindows: [{
+          day_index: 0
+        }]
+      }
+    }
+    vrp[:services] << {
+      id: 'test_same_point1',
+      activity: {
+        point_id: 'point_1',
+        timewindows: [{
+          day_index: 1
+        }]
+      }
+    }
+    service_vrp = {
+      service: :demo,
+      vrp: Models::Vrp.create(vrp)
+    }
+    Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, :duration, 'work_day')
+  rescue StandardError => error
+    assert error.class.name.match 'OptimizerWrapper::UnsupportedProblemError'
+    assert error.data.include?('Work_day partition expects missions at point point_1 to have at least one identical day index')
+  end
 end
