@@ -47,20 +47,29 @@ module Ai4r
 
       def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, output_centroids, incompatibility_set = nil)
         @data_set = data_set
-        @unit_symbols = unit_symbols
-        @cut_symbol = cut_symbol
+        reduced_number_of_clusters = [number_of_clusters, data_set.data_items.collect{ |data_item| [data_item[0], data_item[1]] }.uniq.size].min
+        unless reduced_number_of_clusters == number_of_clusters || @centroid_indices.empty?
+          @centroid_indices = @centroid_indices.collect{ |centroid_index|
+            [@data_set.data_items[centroid_index], centroid_index]
+          }.uniq{ |item| [item.first[0], item.first[1]] }.collect(&:last)
+        end
+        @number_of_clusters = reduced_number_of_clusters
+
         @cut_limit = cut_limit
-        @number_of_clusters = number_of_clusters
-        @output_centroids = output_centroids
+        @cut_symbol = cut_symbol
         @incompatibility_set = incompatibility_set
-        @cluster_metrics = Array.new(number_of_clusters) { Hash.new(0) }
+        @output_centroids = output_centroids
+        @unit_symbols = unit_symbols
+
+        @centroid_function = lambda do |clusters|
+          clusters.collect{ |data_set| get_mean_or_mode(data_set) }
+        end
+
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
         raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
         @iterations = 0
 
-        # calc_initial_clusters_metrics
         calc_initial_centroids
-
         until stop_criteria_met
           calculate_membership_clusters
           recompute_centroids
@@ -140,10 +149,6 @@ module Ai4r
         }
         @iterations += 1
 
-        @centroid_function = lambda do |clusters|
-          clusters.collect{ |data_set| get_mean_or_mode(data_set) }
-        end
-
         @centroids = @centroid_function.call(@clusters)
         @old_centroids.each_with_index{ |data, index|
           data_item = @data_set.data_items.find{ |data_item| data_item[2] == data[2] }
@@ -185,7 +190,7 @@ module Ai4r
                      a[5] && b[5] && (b[5] & a[5]).size < b[5].size # or if services skills have no match
           2 ** 32
         elsif cut_value > limit
-          ((cut_value - limit) / limit) * 1000 * fly_distance
+          ((cut_value - limit) / limit) * 10 * @number_of_clusters * fly_distance
         else
           0
         end
@@ -266,7 +271,7 @@ module Ai4r
       end
 
       def eliminate_empty_clusters
-        old_clusters, old_centroids, old_cluster_indices = @clusters, @centroids, @cluster_indices,
+        old_clusters, old_centroids, old_cluster_indices = @clusters, @centroids, @cluster_indices
         @clusters, @centroids, @cluster_indices = [], [], []
         @number_of_clusters.times do |i|
           next if old_clusters[i].data_items.empty?
