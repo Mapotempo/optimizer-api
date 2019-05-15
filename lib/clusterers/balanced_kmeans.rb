@@ -22,6 +22,8 @@ module Ai4r
   module Clusterers
     class BalancedKmeans < KMeans
 
+      attr_reader :cluster_metrics
+
       parameters_info max_iterations: "Maximum number of iterations to " \
         "build the clusterer. By default it is uncapped.",
         centroid_function: "Custom implementation to calculate the " \
@@ -51,6 +53,7 @@ module Ai4r
         @number_of_clusters = number_of_clusters
         @output_centroids = output_centroids
         @incompatibility_set = incompatibility_set
+        @cluster_metrics = Array.new(number_of_clusters) { Hash.new(0) }
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
         raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
         @iterations = 0
@@ -191,6 +194,7 @@ module Ai4r
       end
 
       def calculate_membership_clusters
+        @cluster_metrics = Array.new(@number_of_clusters) { Hash.new(0) }
         @clusters = Array.new(@number_of_clusters) do
           Ai4r::Data::DataSet.new :data_labels => @data_set.data_labels
         end
@@ -201,18 +205,14 @@ module Ai4r
           @clusters[c] << data_item
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
-            if unit != :visits && data_item[3][:visits] != 1
-              @cluster_metrics[c][unit] += data_item[3][unit]
-            else
-              @cluster_metrics[c][unit] += data_item[3][unit]
-            end
+            @cluster_metrics[c][unit] += data_item[3][unit]
           }
         end
         manage_empty_clusters if has_empty_cluster?
       end
 
       def calc_initial_centroids
-        @centroids, @cluster_metrics, @old_centroids = [], [], nil
+        @centroids, @old_centroids = [], nil
         if @centroid_indices.empty?
           populate_centroids('random')
         else
@@ -226,10 +226,6 @@ module Ai4r
         when 'random' # for initial assignment (without the :centroid_indices option) and for reassignment of empty cluster centroids (with :on_empty option 'random')
           while @centroids.length < number_of_clusters &&
               tried_indexes.length < @data_set.data_items.length
-            @cluster_metrics << {}
-            @unit_symbols.each{ |unit|
-              @cluster_metrics.last[unit] = 0
-            }
             random_index = rand(@data_set.data_items.length)
             if !tried_indexes.include?(random_index)
               tried_indexes << random_index
@@ -245,10 +241,6 @@ module Ai4r
           @centroid_indices.each do |index|
             raise ArgumentError, "Invalid centroid index #{index}" unless (index.is_a? Integer) && index >=0 && index < @data_set.data_items.length
             if !tried_indexes.include?(index)
-              @cluster_metrics << {}
-              @unit_symbols.each{ |unit|
-                @cluster_metrics.last[unit] = 0
-              }
               tried_indexes << index
               if !@centroids.include? @data_set.data_items[index]
                 @centroids << @data_set.data_items[index]
@@ -260,10 +252,6 @@ module Ai4r
           i = sorted_data_indices.length - 1 # the last item is the furthest from its centroid
           while @centroids.length < number_of_clusters &&
               tried_indexes.length < @data_set.data_items.length
-            @cluster_metrics << {}
-            @unit_symbols.each{ |unit|
-              @cluster_metrics.last[unit] = 0
-            }
             outlier_index = sorted_data_indices[i]
             if !tried_indexes.include?(outlier_index)
               tried_indexes << outlier_index
@@ -278,14 +266,13 @@ module Ai4r
       end
 
       def eliminate_empty_clusters
-        old_clusters, old_centroids, old_cluster_indices, old_cluster_metrics = @clusters, @centroids, @cluster_indices, @cluster_metrics
+        old_clusters, old_centroids, old_cluster_indices = @clusters, @centroids, @cluster_indices,
         @clusters, @centroids, @cluster_indices = [], [], []
         @number_of_clusters.times do |i|
           next if old_clusters[i].data_items.empty?
           @clusters << old_clusters[i]
           @cluster_indices << old_cluster_indices[i]
           @centroids << old_centroids[i]
-          @cluster_metrics << old_cluster_metrics[i]
         end
         @number_of_clusters = @centroids.length
       end

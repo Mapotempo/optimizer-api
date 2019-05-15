@@ -353,12 +353,25 @@ module Interpreters
       biggest_cluster_size = 0
       clusters = []
       iteration = 0
+
+      best_limit_score = nil
       while biggest_cluster_size < nb_clusters && iteration < max_iterations
         ratio = 0.5 + 0.5 * (max_iterations - iteration) / max_iterations
         ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids)
         c.clusters.delete([])
-        if c.clusters.size > biggest_cluster_size
+        limit_score = Math.sqrt((0..nb_clusters - 1).collect{ |cluster_index|
+          cluster_metric = c.cluster_metrics[cluster_index][cut_symbol]
+          if metric_limit.is_a?(Array)
+            (metric_limit[cluster_index] - cluster_metric)**2
+          else
+            (metric_limit - cluster_metric)**2
+          end
+        }.reduce(&:+))
+
+        if c.clusters.size >= biggest_cluster_size && (best_limit_score.nil? || limit_score <= best_limit_score)
+          best_limit_score = limit_score
+          puts best_limit_score.to_s + ' -> New best cluster metric (' + c.cluster_metrics.collect{ |cluster_metric| cluster_metric[cut_symbol] }.join(', ') + ')'
           biggest_cluster_size = c.clusters.size
           clusters = c.clusters
           centroids = c.centroid_indices
