@@ -213,8 +213,10 @@ module Wrappers
       puts (job ? job + ' - ' : '') + cmd
       system(cmd)
 
-      if $?.exitstatus == 0
-        JSON.parse(File.read(output.path))
+      unless $CHILD_STATUS.nil?
+        if $CHILD_STATUS.exitstatus.zero?
+          JSON.parse(File.read(output.path))
+        end
       end
     ensure
       input && input.unlink
