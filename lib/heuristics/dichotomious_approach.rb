@@ -38,7 +38,10 @@ module Interpreters
     def self.dichotomious_heuristic(service_vrp, job)
       if dichotomious_candidate(service_vrp)
         set_config(service_vrp)
+        t1 = Time.now
+        # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
         result = OptimizerWrapper.solve([service_vrp], job)
+        t2 = Time.now
 
         if result.nil?
           old_centroids = []
@@ -52,6 +55,7 @@ module Interpreters
             OptimizerWrapper.define_process([lonely_vrp], job)
           }
           result = Helper.merge_results(results)
+          result[:elapsed] += (t2 - t1) * 1000
         end
         if service_vrp[:level].zero?
           Interpreters::SplitClustering.remove_empty_routes(result)
@@ -59,8 +63,11 @@ module Interpreters
           # Set vehicles before remove routes for end stage to avoid using too many vehicles
           service_vrp[:vrp].vehicles = service_vrp[:vrp].vehicles.select{ |v| result[:routes].map{ |r| r[:vehicle_id] }.include?(v.id) }
           Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result)
+          remove_bad_skills(service_vrp, result)
           result = end_stage_insert_unassigned(service_vrp, result, job)
         end
+      else
+        service_vrp[:vrp].resolution_init_duration = nil
       end
       result
     end
@@ -94,9 +101,29 @@ module Interpreters
       }.compact
     end
 
+    def self.remove_bad_skills(service_vrp, result)
+      result[:routes].each{ |r|
+        r[:activities].each{ |a|
+          if a[:service_id]
+            service = service_vrp[:vrp].services.find{ |s| s.id == a[:service_id] }
+            vehicle = service_vrp[:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
+            if service && !service.skills.empty?
+              if vehicle.skills.all?{ |xor_skills| (service.skills & xor_skills).size != service.skills.size }
+               result[:unassigned] << a
+               r[:activities].delete(a)
+              end
+            end
+            # TODO: remove bad sticky?
+          end
+        }
+      }
+      Interpreters::SplitClustering.remove_empty_routes(result)
+    end
+
     def self.end_stage_insert_unassigned(service_vrp, result, job = nil)
       if !result[:unassigned].empty? && dichotomious_candidate(service_vrp)
         service_vrp[:vrp].routes = build_initial_routes([result])
+        service_vrp[:vrp].resolution_init_duration = nil
         unassigned_services = service_vrp[:vrp].services.select{ |s| result[:unassigned].map{ |a| a[:service_id] }.include?(s.id) }
         unassigned_services_by_skills = unassigned_services.group_by{ |s| s.skills }
         # TODO: sort unassigned_services with no skill / sticky at the end
@@ -132,7 +159,10 @@ module Interpreters
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
 
             result_loop = OptimizerWrapper.solve([sub_service_vrp], job)
-            if result_loop
+            result[:elapsed] += result_loop[:elapsed] if result_loop
+
+            # Initial routes can be refused... check unassigned size before take into account solution
+            if result_loop && remaining_service_ids.size >= result_loop[:unassigned].size
               result[:unassigned].delete_if{ |unassigned_activity|
                 result_loop[:routes].any?{ |route|
                   route[:activities].any?{ |activity| activity[:service_id] == unassigned_activity[:service_id] }
@@ -143,10 +173,10 @@ module Interpreters
               result[:unassigned] += result_loop[:unassigned]
               new_routes = result_loop[:routes].select{ |new_route| new_route[:activities].any?{ |a| a[:service_id] } }
               result[:routes].delete_if{ |old_route|
-                new_routes.map{ |r| r[:vehicle_id] }.include?(old_route[:vehicle_id])
+                result_loop[:routes].map{ |r| r[:vehicle_id] }.include?(old_route[:vehicle_id])
               }
               result[:routes] += result_loop[:routes]
-              # TODO: merge costs, elapsed, total_infos...
+              # TODO: merge costs, total_infos...
               sub_results << result_loop
             end
           end
@@ -217,7 +247,7 @@ module Interpreters
         sub_vrp.points = vrp.points
         sub_vrp.vehicles = vrp.vehicles
         sub_vrp.vehicles.each{ |vehicle|
-          vehicle[:free_approach] = true
+          # vehicle[:free_approach] = true
           vehicle[:cost_fixed] = 100000
         }
         split_service_vrps << {
@@ -240,8 +270,7 @@ module Interpreters
 
         # Collect data for kmeans
         vrp.points.each{ |point|
-          unit_quantities = {}
-          unit_symbols.each{ |unit| unit_quantities[unit] = 0 }
+          unit_quantities = Hash.new(0)
           related_services = vrp.services.select{ |service| service[:activity][:point_id] == point[:id] }
           related_services.each{ |service|
             unit_quantities[:visits] += 1
