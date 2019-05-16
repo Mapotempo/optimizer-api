@@ -743,7 +743,7 @@ module Wrappers
       output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
 
       correspondant = { 'path_cheapest_arc' => 0, 'global_cheapest_arc' => 1, 'local_cheapest_insertion' => 2, 'savings' => 3, 'parallel_cheapest_insertion' => 4, 'first_unbound' => 5, 'christofides' => 6}
-      raise StandardError.new('Unconsistent first solution strategy used internally') if vrp.preprocessing_first_solution_strategy && correspondant[vrp.preprocessing_first_solution_strategy.first].nil?
+      raise StandardError.new('Unconsistent first solution strategy used internally: ' + vrp.preprocessing_first_solution_strategy.to_s) if vrp.preprocessing_first_solution_strategy && correspondant[vrp.preprocessing_first_solution_strategy.first].nil?
       cmd = [
         "#{@exec_ortools} ",
         (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
@@ -836,9 +836,9 @@ module Wrappers
       input && input.unlink
       output && output.unlink
       @thread.value # wait for the termination of the thread just in case
-      stdin.close
-      stdout_and_stderr.close
-      pipe.close
+      stdin.close if stdin
+      stdout_and_stderr.close if stdout_and_stderr
+      pipe.close if pipe
     end
   end
 end
