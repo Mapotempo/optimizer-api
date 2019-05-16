@@ -123,7 +123,7 @@ module Interpreters
           vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric } ? vrp.preprocessing_partition_metric : :duration
         case vrp.preprocessing_partition_method
         when 'balanced_kmeans'
-         split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol)
+          split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol)
         when 'hierarchical_tree'
           split_hierarchical(service_vrp, vrp.vehicles.size, cut_symbol)
         else
@@ -213,11 +213,14 @@ module Interpreters
       services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
       shipments = vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
       # TODO: Within Scheduling Vehicles require to have unduplicated ids
-      sub_vrp.vehicles = available_vehicle_ids.collect{ |vehicle_id|
-        vehicle_index = sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id && (vehicle.sequence_timewindows.collect{ |tw| tw.day_index } & day_indices).size > 0 } ||
-                        sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
-        sub_vrp.vehicles.slice!(vehicle_index)
-      } if available_vehicle_ids
+      if available_vehicle_ids
+        sub_vrp.vehicles = available_vehicle_ids.collect{ |vehicle_id|
+          vehicle_index = sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id && (vehicle.sequence_timewindows.collect{ |tw| tw.day_index } & day_indices).size > 0 } ||
+                          sub_vrp.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
+          sub_vrp.vehicles.slice!(vehicle_index)
+        }
+        sub_vrp.routes.delete_if{ |r| available_vehicle_ids.exclude? r.vehicle_id }
+      end
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact + shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
       sub_vrp.services = services
       sub_vrp.shipments = shipments
@@ -455,14 +458,14 @@ module Interpreters
             linked_objects[i[2]]
           }.flatten
         }
-        puts 'Balanced K-Means : Splited ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][cut_symbol] || 0 }.inject(0, :+) })" }.join(' & ')
+        puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][cut_symbol] || 0 }.inject(0, :+) })" }.join(' & ')
         cluster_vehicles = nil
         cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity) if entity != ''
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        puts 'split hierarchical not available when services have activities'
+        puts 'Split not available when services have no activity'
         [service_vrp]
       end
     end
@@ -567,7 +570,7 @@ module Interpreters
           }.flatten
         }
 
-        puts 'Hierarchical Tree : Splited ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
+        puts 'Hierarchical Tree : split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
         cluster_vehicles = nil
         cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity, false) if entity != ''
         adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
@@ -575,7 +578,7 @@ module Interpreters
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        puts 'split hierarchical not available when services have activities'
+        puts 'Split hierarchical not available when services have no activity'
         [service_vrp]
       end
     end
