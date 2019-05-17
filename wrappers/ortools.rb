@@ -816,8 +816,8 @@ module Wrappers
             result.split(' ')[-1].to_f
           end
           @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
-          if block
-            block.call(self, iterations, nil, nil, cost, time, @previous_result)
+          if block && vrp.restitution_intermediate_solutions
+            block.call(self, iterations, nil, nil, cost, time, nil)
           end
           [cost, iterations, @previous_result]
         end
@@ -835,7 +835,7 @@ module Wrappers
     ensure
       input && input.unlink
       output && output.unlink
-      @thread.value # wait for the termination of the thread just in case
+      @thread.value if @thread # wait for the termination of the thread in case there is one
       stdin.close if stdin
       stdout_and_stderr.close if stdout_and_stderr
       pipe.close if pipe

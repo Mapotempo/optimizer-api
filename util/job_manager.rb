@@ -38,11 +38,7 @@ module OptimizerWrapper
           p = Result.get(self.uuid) || { 'graph' => [] }
           p.merge!({ 'graph' => [] }) if !p.has_key?('graph')
           p['graph'] << {iteration: avancement, cost: cost, time: time}
-          Result.set(self.uuid, p)
-        end
-        if solution
-          p = Result.get(self.uuid) || {}
-          p['result'] = solution
+          p['result'] = solution if solution
           Result.set(self.uuid, p)
         end
       }

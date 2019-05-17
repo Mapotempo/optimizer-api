@@ -55,12 +55,10 @@ class Wrappers::VroomTest < Minitest::Test
       }],
     }
     vrp = Models::Vrp.create(problem)
-    progress = 0
-    result = vroom.solve(vrp) { |avancement, total|
-      progress += 1
-    }
+
+    result = vroom.solve(vrp)
+
     assert result
-    assert progress > 0
     assert_equal 1, result[:routes].size
     assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
   end

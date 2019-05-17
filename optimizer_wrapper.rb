@@ -329,12 +329,6 @@ module OptimizerWrapper
       real_result[:csv] = true
     end
 
-    if job
-      p = Result.get(job) || {}
-      p['result'] = real_result
-    end
-    Result.set(job, p) if job
-
     real_result
   rescue Resque::Plugins::Status::Killed
     puts 'Job Killed'

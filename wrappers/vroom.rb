@@ -85,15 +85,13 @@ module Wrappers
         matrix_indices +
         (!vehicle_loop && vehicle_have_end ? [points[vehicle.end_point_id].matrix_index] : [])
 
-      result = run_vroom(vrp.vehicles, vrp.services, points, vrp.matrices, [:time, :distance], vrp.preprocessing_prefer_short_segment, job) { |avancement, total|
-        block.call(self, avancement, total, nil, nil) if block
-      }
+      result = run_vroom(vrp.vehicles, vrp.services, points, vrp.matrices, [:time, :distance], vrp.preprocessing_prefer_short_segment, job)
+
       return if !result
       tour = result['routes'][0]['steps'].collect{ |step| step['job'] }.compact
       puts tour.inspect
 
       cost = (result['summary']['cost']) + vehicle.cost_fixed
-      block.call(self, 1, 1, cost, nil) if block
       previous = vehicle_have_start ? vehicle.start_point.matrix_index : nil
       activities = ([vehicle_have_start ? {
         point_id: vehicle.start_point.id,
