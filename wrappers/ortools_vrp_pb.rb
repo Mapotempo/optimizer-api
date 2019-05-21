@@ -25,7 +25,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :late_multiplier, :float, 10
     repeated :setup_quantities, :int32, 11
     optional :additional_value, :uint32, 12
-    optional :exclusion_cost, :int32, 13
+    optional :exclusion_cost, :int64, 13
     repeated :refill_quantities, :bool, 14
     optional :problem_index, :int32, 15
   end
@@ -34,7 +34,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :duration, :uint32, 2
     optional :id, :string, 3
     optional :late_multiplier, :float, 4
-    optional :exclusion_cost, :int32, 5
+    optional :exclusion_cost, :int64, 5
   end
   add_message "ortools_vrp.Capacity" do
     optional :limit, :int64, 1
