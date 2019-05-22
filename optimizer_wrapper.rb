@@ -297,10 +297,9 @@ module OptimizerWrapper
           [cluster_result || parse_result(vrp, vrp[:preprocessing_heuristic_result]), parse_result(vrp, vrp[:preprocessing_heuristic_result])].select{ |result| !result[:routes].empty? }.sort_by{ |sol| sol[:cost] }.first
         end
       else
+        Cleanse::cleanse(vrp, cluster_result)
         cluster_result
       end
-      Cleanse::cleanse(vrp, cluster_result)
-      cluster_result
     }
 
     real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
