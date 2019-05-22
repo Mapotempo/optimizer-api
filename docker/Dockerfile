@@ -19,33 +19,32 @@ RUN  git clone https://github.com/mapotempo/optimizer-ortools.git --branch ${OPT
   cd /srv/optimizer-ortools && \
   make tsp_simple
 
-# Install Rake
-FROM mapotempo/nginx-passenger:2.0.1 as rake
-
-ENV APP_ENV production
-
-ADD . /srv/app
-RUN apt-get update && \
-  apt-get upgrade -y && \
-  apt-get install -y git build-essential zlib1g-dev zlib1g nano
-RUN which nano
-
-RUN cd /srv/app && \
-  gem install --no-rdoc --no-ri bundler && \
-  bundle check --path vendor/bundle --without development || bundle install --full-index --without development --path vendor/bundle && \
-  chown -R www-data:www-data .
-
 # Install Vroom
 FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} as vroom
 
 RUN echo ${VROOM_VERSION}
 
-# Final image
-FROM mapotempo/nginx-passenger:2.0.1
+# Rake
+FROM ruby:2.3-slim as rake
+
+ENV LANG C.UTF-8
+
+RUN apt-get update && \
+  apt-get install -y git build-essential zlib1g-dev zlib1g nano
+
+ADD . /srv/app
+RUN cd /srv/app && \
+  gem install bundler && \
+  bundle check --path vendor/bundle --without development || bundle install --full-index --without development --path vendor/bundle
+
+# Final image
+FROM ruby:2.3-slim
+
 LABEL maintainer="Mapotempo <contact@mapotempo.com>"
 
+ENV APP_ENV production
 ENV REDIS_HOST redis-cache
-ADD docker/env.d/* /etc/nginx/env.d/
+ENV LANG C.UTF-8
 
 COPY --from=ortools /srv/or-tools/lib srv/or-tools/lib
 COPY --from=ortools /srv/or-tools/bin srv/or-tools/bin
@@ -53,8 +52,9 @@ COPY --from=ortools /srv/optimizer-ortools /srv/optimizer-ortools
 COPY --from=vroom /srv/vroom/bin /srv/vroom/bin
 COPY --from=vroom /usr/lib/x86_64-linux-gnu/libboost* /usr/lib/x86_64-linux-gnu/
 COPY --from=rake /srv/app /srv/app
-COPY --from=rake /usr/local/bin /usr/local/bin
-COPY --from=rake /var/lib/gems /var/lib/gems
-COPY --from=rake /bin/nano /bin/nano
+COPY --from=rake /usr/local/ /usr/local/
 
 WORKDIR /srv/app
+
+EXPOSE 1791
+CMD ["bundle", "exec", "rake", "server"]
