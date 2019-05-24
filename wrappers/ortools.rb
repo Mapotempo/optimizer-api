@@ -603,8 +603,8 @@ module Wrappers
                 label: unit.label,
                 current_load: (activity['quantities'][index] || 0).round(2),
                 counting: unit.counting
-              }
-            }
+              } if vehicle.capacities.any?{ |capacity| capacity.unit.id == unit.id }
+            }.compact
             earliest_start = activity['start_time'] || 0
             if activity['type'] == 'start'
               load_status = build_quantities(nil, activity_loads)
