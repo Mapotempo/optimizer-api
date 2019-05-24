@@ -106,6 +106,36 @@ module Models
       super(hash)
     end
 
+    def calculate_service_exclusion_costs(type = :time, force_recalc = false)
+      # TODO: This function will calculate an exclusion cost for each service seperately
+      # using the time, distance , capacity or a mix of all.
+      #
+      # It is commited as is due to emercency and it basically prevents optim to use an empty vehicle
+      # if there are less than ~15 services (in theory) but due to other costs etc it might be less.
+      #
+      # type        : [:time, :distance, :capacity]
+      # force_recalc: [true, false] For cases where existing exclusion costs needs to be ignored.
+
+      max_fixed_cost = vehicles.max_by(&:cost_fixed).cost_fixed
+
+      if max_fixed_cost <= 0 || (!force_recalc && services.any?{ |service| service.exclusion_cost && service.exclusion_cost > 0 })
+        return
+      end
+
+      case type
+      when :time
+        services.each{ |service|
+          service.exclusion_cost = max_fixed_cost / 15
+        }
+      when :distance
+        raise 'Distance based exclusion cost calculation is not ready'
+      when :capacity
+        raise 'Capacity based exclusion cost calculation is not ready'
+      end
+
+      return
+    end
+
     def configuration=(configuration)
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
       self.resolution = configuration[:resolution] if configuration[:resolution]

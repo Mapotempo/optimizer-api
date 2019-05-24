@@ -85,13 +85,15 @@ module Interpreters
     end
 
     def self.set_config(service_vrp)
+      service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
+
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
       service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 2 : 120000
       service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      service_vrp[:vrp].preprocessing_first_solution_strategy = ['local_cheapest_insertion']
+      service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion'] #A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
 
       service_vrp
     end
