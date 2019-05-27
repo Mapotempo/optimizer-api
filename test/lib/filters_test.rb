@@ -19,7 +19,7 @@ require './test/test_helper'
 
 class FiltersTest < Minitest::Test
   def test_integer_too_big_to_convert_to_int32
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [
         {
@@ -174,7 +174,7 @@ class FiltersTest < Minitest::Test
     true_capacities = {'unit_0' => 25, 'unit_1' => 30, 'unit_2' => 1, 'unit_counting' => 2}
     true_quantities = {'unit_0' => 1, 'unit_1' => 3, 'unit_3' => 1, 'unit_counting' => 1}
 
-    OptimizerWrapper::ORTOOLS.stub(
+    OptimizerWrapper.config[:services][:ortools].stub(
       :run_ortools, #(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
       lambda { |problem, vrp, services, _, _, _|
         # Check if precision coefficient turns the values to integer (i.e., (float.round - float).abs < dalta ).

@@ -2398,8 +2398,8 @@ class WrapperTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
-    assert OptimizerWrapper::VROOM.inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
+    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
+    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
   end
 
   def test_unassigned_presence
@@ -2517,7 +2517,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_all_points_rejected_by_capacity
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2592,7 +2592,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_all_points_rejected_by_tw
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2664,7 +2664,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_all_points_rejected_by_sequence_tw
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2742,7 +2742,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_all_points_rejected_by_lapse
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2816,14 +2816,14 @@ class WrapperTest < Minitest::Test
   def test_impossible_service_too_long
     vrp = VRP.toy
 
-    assert_empty OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp))
+    assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(FCT.create(vrp))
 
     vrp[:vehicles].first[:timewindow] = {
       start: 0,
       end: 10
     }
     vrp[:services].first[:activity][:duration] = 15
-    assert_equal OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp)).size, 1
+    assert_equal OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(FCT.create(vrp)).size, 1
 
     vrp[:vehicles].first[:timewindow] = nil
     vrp[:vehicles].first[:sequence_timewindows] = [{
@@ -2831,13 +2831,13 @@ class WrapperTest < Minitest::Test
       end: 10
     }]
     vrp[:services].first[:activity][:duration] = 15
-    assert_equal OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp)).size, 1
+    assert_equal OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(FCT.create(vrp)).size, 1
 
     vrp[:vehicles].first[:sequence_timewindows] << {
       start: 0,
       end: 20
     }
-    assert_empty OptimizerWrapper::DEMO.detect_unfeasible_services(FCT.create(vrp))
+    assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(FCT.create(vrp))
   end
 
   def test_work_day_entity_after_eventual_vehicle
@@ -2847,13 +2847,13 @@ class WrapperTest < Minitest::Test
       metric: 'duration',
       entity: 'work_day'
     }]
-    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(Models::Vrp.create(problem)).empty?
+    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(Models::Vrp.create(problem)).empty?
 
     problem[:configuration][:preprocessing][:partitions] << {
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'vehicle'
     }
-    assert OptimizerWrapper::ORTOOLS.inapplicable_solve?(Models::Vrp.create(problem)).include?(:assert_vehicle_entity_only_before_work_day)
+    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(Models::Vrp.create(problem)).include?(:assert_vehicle_entity_only_before_work_day)
   end
 end

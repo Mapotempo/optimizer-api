@@ -19,9 +19,8 @@ require './test/test_helper'
 
 
 class Wrappers::VroomTest < Minitest::Test
-
   def test_minimal_problem
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -64,7 +63,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_loop_problem
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -129,7 +128,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_no_end_problem
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -193,7 +192,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_start_different_end_problem
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -253,7 +252,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_vehicle_time_window
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -299,7 +298,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_with_rest
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix',
@@ -379,7 +378,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_with_rest_at_the_end
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix',
@@ -459,7 +458,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_with_rest_at_the_start
-    vroom = OptimizerWrapper::VROOM
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix',

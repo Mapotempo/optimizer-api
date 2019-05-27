@@ -19,10 +19,9 @@ require './test/test_helper'
 
 
 class Wrappers::JspritTest < Minitest::Test
-
   if !ENV['SKIP_JSPRIT']
     def test_minimal_problem
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -72,7 +71,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
     def test_invalid_timewindow
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -123,7 +122,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
     def test_loop_problem
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -198,7 +197,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
     def test_minimal_unassigned_service
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -251,7 +250,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
     def test_minimal_unassigned_shipment
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -312,7 +311,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
     def test_service_with_skills
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -390,7 +389,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
     def test_shipment_with_exclusive_skills
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -476,7 +475,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
     def test_service_sticky_vehicle
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
@@ -563,7 +562,7 @@ class Wrappers::JspritTest < Minitest::Test
     end
 
       def test_vehicle_limit
-      jsprit = OptimizerWrapper::JSPRIT
+      jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
           id: 'matrix_0',
