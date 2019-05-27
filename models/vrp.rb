@@ -191,5 +191,9 @@ module Models
     def need_matrix_value?
       false
     end
+
+    def services_duration
+      Helper.services_duration(self.services)
+    end
   end
 end

@@ -47,12 +47,22 @@ module Interpreters
           old_centroids = []
           sub_service_vrps = []
           loop do
-            sub_service_vrps, centroid_indices = split(service_vrp, old_centroids.compact)
-            old_centroids += centroid_indices if centroid_indices
+            sub_service_vrps = split(service_vrp)
             break if sub_service_vrps.size == 2
           end
-          results = sub_service_vrps.collect{ |lonely_vrp|
-            OptimizerWrapper.define_process([lonely_vrp], job)
+          results = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
+            result = OptimizerWrapper.define_process([sub_service_vrp], job)
+            if index.zero?
+              result[:routes].each{ |r|
+                if r[:activities].select{ |a| a[:service_id] }.empty?
+                  vehicle = sub_service_vrps[0][:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
+                  sub_service_vrps[1][:vrp].vehicles << vehicle
+                  sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+                  sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
+                end
+              }
+            end
+            result
           }
           result = Helper.merge_results(results)
           result[:elapsed] += (t2 - t1) * 1000
@@ -62,9 +72,11 @@ module Interpreters
 
           # Set vehicles before remove routes for end stage to avoid using too many vehicles
           service_vrp[:vrp].vehicles = service_vrp[:vrp].vehicles.select{ |v| result[:routes].map{ |r| r[:vehicle_id] }.include?(v.id) }
-          Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result)
+          Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.7 / (service_vrp[:level] + 1))
           remove_bad_skills(service_vrp, result)
           result = end_stage_insert_unassigned(service_vrp, result, job)
+          Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.3)
+          result
         end
       else
         service_vrp[:vrp].resolution_init_duration = nil
@@ -141,7 +153,8 @@ module Interpreters
           vehicles_with_skills.sort_by{ |v| service_vrp[:vrp].routes.map{ |r| r.vehicle.id }.include?(v.id) ? 0 : 1 }
 
           sub_results = []
-          vehicles_with_skills.each_slice(3) do |vehicles|
+          vehicle_count = skills.empty? && !service_vrp[:vrp].routes.empty? ? [service_vrp[:vrp].routes.size, 6].min : 3
+          vehicles_with_skills.each_slice(vehicle_count) do |vehicles|
             remaining_service_ids = result[:unassigned].map{ |u| u[:service_id] } & services.map(&:id)
             next if remaining_service_ids.empty?
             assigned_service_ids = result[:routes].select{ |r| vehicles.map(&:id).include?(r[:vehicle_id]) }.flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact
@@ -187,9 +200,9 @@ module Interpreters
       result
     end
 
-    def self.split_vehicles(vrp, service_ids_by_cluster)
-      services_skills_by_clusters = service_ids_by_cluster.map{ |service_ids|
-        vrp.services.select{ |s| service_ids.include?(s.id) }.map{ |s| s.skills.empty? ? nil : s.skills.uniq.sort }.compact.uniq
+    def self.split_vehicles(vrp, services_by_cluster)
+      services_skills_by_clusters = services_by_cluster.map{ |services|
+        services.map{ |s| s.skills.empty? ? nil : s.skills.uniq.sort }.compact.uniq
       }
       vehicles_by_clusters = [[], []]
       vrp.vehicles.each{ |v|
@@ -211,16 +224,20 @@ module Interpreters
       vehicles_by_clusters
     end
 
-    def self.split(service_vrp, centroid_indices = nil)
+    def self.split(service_vrp)
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
-      service_ids_by_cluster, centroid_indices = kmeans(vrp, :duration, centroid_indices)
+      services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }.reverse
       split_service_vrps = []
-      if service_ids_by_cluster.size == 2
+      if services_by_cluster.size == 2
         # Kmeans return 2 vrps
-        vehicles_by_cluster = split_vehicles(vrp, service_ids_by_cluster)
+        vehicles_by_cluster = split_vehicles(vrp, services_by_cluster)
+        if vehicles_by_cluster[1].size > vehicles_by_cluster[0].size
+          services_by_cluster.reverse
+          vehicles_by_cluster.reverse
+        end
         [0, 1].each{ |i|
-          sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, service_ids_by_cluster[i])[:vrp]
+          sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id))[:vrp]
           sub_vrp.vehicles = vehicles_by_cluster[i]
           sub_vrp.vehicles.each{ |vehicle|
             vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
@@ -239,9 +256,9 @@ module Interpreters
           }
         }
       else
-        raise 'Incorrect split size with kmeans' if service_ids_by_cluster.size > 2
+        raise 'Incorrect split size with kmeans' if services_by_cluster.size > 2
         # Kmeans return 1 vrp
-        sub_vrp = SplitClustering::build_partial_service_vrp(service_vrp, service_ids_by_cluster[0])[:vrp]
+        sub_vrp = SplitClustering::build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp]
         sub_vrp.points = vrp.points
         sub_vrp.vehicles = vrp.vehicles
         sub_vrp.vehicles.each{ |vehicle|
@@ -254,10 +271,10 @@ module Interpreters
         }
       end
 
-      [split_service_vrps, centroid_indices]
+      split_service_vrps
     end
 
-    def self.kmeans(vrp, cut_symbol, old_centroids = nil)
+    def self.kmeans(vrp, cut_symbol)
       nb_clusters = 2
       # Split using balanced kmeans
       if vrp.services.all?{ |service| service[:activity] }
@@ -294,15 +311,14 @@ module Interpreters
           }
         }
 
-        centroid_indices = []
-        clusters, centroid_indices = SplitClustering.kmeans_process(centroid_indices, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, nil)
+        clusters, _centroid_indices = SplitClustering.kmeans_process([], 100, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
 
-        service_ids_by_cluster = clusters.collect{ |cluster|
+        services_by_cluster = clusters.collect{ |cluster|
           cluster.data_items.collect{ |data|
-            vrp.services.find{ |service| service.activity.point_id == data[2] }.id
+            vrp.services.find{ |service| service.activity.point_id == data[2] }
           }
         }
-        [service_ids_by_cluster, centroid_indices]
+        services_by_cluster
       else
         puts 'Split not available when services have no activities'
         [vrp]
