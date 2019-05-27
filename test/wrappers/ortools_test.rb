@@ -19,9 +19,8 @@ require './test/test_helper'
 
 
 class Wrappers::OrtoolsTest < Minitest::Test
-
   def test_minimal_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -921,7 +920,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_alternative_stop_conditions
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -976,7 +975,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_loop_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1048,7 +1047,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_without_start_end_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1118,7 +1117,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_with_rest
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1180,7 +1179,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_with_rest_multiple_reference
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1247,7 +1246,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_negative_time_windows_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1308,7 +1307,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_quantities
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1378,7 +1377,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_vehicles_timewindow_soft
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1438,7 +1437,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_vehicles_timewindow_hard
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1498,7 +1497,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_multiples_vehicles
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1569,7 +1568,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_double_soft_time_windows_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1638,7 +1637,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_triple_soft_time_windows_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1713,7 +1712,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_double_hard_time_windows_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1782,7 +1781,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_triple_hard_time_windows_problem
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1857,7 +1856,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_nearby_specific_ordder
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1971,7 +1970,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_distance_matrix
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2040,7 +2039,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_max_ride_distance
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2111,7 +2110,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_two_vehicles_one_matrix_each
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2206,7 +2205,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_skills
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2294,7 +2293,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_setup_duration
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2378,7 +2377,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_pickup_delivery
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2482,7 +2481,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_pickup_delivery_2
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2598,7 +2597,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_pickup_delivery_3
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2716,7 +2715,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_route_duration
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2796,7 +2795,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_route_force_start
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2886,7 +2885,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_route_shift_preference_to_force_start
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2979,7 +2978,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_route_shift_preference_to_force_end
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3069,7 +3068,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_route_shift_preference_to_minimize_span
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3159,7 +3158,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_vehicle_limit
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3223,7 +3222,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_minimum_day_lapse
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3305,7 +3304,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_maximum_day_lapse
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3430,7 +3429,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_counting_quantities
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3522,7 +3521,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_shipments
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3603,7 +3602,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_shipments_quantities
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3692,7 +3691,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_shipments_inroute_duration
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3777,7 +3776,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_mixed_shipments_and_services
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3855,7 +3854,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_shipments_distance
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -3937,7 +3936,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_maximum_duration_lapse_shipments
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4042,7 +4041,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_pickup_timewindow_after_delivery_timewindow
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4113,7 +4112,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_value_matrix
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4202,7 +4201,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_sequence
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4287,7 +4286,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           real point is too much, we should raise a flag (or depending on the distance,
           mark point unreachable and replace the data of the point with 'nil').
           That is, until we filter the router distance restuls this test will keep failing."
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       configuration: {
         resolution: {
@@ -4364,7 +4363,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_initial_load_output
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4465,7 +4464,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_force_first
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4535,7 +4534,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_force_end
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4606,7 +4605,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_never_first
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4672,7 +4671,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_fill_quantities
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       units: [{
         id: 'kg',
@@ -4757,7 +4756,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_max_ride_time
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4812,7 +4811,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_vehicle_max_distance
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4872,7 +4871,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_vehicle_max_distance_one_per_vehicle
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4933,7 +4932,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_max_ride_time_never_from_or_to_depot
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -4999,7 +4998,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_initial_routes
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5077,7 +5076,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_alternative_service
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5247,7 +5246,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_evaluate_only
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5304,7 +5303,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_evaluate_only_not_every_service_has_route
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5360,7 +5359,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_evaluate_only_not_every_vehicle_has_route
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5755,7 +5754,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_assemble_heuristic
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5833,7 +5832,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_ordre_with_2_vehicles
-    ortools = OptimizerWrapper::ORTOOLS
+    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
