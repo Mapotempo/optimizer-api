@@ -55,4 +55,10 @@ module Helper
     }
   end
 
+  def self.services_duration(services)
+    services.group_by{ |s| s.activity.point_id }.map{ |_point_id, ss|
+      sm = ss.max_by(&:visits_number)
+      sm.activity.setup_duration * sm.visits_number + ss.map{ |s| s.activity.duration * s.visits_number }.sum
+    }.sum
+  end
 end

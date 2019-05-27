@@ -179,7 +179,7 @@ module Interpreters
     def self.remove_poor_routes(vrp, result)
       if result
         remove_empty_routes(result)
-        remove_poorly_populated_routes(vrp, result) if !Interpreters::Dichotomious.dichotomious_candidate({vrp: vrp, service: :ortools})
+        remove_poorly_populated_routes(vrp, result, 0.7) if !Interpreters::Dichotomious.dichotomious_candidate({vrp: vrp, service: :ortools})
       end
     end
 
@@ -187,17 +187,17 @@ module Interpreters
       result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] }}
     end
 
-    def self.remove_poorly_populated_routes(vrp, result)
+    def self.remove_poorly_populated_routes(vrp, result, limit)
       result[:routes].delete_if{ |route|
         vehicle = vrp.vehicles.find{ |current_vehicle| current_vehicle.id == route[:vehicle_id] }
         loads = route[:activities].last[:detail][:quantities]
         load_flag = vehicle.capacities.empty? || vehicle.capacities.all?{ |capacity|
           current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
-          current_load[:value] / capacity.limit < 0.7 if capacity.limit && current_load && capacity.limit > 0
+          current_load[:value] / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
         }
         vehicle_worktime = vehicle.timewindow.start && vehicle.timewindow.end && (vehicle.duration || (vehicle.timewindow.end - vehicle.timewindow.start))
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
-        time_flag = !vehicle_worktime || route_duration < 0.7 * vehicle_worktime
+        time_flag = !vehicle_worktime || route_duration < limit * vehicle_worktime
         if load_flag && time_flag
           result[:unassigned] += route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact
           true
@@ -292,7 +292,7 @@ module Interpreters
       end
     end
 
-    def self.kmeans_process(centroids, c_max_iterations, max_iterations, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp, incompatibility_set = nil)
+    def self.kmeans_process(centroids, c_max_iterations, max_iterations, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp)
       c = BalancedKmeans.new
       c.max_iterations = c_max_iterations
       c.centroid_indices = centroids if centroids.size == nb_clusters
@@ -303,7 +303,7 @@ module Interpreters
       while biggest_cluster_size < nb_clusters && iteration < max_iterations
         ratio = 0.5 + 0.5 * (max_iterations - iteration) / max_iterations
         ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
-        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, incompatibility_set)
+        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids)
         c.clusters.delete([])
         if c.clusters.size > biggest_cluster_size
           biggest_cluster_size = c.clusters.size
