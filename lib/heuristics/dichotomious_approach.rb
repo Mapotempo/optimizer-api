@@ -148,8 +148,7 @@ module Interpreters
 
             sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles.map(&:id))
             sub_service_vrp[:vrp].vehicles.each{ |vehicle|
-              # vehicle[:free_approach] = true # ???
-              vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000000
+              vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
             }
             rate_vehicles = sub_service_vrp[:vrp].vehicles.size / service_vrp[:vrp].vehicles.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
@@ -171,7 +170,6 @@ module Interpreters
               # result[:unassigned] |= result_loop[:unassigned] # Cannot use | operator because :type field not always present...
               result[:unassigned].delete_if{ |activity| result_loop[:unassigned].map{ |a| a[:service_id] }.include?(activity[:service_id]) }
               result[:unassigned] += result_loop[:unassigned]
-              new_routes = result_loop[:routes].select{ |new_route| new_route[:activities].any?{ |a| a[:service_id] } }
               result[:routes].delete_if{ |old_route|
                 result_loop[:routes].map{ |r| r[:vehicle_id] }.include?(old_route[:vehicle_id])
               }
@@ -181,7 +179,8 @@ module Interpreters
             end
           end
           new_routes = build_initial_routes(sub_results)
-          service_vrp[:vrp].routes.delete_if{ |r| new_routes.map{ |rr| rr.vehicle.id }.include?(r.vehicle.id) }
+          vehicle_ids = sub_results.flat_map{ |r| r[:routes].map{ |route| route[:vehicle_id] } }
+          service_vrp[:vrp].routes.delete_if{ |r| vehicle_ids.include?(r.vehicle.id) }
           service_vrp[:vrp].routes += new_routes
         }
       end
@@ -223,9 +222,8 @@ module Interpreters
         [0, 1].each{ |i|
           sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, service_ids_by_cluster[i])[:vrp]
           sub_vrp.vehicles = vehicles_by_cluster[i]
-          sub_vrp.vehicles.each{ |vehicle| # ???
-            # vehicle[:free_approach] = true
-            vehicle[:cost_fixed] = vehicle[:cost_fixed] || 100000000
+          sub_vrp.vehicles.each{ |vehicle|
+            vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
           }
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
           sub_vrp.resolution_vehicle_limit = [sub_vrp.vehicles.size, vrp.vehicles.empty? ? 0 : (sub_vrp.vehicles.size / vrp.vehicles.size.to_f * vrp.resolution_vehicle_limit).ceil].min
@@ -247,8 +245,7 @@ module Interpreters
         sub_vrp.points = vrp.points
         sub_vrp.vehicles = vrp.vehicles
         sub_vrp.vehicles.each{ |vehicle|
-          # vehicle[:free_approach] = true
-          vehicle[:cost_fixed] = 100000
+          vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
         }
         split_service_vrps << {
           service: service_vrp[:service],
