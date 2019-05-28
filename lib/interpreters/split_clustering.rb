@@ -384,6 +384,7 @@ module Interpreters
           distance_to_centroid * (1 + (4.0 / nb_clusters ) * (metric_limit.zero? ? 1 : ( (metrics.max - metrics.min).abs / metric_limit)))
         }.sum
         values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][:duration] }.sum.to_i }
+        puts "balance : #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum/values.size).to_i}"
         iteration += 1
         empty_clusters_score = c.cluster_metrics.size < nb_clusters && (c.cluster_metrics.size..nb_clusters - 1).collect{ |cluster_index|
             metric_limit.is_a?(Array) ? metric_limit[cluster_index] : metric_limit
