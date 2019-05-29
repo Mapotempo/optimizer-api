@@ -43,8 +43,7 @@ module Interpreters
         result = OptimizerWrapper.solve([service_vrp], job)
         t2 = Time.now
 
-        if result.nil?
-          old_centroids = []
+        if result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size
           sub_service_vrps = []
           loop do
             sub_service_vrps = split(service_vrp)
@@ -71,7 +70,6 @@ module Interpreters
           Interpreters::SplitClustering.remove_empty_routes(result)
 
           # Set vehicles before remove routes for end stage to avoid using too many vehicles
-          service_vrp[:vrp].vehicles = service_vrp[:vrp].vehicles.select{ |v| result[:routes].map{ |r| r[:vehicle_id] }.include?(v.id) }
           Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.7 / (service_vrp[:level] + 1))
           remove_bad_skills(service_vrp, result)
           result = end_stage_insert_unassigned(service_vrp, result, job)
