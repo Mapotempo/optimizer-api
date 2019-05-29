@@ -263,7 +263,7 @@ module Interpreters
         loads = route[:activities].last[:detail][:quantities]
         load_flag = vehicle.capacities.empty? || vehicle.capacities.all?{ |capacity|
           current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
-          current_load[:value] / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
+          current_load[:current_load] / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
         }
         vehicle_worktime = vehicle.timewindow.start && vehicle.timewindow.end && (vehicle.duration || (vehicle.timewindow.end - vehicle.timewindow.start))
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
