@@ -601,10 +601,12 @@ module Wrappers
               {
                 unit: unit.id,
                 label: unit.label,
-                current_load: (activity['quantities'][index] || 0).round(2),
+                current_load: vehicle.end_point && activity['type'] == 'end' ?
+                              (route['activities'][-2]['quantities'][index]).round(2) :
+                              (activity['quantities'][index] || 0).round(2),
                 counting: unit.counting
-              } if vehicle.capacities.any?{ |capacity| capacity.unit.id == unit.id }
-            }.compact
+              }
+            }
             earliest_start = activity['start_time'] || 0
             if activity['type'] == 'start'
               load_status = build_quantities(nil, activity_loads)
@@ -626,7 +628,7 @@ module Wrappers
                   quantities: activity_loads.collect{ |current_load|
                     {
                       unit: current_load[:unit],
-                      value: current_load[:current_load]
+                      current_load: current_load[:current_load]
                     }
                   }
                 } : nil
