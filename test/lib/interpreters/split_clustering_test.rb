@@ -152,9 +152,10 @@ class SplitClusteringTest < Minitest::Test
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, :duration, 'work_day')
       assert_equal 5, services_vrps.size
       services_vrps.each{ |service_vrp|
-        next if service_vrp[:vrp].points.size < 6 # FIXME When number of services is too small balanced duration is very random
+        next if service_vrp[:vrp].points.size < 10 # FIXME When number of services is too small balanced duration is very random
         durations << service_vrp[:vrp].services_duration
       }
+      next if durations.empty?
       average_duration = durations.inject(0, :+) / durations.size
       min_duration = average_duration - 0.7 * average_duration
       max_duration = average_duration + 0.7 * average_duration
@@ -377,5 +378,36 @@ class SplitClusteringTest < Minitest::Test
     generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
     cluster_with_skill = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
     assert cluster_with_skill[:vrp][:vehicles].any?{ |v| v[:skills].include?('skill') }
+  end
+
+  def test_no_doubles_3000
+    vrp = FCT.load_vrp(self)
+    service_vrp = {vrp: vrp, service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    assert_equal generated_services_vrps.size, 15
+    generated_services_vrps.each{ |service|
+      vehicle_day = service[:vrp][:vehicles].first[:sequence_timewindows].first[:day_index]
+      assert service[:vrp][:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(vehicle_day) }
+    }
+  end
+
+  def test_Mai17_AG10_12VL 
+    # do not keep this test, too long
+    vrp = FCT.load_vrp(self)
+    service_vrp = {vrp: vrp, service: :demo}
+    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    assert_equal generated_services_vrps.size, 100
+    (0..99).each{ |index|
+      vrp = generated_services_vrps[index][:vrp]
+      if vrp[:vehicles].first[:sequence_timewindows].first[:day_index] == 0
+        assert vrp[:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(0) }
+      end
+      if vrp[:vehicles].first[:sequence_timewindows].first[:day_index] == 1
+        assert vrp[:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(1) }
+      end
+      if vrp[:vehicles].first[:sequence_timewindows].first[:day_index] == 2
+        assert vrp[:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(2) }
+      end
+    }
   end
 end
