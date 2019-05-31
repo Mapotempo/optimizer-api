@@ -8,6 +8,7 @@ services:
         target: 80
         published: 8083
     environment:
+      APP_ENV: production
       REDIS_HOST: redis-cache
       RESQUE_REDIS_HOST: redis
       SKIP_JSPRIT: 'true'
@@ -21,12 +22,13 @@ services:
     command: bundle exec rake resque:workers
     hostname: resque-default
     environment:
-      ROUTER_API_KEY: ${ROUTER_API_KEY}
-      ROUTER_URL: ${ROUTER_URL}
-      RESQUE_REDIS_HOST: redis
-      REDIS_HOST: redis-cache
+      APP_ENV: production
       COUNT: 5
       QUEUES: DEFAULT
+      REDIS_HOST: redis-cache
+      RESQUE_REDIS_HOST: redis
+      ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
+      ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
     networks:
       - redis_cache
       - resque
@@ -38,6 +40,11 @@ services:
     command: redis-server --appendonly yes
     networks:
       - resque
+      - ./production.rb:/srv/app/config/environments/production.rb
+    restart: always
+    links:
+      - redis-cache
+    command: /bin/bash -c "cd /srv/app && APP_ENV=production COUNT=5 QUEUE=DEFAULT /usr/bin/bundle exec rake resque:workers"
 
   redis-cache:
     image: redis:${REDIS_VERSION:-3.2-alpine}
