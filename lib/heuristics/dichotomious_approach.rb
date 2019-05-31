@@ -256,7 +256,7 @@ module Interpreters
           sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
           sub_vrp.preprocessing_first_solution_strategy = ['self_selection'] # ???
           sub_vrp.resolution_split_number += i
-          sub_vrp.resolution_total_split_number = service_vrp[:vrp].resolution_total_split_number
+          sub_vrp.resolution_total_split_number += 1
 
           split_service_vrps << {
             service: service_vrp[:service],
