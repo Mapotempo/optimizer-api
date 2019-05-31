@@ -20,6 +20,7 @@ require './lib/interpreters/split_clustering.rb'
 require './lib/clusterers/balanced_kmeans.rb'
 require './lib/tsp_helper.rb'
 require './lib/helper.rb'
+require './util/job_manager.rb'
 require 'ai4r'
 
 module Interpreters
@@ -35,23 +36,25 @@ module Interpreters
       service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? }
     end
 
-    def self.dichotomious_heuristic(service_vrp, job)
+    def self.dichotomious_heuristic(service_vrp, job, &block)
       if dichotomious_candidate(service_vrp)
         set_config(service_vrp)
         t1 = Time.now
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
         # TODO: only compute matrix should be called
-        result = OptimizerWrapper.solve([service_vrp], job)
+        result = OptimizerWrapper.solve([service_vrp], job, block)
         t2 = Time.now
 
         if result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size
           sub_service_vrps = []
           loop do
-            sub_service_vrps = split(service_vrp)
+            sub_service_vrps = split(service_vrp, job)
             break if sub_service_vrps.size == 2
           end
           results = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
-            result = OptimizerWrapper.define_process([sub_service_vrp], job)
+            sub_service_vrp[:vrp].resolution_split_number = sub_service_vrps[0][:vrp].resolution_split_number + 1 if !index.zero?
+            sub_service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[0][:vrp].resolution_total_split_number if !index.zero?
+            result = OptimizerWrapper.define_process([sub_service_vrp], job, &block)
             if index.zero?
               result[:routes].each{ |r|
                 if r[:activities].select{ |a| a[:service_id] }.empty?
@@ -64,6 +67,8 @@ module Interpreters
             end
             result
           }
+          service_vrp[:vrp].resolution_split_number = sub_service_vrps[1][:vrp].resolution_split_number
+          service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[1][:vrp].resolution_total_split_number
           result = Helper.merge_results(results)
           result[:elapsed] += (t2 - t1) * 1000
 
@@ -134,7 +139,7 @@ module Interpreters
       Interpreters::SplitClustering.remove_empty_routes(result)
     end
 
-    def self.end_stage_insert_unassigned(service_vrp, result, job = nil)
+    def self.end_stage_insert_unassigned(service_vrp, result, block, job = nil)
       if !result[:unassigned].empty? && dichotomious_candidate(service_vrp)
         service_vrp[:vrp].routes = build_initial_routes([result])
         service_vrp[:vrp].resolution_init_duration = nil
@@ -227,7 +232,7 @@ module Interpreters
       vehicles_by_clusters
     end
 
-    def self.split(service_vrp)
+    def self.split(service_vrp, job)
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
       services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }.reverse
@@ -251,6 +256,8 @@ module Interpreters
           sub_vrp.points += sub_vrp.shipments.flat_map{ |shipment| [shipment.pickup.point, shipment.delivery.point] }.uniq
           sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
           sub_vrp.preprocessing_first_solution_strategy = ['self_selection'] # ???
+          sub_vrp.resolution_split_number += i
+          sub_vrp.resolution_total_split_number = service_vrp[:vrp].resolution_total_split_number
 
           split_service_vrps << {
             service: service_vrp[:service],

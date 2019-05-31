@@ -79,6 +79,15 @@ module OptimizerWrapper
   class SchedulingHeuristicError < StandardError; end
 
   class Result
+
+    def self.time_spent=(time_spent)
+      @time_spent = time_spent
+    end
+
+    def self.time_spent
+      @time_spent
+    end
+
     def self.set(key, value)
       OptimizerWrapper::REDIS.set(key, value.to_json)
     end

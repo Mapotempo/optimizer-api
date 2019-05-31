@@ -61,7 +61,7 @@ module OptimizerWrapper
 
   def self.dump_vrp_cache=(cache)
     @@dump_vrp_cache = cache
-  end    
+  end
 
   def self.router
     @router ||= Routers::RouterWrapper.new(ActiveSupport::Cache::NullStore.new, ActiveSupport::Cache::NullStore.new, config[:router][:api_key])
@@ -169,17 +169,17 @@ module OptimizerWrapper
     }
     unduplicated_services, duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services)
     duplicated_results = duplicated_services.compact.collect{ |service_vrp|
-      define_process([service_vrp], job)
+      define_process([service_vrp], job, &block)
     }
     split_results = nil
     definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
       # Split/Clusterize the problem if too large
-      unsplit_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp], job) # Call recursively define_process
+      unsplit_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp], job, &block) # Call recursively define_process
       unsplit_vrps
     }.flatten.compact
     dicho_results = []
     definitive_service_vrps.delete_if{ |service_vrp|
-      dicho_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job) # Call recursively define_process
+      dicho_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job, &block) # Call recursively define_process
       dicho_results << dicho_result
       dicho_result
     }
@@ -272,10 +272,16 @@ module OptimizerWrapper
                       Result.set(job, actual_result)
                     end
                   }) { |wrapper, avancement, total, message, cost, time, solution|
-                  block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block
+                  block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block && vrp.resolution_duration == vrp.resolution_total_duration
                 }
                 if result.class.name == 'Hash' # result.is_a?(Hash) not working
                   result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+                  if Result.time_spent.nil?
+                    Result.time_spent = result[:elapsed]
+                  else
+                    Result.time_spent += result[:elapsed]
+                  end
+                  block.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent / 1000).to_i}/#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if block && vrp.resolution_duration != vrp.resolution_total_duration
                   parse_result(cluster_vrp, result)
                 elsif result.class.name == 'String' # result.is_a?(String) not working
                   raise RuntimeError.new(result) unless result == "Job killed"
