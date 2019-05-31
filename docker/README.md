@@ -10,9 +10,20 @@ Optimizer requires the two following images that must be manually built.
 ### Ortools
 
 ```
-export ORTOOLS_VERSION=v6.5
+export ORTOOLS_VERSION=v7.0
 docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
   -f ./docker/ortools/Dockerfile -t ${REGISTRY}mapotempo/ortools:${ORTOOLS_VERSION} .
+```
+
+### Optimizer Ortools (wrapper)
+*OPTIMIZER_ORTOOLS_VERSION* can either be *master*, *v7.0* or *dev*
+
+```
+export ORTOOLS_VERSION=v7.0
+export OPTIMIZER_ORTOOLS_VERSION=dev
+docker build --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION} \
+  --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
+  -f ./docker/optimizer-ortools/Dockerfile -t ${REGISTRY}mapotempo/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION} .
 ```
 
 #### Vroom
@@ -25,11 +36,13 @@ docker build --build-arg VROOM_VERSION=${VROOM_VERSION} \
 ## Build API
 
 ```
-export ORTOOLS_VERSION=v6.5
-export VROOM_VERSION=v1.2.0
 export CI_COMMIT_REF_NAME=latest
+export OPTIMIZER_ORTOOLS_VERSION=dev
+export ORTOOLS_VERSION=v7.0
+export VROOM_VERSION=v1.2.0
 docker build \
   --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
+  --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION} \
   --build-arg VROOM_VERSION=${VROOM_VERSION} \
   --build-arg CI_COMMIT_REF_NAME=${CI_COMMIT_REF_NAME} \
   -f ./docker/Dockerfile -t ${REGISTRY}mapotempo/optimizer-api:${CI_COMMIT_REF_NAME} .
