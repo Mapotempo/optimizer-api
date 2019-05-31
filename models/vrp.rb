@@ -21,7 +21,6 @@ module Models
   class Vrp < Base
     field :name, default: nil
     field :preprocessing_max_split_size, default: nil
-    field :preprocessing_split_number, default: 1.0
     field :preprocessing_partition_method, default: nil
     field :preprocessing_partition_metric, default: nil
     field :preprocessing_kmeans_centroids, default: nil
@@ -34,6 +33,7 @@ module Models
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
     field :resolution_duration, default: nil
+    field :resolution_total_duration, default: nil
     field :resolution_iterations, default: nil
     field :resolution_iterations_without_improvment, default: nil
     field :resolution_stable_iterations, default: nil
@@ -48,6 +48,8 @@ module Models
     field :resolution_same_point_day, default: false
     field :resolution_allow_partial_assignment, default: true
     field :resolution_evaluate_only, default: false
+    field :resolution_split_number, default: 1
+    field :resolution_total_split_number, default: 2
     field :resolution_several_solutions, default: nil
     field :resolution_variation_ratio, default: nil
     field :resolution_batch_heuristic, default: false
@@ -154,6 +156,7 @@ module Models
 
     def resolution=(resolution)
       self.resolution_duration = resolution[:duration]
+      self.resolution_total_duration = resolution[:duration]
       self.resolution_iterations = resolution[:iterations]
       self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
       self.resolution_stable_iterations = resolution[:stable_iterations]
@@ -167,6 +170,8 @@ module Models
       self.resolution_same_point_day = resolution[:same_point_day]
       self.resolution_allow_partial_assignment = resolution[:allow_partial_assignment]
       self.resolution_evaluate_only = resolution[:evaluate_only]
+      self.resolution_split_number = resolution[:split_number]
+      self.resolution_total_split_number = resolution[:total_split_number]
       self.resolution_several_solutions = resolution[:several_solutions]
       self.resolution_variation_ratio = resolution[:variation_ratio]
       self.resolution_batch_heuristic = resolution[:batch_heuristic]
@@ -175,7 +180,6 @@ module Models
     def preprocessing=(preprocessing)
       self.preprocessing_force_cluster = preprocessing[:force_cluster]
       self.preprocessing_max_split_size = preprocessing[:max_split_size]
-      self.preprocessing_split_number = preprocessing[:split_number]
       self.preprocessing_partition_method = preprocessing[:partition_method]
       self.preprocessing_partition_metric = preprocessing[:partition_metric]
       self.preprocessing_kmeans_centroids = preprocessing[:kmeans_centroids]

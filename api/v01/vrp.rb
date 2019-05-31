@@ -321,7 +321,6 @@ module Api
 
       def self.vrp_request_preprocessing(this)
         this.optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
-        this.optional(:split_number, type: Float, desc: 'Give number of precess for block call')
         this.optional(:partition_method, type: String, desc: '[ DEPRECATED : use partitions structure instead ]')
         this.optional(:partition_metric, type: Symbol, desc: '[ DEPRECATED : use partitions structure instead ]')
         this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available with deprecated partition_method')
@@ -349,6 +348,7 @@ module Api
         this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called.')
         this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is periodic is activated. Not available ORtools.')
         this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
+        this.optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')

@@ -83,7 +83,7 @@ module Interpreters
               vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 &&
               vrp.shipments.size == ship_candidates.size &&
               (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
-          split_results << split_solve(service_vrp)
+          split_results << split_solve(service_vrp, &block)
           nil
         else
           {
@@ -146,7 +146,6 @@ module Interpreters
 
     def self.split_solve(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
-
       available_vehicle_ids = vrp.vehicles.collect{ |vehicle| vehicle.id }
 
       problem_size = vrp.services.size + vrp.shipments.size
@@ -156,20 +155,19 @@ module Interpreters
       sub_service_vrps = split_balanced_kmeans(service_vrp, 2)
       output_clusters(sub_service_vrps) if service_vrp[:vrp][:debug_output_clusters]
       result = []
-      sub_service_vrps.each{ |sub_service_vrp|
+      sub_service_vrps.sort_by{ |sub_service_vrp| -sub_service_vrp[:vrp].services.size }.each_with_index{ |sub_service_vrp, index|
         sub_vrp = sub_service_vrp[:vrp]
         sub_vrp.resolution_duration = vrp.resolution_duration / problem_size * (sub_vrp.services.size + sub_vrp.shipments.size)
         sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size *
                                                 (sub_vrp.services.size + sub_vrp.shipments.size) if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
         sub_vrp.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.10 + sub_vrp.services.size.to_f / vrp.services.size)).to_i
-        sub_vrp.preprocessing_split_number -= vrp.preprocessing_split_number / 2.0
         sub_problem = {
           vrp: sub_vrp,
           service: service_vrp[:service]
         }
         sub_vrp.services += empties_or_fills
         sub_vrp.vehicles.select!{ |vehicle| available_vehicle_ids.include?(vehicle.id) }
-        sub_result = OptimizerWrapper.define_process([sub_problem], job)
+        sub_result = OptimizerWrapper.define_process([sub_problem], job, &block)
         remove_poor_routes(sub_vrp, sub_result)
         raise 'Incorrect activities count' if sub_problem[:vrp][:services].size != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.size
         available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
