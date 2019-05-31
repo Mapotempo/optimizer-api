@@ -40,6 +40,7 @@ module Ai4r
                         "'terminate' (terminate with error), 'random' (relocate the " \
                         "empty cluster to a random point), 'outlier' (relocate the " \
                         "empty cluster to the point furthest from its centroid).",
+                      expected_caracteristics: 'Expected sets of caracteristics for generated clusters',
                       possible_caracteristics_combination: 'Set of skills we can combine in the same cluster.',
                       impossible_day_combination: 'Maximum set of conflicting days.'
 
@@ -185,7 +186,7 @@ module Ai4r
 
       protected
 
-      def compute_compatibility(caracteristics_a, caracteristics_b)
+      def compute_compatibility(caracteristics_a, caracteristics_b, cluster_index)
         # TODO : not differenciate day skills and skills and simplify
         hard_violation = false
         non_common_number = 0
@@ -206,6 +207,11 @@ module Ai4r
           end
         end
 
+        if @expected_caracteristics
+          conflicting_caracteristics = caracteristics_a.select{ |c| @expected_caracteristics.include?(c) && !@centroids[cluster_index][5].include?(c) }
+          hard_violation = conflicting_caracteristics.any?{ |c| @centroids.select{ |centroid| centroid[5].include?(c) }.size == @expected_caracteristics.count(c) } if !hard_violation
+        end
+
         [hard_violation, non_common_number]
       end
 
@@ -220,7 +226,7 @@ module Ai4r
         end
 
         # caracteristics compatibility
-        hard_violation, non_common_number = a[5].empty? ? [false, 0] : compute_compatibility(a[5], b[5])
+        hard_violation, non_common_number = a[5].empty? ? [false, 0] : compute_compatibility(a[5], b[5], cluster_index)
         compatibility = if a[4] && b[4] && (b[4] & a[4]).empty? || # if service sticky or skills are different than centroids sticky/skills,
                            hard_violation # or if services skills have no match
           2**32
