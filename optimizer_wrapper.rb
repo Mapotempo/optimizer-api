@@ -320,9 +320,9 @@ module OptimizerWrapper
       cluster_reference += 1
       if vrp.preprocessing_heuristic_result && !vrp.preprocessing_heuristic_result.empty?
         if [cluster_result, vrp.preprocessing_heuristic_result].all?{ |result| result.nil? || result[:routes].empty? }
-          cluster_result || vrp.preprocessing_heuristic_result
+          cluster_result || parse_result(vrp, vrp[:preprocessing_heuristic_result])
         else
-          [cluster_result || vrp.preprocessing_heuristic_result, vrp.preprocessing_heuristic_result].select{ |result| !result[:routes].empty? }.sort_by{ |sol| sol[:cost] }.first
+          [cluster_result || parse_result(vrp, vrp[:preprocessing_heuristic_result]), parse_result(vrp, vrp[:preprocessing_heuristic_result])].select{ |result| !result[:routes].empty? }.sort_by{ |sol| sol[:cost] }.first
         end
       else
         cluster_result
