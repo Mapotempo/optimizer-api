@@ -1,4 +1,4 @@
-ARG CI_COMMIT_REF_NAME=latest
+ARG OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-dev}
 ARG ORTOOLS_VERSION=${ORTOOLS_VERSION:-latest}
 ARG VROOM_VERSION=${VROOM_VERSION:-latest}
 ARG REGISTRY=${REGISTRY:-registry.mapotempo.com/}
@@ -19,8 +19,8 @@ FROM ruby:2.3-slim as rake
 
 ENV LANG C.UTF-8
 
-RUN apt-get update && \
-  apt-get install -y git build-essential zlib1g-dev zlib1g nano
+RUN apt-get update > /dev/null && \
+  apt-get install -y git build-essential zlib1g-dev zlib1g > /dev/null
 
 ADD . /srv/app
 RUN cd /srv/app && \
