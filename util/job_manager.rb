@@ -80,11 +80,9 @@ module OptimizerWrapper
 
   class Result
 
-    def self.time_spent=(time_spent)
-      @time_spent = time_spent
-    end
-
-    def self.time_spent
+    def self.time_spent(value)
+      @time_spent += value if @time_spent
+      @time_spent = value if !@time_spent
       @time_spent
     end
 
