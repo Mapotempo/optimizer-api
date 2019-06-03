@@ -312,7 +312,7 @@ module Interpreters
           }
         }
 
-        clusters, _centroid_indices = SplitClustering.kmeans_process([], 100, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
+        clusters, _centroid_indices = SplitClustering.kmeans_process([], 100, 5, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, rate_balance: 0)
 
         services_by_cluster = clusters.collect{ |cluster|
           cluster.data_items.collect{ |data|

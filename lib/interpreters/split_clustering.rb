@@ -230,7 +230,7 @@ module Interpreters
     end
 
     # TODO: private method, reduce params
-    def self.kmeans_process(centroids, max_iterations, restarts, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp)
+    def self.kmeans_process(centroids, max_iterations, restarts, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp, options = {})
       biggest_cluster_size = 0
       clusters = []
       restart = -1
@@ -245,15 +245,24 @@ module Interpreters
         # TODO : throw error if vehicles have alternative skills
         c.impossible_day_combination = (0..6).collect{ |day| "not_day_skill_#{day}" }
 
-        ratio = 0.5 + 0.5 * (restarts - restart) / restarts.to_f
+        ratio = 0.8 + 0.2 * (restarts - restart) / restarts.to_f
         ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
-        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids)
+        c.build(DataSet.new(data_items: data_items.shuffle), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
         c.clusters.delete([])
         values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][cut_symbol] }.sum.to_i }
         limit_score = (0..c.cluster_metrics.size - 1).collect{ |cluster_index|
           centroid_coords = [c.centroids[cluster_index][0], c.centroids[cluster_index][1]]
           distance_to_centroid = c.clusters[cluster_index].data_items.collect{ |item| custom_distance([item[0], item[1]], centroid_coords) }.sum
-          distance_to_centroid * (1 + (4.0 / nb_clusters ) * (metric_limit.zero? ? 1 : ( (values.max - values.min).abs / metric_limit)))
+          ml = metric_limit.is_a?(Array) ? metric_limit[cluster_index] : metric_limit
+          if c.clusters[cluster_index].data_items.size == 1
+            2**32
+          elsif ml.zero? # Why is it possible?
+            distance_to_centroid
+          else
+            cluster_metric = c.clusters[cluster_index].data_items.collect{ |i| i[3][cut_symbol] }.sum.to_f
+            # TODO: large clusters having great difference with target metric should have a large (bad) score
+            distance_to_centroid * ((cluster_metric - ml).abs / ml)
+          end
         }.sum
         puts "balance : #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum/values.size).to_i}"
         restart += 1

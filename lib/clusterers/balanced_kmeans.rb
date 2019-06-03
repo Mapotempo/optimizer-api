@@ -47,7 +47,7 @@ module Ai4r
       # Items will be clustered in "number_of_clusters" different
       # clusters.
 
-      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, output_centroids, incompatibility_set = nil)
+      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, output_centroids, options = {})
         @data_set = data_set
         reduced_number_of_clusters = [number_of_clusters, data_set.data_items.collect{ |data_item| [data_item[0], data_item[1]] }.uniq.size].min
         unless reduced_number_of_clusters == number_of_clusters || @centroid_indices.empty?
@@ -59,7 +59,6 @@ module Ai4r
 
         @cut_limit = cut_limit
         @cut_symbol = cut_symbol
-        @incompatibility_set = incompatibility_set
         @output_centroids = output_centroids
         @unit_symbols = unit_symbols
 
@@ -72,10 +71,16 @@ module Ai4r
         @iterations = 0
 
         calc_initial_centroids
+        @rate_balance = 1.0
         until stop_criteria_met
           calculate_membership_clusters
+          sort_clusters
           recompute_centroids
         end
+        @rate_balance = options[:rate_balance] || 0.1
+        calculate_membership_clusters
+        sort_clusters
+        recompute_centroids
 
         self
       end
@@ -225,11 +230,11 @@ module Ai4r
         end
 
         # balance between clusters computation
-        balance = if cut_value > limit * 1.2
-          ((cut_value - limit) / limit) * 5 * @number_of_clusters * fly_distance
+        balance = if cut_value > limit
+          ((cut_value - limit) / limit.to_f) * 200 * fly_distance * @rate_balance
         else
           0
-        end 
+        end
 
         fly_distance + balance + compatibility
       end
@@ -241,7 +246,7 @@ module Ai4r
         end
         @cluster_indices = Array.new(@number_of_clusters) {[]}
 
-        @data_set.data_items.shuffle.each_with_index do |data_item, data_index|
+        @data_set.data_items.each_with_index do |data_item, data_index|
           c = eval(data_item)
           @clusters[c] << data_item
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
@@ -323,7 +328,27 @@ module Ai4r
       def stop_criteria_met
         @old_centroids == @centroids ||
           same_centroid_distance_moving_average(Math.sqrt(@iterations).to_i) || #Check if there is a loop of size Math.sqrt(@iterations)
-          (@max_iterations && (@max_iterations <= @iterations))
+          (@max_iterations && (@max_iterations <= @iterations + 1))
+      end
+
+      def sort_clusters
+        if @cut_limit.is_a? Array
+          @limit_sorted_indices ||= @cut_limit.map.with_index{ |v, i| [i, v] }.sort_by{ |a| a[1] }.map{ |a| a[0] }
+          cluster_sorted_indices = @cluster_metrics.map.with_index{ |v, i| [i, v[@cut_symbol]] }.sort_by{ |a| a[1] }.map{ |a| a[0] }
+          if cluster_sorted_indices != @cluster_sorted_indices
+            @cluster_sorted_indices = cluster_sorted_indices
+            old_clusters = @clusters.dup
+            old_centroids = @centroids.dup
+            old_centroid_indices = @centroid_indices.dup
+            old_cluster_metrics = @cluster_metrics.dup
+            cluster_sorted_indices.each_with_index{ |i, j|
+              @clusters[@limit_sorted_indices[j]] = old_clusters[i]
+              @centroids[@limit_sorted_indices[j]] = old_centroids[i]
+              @centroid_indices[@limit_sorted_indices[j]] = old_centroid_indices[i]
+              @cluster_metrics[@limit_sorted_indices[j]] = old_cluster_metrics[i]
+            }
+          end
+        end
       end
 
       private

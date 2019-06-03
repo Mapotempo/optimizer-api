@@ -19,59 +19,118 @@ require './test/test_helper'
 require './lib/interpreters/split_clustering.rb'
 
 class SplitClusteringTest < Minitest::Test
-
-  def test_cluster_one_phase_to_edit
-    skip 'Require changes into the entity and into the duration calculation'
+  def test_cluster_dichotomious
     vrp = FCT.load_vrp(self)
     service_vrp = {vrp: vrp, service: :demo}
-    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 80, :duration, 'vehicle')
+    while service_vrp[:vrp].services.size > 100
+      services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, :duration, 'vehicle')
+      assert_equal 2, services_vrps_dicho.size
+
+      # TODO: with rate_balance != 0 there is risk to get services to same lat/lng in different clusters
+      # locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.first.data_items.map{ |d| [d[0], d[1]] }
+      # locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.second.data_items.map{ |d| [d[0], d[1]] }
+      # (locations_one & locations_two).each{ |loc|
+      #   point_id_first = services_vrps_dicho.first[:vrp].points.find{ |p| p.location.lat == loc[0] && p.location.lon == loc[1] }.id
+      #   puts "service from #{point_id_first} in cluster #0" + services_vrps_dicho.first[:vrp].services.select{ |s| s.activity.point_id == point_id_first }.to_s
+      #   point_id_second = services_vrps_dicho.second[:vrp].points.find{ |p| p.location.lat == loc[0] && p.location.lon == loc[1] }.id
+      #   puts "service from #{point_id_second} in cluster #1" + services_vrps_dicho.second[:vrp].services.select{ |s| s.activity.point_id == point_id_second }.to_s
+      # }
+      # assert_equal 0, (locations_one & locations_two).size
+
+      durations = []
+      services_vrps_dicho.each{ |service_vrp_dicho|
+        durations << service_vrp_dicho[:vrp].services_duration
+      }
+      assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
+
+      average_duration = durations.inject(0, :+) / durations.size
+      # Clusters should be very well balanced
+      min_duration = average_duration - 0.1 * average_duration
+      max_duration = average_duration + 0.1 * average_duration
+      durations.each_with_index{ |duration, index|
+        assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
+      }
+
+      service_vrp = services_vrps_dicho.first
+    end
+  end
+
+  def test_cluster_dichotomious_heuristic
+    vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious.json')
+    service_vrp = {vrp: vrp, service: :demo, level: 0}
+    while service_vrp[:vrp].services.size > 100
+      services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp)
+      assert_equal 2, services_vrps_dicho.size
+
+      locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.first.data_items.map{ |d| [d[0], d[1]] }
+      locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.second.data_items.map{ |d| [d[0], d[1]] }
+      assert_equal 0, (locations_one & locations_two).size
+
+      durations = []
+      services_vrps_dicho.each{ |service_vrp_dicho|
+        durations << service_vrp_dicho[:vrp].services_duration
+      }
+      assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
+      assert durations[0] >= durations[1]
+
+      average_duration = durations.inject(0, :+) / durations.size
+      # Clusters should be balanced but the priority is the geometry
+      min_duration = average_duration - 0.5 * average_duration
+      max_duration = average_duration + 0.5 * average_duration
+      durations.each_with_index{ |duration, index|
+        assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
+      }
+
+      service_vrp = services_vrps_dicho.first
+    end
+  end
+
+  def test_cluster_one_phase_work_day
+    vrp = FCT.load_vrp(self, fixture_file: 'cluster_one_phase.json')
+    service_vrp = {vrp: vrp, service: :demo}
+    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 80, :duration, 'work_day')
     assert_equal 80, services_vrps_days.size
 
     durations = []
-    services_vrps_days.each{ |service_vrp_vehicle|
-      # TODO: durations should be sum of setup_duration & duration
-      durations << service_vrp_vehicle[:vrp].services.collect{ |service| service[:activity][:duration] * service[:visits_number] }.sum
+    services_vrps_days.each{ |service_vrp_day|
+      durations << service_vrp_day[:vrp].services_duration
     }
 
     average_duration = durations.inject(0, :+) / durations.size
-    durations.each{ |duration|
-      assert (duration < (average_duration + 1/2 * average_duration)) && duration > (average_duration - 1/2 * average_duration)
+    min_duration = average_duration - 0.5 * average_duration
+    max_duration = average_duration + 0.5 * average_duration
+    o = durations.map.with_index{ |duration, index|
+      # assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
+      duration < max_duration && duration > min_duration
     }
+    assert o.select{ |i| i }.size > 0.9 * o.size
   end
 
-  def test_cluster_one_phase
-    vrp = FCT.load_vrp(self)
+  def test_cluster_one_phase_vehicle
+    vrp = FCT.load_vrp(self, fixture_file: 'cluster_one_phase.json')
     service_vrp = { vrp: vrp, service: :demo }
 
-    total_durations = vrp.points.collect{ |point|
-      vrp.services.select{ |service| service.activity.point.id == point.id }.map.with_index{ |service, i|
-        service.visits_number * (service.activity.duration + (i.zero? ? service.activity.setup_duration : 0))
-      }.sum
-    }.sum
+    total_durations = vrp.services_duration
     services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, :duration, 'vehicle')
     assert_equal 5, services_vrps_days.size
 
     durations = []
     services_vrps_days.each{ |service_vrp_vehicle|
-      durations << service_vrp[:vrp].points.collect{ |point|
-        service_vrp_vehicle[:vrp].services.select{ |service| service.activity.point.id == point.id }.map.with_index{ |service, i|
-          service.visits_number * (service.activity.duration + (i.zero? ? service.activity.setup_duration : 0))
-        }.sum
-      }.sum
+      durations << service_vrp[:vrp].services_duration
     }
+    # First balanced duration should be the smallest according vehicle data
+    assert 0, durations.index(durations.min)
+
     cluster_weight_sum = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.sum
     minimum_sequence_timewindows = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.min
     maximum_sequence_timewindows = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.max
-    durations.each{ |duration|
-      assert duration < (maximum_sequence_timewindows + 1) * total_durations / cluster_weight_sum
-      assert duration > (minimum_sequence_timewindows - 1) * total_durations / cluster_weight_sum
+    durations.each_with_index{ |duration, index|
+      # assert duration < (maximum_sequence_timewindows + 1) * total_durations / cluster_weight_sum, "Duration ##{index} (#{duration}) should be less than #{(maximum_sequence_timewindows + 1) * total_durations / cluster_weight_sum}"
+      assert duration > (minimum_sequence_timewindows - 1) * total_durations / cluster_weight_sum, "Duration ##{index} (#{duration}) should be more than #{(minimum_sequence_timewindows - 1) * total_durations / cluster_weight_sum}"
     }
   end
 
   def test_cluster_two_phases
-    skip "This test fails. The test is created for Test-Driven Development.
-          The functionality is not ready yet, it is skipped for devs not working on the functionality.
-          Expectation: split_balanced_kmeans creates demanded number of clusters."
     vrp = FCT.load_vrp(self)
     service_vrp = {vrp: vrp, service: :demo}
     services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, :duration, 'vehicle')
@@ -79,8 +138,13 @@ class SplitClusteringTest < Minitest::Test
 
     durations = []
     services_vrps_vehicles.each{ |service_vrp_vehicle|
-      # TODO: durations should be sum of setup_duration & duration
-      durations << service_vrp_vehicle[:vrp].services.collect{ |service| service[:activity][:duration] * service[:visits_number] }.sum
+      durations << service_vrp_vehicle[:vrp].services_duration
+    }
+    average_duration = durations.inject(0, :+) / durations.size
+    min_duration = average_duration - 0.5 * average_duration
+    max_duration = average_duration + 0.5 * average_duration
+    durations.each_with_index{ |duration, index|
+      assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
     }
 
     services_vrps_days = services_vrps_vehicles.each{ |services_vrps|
@@ -88,12 +152,14 @@ class SplitClusteringTest < Minitest::Test
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, :duration, 'work_day')
       assert_equal 5, services_vrps.size
       services_vrps.each{ |service_vrp|
-        # TODO: durations should be sum of setup_duration & duration
-        durations << service_vrp[:vrp].services.collect{ |service| service[:activity][:duration] * service[:visits_number] }.sum
+        next if service_vrp[:vrp].points.size < 6 # FIXME When number of services is too small balanced duration is very random
+        durations << service_vrp[:vrp].services_duration
       }
       average_duration = durations.inject(0, :+) / durations.size
-      durations.each{ |duration|
-        # assert (duration < (average_duration + 1/2 * average_duration)) && duration > (average_duration - 1/2 * average_duration)
+      min_duration = average_duration - 0.7 * average_duration
+      max_duration = average_duration + 0.7 * average_duration
+      durations.each_with_index{ |duration, index|
+        assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
       }
     }
   end
