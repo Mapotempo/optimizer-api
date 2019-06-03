@@ -118,7 +118,7 @@ module Api
         this.optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
         this.optional(:setup_duration, types: [String, Float, Integer], desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:late_multiplier, type: Float, desc: 'Overrides the late_multiplier defined at the vehicle level (ORtools only)')
-        this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '[ DEPRECATED v0.3]')
+        this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '[ DEPRECATED ]')
         this.requires(:point_id, type: String, allow_blank: false, desc: 'Reference to the associated point')
         this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may start') do
           Vrp.vrp_request_timewindow(self)
@@ -156,17 +156,16 @@ module Api
         this.optional(:additional_setup, type: Float, desc: 'Constant additional setup duration for all setup defined in the tour, for this vehicle')
         this.optional(:coef_service, type: Float, desc: 'Coefficient applied to every service duration defined in the tour, for this vehicle')
         this.optional(:additional_service, type: Float, desc: 'Constant additional service time for all travel defined in the tour, for this vehicle')
-        this.optional(:force_start, type: Boolean, desc: '[ DEPRECATED v0.3]')
+        this.optional(:force_start, type: Boolean, desc: '[ DEPRECATED ]')
         this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open, as late as possible or let vehicule start at any time. Not available with periodic heuristic.')
         this.optional(:trips, type: Integer, desc: 'Describe the number of return to the depot a vehicle is allowed to perform within its route')
 
-        this.optional(:matrix_id, type: String, desc: 'Related matrix, if already defined')
-        this.optional(:value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index.')
-        this.optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
+        this.optional :matrix_id, type: String, desc: 'Related matrix, if already defined'
+        this.optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index.'
+        this.optional :router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc'
         this.exactly_one_of :matrix_id, :router_mode
-
-        this.optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
-        this.optional(:speed_multiplier, type: Float, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.')
+        this.optional :router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance'
+        this.optional :speed_multiplier, type: Float, default: 1.0, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.'
         this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) }} : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :traffic, type: Boolean, default: true, desc: 'Take into account traffic or not.'
@@ -285,7 +284,7 @@ module Api
         this.optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistanche)')
         this.optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
         this.optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
-        this.optional(:speed_multiplier, type: Float, desc: 'multiply the current modality speed, default : 1.0')
+        this.optional(:speed_multiplier, type: Float, default: 1.0, desc: 'multiply the current modality speed, default : 1.0')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this subtour')
         this.optional(:duration, type: Integer, desc: 'Maximum subtour duration')
         this.optional(:transmodal_stops, type: Hash, desc: 'Point where the vehicles can park and start the subtours') do
@@ -349,7 +348,7 @@ module Api
         this.optional(:solver_parameter, type: Integer, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
         this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called.')
         this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is periodic is activated. Not available ORtools.')
-        this.optional(:allow_partial_assignment, type: Boolean, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
+        this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
@@ -380,9 +379,9 @@ module Api
       end
 
       def self.vrp_request_debug(this)
-        this.optional(:output_kmeans_centroids, type: Boolean, desc: '[debug] Outputs centroids used for kmeans clustering if clusters are generated')
-        this.optional(:output_clusters_in_csv, type: Boolean, desc: '[debug] Outputs clusters generated in a csv')
-        this.optional(:batch_heuristic, type: Boolean, desc: '[debug] Each heuristic will be computed')
+        this.optional(:output_kmeans_centroids, type: Boolean, default: OptimizerWrapper.config[:debug_output_kmeans_centroids], desc: '[debug] Outputs centroids used for kmeans clustering if clusters are generated')
+        this.optional(:output_clusters, type: Boolean, default: OptimizerWrapper.config[:debug_output_clusters], desc: '[debug] Outputs clusters generated in csv/geojson')
+        this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug_batch_heuristic], desc: '[debug] Each heuristic will be computed')
       end
 
       namespace :vrp do
