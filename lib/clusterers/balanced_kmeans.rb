@@ -322,10 +322,44 @@ module Ai4r
 
       def stop_criteria_met
         @old_centroids == @centroids ||
+          same_centroid_distance_moving_average(Math.sqrt(@iterations).to_i) || #Check if there is a loop of size Math.sqrt(@iterations)
           (@max_iterations && (@max_iterations <= @iterations))
       end
 
       private
+
+      def same_centroid_distance_moving_average(last_n_iterations)
+        if @iterations.zero?
+          # Initialize the array stats array
+          @last_n_average_diffs = [0.0] * (2 * last_n_iterations + 1)
+          return false
+        end
+
+        # Calculate total absolute centroid movement in meters
+        total_movement_meter = 0
+        @number_of_clusters.times { |i|
+          total_movement_meter += Helper.euclidean_distance(@old_centroids[i], @centroids[i])
+        }
+
+        # If convereged, we can stop
+        return true if total_movement_meter.to_f < 1
+
+        @last_n_average_diffs.push total_movement_meter.to_f
+
+        # Check if there is a centroid loop of size n
+        (1..last_n_iterations).each{ |n|
+          last_n_iter_average_curr = @last_n_average_diffs[-n..-1].reduce(:+)
+          last_n_iter_average_prev = @last_n_average_diffs[-(n + n)..-(1 + n)].reduce(:+)
+
+          # If we make exact same moves again and again, we can stop
+          return true if (last_n_iter_average_curr - last_n_iter_average_prev).abs < 1e-5
+        }
+
+        # Clean old stats
+        @last_n_average_diffs.shift if @last_n_average_diffs.size > (2 * last_n_iterations + 1)
+
+        return false
+      end
 
       def update_centroid_properties(centroid_index, new_item)
         @centroids[centroid_index][5] |= new_item[5]
