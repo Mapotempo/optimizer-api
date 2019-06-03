@@ -27,34 +27,7 @@ require './lib/interpreters/periodic_visits.rb'
 
 module Interpreters
   class SplitClustering
-    def self.custom_distance(a, b)
-      fly_distance = Helper.flying_distance(a, b)
-      # units_distance = (0..unit_sets.size - 1).any? { |index| a[3 + index] + b[3 + index] == 1 } ? 2**56 : 0
-      # timewindows_distance = a[2].overlaps?(b[2]) ? 0 : 2**56
-      fly_distance #+ units_distance + timewindows_distance
-    end
-
-    def self.compute_day_skills(timewindows)
-      if timewindows.empty? || timewindows.any?{ |tw| tw[:day_index].nil? }
-        []
-      else
-        ([0, 1, 2, 3, 4, 5, 6] - timewindows.collect{ |tw| tw[:day_index] }).collect{ |forbidden_day|
-          "not_day_skill_#{forbidden_day}"
-        }
-      end
-    end
-
-    def self.csv_line(vrp, service, cluster_index, prefix = nil)
-      [
-        service.id,
-        service.activity.point.location.lat,
-        service.activity.point.location.lon,
-        (prefix || '') + cluster_index.to_s,
-        vrp.vehicles.first && vrp.vehicles.first.start_point && vrp.vehicles.first.start_point.id,
-        vrp.vehicles.first && vrp.vehicles.first.end_point && vrp.vehicles.first.end_point.id
-      ]
-    end
-
+    # TODO: private method
     def self.output_clusters(all_service_vrps, vehicles = [], two_stages = false)
       cache = OptimizerWrapper.dump_vrp_cache
       polygons = []
@@ -94,36 +67,6 @@ module Interpreters
       puts 'Clusters saved : ' + filename
     end
 
-    def self.collect_hulls(service_vrp)
-      vector = service_vrp[:vrp].services.collect{ |service|
-        [service.activity.point.location.lon, service.activity.point.location.lat]
-      }
-      hull = Hull.get_hull(vector)
-      return nil if hull.nil?
-      unit_objects = service_vrp[:vrp].units.collect{ |unit|
-        {
-          unit_id: unit.id,
-          value: service_vrp[:vrp].services.collect{ |service|
-            service_quantity = service.quantities.find{ |quantity| quantity.unit_id == unit.id }
-            service_quantity && service_quantity.value || 0
-          }.reduce(&:+)
-        }
-      }
-      duration = service_vrp[:vrp][:services].group_by{ |s| s.activity.point_id }.map{ |_point_id, ss|
-        first = ss.min_by{ |s| -s.visits_number }
-        duration = first.activity.setup_duration * first.visits_number + ss.map{ |s| s.activity.duration * s.visits_number }.sum
-      }.sum
-      {
-        type: 'Feature',
-        properties: unit_objects.collect{ |unit_object| { unit_object[:unit_id].to_sym => unit_object[:value] } } +
-          [{ duration: duration }],
-        geometry: {
-          type: 'Polygon',
-          coordinates: [hull + [hull.first]]
-        }
-      }
-    end
-
     def self.split_clusters(services_vrps, job = nil, &block)
       split_results = []
       all_service_vrps = services_vrps.collect{ |service_vrp|
@@ -151,7 +94,7 @@ module Interpreters
         end
       }.flatten.compact
       two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
-      output_clusters(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps.size > 1 && services_vrps[0][:vrp][:debug_output_clusters]
+      output_clusters(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps[0][:vrp][:debug_output_clusters]
       [all_service_vrps, split_results]
     rescue => e
       puts e
@@ -236,16 +179,6 @@ module Interpreters
       result
     end
 
-    def self.remove_used_empties_and_refills(vrp, result)
-      result[:routes].collect{ |route|
-        current_service = nil
-        route[:activities].select{ |activity| activity[:service_id] }.collect{ |activity|
-          current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
-          current_service if current_service && current_service.quantities.any?(&:fill) || current_service.quantities.any?(&:empty)
-        }
-      }.flatten
-    end
-
     def self.remove_poor_routes(vrp, result)
       if result
         remove_empty_routes(result)
@@ -296,76 +229,15 @@ module Interpreters
       }
     end
 
-    def self.count_metric(graph, parent, symbol)
-      value = parent.nil? ? 0 : graph[parent][:unit_metrics][symbol]
-      value + (parent.nil? ? 0 : (count_metric(graph, graph[parent][:left], symbol) + count_metric(graph, graph[parent][:right], symbol)))
-    end
-
-    def self.collect_data_items_metrics(vrp, entity, unit_symbols, cumulated_metrics, max_cut_metrics = nil)
-      data_items = []
-      linked_objects = {}
-
-      depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
-
-      (vrp.services + vrp.shipments).group_by{ |s|
-        if s.activity
-          s.activity.point
-        elsif s.delivery.point && depot_ids.include?(s.pickup.point.id)
-          s.delivery.point.id
-        elsif s.pickup.point && depot_ids.include?(s.delivery.point.id)
-          s.pickup.point.id
-        end
-      }.each{ |point, set_at_point|
-        next if !point
-        set_at_point.group_by{ |s|
-          related_skills = (s.skills && !s.skills.empty? ? s.skills : [])
-          timewindows = s.activity ? s.activity.timewindows : (s.pickup ? s.pickup.timewindows : s.delivery.timewindows)
-          day_skills = entity == 'work_day' ? compute_day_skills(timewindows) : []
-
-          [s[:sticky_vehicle_ids], related_skills + day_skills]
-        }.each_with_index{ |(properties, sub_set), sub_set_index|
-          sticky, skills = properties
-
-          unit_quantities = Hash.new(0)
-          sub_set.sort_by{ |s| - s.visits_number }.each_with_index{ |s, i|
-            unit_quantities[:visits] += s.visits_number
-            cumulated_metrics[:visits] += s.visits_number
-            s_setup_duration = s.activity ? s.activity.setup_duration : (s.pickup ? s.pickup.setup_duration : s.delivery.setup_duration)
-            s_duration = s.activity ? s.activity.duration : (s.pickup ? s.pickup.duration : s.delivery.duration)
-            duration = ((i.zero? ? s_setup_duration : 0) + s_duration) * s.visits_number
-            unit_quantities[:duration] += duration
-            cumulated_metrics[:duration] += duration
-            s.quantities.each{ |quantity|
-              unit_quantities[quantity.unit_id.to_sym] += quantity.value * s.visits_number
-              cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * s.visits_number
-            }
-          }
-
-          linked_objects["#{point.id}_#{sub_set_index}"] = sub_set.collect{ |object| object[:id] }
-          data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, sticky, skills, 0]
-        }
-
-        next if !max_cut_metrics
-        unit_symbols.each{ |unit|
-          max_cut_metrics[unit] = [unit_quantities[unit], max_cut_metrics[unit]].max
-        }
-      }
-
-      if max_cut_metrics
-        [data_items, cumulated_metrics, linked_objects, max_cut_metrics]
-      else
-        [data_items, cumulated_metrics, linked_objects]
-      end
-    end
-
-    def self.kmeans_process(centroids, c_max_iterations, max_iterations, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp)
+    # TODO: private method, reduce params
+    def self.kmeans_process(centroids, max_iterations, restarts, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp)
       biggest_cluster_size = 0
       clusters = []
-      iteration = 0
+      restart = -1
       best_limit_score = nil
-      while iteration < max_iterations
+      while restart < restarts
         c = BalancedKmeans.new
-        c.max_iterations = c_max_iterations
+        c.max_iterations = max_iterations
         c.centroid_indices = centroids if centroids && centroids.size == nb_clusters
         c.on_empty = 'random'
         # TODO : remove vrp notion from here
@@ -373,19 +245,18 @@ module Interpreters
         # TODO : throw error if vehicles have alternative skills
         c.impossible_day_combination = (0..6).collect{ |day| "not_day_skill_#{day}" }
 
-        ratio = 0.5 + 0.5 * (max_iterations - iteration) / max_iterations
+        ratio = 0.5 + 0.5 * (restarts - restart) / restarts.to_f
         ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids)
         c.clusters.delete([])
-        metrics = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][:duration] }.sum.to_i }
+        values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][cut_symbol] }.sum.to_i }
         limit_score = (0..c.cluster_metrics.size - 1).collect{ |cluster_index|
           centroid_coords = [c.centroids[cluster_index][0], c.centroids[cluster_index][1]]
           distance_to_centroid = c.clusters[cluster_index].data_items.collect{ |item| custom_distance([item[0], item[1]], centroid_coords) }.sum
-          distance_to_centroid * (1 + (4.0 / nb_clusters ) * (metric_limit.zero? ? 1 : ( (metrics.max - metrics.min).abs / metric_limit)))
+          distance_to_centroid * (1 + (4.0 / nb_clusters ) * (metric_limit.zero? ? 1 : ( (values.max - values.min).abs / metric_limit)))
         }.sum
-        values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][:duration] }.sum.to_i }
         puts "balance : #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum/values.size).to_i}"
-        iteration += 1
+        restart += 1
         empty_clusters_score = c.cluster_metrics.size < nb_clusters && (c.cluster_metrics.size..nb_clusters - 1).collect{ |cluster_index|
             metric_limit.is_a?(Array) ? metric_limit[cluster_index] : metric_limit
         }.reduce(&:+) || 0
@@ -400,165 +271,6 @@ module Interpreters
         c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
       end
       [clusters, centroids]
-    end
-
-    def self.list_vehicles(vehicles)
-      vehicle_list = []
-      vehicles.each{ |vehicle|
-        if vehicle[:timewindow]
-          (0..6).each{ |day|
-            tw = Marshal.load(Marshal.dump(vehicle[:timewindow]))
-            tw[:day_index] = day
-            new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle.id = "#{vehicle.id}_#{day}"
-            new_vehicle.original_id =  vehicle.id
-            new_vehicle[:timewindow] = tw
-            vehicle_list << new_vehicle
-          }
-        elsif vehicle[:sequence_timewindows]
-          vehicle[:sequence_timewindows].each_with_index{ |tw, tw_i|
-            new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle[:sequence_timewindows] = [tw]
-            new_vehicle.id = "#{vehicle.id}_#{tw_i}"
-            new_vehicle.original_id = vehicle.id
-            vehicle_list << new_vehicle
-          }
-        end
-      }
-      vehicle_list
-    end
-
-    def self.compute_distance_value(vehicle, cluster, points)
-      # if all vehicles do not have the same number of depots, this can not be the best way
-      value = nil
-      start_lat = points.find{ |p| p[:id] == vehicle.start_point_id }[:location][:lat] if vehicle.start_point_id
-      start_lon = points.find{ |p| p[:id] == vehicle.start_point_id }[:location][:lon] if vehicle.start_point_id
-      end_lat = points.find{ |p| p[:id] == vehicle.end_point_id }[:location][:lat] if vehicle.end_point_id
-      end_lon = points.find{ |p| p[:id] == vehicle.end_point_id }[:location][:lon] if vehicle.end_point_id
-
-      cluster.each{ |point|
-        s_lat = point[0]
-        s_lon = point[1]
-
-        sum_distance = Helper.flying_distance([start_lat, start_lon], [s_lat, s_lon]) + Helper.flying_distance([end_lat, end_lon], [s_lat, s_lon])
-        value = sum_distance if value.nil?
-        value = [value, sum_distance].min
-      }
-
-      value
-    end
-
-    def self.compute_global_skills_value(vehicle_skills, cluster_skills, value, day_skills = true)
-      if (day_skills && (cluster_skills + vehicle_skills).uniq.size == 7) ||
-         (!day_skills && (cluster_skills & vehicle_skills).size < cluster_skills.size)
-        2**32
-      else
-        value * (1 + (cluster_skills + vehicle_skills).uniq.size / 100)
-      end
-    end
-
-    def self.assign_vehicle_to_clusters(vehicles, points, clusters, entity = '', kmeans = true)
-      cluster_vehicles = Array.new(clusters.size){ [] }
-      available_clusters = []
-      clusters.each_with_index{ |cluster, i|
-        available_clusters << {
-          id: i,
-          cluster: kmeans ? cluster.data_items : cluster
-        }
-      }
-
-      vehicles_cluster = []
-      vehicles.each{ |vehicle|
-        values = []
-        next if available_clusters.empty?
-        available_clusters.each{ |cluster_data|
-          value = compute_distance_value(vehicle, cluster_data[:cluster], points)
-          value = compute_global_skills_value(compute_day_skills(vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows), cluster_data[:cluster].collect{ |i| i[5] }.flatten.select{ |skill| skill.include?('not_day_skill') }.uniq, value) if entity == 'work_day' # test tw et non tw
-          value = compute_global_skills_value(vehicle[:skills], cluster_data[:cluster][0][5].reject{ |skill| skill.include?('not_day_skill') }, value, false)
-
-          values << value
-        }
-        vehicles_cluster << values
-      }
-
-      available_vehicles_id = (0..vehicles.size - 1).collect{ |i| i }
-      available_clusters_id = (0..available_clusters.size - 1).collect{ |i| i }
-      until available_vehicles_id.empty?
-        current = vehicles_cluster.collect{ |tab| tab.select.with_index{ |val, i| val != 2**32 && available_clusters_id.include?(i) } }
-        smallest_size = current.collect.with_index{ |tab, i| tab.empty? || !available_vehicles_id.include?(i) ? 2**32 : tab.size }.min
-        if current.all?{ |tab| tab.empty? } || smallest_size == 2**32
-          # clusters were generated such that we can not find a good vehicle assignment for all of them
-          break
-        end
-        potential_vehicles = (0..current.size - 1).select{ |index| current[index].size == smallest_size && available_vehicles_id.include?(index) }
-
-        minimum = potential_vehicles.collect{ |v_index| current[v_index].min }.min
-        vehicle_to_affect = potential_vehicles.find{ |index| current[index].size == smallest_size && current[index].include?(minimum) }
-        cluster_to_affect = vehicles_cluster[vehicle_to_affect].find_index(minimum)
-
-        cluster_vehicles[available_clusters[cluster_to_affect][:id]] = [vehicles[vehicle_to_affect][:id]]
-
-        available_vehicles_id.delete(vehicle_to_affect)
-        available_clusters_id.delete(cluster_to_affect)
-      end
-
-      available_clusters_id.each_with_index{ |c, c_id|
-        v_id = available_vehicles_id[c_id]
-        # TODO : should not need this
-        begin
-          cluster_vehicles[available_clusters[c][:id]] << vehicles[v_id][:id]
-        rescue
-          cluster_vehicles[available_clusters[c][:id]] << vehicles[0][:id]
-        end
-      }
-
-      cluster_vehicles
-    end
-
-    def self.remove_from_upper(graph, node, symbol, value_to_remove)
-      if graph.key?(node)
-        graph[node][:unit_metrics][symbol] -= value_to_remove
-        remove_from_upper(graph, graph[node][:parent], symbol, value_to_remove)
-      end
-    end
-
-    def self.tree_leafs(graph, node)
-      if node.nil?
-        [nil]
-      elsif (graph[node][:level]).zero?
-         [node]
-       else
-         [tree_leafs(graph, graph[node][:left]), tree_leafs(graph, graph[node][:right])]
-       end
-    end
-
-    def self.tree_leafs_delete(graph, node)
-      returned = if node.nil?
-        []
-      elsif (graph[node][:level]).zero?
-        [node]
-      else
-        [tree_leafs(graph, graph[node][:left]), tree_leafs(graph, graph[node][:right])]
-      end
-      graph.delete(node)
-      returned
-    end
-
-    def self.centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
-      limits = []
-      if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] } &&
-         vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.uniq.size != 1
-        vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
-        total_shares = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum.to_f
-        vrp.vehicles.each_with_index{ |vehicle, index|
-          vehicle_share = vehicle[:sequence_timewindows].size
-          data_items[index][6] = vehicle_share # affect sequence timewindow size to initial centroids
-          limits << cumulated_metrics[cut_symbol].to_f * (vehicle_share / total_shares)
-        }
-      else
-        limits = cumulated_metrics[cut_symbol] / nb_clusters
-      end
-      limits
     end
 
     def self.split_balanced_kmeans(service_vrp, nb_clusters, cut_symbol = :duration, entity = '')
@@ -592,47 +304,9 @@ module Interpreters
       end
     end
 
-    # Adjust cluster if they are disparate - only called when entity == 'work_day'
-    def self.adjust_clusters(clusters, limits, cut_symbol, centroids, data_items)
-      clusters.each_with_index{ |_cluster, index|
-        centroids[index] = data_items[centroids[index]]
-      }
-      clusters.each_with_index{ |cluster, index|
-        count = 0
-        cluster.data_items.sort_by!{ |data| Helper.flying_distance(data, centroids[index]) }
-        cluster.data_items.each{ |data|
-          count += data[3][cut_symbol]
-          next if count <= limits || centroids.include?(data)
-          c = find_cluster(clusters, cluster, cut_symbol, data, limits)
-          next if c.nil?
-          cluster.data_items.delete(data)
-          c.data_items.insert(c.data_items.size, data)
-          count -= data[3][cut_symbol]
-        }
-      }
-    end
-
-    # Find the nearest cluster to add data_to_insert - because the other is full
-    def self.find_cluster(clusters, original_cluster, cut_symbol, data_to_insert, limit)
-      c = nil
-      dist = 2**32
-      clusters.each{ |cluster|
-        next if cluster == original_cluster
-        cluster.data_items.each{ |data|
-          if dist > Helper.flying_distance(data, data_to_insert) && cluster.data_items.collect{ |data_item| data_item[3][cut_symbol] }.sum < limit &&
-             cluster.data_items.all?{ |d| data_to_insert[5].nil? || d[5] && (data_to_insert[5] & d[5]).size >= d[5].size }
-            dist = Helper.flying_distance(data, data_to_insert)
-            c = cluster
-          end
-        }
-      }
-
-      c
-    end
-
     def self.split_hierarchical(service_vrp, nb_clusters, cut_symbol = :duration, entity = '')
       vrp = service_vrp[:vrp]
-      # splits using hierarchical tree method
+      # Split using hierarchical tree method
       if vrp.services.all?{ |service| service[:activity] }
         max_cut_metrics = Hash.new(0)
         cumulated_metrics = Hash.new(0)
@@ -702,5 +376,347 @@ module Interpreters
         [service_vrp]
       end
     end
+
+    module ClassMethods
+      private
+
+      def custom_distance(a, b)
+        fly_distance = Helper.flying_distance(a, b)
+        # units_distance = (0..unit_sets.size - 1).any? { |index| a[3 + index] + b[3 + index] == 1 } ? 2**56 : 0
+        # timewindows_distance = a[2].overlaps?(b[2]) ? 0 : 2**56
+        fly_distance #+ units_distance + timewindows_distance
+      end
+
+      def compute_day_skills(timewindows)
+        if timewindows.empty? || timewindows.any?{ |tw| tw[:day_index].nil? }
+          []
+        else
+          ([0, 1, 2, 3, 4, 5, 6] - timewindows.collect{ |tw| tw[:day_index] }).collect{ |forbidden_day|
+            "not_day_skill_#{forbidden_day}"
+          }
+        end
+      end
+
+      def csv_line(vrp, service, cluster_index, prefix = nil)
+        [
+          service.id,
+          service.activity.point.location.lat,
+          service.activity.point.location.lon,
+          (prefix || '') + cluster_index.to_s,
+          vrp.vehicles.first && vrp.vehicles.first.start_point && vrp.vehicles.first.start_point.id,
+          vrp.vehicles.first && vrp.vehicles.first.end_point && vrp.vehicles.first.end_point.id
+        ]
+      end
+
+      def collect_hulls(service_vrp)
+        vector = service_vrp[:vrp].services.collect{ |service|
+          [service.activity.point.location.lon, service.activity.point.location.lat]
+        }
+        hull = Hull.get_hull(vector)
+        return nil if hull.nil?
+        unit_objects = service_vrp[:vrp].units.collect{ |unit|
+          {
+            unit_id: unit.id,
+            value: service_vrp[:vrp].services.collect{ |service|
+              service_quantity = service.quantities.find{ |quantity| quantity.unit_id == unit.id }
+              service_quantity && service_quantity.value || 0
+            }.reduce(&:+)
+          }
+        }
+        duration = service_vrp[:vrp][:services].group_by{ |s| s.activity.point_id }.map{ |_point_id, ss|
+          first = ss.min_by{ |s| -s.visits_number }
+          duration = first.activity.setup_duration * first.visits_number + ss.map{ |s| s.activity.duration * s.visits_number }.sum
+        }.sum
+        {
+          type: 'Feature',
+          properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } +
+            [[:duration, duration]]],
+          geometry: {
+            type: 'Polygon',
+            coordinates: [hull + [hull.first]]
+          }
+        }
+      end
+
+      def count_metric(graph, parent, symbol)
+        value = parent.nil? ? 0 : graph[parent][:unit_metrics][symbol]
+        value + (parent.nil? ? 0 : (count_metric(graph, graph[parent][:left], symbol) + count_metric(graph, graph[parent][:right], symbol)))
+      end
+
+      def collect_data_items_metrics(vrp, entity, unit_symbols, cumulated_metrics, max_cut_metrics = nil)
+        data_items = []
+        linked_objects = {}
+
+        depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
+
+        (vrp.services + vrp.shipments).group_by{ |s|
+          if s.activity
+            s.activity.point
+          elsif s.delivery.point && depot_ids.include?(s.pickup.point.id)
+            s.delivery.point.id
+          elsif s.pickup.point && depot_ids.include?(s.delivery.point.id)
+            s.pickup.point.id
+          end
+        }.each{ |point, set_at_point|
+          next if !point
+          set_at_point.group_by{ |s|
+            related_skills = (s.skills && !s.skills.empty? ? s.skills : [])
+            timewindows = s.activity ? s.activity.timewindows : (s.pickup ? s.pickup.timewindows : s.delivery.timewindows)
+            day_skills = entity == 'work_day' ? compute_day_skills(timewindows) : []
+
+            [s[:sticky_vehicle_ids], related_skills + day_skills]
+          }.each_with_index{ |(properties, sub_set), sub_set_index|
+            sticky, skills = properties
+
+            unit_quantities = Hash.new(0)
+            sub_set.sort_by{ |s| - s.visits_number }.each_with_index{ |s, i|
+              unit_quantities[:visits] += s.visits_number
+              cumulated_metrics[:visits] += s.visits_number
+              s_setup_duration = s.activity ? s.activity.setup_duration : (s.pickup ? s.pickup.setup_duration : s.delivery.setup_duration)
+              s_duration = s.activity ? s.activity.duration : (s.pickup ? s.pickup.duration : s.delivery.duration)
+              duration = ((i.zero? ? s_setup_duration : 0) + s_duration) * s.visits_number
+              unit_quantities[:duration] += duration
+              cumulated_metrics[:duration] += duration
+              s.quantities.each{ |quantity|
+                unit_quantities[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+                cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+              }
+            }
+
+            linked_objects["#{point.id}_#{sub_set_index}"] = sub_set.collect{ |object| object[:id] }
+            data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, sticky, skills, 0]
+          }
+
+          next if !max_cut_metrics
+          unit_symbols.each{ |unit|
+            max_cut_metrics[unit] = [unit_quantities[unit], max_cut_metrics[unit]].max
+          }
+        }
+
+        if max_cut_metrics
+          [data_items, cumulated_metrics, linked_objects, max_cut_metrics]
+        else
+          [data_items, cumulated_metrics, linked_objects]
+        end
+      end
+
+      def list_vehicles(vehicles)
+        vehicle_list = []
+        vehicles.each{ |vehicle|
+          if vehicle[:timewindow]
+            (0..6).each{ |day|
+              tw = Marshal.load(Marshal.dump(vehicle[:timewindow]))
+              tw[:day_index] = day
+              new_vehicle = Marshal.load(Marshal.dump(vehicle))
+              new_vehicle.id = "#{vehicle.id}_#{day}"
+              new_vehicle.original_id =  vehicle.id
+              new_vehicle[:timewindow] = tw
+              vehicle_list << new_vehicle
+            }
+          elsif vehicle[:sequence_timewindows]
+            vehicle[:sequence_timewindows].each_with_index{ |tw, tw_i|
+              new_vehicle = Marshal.load(Marshal.dump(vehicle))
+              new_vehicle[:sequence_timewindows] = [tw]
+              new_vehicle.id = "#{vehicle.id}_#{tw_i}"
+              new_vehicle.original_id = vehicle.id
+              vehicle_list << new_vehicle
+            }
+          end
+        }
+        vehicle_list
+      end
+
+      # TODO: compute distance to centroid to save time
+      def compute_distance_value(vehicle, cluster, points)
+        # if all vehicles do not have the same number of depots, this can not be the best way
+        value = nil
+        # TODO: why use points instead of vehicle.start_point.location.lat ?
+        start_lat = points.find{ |p| p[:id] == vehicle.start_point_id }[:location][:lat] if vehicle.start_point_id
+        start_lon = points.find{ |p| p[:id] == vehicle.start_point_id }[:location][:lon] if vehicle.start_point_id
+        end_lat = points.find{ |p| p[:id] == vehicle.end_point_id }[:location][:lat] if vehicle.end_point_id
+        end_lon = points.find{ |p| p[:id] == vehicle.end_point_id }[:location][:lon] if vehicle.end_point_id
+
+        cluster.each{ |point|
+          s_lat = point[0]
+          s_lon = point[1]
+
+          sum_distance = Helper.flying_distance([start_lat, start_lon], [s_lat, s_lon]) + Helper.flying_distance([end_lat, end_lon], [s_lat, s_lon])
+          value = sum_distance if value.nil?
+          value = [value, sum_distance].min
+        }
+
+        value
+      end
+
+      def compute_global_skills_value(vehicle_skills, cluster_skills, value, day_skills = true)
+        if (day_skills && (cluster_skills + vehicle_skills).uniq.size == 7) ||
+           (!day_skills && (cluster_skills & vehicle_skills).size < cluster_skills.size)
+          2**32
+        else
+          value * (1 + (cluster_skills + vehicle_skills).uniq.size / 100)
+        end
+      end
+
+      # TODO: remove kmeans param
+      def assign_vehicle_to_clusters(vehicles, points, clusters, _entity = '', kmeans = true)
+        cluster_vehicles = Array.new(clusters.size){ [] }
+        available_clusters = []
+        clusters.each_with_index{ |cluster, i|
+          available_clusters << {
+            id: i,
+            cluster: kmeans ? cluster.data_items : cluster
+          }
+        }
+
+        vehicles_cluster = []
+        cache_distance = {}
+        vehicles.each{ |vehicle|
+          values = []
+          next if available_clusters.empty?
+          available_clusters.each{ |cluster_data|
+            key = [vehicle.start_point.location.lat, vehicle.start_point.location.lon, vehicle.end_point.location.lat, vehicle.end_point.location.lon, cluster_data[:id]]
+            value = cache_distance[key]
+            if !value
+              value = compute_distance_value(vehicle, cluster_data[:cluster], points)
+              cache_distance[key] = value
+            end
+            # value = compute_global_skills_value(compute_day_skills(vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows), cluster_data[:cluster].collect{ |i| i[5] }.flatten.select{ |skill| skill.include?('not_day_skill') }.uniq, value) if entity == 'work_day' # test tw et non tw
+            # value = compute_global_skills_value(vehicle[:skills], cluster_data[:cluster][0][5].reject{ |skill| skill.include?('not_day_skill') }, value, false)
+
+            values << value
+          }
+          vehicles_cluster << values
+        }
+
+        available_vehicles_id = (0..vehicles.size - 1).collect{ |i| i }
+        available_clusters_id = (0..available_clusters.size - 1).collect{ |i| i }
+        until available_vehicles_id.empty?
+          current = vehicles_cluster.collect{ |tab| tab.select.with_index{ |val, i| val != 2**32 && available_clusters_id.include?(i) } }
+          smallest_size = current.collect.with_index{ |tab, i| tab.empty? || !available_vehicles_id.include?(i) ? 2**32 : tab.size }.min
+          if current.all?{ |tab| tab.empty? } || smallest_size == 2**32
+            # clusters were generated such that we can not find a good vehicle assignment for all of them
+            break
+          end
+          potential_vehicles = (0..current.size - 1).select{ |index| current[index].size == smallest_size && available_vehicles_id.include?(index) }
+
+          minimum = potential_vehicles.collect{ |v_index| current[v_index].min }.min
+          vehicle_to_affect = potential_vehicles.find{ |index| current[index].size == smallest_size && current[index].include?(minimum) }
+          cluster_to_affect = vehicles_cluster[vehicle_to_affect].find_index(minimum)
+
+          cluster_vehicles[available_clusters[cluster_to_affect][:id]] = [vehicles[vehicle_to_affect][:id]]
+
+          available_vehicles_id.delete(vehicle_to_affect)
+          available_clusters_id.delete(cluster_to_affect)
+        end
+
+        available_clusters_id.each_with_index{ |c, c_id|
+          v_id = available_vehicles_id[c_id]
+          # TODO : should not need this
+          begin
+            cluster_vehicles[available_clusters[c][:id]] << vehicles[v_id][:id]
+          rescue
+            cluster_vehicles[available_clusters[c][:id]] << vehicles[0][:id]
+          end
+        }
+
+        cluster_vehicles
+      end
+
+      # Adjust cluster if they are disparate - only called when entity == 'work_day'
+      def adjust_clusters(clusters, limits, cut_symbol, centroids, data_items)
+        clusters.each_with_index{ |_cluster, index|
+          centroids[index] = data_items[centroids[index]]
+        }
+        clusters.each_with_index{ |cluster, index|
+          count = 0
+          cluster.data_items.sort_by!{ |data| Helper.flying_distance(data, centroids[index]) }
+          cluster.data_items.each{ |data|
+            count += data[3][cut_symbol]
+            next if count <= limits || centroids.include?(data)
+            c = find_cluster(clusters, cluster, cut_symbol, data, limits)
+            next if c.nil?
+            cluster.data_items.delete(data)
+            c.data_items.insert(c.data_items.size, data)
+            count -= data[3][cut_symbol]
+          }
+        }
+      end
+
+      # Find the nearest cluster to add data_to_insert - because the other is full
+      def find_cluster(clusters, original_cluster, cut_symbol, data_to_insert, limit)
+        c = nil
+        dist = 2**32
+        clusters.each{ |cluster|
+          next if cluster == original_cluster
+          cluster.data_items.each{ |data|
+            if dist > Helper.flying_distance(data, data_to_insert) && cluster.data_items.collect{ |data_item| data_item[3][cut_symbol] }.sum < limit &&
+               cluster.data_items.all?{ |d| data_to_insert[5].nil? || d[5] && (data_to_insert[5] & d[5]).size >= d[5].size }
+              dist = Helper.flying_distance(data, data_to_insert)
+              c = cluster
+            end
+          }
+        }
+
+        c
+      end
+
+      def remove_from_upper(graph, node, symbol, value_to_remove)
+        if graph.key?(node)
+          graph[node][:unit_metrics][symbol] -= value_to_remove
+          remove_from_upper(graph, graph[node][:parent], symbol, value_to_remove)
+        end
+      end
+
+      def remove_used_empties_and_refills(vrp, result)
+        result[:routes].collect{ |route|
+          current_service = nil
+          route[:activities].select{ |activity| activity[:service_id] }.collect{ |activity|
+            current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
+            current_service if current_service && current_service.quantities.any?(&:fill) || current_service.quantities.any?(&:empty)
+          }
+        }.flatten
+      end
+
+      def tree_leafs(graph, node)
+        if node.nil?
+          [nil]
+        elsif (graph[node][:level]).zero?
+           [node]
+         else
+           [tree_leafs(graph, graph[node][:left]), tree_leafs(graph, graph[node][:right])]
+         end
+      end
+
+      def tree_leafs_delete(graph, node)
+        returned = if node.nil?
+          []
+        elsif (graph[node][:level]).zero?
+          [node]
+        else
+          [tree_leafs(graph, graph[node][:left]), tree_leafs(graph, graph[node][:right])]
+        end
+        graph.delete(node)
+        returned
+      end
+
+      def centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
+        limits = []
+        if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] } &&
+           vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.uniq.size != 1
+          vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
+          total_shares = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum.to_f
+          vrp.vehicles.each_with_index{ |vehicle, index|
+            vehicle_share = vehicle[:sequence_timewindows].size
+            data_items[index][6] = vehicle_share # affect sequence timewindow size to initial centroids
+            limits << cumulated_metrics[cut_symbol].to_f * (vehicle_share / total_shares)
+          }
+        else
+          limits = cumulated_metrics[cut_symbol] / nb_clusters
+        end
+        limits
+      end
+    end
+
+    extend ClassMethods
   end
 end
