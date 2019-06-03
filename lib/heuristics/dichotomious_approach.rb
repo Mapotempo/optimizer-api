@@ -40,6 +40,7 @@ module Interpreters
         set_config(service_vrp)
         t1 = Time.now
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
+        # TODO: only compute matrix should be called
         result = OptimizerWrapper.solve([service_vrp], job)
         t2 = Time.now
 
@@ -66,16 +67,14 @@ module Interpreters
           result = Helper.merge_results(results)
           result[:elapsed] += (t2 - t1) * 1000
         end
-        if service_vrp[:level].zero?
-          Interpreters::SplitClustering.remove_empty_routes(result)
+        Interpreters::SplitClustering.remove_empty_routes(result)
 
-          # Set vehicles before remove routes for end stage to avoid using too many vehicles
-          Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.7 / (service_vrp[:level] + 1))
-          remove_bad_skills(service_vrp, result)
-          result = end_stage_insert_unassigned(service_vrp, result, job)
-          Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.3)
-          result
-        end
+        # Set vehicles before remove routes for end stage to avoid using too many vehicles
+        Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.7 / (service_vrp[:level] + 1))
+        remove_bad_skills(service_vrp, result)
+        result = end_stage_insert_unassigned(service_vrp, result, job)
+        Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.3)
+        result
       else
         service_vrp[:vrp].resolution_init_duration = nil
       end
@@ -91,7 +90,8 @@ module Interpreters
       service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion'] #A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
+      service_vrp[:vrp].resolution_init_duration = 10 if service_vrp[:vrp].vehicles.size > 10 && service_vrp[:vrp].resolution_vehicle_limit > 10 || service_vrp[:vrp].services.size > 500
+      service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion'] # A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
 
       service_vrp
     end
@@ -165,8 +165,8 @@ module Interpreters
             }
             rate_vehicles = sub_service_vrp[:vrp].vehicles.size / service_vrp[:vrp].vehicles.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
-            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration * rate_vehicles * rate_services).to_i
-            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / (2.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / (1.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i
             # sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
 
@@ -275,6 +275,7 @@ module Interpreters
       split_service_vrps
     end
 
+    # TODO: remove this method and use SplitClustering class instead
     def self.kmeans(vrp, cut_symbol)
       nb_clusters = 2
       # Split using balanced kmeans
