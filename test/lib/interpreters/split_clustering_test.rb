@@ -139,9 +139,12 @@ class SplitClusteringTest < Minitest::Test
   end
 
   def test_length_centroid
-    vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/length_centroid.json').to_a.join)['vrp']))
+    vrp = FCT.load_vrp(self)
+    service_vrp = {vrp: vrp, service: :demo}
 
-    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp, nil, nil)
+    assert services_vrps
+    assert_equal services_vrps.size, 2
   end
 
   def test_work_day_without_vehicle_entity_small
