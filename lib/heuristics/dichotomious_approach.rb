@@ -123,8 +123,8 @@ module Interpreters
             vehicle = service_vrp[:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
             if service && !service.skills.empty?
               if vehicle.skills.all?{ |xor_skills| (service.skills & xor_skills).size != service.skills.size }
-               result[:unassigned] << a
-               r[:activities].delete(a)
+                result[:unassigned] << a
+                r[:activities].delete(a)
               end
             end
             # TODO: remove bad sticky?
