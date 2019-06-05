@@ -661,6 +661,7 @@ module OptimizerWrapper
   end
 
   def self.parse_result(vrp, result)
+    tic_parse_result = Time.now
     result[:routes].each{ |r|
       details = nil
       v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
@@ -705,7 +706,9 @@ module OptimizerWrapper
       }.reduce(:+)
     end
 
-    log "result - unassigned rate: #{result[:unassigned].size}/#{vrp.services.size} (#{(result[:unassigned].size.to_f / vrp.services.size * 100).round(1)}%), vehicles used: #{result[:routes].map{ |r| r[:vehicle_id] if r[:activities].any?{ |a| a[:service_id] } } }"
+    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.services.size}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.services.size + 2 * vrp.shipments.size) * 100).round(1)}%), vehicles used: #{result[:routes].map{ |r| r[:vehicle_id] if r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }}"
+    log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
+
     result
   end
 

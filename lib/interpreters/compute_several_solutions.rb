@@ -143,6 +143,7 @@ module Interpreters
     end
 
     def self.find_best_heuristic(service_vrp)
+      tic = Time.now
       vrp = service_vrp[:vrp]
       strategies = vrp.preprocessing_first_solution_strategy
       custom_heuristics = collect_heuristics(vrp, strategies)
@@ -189,6 +190,7 @@ module Interpreters
       else
         vrp.preprocessing_first_solution_strategy = custom_heuristics
       end
+      log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec"
       service_vrp
     end
 
