@@ -26,15 +26,19 @@ class DichotomiousTest < Minitest::Test
     t2 = Time.now
     assert result
 
-    # Check routes
-    assert 16 > result[:routes].size, "Too many routes: #{result[:routes].size}"
-
     # Check activities
-    assert 20 > result[:unassigned].size, "Too many unassigned services #{result[:unassigned].size}"
+    assert 30 > result[:unassigned].size, "Too many unassigned services #{result[:unassigned].size}"
+
+    # Check routes
+    if result[:unassigned].size < 10
+      assert 14 > result[:routes].size, "Too many routes: #{result[:routes].size}"
+    else
+      assert 13 > result[:routes].size, "Too many routes: #{result[:routes].size}"
+    end
 
     # Check elapsed time
-    assert t2 - t1 < 1500, "Too long elapsed time: #{t2 - t1}"
-    assert t2 - t1 > 1000, "Too short elapsed time: #{t2 - t1}"
-    assert result[:elapsed] / 1000 > 1000 && result[:elapsed] / 1000 < 1500, "Incorrect elapsed time: #{result[:elapsed]}"
+    assert t2 - t1 < 765, "Too long elapsed time: #{t2 - t1}"
+    assert t2 - t1 > 510, "Too short elapsed time: #{t2 - t1}"
+    assert result[:elapsed] / 1000 > 510 && result[:elapsed] / 1000 < 765, "Incorrect elapsed time: #{result[:elapsed]}"
   end
 end
