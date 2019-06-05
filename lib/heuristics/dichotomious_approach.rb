@@ -96,9 +96,12 @@ module Interpreters
           service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[1][:vrp].resolution_total_split_number
           result = Helper.merge_results(results)
           result[:elapsed] += (t2 - t1) * 1000
+          log "dicho - level(#{service_vrp[:level]}) before remove_bad_skills unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
 
           remove_bad_skills(service_vrp, result)
           Interpreters::SplitClustering.remove_empty_routes(result)
+
+          log "dicho - level(#{service_vrp[:level]}) before end_stage_insert  unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
 
           result = end_stage_insert_unassigned(service_vrp, result, job)
           Interpreters::SplitClustering.remove_empty_routes(result)
@@ -106,7 +109,9 @@ module Interpreters
           if service_vrp[:level].zero?
             # Remove vehicles which are half empty
             Interpreters::SplitClustering.remove_empty_routes(result)
+            log "dicho - before remove_poorly_populated_routes: #{result[:routes].size}", level: :debug
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.5)
+            log "dicho - after remove_poorly_populated_routes: #{result[:routes].size}", level: :debug
           end
 
           log "dicho - level(#{service_vrp[:level]}) unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
@@ -198,6 +203,7 @@ module Interpreters
     end
 
     def self.remove_bad_skills(service_vrp, result)
+      log '---> remove_bad_skills', level: :debug
       result[:routes].each{ |r|
         r[:activities].each{ |a|
           if a[:service_id]
@@ -205,6 +211,7 @@ module Interpreters
             vehicle = service_vrp[:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
             if service && !service.skills.empty?
               if vehicle.skills.all?{ |xor_skills| (service.skills & xor_skills).size != service.skills.size }
+                log "dicho - removed service #{a[:service_id]} from vehicle #{r[:vehicle_id]}"
                 result[:unassigned] << a
                 r[:activities].delete(a)
               end
@@ -213,6 +220,7 @@ module Interpreters
           end
         }
       }
+      log '<--- remove_bad_skills', level: :debug
     end
 
     def self.end_stage_insert_unassigned(service_vrp, result, job = nil)

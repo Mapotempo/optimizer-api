@@ -65,6 +65,7 @@ module Interpreters
     end
 
     def self.generate_split_vrps(service_vrp, job = nil, block)
+      log '--> generate_split_vrps', level: :debug
       vrp = service_vrp[:vrp]
       if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
         current_service_vrps = [service_vrp]
@@ -173,9 +174,14 @@ module Interpreters
         }
         vehicle_worktime = vehicle.duration || vehicle.timewindow&.start && vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start)
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
-        log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime}"
+        log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime} percent: #{((route_duration.to_f / vehicle_worktime) * 100).to_i}%", level: :debug
         time_flag = vehicle_worktime && route_duration < limit * vehicle_worktime
+
         if load_flag && time_flag
+          number_of_services_in_the_route = route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact.size
+
+          log "route #{route[:vehicle_id]} is emptied: #{number_of_services_in_the_route} services are now unassigned.", level: :warning
+
           result[:unassigned] += route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact
           true
         end
@@ -312,6 +318,7 @@ module Interpreters
     end
 
     def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {}, &block)
+      log '--> split_balanced_kmeans', level: :debug
       default_options = { max_iterations: 300, restarts: 50, cut_symbol: :duration }
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
@@ -341,15 +348,19 @@ module Interpreters
 
         raise OptimizerWrapper::UnsupportedProblemError, 'Cannot use balanced kmeans if there are vehicles with alternative skills' if vrp.vehicles.any?{ |v| v[:skills].any?{ |skill| skill.is_a?(Array) } && v[:skills].size > 1 }
 
+        tic = Time.now
+
         options[:expected_characteristics] = generate_expected_characteristics(vrp.vehicles)
         clusters, _centroids, centroid_characteristics = kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options, &block)
+
+        toc = Time.now
 
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
           cluster.data_items.flat_map{ |i|
             linked_objects[i[2]]
           }
         }
-        log 'Balanced K-Means: split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
+        log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
         cluster_vehicles = assign_vehicle_to_clusters(centroid_characteristics, nil, nil, clusters) if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
 
         result_items.collect.with_index{ |result_item, result_index|
@@ -383,7 +394,6 @@ module Interpreters
         start_timer = Time.now
         clusterer = c.build(DataSet.new(data_items: data_items), unit_symbols)
         end_timer = Time.now
-        log "Timer #{end_timer - start_timer}"
 
         metric_limit = cumulated_metrics[options[:cut_symbol]] / nb_clusters
         # raise OptimizerWrapper::DiscordantProblemError.new("Unfitting cluster split metric. Maximum value is greater than average") if max_cut_metrics[options[:cut_symbol]] > metric_limit
@@ -426,7 +436,7 @@ module Interpreters
           linked_objects[i[2]]
         }.flatten
 
-        log 'Hierarchical Tree: split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
+        log "Hierarchical Tree (#{end_timer - start_timer}sec): split #{data_items.size} into #{clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')}"
         cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size, vrp.vehicles, vrp.points, clusters)
         adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
         result_items.collect.with_index{ |result_item, result_index|
@@ -736,6 +746,7 @@ module Interpreters
           if vrp.matrices.empty?
             single_location_array = [[vrp.vehicles[0].start_point.location.lat, vrp.vehicles[0].start_point.location.lon]]
             locations = data_items.collect{ |point| [point[0], point[1]] }
+            log "matrix computation #{single_location_array.size}x#{locations.size} & #{locations.size}x#{single_location_array.size}"
             time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], single_location_array, locations).first
             time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], locations, single_location_array).first
           else

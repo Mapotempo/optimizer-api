@@ -569,7 +569,8 @@ module Wrappers
     end
 
     def add_unassigned(unfeasible, vrp, service, reason)
-      return unfeasible if unfeasible.any?{ |unfeas| unfeas[:service_id] == service[:id] }
+      log "service #{service[:id]} cannot be assigned, reason: #{reason}", level: :warning
+      return unfeasible if unfeasible.any?{ |unfeas| unfeas[:original_service_id] == service[:id] }
 
       unfeasible << (0..service.visits_number).collect{ |index|
         service_unassigned = unfeasible.find{ |una| una[:original_service_id] == service[:id] }
