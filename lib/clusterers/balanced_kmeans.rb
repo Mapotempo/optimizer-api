@@ -72,6 +72,7 @@ module Ai4r
 
         calc_initial_centroids
         @rate_balance = 1.0
+        @data_set.data_items.sort_by!{ |x| x[3][@cut_symbol] || 0 }.reverse! if @cut_symbol # TODO: This doesn't need to be in here move outside after testing
         until stop_criteria_met
           calculate_membership_clusters
           sort_clusters
@@ -224,19 +225,24 @@ module Ai4r
                            hard_violation # or if services skills have no match
           2**32
         elsif non_common_number > 0 # if services skills have no intersection but could have one
-          2**(16 + non_common_number)
+          fly_distance * non_common_number
         else
           0
         end
 
         # balance between clusters computation
-        balance = if cut_value > limit
-          ((cut_value - limit) / limit.to_f) * 200 * fly_distance * @rate_balance
-        else
-          0
+        balance = 1.0
+        if @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 } #&& @iterations > 0
+          @average_load = @total_load / @number_of_clusters
+          if @average_load / limit < 0.95
+            balance = (cut_value / @average_load)**(2 * @average_load / limit)
+          else
+            balance = (cut_value / @average_load)
+          end
+          #puts "%#{(@average_load*100/limit).to_i} balance: #{balance.round(2)} current cluster load: #{cut_value} @average_load: #{@average_load}"
         end
 
-        fly_distance + balance + compatibility
+        (fly_distance + compatibility) * balance
       end
 
       def calculate_membership_clusters
@@ -246,12 +252,16 @@ module Ai4r
         end
         @cluster_indices = Array.new(@number_of_clusters) {[]}
 
+        @total_load = 0
         @data_set.data_items.each_with_index do |data_item, data_index|
           c = eval(data_item)
           @clusters[c] << data_item
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
             @cluster_metrics[c][unit] += data_item[3][unit]
+            if unit == @cut_symbol
+              @total_load += data_item[3][unit]
+            end
           }
           update_centroid_properties(c, data_item) # TODO : only if missing caracteristics. Returned through eval ?
         end
