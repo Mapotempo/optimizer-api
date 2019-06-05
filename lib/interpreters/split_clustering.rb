@@ -233,7 +233,7 @@ module Interpreters
     def self.kmeans_process(centroids, max_iterations, restarts, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp, options = {})
       biggest_cluster_size = 0
       clusters = []
-      restart = -1
+      restart = 0
       best_limit_score = nil
       while restart < restarts
         c = BalancedKmeans.new
@@ -247,7 +247,7 @@ module Interpreters
 
         ratio = 0.8 + 0.2 * (restarts - restart) / restarts.to_f
         ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
-        c.build(DataSet.new(data_items: data_items.shuffle), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
+        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
         c.clusters.delete([])
         values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][cut_symbol] }.sum.to_i }
         limit_score = (0..c.cluster_metrics.size - 1).collect{ |cluster_index|
@@ -292,7 +292,7 @@ module Interpreters
         data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, entity, unit_symbols, cumulated_metrics)
         limits = centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
-        clusters, centroids = kmeans_process(centroids, 80, 20, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
+        clusters, centroids = kmeans_process(centroids, 150, 15, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp)
         # TODO : possible to remove ?
         # adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
