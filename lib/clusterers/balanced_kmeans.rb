@@ -73,7 +73,13 @@ module Ai4r
 
         calc_initial_centroids
         @rate_balance = 1.0
-        @data_set.data_items.sort_by!{ |x| x[3][@cut_symbol] || 0 }.reverse! if @cut_symbol # TODO: This doesn't need to be in here move outside after testing
+
+        if @cut_symbol
+          @data_set.data_items.sort_by!{ |x| x[3][@cut_symbol] || 0 }.reverse!
+
+          @total_cut_load = @data_set.data_items.inject(0) { |sum, d| sum + d[3][@cut_symbol] }
+        end
+
         until stop_criteria_met
           calculate_membership_clusters
           sort_clusters
@@ -229,23 +235,29 @@ module Ai4r
         hard_violation, non_common_number = a[5].empty? ? [false, 0] : compute_compatibility(a[5], b[5], cluster_index)
         compatibility = if a[4] && b[4] && (b[4] & a[4]).empty? || # if service sticky or skills are different than centroids sticky/skills,
                            hard_violation # or if services skills have no match
-          2**32
-        elsif non_common_number > 0 # if services skills have no intersection but could have one
-          fly_distance * non_common_number
-        else
-          0
-        end
+                          2**32
+                        elsif non_common_number > 0 # if services skills have no intersection but could have one
+                          fly_distance * non_common_number
+                        else
+                          0
+                        end
 
         # balance between clusters computation
         balance = 1.0
-        if @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 } #&& @iterations > 0
-          @average_load = @total_load / @number_of_clusters
-          if @average_load / limit < 0.95
-            balance = (cut_value / @average_load)**(2 * @average_load / limit)
-          else
-            balance = (cut_value / @average_load)
-          end
-          #puts "%#{(@average_load*100/limit).to_i} balance: #{balance.round(2)} current cluster load: #{cut_value} @average_load: #{@average_load}"
+        if @appy_balancing #&& @iterations > 0
+          # At this "stage" of the clustering we would expect this limit to be met
+          expected_cut_limit = limit * @percent_assigned_cut_load
+          # Compare "expected_cut_limit to the current cut_value
+          # and penalize (or favorise) if cut_value/expected_cut_limit greater (or less) than 1.
+          #byebug
+          balance = if @percent_assigned_cut_load < 0.95
+                      # First half of the clustering down-play the effect of balance (i.e., **power < 1)
+                      # After then make it more pronounced (i.e., **power > 1)
+                      (cut_value / expected_cut_limit)**(2 * @percent_assigned_cut_load)
+                    else
+                      # If at the end of the clustering, do not take the power
+                      (cut_value / expected_cut_limit)
+                    end
         end
 
         (fly_distance + compatibility) * balance
@@ -258,15 +270,20 @@ module Ai4r
         end
         @cluster_indices = Array.new(@number_of_clusters) {[]}
 
-        @total_load = 0
+        @appy_balancing = false
+        @total_assigned_cut_load = 0
+        @percent_assigned_cut_load = 0
         @data_set.data_items.each_with_index do |data_item, data_index|
           c = eval(data_item)
           @clusters[c] << data_item
           @cluster_indices[c] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
             @cluster_metrics[c][unit] += data_item[3][unit]
-            if unit == @cut_symbol
-              @total_load += data_item[3][unit]
+            next if unit != @cut_symbol
+            @total_assigned_cut_load += data_item[3][unit]
+            @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load
+            if !@appy_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 }
+              @appy_balancing = true
             end
           }
           update_centroid_properties(c, data_item) # TODO : only if missing caracteristics. Returned through eval ?
