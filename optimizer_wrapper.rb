@@ -352,46 +352,66 @@ module OptimizerWrapper
     raise
   end
 
+  def self.split_independant_vrp_by_skills(vrp)
+    # TODO : remove this flatten to take into account alternative skills on vehicle
+    all_skills = vrp.vehicles.collect{ |v| v.skills.flatten }.uniq
+    vehicle_ids_by_skills = all_skills.collect{ |skills| vrp.vehicles.collect{ |v| v.id if v.skills.flatten == skills }.compact }
+
+    sub_vrps = vehicle_ids_by_skills.each_with_object([]) { |vehicle_ids, sub_vrps|
+      service_ids = vrp.services.select{ |s| (s.skills & vrp.vehicles.find{ |v| vehicle_id.include?(v.id) }.skills.flatten) == s.skills }.map(&:id)
+      shipment_ids = vrp.shipments.select{ |s| (s.skills & vrp.vehicles.find{ |v| vehicle_id.include?(v.id) }.skills.flatten) == s.skills }.map(&:id)
+
+      next if service_ids.empty? && shipment_ids.empty? # No need to create this sub_problem if there is no shipment nor service in it
+
+      service_vrp = {
+        service: nil,
+        vrp: vrp,
+      }
+      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, vehicle_ids)
+      sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration && vrp.resolution_duration * sub_service_vrp[:vrp].services.size / vrp.services.size
+      sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration && vrp.resolution_minimum_duration * sub_service_vrp[:vrp].services.size / vrp.services.size) || (vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size)
+      sub_vrps.push(sub_service_vrp[:vrp])
+    }
+    sub_vrps
+  end
+
+  def self.split_independant_vrp_by_sticky_vehicle(vrp)
+    # Intead of map{}.compact() or collect{}.compact() reduce([]){} or each_with_object([]){} is more efficient
+    # when there are items to skip in the loop because it makes one pass of the array instead of two
+    sub_vrps = vrp.vehicles.map(&:id).each_with_object([]) { |vehicle_id, sub_vrps|
+      service_ids = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
+      shipment_ids = vrp.shipments.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
+
+      next if service_ids.empty? && shipment_ids.empty? # No need to create this sub_problem if there is no shipment nor service in it
+
+      service_vrp = {
+        service: nil,
+        vrp: vrp,
+      }
+      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, [vehicle_id])
+      sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration && vrp.resolution_duration / vrp.vehicles.size
+      sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration && vrp.resolution_minimum_duration / vrp.vehicles.size) || (vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size)
+      sub_vrps.push(sub_service_vrp[:vrp])
+    }
+    sub_vrps
+  end
+
   def self.split_independant_vrp(vrp)
     # Don't split vrp if
     return [vrp] if ENV['DUMP_VRP'] || # Dump to compute matrix is needed
                     (vrp.vehicles.size <= 1) ||
-                    (vrp.services.empty? && vrp.shipments.empty?) || # there might be zero services or shipments (check together)
-                    vrp.services.any?{ |s| s.sticky_vehicles.size != 1 } ||
-                    vrp.shipments.any?{ |s| s.sticky_vehicles.size != 1 }
+                    (vrp.services.empty? && vrp.shipments.empty?)  # there might be zero services or shipments (check together)
 
-    # Intead of map{}.compact() or collect{}.compact() reduce([]){} or each_with_object([]){} is more efficient
-    # when there are items to skip in the loop because it makes one pass of the array instead of two
-    sub_vrps = vrp.vehicles.each_with_object([]) { |vehicle, sub_vrps|
-      services = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle.id] }
-      shipments = vrp.shipments.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle.id] }
+    if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 } && vrp.shipments.all?{ |s| s.sticky_vehicles.size == 1 }
+      return split_independant_vrp_by_sticky_vehicle(vrp)
+    end
 
-      next if services.empty? && shipments.empty? # No need to create this sub_problem if there is no shipment nor service in it
+    if vrp.services.all?{ |s| !s.skills.empty? && s.sticky_vehicles.empty? &&
+       vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == v_skills.size } } }
+      return split_independant_vrp_by_skills(vrp)
+    end
 
-      sub_vrp = ::Models::Vrp.create({}, false)
-      [:matrices, :units].each{ |key|
-        (sub_vrp.send "#{key}=", vrp.send(key)) if vrp.send(key)
-      }
-      point_ids = services.map{ |s| s.activity.point.id } + [vehicle.start_point_id, vehicle.end_point_id].uniq.compact + vrp.subtours.map{ |s_t| s_t.transmodal_stops.map{ |t_s| t_s.id }}.flatten.uniq
-      sub_vrp.points = vrp.points.select{ |p| point_ids.include? p.id }
-      sub_vrp.rests = vrp.rests.select{ |r| vehicle.rests.map(&:id).include? r.id }
-      sub_vrp.vehicles = vrp.vehicles.select{ |v| v.id == vehicle.id }
-      sub_vrp.services = services
-      sub_vrp.shipments = shipments
-      sub_vrp.routes = vrp.routes.select{ |route| sub_vrp.vehicles.one?{ |vehicle| vehicle.id == route.vehicle.id }}
-      sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id }}}
-      sub_vrp.subtours = vrp.subtours
-      [:preprocessing, :restitution, :resolution].each{ |c|
-        vrp.methods.select{ |m| m.to_s.start_with?("#{c}_") && !m.to_s.end_with?('?') && !m.to_s.end_with?('=') }.each{ |m|
-          v = vrp.send(m)
-          sub_vrp.send("#{m}=", v) unless v.nil?
-        }
-      }
-      sub_vrp.resolution_duration = vrp.resolution_duration && vrp.resolution_duration / vrp.vehicles.size
-      sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration && vrp.resolution_minimum_duration / vrp.vehicles.size) || (vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size)
-      sub_vrps.push(sub_vrp)
-    }
-    sub_vrps
+    [vrp]
   end
 
   def self.join_independant_vrps(services_vrps, callback)

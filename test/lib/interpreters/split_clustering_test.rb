@@ -369,4 +369,41 @@ class SplitClusteringTest < Minitest::Test
       assert service[:vrp][:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(vehicle_day) }
     }
   end
+
+  def test_split_problem_based_on_skills
+    vrp = VRP.basic
+    vrp[:services][0][:skills] = ['skill_a', 'skill_c']
+    vrp[:services][1][:skills] = ['skill_a', 'skill_c']
+    vrp[:services][2][:skills] = ['skill_b']
+    vrp[:services][3] = {
+      id: 'service_4',
+      skills: ['skill_b'],
+      activity: {
+        point_id: 'point_3'
+      }
+    }
+    vrp[:vehicles][0] = {
+      id: 'vehicle_0',
+      matrix_id: 'matrix_0',
+      start_point_id: 'point_0',
+      skills: [['skill_a', 'skill_c']]
+    }
+    vrp[:vehicles][1] = {
+      id: 'vehicle_1',
+      matrix_id: 'matrix_0',
+      start_point_id: 'point_0',
+      skills: [['skill_b']]
+    }
+    vrp[:vehicles][2] = {
+      id: 'vehicle_2',
+      matrix_id: 'matrix_0',
+      start_point_id: 'point_0',
+      skills: [['skill_b']]
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, FCT.create(vrp), nil)
+    assert_equal result[:solvers].size, 2
+    assert_equal result[:routes][0][:activities].collect{ |activity| activity[:service_id] }.compact, ['service_1', 'service_2']
+    assert_equal result[:routes][1][:activities].collect{ |activity| activity[:service_id] }.compact, ['service_3', 'service_4']
+  end
 end

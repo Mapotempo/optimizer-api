@@ -220,6 +220,8 @@ module Interpreters
       points_ids = services.map{ |s| s.activity.point.id }.uniq.compact + shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
       sub_vrp.services = services
       sub_vrp.shipments = shipments
+      sub_vrp.rests = vrp.rests.select{ |r| sub_vrp.vehicles.collect{ |v| v.rests.id }.include? r.id }
+      sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } } }
       sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + sub_vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten).compact.uniq
       {
         vrp: sub_vrp,
