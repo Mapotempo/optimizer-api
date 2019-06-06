@@ -76,11 +76,14 @@ module Interpreters
           result[:elapsed] += (t2 - t1) * 1000
 
           remove_bad_skills(service_vrp, result)
+          Interpreters::SplitClustering.remove_empty_routes(result)
 
           result = end_stage_insert_unassigned(service_vrp, result, job)
+          Interpreters::SplitClustering.remove_empty_routes(result)
 
           if service_vrp[:level].zero?
             # Remove vehicles which are half empty
+            Interpreters::SplitClustering.remove_empty_routes(result)
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.5)
           end
         end
@@ -123,7 +126,6 @@ module Interpreters
     end
 
     def self.remove_bad_skills(service_vrp, result)
-      Interpreters::SplitClustering.remove_empty_routes(result)
       result[:routes].each{ |r|
         r[:activities].each{ |a|
           if a[:service_id]
@@ -139,7 +141,6 @@ module Interpreters
           end
         }
       }
-      Interpreters::SplitClustering.remove_empty_routes(result)
     end
 
     def self.end_stage_insert_unassigned(service_vrp, result, block, job = nil)
