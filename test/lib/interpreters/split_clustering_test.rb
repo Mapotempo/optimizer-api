@@ -23,6 +23,7 @@ class SplitClusteringTest < Minitest::Test
     vrp = FCT.load_vrp(self)
     service_vrp = {vrp: vrp, service: :demo}
     while service_vrp[:vrp].services.size > 100
+      service_vrp[:vrp][:vehicles] *= 2
       services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, :duration, 'vehicle')
       assert_equal 2, services_vrps_dicho.size
 
@@ -47,37 +48,6 @@ class SplitClusteringTest < Minitest::Test
       # Clusters should be very well balanced
       min_duration = average_duration - 0.1 * average_duration
       max_duration = average_duration + 0.1 * average_duration
-      durations.each_with_index{ |duration, index|
-        assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
-      }
-
-      service_vrp = services_vrps_dicho.first
-    end
-  end
-
-  def test_cluster_dichotomious_heuristic
-    skip 'Long test, broken in previous commits, to fix'
-    vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious.json')
-    service_vrp = {vrp: vrp, service: :demo, level: 0}
-    while service_vrp[:vrp].services.size > 100
-      services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp)
-      assert_equal 2, services_vrps_dicho.size
-
-      locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.first.data_items.map{ |d| [d[0], d[1]] }
-      locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.second.data_items.map{ |d| [d[0], d[1]] }
-      assert_equal 0, (locations_one & locations_two).size
-
-      durations = []
-      services_vrps_dicho.each{ |service_vrp_dicho|
-        durations << service_vrp_dicho[:vrp].services_duration
-      }
-      assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
-      assert durations[0] >= durations[1]
-
-      average_duration = durations.inject(0, :+) / durations.size
-      # Clusters should be balanced but the priority is the geometry
-      min_duration = average_duration - 0.5 * average_duration
-      max_duration = average_duration + 0.5 * average_duration
       durations.each_with_index{ |duration, index|
         assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
       }
@@ -149,12 +119,13 @@ class SplitClusteringTest < Minitest::Test
       assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
     }
 
-    services_vrps_days = services_vrps_vehicles.each{ |services_vrps|
+    services_vrps_vehicles.each{ |services_vrps|
       durations = []
+      services_vrps[:vrp][:vehicles] *= 5
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, :duration, 'work_day')
       assert_equal 5, services_vrps.size
       services_vrps.each{ |service_vrp|
-        next if service_vrp[:vrp].points.size < 10 # FIXME When number of services is too small balanced duration is very random
+        next if service_vrp[:vrp].points.size < 10
         durations << service_vrp[:vrp].services_duration
       }
       next if durations.empty?
@@ -175,6 +146,9 @@ class SplitClusteringTest < Minitest::Test
 
   def test_work_day_without_vehicle_entity_small
     vrp = VRP.lat_lon_scheduling
+    vrp[:vehicles].each{ |v|
+      v[:sequence_timewindows] = []
+    }
     vrp[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
       metric: 'duration',
@@ -390,26 +364,6 @@ class SplitClusteringTest < Minitest::Test
     generated_services_vrps.each{ |service|
       vehicle_day = service[:vrp][:vehicles].first[:sequence_timewindows].first[:day_index]
       assert service[:vrp][:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(vehicle_day) }
-    }
-  end
-
-  def test_Mai17_AG10_12VL 
-    # do not keep this test, too long
-    vrp = FCT.load_vrp(self)
-    service_vrp = {vrp: vrp, service: :demo}
-    generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
-    assert_equal generated_services_vrps.size, 100
-    (0..99).each{ |index|
-      vrp = generated_services_vrps[index][:vrp]
-      if vrp[:vehicles].first[:sequence_timewindows].first[:day_index] == 0
-        assert vrp[:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(0) }
-      end
-      if vrp[:vehicles].first[:sequence_timewindows].first[:day_index] == 1
-        assert vrp[:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(1) }
-      end
-      if vrp[:vehicles].first[:sequence_timewindows].first[:day_index] == 2
-        assert vrp[:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(2) }
-      end
     }
   end
 end

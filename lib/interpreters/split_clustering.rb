@@ -309,7 +309,7 @@ module Interpreters
         }
         puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][cut_symbol] || 0 }.inject(0, :+) })" }.join(' & ')
         cluster_vehicles = nil
-        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity) if entity != ''
+        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
@@ -382,7 +382,7 @@ module Interpreters
 
         puts 'Hierarchical Tree : split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
         cluster_vehicles = nil
-        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity, false) if entity != ''
+        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
         adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
@@ -561,33 +561,39 @@ module Interpreters
         value * (1 + day_skills.count("not_day_skill_#{day}")/size.to_f)
       end
 
-      # TODO: remove kmeans param
-      def assign_vehicle_to_clusters(vehicles, points, clusters, entity = '', kmeans = true)
+      def assign_vehicle_to_clusters(vehicles, points, clusters, entity)
         cluster_vehicles = Array.new(clusters.size){ [] }
         available_clusters = []
         clusters.each_with_index{ |cluster, i|
-          avg_lat = cluster.data_items.collect{ |i| i[0] }.sum / cluster.data_items.size
-          avg_lon = cluster.data_items.collect{ |i| i[1] }.sum / cluster.data_items.size
-          cluster_struct = kmeans ? cluster.data_items : cluster
+          avg_lat = cluster.data_items.collect{ |item| item[0] }.sum / cluster.data_items.size
+          avg_lon = cluster.data_items.collect{ |item| item[1] }.sum / cluster.data_items.size
           available_clusters << {
             id: i,
             centroid: [avg_lat, avg_lon],
-            number_items: cluster_struct.size,
-            skills: cluster_struct.collect{ |item| item[5].reject{ |skill| skill.include?('not_day_skill') } }.flatten.uniq,
-            day_skills: cluster_struct.collect{ |item| item[5] }.flatten
+            number_items: (cluster.data_items || cluster).size,
+            skills: (cluster.data_items || cluster).collect{ |item| item[5] }.flatten.uniq
           }
         }
+
+        if entity == 'work_day'
+          all_days = [0, 1, 2, 3, 4, 5, 6]
+          available_days = vehicles.collect{ |v| v[:timewindow] ? (v[:timewindow][:day_index] || all_days) : (v[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days }) }.flatten.uniq
+          clusters.each_with_index{ |cluster, i|
+            available_clusters[i][:skills].delete_if{ |skill| skill.include?('not_day_skill') }
+            available_clusters[i][:day_skills] = (cluster.data_items || cluster).collect{ |item| item[5] }.flatten.uniq
+            available_clusters[i][:days_conflict] = (0..6).collect{ |day| available_days.include?(day) ? (cluster.data_items || cluster).select{ |i| i[5].any?{ |skill| skill.include?(day.to_s) } }.size : 0 }
+          }
+        end
 
         # not to influence assignment regarding skills that no vehicle have
         available_clusters.each{ |cluster_data|
           cluster_data[:skills].delete_if{ |skill| !vehicles.collect{ |v| v[:skills] }.flatten.include?(skill) }
         }
 
-        vehicles_cluster = []
+        vehicles_cluster_distance = []
         vehicles.each{ |vehicle|
           next if available_clusters.empty?
 
-          values = []
           v_start = [nil, nil]
           v_end = [nil, nil]
           if vehicle.start_point_id
@@ -599,31 +605,24 @@ module Interpreters
             v_end = [point[:lat], point[:lon]]
           end
 
-          available_clusters.each{ |cluster_data|
-            value = compute_distance_value(v_start, v_end, cluster_data[:centroid])
-            vehicle_tws = vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows
-            value = compute_global_skills_value(vehicle[:skills], cluster_data[:skills], value, false)
-            if vehicle.timewindow && vehicle.timewindow.day_index || vehicle.sequence_timewindows.size == 1 && vehicle.sequence_timewindows.first.day_index
-              # only one day is possible for this vehicle
-              vehicle_day = vehicle.timewindow ? vehicle.timewindow.day_index : vehicle.sequence_timewindows.first.day_index
-              value = compute_day_compatibility(vehicle_day, cluster_data[:day_skills], cluster_data[:number_items], value)
-            else
-              value = compute_global_skills_value(compute_day_skills(vehicle_tws), cluster_data[:day_skills], value)
-            end
-
-            values << value
+          vehicles_cluster_distance << available_clusters.collect{ |cluster_data|
+            compute_distance_value(v_start, v_end, cluster_data[:centroid])
           }
-          vehicles_cluster << values
         }
 
         available_vehicles_id = (0..vehicles.size - 1).collect{ |i| i }
         available_clusters_id = (0..available_clusters.size - 1).collect{ |i| i }
         until available_clusters_id.empty?
-          cluster_to_affect = available_clusters_id.sort_by{ |i| -available_clusters[i][:day_skills].size }.first
-          vehicle_to_affect = available_vehicles_id.sort_by{ |i| vehicles_cluster[i][cluster_to_affect] }.first
+          cluster_to_affect = if entity == 'work_day'
+            available_clusters_id.group_by{ |id| available_clusters[id][:day_skills].size + available_clusters[id][:skills].uniq.size }.max_by{ |val, _list| val }[1].max_by{ |c| available_clusters[c][:days_conflict].max }
+          else
+            available_clusters_id.max_by{ |cluster| available_clusters[cluster][:skills].size }
+          end
+
+          compatible_vehicles = find_compatible_vehicles(cluster_to_affect, vehicles, available_clusters, vehicles_cluster_distance, entity, cluster: available_clusters_id, vehicle: available_vehicles_id)
+          vehicle_to_affect = compatible_vehicles.min_by{ |tab| tab[1] }.first
 
           cluster_vehicles[available_clusters[cluster_to_affect][:id]] = [vehicles[vehicle_to_affect][:id]]
-
           available_clusters_id.delete(cluster_to_affect)
           available_vehicles_id.delete(vehicle_to_affect)
         end
@@ -667,6 +666,37 @@ module Interpreters
         }
 
         c
+      end
+
+      def find_compatible_vehicles(cluster_to_affect, vehicles, available_clusters, vehicles_cluster_distance, entity, available_ids)
+        compatible_vehicles = []
+        violating = []
+        all_days = [0, 1, 2, 3, 4, 5, 6]
+        available_ids[:vehicle].each{ |v_i|
+          vehicle = vehicles[v_i]
+
+          conflict_with_clusters = vehicle[:skills].collect{ |skill| available_ids[:cluster].collect{ |i| available_clusters[i][:skills].include?(skill) ? available_clusters[i][:number_items] : 0 } }.flatten.sum
+          conflict_with_clusters -= (available_clusters[cluster_to_affect][:skills] - vehicle.skills).size * available_clusters[cluster_to_affect][:number_items]
+          violating << v_i if !(available_clusters[cluster_to_affect][:skills] - vehicle.skills).empty?
+
+          if entity == 'work_day'
+            days = [vehicle[:timewindow] ? (vehicle[:timewindow][:day_index] || all_days) : (vehicle[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days }) ].flatten.uniq
+            conflict_with_clusters = days.collect{ |day| available_ids[:cluster].collect{ |i| available_clusters[i][:days_conflict][day] } }.flatten.sum
+            conflict_with_clusters -= available_clusters[cluster_to_affect][:days_conflict][days.first] if days.size == 1 # 0 if no conflict between service and vehicle day
+            violating << v_i if days.none?{ |day| available_clusters[cluster_to_affect][:day_skills].none?{ |skill| skill.include?(day.to_s) } }
+          end
+
+          # TODO : test case with skills
+
+          compatible_vehicles << [v_i, vehicles_cluster_distance[v_i][cluster_to_affect] * (1 - conflict_with_clusters / 100.0)]
+        }
+
+        if violating.size < available_ids[:vehicle].size
+          # some vehicles are fully compatible
+          compatible_vehicles.delete_if{ |v| violating.include?(v.first) }
+        end
+
+        compatible_vehicles
       end
 
       def remove_from_upper(graph, node, symbol, value_to_remove)

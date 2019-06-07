@@ -41,4 +41,35 @@ class DichotomiousTest < Minitest::Test
     assert t2 - t1 > 510, "Too short elapsed time: #{t2 - t1}"
     assert result[:elapsed] / 1000 > 510 && result[:elapsed] / 1000 < 765, "Incorrect elapsed time: #{result[:elapsed]}"
   end
+
+  def test_cluster_dichotomious_heuristic
+    skip 'Long test, broken in previous commits, to fix'
+    vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious.json')
+    service_vrp = {vrp: vrp, service: :demo, level: 0}
+    while service_vrp[:vrp].services.size > 100
+      services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp)
+      assert_equal 2, services_vrps_dicho.size
+
+      locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.first.data_items.map{ |d| [d[0], d[1]] }
+      locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.second.data_items.map{ |d| [d[0], d[1]] }
+      assert_equal 0, (locations_one & locations_two).size
+
+      durations = []
+      services_vrps_dicho.each{ |service_vrp_dicho|
+        durations << service_vrp_dicho[:vrp].services_duration
+      }
+      assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
+      assert durations[0] >= durations[1]
+
+      average_duration = durations.inject(0, :+) / durations.size
+      # Clusters should be balanced but the priority is the geometry
+      min_duration = average_duration - 0.5 * average_duration
+      max_duration = average_duration + 0.5 * average_duration
+      durations.each_with_index{ |duration, index|
+        assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
+      }
+
+      service_vrp = services_vrps_dicho.first
+    end
+  end
 end
