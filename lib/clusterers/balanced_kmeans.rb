@@ -79,7 +79,7 @@ module Ai4r
           sort_clusters
           recompute_centroids
         end
-        @rate_balance = options[:rate_balance] || 0.1
+        @rate_balance = options[:rate_balance]
         calculate_membership_clusters
         sort_clusters
         recompute_centroids
@@ -237,8 +237,8 @@ module Ai4r
         end
 
         # balance between clusters computation
-        balance = 1.0
-        if @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 } #&& @iterations > 0
+        balance = @rate_balance || 1.0
+        if @rate_balance && @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 } #&& @iterations > 0
           @average_load = @total_load / @number_of_clusters
           if @average_load / limit < 0.95
             balance = (cut_value / @average_load)**(2 * @average_load / limit)
