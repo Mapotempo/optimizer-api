@@ -260,7 +260,11 @@ module Ai4r
                     end
         end
 
-        (fly_distance + compatibility) * balance
+        if @rate_balance
+          (fly_distance + compatibility) + @rate_balance * (fly_distance + compatibility) * balance
+        else
+          (fly_distance + compatibility) * balance
+        end
       end
 
       def calculate_membership_clusters
