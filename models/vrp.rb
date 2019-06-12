@@ -126,8 +126,10 @@ module Models
 
       case type
       when :time
+        total_load = services.map{ |service| service[:activity][:duration] + service[:activity][:setup_duration] }.reduce(:+)
+        average_load = total_load / services.size.to_f
         services.each{ |service|
-          service.exclusion_cost = max_fixed_cost / 15
+          service.exclusion_cost = ((max_fixed_cost / 15.0) * ((service[:activity][:duration] + service[:activity][:setup_duration]) / average_load)).to_i
         }
       when :distance
         raise 'Distance based exclusion cost calculation is not ready'
