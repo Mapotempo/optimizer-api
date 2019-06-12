@@ -37,7 +37,7 @@ class DichotomiousTest < Minitest::Test
     end
 
     # Check elapsed time
-    assert t2 - t1 < 765, "Too long elapsed time: #{t2 - t1}"
+    assert t2 - t1 < 765 * 1.25, "Too long elapsed time: #{t2 - t1}"
     assert t2 - t1 > 510, "Too short elapsed time: #{t2 - t1}"
     assert result[:elapsed] / 1000 > 510 && result[:elapsed] / 1000 < 765, "Incorrect elapsed time: #{result[:elapsed]}"
   end

@@ -98,11 +98,18 @@ module Interpreters
 
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
-      service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.25).to_i : 120000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
-      service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.25).to_i : 90000
+      if service_vrp[:level] && service_vrp[:level] > 0
+        service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 3).to_i : 120000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
+        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 3).to_i : 90000
+      end
+
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      service_vrp[:vrp].resolution_init_duration = 10 if service_vrp[:vrp].vehicles.size > 4 && service_vrp[:vrp].resolution_vehicle_limit > 4 || service_vrp[:vrp].services.size > 200
+      if service_vrp[:vrp].vehicles.size > 6 && service_vrp[:vrp].resolution_vehicle_limit > 6 && service_vrp[:vrp].services.size > 165
+        service_vrp[:vrp].resolution_init_duration = 10
+      else
+        service_vrp[:vrp].resolution_init_duration = nil
+      end
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion'] # A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
 
       service_vrp
@@ -174,10 +181,10 @@ module Interpreters
             sub_service_vrp[:vrp].vehicles.each{ |vehicle|
               vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
             }
-            rate_vehicles = sub_service_vrp[:vrp].vehicles.size / service_vrp[:vrp].vehicles.size.to_f
+            rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
-            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / (2.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i
-            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / (1.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / 3.0 * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / 3.0 * rate_vehicles * rate_services).to_i
             # sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
 
