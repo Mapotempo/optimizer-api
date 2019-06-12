@@ -246,7 +246,7 @@ module Interpreters
     def self.split(service_vrp, job)
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
-      services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }.reverse
+      services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }
       split_service_vrps = []
       if services_by_cluster.size == 2
         # Kmeans return 2 vrps
@@ -322,15 +322,7 @@ module Interpreters
 
           next if related_services.empty?
           related_services.each{ |related_service|
-            if related_service[:sticky_vehicle_ids] && related_service[:skills] && !related_service[:skills].empty?
-              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], related_service[:skills], 0]
-            elsif related_service[:sticky_vehicle_ids] && related_service[:skills] && related_service[:skills].empty?
-                data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], [], 0]
-            elsif related_service[:skills] && !related_service[:skills].empty? && !related_service[:sticky_vehicle_ids]
-              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], related_service[:skills], 0]
-            else
-              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], [], 0]
-            end
+            data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], [], 0]
           }
         }
 
