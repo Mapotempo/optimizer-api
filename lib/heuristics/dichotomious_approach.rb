@@ -27,7 +27,9 @@ module Interpreters
   class Dichotomious
 
     def self.dichotomious_candidate(service_vrp)
+      ((service_vrp[:level] && service_vrp[:level] > 0) || service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? }) &&
       service_vrp[:vrp].vehicles.size > 3 &&
+      service_vrp[:vrp].schedule_range_indices.nil? && service_vrp[:vrp].schedule_range_date.nil? &&
       service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > 50 &&
       service_vrp[:vrp].shipments.empty? &&
       # (service_vrp[:vrp].vehicles.all?(&:force_start) || service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle[:shift_preference] == 'force_start' }) &&
