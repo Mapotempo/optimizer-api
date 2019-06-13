@@ -715,14 +715,14 @@ module Wrappers
 
       # check distances from vehicle depot is feasible
       vrp.services.each{ |service|
-        index = vrp.points.find{ |point| point.id == service.activity.point.id }.matrix_index
+        index = service.activity.point.matrix_index
         found = vrp.vehicles.find{ |vehicle|
           if vehicle.start_point_id && vehicle.end_point_id &&
             (vehicle.cost_time_multiplier > 0 && (vehicle.timewindow && vehicle.timewindow.start && vehicle.timewindow.end || vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?) ||
             vehicle.cost_distance_multiplier > 0 && vehicle.distance)
 
-            start_index = vrp.points.find{ |pt| pt.id == vehicle.start_point_id }.matrix_index
-            end_index = vrp.points.find{ |pt| pt.id == vehicle.end_point_id }.matrix_index
+            start_index = vehicle.start_point.matrix_index
+            end_index = vehicle.end_point.matrix_index
 
             metric = vehicle.cost_time_multiplier > 0 ? :time : :distance
             cost = vrp.matrices[0][metric][start_index][index] + vrp.matrices[0][metric][index][end_index]
@@ -740,8 +740,8 @@ module Wrappers
         }
         check_approach_return = vrp.matrices.all?{ |matrix| matrix[:time] } && vrp.vehicles.all?{ |vehicle|
           matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }
-          earliest_arrival = vehicle.timewindow.start + matrix[:time][vrp.points.find{ |pt| pt.id == vehicle.start_point_id }.matrix_index][index] if vehicle.start_point_id && vehicle.timewindow && vehicle.timewindow.start
-          latest_arrival = vehicle.timewindow.end - service.activity.duration - matrix[:time][index][vrp.points.find{ |pt| pt.id == vehicle.end_point_id }.matrix_index] if vehicle.end_point_id && vehicle.timewindow && vehicle.timewindow.end
+          earliest_arrival = vehicle.timewindow.start + matrix[:time][vehicle.start_point.matrix_index][index] if vehicle.start_point_id && vehicle.timewindow && vehicle.timewindow.start
+          latest_arrival = vehicle.timewindow.end - service.activity.duration - matrix[:time][index][vehicle.end_point.matrix_index] if vehicle.end_point_id && vehicle.timewindow && vehicle.timewindow.end
 
           check_approach = (service.activity.late_multiplier.nil? || service.activity.late_multiplier == 0) && !service.activity.timewindows.empty? && service.activity.timewindows.all?{ |tw|
             tw.end && earliest_arrival && earliest_arrival > tw.end
