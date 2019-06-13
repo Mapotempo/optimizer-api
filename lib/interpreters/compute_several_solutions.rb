@@ -193,12 +193,10 @@ module Interpreters
         if (vehicle.start_point_id.nil? || vehicle.end_point_id.nil?) && (vehicle.start_point.nil? || vehicle.end_point.nil?)
           true
         else
-          start_point_id = vehicle[:start_point_id]
-          start_point = vrp.points.find{ |pt| pt[:id] == start_point_id }
-          end_point_id = vehicle[:end_point_id]
-          end_point = vrp.points.find{ |pt| pt[:id] == end_point_id }
+          start_point = vehicle.start_point
+          end_point = vehicle.end_point
 
-          start_point_id == end_point_id ||
+          vehicle.start_point_id == vehicle.end_point_id ||
           start_point[:location] && end_point[:location] && start_point[:location][:lat] == end_point[:location][:lat] && start_point[:location][:lon] == end_point[:location][:lon] ||
           vrp[:matrices] && start_point[:matrix_index] && end_point[:matrix_index] && vrp[:matrices].all?{ |matrix| matrix[:time] && matrix[:time][start_point[:matrix_index]][end_point[:matrix_index]] == 0 }
         end
