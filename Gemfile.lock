@@ -24,6 +24,7 @@ GEM
       ice_nine (~> 0.11.0)
       thread_safe (~> 0.3, >= 0.3.1)
     backport (0.3.0)
+    benchmark-ips (2.7.2)
     builder (3.2.3)
     byebug (9.0.6)
     coercible (1.0.0)
@@ -198,6 +199,7 @@ DEPENDENCIES
   active_hash!
   activemodel (< 5)
   ai4r
+  benchmark-ips
   byebug
   google-protobuf (>= 3)
   grape (< 0.19.0)

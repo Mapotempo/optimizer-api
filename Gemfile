@@ -35,7 +35,7 @@ gem 'google-protobuf', '>=3'
 
 group :development, :test do
   gem 'byebug'
-
+  gem 'benchmark-ips'
   # For linting and offline code analysis in vscode
   gem 'rubocop', '<0.58' # TODO: Waiting Ruby 2.2
   gem 'solargraph'
