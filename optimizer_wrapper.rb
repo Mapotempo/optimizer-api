@@ -70,7 +70,7 @@ module OptimizerWrapper
   def self.compute_vrp_need_matrix(vrp)
     vrp_need_matrix = [
       vrp.need_matrix_time? ? :time : nil,
-      vrp.need_matrix_distance? ? :distance : nil,
+      vrp.need_matrix_time? || vrp.need_matrix_distance? ? :distance : nil,
       vrp.need_matrix_value? ? :value : nil
     ].compact
   end
