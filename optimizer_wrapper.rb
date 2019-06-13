@@ -626,6 +626,7 @@ module OptimizerWrapper
   def self.route_total_dimension(vrp, route, vehicle, dimension)
     previous = nil
     route[:activities].sum{ |a|
+      #TODO: This next operation is expensive for big instances. Is there a better way?
       point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
         s.id == a[:service_id]
       }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
@@ -681,15 +682,17 @@ module OptimizerWrapper
       v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
       if r[:end_time] && r[:start_time]
         r[:total_time] = r[:end_time] - r[:start_time]
-      elsif vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.time
+      end
+      matrix = vrp.matrices.find{ |mat| mat.id == v.matrix_id }
+      if matrix.time
         r[:total_travel_time] = route_total_dimension(vrp, r, v, :time)
       end
-      if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.value
+      if matrix.value
         r[:total_travel_value] = route_total_dimension(vrp, r, v, :value)
       end
-      if vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }.distance
+      if matrix.distance
         r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
-      elsif vrp.matrices.find{ |matrix| matrix.id == v.matrix_id }[:distance].nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
+      elsif matrix[:distance].nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
         details = route_details(vrp, r, v)
         if details && !details.empty?
           r[:total_distance] = details.map(&:first).compact.reduce(:+)
