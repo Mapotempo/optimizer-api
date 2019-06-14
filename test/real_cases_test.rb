@@ -392,6 +392,29 @@ class RealCasesTest < Minitest::Test
       # Check elapsed time
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
-  end
 
+    # North West of France - at the fastest with distance minimization
+    def test_instance_fr_g1g2
+      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert result
+      assert result[:cost] < 99400
+    end
+
+    # North West of France - at the fastest with distance minimization
+    def test_instance_fr_hv11
+      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert result
+      assert result[:cost] < 4503790100
+    end
+
+    # North West of France - at the fastest with distance minimization
+    def test_instance_fr_tv1
+      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert result
+      assert result[:cost] < 126082900
+    end
+  end
 end
