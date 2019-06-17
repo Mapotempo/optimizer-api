@@ -58,7 +58,7 @@ class DichotomiousTest < Minitest::Test
         durations << service_vrp_dicho[:vrp].services_duration
       }
       assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
-      assert durations[0] >= durations[1]
+      assert durations[0] <= durations[1]
 
       average_duration = durations.inject(0, :+) / durations.size
       # Clusters should be balanced but the priority is the geometry
