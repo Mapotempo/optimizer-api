@@ -442,4 +442,30 @@ class HeuristicTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
     assert result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:detail][:skills] }.compact.flatten}.all?{ |skill| skill.size == 1 }
   end
+
+  def test_results_regularity
+    visits_unassigned = []
+    services_unassigned = []
+    (0..49).each{ |_tentative|
+      vrp = FCT.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: {vrp: [:ortools] } }, vrp, nil)
+      visits_unassigned << result[:unassigned].size
+      services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+    }
+    assert services_unassigned.max / services_unassigned.min < 2.0 # easier to achieve
+    assert visits_unassigned.max / visits_unassigned.min < 2.0
+  end
+
+  def test_results_regularity_2
+    visits_unassigned = []
+    services_unassigned = []
+    (0..49).each{ |_tentative|
+      vrp = FCT.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, vrp, nil)
+      visits_unassigned << result[:unassigned].size
+      services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+    }
+    assert services_unassigned.max / services_unassigned.min < 2.0 # easier to achieve
+    assert visits_unassigned.max / visits_unassigned.min < 2.0
+  end
 end
