@@ -316,8 +316,9 @@ module Interpreters
         }
       else
         puts 'Split not available when services have no activity or cluster size is less than 2'
-        # TODO : throw error ?
-        [service_vrp]
+        # TODO : remove marshal dump
+        # ensure test_instance_800unaffected_clustered and test_instance_800unaffected_clustered_same_point work
+        [Marshal.load(Marshal.dump(service_vrp))]
       end
     end
 

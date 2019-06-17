@@ -185,7 +185,7 @@ module SchedulingHeuristic
     }
   end
 
-  def self.update_route(remove_index, day_route, vehicle, day, matrix_id)
+  def self.update_route(remove_index, day_route, matrix_id)
     return day_route if !remove_index || !day_route[remove_index + 1]
     duration = day_route[remove_index + 1][:end] - day_route[remove_index + 1][:arrival]
     arrival = @indices[day_route[remove_index + 1][:id]]
@@ -201,13 +201,13 @@ module SchedulingHeuristic
     ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
     removed_size = @planning[vehicle].collect{ |day, day_route|
       remove_index = day_route[:services].find_index{ |stop| stop[:id] == service[:id] }
-      day_route[:services] = update_route(remove_index, day_route[:services], vehicle, day, @planning[vehicle][day][:vehicle][:matrix_id])
+      day_route[:services] = update_route(remove_index, day_route[:services], @planning[vehicle][day][:vehicle][:matrix_id])
       day_route[:services].slice!(remove_index) if remove_index
     }.compact.size
 
     removed_size += @candidate_routes[vehicle].collect{ |day, day_route|
       remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service[:id] }
-      day_route[:current_route] = update_route(remove_index, day_route[:current_route], vehicle, day, @candidate_routes[vehicle][day][:matrix_id])
+      day_route[:current_route] = update_route(remove_index, day_route[:current_route], @candidate_routes[vehicle][day][:matrix_id])
       day_route[:current_route].slice!(remove_index) if remove_index
     }.compact.size
 
@@ -847,6 +847,7 @@ module SchedulingHeuristic
 
   def self.get_unassigned_info(vrp, id, service_in_vrp, reason)
     {
+      original_service_id: service_in_vrp[:id],
       service_id: id,
       point_id: service_in_vrp[:activity][:point_id],
       detail: {

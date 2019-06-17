@@ -263,9 +263,6 @@ class HeuristicTest < Minitest::Test
   end
 
   def test_two_stage_cluster
-    skip "This test fails. The test is created for Test-Driven Development.
-          The functionality is not ready yet, it is skipped for devs not working on the functionality.
-          Expectation: "
     problem = VRP.lat_lon_scheduling
     problem[:services][0][:visits_number] = 1
     problem[:services][0][:minimum_lapse] = 84
@@ -389,7 +386,7 @@ class HeuristicTest < Minitest::Test
   end
 
   def test_day_closed_on_work_day
-    skip 'Requires modifications in clustering'
+    skip 'Requires modifications in clustering : No vehicle found related'
     problem = VRP.lat_lon_scheduling
     problem[:services][0][:visits_number] = 3
     problem[:services][0][:minimum_lapse] = 7
@@ -458,7 +455,7 @@ class HeuristicTest < Minitest::Test
 
   def test_no_duplicated_skills
     problem = VRP.lat_lon_scheduling
-    problem[:services] = [problem[:services].first]
+    problem[:services] = [problem[:services][0], problem[:services][1]]
     problem[:services].first[:visits_number] = 4
     problem[:vehicles] = [{
       id: 'vehicle_0',
@@ -493,7 +490,7 @@ class HeuristicTest < Minitest::Test
     }
 
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
-    assert result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:detail][:skills] }.compact.flatten}.all?{ |skill| skill.size == 1 }
+    assert(result[:routes].all?{ |route| route[:activities].all?{ |activity| activity[:detail][:skills].nil? || activity[:detail][:skills].size == 1 } })
   end
 
   def test_results_regularity
