@@ -65,7 +65,8 @@ module Wrappers
               travel_distance: 0,
               travel_start_time: 0
           }]).compact
-        }} || []
+        }} || [],
+        unassigned: []
       }
     end
   end

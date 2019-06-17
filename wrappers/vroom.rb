@@ -162,7 +162,8 @@ module Wrappers
         routes: [{
           vehicle_id: vehicle.id,
           activities: activities
-        }]
+        }],
+        unassigned: []
       }
     end
 
