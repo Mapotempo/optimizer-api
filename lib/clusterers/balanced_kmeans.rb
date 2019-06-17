@@ -71,14 +71,17 @@ module Ai4r
         raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
         @iterations = 0
 
+        if @cut_symbol
+          @total_cut_load = @data_set.data_items.inject(0) { |sum, d| sum + d[3][@cut_symbol] }
+          if @total_cut_load.zero?
+            @cut_symbol = nil # Disable balanacing because there is no point
+          else
+            @data_set.data_items.sort_by!{ |x| x[3][@cut_symbol] || 0 }.reverse!
+          end
+        end
+
         calc_initial_centroids
         @rate_balance = 1.0
-
-        if @cut_symbol
-          @data_set.data_items.sort_by!{ |x| x[3][@cut_symbol] || 0 }.reverse!
-
-          @total_cut_load = @data_set.data_items.inject(0) { |sum, d| sum + d[3][@cut_symbol] }
-        end
 
         until stop_criteria_met
           calculate_membership_clusters
