@@ -43,11 +43,10 @@ class DichotomiousTest < Minitest::Test
   end
 
   def test_cluster_dichotomious_heuristic
-    skip 'Long test, broken in previous commits, to fix'
     vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious.json')
     service_vrp = {vrp: vrp, service: :demo, level: 0}
     while service_vrp[:vrp].services.size > 100
-      services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp)
+      services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp, nil)
       assert_equal 2, services_vrps_dicho.size
 
       locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.first.data_items.map{ |d| [d[0], d[1]] }

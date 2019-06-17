@@ -67,10 +67,6 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_instance_800unaffected_clustered
-      skip "This test fails. The test is created for Test-Driven Development.
-            The functionality is not ready yet, it is skipped for devs not working on the functionality.
-            Fails becasue of the logic change about deleted jobs in split cluster.
-            Will continue fail until logic is corrected.\n\n"
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
@@ -85,10 +81,6 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_instance_800unaffected_clustered_same_point
-      skip "This test fails. The test is created for Test-Driven Development.
-            The functionality is not ready yet, it is skipped for devs not working on the functionality.
-            Fails becasue of the logic change about deleted jobs in split cluster.
-            Will continue fail until logic is corrected.\n\n"
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
