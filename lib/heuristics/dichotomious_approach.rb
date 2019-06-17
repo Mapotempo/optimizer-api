@@ -167,8 +167,20 @@ module Interpreters
           unless sticky_vehicle_ids.empty?
             vehicles_with_skills = service_vrp[:vrp].vehicles.select{ |v| sticky_vehicle_ids.include?(v.id) }
           end
-          # Priorize existing vehicles already assigned
-          vehicles_with_skills.sort_by{ |v| service_vrp[:vrp].routes.map{ |r| r.vehicle.id }.include?(v.id) ? 0 : 1 }
+
+          # Shuffle so that existing routes will be distributed randomly
+          # Otherwise we might have a sub_vrp with 6 existing routes (no empty routes) and
+          # hundreds of services which makes it very hard to insert a point
+          # With shuffle we distribute the existing routes accross all sub-vrps we create
+          vehicles_with_skills.shuffle!
+
+          #TODO: Here we launch the optim of a single skill however, it make sense to include the vehicles without skills
+          #(especially the ones with existing routes) in the sub_vrp because that way optim can move poits between vehicles
+          #and serve an unserviced point with skills.
+
+          #TODO: We do not consider the geographic closeness/distance of routes and points.
+          #This might be the reason why sometimes we have solutions with long detours.
+          #However, it is not very easy to find a generic and effective way.
 
           sub_results = []
           vehicle_count = skills.empty? && !service_vrp[:vrp].routes.empty? ? [service_vrp[:vrp].routes.size, 6].min : 3
@@ -189,7 +201,7 @@ module Interpreters
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
 
             result_loop = OptimizerWrapper.solve([sub_service_vrp], job)
-            result[:elapsed] += result_loop[:elapsed] if result_loop
+            result[:elapsed] += result_loop[:elapsed] if result_loop && result_loop[:elapsed]
 
             # Initial routes can be refused... check unassigned size before take into account solution
             if result_loop && remaining_service_ids.size >= result_loop[:unassigned].size
