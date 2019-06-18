@@ -30,26 +30,30 @@ module OptimizerWrapper
       tick('Starting job') # Important to kill job before any code
 
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
+      ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       result = OptimizerWrapper.define_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         @killed && wrapper.kill && return
         @wrapper = wrapper
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         if avancement && cost
           p = Result.get(self.uuid) || { 'graph' => [] }
-          p.merge!({ 'graph' => [] }) if !p.has_key?('graph')
-          p['graph'] << {iteration: avancement, cost: cost, time: time}
+          p['graph'] = [] if !p.key?('graph')
+          p['csv'] = true if ask_restitution_csv
+          p['graph'] << { iteration: avancement, cost: cost, time: time }
           p['result'] = solution if solution
           Result.set(self.uuid, p)
         end
       }
 
       # Add values related to the current solve status
-      if services_vrps.size == 1 && p && p['result'] && p['graph'] && !p['graph'].empty?
-        p = Result.get(self.uuid) || {}
+      p = Result.get(self.uuid) || {}
+      p['csv'] = true if ask_restitution_csv
+      p['result'] = [result].flatten #TODO define process must only return an array (Need tests edit)
+      if services_vrps.size == 1 && p['graph'] && !p['graph'].empty?
         p['result'].first['iterations'] = p['graph'].last['iteration']
         p['result'].first['elapsed'] = p['graph'].last['time']
-        Result.set(self.uuid, p)
       end
+      Result.set(self.uuid, p)
     rescue => e
       puts e
       puts e.backtrace

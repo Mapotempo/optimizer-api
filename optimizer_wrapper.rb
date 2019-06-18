@@ -173,9 +173,6 @@ module OptimizerWrapper
     result_global = {
       result: ([result] + duplicated_results + split_results).compact
     }
-    result_global[:csv] = true if result_global[:result].any?{ |result| result && result[:csv] == true }
-
-    Result.set(job, result_global)
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end
 
@@ -270,8 +267,6 @@ module OptimizerWrapper
               end
             else
               cluster_result = parse_result(vrp, vrp[:preprocessing_heuristic_result])
-              actual_result = Result.get(job) || {}
-              Result.set(job, actual_result)
             end
           else
             cluster_result = {
