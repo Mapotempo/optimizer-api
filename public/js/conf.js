@@ -68,6 +68,7 @@ var i18n = {
   deleteOptim: 'Supprimer',
   displaySolution: 'Afficher la solution intermédiaire',
   downloadCSV: 'Télécharger le fichier CSV',
+  downloadJSON: 'Télécharger le fichier json',
   reference: 'référence',
   route: 'tournée',
   vehicle: 'véhicule',
