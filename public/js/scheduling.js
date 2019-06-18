@@ -16,6 +16,8 @@ $(document).ready(function() {
 
   $('#infos').html(i18n.waitingSubmit);
 
+  jobsManager.ajaxGetJobs(true);
+
   $('#post-form').submit(function(e) {
     e.preventDefault();
 
@@ -33,11 +35,41 @@ $(document).ready(function() {
         cache: false,
         processData: false,
         data: problem_data
-      }).done(function(response) {
-        var jobId = response.job.id;
-        if (jobId != null)
-          watchJobUpdate(jobId);
-      }).fail(function(error) {
+      }).done(function (response) {
+        var job = response.job;
+        $('#infos').html(i18n.optimizeLoading);
+        if (job !== null) {
+          jobsManager.checkJobStatus({
+            job: job,
+            format: '.csv',
+            interval: 3000
+          }, function (err, job, xhr) {
+            if (err) {
+              $('#infos').html(i18n.failureCallOptim(err));
+              console.log(err.status);
+              return;
+            }
+
+            if (xhr.status == 200) {
+              $('#infos').html(i18n.optimizeFinished);
+              if (job instanceof Object && 'solutions' in response) {
+                self.solutionJSON = (job.solutions);
+              } else {
+                var a = document.createElement('a');
+                a.href = 'data:attachment/csv,' + encodeURIComponent(job);
+                a.target = '_blank';
+                a.download = 'result.csv';
+                document.body.appendChild(a);
+                a.click();
+              }
+            } else if (xhr.status == 202) {
+              $('#infos').html(i18n.optimizeFinishedError);
+              if (debug) console.log(job)
+            }
+
+          })
+        }
+      }).fail(function (error) {
         $('#infos').html(i18n.failureCallOptim('Vérification des fichiers requise'));
         console.log(error.responseText);
       });
@@ -46,40 +78,4 @@ $(document).ready(function() {
       $('#infos').html(i18n.form.invalidConfig);
     }
   });
-
-  var watchJobUpdate = function(jobId) {
-    var check_job = function() {
-
-      $('#infos').html(i18n.optimizeLoading);
-      $.ajax({
-        url: '/0.1/vrp/jobs/' + jobId + '.csv?api_key=' + getParams()["api_key"],
-        type: 'GET',
-      }).done(function(response, responseText, XHR) {
-        if (XHR.status == 200) {
-          $('#infos').html(i18n.optimizeFinished);
-          if (response instanceof Object && 'solutions' in response) {
-            self.solutionJSON = (response.solutions);
-          } else {
-            var a         = document.createElement('a');
-            a.href        = 'data:attachment/csv,' +  encodeURIComponent(response);
-            a.target      = '_blank';
-            a.download    = 'result.csv';
-            document.body.appendChild(a);
-            a.click();
-          }
-
-          clearInterval(timeOut);
-        } else if (XHR.status == 202) {
-          $('#infos').html(i18n.optimizeFinishedError);
-          console.log(response);
-          clearInterval(timeOut);
-        }
-      }).fail(function(err) {
-        $('#infos').html(i18n.failureCallOptim(err));
-        console.log(err.status);
-      });
-    };
-
-    var timeOut = setInterval(check_job, 3000);
-  };
 });

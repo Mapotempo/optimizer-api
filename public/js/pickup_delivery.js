@@ -1,17 +1,5 @@
 'use strict';
 
-Number.prototype.toHHMMSS = function() {
-  var sec_num = parseInt(this, 10); // don't forget the second param
-  var hours   = Math.floor(sec_num / 3600);
-  var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
-  var seconds = sec_num - (hours * 3600) - (minutes * 60);
-
-  if (hours   < 10) {hours   = "0"+hours;}
-  if (minutes < 10) {minutes = "0"+minutes;}
-  if (seconds < 10) {seconds = "0"+seconds;}
-  return hours+':'+minutes+':'+seconds;
-};
-
 $(document).ready(function() {
   var debug = (window.location.search.search('debug') != -1) ? true : false;
   var data = {
@@ -19,88 +7,7 @@ $(document).ready(function() {
     vehicles: []
   };
   var customers = [];
-
-  var jobsManager = {
-    jobs: {},
-    htmlElements: {
-      builder: function(jobs) {
-        $(jobs).each(function() {
-          $('#jobs-list').append('<div class="job">' +
-            '<span class="job_title">' + 'Job N° ' + $(this)[0]['uuid'] + '</span> ' +
-            '<button value=' + $(this)[0]['uuid'] + ' data-role="delete">' + (($(this)[0]['status'] == 'queued' || $(this)[0]['status'] == 'working') ? i18n.killOptim : i18n.deleteOptim) + '</button>' +
-            ' (Status: ' + $(this)[0]['status'] + ')' +
-            '</div>');
-        });
-        $('#jobs-list button').on('click', function() {
-          jobsManager.roleDispatcher(this);
-        });
-      }
-    },
-    roleDispatcher: function(object) {
-      switch ($(object).data('role')) {
-      case 'focus':
-        //actually in building, create to apply different behavior to the button object restartJob, actually not set. #TODO
-        break;
-      case 'delete':
-        this.ajaxDeleteJob($(object).val());
-        break;
-      }
-    },
-    ajaxGetJobs: function(timeinterval) {
-      var ajaxload = function() {
-        $.ajax({
-          url: '/0.1/vrp/jobs',
-          type: 'get',
-          dataType: 'json',
-          data: { api_key: getParams()['api_key'] },
-        }).done(function(data) {
-          jobsManager.shouldUpdate(data);
-        }).fail(function(jqXHR, textStatus, errorThrown) {
-          clearInterval(window.AjaxGetRequestInterval);
-          if (jqXHR.status == 401) {
-            $('#optim-list-status').prepend('<div class="error">' + i18n.unauthorizedError + '</div>');
-            $('form input, form button').prop('disabled', true);
-          }
-        });
-      };
-      if (timeinterval) {
-        ajaxload();
-        window.AjaxGetRequestInterval = setInterval(ajaxload, 5000);
-      } else {
-        ajaxload();
-      }
-    },
-    ajaxDeleteJob: function(uuid) {
-      $.ajax({
-        url: '/0.1/vrp/jobs/' + uuid + '.json',
-        type: 'delete',
-        dataType: 'json',
-        data: {
-          api_key: getParams()['api_key']
-        },
-      }).done(function(data) {
-        if (debug) { console.log("the uuid have been deleted from the jobs queue & the DB"); }
-        $('button[data-role="delete"][value="' + uuid + '"]').fadeOut(500, function() { $(this).closest('.job').remove(); });
-      });
-    },
-    shouldUpdate: function(data) {
-      //check if chagements occurs in the data api. #TODO, update if more params are needed.
-      $(data).each(function(index, object) {
-        if (jobsManager.jobs.length > 0) {
-          if (object.status != jobsManager.jobs[index].status || jobsManager.jobs.length != data.length) {
-            jobsManager.jobs = data;
-            $('#jobs-list').empty();
-            jobsManager.htmlElements.builder(jobsManager.jobs);
-          }
-        }
-        else {
-          jobsManager.jobs = data;
-          $('#jobs-list').empty();
-          jobsManager.htmlElements.builder(jobsManager.jobs);
-        }
-      });
-    }
-  };
+  var timer = null;
 
   jobsManager.ajaxGetJobs(true);
 
@@ -209,7 +116,7 @@ $(document).ready(function() {
   };
 
   var initForm = function() {
-    clearInterval(window.optimInterval);
+    clearInterval(timer);
     $('#send-files').attr('disabled', false);
     $('#optim-infos').html('');
   };
@@ -457,22 +364,9 @@ $(document).ready(function() {
     }
   };
 
-  var displayGraph = function(data) {
-    $('#result-graph').show();
-    var values = data ? $.map(data, function(v, k) { return {x: v.iteration, y: v.cost}; }) : [];
-    if (values && values.length > 0) {
-      var ctx = document.getElementById('result-graph').getContext('2d');
-      new Chart(ctx).Scatter([{
-        label: 'Iterations/Cost',
-        data: values
-      }], {
-        bezierCurve: false
-      });
-    }
-  };
-
   var lastSolution = null;
   var callOptimization = function(vrp, callback) {
+    var delay = 3000;
     lastSolution = null;
     $.ajax({
       type: 'post',
@@ -480,88 +374,72 @@ $(document).ready(function() {
       data: JSON.stringify({vrp: vrp}),
       url: '/0.1/vrp/submit.json?api_key=' + getParams()["api_key"],
       success: function(result) {
+
         if (debug) console.log("Calling optimization... ", result);
-        var delay = 2000;
-        var interval = undefined;
-        var nbInterval = 0;
-        var nbError = 0;
-        var checkResponse = function() {
-          if (!interval) {
-            $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
-            $('#optim-kill').click(function(e) {
-              $.ajax({
-                type: 'delete',
-                url: '/0.1/vrp/jobs/' + $('#optim-job-uid').val() + '.json?api_key=' + getParams()["api_key"]
-              }).done(function(result) {
-                clearInterval(window.optimInterval);
-                $('#optim-infos').html('');
-                if (lastSolution) {
-                  displaySolution(lastSolution, {initForm: true});
-                }
-              }).fail(function(jqXHR, textStatus) {
-                alert(textStatus);
+
+        $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
+        $('#optim-kill').click(function (e) {
+          $.ajax({
+            type: 'delete',
+            url: '/0.1/vrp/jobs/' + $('#optim-job-uid').val() + '.json?api_key=' + getParams()["api_key"]
+          }).done(function (result) {
+            jobsManager.stopJobChecking();
+            clearInterval(timer);
+            $('#optim-infos').html('');
+            displaySolution(lastSolution, { initForm: true });
+          }).fail(function (jqXHR, textStatus) {
+            alert(textStatus);
+          });
+          e.preventDefault();
+          return false;
+        });
+
+        jobsManager.checkJobStatus({
+          job: result.job,
+          format: '.json',
+          interval: delay
+        }, function (err, job) {
+
+          // on job error
+          if (err) {
+            if (debug) console.log("Error: ", err);
+            return;
+          }
+
+          $('#avancement').html(job.job.avancement);
+          if (job.job.status == 'queued') {
+            if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
+          }
+          else if (job.job.status == 'working') {
+            if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
+            if (job.solutions && job.solutions[0]) {
+              if (!lastSolution)
+                $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
+              lastSolution = job.solutions[0];
+              $('#display-solution').click(function(e) {
+                displaySolution(lastSolution);
+                e.preventDefault();
+                return false;
               });
-              e.preventDefault();
-              return false;
-            });
+            }
+            if (job.job.graph) {
+              displayGraph(job.job.graph);
+            }
+            return true;
           }
-          clearInterval(interval);
-          if (delay) {
-            $.ajax({
-              type: 'get',
-              contentType: 'application/json',
-              url: '/0.1/vrp/jobs/' + result.job.id + '.json?api_key=' + getParams()["api_key"],
-              success: function(job) {
-                nbError = 0;
-                $('#avancement').html(job.job.avancement);
-                if (job.job.status == 'queued') {
-                  if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
-                }
-                else if (job.job.status == 'working') {
-                  if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
-                  if (job.solutions && job.solutions[0]) {
-                    if (!lastSolution)
-                      $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
-                    lastSolution = job.solutions[0];
-                    $('#display-solution').click(function(e) {
-                      displaySolution(lastSolution);
-                      e.preventDefault();
-                      return false;
-                    });
-                  }
-                  if (job.job.graph) {
-                    displayGraph(job.job.graph);
-                  }
-                }
-                else if (job.job.status == 'completed') {
-                  delay = 0;
-                  if (debug) console.log('Job completed: ' + JSON.stringify(job));
-                  if (job.job.graph) {
-                    displayGraph(job.job.graph);
-                  }
-                  callback(job.solutions[0]);
-                }
-                else if (job.job.status == 'failed' || job.job.status == 'killed') {
-                  delay = 0;
-                  if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
-                  alert(i18n.failureCallOptim(job.job.avancement));
-                  initForm();
-                }
-              },
-              error: function(xhr, status) {
-                nbError++;
-                if (nbError > 2) {
-                  delay = 0;
-                  alert(i18n.failureOptim(nbError, status));
-                  initForm();
-                }
-              }
-            });
-            nbInterval++;
-            interval = setTimeout(checkResponse, Math.min(delay * nbInterval, 30000));
+          else if (job.job.status == 'completed') {
+            if (debug) console.log('Job completed: ' + JSON.stringify(job));
+            if (job.job.graph) {
+              displayGraph(job.job.graph);
+            }
+            callback(job.solutions[0]);
           }
-        };
-        checkResponse();
+          else if (job.job.status == 'failed' || job.job.status == 'killed') {
+            if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
+            alert(i18n.failureCallOptim(job.job.avancement));
+            initForm();
+          }
+        })
       },
       error: function(xhr, status, message) {
         alert(i18n.failureCallOptim(status + " " + message + " " + xhr.responseText));
@@ -881,12 +759,7 @@ $(document).ready(function() {
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
       $('#send-files').attr('disabled', true);
       $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> - <span id="timer"></span>');
-      var start = new Date();
-      var displayTimer = function() {
-        $('#timer').html(((new Date() - start) / 1000).toHHMMSS());
-      };
-      displayTimer();
-      window.optimInterval = setInterval(displayTimer, 1000);
+      timer = displayTimer()
       $('#infos').html('');
       $('#result').html('');
       $('#result-graph').hide();
