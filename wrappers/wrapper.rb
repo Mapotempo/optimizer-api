@@ -564,7 +564,7 @@ module Wrappers
             setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
             duration: service[:activity] ? service[:activity][:duration] : nil,
             timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
-            quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit].id, value: qte[:value] } } : nil
+            quantities: service[:quantities]
           },
           reason: reason
         }

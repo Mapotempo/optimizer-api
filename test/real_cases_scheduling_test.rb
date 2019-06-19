@@ -48,7 +48,7 @@ class HeuristicTest < Minitest::Test
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
-      assert_equal 17, result[:unassigned].size
+      assert_equal 11, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
       assert_equal result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:service_id] }.collect{ |activity| activity[:detail][:quantities][0][:value] }.sum }.sum + result[:unassigned].collect{ |unassigned| unassigned[:detail][:quantities][0][:value] }.sum, vrp.services.collect{ |service| service[:quantities][0][:value] }.sum
       assert result[:routes].none?{ |route| route[:activities].reject{ |stop| stop[:detail][:quantities].empty? }.collect{ |stop| stop[:detail][:quantities][0][:value] }.sum > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] }
@@ -145,5 +145,13 @@ class HeuristicTest < Minitest::Test
         }
       }
     end
+  end
+
+  def test_AG45_NoChaumont_5Veh_ForAPI
+    vrp = FCT.load_vrp(self)
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    assert result
+    assert result[:unassigned].size < 400
+    assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }
   end
 end

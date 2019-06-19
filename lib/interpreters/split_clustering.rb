@@ -238,8 +238,10 @@ module Interpreters
     def self.kmeans_process(centroids, max_iterations, restarts, nb_clusters, data_items, unit_symbols, cut_symbol, metric_limit, vrp, options = {})
       biggest_cluster_size = 0
       clusters = []
+      day_caracteristics = []
       restart = 0
       best_limit_score = nil
+      c = nil
       while restart < restarts
         c = BalancedKmeans.new
         c.max_iterations = max_iterations
@@ -248,7 +250,6 @@ module Interpreters
         # TODO : remove vrp notion from here
         c.possible_caracteristics_combination = vrp.vehicles.collect{ |vehicle| vehicle[:skills] }.to_a # assumes vehicle have no alternative skills
         # TODO : throw error if vehicles have alternative skills
-        c.impossible_day_combination = (0..6).collect{ |day| "not_day_skill_#{day}" }
         c.expected_caracteristics = options[:expected_caracteristics] if options[:expected_caracteristics]
 
         ratio = 0.9 + 0.1 * (restarts - restart) / restarts.to_f
@@ -300,10 +301,12 @@ module Interpreters
           biggest_cluster_size = c.clusters.size
           clusters = c.clusters
           centroids = c.centroid_indices
+          day_caracteristics = c.centroids.collect{ |centroid| centroid[5] }
         end
         c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
       end
-      [clusters, centroids]
+
+      [clusters, centroids, day_caracteristics]
     end
 
     def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {})
@@ -327,13 +330,8 @@ module Interpreters
         limits = centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity])
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && options[:entity] != 'work_day'
 
-        expected_caracteristics = options[:entity] == 'work_day' ? vrp.vehicles.collect{ |v| [0, 1, 2, 3, 4, 5, 6] - [v.timewindow ? v.timewindow.day_index : v.sequence_timewindows.first.day_index] }.flatten : []
-        expected_caracteristics.map!{ |d| "not_day_skill_#{d}" } if options[:entity] == 'work_day'
-        # TODO : add skills
-
-        options[:expected_caracteristics] = expected_caracteristics
-
-        clusters, _centroids = kmeans_process(centroids, options[:max_iterations], options[:restarts], nb_clusters, data_items, unit_symbols, options[:cut_symbol], limits, vrp, options)
+        options[:expected_caracteristics] = generate_expected_caracteristics(vrp.vehicles, options[:entity])
+        clusters, _centroids, centroid_caracteristics = kmeans_process(centroids, options[:max_iterations], options[:restarts], nb_clusters, data_items, unit_symbols, options[:cut_symbol], limits, vrp, options)
 
         # TODO : possible to remove ?
         # adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
@@ -343,7 +341,7 @@ module Interpreters
           }
         }
         puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
-        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, options[:entity]) if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
+        cluster_vehicles = assign_vehicle_to_clusters(centroid_caracteristics, vrp.vehicles, vrp.points, clusters, options[:entity]) if options[:entity] == 'work_day' || options[:entity] == 'vehicle' # change everywhere
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
@@ -540,6 +538,7 @@ module Interpreters
             }
 
             linked_objects["#{point.id}_#{sub_set_index}"] = sub_set.collect{ |object| object[:id] }
+            # TODO : group sticky and skills (in expected caracteristics too)
             data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, sticky, skills, 0]
           }
 
@@ -601,39 +600,26 @@ module Interpreters
         value * (1 + day_skills.count("not_day_skill_#{day}")/size.to_f)
       end
 
-      def assign_vehicle_to_clusters(vehicles, points, clusters, entity)
+      def generate_expected_caracteristics(vehicles, entity)
+        # TODO : improve case with alternative skills
+        expected = vehicles.collect{ |v| v[:skills].flatten }
+        all_days = [0, 1, 2, 3, 4, 5, 6]
+        day_caracteristics = vehicles.map{ |vehicle|
+          v_days = [vehicle[:timewindow] ? (vehicle[:timewindow][:day_index] || all_days) : (vehicle[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days }) ].flatten.uniq
+          (all_days - v_days).map!{ |d| "not_day_skill_#{d}" }
+        }
+        expected.collect!.with_index{ |vehicle_set, v_i| (vehicle_set + day_caracteristics[v_i]) }
+
+        expected
+      end
+
+      def assign_vehicle_to_clusters(clusters_caracteristics, vehicles, points, clusters, entity)
+        expected_caracteristics = generate_expected_caracteristics(vehicles, entity)
+
         cluster_vehicles = Array.new(clusters.size){ [] }
-        available_clusters = []
-        clusters.each_with_index{ |cluster, i|
-          avg_lat = cluster.data_items.collect{ |item| item[0] }.sum / cluster.data_items.size
-          avg_lon = cluster.data_items.collect{ |item| item[1] }.sum / cluster.data_items.size
-          available_clusters << {
-            id: i,
-            centroid: [avg_lat, avg_lon],
-            number_items: (cluster.data_items || cluster).size,
-            skills: (cluster.data_items || cluster).collect{ |item| item[5] }.flatten.uniq
-          }
-        }
+        remaining_vehicles = (0..vehicles.size - 1).collect{ |v| v }
 
-        if entity == 'work_day'
-          all_days = [0, 1, 2, 3, 4, 5, 6]
-          available_days = vehicles.collect{ |v| v[:timewindow] ? (v[:timewindow][:day_index] || all_days) : (v[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days }) }.flatten.uniq
-          clusters.each_with_index{ |cluster, i|
-            available_clusters[i][:skills].delete_if{ |skill| skill.include?('not_day_skill') }
-            available_clusters[i][:day_skills] = (cluster.data_items || cluster).collect{ |item| item[5] }.flatten.uniq
-            available_clusters[i][:days_conflict] = (0..6).collect{ |day| available_days.include?(day) ? (cluster.data_items || cluster).select{ |i| i[5].any?{ |skill| skill.include?(day.to_s) } }.size : 0 }
-          }
-        end
-
-        # not to influence assignment regarding skills that no vehicle have
-        available_clusters.each{ |cluster_data|
-          cluster_data[:skills].delete_if{ |skill| !vehicles.collect{ |v| v[:skills] }.flatten.include?(skill) }
-        }
-
-        vehicles_cluster_distance = []
-        vehicles.each{ |vehicle|
-          next if available_clusters.empty?
-
+        vehicle_coords = vehicles.map{ |vehicle|
           v_start = [nil, nil]
           v_end = [nil, nil]
           if vehicle.start_point_id
@@ -645,27 +631,18 @@ module Interpreters
             v_end = [point[:lat], point[:lon]]
           end
 
-          vehicles_cluster_distance << available_clusters.collect{ |cluster_data|
-            compute_distance_value(v_start, v_end, cluster_data[:centroid])
-          }
+          [v_start, v_end]
         }
 
-        available_vehicles_id = (0..vehicles.size - 1).collect{ |i| i }
-        available_clusters_id = (0..available_clusters.size - 1).collect{ |i| i }
-        until available_clusters_id.empty?
-          cluster_to_affect = if entity == 'work_day'
-            available_clusters_id.group_by{ |id| available_clusters[id][:day_skills].size + available_clusters[id][:skills].uniq.size }.max_by{ |val, _list| val }[1].max_by{ |c| available_clusters[c][:days_conflict].max }
-          else
-            available_clusters_id.max_by{ |cluster| available_clusters[cluster][:skills].size }
-          end
-
-          compatible_vehicles = find_compatible_vehicles(cluster_to_affect, vehicles, available_clusters, vehicles_cluster_distance, entity, cluster: available_clusters_id, vehicle: available_vehicles_id)
-          vehicle_to_affect = compatible_vehicles.min_by{ |tab| tab[1] }.first
-
-          cluster_vehicles[available_clusters[cluster_to_affect][:id]] = [vehicles[vehicle_to_affect][:id]]
-          available_clusters_id.delete(cluster_to_affect)
-          available_vehicles_id.delete(vehicle_to_affect)
-        end
+        (0..clusters.size - 1).each{ |cluster_index|
+          cluster_skills = clusters_caracteristics[cluster_index]
+          avg_lat = clusters[cluster_index].data_items.collect{ |item| item[0] }.sum / clusters[cluster_index].data_items.size
+          avg_lon = clusters[cluster_index].data_items.collect{ |item| item[1] }.sum / clusters[cluster_index].data_items.size
+          possible_vehicles_indexes = expected_caracteristics.each_with_index.map { |caracteristics, index| caracteristics == cluster_skills ? index : nil }.compact & remaining_vehicles
+          vehicle_id = possible_vehicles_indexes.min_by{ |i| Helper.flying_distance(vehicle_coords[i][0], [avg_lat, avg_lon]) + Helper.flying_distance(vehicle_coords[i][1], [avg_lat, avg_lon]) }
+          cluster_vehicles[cluster_index] = [vehicles[vehicle_id][:id]]
+          remaining_vehicles.delete(vehicle_id)
+        }
 
         cluster_vehicles
       end
