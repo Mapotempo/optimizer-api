@@ -64,8 +64,9 @@ class HeuristicTest < Minitest::Test
     vrp = FCT.create(vrp)
 
     s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
-    data_services = s.collect_services_data(vrp)
-    assert data_services['service_1'][:tw].all?{ |tw| tw[:start] == 5 && tw[:end] == 10 }
+    s.collect_services_data(vrp)
+    data_services = s.instance_variable_get(:@services_data)
+    assert(data_services['service_1'][:tw].all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
     assert_equal 0, s.instance_variable_get(:@uninserted).size
   end
 
@@ -92,8 +93,9 @@ class HeuristicTest < Minitest::Test
     vrp[:services][3][:visits_number] = 2
     vrp[:services][3][:minimum_lapse] = 6
     vrp = FCT.create(vrp)
-    SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
-    data_services = SchedulingHeuristic.collect_services_data(vrp)
+    s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+    s.collect_services_data(vrp)
+    data_services = s.instance_variable_get(:@services_data)
     assert_equal 6, data_services.size
     assert_nil data_services['service_1'][:heuristic_period]
     assert_equal 7, data_services['service_2'][:heuristic_period]
