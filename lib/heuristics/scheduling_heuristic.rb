@@ -44,6 +44,7 @@ module SchedulingHeuristic
     @used_to_adjust = []
     @vehicle_day_completed = {}
     @cost = 0
+    @services_data = {}
 
     # heuristic parameters
     @allow_partial_assignment = vrp.resolution_allow_partial_assignment
@@ -60,25 +61,25 @@ module SchedulingHeuristic
     self
   end
 
-  def self.adjust_candidate_routes(vehicle, day_finished, services)
+  def self.adjust_candidate_routes(vehicle, day_finished)
     ### assigns all visits of services in [services] that where newly scheduled on [vehicle] at [day_finished] ###
     days_available = @candidate_routes[vehicle].keys
     days_filled = [day_finished]
     @candidate_routes[vehicle][day_finished][:current_route].select{ |service|
       !@used_to_adjust.include?(service[:id])
     }.sort_by{ |service|
-      services[service[:id]][:priority]
+      @services_data[service[:id]][:priority]
     }.each{ |service|
       cleaned_service = nil
       @used_to_adjust << service[:id]
-      peri = [services[service[:id]][:heuristic_period], 1].compact.max
+      peri = [@services_data[service[:id]][:heuristic_period], 1].compact.max
       day_to_insert = (peri % 7) > 0 ? days_available.select{ |day| day >= day_finished + peri }.min : day_finished + peri
-      (2..services[service[:id]][:nb_visits]).each{ |visit_number|
+      (2..@services_data[service[:id]][:nb_visits]).each{ |visit_number|
         break if cleaned_service
         inserted_day = nil
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end
           break if cleaned_service
-          inserted_day = try_to_insert_at(vehicle, day_to_insert, services, service, visit_number, days_filled) if days_available.include?(day_to_insert)
+          inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number, days_filled) if days_available.include?(day_to_insert)
 
           if (peri % 7) > 0
             day_to_insert = days_available.select{ |day| day >= day_to_insert + peri }.min
@@ -89,21 +90,21 @@ module SchedulingHeuristic
 
         if inserted_day.nil?
           if !@allow_partial_assignment
-            clean_routes(services, service, day_finished, vehicle, days_available)
+            clean_routes(service, day_finished, vehicle, days_available)
             cleaned_service = true
           elsif day_to_insert.nil? || day_to_insert > @schedule_end
-            @uninserted["#{service[:id]}_#{visit_number}_#{services[service[:id]][:nb_visits]}"] = {
+            @uninserted["#{service[:id]}_#{visit_number}_#{@services_data[service[:id]][:nb_visits]}"] = {
               original_service: service[:id],
               reason: "First visit assigned at day #{day_finished} : too late to affect other visits"
             }
           else
-            @uninserted["#{service[:id]}_#{visit_number}_#{services[service[:id]][:nb_visits]}"] = {
+            @uninserted["#{service[:id]}_#{visit_number}_#{@services_data[service[:id]][:nb_visits]}"] = {
               original_service: service[:id],
               reason: "Visit not assignable by heuristic, first visit assigned at day #{day_finished}"
             }
           end
         end
-      } if services[service[:id]][:nb_visits] > 1
+      } if @services_data[service[:id]][:nb_visits] > 1
     }
 
     days_filled.uniq.each{ |d|
@@ -111,11 +112,11 @@ module SchedulingHeuristic
     }
   end
 
-  def self.best_common_tw(services, set)
+  def self.best_common_tw(set)
     ### finds the biggest tw common to all services in [set] ###
-    first_with_tw = set.find{ |service| services[service[:id]][:tw] && !services[service[:id]][:tw].empty? }
+    first_with_tw = set.find{ |service| @services_data[service[:id]][:tw] && !@services_data[service[:id]][:tw].empty? }
     if first_with_tw
-      group_tw = services[first_with_tw[:id]][:tw].collect{ |tw| {day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
+      group_tw = @services_data[first_with_tw[:id]][:tw].collect{ |tw| { day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
       # all timewindows are assigned to a day
       group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw| (0..6).each{ |day|
           group_tw << { day_index: day, start: tw[:start], end: tw[:end] }
@@ -124,28 +125,26 @@ module SchedulingHeuristic
 
       # finding minimal common timewindow
       set.each{ |service|
-        if !services[service[:id]][:tw].empty?
-          # remove all tws with no intersection with this service tws
-          group_tw.delete_if{ |tw1|
-            services[service[:id]][:tw].none?{ |tw2|
-              (tw2[:day_index].nil? || tw2[:day_index] == tw1[:day_index]) &&
+        next if @services_data[service[:id]][:tw].empty?
+        # remove all tws with no intersection with this service tws
+        group_tw.delete_if{ |tw1|
+          @services_data[service[:id]][:tw].none?{ |tw2|
+            (tw2[:day_index].nil? || tw2[:day_index] == tw1[:day_index]) &&
               (tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start] && tw2[:end] >= tw1[:end])
-            }
           }
+        }
 
-          if !group_tw.empty?
-            # adjust all tws with intersections with this point tws
-            services[service[:id]][:tw].each{ |tw|
-              intersecting_tws = group_tw.select{ |t| (t[:day_index].nil? || tw[:day_index].nil? || t[:day_index] == tw[:day_index]) && (tw[:start].between?(t[:start], t[:end]) || tw[:end].between?(t[:start], t[:end]) || tw[:start] <= t[:start] && tw[:end] >= t[:start]) }
-              if !intersecting_tws.empty?
-                intersecting_tws.each{ |t|
-                  t[:start] = [t[:start], tw[:start]].max
-                  t[:end] = [t[:end], tw[:end]].min
-                }
-              end
-            }
-          end
-        end
+        next if group_tw.empty?
+        # adjust all tws with intersections with this point tws
+        @services_data[service[:id]][:tw].each{ |tw|
+          intersecting_tws = group_tw.select{ |t| (t[:day_index].nil? || tw[:day_index].nil? || t[:day_index] == tw[:day_index]) && (tw[:start].between?(t[:start], t[:end]) || tw[:end].between?(t[:start], t[:end]) || tw[:start] <= t[:start] && tw[:end] >= t[:start]) }
+          next if intersecting_tws.empty?
+          intersecting_tws.each{ |t|
+            t[:start] = [t[:start], tw[:start]].max
+            t[:end] = [t[:end], tw[:end]].min
+          }
+        }
+
       }
 
       group_tw.delete_if{ |tw| tw[:start] && tw[:end] && tw[:start] == tw[:end] }
@@ -155,7 +154,7 @@ module SchedulingHeuristic
     end
   end
 
-  def self.check_solution_validity(services_data)
+  def self.check_solution_validity
     @planning.each{ |vehicle, all_days_routes|
       all_days_routes.each{ |day, route|
         next if route[:services].empty?
@@ -170,17 +169,16 @@ module SchedulingHeuristic
       }
     }
 
-    @planning.each{ |vehicle, all_days_routes|
+    @planning.each{ |_vehicle, all_days_routes|
       all_days_routes.each{ |day, route|
-        route[:services].each_with_index{ |s,i|
-          if !services_data[s[:id]][:tw].nil? && !services_data[s[:id]][:tw].empty?
-            time_to_arrive = ( i == 0 ? matrix(route[:vehicle], route[:vehicle][:start_point_id], s[:id]) : matrix( route[:vehicle], route[:services][i - 1][:id], s[:id] ))
-            compatible_tw = services_data[s[:id]][:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && (s[:start] + time_to_arrive).between?(tw[:start], tw[:end] ) }
-            if compatible_tw.nil? && services_data[s[:id]][:tw].each{ |tw| (s[:start] + time_to_arrive) < tw[:start] }
-              s[:start] = services_data[s[:id]][:tw].collect{ |tw| tw[:start] }.min - time_to_arrive
-            elsif compatible_tw.nil?
-              raise OptimizerWrapper::SchedulingHeuristicError.new('One service timewindows violated')
-            end
+        route[:services].each_with_index{ |s, i|
+          next if @services_data[s[:id]][:tw].nil? || @services_data[s[:id]][:tw].empty?
+          time_to_arrive = (i.zero? ? matrix(route[:vehicle], route[:vehicle][:start_point_id], s[:id]) : matrix(route[:vehicle], route[:services][i - 1][:id], s[:id]))
+          compatible_tw = @services_data[s[:id]][:tw].find{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && (s[:start] + time_to_arrive).between?(tw[:start], tw[:end]) }
+          if compatible_tw.nil? && @services_data[s[:id]][:tw].each{ |tw| (s[:start] + time_to_arrive) < tw[:start] }
+            s[:start] = @services_data[s[:id]][:tw].collect{ |tw| tw[:start] }.min - time_to_arrive
+          elsif compatible_tw.nil?
+            raise OptimizerWrapper::SchedulingHeuristicError.new('One service timewindows violated')
           end
         }
       }
@@ -199,9 +197,8 @@ module SchedulingHeuristic
     day_route
   end
 
-  def self.clean_routes(services, service, day_finished, vehicle, days_available)
+  def self.clean_routes(service, day_finished, vehicle, days_available)
     ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-    peri = services[service[:id]][:heuristic_period] || 1
     removed_size = @planning[vehicle].collect{ |day, day_route|
       remove_index = day_route[:services].find_index{ |stop| stop[:id] == service[:id] }
       day_route[:services] = update_route(remove_index, day_route[:services], vehicle, day, @planning[vehicle][day][:vehicle][:matrix_id])
@@ -214,34 +211,31 @@ module SchedulingHeuristic
       day_route[:current_route].slice!(remove_index) if remove_index
     }.compact.size
 
-    (1..services[service[:id]][:nb_visits]).each{ |number_in_sequence|
-      @uninserted["#{service[:id]}_#{number_in_sequence}_#{services[service[:id]][:nb_visits]}"] = {
+    (1..@services_data[service[:id]][:nb_visits]).each{ |number_in_sequence|
+      @uninserted["#{service[:id]}_#{number_in_sequence}_#{@services_data[service[:id]][:nb_visits]}"] = {
         original_service: service[:id],
         reason: "Only partial assignment could be found (#{removed_size} visits had been assigned from day #{day_finished})"
       }
     }
 
     @to_plan_service_ids.delete_if{ |service_id|
-      services[service_id][:point_id] == service[:point_id]
+      @services_data[service_id][:point_id] == service[:point_id]
     }
     @candidate_service_ids.each{ |candidate_service|
-      if services[candidate_service][:point_id] == service[:point_id]
-        (0..services[candidate_service][:nb_visits] - 1).each{ |visit|
-          @uninserted["#{candidate_service}_#{visit + 1}_#{services[candidate_service][:nb_visits]}"] = {
-            original_service: candidate_service,
-            reason: "Service #{candidate_service} at the same location is already unassigned, and partial_assigments are unauthorized"
-          }
+      next if @services_data[candidate_service][:point_id] != service[:point_id]
+      (0..@services_data[candidate_service][:nb_visits] - 1).each{ |visit|
+        @uninserted["#{candidate_service}_#{visit + 1}_#{@services_data[candidate_service][:nb_visits]}"] = {
+          original_service: candidate_service,
+          reason: "Service #{candidate_service} at the same location is already unassigned, and partial_assigments are unauthorized"
         }
-      end
+      }
     }
     @candidate_service_ids.delete_if{ |service_id|
-      services[service_id][:point_id] == service[:point_id]
+      @services_data[service_id][:point_id] == service[:point_id]
     }
   end
 
   def self.collect_services_data(vrp)
-    services_data = {}
-
     has_sequence_timewindows = vrp[:vehicles][0][:timewindow].nil?
     available_units = vrp.vehicles.collect{ |vehicle| vehicle[:capacities] ? vehicle[:capacities].collect{ |capacity| capacity[:unit_id] } : nil }.flatten.compact.uniq
 
@@ -258,7 +252,7 @@ module SchedulingHeuristic
                 else
                   service[:minimum_lapse].nil? ? 1 : service[:minimum_lapse].ceil
                 end
-      services_data[service.id] = {
+      @services_data[service.id] = {
         capacity: compute_capacities(service[:quantities], false, available_units),
         setup_duration: service[:activity][:setup_duration],
         duration: service[:activity][:duration],
@@ -283,9 +277,9 @@ module SchedulingHeuristic
                                                           service[:activity][:point_id] == point[:id] }.sort_by{ |s| s[:visits_number] }
 
         if !same_located_set.empty?
-          group_tw = best_common_tw(services_data, same_located_set)
+          group_tw = best_common_tw(same_located_set)
 
-          if group_tw.empty? && !same_located_set.all?{ |service| services_data[service[:id]][:tw].nil? || services_data[service[:id]][:tw].empty? }
+          if group_tw.empty? && !same_located_set.all?{ |service| @services_data[service[:id]][:tw].nil? || @services_data[service[:id]][:tw].empty? }
             # reject group because no common tw
             same_located_set.each{ |service|
               (1..service[:visits_number]).each{ |index|
@@ -300,18 +294,18 @@ module SchedulingHeuristic
             representative_ids = []
             last_representative = nil
             # one representative per freq
-            same_located_set.collect{ |service| services_data[service[:id]][:heuristic_period] }.uniq.each{ |period|
-              sub_set = same_located_set.select{ |s| services_data[s[:id]][:heuristic_period] == period }
+            same_located_set.collect{ |service| @services_data[service[:id]][:heuristic_period] }.uniq.each{ |period|
+              sub_set = same_located_set.select{ |s| @services_data[s[:id]][:heuristic_period] == period }
               representative_id = sub_set[0][:id]
               last_representative = representative_id
               representative_ids << representative_id
-              services_data[representative_id][:tw] = group_tw
-              services_data[representative_id][:group_duration] = sub_set.sum{ |s| s[:activity][:duration] }
+              @services_data[representative_id][:tw] = group_tw
+              @services_data[representative_id][:group_duration] = sub_set.sum{ |s| s[:activity][:duration] }
 
               @same_located[representative_id] = sub_set.delete_if{ |s| s[:id] == representative_id }.collect{ |s| s[:id] }
-              services_data[representative_id][:group_capacity] = Marshal.load(Marshal.dump(services_data[representative_id][:capacity]))
+              @services_data[representative_id][:group_capacity] = Marshal.load(Marshal.dump(@services_data[representative_id][:capacity]))
               @same_located[representative_id].each{ |service_id|
-                services_data[service_id][:capacity].each{ |unit, value| services_data[representative_id][:group_capacity][unit] += value }
+                @services_data[service_id][:capacity].each{ |unit, value| @services_data[representative_id][:group_capacity][unit] += value }
               }
             }
 
@@ -321,8 +315,6 @@ module SchedulingHeuristic
         end
       }
     end
-
-    services_data
   end
 
   def self.collect_unassigned(vrp)
@@ -372,62 +364,63 @@ module SchedulingHeuristic
 
   def self.compute_initial_solution(vrp)
     # collecting data
-    services_data = collect_services_data(vrp)
+    collect_services_data(vrp)
     generate_route_structure(vrp)
 
     # Solve TSP - Build a large Tour to define an arbitrary insertion order
     solve_tsp(vrp)
-    fill_days(services_data)
+    fill_days
 
     fill_planning
-    check_solution_validity(services_data)
-    routes = prepare_output_and_collect_routes(vrp, services_data)
+    check_solution_validity
+    routes = prepare_output_and_collect_routes(vrp)
 
     routes
   end
 
-  def self.compute_insertion_costs(vehicle, day, positions_in_order, services, route_data)
+  def self.compute_insertion_costs(vehicle, day, positions_in_order, route_data)
     ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
     route = route_data[:current_route]
     insertion_costs = []
 
     @to_plan_service_ids.select{ |service|
                   @candidate_service_ids.include?(service) &&
-                  # quantities are respected
-                  (@same_point_day && services[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } || !@same_point_day && services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) &&
-                  # service is available at this day
-                  !services[service][:unavailable_days].include?(day) }.each{ |service_id|
+                    # quantities are respected
+                    (@same_point_day && @services_data[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } ||
+                      !@same_point_day && @services_data[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) &&
+                    # service is available at this day
+                    !@services_data[service][:unavailable_days].include?(day) }.each{ |service_id|
 
       # ignore if we have already visited this POINT but not in this route
-      next if @unlocked.include?(service_id) && @candidate_routes[vehicle][day][:current_route].none?{ |stop| stop[:point_id] == services[service_id][:point_id] }
+      next if @unlocked.include?(service_id) && @candidate_routes[vehicle][day][:current_route].none?{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }
       same_point_compatible_day = true
-      if @unlocked.include?(service_id) && services[service_id][:heuristic_period]
-        last_visit_day = day + (services[service_id][:nb_visits] - 1) * services[service_id][:heuristic_period]
+      if @unlocked.include?(service_id) && @services_data[service_id][:heuristic_period]
+        last_visit_day = day + (@services_data[service_id][:nb_visits] - 1) * @services_data[service_id][:heuristic_period]
         # can not finish later (over whole period) than service at same_point
-        stop = @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:point_id] == services[service_id][:point_id] }
-        stop_last_visit_day = day + (services[stop[:id]][:nb_visits] - stop[:number_in_sequence] ) * services[stop[:id]][:heuristic_period]
+        stop = @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }
+        stop_last_visit_day = day + (@services_data[stop[:id]][:nb_visits] - stop[:number_in_sequence] ) * @services_data[stop[:id]][:heuristic_period]
         same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
       end
 
-      period = services[service_id][:heuristic_period]
-      n_visits = services[service_id][:nb_visits]
-      duration = @same_point_day ? services[service_id][:group_duration] : services[service_id][:duration]
+      period = @services_data[service_id][:heuristic_period]
+      n_visits = @services_data[service_id][:nb_visits]
+      duration = @same_point_day ? @services_data[service_id][:group_duration] : @services_data[service_id][:duration]
       latest_authorized_day = @schedule_end - (period || 0) * (n_visits - 1)
 
       if period.nil? || day <= latest_authorized_day && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil? && same_point_compatible_day
-        s_position_in_order = @order.index(services[service_id][:point_id])
+        s_position_in_order = @order.index(@services_data[service_id][:point_id])
         first_bigger_position_in_sol = positions_in_order.select{ |pos| pos > s_position_in_order }.min
         insertion_index = positions_in_order.index(first_bigger_position_in_sol).nil? ? route.size : positions_in_order.index(first_bigger_position_in_sol)
 
-        if route.find{ |stop| stop[:point_id] == services[service_id][:point_id] }
-          insertion_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == services[service_id][:point_id] }
+        if route.find{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }
+          insertion_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }
         end
 
-        insertion_costs, index_accepted = compute_value_at_position(route_data, services, service_id, insertion_index, insertion_costs, duration, s_position_in_order, false)
+        insertion_costs, index_accepted = compute_value_at_position(route_data, service_id, insertion_index, insertion_costs, duration, s_position_in_order, false)
 
-        if !index_accepted && !route.empty? && !route.find{ |stop| stop[:point_id] == services[service_id][:point_id] }
+        if !index_accepted && !route.empty? && !route.find{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }
           # we can try to find another index
-          other_indices = find_best_index(services, service_id, route_data)
+          other_indices = find_best_index(service_id, route_data)
           # if !other_indices.nil?
           if other_indices
             insertion_costs << other_indices
@@ -454,14 +447,14 @@ module SchedulingHeuristic
     @candidate_routes[vehicle][day][:positions_in_order] = positions
   end
 
-  def self.compute_shift(route_data, services_info, service_inserted, inserted_final_time, next_service, next_service_id)
+  def self.compute_shift(route_data, service_inserted, inserted_final_time, next_service, next_service_id)
     route = route_data[:current_route]
 
     if route.empty?
       [nil, nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted) + matrix(route_data, service_inserted, route_data[:end_point_id])]
     elsif next_service_id
       dist_to_next = matrix(route_data, service_inserted, next_service_id)
-      next_start, next_end = compute_tw_for_next(inserted_final_time, route[next_service][:arrival], services_info[next_service_id], route[next_service][:considered_setup_duration], dist_to_next, route_data[:global_day_index])
+      next_start, next_end = compute_tw_for_next(inserted_final_time, route[next_service][:arrival], @services_data[next_service_id], route[next_service][:considered_setup_duration], dist_to_next, route_data[:global_day_index])
       shift = next_end - route[next_service][:end]
 
       [next_start, next_start + dist_to_next, next_end, shift]
@@ -483,7 +476,7 @@ module SchedulingHeuristic
     [new_start, new_end]
   end
 
-  def self.compute_value_at_position(route_data, services, service, position, possibles, duration, position_in_order, filling_candidate_route = false)
+  def self.compute_value_at_position(route_data, service, position, possibles, duration, position_in_order, filling_candidate_route = false)
     ### compute cost of inserting [service] at [position] in [route_data]
     value_inserted = false
 
@@ -493,12 +486,12 @@ module SchedulingHeuristic
     next_id = route[position] ? route[position][:id] : nil
     return [possibles, false] if route_data[:maximum_ride_time] && (position > 0 && matrix(route_data, previous_service, service, :time) > route_data[:maximum_ride_time] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :time) > route_data[:maximum_ride_time])
     return [possibles, false] if route_data[:maximum_ride_distance] && (position > 0 && matrix(route_data, previous_service, service, :distance) > route_data[:maximum_ride_distance] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :distance) > route_data[:maximum_ride_distance])
-    list = find_timewindows(position, previous_service, previous_service_end, service, services[service], route_data, duration, filling_candidate_route)
+    list = find_timewindows(position, previous_service, previous_service_end, service, @services_data[service], route_data, duration, filling_candidate_route)
     list.each{ |current_tw|
       start_time = current_tw[:start_time]
       arrival_time = start_time + matrix(route_data, previous_service, service)
       final_time = current_tw[:final_time]
-      next_start, next_arrival, next_end, shift = compute_shift(route_data, services, service, final_time, position, next_id)
+      next_start, next_arrival, next_end, shift = compute_shift(route_data, service, final_time, position, next_id)
       acceptable_shift = route[position] && route[position][:max_shift] ? route[position][:max_shift] >= shift : true
       computed_shift = Marshal.load(Marshal.dump(shift))
       if acceptable_shift && route[position + 1]
@@ -514,19 +507,19 @@ module SchedulingHeuristic
       time_back_to_depot = (position == route.size ? final_time + matrix(route_data, service, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + computed_shift)
       acceptable_shift_for_itself = (current_tw[:end_tw] ? arrival_time <= current_tw[:end_tw] : true) && (route_data[:duration] ? time_back_to_depot - (position == 0 ? start_time : route.first[:start]) <= route_data[:duration] : true)
       acceptable_shift_for_group = true
-      if @same_point_day && !filling_candidate_route && !services[service][:tw].empty?
+      if @same_point_day && !filling_candidate_route && !@services_data[service][:tw].empty?
         # all services start on time
-        additional_durations = services[service][:duration] + current_tw[:setup_duration]
+        additional_durations = @services_data[service][:duration] + current_tw[:setup_duration]
         @same_located[service].each{ |id|
           acceptable_shift_for_group = current_tw[:max_shift] - additional_durations >= 0
-          additional_durations += services[id][:duration]
+          additional_durations += @services_data[id][:duration]
         }
       end
       if acceptable_shift && time_back_to_depot <= route_data[:tw_end] && acceptable_shift_for_itself && acceptable_shift_for_group
         value_inserted = true
         possibles << {
           id: service,
-          point: services[service][:point_id],
+          point: @services_data[service][:point_id],
           shift: shift,
           start: start_time,
           arrival: arrival_time,
@@ -547,7 +540,7 @@ module SchedulingHeuristic
     [possibles, value_inserted]
   end
 
-  def self.fill_basic(services_data)
+  def self.fill_basic
     ### fill planning without same_point_day option ###
     until @candidate_vehicles.empty? || @candidate_service_ids.empty?
       current_vehicle = @candidate_vehicles[0]
@@ -557,14 +550,14 @@ module SchedulingHeuristic
       current_day = days_available[0]
 
       until @candidate_service_ids.empty? || current_day.nil?
-        fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
-        adjust_candidate_routes(current_vehicle, current_day, services_data)
+        fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day])
+        adjust_candidate_routes(current_vehicle, current_day)
         days_available.delete(current_day)
         @candidate_routes[current_vehicle].delete(current_day)
         while @candidate_routes[current_vehicle].any?{ |_day, day_data| !day_data[:current_route].empty? }
           current_day = @candidate_routes[current_vehicle].max_by{ |_day, day_data| day_data[:current_route].size }.first
-          fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day], services_data)
-          adjust_candidate_routes(current_vehicle, current_day, services_data)
+          fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day])
+          adjust_candidate_routes(current_vehicle, current_day)
           days_available.delete(current_day)
           @candidate_routes[current_vehicle].delete(current_day)
         end
@@ -577,16 +570,16 @@ module SchedulingHeuristic
     end
   end
 
-  def self.fill_days(services_data)
+  def self.fill_days
     ### fill planning ###
     if @same_point_day
-      fill_grouped(services_data)
+      fill_grouped
     else
-      fill_basic(services_data)
+      fill_basic
     end
   end
 
-  def self.fill_day_in_planning(vehicle, route_data, services)
+  def self.fill_day_in_planning(vehicle, route_data)
     ### fill this specific [route_data] assigned to [vehicle] ###
     day = route_data[:global_day_index]
     current_route = route_data[:current_route]
@@ -594,15 +587,15 @@ module SchedulingHeuristic
     service_to_insert = true
 
     while service_to_insert
-      insertion_costs = compute_insertion_costs(vehicle, day, positions_in_order, services, route_data)
+      insertion_costs = compute_insertion_costs(vehicle, day, positions_in_order, route_data)
       if !insertion_costs.empty?
         # there are services we can add
-        point_to_add = select_point(services, insertion_costs)
-        best_index = find_best_index(services, point_to_add[:id], route_data)
+        point_to_add = select_point(insertion_costs)
+        best_index = find_best_index(point_to_add[:id], route_data)
 
-        insert_point_in_route(route_data, best_index, day, services)
+        insert_point_in_route(route_data, best_index, day)
         @to_plan_service_ids.delete(point_to_add[:id])
-        services[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+        @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
         if point_to_add[:position] == best_index[:position]
           positions_in_order.insert(point_to_add[:position], point_to_add[:position_in_order])
         else
@@ -633,7 +626,7 @@ module SchedulingHeuristic
     end
   end
 
-  def self.fill_grouped(services_data)
+  def self.fill_grouped
     ### fill planning with same_point_day option ###
     @candidate_vehicles.each{ |current_vehicle|
       possible_to_fill = !@to_plan_service_ids.empty?
@@ -646,15 +639,15 @@ module SchedulingHeuristic
           route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] }
         }[0][0]
         route_data = @candidate_routes[current_vehicle][best_day]
-        insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], services_data, route_data)
+        insertion_costs = compute_insertion_costs(current_vehicle, best_day, route_data[:positions_in_order], route_data)
 
         if !insertion_costs.empty?
-          point_to_add = select_point(services_data, insertion_costs)
-          best_index = find_best_index(services_data, point_to_add[:id], route_data)
+          point_to_add = select_point(insertion_costs)
+          best_index = find_best_index(point_to_add[:id], route_data)
           if best_index
-            best_index[:end] = best_index[:end] - services_data[best_index[:id]][:group_duration] + services_data[best_index[:id]][:duration]
-            insert_point_in_route(route_data, best_index, best_day, services_data)
-            services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+            best_index[:end] = best_index[:end] - @services_data[best_index[:id]][:group_duration] + @services_data[best_index[:id]][:duration]
+            insert_point_in_route(route_data, best_index, best_day)
+            @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
             if point_to_add[:position] == best_index[:position]
               route_data[:positions_in_order].insert(point_to_add[:position], point_to_add[:position_in_order])
             else
@@ -665,25 +658,25 @@ module SchedulingHeuristic
             # adding all points of same familly and frequence
             start = best_index[:end]
             max_shift = best_index[:potential_shift]
-            additional_durations = services_data[best_index[:id]][:duration] + best_index[:considered_setup_duration]
+            additional_durations = @services_data[best_index[:id]][:duration] + best_index[:considered_setup_duration]
             @same_located[best_index[:id]].each_with_index{ |service_id, i|
               route_data[:current_route].insert(best_index[:position] + i + 1,
                 id: service_id,
                 point_id: best_index[:point],
                 start: start,
                 arrival: start,
-                end: start + services_data[service_id][:duration],
+                end: start + @services_data[service_id][:duration],
                 considered_setup_duration: 0,
                 max_shift: max_shift ? max_shift - additional_durations : nil,
                 number_in_sequence: 1)
-              additional_durations += services_data[service_id][:duration]
+              additional_durations += @services_data[service_id][:duration]
               @to_plan_service_ids.delete(service_id)
               @candidate_service_ids.delete(service_id)
-              start += services_data[service_id][:duration]
-              services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+              start += @services_data[service_id][:duration]
+              @services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
               route_data[:positions_in_order].insert(best_index[:position] + i + 1, route_data[:positions_in_order][best_index[:position]])
             }
-            adjust_candidate_routes(current_vehicle, best_day, services_data)
+            adjust_candidate_routes(current_vehicle, best_day)
 
             if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty?
               @to_plan_service_ids += @services_unlocked_by[best_index[:id]]
@@ -704,23 +697,23 @@ module SchedulingHeuristic
     }
   end
 
-  def self.find_best_index(services, service, route_data, in_adjust = false)
+  def self.find_best_index(service, route_data, in_adjust = false)
     ### find the best position in [route_data] to insert [service] ###
     route = route_data[:current_route]
     possibles = []
-    duration = services[service][:duration]
+    duration = @services_data[service][:duration]
     if !in_adjust
-      duration = @same_point_day ? services[service][:group_duration] : services[service][:duration] # this should always work
+      duration = @same_point_day ? @services_data[service][:group_duration] : @services_data[service][:duration] # this should always work
     end
 
     if route.empty?
-      if services[service][:tw].empty? || services[service][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index] % 7 }
-        tw = find_timewindows(0, nil, nil, service, services[service], route_data, duration)[0]
+      if @services_data[service][:tw].empty? || @services_data[service][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index] % 7 }
+        tw = find_timewindows(0, nil, nil, service, @services_data[service], route_data, duration)[0]
         if tw[:final_time] + matrix(route_data, service, route_data[:end_point_id]) <= route_data[:tw_end]
           possibles << {
             id: service,
-            point: services[service][:point_id],
-            shift: matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id]) + services[service][:duration],
+            point: @services_data[service][:point_id],
+            shift: matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id]) + @services_data[service][:duration],
             start: tw[:start_time],
             arrival: tw[:start_time] + matrix(route_data, route_data[:start_point_id], service),
             end: tw[:final_time],
@@ -736,21 +729,21 @@ module SchedulingHeuristic
           }
         end
       end
-    elsif route.find_index{ |stop| stop[:point_id] == services[service][:point_id] }
-      same_point_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == services[service][:point_id] }
+    elsif route.find_index{ |stop| stop[:point_id] == @services_data[service][:point_id] }
+      same_point_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == @services_data[service][:point_id] }
       if in_adjust
-        possibles, value_inserted = compute_value_at_position(route_data, services, service, same_point_index, possibles, services[service][:duration], -1, true)
+        possibles, value_inserted = compute_value_at_position(route_data, service, same_point_index, possibles, @services_data[service][:duration], -1, true)
       else
-        possibles, value_inserted = compute_value_at_position(route_data, services, service, same_point_index, possibles, duration, -1, false)
+        possibles, value_inserted = compute_value_at_position(route_data, service, same_point_index, possibles, duration, -1, false)
       end
     else
       previous_point = route_data[:start_point_id]
       (0..route.size).each{ |position|
         if position == route.size || route[position][:point_id] != previous_point
           if in_adjust
-            possibles, value_inserted = compute_value_at_position(route_data, services, service, position, possibles, services[service][:duration], -1, true)
+            possibles, value_inserted = compute_value_at_position(route_data, service, position, possibles, @services_data[service][:duration], -1, true)
           else
-            possibles, value_inserted = compute_value_at_position(route_data, services, service, position, possibles, duration, -1, false)
+            possibles, value_inserted = compute_value_at_position(route_data, service, position, possibles, duration, -1, false)
           end
         end
         if position < route.size
@@ -868,7 +861,7 @@ module SchedulingHeuristic
     }
   end
 
-  def self.insert_point_in_route(route_data, point_to_add, day, services)
+  def self.insert_point_in_route(route_data, point_to_add, day)
     ### modify [route_data] such that [point_to_add] is in the route ###
     current_route = route_data[:current_route]
     @candidate_service_ids.delete(point_to_add[:id])
@@ -900,8 +893,8 @@ module SchedulingHeuristic
             current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
           elsif shift < 0
             new_potential_start = current_route[point][:arrival] + shift
-            service_tw = services[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:arrival].between?(tw[:start],tw[:end]) }
-            soonest_authorized = (services[current_route[point][:id]][:tw].empty? || !service_tw) ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id])
+            service_tw = @services_data[current_route[point][:id]][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == day % 7 && current_route[point][:arrival].between?(tw[:start],tw[:end]) }
+            soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]))
             if soonest_authorized > new_potential_start
               # barely tested because very few cases :
               shift = shift - (soonest_authorized - new_potential_start)
@@ -928,7 +921,7 @@ module SchedulingHeuristic
     end
   end
 
-  def self.prepare_output_and_collect_routes(vrp, services_data)
+  def self.prepare_output_and_collect_routes(vrp)
     routes = []
     solution = []
     day_name = { 0 => 'mon', 1 => 'tue', 2 => 'wed', 3 => 'thu', 4 => 'fri', 5 => 'sat', 6 => 'sun' }
@@ -964,7 +957,7 @@ module SchedulingHeuristic
             detail: {
               lat: (associated_point[:location][:lat] if associated_point[:location]),
               lon: (associated_point[:location][:lon] if associated_point[:location]),
-              skills: services_data[point[:id]][:skills],
+              skills: @services_data[point[:id]][:skills],
               setup_duration: point[:considered_setup_duration],
               duration: service_in_vrp[:activity][:duration],
               timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].select{ |t| t[:day_index] == day % 7 }.collect{ |tw| {start: tw[:start], end: tw[:end] } } : [],
@@ -1012,10 +1005,10 @@ module SchedulingHeuristic
     routes
   end
 
-  def self.select_point(services, insertion_costs)
+  def self.select_point(insertion_costs)
     ### chose the most interesting point to insert according to [insertion_costs] ###
-    max_priority = services.collect{ |_id, data| data[:priority] }.max
-    insertion_costs.sort_by{ |s| (services[s[:id]][:priority].to_f / max_priority) * (s[:additional_route_time] / services[s[:id]][:nb_visits]**2) }[0]
+    max_priority = @services_data.collect{ |_id, data| data[:priority] }.max
+    insertion_costs.sort_by{ |s| (@services_data[s[:id]][:priority].to_f / max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }[0]
   end
 
   def self.solve_tsp(vrp)
@@ -1031,15 +1024,15 @@ module SchedulingHeuristic
     end
   end
 
-  def self.try_to_insert_at(vehicle, day, services, service, visit_number, days_filled)
+  def self.try_to_insert_at(vehicle, day, service, visit_number, days_filled)
     # when adjusting routes, tries to insert [service] at [day] for [vehicle]
     if !@vehicle_day_completed[vehicle][day]
-      best_index = find_best_index(services, service[:id], @candidate_routes[vehicle][day], true) if services[service[:id]][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 }
+      best_index = find_best_index(service[:id], @candidate_routes[vehicle][day], true) if @services_data[service[:id]][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 }
       if best_index
-        insert_point_in_route(@candidate_routes[vehicle][day], best_index, day, services)
+        insert_point_in_route(@candidate_routes[vehicle][day], best_index, day)
         @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:id] == service[:id] }[:number_in_sequence] = visit_number
 
-        services[service[:id]][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
+        @services_data[service[:id]][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
         days_filled << day
         day
       end
