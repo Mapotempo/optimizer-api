@@ -132,7 +132,12 @@ class SplitClusteringTest < Minitest::Test
 
     services_vrps_vehicles.each{ |services_vrps|
       durations = []
-      services_vrps[:vrp][:vehicles] *= 5
+      vehicles = (0..4).collect{ |v_i|
+        vehicle = Marshal.load(Marshal.dump(services_vrps[:vrp][:vehicles].first))
+        vehicle[:sequence_timewindows] = [vehicle[:sequence_timewindows][v_i]]
+        vehicle
+      }
+      services_vrps[:vrp][:vehicles] = vehicles
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, cut_symbol: :duration, entity: 'work_day', restarts: @split_restarts)
       assert_equal 5, services_vrps.size
       services_vrps.each{ |service_vrp_day|
@@ -325,7 +330,7 @@ class SplitClusteringTest < Minitest::Test
     vrp[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
       metric: 'duration',
-      entity: 'vehicles'
+      entity: 'work_day'
     }]
     vrp[:preprocessing_kmeans_centroids] = [1, 2]
     vrp[:services][0][:activity][:timewindows] = [{start: 0, end: 10, day_index: 0}]
