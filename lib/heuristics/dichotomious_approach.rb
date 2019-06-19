@@ -35,7 +35,8 @@ module Interpreters
       # (service_vrp[:vrp].vehicles.all?(&:force_start) || service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle[:shift_preference] == 'force_start' }) &&
       service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier == 0 } &&
       service_vrp[:vrp].services.all?{ |service| service.activity.late_multiplier.nil? || service.activity.late_multiplier == 0 } &&
-      service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? }
+      service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? } &&
+      service_vrp[:vrp].points.all?{ |point| point.location && point.location.lat && point.location.lon } #TODO - Remove and use matrix/matrix_index in clustering
     end
 
     def self.dichotomious_heuristic(service_vrp, job, &block)

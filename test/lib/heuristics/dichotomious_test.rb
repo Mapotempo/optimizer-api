@@ -72,4 +72,11 @@ class DichotomiousTest < Minitest::Test
       service_vrp = services_vrps_dicho.first
     end
   end
+
+  def test_no_dichotomious_when_no_location
+    vrp = FCT.load_vrp(self)
+    service_vrp = { vrp: vrp, service: :demo }
+
+    assert !Interpreters::Dichotomious.dichotomious_candidate(service_vrp)
+  end
 end
