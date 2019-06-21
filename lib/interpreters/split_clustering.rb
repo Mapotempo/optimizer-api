@@ -115,14 +115,14 @@ module Interpreters
               current_vrp = s_v[:vrp]
               # TODO : global variable to know if work_day entity
               current_vrp.vehicles = list_vehicles(current_vrp.vehicles) if partition[:entity] == 'work_day'
-              split_balanced_kmeans(s_v, [current_vrp.vehicles.size, current_vrp.services.size].min, cut_symbol, partition[:entity])
+              split_balanced_kmeans(s_v, [current_vrp.vehicles.size, current_vrp.services.size].min, cut_symbol: cut_symbol, entity: partition[:entity])
             }
             current_service_vrps = generated_service_vrps.flatten
           when 'hierarchical_tree'
             generated_service_vrps = current_service_vrps.collect{ |s_v|
               current_vrp = s_v[:vrp]
               current_vrp.vehicles = list_vehicles([current_vrp.vehicles.first]) if partition[:entity] == 'work_day'
-              split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol, partition[:entity])
+              split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol: cut_symbol, entity: partition[:entity])
             }
             current_service_vrps = generated_service_vrps.flatten
           else
@@ -135,9 +135,9 @@ module Interpreters
           vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric } ? vrp.preprocessing_partition_metric : :duration
         case vrp.preprocessing_partition_method
         when 'balanced_kmeans'
-          split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol)
+          split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
         when 'hierarchical_tree'
-          split_hierarchical(service_vrp, vrp.vehicles.size, cut_symbol)
+          split_hierarchical(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
         else
           raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
         end
@@ -244,7 +244,7 @@ module Interpreters
         c.impossible_day_combination = (0..6).collect{ |day| "not_day_skill_#{day}" }
         c.expected_caracteristics = options[:expected_caracteristics] if options[:expected_caracteristics]
 
-        ratio = 0.8 + 0.2 * (restarts - restart) / restarts.to_f
+        ratio = 0.9 + 0.1 * (restarts - restart) / restarts.to_f
         ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
         c.clusters.delete([])
@@ -281,44 +281,46 @@ module Interpreters
       [clusters, centroids]
     end
 
-    def self.split_balanced_kmeans(service_vrp, nb_clusters, cut_symbol = :duration, entity = '')
+    def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {})
+      default_options = {max_iterations: 300, restarts: 50, cut_symbol: :duration}
+      options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
-      if vrp.services.all?{ |service| service[:activity] }
+      if vrp.services.all?{ |service| service[:activity] } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
-        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, entity, unit_symbols, cumulated_metrics)
-        limits = centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
-        centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && entity != 'work_day'
+        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, options[:entity], unit_symbols, cumulated_metrics)
+        limits = centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity])
+        centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && options[:entity] != 'work_day'
 
-        expected_caracteristics = entity == 'work_day' ? vrp.vehicles.collect{ |v| [0, 1, 2, 3, 4, 5, 6] - [v.timewindow ? v.timewindow.day_index : v.sequence_timewindows.first.day_index] }.flatten : []
-        expected_caracteristics.map!{ |d| "not_day_skill_#{d}" } if entity == 'work_day'
+        expected_caracteristics = options[:entity] == 'work_day' ? vrp.vehicles.collect{ |v| [0, 1, 2, 3, 4, 5, 6] - [v.timewindow ? v.timewindow.day_index : v.sequence_timewindows.first.day_index] }.flatten : []
+        expected_caracteristics.map!{ |d| "not_day_skill_#{d}" } if options[:entity] == 'work_day'
         # TODO : add skills
 
-        clusters, centroids = kmeans_process(centroids, 300, 20, nb_clusters, data_items, unit_symbols, cut_symbol, limits, vrp, expected_caracteristics: expected_caracteristics)
+        clusters, _centroids = kmeans_process(centroids, options[:max_iterations], options[:restarts], nb_clusters, data_items, unit_symbols, options[:cut_symbol], limits, vrp, expected_caracteristics: expected_caracteristics)
 
         # TODO : possible to remove ?
-        # adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
+        # adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
-          c = cluster.data_items.collect{ |i|
+          cluster.data_items.flat_map{ |i|
             linked_objects[i[2]]
-          }.flatten
+          }
         }
-        puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][cut_symbol] || 0 }.inject(0, :+) })" }.join(' & ')
-        cluster_vehicles = nil
-        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
+        puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
+        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, options[:entity])
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        puts 'Split not available when services have no activity'
+        puts 'Split not available when services have no activity or cluster size is less than 2'
         # TODO : throw error ?
         [service_vrp]
       end
     end
 
-    def self.split_hierarchical(service_vrp, nb_clusters, cut_symbol = :duration, entity = '')
+    def self.split_hierarchical(service_vrp, nb_clusters, options = {})
+      options[:cut_symbol] = :duration if options[:cut_symbol].nil?
       vrp = service_vrp[:vrp]
       # Split using hierarchical tree method
       if vrp.services.all?{ |service| service[:activity] }
@@ -327,7 +329,7 @@ module Interpreters
 
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
-        data_items, cumulated_metrics, linked_objects, max_cut_metrics = collect_data_items_metrics(vrp, entity, unit_symbols, cumulated_metrics, max_cut_metrics)
+        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, options[:entity], unit_symbols, cumulated_metrics, max_cut_metrics)
 
         custom_distance = lambda do |a, b|
           custom_distance(a, b)
@@ -339,8 +341,8 @@ module Interpreters
         end_timer = Time.now
         puts "Timer #{end_timer - start_timer}"
 
-        metric_limit = cumulated_metrics[cut_symbol] / nb_clusters
-        # raise OptimizerWrapper::DiscordantProblemError.new("Unfitting cluster split metric. Maximum value is greater than average") if max_cut_metrics[cut_symbol] > metric_limit
+        metric_limit = cumulated_metrics[options[:cut_symbol]] / nb_clusters
+        # raise OptimizerWrapper::DiscordantProblemError.new("Unfitting cluster split metric. Maximum value is greater than average") if max_cut_metrics[options[:cut_symbol]] > metric_limit
 
         graph = Marshal.load(Marshal.dump(clusterer.graph.compact))
 
@@ -352,7 +354,7 @@ module Interpreters
         # current_level = max_level
         # while current_level >= 0
         #   graph.select{ |k, v| v[:level] == current_level }.each{ |k, v|
-        #     next if v[:unit_metrics][cut_symbol] > 1.1 * metric_limit && current_level != 0
+        #     next if v[:unit_metrics][options[:cut_symbol]] > 1.1 * metric_limit && current_level != 0
         #     clusters << tree_leafs_delete(graph, k).flatten.compact
         #   }
         #   current_level -= 1
@@ -361,10 +363,10 @@ module Interpreters
         # Bottom Up cut
         (0..max_level).each{ |current_level|
           graph.select{ |_k, v| v[:level] == current_level }.each{ |k, v|
-            next if v[:unit_metrics][cut_symbol] < metric_limit && current_level != max_level
+            next if v[:unit_metrics][options[:cut_symbol]] < metric_limit && current_level != max_level
             clusters << tree_leafs(graph, k).flatten.compact
             next if current_level == max_level
-            remove_from_upper(graph, graph[k][:parent], cut_symbol, v[:unit_metrics][cut_symbol])
+            remove_from_upper(graph, graph[k][:parent], options[:cut_symbol], v[:unit_metrics][options[:cut_symbol]])
             if k == graph[v[:parent]][:left]
               graph[v[:parent]][:left] = nil
             else
@@ -379,9 +381,8 @@ module Interpreters
         }.flatten
 
         puts 'Hierarchical Tree : split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
-        cluster_vehicles = nil
-        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, entity)
-        adjust_clusters(clusters, limits, cut_symbol, centroids, data_items) if entity == 'work_day'
+        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, options[:entity])
+        adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
