@@ -541,12 +541,16 @@ module Api
                   }, with: Grape::Presenters::Presenter)
                 elsif ret.is_a?(Hash)
                   status 200
-                  present({
-                    solutions: [ret],
-                    job: {
-                      status: :completed,
-                    }
-                  }, with: Grape::Presenters::Presenter)
+                  if vrp.restitution_csv
+                    present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
+                  else
+                    present({
+                      solutions: [ret],
+                      job: {
+                        status: :completed,
+                      }
+                    }, with: Grape::Presenters::Presenter)
+                  end
                 else
                   error!({status: 'Internal Server Error'}, 500)
                 end
