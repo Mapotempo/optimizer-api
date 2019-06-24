@@ -360,7 +360,7 @@ module Api
         this.optional(:geometry, type: Boolean, desc: 'Allow to return the MultiLineString of each route')
         this.optional(:geometry_polyline, type: Boolean, desc: 'Encode the MultiLineString')
         this.optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
-        this.optional(:csv, type: Boolean, desc: 'The output is a CSV file')
+        this.optional(:csv, type: Boolean, desc: 'The output is a CSV file if you do not specify api format')
         this.optional(:allow_empty_result, type: Boolean, desc: 'Allow no solution from the solver used')
       end
 
@@ -561,43 +561,6 @@ module Api
           end
         end
 
-        resource :jobs_completed do
-          desc 'Fetch vrp result', {
-            nickname: 'jobCompleted',
-            success: VrpResult,
-            failure: [
-              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
-            ],
-            detail: 'Get the job result for completed jobs only.'
-          }
-          params {
-            requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
-          }
-          get ':id' do
-            id = params[:id]
-            solution = APIBase.dump_vrp_cache.read("#{id}.solution")
-            if solution
-              status 200
-              if env['api.format'] == :csv
-                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
-              else
-                present({
-                  solutions: [solution['result']].flatten(1),
-                  job: {
-                    id: id,
-                    status: :completed,
-                    avancement: nil,
-                    graph: solution['graph']
-                  }
-                }, with: Grape::Presenters::Presenter)
-              end
-            else
-              status 404
-              error!({status: 'Not Found', detail: "Result from job with id='#{id}' not found"}, 404)
-            end
-          end
-        end
-
         resource :jobs do
           desc 'Fetch vrp job status', {
             nickname: 'job',
@@ -613,24 +576,28 @@ module Api
           get ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
+            solution = APIBase.dump_vrp_cache.read("#{id}-#{params[:api_key]}.solution") || OptimizerWrapper::Result.get(id)
+            output_format = params[:format]&.to_sym || (solution['csv'] ? :csv : env['api.format'])
 
-            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job
+            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job || solution
+
+            solution ||= {}
 
             # If job has been killed by restarting queues, need to update job status to 'killed'
-            if job.working?
+            if job&.working?
               job_ids = Resque.workers.map{ |w| w.job && w.job['payload'] && w.job['payload']['args'].first }
               unless job_ids.include? id
                 OptimizerWrapper.job_remove(params[:api_key], id)
                 job.status = 'killed'
               end
             end
-            solution = OptimizerWrapper::Result.get(id) || {}
-            if job.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
+
+            if job&.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
               status 404
               error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
-            elsif job.failed?
+            elsif job&.failed?
               status 202
-              if solution['csv']
+              if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
               else
                 present({
@@ -643,9 +610,10 @@ module Api
                   }
                 }, with: Grape::Presenters::Presenter)
               end
-            elsif !job.completed?
+            elsif job && !job.completed?
               status 206
-              if solution['csv']
+              # TODO: why try to return a csv for queued job?
+              if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
               else
                 present({
@@ -659,9 +627,9 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             else
-              APIBase.dump_vrp_cache.write("#{id}.solution", solution)
+              APIBase.dump_vrp_cache.write("#{id}-#{params[:api_key]}.solution", solution) if job
               status 200
-              if solution['csv']
+              if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
               else
                 present({
@@ -669,12 +637,12 @@ module Api
                   job: {
                     id: id,
                     status: :completed,
-                    avancement: job.message,
+                    avancement: job&.message,
                     graph: solution['graph']
                   }
                 }, with: Grape::Presenters::Presenter)
               end
-              OptimizerWrapper.job_remove(params[:api_key], id)
+              OptimizerWrapper.job_remove(params[:api_key], id) if job
             end
           end
 
@@ -702,6 +670,7 @@ module Api
           delete ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
+
             if !job || OptimizerWrapper.job_list(params[:api_key]).map{ |j| j[:uuid] }.exclude?(id)
               status 404
               error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
@@ -711,7 +680,8 @@ module Api
               solution = OptimizerWrapper::Result.get(id)
               status 202
               if solution && !solution.empty?
-                if solution['csv']
+                output_format = params[:format]&.to_sym || (solution['csv'] ? :csv : env['api.format'])
+                if output_format == :csv
                   present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
                 else
                   present({
