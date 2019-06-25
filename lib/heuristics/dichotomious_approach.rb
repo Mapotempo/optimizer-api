@@ -45,7 +45,10 @@ module Interpreters
         t1 = Time.now
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
         # TODO: only compute matrix should be called
+        service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
+        update_exlusion_cost(service_vrp)
         result = OptimizerWrapper.solve([service_vrp], job, block)
+
         t2 = Time.now
 
         if result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size
@@ -94,8 +97,6 @@ module Interpreters
     end
 
     def self.set_config(service_vrp)
-      service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
-
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
       if service_vrp[:level] && service_vrp[:level] > 0
@@ -113,6 +114,15 @@ module Interpreters
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion'] # A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
 
       service_vrp
+    end
+
+    def self.update_exlusion_cost(service_vrp)
+      if !service_vrp[:level].zero?
+        average_exclusion_cost = service_vrp[:vrp].services.collect{ |service| service.exclusion_cost }.sum / service_vrp[:vrp].services.size
+        service_vrp[:vrp].services.each{ |service|
+          service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].resolution_mult_level**service_vrp[:level] - 1)
+        }
+      end
     end
 
     def self.build_initial_routes(results)

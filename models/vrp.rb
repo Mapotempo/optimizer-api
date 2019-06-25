@@ -15,6 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+require './lib/tsp_helper.rb'
 require './models/base'
 
 module Models
@@ -32,6 +33,9 @@ module Models
     field :preprocessing_first_solution_strategy, default: nil
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
+    field :resolution_mult_level, default: 1.5
+    field :resolution_angle, default: 40
+    field :resolution_div_average_service, default: 0.33
     field :resolution_duration, default: nil
     field :resolution_total_duration, default: nil
     field :resolution_iterations, default: nil
@@ -126,10 +130,36 @@ module Models
 
       case type
       when :time
-        total_load = services.map{ |service| service[:activity][:duration] }.reduce(:+)
-        average_load = total_load / services.size.to_f
+        tsp = TSPHelper::create_tsp(self, vehicles.first)
+        result = TSPHelper::solve(tsp)
+        total_travel_time = result[:cost]
+
+        total_vehicle_work_time = vehicles.map{ |vehicle| vehicle[:duration] || vehicle[:timewindow][:end] - vehicle[:timewindow][:start] }.reduce(:+)
+        average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
+        total_service_time = services.map{ |service| service[:activity][:duration].to_i }.reduce(:+)
+
+        data_items = []
+        points.each{ |point|
+          data_items << [point.location.lat, point.location.lon, "#{point.id}", [], [], []]
+        }
+        c = BalancedKmeans.new
+        centroid = c.get_mean_or_mode(DataSet.new(data_items: data_items))
+        #TODO It assums there is only one depot
+        depot = vehicles.collect{ |vehicle| [vehicle.start_point.location.lat, vehicle.end_point.location.lon] }.uniq.flatten
+        approx_depot_time_correction = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil * 2 * Helper.flying_distance([centroid[0], centroid[1]], depot)
+        total_time_load = total_service_time + total_travel_time + approx_depot_time_correction
+
+        average_service_load = total_time_load / services.size.to_f
+        average_number_of_services = average_vehicles_work_time / average_service_load
+        exclusion_rate = resolution_div_average_service * average_number_of_services
+        angle = resolution_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
+        tan_variable =  Math.tan(angle * Math::PI / 180)
+        tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
+        coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
+        coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
+
         services.each{ |service|
-          service.exclusion_cost = ((max_fixed_cost / 15.0) * (service[:activity][:duration] / average_load)).to_i
+          service.exclusion_cost = (coeff_variable_cost * (max_fixed_cost / exclusion_rate * service[:activity][:duration] / average_service_load) + coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
         }
       when :distance
         raise 'Distance based exclusion cost calculation is not ready'
@@ -157,6 +187,9 @@ module Models
     end
 
     def resolution=(resolution)
+      self.resolution_angle = resolution[:angle]
+      self.resolution_mult_level = resolution[:mult_level]
+      self.resolution_div_average_service = resolution[:div_average_service]
       self.resolution_duration = resolution[:duration]
       self.resolution_total_duration = resolution[:duration]
       self.resolution_iterations = resolution[:iterations]
