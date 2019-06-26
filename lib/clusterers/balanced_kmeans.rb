@@ -38,8 +38,7 @@ module Ai4r
                       on_empty: 'Action to take if a cluster becomes empty, with values ' \
                         "'eliminate' (the default action, eliminate the empty cluster), " \
                         "'terminate' (terminate with error), 'random' (relocate the " \
-                        "empty cluster to a random point), 'outlier' (relocate the " \
-                        "empty cluster to the point furthest from its centroid).",
+                        "empty cluster to a random point) ",
                       expected_caracteristics: 'Expected sets of caracteristics for generated clusters',
                       possible_caracteristics_combination: 'Set of skills we can combine in the same cluster.',
                       impossible_day_combination: 'Maximum set of conflicting days.'
@@ -64,7 +63,7 @@ module Ai4r
         @unit_symbols = unit_symbols
 
         @centroid_function = lambda do |clusters|
-          clusters.collect{ |data_set| get_mean_or_mode(data_set) }
+          clusters.collect{ |cluster_data_points| get_mean_or_mode(cluster_data_points) }
         end
 
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
@@ -76,22 +75,36 @@ module Ai4r
           if @total_cut_load.zero?
             @cut_symbol = nil # Disable balanacing because there is no point
           else
-            @data_set.data_items.sort_by!{ |x| x[3][@cut_symbol] || 0 }.reverse!
+            @data_set.data_items.sort_by!{ |x| x[3][@cut_symbol] ? -x[3][@cut_symbol] : 0 }
+            data_length = @data_set.data_items.size
+            @data_set.data_items[(data_length * 0.1).to_i..(data_length * 0.90).to_i] = @data_set.data_items[(data_length * 0.1).to_i..(data_length * 0.90).to_i].shuffle!
           end
         end
 
         calc_initial_centroids
-        @rate_balance = 1.0
 
+        @rate_balance = 0.0
         until stop_criteria_met
+          @rate_balance = 1.0 - (0.2 * @iterations / @max_iterations) if @cut_symbol
+
+          update_cut_limit
+
           calculate_membership_clusters
-          sort_clusters
+          #sort_clusters
           recompute_centroids
         end
-        @rate_balance = options[:rate_balance] || 0.1
-        calculate_membership_clusters
-        sort_clusters
-        recompute_centroids
+
+        if options[:last_iteration_balance_rate]
+          @rate_balance = options[:last_iteration_balance_rate]
+
+          update_cut_limit
+
+          calculate_membership_clusters
+          #sort_clusters
+          recompute_centroids
+        end
+
+        puts "Clustering converged after #{@iterations} iterations.\n"
 
         self
       end
@@ -168,6 +181,19 @@ module Ai4r
         @iterations += 1
 
         @centroids = @centroid_function.call(@clusters)
+
+        if @cut_symbol
+          #if there is balancing.
+          @centroids.each_with_index { |centroid, index|
+            #move the data_points closest to the centroid centers so that balancing can start early
+            point_closest_to_centroid_center = clusters[index].data_items.min_by{ |data_point| Helper::flying_distance(centroid, data_point) }
+            @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center)) #move it to the top
+
+            #correct the distance_from_and_to_depot info of the new cluster with the average of the points
+            centroid[3][:duration_from_and_to_depot] = @clusters[index].data_items.map { |d| d[3][:duration_from_and_to_depot] }.sum / @clusters[index].data_items.size
+          }
+        end
+
         @old_centroids.collect!.with_index{ |data, index|
           data_item = @data_set.data_items.find{ |data_item| data_item[2] == data[2] }
           data_item[4] = data_sticky[index]
@@ -229,9 +255,9 @@ module Ai4r
         fly_distance = Helper.flying_distance(a, b)
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
         limit = if @cut_limit.is_a? Array
-          @cut_limit[cluster_index]
+          @cut_limit[cluster_index][:limit]
         else
-          @cut_limit
+          @cut_limit[:limit]
         end
 
         # caracteristics compatibility
@@ -247,16 +273,15 @@ module Ai4r
 
         # balance between clusters computation
         balance = 1.0
-        if @appy_balancing #&& @iterations > 0
+        if @appy_balancing
           # At this "stage" of the clustering we would expect this limit to be met
           expected_cut_limit = limit * @percent_assigned_cut_load
           # Compare "expected_cut_limit to the current cut_value
           # and penalize (or favorise) if cut_value/expected_cut_limit greater (or less) than 1.
-          #byebug
           balance = if @percent_assigned_cut_load < 0.95
-                      # First half of the clustering down-play the effect of balance (i.e., **power < 1)
+                      # First down-play the effect of balance (i.e., **power < 1)
                       # After then make it more pronounced (i.e., **power > 1)
-                      (cut_value / expected_cut_limit)**(2 * @percent_assigned_cut_load)
+                      (cut_value / expected_cut_limit)**((2 + @rate_balance) * @percent_assigned_cut_load)
                     else
                       # If at the end of the clustering, do not take the power
                       (cut_value / expected_cut_limit)
@@ -264,7 +289,7 @@ module Ai4r
         end
 
         if @rate_balance
-          (fly_distance + compatibility) + @rate_balance * (fly_distance + compatibility) * balance
+          (1.0 - @rate_balance) * (fly_distance + compatibility) + @rate_balance * (fly_distance + compatibility) * balance
         else
           (fly_distance + compatibility) * balance
         end
@@ -277,23 +302,23 @@ module Ai4r
         end
         @cluster_indices = Array.new(@number_of_clusters) {[]}
 
-        @appy_balancing = false
         @total_assigned_cut_load = 0
         @percent_assigned_cut_load = 0
+        @appy_balancing = false
         @data_set.data_items.each_with_index do |data_item, data_index|
-          c = eval(data_item)
-          @clusters[c] << data_item
-          @cluster_indices[c] << data_index if @on_empty == 'outlier'
+          cluster_index = eval(data_item)
+          @clusters[cluster_index] << data_item
+          @cluster_indices[cluster_index] << data_index if @on_empty == 'outlier'
           @unit_symbols.each{ |unit|
-            @cluster_metrics[c][unit] += data_item[3][unit]
+            @cluster_metrics[cluster_index][unit] += data_item[3][unit]
             next if unit != @cut_symbol
             @total_assigned_cut_load += data_item[3][unit]
-            @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load
+            @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load.to_f
             if !@appy_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 }
               @appy_balancing = true
             end
           }
-          update_centroid_properties(c, data_item) # TODO : only if missing caracteristics. Returned through eval ?
+          update_centroid_properties(cluster_index, data_item) # TODO : only if missing caracteristics. Returned through eval ?
         end
         manage_empty_clusters if has_empty_cluster?
       end
@@ -312,18 +337,21 @@ module Ai4r
         tried_indexes = []
         case populate_method
         when 'random' # for initial assignment (without the :centroid_indices option) and for reassignment of empty cluster centroids (with :on_empty option 'random')
+          tried_ids = []
           while @centroids.length < number_of_clusters &&
-              tried_indexes.length < @data_set.data_items.length
+                tried_ids.length < @data_set.data_items.length
             random_index = rand(@data_set.data_items.length)
-            if !tried_indexes.include?(random_index)
-              tried_indexes << random_index
-              if !@centroids.include? @data_set.data_items[random_index]
-                @centroids << @data_set.data_items[random_index]
-              end
+
+            next if tried_ids.include?(@data_set.data_items[random_index][2])
+
+            tried_ids << @data_set.data_items[random_index][2]
+            if !@centroids.include? @data_set.data_items[random_index]
+              @centroids << @data_set.data_items[random_index]
+              @data_set.data_items.insert(0, @data_set.data_items.delete_at(random_index))
             end
           end
           if @output_centroids
-            puts "[DEBUG] kmeans_centroids : #{tried_indexes}"
+            puts "[DEBUG] kmeans_centroids : #{tried_ids}"
           end
         when 'indices' # for initial assignment only (with the :centroid_indices option)
           @centroid_indices.each do |index|
@@ -334,20 +362,6 @@ module Ai4r
                 @centroids << @data_set.data_items[index]
               end
             end
-          end
-        when 'outlier' # for reassignment of empty cluster centroids only (with :on_empty option 'outlier')
-          sorted_data_indices = sort_data_indices_by_dist_to_centroid
-          i = sorted_data_indices.length - 1 # the last item is the furthest from its centroid
-          while @centroids.length < number_of_clusters &&
-              tried_indexes.length < @data_set.data_items.length
-            outlier_index = sorted_data_indices[i]
-            if !tried_indexes.include?(outlier_index)
-              tried_indexes << outlier_index
-              if !@centroids.include? @data_set.data_items[outlier_index]
-                @centroids << @data_set.data_items[outlier_index]
-              end
-            end
-            i > 0 ? i -= 1 : break
           end
         end
         @number_of_clusters = @centroids.length
@@ -368,7 +382,7 @@ module Ai4r
       def stop_criteria_met
         @old_centroids == @centroids ||
           same_centroid_distance_moving_average(Math.sqrt(@iterations).to_i) || #Check if there is a loop of size Math.sqrt(@iterations)
-          (@max_iterations && (@max_iterations <= @iterations + 1))
+          (@max_iterations && (@max_iterations <= @iterations))
       end
 
       def sort_clusters
@@ -392,6 +406,18 @@ module Ai4r
       end
 
       private
+
+      def update_cut_limit
+        return if @rate_balance == 0.0 || @cut_symbol.nil? || @cut_symbol != :duration || !@cut_limit.is_a?(Array)
+        #TODO: This functionality is implemented only for duration cut_symbol. Make sure it doesn't interfere with other cut_symbols
+        vehicle_work_time = @centroids.map.with_index{ |centroid, index|
+          @cut_limit[index][:total_work_time] - 1.5 * centroid[3][:duration_from_and_to_depot] * @cut_limit[index][:total_work_days]  # !!!!!!!!!!!!!!!!!!!! 1.5
+        }
+        total_vehicle_work_times = vehicle_work_time.sum.to_f
+        @centroids.size.times{ |index|
+          @cut_limit[index][:limit] = @total_cut_load * vehicle_work_time[index] / total_vehicle_work_times
+        }
+      end
 
       def same_centroid_distance_moving_average(last_n_iterations)
         if @iterations.zero?
