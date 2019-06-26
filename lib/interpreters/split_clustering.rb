@@ -247,14 +247,21 @@ module Interpreters
         c.expected_caracteristics = options[:expected_caracteristics] if options[:expected_caracteristics]
 
         ratio = 0.9 + 0.1 * (restarts - restart) / restarts.to_f
-        ratio_metric = metric_limit.is_a?(Array) ? metric_limit.map{ |limit| ratio * limit } : ratio * metric_limit
+        ratio_metric = metric_limit.dup
+        if ratio_metric.is_a?(Array)
+          ratio_metric.each{ |metric|
+            metric[:limit] *= ratio
+          }
+        else
+          ratio_metric[:limit] *= ratio
+        end
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
         c.clusters.delete([])
         values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][cut_symbol] }.sum.to_i }
         limit_score = (0..c.cluster_metrics.size - 1).collect{ |cluster_index|
           centroid_coords = [c.centroids[cluster_index][0], c.centroids[cluster_index][1]]
           distance_to_centroid = c.clusters[cluster_index].data_items.collect{ |item| custom_distance([item[0], item[1]], centroid_coords) }.sum
-          ml = metric_limit.is_a?(Array) ? metric_limit[cluster_index] : metric_limit
+          ml = metric_limit.is_a?(Array) ? metric_limit[cluster_index][:limit] : metric_limit[:limit]
           if c.clusters[cluster_index].data_items.size == 1
             2**32
           elsif ml.zero? # Why is it possible?
@@ -262,13 +269,20 @@ module Interpreters
           else
             cluster_metric = c.clusters[cluster_index].data_items.collect{ |i| i[3][cut_symbol] }.sum.to_f
             # TODO: large clusters having great difference with target metric should have a large (bad) score
-            distance_to_centroid * ((cluster_metric - ml).abs / ml)
+            #distance_to_centroid * ((cluster_metric - ml).abs / ml)
+            balancing_coeff = if options[:entity] == 'work_day'
+                                1.0
+                              else
+                                0.6
+                              end
+            (1.0 - balancing_coeff) * distance_to_centroid + balancing_coeff * ((cluster_metric - ml).abs / ml) * distance_to_centroid
           end
         }.sum
         puts "balance : #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum/values.size).to_i}"
+        puts "Restart: #{restart} ratio_metric: #{ratio_metric} score: #{limit_score} balance : #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum/values.size).to_i} #{(values.min - values.max).to_f / values.max}"
         restart += 1
         empty_clusters_score = c.cluster_metrics.size < nb_clusters && (c.cluster_metrics.size..nb_clusters - 1).collect{ |cluster_index|
-            metric_limit.is_a?(Array) ? metric_limit[cluster_index] : metric_limit
+            metric_limit.is_a?(Array) ? metric_limit[cluster_index][:limit] : metric_limit[:limit]
         }.reduce(&:+) || 0
         limit_score += empty_clusters_score
         if best_limit_score.nil? || c.clusters.size > biggest_cluster_size || (c.clusters.size >= biggest_cluster_size && limit_score < best_limit_score)
@@ -742,18 +756,35 @@ module Interpreters
 
       def centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
         limits = []
-        if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] } &&
-           vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.uniq.size != 1
+
+        if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
+
+          depot = [vrp.vehicles[0].start_point.location.lat, vrp.vehicles[0].start_point.location.lon]
+          points = data_items.collect{ |point| [point[0], point[1]] }
+          time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], depot, points)
+          time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], points, depot)
+
+          data_items.each_with_index{ |point, index|
+            point[3][:duration_from_and_to_depot] = time_matrix_from_depot[0][0][index] + time_matrix_to_depot[0][index][0]
+          }
+
           vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
-          total_shares = vrp.vehicles.collect{ |vehicle| vehicle[:sequence_timewindows].size }.sum.to_f
-          vrp.vehicles.each_with_index{ |vehicle, index|
-            vehicle_share = vehicle[:sequence_timewindows].size
-            data_items[index][6] = vehicle_share # affect sequence timewindow size to initial centroids
-            limits << cumulated_metrics[cut_symbol].to_f * (vehicle_share / total_shares)
+
+          vehicle_total_work_times = vrp.vehicles.collect{ |vehicle|
+            vehicle[:sequence_timewindows].sum{ |tw| tw.end - tw.start }
+          }
+          total_work_times = vehicle_total_work_times.sum.to_f
+          vrp.vehicles.each_with_index{ |vehicle, ind|
+            limits << {
+                        limit: cumulated_metrics[cut_symbol].to_f * (vehicle_total_work_times[ind] / total_work_times),
+                        total_work_time: vehicle_total_work_times[ind] * 12,        #### !!!!!!!!!!!!!!!!!!! * 12!!!!
+                        total_work_days: vehicle[:sequence_timewindows].size * 12   #### !!!!!!!!!!!!!!!!!!! * 12!!!!
+                      }
           }
         else
-          limits = cumulated_metrics[cut_symbol] / nb_clusters
+          limits = { limit: cumulated_metrics[cut_symbol] / nb_clusters }
         end
+        p limits
         limits
       end
     end
