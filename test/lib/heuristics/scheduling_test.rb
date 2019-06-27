@@ -520,4 +520,11 @@ class HeuristicTest < Minitest::Test
     # TODO: best visits_unassigned is 8
     assert visits_unassigned.max / visits_unassigned.min.to_f < 3, "#{visits_unassigned} should be more regular"
   end
+
+  def test_callage_freq
+    vrp = FCT.load_vrp(self)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] } }, vrp, nil)
+    assert result[:routes].collect{ |r| r[:activities].size }.uniq.size == 1
+    assert result[:unassigned].empty?
+  end
 end
