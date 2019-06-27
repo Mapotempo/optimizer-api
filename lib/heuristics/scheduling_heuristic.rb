@@ -1009,7 +1009,22 @@ module SchedulingHeuristic
   def self.select_point(insertion_costs)
     ### chose the most interesting point to insert according to [insertion_costs] ###
     max_priority = @services_data.collect{ |_id, data| data[:priority] }.max
-    insertion_costs.sort_by{ |s| (@services_data[s[:id]][:priority].to_f / max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }[0]
+    costs = insertion_costs.collect{ |s| s[:additional_route_time] }
+    if costs.min != 0
+      insertion_costs.min_by{ |s| (@services_data[s[:id]][:priority].to_f / max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }
+    else
+      freq = insertion_costs.collect{ |s| @services_data[s[:id]][:nb_visits] }
+      zero_idx = (0..(costs.size - 1)).select{ |i| costs[i].zero? }
+      potential = zero_idx.select{ |i| freq[i] == freq.max }
+      if !potential.empty?
+        # the one with biggest duration will be the hardest to plan
+        insertion_costs[potential.max_by{ |p| @services_data[insertion_costs[p][:id]][:duration] }]
+      else
+        # TODO : more tests to improve.
+        # we can consider having a limit such that if additional route is > limit then we keep service with additional_route = 0 (and freq max among those)
+        insertion_costs.reject{ |s| s[:additional_route_time].zero? }.min_by{ |s| (@services_data[s[:id]][:priority].to_f / max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }
+      end
+    end
   end
 
   def self.solve_tsp(vrp)
