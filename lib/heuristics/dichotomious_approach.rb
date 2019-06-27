@@ -111,7 +111,7 @@ module Interpreters
 
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      if service_vrp[:vrp].vehicles.size > 6 && service_vrp[:vrp].resolution_vehicle_limit > 6 && service_vrp[:vrp].services.size > 165
+      if service_vrp[:vrp].vehicles.size > 3 && service_vrp[:vrp].resolution_vehicle_limit > 3 && service_vrp[:vrp].services.size > 100
         service_vrp[:vrp].resolution_init_duration = 10
       else
         service_vrp[:vrp].resolution_init_duration = nil
