@@ -188,7 +188,7 @@ module Models
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
-      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
+      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy].nil? ? nil : [preprocessing[:first_solution_strategy]].flatten # To make sure that internal vrp conforms with the Grape vrp.
       self.preprocessing_partitions = preprocessing[:partitions]
       self.preprocessing_heuristic_result = {}
     end
