@@ -105,8 +105,8 @@ module Interpreters
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
       if service_vrp[:level] && service_vrp[:level] > 0
-        service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 4).to_i : 120000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
-        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 4).to_i : 90000
+        service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.66).to_i : 120000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
+        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.66).to_i : 90000
       end
 
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
@@ -210,8 +210,8 @@ module Interpreters
             }
             rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
-            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / 2.0 * rate_vehicles * rate_services).to_i
-            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / 2.0 * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / 3.99 * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / 3.99 * rate_vehicles * rate_services).to_i
             # sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
 
