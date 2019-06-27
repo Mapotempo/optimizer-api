@@ -150,8 +150,8 @@ module Interpreters
       }
     end
 
-    def self.end_stage_insert_unassigned(service_vrp, result, block, job = nil)
-      if !result[:unassigned].empty? && dichotomious_candidate(service_vrp)
+    def self.end_stage_insert_unassigned(service_vrp, result, job = nil)
+      if !result[:unassigned].empty?
         service_vrp[:vrp].routes = build_initial_routes([result])
         service_vrp[:vrp].resolution_init_duration = nil
         unassigned_services = service_vrp[:vrp].services.select{ |s| result[:unassigned].map{ |a| a[:service_id] }.include?(s.id) }
