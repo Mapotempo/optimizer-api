@@ -52,10 +52,7 @@ module Interpreters
 
     def self.variate_service_vrp(service_vrp, i)
       vrp = service_vrp[:vrp]
-      if vrp.matrices.size == 0
-        vrp_need_matrix = OptimizerWrapper.compute_vrp_need_matrix(service_vrp[:vrp])
-        service_vrp[:vrp] = OptimizerWrapper.compute_need_matrix(vrp, vrp_need_matrix)
-      end
+      vrp.compute_matrix if vrp.matrices.empty?
 
       if i == 0
         service_vrp[:vrp].matrices[0][:value] = vrp.matrices[0][:time]

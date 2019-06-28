@@ -17,9 +17,12 @@
 #
 require './lib/tsp_helper.rb'
 require './models/base'
+require './models/concerns/distance_matrix'
 
 module Models
   class Vrp < Base
+    include DistanceMatrix
+
     field :name, default: nil
     field :preprocessing_max_split_size, default: nil
     field :preprocessing_partition_method, default: nil
@@ -179,29 +182,6 @@ module Models
     def debug=(debug)
       self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
       self.debug_output_clusters = debug[:output_clusters]
-    end
-
-    def need_matrix_time?
-     !(services.find{ |service|
-        !service.activity.timewindows.empty? || service.activity.late_multiplier && service.activity.late_multiplier != 0
-      } ||
-      shipments.find{ |shipment|
-        !shipment.pickup.timewindows.empty? || shipment.pickup.late_multiplier && shipment.pickup.late_multiplier != 0 ||
-        !shipment.delivery.timewindows.empty? || shipment.delivery.late_multiplier && shipment.delivery.late_multiplier != 0
-      } ||
-      vehicles.find{ |vehicle|
-        vehicle.need_matrix_time?
-      }).nil?
-    end
-
-    def need_matrix_distance?
-      !(vehicles.find{ |vehicle|
-        vehicle.need_matrix_distance?
-      }).nil?
-    end
-
-    def need_matrix_value?
-      false
     end
 
     def services_duration

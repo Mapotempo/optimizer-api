@@ -313,10 +313,7 @@ module Interpreters
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
         if options[:entity] == 'work_day' || !vrp.matrices.empty?
-          if vrp.matrices.empty?
-            vrp_need_matrix = OptimizerWrapper.compute_vrp_need_matrix(service_vrp[:vrp])
-            service_vrp[:vrp] = OptimizerWrapper.compute_need_matrix(vrp, vrp_need_matrix)
-          end
+          vrp.compute_matrix if vrp.matrices.empty?
 
           options[:distance_function] = lambda do |data_item_a, data_item_b|
             vrp.matrices[0][:time][data_item_a[3][:matrix_index]][data_item_b[3][:matrix_index]]

@@ -46,7 +46,7 @@ module Interpreters
         t1 = Time.now
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
         if service_vrp[:level].zero?
-          service_vrp[:vrp] = OptimizerWrapper.compute_need_matrix(service_vrp[:vrp], OptimizerWrapper.compute_vrp_need_matrix(service_vrp[:vrp]))
+          service_vrp[:vrp].compute_matrix
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exlusion_cost(service_vrp)
         else
