@@ -67,59 +67,6 @@ module OptimizerWrapper
     @router ||= Routers::RouterWrapper.new(ActiveSupport::Cache::NullStore.new, ActiveSupport::Cache::NullStore.new, config[:router][:api_key])
   end
 
-  def self.compute_vrp_need_matrix(vrp)
-    vrp_need_matrix = [
-      vrp.need_matrix_time? ? :time : nil,
-      vrp.need_matrix_time? || vrp.need_matrix_distance? ? :distance : nil,
-      vrp.need_matrix_value? ? :value : nil
-    ].compact
-  end
-
-  def self.compute_need_matrix(vrp, vrp_need_matrix, &block)
-    need_matrix = vrp.vehicles.collect{ |vehicle| [vehicle, vehicle.dimensions] }.select{ |vehicle, dimensions|
-      dimensions.find{ |dimension|
-        vrp_need_matrix.include?(dimension) && (vehicle.matrix_id.nil? || vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
-      }
-    }
-    if need_matrix.size > 0
-      points = vrp.points.each_with_index.collect{ |point, index|
-        point.matrix_index = index
-        [point.location.lat, point.location.lon]
-      }
-      vrp.vehicles.select{ |v| v[:start_point] }.each{ |v|
-        v[:start_point][:matrix_index] = vrp[:points].find{ |p| p.id == v[:start_point][:id] }[:matrix_index]
-      }
-      vrp.vehicles.select{ |v| v[:end_point] }.each{ |v|
-        v[:end_point][:matrix_index] = vrp[:points].find{ |p| p.id == v[:end_point][:id] }[:matrix_index]
-      }
-
-      uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-        [vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]
-      }.uniq
-
-      i = 0
-      id = 0
-      uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
-        block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil) if block
-        # set vrp.matrix_time and vrp.matrix_distance depending of dimensions order
-        matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, points, points, options)
-        m = Models::Matrix.create(
-          id: 'm' + (id+=1).to_s,
-          time: (matrices[dimensions.index(:time)] if dimensions.index(:time)),
-          distance: (matrices[dimensions.index(:distance)] if dimensions.index(:distance)),
-          value: (matrices[dimensions.index(:value)] if dimensions.index(:value))
-        )
-        vrp.matrices += [m]
-        [[mode, dimensions, options], m]
-      }]
-
-      uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-        vehicle.matrix_id = vrp.matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]] }.id
-      }
-    end
-    vrp
-  end
-
   def self.wrapper_vrp(api_key, services, vrp, checksum, job_id = nil)
     inapplicable_services = []
     apply_zones(vrp)
@@ -236,8 +183,7 @@ module OptimizerWrapper
           vrp.services.delete_if{ |service| unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
 
           if !(vrp.vehicles.select{ |v| v.overall_duration }.size>0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
-            vrp_need_matrix = compute_vrp_need_matrix(vrp)
-            vrp = compute_need_matrix(vrp, vrp_need_matrix)
+            vrp.compute_matrix(&block)
           end
 
           unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
