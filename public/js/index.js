@@ -4,8 +4,6 @@ var jsonFileDOM = $('#json-file');
 var postForm = $('#post-form');
 var timer = null;
 
-var debug = (window.location.search.search('debug') != -1) ? true : false;
-
 jobsManager.ajaxGetJobs(true);
 
 jsonFileDOM.on('change', function (e) {
@@ -65,9 +63,10 @@ postForm.on('submit', function (e) {
           interval: delay
         }, function (err, job) {
           if (err) {
+            initForm();
+            alert("An error occured");
             return;
           }
-
           // vrp returning csv, not json
           if (typeof job === 'string') {
             return displaySolution(job, {initForm: true});
@@ -111,6 +110,7 @@ postForm.on('submit', function (e) {
       },
       error: function () {
         alert("An error occured");
+        initForm();
       },
       dataType: 'json',
       contentType: "application/json"
@@ -136,6 +136,7 @@ var displaySolution = function (solution, options) {
 };
 
 var initForm = function() {
+  jobsManager.stopJobChecking();
   clearInterval(timer);
   $('#send-files').attr('disabled', false);
   $('#optim-infos').html('');

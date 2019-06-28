@@ -1,17 +1,59 @@
 
 var jobStatusInterval = null;
 var requestPendingAllJobs = false;
+
 var jobsManager = {
   jobs: [],
-
   htmlElements: {
     builder: function (jobs) {
       $(jobs).each(function () {
-        $('#jobs-list').append('<div class="job">' +
-          '<span class="job_title">' + 'Job N° ' + $(this)[0]['uuid'] + '</span> ' +
-          '<button value=' + $(this)[0]['uuid'] + ' data-role="delete">' + (($(this)[0]['status'] == 'queued' || $(this)[0]['status'] == 'working') ? i18n.killOptim : i18n.deleteOptim) + '</button>' +
-          ' (Status: ' + $(this)[0]['status'] + ')' +
-          '</div>');
+
+        currentJob = this;
+        var completed = currentJob.status === 'completed' ? true : false;
+
+        $('#jobs-list').append('<div class="job">'
+          + '<span class="job_title">' + 'Job N° ' + currentJob.uuid + '</span> '
+          + '<button value=' + currentJob.uuid + ' data-role="delete">'
+          + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18n.killOptim : i18n.deleteOptim)
+          + '</button>'
+          + ' (Status: ' + currentJob.status + ')'
+          + (completed ? ' <a data-job-id=' + currentJob.uuid + ' href="#">' + 'Telecharger le resultat de l\'optimisation' + '</a>' : '')
+          + '</div>');
+
+        if (completed) {
+          $('a[data-job-id="' + currentJob.uuid + '"').on('click', function (e) {
+            e.preventDefault();
+            jobsManager.checkJobStatus({
+              job: currentJob,
+            }, function (err, job) {
+              if (err) {
+                if (debug) console.error(err);
+                return alert("An error occured");
+              }
+
+              if (typeof job === 'string') {
+                $('#result').html(job)
+                var a = document.createElement('a');
+                a.href = 'data:attachment/csv,' + encodeURIComponent(job);
+                a.target = '_blank';
+                a.download = 'result.csv';
+                document.body.appendChild(a);
+                a.click();
+              }
+              else {
+                var solution = job.solutions[0];
+                $('#result').html(JSON.stringify(solution, null, 4));
+                var a = document.createElement('a');
+                a.href = 'data:attachment/json,' + encodeURIComponent(JSON.stringify(solution, null, 4));
+                a.target = '_blank';
+                a.download = 'result.json';
+                document.body.appendChild(a);
+                a.click();
+              }
+            });
+
+          })
+        }
       });
       $('#jobs-list button').on('click', function () {
         jobsManager.roleDispatcher(this);
@@ -93,54 +135,70 @@ var jobsManager = {
   checkJobStatus: function (options, cb) {
     var nbError = 0;
     var pendingRequest = false;
-    jobStatusInterval = setInterval(function () {
-      if (!pendingRequest) {
-        pendingRequest = true;
-        $.ajax({
-          type: 'GET',
-          contentType: 'application/json',
-          url: '/0.1/vrp/jobs/'
-            + options.job.id
-            + options.format
-            + '?api_key=' + getParams()["api_key"],
-          success: function (job, status, xhr) {
-            if (options.format === ".csv") {
-              nbError = 0;
-              onCSVFormat(jobStatusInterval, job, xhr, cb);
-            }
-            else if (options.format === ".json") {
-              nbError = 0;
-              onJSONFormat(jobStatusInterval, job, xhr, cb);
-            }
-          },
-          error: function (xhr, status) {
-            ++nbError
-            if (nbError > 2) {
-              alert(i18n.failureOptim(nbError, status));
+
+    if (options.interval) {
+      jobStatusInterval = setInterval(function () {
+        if (!pendingRequest) {
+          pendingRequest = true;
+          requestPendingJob();
+        }
+      }, options.interval);
+      return;
+    }
+
+    requestPendingJob();
+
+    function requestPendingJob() {
+      $.ajax({
+        type: 'GET',
+        contentType: 'application/json',
+        url: '/0.1/vrp/jobs/'
+          + (options.job.id || options.job.uuid)
+          + (options.format ? options.format : '')
+          + '?api_key=' + getParams()["api_key"],
+        success: function (job, status, xhr) {
+          if (options.format === ".csv") {
+            nbError = 0;
+            onCSVFormat(jobStatusInterval, job, xhr, cb);
+          }
+          else if (options.format === ".json") {
+            nbError = 0;
+            onJSONFormat(jobStatusInterval, job, xhr, cb);
+          }
+          else {
+            cb(null, job, xhr);
+          }
+        },
+        error: function (xhr, status) {
+          ++nbError
+          if (nbError > 2) {
+            alert(i18n.failureOptim(nbError, status));
+            if (jobStatusInterval) {
               clearInterval(jobStatusInterval);
-              cb({ xhr, status });
             }
-          },
-          complete: function () { pendingRequest = false; }
-        });
-      }
-    }, options.interval);
+            cb({ xhr, status });
+          }
+        },
+        complete: function () { pendingRequest = false; }
+      });
+    }
+
   },
-  stopJobChecking: function() {
+  stopJobChecking: function () {
     clearInterval(jobStatusInterval);
   }
 };
 
 function onCSVFormat(jobStatusInterval, job, xhr, cb) {
-  if (xhr.status === 200 || xhr.status === 202) {
+  if (xhr.status === 200 || xhr.status === 202 && jobStatusInterval) {
     clearInterval(jobStatusInterval);
   }
   cb(null, job, xhr);
 }
 
 function onJSONFormat(jobStatusInterval, job, xhr, cb) {
-  if ((job.job && (job.job.status !== 'queued' && job.job.status !== 'working'))
-    || typeof job === 'string') {
+  if (((job.job && (job.job.status !== 'queued' && job.job.status !== 'working'))
+    || typeof job === 'string') && jobStatusInterval) {
     clearInterval(jobStatusInterval);
   }
   cb(null, job, xhr);

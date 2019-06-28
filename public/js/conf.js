@@ -6,6 +6,8 @@ var getParams = function() {
   return parameters;
 };
 
+var debug = (window.location.search.search('debug') != -1) ? true : false;
+
 var i18n = {
   title: 'Optimisez vos fichiers CSV',
   form: {
