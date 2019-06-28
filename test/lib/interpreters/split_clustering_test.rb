@@ -57,9 +57,12 @@ class SplitClusteringTest < Minitest::Test
   end
 
   def test_cluster_one_phase_work_day
-    skip 'Long test, broken in previous commits, to fix'
+    skip "This test fails. The test is created for Test-Driven Development.
+          The functionality is not ready yet, it is skipped for devs not working on the functionality.
+          Basically, we want to be able to cluster in one single step (instead of by-vehicle and then by-day) and
+          we expect that the clusters are balanced. However, currently it takes too long and the results are not balanced."
     vrp = FCT.load_vrp(self, fixture_file: 'cluster_two_phases.json')
-    service_vrp = {vrp: vrp, service: :demo}
+    service_vrp = { vrp: vrp, service: :demo }
     services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 80, cut_symbol: :duration, entity: 'work_day')
     assert_equal 80, services_vrps_days.size
 
@@ -67,15 +70,16 @@ class SplitClusteringTest < Minitest::Test
     services_vrps_days.each{ |service_vrp_day|
       durations << service_vrp_day[:vrp].services_duration
     }
+    puts durations.inspect
 
     average_duration = durations.inject(0, :+) / durations.size
     min_duration = average_duration - 0.5 * average_duration
     max_duration = average_duration + 0.5 * average_duration
-    o = durations.map.with_index{ |duration, index|
+    o = durations.map.with_index{ |duration, _index|
       # assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
       duration < max_duration && duration > min_duration
     }
-    assert o.select{ |i| i }.size > 0.9 * o.size
+    assert o.select{ |i| i }.size > 0.9 * o.size # TODO: All clusters should be balanced -- i.e., not just 90% of them
   end
 
   def test_cluster_one_phase_vehicle
