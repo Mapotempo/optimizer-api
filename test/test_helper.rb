@@ -389,41 +389,47 @@ module VRP
       }],
       points: [{
         id: 'point_0',
-        location: {lat: 45.288798, lon: 4.951565}
+        location: { lat: 45.2888, lon: 4.9515 }
       }, {
         id: 'point_1',
-        location: {lat: 45.6047844887, lon: 4.7589656711}
+        location: { lat: 45.6047, lon: 4.7581 }
       }, {
         id: 'point_2',
-        location: {lat: 45.604784488, lon: 4.7589656711}
+        location: { lat: 45.6046, lon: 4.752 }
       }, {
         id: 'point_3',
-        location: {lat: 45.344334, lon: 4.817731}
+        location: { lat: 45.6044, lon: 4.8171 }
       }, {
         id: 'point_4',
-        location: {lat: 45.5764120817, lon: 4.8056146502}
+        location: { lat: 45.5767, lon: 4.8052 }
       }, {
         id: 'point_5',
-        location: {lat: 45.576412081, lon: 4.8056146502}
+        location: { lat: 45.5766, lon: 4.8153 }
       }, {
         id: 'point_6',
-        location: {lat: 45.2583248913, lon: 4.6873225272}
+        location: { lat: 45.2583, lon: 4.6773 }
       }, {
         id: 'point_7',
-        location: {lat: 45.2583248917, lon: 4.6873225272}
+        location: { lat: 45.2584, lon: 4.6674 }
       }, {
         id: 'point_8',
-        location: {lat: 45.2583248916, lon: 4.6873225272}
+        location: { lat: 45.2585, lon: 4.6575 }
       }, {
         id: 'point_9',
-        location: {lat: 45.2583248915, lon: 4.6873225272}
+        location: { lat: 45.2686, lon: 4.6776 }
       }, {
         id: 'point_10',
-        location: {lat: 45.2583248914, lon: 4.6873225272}
+        location: { lat: 45.2687, lon: 4.6877 }
       }, {
         id: 'point_11',
-        location: {lat: 45.2583248912, lon: 4.6873225272}
-      }],
+        location: { lat: 45.2788, lon: 4.6878 }
+      }, {
+        id: 'point_11_d',
+        location: { lat: 45.2788, lon: 4.6878 }
+      }, {
+        id: 'point_1_d',
+        location: { lat: 45.6047, lon: 4.7581 }
+      },],
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
@@ -544,6 +550,18 @@ module VRP
         type: 'service',
         activity: {
           point_id: 'point_11'
+        }
+      }, {
+        id: 'service_12',
+        type: 'service',
+        activity: {
+          point_id: 'point_11_d'
+        }
+      }, {
+        id: 'service_13',
+        type: 'service',
+        activity: {
+          point_id: 'point_1_d'
         }
       }],
       configuration: {

@@ -209,23 +209,23 @@ class SplitClusteringTest < Minitest::Test
     vrp = VRP.lat_lon_scheduling_two_vehicles
     vrp[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
-      metric: 'duration',
+      metric: :visits,
       entity: 'vehicle'
     }, {
       method: 'balanced_kmeans',
-      metric: 'duration',
+      metric: :visits,
       entity: 'work_day'
     }]
-    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    service_vrp = { vrp: FCT.create(vrp), service: :demo }
     generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
-    assert_equal 9, generated_services_vrps.size
+    assert_equal 10, generated_services_vrps.size
 
     vrp[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
-      metric: 'duration',
+      metric: :visits,
       entity: 'work_day'
     }]
-    service_vrp = {vrp: FCT.create(vrp), service: :demo}
+    service_vrp = { vrp: FCT.create(vrp), service: :demo }
     generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
     assert_equal 10, generated_services_vrps.size
   end
