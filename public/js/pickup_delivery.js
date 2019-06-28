@@ -1,7 +1,6 @@
 'use strict';
 
 $(document).ready(function() {
-  var debug = (window.location.search.search('debug') != -1) ? true : false;
   var data = {
     customers: [],
     vehicles: []
@@ -403,6 +402,8 @@ $(document).ready(function() {
           // on job error
           if (err) {
             if (debug) console.log("Error: ", err);
+            alert("An error occured");
+            initForm();
             return;
           }
 
