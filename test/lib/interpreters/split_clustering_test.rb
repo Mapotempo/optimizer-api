@@ -108,7 +108,7 @@ class SplitClusteringTest < Minitest::Test
 
   def test_cluster_two_phases
     vrp = FCT.load_vrp(self)
-    service_vrp = {vrp: vrp, service: :demo}
+    service_vrp = { vrp: vrp, service: :demo }
     services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, cut_symbol: :duration, entity: 'vehicle')
     assert_equal 16, services_vrps_vehicles.size
 
@@ -119,27 +119,34 @@ class SplitClusteringTest < Minitest::Test
     average_duration = durations.inject(0, :+) / durations.size
     min_duration = average_duration - 0.5 * average_duration
     max_duration = average_duration + 0.5 * average_duration
+    puts durations.sort.inspect
     durations.each_with_index{ |duration, index|
-      assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
+      assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration.round(2)}) should be between #{min_duration.round(2)} and #{max_duration.round(2)}"
     }
+
+    overall_min_duration = average_duration
+    overall_max_duration = 0.0
 
     services_vrps_vehicles.each{ |services_vrps|
       durations = []
       services_vrps[:vrp][:vehicles] *= 5
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, cut_symbol: :duration, entity: 'work_day')
       assert_equal 5, services_vrps.size
-      services_vrps.each{ |service_vrp|
-        next if service_vrp[:vrp].points.size < 10
-        durations << service_vrp[:vrp].services_duration
+      services_vrps.each{ |service_vrp_day|
+        next if service_vrp_day[:vrp].points.size < 10
+        durations << service_vrp_day[:vrp].services_duration
       }
       next if durations.empty?
       average_duration = durations.inject(0, :+) / durations.size
       min_duration = average_duration - 0.7 * average_duration
       max_duration = average_duration + 0.7 * average_duration
       durations.each_with_index{ |duration, index|
-        assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
+        assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration.round(2)}) should be between #{min_duration.round(2)} and #{max_duration.round(2)}"
       }
+      overall_min_duration = [overall_min_duration, durations.min].min
+      overall_max_duration = [overall_max_duration, durations.max].max
     }
+    puts "Overall min and max duration are #{overall_min_duration.round(2)} and #{overall_max_duration.round(2)} (#{(100 * (overall_max_duration - overall_min_duration) / overall_max_duration).round(2)}%)"
   end
 
   def test_length_centroid
