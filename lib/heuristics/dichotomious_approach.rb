@@ -39,7 +39,7 @@ module Interpreters
       service_vrp[:vrp].points.all?{ |point| point.location && point.location.lat && point.location.lon } #TODO - Remove and use matrix/matrix_index in clustering
     end
 
-    def self.dichotomious_heuristic(service_vrp, job, &block)
+    def self.dichotomious_heuristic(service_vrp, job = nil, &block)
       if dichotomious_candidate(service_vrp)
         set_config(service_vrp)
         t1 = Time.now
@@ -255,7 +255,7 @@ module Interpreters
       vehicles_by_clusters
     end
 
-    def self.split(service_vrp, job)
+    def self.split(service_vrp, job = nil)
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
       services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }
