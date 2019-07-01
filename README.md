@@ -81,23 +81,17 @@ APP_ENV=test ROUTER_URL=http://localhost:4899 bundle exec rake test
 You can add your own tests on specific Vehicle Routing Problem (for instance data from real cases). Let's see how to create a new test called "new_test".
 You will find template for test in `test/real_cases_test.rb`
 
-Before creating test, you need to capture scenario. Launch process with environment variable `DUMP_VRP` to record it:
-```
-DUMP_VRP=new_test bundle exec rake server
-DUMP_VRP=new_test COUNT=5 QUEUE=* bundle exec rake resque:workers
-```
+Before creating test, you need to capture scenario, in order to have a static image of your problem, insensitive to the routers edits.
 
-Just run the original scenario to record it. Then two files are created in `test/fixtures` after running scenario:
-- `new_test.json` file corresponding to original vrp sent by api
-- `new_test.dump` file corresponding to complete vrp (for instance containing matrices if they are not provided in original vrp)
+Add your test JSON file into `test/fixtures/`. Now to create your test, just copy test template in `test/wrappers/real_cases_test.rb`, or any equivalent file.
+Once launched, the dump file of the problem will be created and put aswell in `test/fixtures` as following:
+- `new_test.dump` file corresponding to complete vrp with calculated matrices if not provided
 
-Now to create your test, just copy test template in `test/wrappers/real_cases_test.rb` with either `.json` or `.dump` depending on your data (e.g. if your vrp sent to api contains matrices you can use `.json` file, in other case use `.dump` file.)
 
 If you create a test by using `.dump`, your test will fail as soon as vrp model is changed. Just run following task to update fixtures:
 ```
-DUMP_VRP=my_test APP_ENV=test bundle exec rake test TEST=test/real_cases_test.rb
+DUMP_VRP=true APP_ENV=test bundle exec rake test TEST=test/real_cases_test.rb
 ```
-TODO: create a task to update all fixtures at once.
 
 Note: you can update a test and run the modified scenario with new vrp `.json`:
 ```

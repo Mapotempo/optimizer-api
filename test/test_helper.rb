@@ -46,12 +46,15 @@ module FCT
   end
 
   def self.load_vrp(test, options = {})
-    filename = options[:fixture_file] || test.name[5..-1] + '.json'
-    if File.file?('test/fixtures/' + filename.gsub('.json', '.dump')) && !ENV['DUMP_VRP']
-      Marshal.load(Base64.decode64(File.open('test/fixtures/' + filename.gsub('.json', '.dump')).to_a.join))
+    filename = options[:fixture_file] || test.name[5..-1]
+    dump_file = 'test/fixtures/' + filename + '.dump'
+    if File.file?(dump_file) && !ENV['DUMP_VRP']
+      Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
     else
-      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename).to_a.join)['vrp']))
-      File.write('test/fixtures/' + filename.gsub('.json', '.dump'), Base64.encode64(Marshal::dump(vrp)))
+      problem = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
+      vrp = Models::Vrp.create(problem)
+      # File.write(dump_file, Base64.encode64(Marshal::dump(vrp)))
+      vrp.name = filename if vrp.matrices.empty?
       vrp
     end
   end

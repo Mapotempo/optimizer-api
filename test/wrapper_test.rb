@@ -18,7 +18,6 @@
 require './test/test_helper'
 
 class WrapperTest < Minitest::Test
-
   def test_zip_cluster
     size = 5
     problem = {
@@ -181,8 +180,8 @@ class WrapperTest < Minitest::Test
           activity: {
             point_id: "point_#{i}",
             timewindows: [{
-              start: i*10,
-              end: i*10+1
+              start: i * 10,
+              end: i * 10 + 1
             }],
             duration: 1
           }
@@ -221,14 +220,14 @@ class WrapperTest < Minitest::Test
         ]
       }],
       units: [{
-          id: "unit0",
-          label: "kg"
+          id: 'unit0',
+          label: 'kg'
       }, {
-          id: "unit1",
-          label: "kg"
+          id: 'unit1',
+          label: 'kg'
       }, {
-          id: "unit2",
-          label: "kg"
+          id: 'unit2',
+          label: 'kg'
       }],
       points: (0..(size - 1)).collect{ |i|
         {
@@ -241,13 +240,13 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
         capacities: [{
-          unit_id: "unit0",
+          unit_id: 'unit0',
           limit: 5
-        },{
-          unit_id: "unit1",
+        }, {
+          unit_id: 'unit1',
           limit: 5
-        },{
-          unit_id: "unit2",
+        }, {
+          unit_id: 'unit2',
           limit: 5
         }]
       }],
@@ -255,7 +254,7 @@ class WrapperTest < Minitest::Test
         {
           id: "service_#{i}",
           quantities: [{
-            unit_id: "unit#{i%3}",
+            unit_id: "unit#{i % 3}",
             value: 1
           }],
           activity: {
@@ -312,8 +311,8 @@ class WrapperTest < Minitest::Test
           activity: {
             point_id: "point_#{i}",
             timewindows: [{
-              start: i*10,
-              end: i*10 + 10
+              start: i * 10,
+              end: i * 10 + 10
             }]
           }
         }
@@ -367,8 +366,8 @@ class WrapperTest < Minitest::Test
           activity: {
             point_id: "point_#{i}",
             timewindows: [{
-              start: i*10,
-              end: i*10 + 10
+              start: i * 10,
+              end: i * 10 + 10
             }]
           }
         }
@@ -651,7 +650,7 @@ class WrapperTest < Minitest::Test
         assert_includes services, "service_#{i}", "[#{o}] Service missing: #{i}"
       }
       points = result[:routes][0][:activities].collect{ |a| a[:point_id] }
-      assert_includes points, "point_0", "[#{o}] Point missing: 0"
+      assert_includes points, 'point_0', "[#{o}] Point missing: 0"
     }
   end
 
@@ -729,7 +728,7 @@ class WrapperTest < Minitest::Test
       }
     }
     original_stdout = $stdout
-    $stdout = StringIO.new('','w')
+    $stdout = StringIO.new('', 'w')
     result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
     traces = $stdout.string
     $stdout = original_stdout
@@ -739,7 +738,7 @@ class WrapperTest < Minitest::Test
     points = result[:routes][0][:activities].collect{ |a| a[:service_id] || a[:point_id] || a[:rest_id] }
     services_size = problem[:services].size
     services_size.times.each{ |i|
-      assert_includes points, "service_#{i+1}", "Element missing: #{i+1}"
+      assert_includes points, "service_#{i + 1}", "Element missing: #{i + 1}"
     }
   end
 
@@ -811,7 +810,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+    assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
   end
 
   def test_multiple_matrices_not_provided
@@ -822,7 +821,7 @@ class WrapperTest < Minitest::Test
           id: "point_#{i}",
           location: {
             lat: 45,
-            lon: Float(i)/10
+            lon: Float(i) / 10
           }
         }
       },
@@ -852,44 +851,40 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+    assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, { problem: problem }), nil)
   end
 
   def test_router_matrix_error
     problem = {
-      points: [
-        {
-          id: "point_0",
-          location: {
-            lat: 1000,
-            lon: 1000
-          }
-        }, {
-          id: "point_1",
-          location: {
-            lat: 1000,
-            lon: 1000
-          }
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 1000,
+          lon: 1000
         }
-      ],
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 1000,
+          lon: 1000
+        }
+      }],
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
         speed_multiplier: 1,
       }],
-      services: [
-        {
-          id: "service_0",
-          activity: {
-            point_id: "point_0"
-          }
-        }, {
-          id: "service_1",
-          activity: {
-            point_id: "point_1"
-          }
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_0'
         }
-      ],
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -901,7 +896,9 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+      Routers::RouterWrapper.stub_any_instance(:matrix, lambda{ |*a| raise RouterError.new('STUB: Expectation Failed - RouterWrapper::OutOfSupportedAreaOrNotSupportedDimensionError') }) do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
+      end
     rescue StandardError => error
       assert error.class.name.match 'RouterError'
     end
@@ -963,39 +960,35 @@ class WrapperTest < Minitest::Test
 
   def test_point_id_not_defined
     problem = {
-      points: [
-        {
-          id: "point_0",
-          location: {
-            lat: 1000,
-            lon: 1000
-          }
-        }, {
-          id: "point_1",
-          location: {
-            lat: 1000,
-            lon: 1000
-          }
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 1000,
+          lon: 1000
         }
-      ],
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 1000,
+          lon: 1000
+        }
+      }],
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
         speed_multiplier: 1,
       }],
-      services: [
-        {
-          id: "service_0",
+      services: [{
+          id: 'service_0',
           activity: {
-            point_id: "point_0"
+            point_id: 'point_0'
           }
         }, {
-          id: "service_1",
+          id: 'service_1',
           activity: {
-            point_id: "point_2"
+            point_id: 'point_2'
           }
-        }
-      ],
+      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -1007,7 +1000,7 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
     rescue StandardError => error
       assert error.is_a?(ActiveHash::RecordNotFound)
       assert error.message.match 'Couldn\'t find Models::Point with ID=point_2'
@@ -1033,38 +1026,34 @@ class WrapperTest < Minitest::Test
           [ 0, 10, 20, 30,  0]
         ]
       }],
-      points: [
-        {
-          id: "point_0",
-          matrix_index: 0,
-          location: {
-            lat: 1000,
-            lon: 1000
-          }
-        }, {
-          id: "point_1",
-          matrix_index: 2,
+      points: [{
+        id: 'point_0',
+        matrix_index: 0,
+        location: {
+          lat: 1000,
+          lon: 1000
         }
-      ],
+      }, {
+        id: 'point_1',
+        matrix_index: 2,
+    }],
       vehicles: [{
         id: 'vehicle_0',
         matrix_id: 'matrix_0',
         start_point_id: 'point_0',
         speed_multiplier: 1,
       }],
-      services: [
-        {
-          id: "service_0",
-          activity: {
-            point_id: "point_0"
-          }
-        }, {
-          id: "service_1",
-          activity: {
-            point_id: "point_1"
-          }
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_0'
         }
-      ],
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -1079,7 +1068,7 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
     rescue StandardError => error
       assert error.is_a?(OptimizerWrapper::DiscordantProblemError)
       assert error.data.match 'Trace is not available if locations are not defined'
@@ -1088,39 +1077,35 @@ class WrapperTest < Minitest::Test
 
   def test_geometry_polyline_encoded
     problem = {
-      points: [
-        {
-          id: "point_0",
-          location: {
-            lat: 48,
-            lon: 5
-          }
-        }, {
-          id: "point_1",
-          location: {
-            lat: 50,
-            lon: 1
-          }
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48,
+          lon: 5
         }
-      ],
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 50,
+          lon: 1
+        }
+      }],
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
         speed_multiplier: 1,
       }],
-      services: [
-        {
-          id: "service_0",
-          activity: {
-            point_id: "point_0"
-          }
-        }, {
-          id: "service_1",
-          activity: {
-            point_id: "point_1"
-          }
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_0'
         }
-      ],
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -1136,45 +1121,43 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
-    assert result[:routes][0][:geometry]
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.load_vrp(self, { problem: problem }), nil)
+      assert result[:routes][0][:geometry]
+    end
   end
 
   def test_geometry_polyline
     problem = {
-      points: [
-        {
-          id: "point_0",
-          location: {
-            lat: 48,
-            lon: 5
-          }
-        }, {
-          id: "point_1",
-          location: {
-            lat: 49,
-            lon: 1
-          }
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48,
+          lon: 5
         }
-      ],
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 49,
+          lon: 1
+        }
+      }],
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
         speed_multiplier: 1,
       }],
-      services: [
-        {
-          id: "service_0",
-          activity: {
-            point_id: "point_0"
-          }
-        }, {
-          id: "service_1",
-          activity: {
-            point_id: "point_1"
-          }
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_0'
         }
-      ],
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -1189,298 +1172,26 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
-    assert result[:routes][0][:geometry]
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.load_vrp(self, { problem: problem }), nil)
+      assert result[:routes][0][:geometry]
+    end
   end
 
   def test_geometry_route_single_activity
     problem = {
-      points: [
-        {
-          id: "point_0",
-          location: {
-            lat: 48,
-            lon: 5
-          }
-        }, {
-          id: "point_1",
-          location: {
-            lat: 49,
-            lon: 1
-          }
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48,
+          lon: 5
         }
-      ],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        speed_multiplier: 1
       }, {
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        speed_multiplier: 1
-      }],
-      services: [
-        {
-          id: "service_0",
-          activity: {
-            point_id: "point_0"
-          }
-        }, {
-          id: "service_1",
-          activity: {
-            point_id: "point_1"
-          }
+        id: 'point_1',
+        location: {
+          lat: 49,
+          lon: 1
         }
-      ],
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        restitution: {
-          geometry: true,
-          geometry_polyline: false,
-          intermediate_solutions: false,
-        },
-        resolution: {
-          duration: 10
-        }
-      }
-    }
-
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
-    assert result[:routes][0][:geometry]
-  end
-
-  def test_geometry_with_rests
-    problem = {
-      points: [
-        {
-            id: "point0",
-            location:
-            {
-                lat: 43.7,
-                lon: 5.7
-            }
-        },
-        {
-            id: "point1",
-            location:
-            {
-                lat: 44.2,
-                lon: 6.2
-            }
-        },
-        {
-            id: "depot",
-            location:
-            {
-                lat: 44.0,
-                lon: 5.1
-            }
-        }],
-        rests: [
-        {
-            id: "break1",
-            duration: 3600.0,
-            timewindows: [
-            {
-                start: 45000,
-                end: 48600
-            }]
-        }],
-        vehicles: [
-        {
-            id: "vehicle1",
-            cost_fixed: 0.0,
-            cost_time_multiplier: 1.0,
-            cost_waiting_time_multiplier: 1.0,
-            router_mode: "car",
-            router_dimension: "time",
-            speed_multiplier: 1.0,
-            start_point_id: "depot",
-            end_point_id: "depot",
-            rest_ids: ["break1"],
-            timewindow: {
-                start: 28800,
-                end: 61200
-            }
-        }],
-        services: [
-        {
-            id: "point0",
-            type: "service",
-            activity:
-            {
-                duration: 1200.0,
-                point_id: "point0",
-                timewindows: [
-                {
-                    start: 28800,
-                    end: 63000
-                }]
-            }
-        },
-        {
-            id: "point1",
-            priority: 2,
-            visits_number: 1,
-            type: "service",
-            activity:
-            {
-                duration: 1800.0,
-                point_id: "point1",
-                timewindows: [
-                {
-                    start: 30600,
-                    end: 57600
-                }]
-            }
-        }],
-        configuration:
-        {
-            resolution:
-            {
-                duration: 100,
-            },
-            restitution:
-            {
-                geometry: true,
-                geometry_polyline: true,
-                intermediate_solutions: false,
-            }
-        }
-    }
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
-    assert_equal result[:routes][0][:activities].size, 5
-    assert !result[:routes][0][:geometry].nil?
-  end
-
-  def test_input_zones
-    problem = {
-      points: [
-        {
-          id: "point_0",
-          location: {
-            lat: 48,
-            lon: 5
-          }
-        }, {
-          id: "point_1",
-          location: {
-            lat: 49,
-            lon: 1
-          }
-        }
-      ],
-      zones: [{
-        id: "zone_0",
-        polygon: {
-        type: "Polygon",
-        coordinates: [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
-        },
-        allocations: [["vehicle_0"]]
-      }, {
-        id: "zone_1",
-        polygon: {
-          type: "Polygon",
-          coordinates: [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
-        },
-        allocations: [["vehicle_1"]]
-      }, {
-        id: "zone_2",
-        polygon: {
-          type: "Polygon",
-          coordinates: [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
-        },
-        allocations: [["vehicle_1"]]
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        speed_multiplier: 1
-      }, {
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        speed_multiplier: 1
-      }],
-      services: [
-        {
-          id: "service_0",
-          activity: {
-            point_id: "point_0"
-          }
-        }, {
-          id: "service_1",
-          activity: {
-            point_id: "point_1"
-          }
-        }
-      ],
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        restitution: {
-          geometry: true,
-          geometry_polyline: false,
-          intermediate_solutions: false,
-        },
-        resolution: {
-          duration: 10
-        }
-      }
-    }
-
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, Models::Vrp.create(problem), nil)
-    assert_equal result[:routes][0][:activities].size, 2
-    assert_equal result[:routes][1][:activities].size, 2
-  end
-
-  def test_input_zones_shipment
-    problem = {
-      points: [
-        {
-          id: "point_0", # zone_1
-          location: {
-            lat: 48,
-            lon: 5
-          }
-        }, {
-          id: "point_1", # zone_0
-          location: {
-            lat: 49,
-            lon: 1
-          }
-        }, {
-          id: "point_2", # no_zone
-          location: {
-            lat: 50,
-            lon: 3
-          }
-        }
-      ],
-      zones: [{
-        id: "zone_0",
-        polygon: {
-        type: "Polygon",
-        coordinates: [[[0.5,48.5],[1.5,48.5],[1.5,49.5],[0.5,49.5],[0.5,48.5]]]
-        },
-        allocations: [["vehicle_0"]]
-      }, {
-        id: "zone_1",
-        polygon: {
-          type: "Polygon",
-          coordinates: [[[4.5,47.5],[5.5,47.5],[5.5,48.5],[4.5,48.5],[4.5,47.5]]]
-        },
-        allocations: [["vehicle_1"]]
-      }, {
-        id: "zone_2",
-        polygon: {
-          type: "Polygon",
-          coordinates: [[[2.5,46.5],[4.5,46.5],[4.5,48.5],[2.5,48.5],[2.5,46.5]]]
-        },
-        allocations: [["vehicle_1"]]
       }],
       vehicles: [{
         id: 'vehicle_0',
@@ -1492,22 +1203,16 @@ class WrapperTest < Minitest::Test
         speed_multiplier: 1
       }],
       services: [{
-        id: "service_0",
+        id: 'service_0',
         activity: {
-          point_id: "point_1"
+          point_id: 'point_0'
+        }
+      }, {
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1'
         }
       }],
-      shipments: [
-        {
-          id: "shipment_0",
-          pickup: {
-            point_id: "point_0"
-          },
-          delivery: {
-            point_id: "point_2"
-          }
-        }
-      ],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -1522,8 +1227,258 @@ class WrapperTest < Minitest::Test
         }
       }
     }
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.load_vrp(self, { problem: problem }), nil)
+      assert result[:routes][0][:geometry]
+    end
+  end
 
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, Models::Vrp.create(problem), nil)
+  def test_geometry_with_rests
+    problem = {
+      points: [{
+        id: 'point0',
+        location: {
+          lat: 43.7,
+          lon: 5.7
+        }
+      }, {
+        id: 'point1',
+        location: {
+          lat: 44.2,
+          lon: 6.2
+        }
+      }, {
+        id: 'depot',
+        location: {
+          lat: 44.0,
+          lon: 5.1
+        }
+      }],
+      rests: [{
+          id: 'break1',
+          duration: 3600.0,
+          timewindows: [{
+            start: 45000,
+            end: 48600
+          }]
+        }],
+      vehicles: [{
+        id: 'vehicle1',
+        cost_fixed: 0.0,
+        cost_time_multiplier: 1.0,
+        cost_waiting_time_multiplier: 1.0,
+        router_mode: 'car',
+        router_dimension: 'time',
+        speed_multiplier: 1.0,
+        start_point_id: 'depot',
+        end_point_id: 'depot',
+        rest_ids: ['break1'],
+        timewindow: {
+          start: 28800,
+          end: 61200
+        }
+      }],
+      services: [{
+        id: 'point0',
+        type: 'service',
+        activity: {
+          duration: 1200.0,
+          point_id: 'point0',
+          timewindows: [{
+            start: 28800,
+            end: 63000
+          }]
+        }
+      }, {
+        id: 'point1',
+        priority: 2,
+        visits_number: 1,
+        type: 'service',
+        activity: {
+          duration: 1800.0,
+          point_id: 'point1',
+          timewindows: [{
+            start: 30600,
+            end: 57600
+          }]
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        },
+        restitution: {
+          geometry: true,
+          geometry_polyline: true,
+          intermediate_solutions: false,
+        }
+      }
+    }
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.load_vrp(self, { problem: problem }), nil)
+      assert_equal result[:routes][0][:activities].size, 5
+      assert !result[:routes][0][:geometry].nil?
+    end
+  end
+
+  def test_input_zones
+    problem = {
+      points: [{
+        id: 'point_0',
+        location: {
+          lat: 48,
+          lon: 5
+        }
+      }, {
+        id: 'point_1',
+        location: {
+          lat: 49,
+          lon: 1
+        }
+      }],
+      zones: [{
+        id: 'zone_0',
+        polygon: {
+        type: 'Polygon',
+        coordinates: [[[0.5, 48.5], [1.5, 48.5], [1.5, 49.5], [0.5, 49.5], [0.5, 48.5]]]
+        },
+        allocations: [['vehicle_0']]
+      }, {
+        id: 'zone_1',
+        polygon: {
+          type: 'Polygon',
+          coordinates: [[[4.5, 47.5], [5.5, 47.5], [5.5, 48.5], [4.5, 48.5], [4.5, 47.5]]]
+        },
+        allocations: [['vehicle_1']]
+      }, {
+        id: 'zone_2',
+        polygon: {
+          type: 'Polygon',
+          coordinates: [[[2.5, 46.5], [4.5, 46.5], [4.5, 48.5], [2.5, 48.5], [2.5, 46.5]]]
+        },
+        allocations: [['vehicle_1']]
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }],
+      services: [
+        {
+          id: 'service_0',
+          activity: {
+            point_id: 'point_0'
+          }
+        }, {
+          id: 'service_1',
+          activity: {
+            point_id: 'point_1'
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          intermediate_solutions: false,
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.load_vrp(self, { problem: problem }), nil)
+    assert_equal result[:routes][0][:activities].size, 2
+    assert_equal result[:routes][1][:activities].size, 2
+  end
+
+  def test_input_zones_shipment
+    problem = {
+      points: [{
+        id: 'point_0', # zone_1
+        location: {
+          lat: 48,
+          lon: 5
+        }
+      }, {
+        id: 'point_1', # zone_0
+        location: {
+          lat: 49,
+          lon: 1
+        }
+      }, {
+        id: 'point_2', # no_zone
+        location: {
+          lat: 50,
+          lon: 3
+        }
+      }],
+      zones: [{
+        id: 'zone_0',
+        polygon: {
+          type: 'Polygon',
+          coordinates: [[[0.5, 48.5], [1.5, 48.5], [1.5, 49.5], [0.5, 49.5], [0.5, 48.5]]]
+        },
+        allocations: [['vehicle_0']]
+      }, {
+        id: 'zone_1',
+        polygon: {
+          type: 'Polygon',
+          coordinates: [[[4.5, 47.5], [5.5, 47.5], [5.5, 48.5], [4.5, 48.5], [4.5, 47.5]]]
+        },
+        allocations: [['vehicle_1']]
+      }, {
+        id: 'zone_2',
+        polygon: {
+          type: 'Polygon',
+          coordinates: [[[2.5, 46.5], [4.5, 46.5], [4.5, 48.5], [2.5, 48.5], [2.5, 46.5]]]
+        },
+        allocations: [['vehicle_1']]
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }, {
+        id: 'vehicle_1',
+        start_point_id: 'point_0',
+        speed_multiplier: 1
+      }],
+      services: [{
+        id: 'service_0',
+        activity: {
+          point_id: 'point_1'
+        }
+      }],
+      shipments: [{
+          id: 'shipment_0',
+          pickup: {
+            point_id: 'point_0'
+          },
+          delivery: {
+            point_id: 'point_2'
+          }
+      }],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        restitution: {
+          intermediate_solutions: false,
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.load_vrp(self, { problem: problem }), nil)
     assert_equal 2, result[:routes][0][:activities].size
     assert_equal 3, result[:routes][1][:activities].size
     assert_equal 0, result[:unassigned].size
@@ -1549,10 +1504,10 @@ class WrapperTest < Minitest::Test
         ]
       }],
       points: [{
-          id: "point_0",
+          id: 'point_0',
           matrix_index: 0
         }, {
-          id: "point_1",
+          id: 'point_1',
           matrix_index: 1
         }],
       vehicles: [{
@@ -1561,17 +1516,15 @@ class WrapperTest < Minitest::Test
         speed_multiplier: 1,
         matrix_id: 'matrix_0'
       }],
-      shipments: [
-        {
-          id: "shipment_0",
-          pickup: {
-            point_id: "point_0"
-          },
-          delivery: {
-            point_id: "point_1"
-          }
+      shipments: [{
+        id: 'shipment_0',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_1'
         }
-      ],
+      }],
       configuration: {
         preprocessing: {
           cluster_threshold: 5
@@ -1586,83 +1539,74 @@ class WrapperTest < Minitest::Test
     }
 
     result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
-    assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
-    assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
-    assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
-    assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
+    assert result[:routes][0][:activities][1].key?(:pickup_shipment_id)
+    assert !result[:routes][0][:activities][1].key?(:delivery_shipment_id)
+    assert !result[:routes][0][:activities][2].key?(:pickup_shipment_id)
+    assert result[:routes][0][:activities][2].key?(:delivery_shipment_id)
 
     if !ENV['SKIP_JSPRIT']
       result = OptimizerWrapper.solve([service: :jsprit, vrp: Models::Vrp.create(problem)])
-      assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
-      assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
-      assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
-      assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
+      assert result[:routes][0][:activities][1].key?(:pickup_shipment_id)
+      assert !result[:routes][0][:activities][1].key?(:delivery_shipment_id)
+      assert !result[:routes][0][:activities][2].key?(:pickup_shipment_id)
+      assert result[:routes][0][:activities][2].key?(:delivery_shipment_id)
     end
   end
 
   def test_split_vrps_using_two_solver
-    problem={
-      points: [
-        {
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ],
+        distance: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ]
+      }],
+      points: [{
           id: 'point_0',
-          location: {
-            lat: 48.787021,
-            lon: 2.65819
-          }
-        },
-        {
-        id: 'point_1',
-            location:
-            {
-                lat: 48.844836,
-                lon: 2.369496
-            }
-        },
-        {
-        id: 'point_2',
-            location:
-            {
-                lat: 48.630381,
-                lon: 2.437141
-            }
+          matrix_index: 0,
+        }, {
+          id: 'point_1',
+          matrix_index: 1,
+        }, {
+          id: 'point_2',
+          matrix_index: 2,
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        speed_multiplier: 1.0,
+        start_point_id: 'point_0',
+        cost_time_multiplier: 1.0,
+        cost_waiting_time_multiplier: 1.0
+      }, {
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0',
+        speed_multiplier: 1.0,
+        cost_time_multiplier: 1.0,
+        cost_waiting_time_multiplier: 1.0
+      }],
+      services: [{
+        id: 'service_1',
+        sticky_vehicle_ids: ['vehicle_0'],
+        activity: {
+          point_id: 'point_1',
+          duration: 600.0
         }
-      ],
-      vehicles: [
-        {
-            id: 'vehicle_0',
-            speed_multiplier: 1.0,
-            start_point_id: 'point_0',
-            cost_time_multiplier: 1.0,
-            cost_waiting_time_multiplier: 1.0
-        },
-        {
-            id: 'vehicle_1',
-            speed_multiplier: 1.0,
-            cost_time_multiplier: 1.0,
-            cost_waiting_time_multiplier: 1.0
+      }, {
+        id: 'service_2',
+        sticky_vehicle_ids: ['vehicle_1'],
+        activity: {
+          point_id: 'point_2',
+          duration: 600.0
         }
-      ],
-      services: [
-        {
-            id: 'service_1',
-            sticky_vehicle_ids: ['vehicle_0'],
-
-            activity:
-            {
-                point_id: 'point_1',
-                duration: 600.0
-            }
-        },
-        {
-            id: 'service_2',
-            sticky_vehicle_ids: ['vehicle_1'],
-            activity:
-            {
-                point_id: 'point_2',
-                duration: 600.0
-            }
-        }
-      ],
+      }],
       configuration: {
         resolution: {
           duration: 100,
@@ -1670,9 +1614,9 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom, :ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal result[:solvers][0],'vroom'
-    assert_equal result[:solvers][1],'ortools'
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom, :ortools] }}, FCT.create(problem), nil)
+    assert_equal result[:solvers][0], 'vroom'
+    assert_equal result[:solvers][1], 'ortools'
   end
 
   def test_possible_no_service_too_far_time
@@ -1745,7 +1689,7 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        timewindow:{
+        timewindow: {
           start: 0,
           end: 10
         }
@@ -1801,7 +1745,7 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        timewindow:{
+        timewindow: {
           start: 0,
           end: 30
         },
@@ -1841,14 +1785,14 @@ class WrapperTest < Minitest::Test
         ]
       }],
       units: [{
-          id: "unit0",
-          label: "kg"
+          id: 'unit0',
+          label: 'kg'
       }, {
-          id: "unit1",
-          label: "kg"
+          id: 'unit1',
+          label: 'kg'
       }, {
-          id: "unit2",
-          label: "kg"
+          id: 'unit2',
+          label: 'kg'
       }],
       points: [{
         id: 'point_0',
@@ -1865,13 +1809,13 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
         capacities: [{
-          unit_id: "unit0",
+          unit_id: 'unit0',
           limit: 5
-        },{
-          unit_id: "unit1",
+        }, {
+          unit_id: 'unit1',
           limit: 5
-        },{
-          unit_id: "unit2",
+        }, {
+          unit_id: 'unit2',
           limit: 5
         }]
       }],
@@ -1881,7 +1825,7 @@ class WrapperTest < Minitest::Test
           point_id: 'point_1'
         },
         quantities: [{
-            unit_id: "unit0",
+            unit_id: 'unit0',
             value: 6
           }],
       }, {
@@ -2137,7 +2081,7 @@ class WrapperTest < Minitest::Test
           start: 6,
           end: 10
         }
-      },{
+      }, {
         id: 'vehicle_1',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0'
@@ -2192,7 +2136,7 @@ class WrapperTest < Minitest::Test
           start: 6,
           end: 10,
           day_index: 2
-        },{
+        }, {
           start: 0,
           end: 5,
           day_index: 0
@@ -2218,8 +2162,8 @@ class WrapperTest < Minitest::Test
         resolution: {
           duration: 100,
         },
-        schedule:{
-          range_indices:{
+        schedule: {
+          range_indices: {
             start: 0,
             end: 2
           }
@@ -2321,10 +2265,10 @@ class WrapperTest < Minitest::Test
         resolution: {
           duration: 100,
         },
-        schedule:{
+        schedule: {
           range_date: {
-            start: Date.new(2017,1,27),
-            end: Date.new(2017,1,28)
+            start: Date.new(2017, 1, 27),
+            end: Date.new(2017, 1, 28)
           }
         }
       }
@@ -2344,31 +2288,30 @@ class WrapperTest < Minitest::Test
           [1, 1, 1, 0]
         ],
       }],
-      points: [
-        {
-          id: "point_0",
-          location: {
-              lat: 44.82332,
-              lon: -0.607338
-          }
-        }, {
-          id: "point_1",
-          location: {
-              lat: 44.83395,
-              lon: -0.56545
-          }
-        }, {
-          id: "point_2",
-          location: {
-              lat: 44.853662,
-              lon: -0.568542
-          }
-        }, {
-          id: "point_3",
-          location: {
-              lat: 44.853662,
-              lon: -0.568542
-          }
+      points: [{
+        id: 'point_0',
+        location: {
+            lat: 44.82332,
+            lon: -0.607338
+        }
+      }, {
+        id: 'point_1',
+        location: {
+            lat: 44.83395,
+            lon: -0.56545
+        }
+      }, {
+        id: 'point_2',
+        location: {
+            lat: 44.853662,
+            lon: -0.568542
+        }
+      }, {
+        id: 'point_3',
+        location: {
+            lat: 44.853662,
+            lon: -0.568542
+        }
       }],
       vehicles: [{
         id: 'vehicle_0',
@@ -2514,7 +2457,7 @@ class WrapperTest < Minitest::Test
     }
 
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| !activity[:service_id].nil? }.size }.reduce(&:+)
+    assert_equal 1, result[:routes].collect{ |route| route[:activities].reject{ |activity| activity[:service_id].nil? }.size }.reduce(&:+)
     assert_equal 5, result[:unassigned].size
   end
 
@@ -2530,8 +2473,8 @@ class WrapperTest < Minitest::Test
         ]
       }],
       units: [{
-          id: "unit0",
-          label: "kg"
+          id: 'unit0',
+          label: 'kg'
       }],
       points: [{
         id: 'point_0',
@@ -2548,7 +2491,7 @@ class WrapperTest < Minitest::Test
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
         capacities: [{
-          unit_id: "unit0",
+          unit_id: 'unit0',
           limit: 2
         }],
         timewindow: {
@@ -2562,7 +2505,7 @@ class WrapperTest < Minitest::Test
           point_id: 'point_1'
         },
         quantities: [{
-          unit_id: "unit0",
+          unit_id: 'unit0',
           value: 6
         }]
       }, {
@@ -2571,12 +2514,12 @@ class WrapperTest < Minitest::Test
           point_id: 'point_2'
         },
         quantities: [{
-          unit_id: "unit0",
+          unit_id: 'unit0',
           value: 3
         }]
       }],
-      schedule:{
-        range_indices:{
+      schedule: {
+        range_indices: {
           start: 0,
           end: 2
         }
@@ -2605,8 +2548,8 @@ class WrapperTest < Minitest::Test
         ]
       }],
       units: [{
-          id: "unit0",
-          label: "kg"
+          id: 'unit0',
+          label: 'kg'
       }],
       points: [{
         id: 'point_0',
@@ -2647,8 +2590,8 @@ class WrapperTest < Minitest::Test
           }]
         }
       }],
-      schedule:{
-        range_indices:{
+      schedule: {
+        range_indices: {
           start: 0,
           end: 2
         }
@@ -2677,8 +2620,8 @@ class WrapperTest < Minitest::Test
         ]
       }],
       units: [{
-          id: "unit0",
-          label: "kg"
+          id: 'unit0',
+          label: 'kg'
       }],
       points: [{
         id: 'point_0',
@@ -2698,7 +2641,7 @@ class WrapperTest < Minitest::Test
           start: 6,
           end: 10,
           day_index: 2
-        },{
+        }, {
           start: 0,
           end: 5,
           day_index: 0
@@ -2725,8 +2668,8 @@ class WrapperTest < Minitest::Test
           }]
         }
       }],
-      schedule:{
-        range_indices:{
+      schedule: {
+        range_indices: {
           start: 0,
           end: 2
         }
@@ -2755,8 +2698,8 @@ class WrapperTest < Minitest::Test
         ]
       }],
       units: [{
-          id: "unit0",
-          label: "kg"
+          id: 'unit0',
+          label: 'kg'
       }],
       points: [{
         id: 'point_0',
@@ -2776,7 +2719,7 @@ class WrapperTest < Minitest::Test
           start: 6,
           end: 10,
           day_index: 2
-        },{
+        }, {
           start: 0,
           end: 5,
           day_index: 0
@@ -2797,8 +2740,8 @@ class WrapperTest < Minitest::Test
           point_id: 'point_2'
         }
       }],
-      schedule:{
-        range_indices:{
+      schedule: {
+        range_indices: {
           start: 0,
           end: 2
         }

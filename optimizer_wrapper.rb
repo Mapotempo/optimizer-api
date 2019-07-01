@@ -68,9 +68,16 @@ module OptimizerWrapper
   end
 
   def self.wrapper_vrp(api_key, services, vrp, checksum, job_id = nil)
+    # Get complete matrix in case of problem to dump
+    if ENV['DUMP_VRP'] && vrp.name
+      vrp.compute_matrix
+      File.write('test/fixtures/' + vrp.name + '.dump', Base64.encode64(Marshal::dump(vrp)))
+    end
+
     inapplicable_services = []
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
+
     services_vrps = split_independant_vrp(vrp).map.with_index{ |vrp_element, i|
       {
         service: services[:services][:vrp].find{ |s|
@@ -182,9 +189,7 @@ module OptimizerWrapper
           unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
           vrp.services.delete_if{ |service| unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
 
-          if !(vrp.vehicles.select{ |v| v.overall_duration }.size>0 || vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.size > 0)
-            vrp.compute_matrix(&block)
-          end
+          vrp.compute_matrix(&block)
 
           unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
           @unfeasible_services += unfeasible_services
@@ -197,7 +202,6 @@ module OptimizerWrapper
           vrp = config[:services][service].simplify_constraints(vrp)
 
           if !vrp.services.empty? || !vrp.shipments.empty? || !vrp.rests.empty?
-            File.write('test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_') + '.dump', Base64.encode64(Marshal::dump(vrp))) if ENV['DUMP_VRP']
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp)
             if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver
@@ -346,8 +350,7 @@ module OptimizerWrapper
 
   def self.split_independant_vrp(vrp)
     # Don't split vrp if
-    return [vrp] if ENV['DUMP_VRP'] || # Dump to compute matrix is needed
-                    (vrp.vehicles.size <= 1) ||
+    return [vrp] if (vrp.vehicles.size <= 1) ||
                     (vrp.services.empty? && vrp.shipments.empty?) # there might be zero services or shipments (check together)
 
     if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 } && vrp.shipments.all?{ |s| s.sticky_vehicles.size == 1 }

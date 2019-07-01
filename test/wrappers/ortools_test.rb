@@ -5823,7 +5823,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_insert_with_order
-    vrp = FCT.load_vrp(self, fixture_file: 'instance_order.json')
+    vrp = FCT.load_vrp(self, fixture_file: 'instance_order')
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, vrp, nil)
     assert result
     previous_index = nil

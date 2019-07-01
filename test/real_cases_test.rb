@@ -47,7 +47,7 @@ class RealCasesTest < Minitest::Test
     def test_ortools_one_route_without_rest
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       # Check routes
@@ -67,7 +67,7 @@ class RealCasesTest < Minitest::Test
     def test_ortools_one_route_without_rest_2
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       # Check routes
@@ -87,7 +87,7 @@ class RealCasesTest < Minitest::Test
     def test_ortools_one_route_many_stops
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       # Check routes
@@ -110,7 +110,7 @@ class RealCasesTest < Minitest::Test
     def test_ortools_one_route_with_rest
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       # Check routes
@@ -134,14 +134,14 @@ class RealCasesTest < Minitest::Test
     def test_ortools_one_route_with_rest_and_waiting_time
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       # Check routes
       assert_equal 1, result[:routes].size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 5000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 5000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
       # Check activities
       assert_equal check_vrp.services.size + 2 + 1, result[:routes][0][:activities].size
       # Check elapsed time
@@ -153,7 +153,7 @@ class RealCasesTest < Minitest::Test
       skip 'Test broken in one previous commit, to fix'
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
@@ -166,7 +166,7 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 42300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 42300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 420000, "Too long elapsed time: #{result[:elapsed]}"
@@ -175,21 +175,21 @@ class RealCasesTest < Minitest::Test
     # Lille - 141 services with time window and quantity - no late for services
     def test_ortools_global_six_routes_without_rest
       vrp = FCT.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       # Check routes
       assert_equal (vrp.vehicles.size), result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 58500, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 59180, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
 
       # Check activities
       activities = result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       assert 140 < activities, "Not enough activities: #{activities}"
 
       # Check elapsed time
-      assert result[:elapsed] < 30000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 20000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Bordeaux - 81 services with time window - late for services & vehicles
@@ -197,7 +197,7 @@ class RealCasesTest < Minitest::Test
       skip 'Test broken in one previous commit, to fix'
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
@@ -206,7 +206,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 4, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 31700, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 31700, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
@@ -217,23 +217,23 @@ class RealCasesTest < Minitest::Test
       test_ortools_global_ten_routes_without_rest
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       # Check activities
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service35'}
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service83'}
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service84'}
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service35' }
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service83' }
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service84' }
       assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service88' || unassigned[:service_id] == 'service89' }
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1169'}
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183'}
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1169' }
+      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183' }
       assert_equal check_vrp.services.size - 6, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
       assert_equal 29, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 176000, "Too long travel time:# {result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 176000, "Too long travel time:# {result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 8000, "Too long elapsed time: #{result[:elapsed]}"
@@ -243,16 +243,16 @@ class RealCasesTest < Minitest::Test
     def test_ortools_one_route_with_single_mtws
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].size
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      assert_equal 1, result[:unassigned].select{ |u| !u[:reason].nil? }.size
+      assert_equal 1, result[:unassigned].reject{ |u| u[:reason].nil? }.size
       services_by_routes = check_vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 6300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 6305, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 7000, "Too long elapsed time: #{result[:elapsed]}"
@@ -262,14 +262,14 @@ class RealCasesTest < Minitest::Test
     def test_ortools_open_timewindows
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       services_by_routes = check_vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 13000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 13225, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 5000, "Too long elapsed time: #{result[:elapsed]}"
@@ -279,7 +279,7 @@ class RealCasesTest < Minitest::Test
     def test_ortools_single_route_with_route_order
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
@@ -297,17 +297,17 @@ class RealCasesTest < Minitest::Test
       assert_equal expected_ids, route_order
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 11200, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 12085, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
 
       # Check elapsed time
-      assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 65000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Nice - A single route with an order defining the most part of the route, many stops
     def test_ortools_single_route_with_route_order_2
       skip 'Test broken in one previous commit, to fix'
       vrp = FCT.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
@@ -325,7 +325,7 @@ class RealCasesTest < Minitest::Test
       assert_equal expected_ids, route_order
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+) < 13500, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time]}.reduce(&:+)}"
+      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 13500, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
 
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
@@ -338,7 +338,7 @@ class RealCasesTest < Minitest::Test
             Gwen said he will fix it."
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
@@ -358,7 +358,7 @@ class RealCasesTest < Minitest::Test
             Gwen said he will fix it."
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools, :ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
@@ -371,12 +371,10 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
-    def test_spliting
-      service_vrp = Marshal.load(File.binread('test/fixtures/service_vrp_dichotomious.dump'))
-      vrp = service_vrp[:vrp]
-      vrp.preprocessing_max_split_size = 250
+    def test_dichotomious_paris_area
+      vrp = FCT.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
-      result = OptimizerWrapper.define_process([service_vrp])
       routes = result[:routes]
       unassigned = result[:unassigned]
 
@@ -435,24 +433,5 @@ class RealCasesTest < Minitest::Test
       assert result[:total_distance] <= 105700
       assert_equal 0, result[:unassigned].size
     end
-  end
-
-  def test_soft_instance_dichotomious
-    vrp = FCT.load_vrp(self)
-    t1 = Time.now
-    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
-    t2 = Time.now
-    assert result
-
-    # Check activities
-    assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
-
-    # Check routes
-    assert result[:routes].size < 48, "Too many routes: #{result[:routes].size}"
-
-    # Check elapsed time
-    assert result[:elapsed] / 1000 > 4080 * 0.9 && result[:elapsed] / 1000 < 4590 * 1.01, "Incorrect elapsed time: #{result[:elapsed]}"
-    assert t2 - t1 < 4590 * 1.55, "Too long elapsed time: #{t2 - t1}"
-    assert t2 - t1 > 4080, "Too short elapsed time: #{t2 - t1}"
   end
 end
