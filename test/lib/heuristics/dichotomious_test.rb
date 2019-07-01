@@ -43,8 +43,17 @@ class DichotomiousTest < Minitest::Test
   end
 
   def test_cluster_dichotomious_heuristic
+    # Warning: This test is not enough to ensure that two services at the same point will
+    # not end up in two different routes because after clustering there is tsp_simple.
+    # In fact this check is too limiting because for this test to pass we disactivate
+    # balancing in dicho_split at the last iteration.
+
+    # TODO: Instead of disactivating balancing we can implement
+    # clicque like preprocessing inside clustering that way it would be impossible for
+    # two very close service ending up in two different routes.
+    # Moreover, it would increase the performance of clustering.
     vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious.json')
-    service_vrp = {vrp: vrp, service: :demo, level: 0}
+    service_vrp = { vrp: vrp, service: :demo, level: 0 }
     while service_vrp[:vrp].services.size > 100
       services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp, nil)
       assert_equal 2, services_vrps_dicho.size
