@@ -496,10 +496,6 @@ module Api
           }
           post do
             begin
-              if ENV['DUMP_VRP']
-                path = 'test/fixtures/' + ENV['DUMP_VRP'].gsub(/[^a-z0-9\-]+/i, '_')
-                File.write(path + '.json', {vrp: params[:vrp]}.to_json)
-              end
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
               if params[:points]
                 APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(''), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles], configuration: params[:vrp][:configuration] } }.to_json)

@@ -65,7 +65,7 @@ class SplitClusteringTest < Minitest::Test
           The functionality is not ready yet, it is skipped for devs not working on the functionality.
           Basically, we want to be able to cluster in one single step (instead of by-vehicle and then by-day) and
           we expect that the clusters are balanced. However, currently it takes too long and the results are not balanced."
-    vrp = FCT.load_vrp(self, fixture_file: 'cluster_two_phases.json')
+    vrp = FCT.load_vrp(self, fixture_file: 'cluster_two_phases')
     service_vrp = { vrp: vrp, service: :demo }
     services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 80, cut_symbol: :duration, entity: 'work_day', restarts: @split_restarts)
     assert_equal 80, services_vrps_days.size
@@ -86,7 +86,7 @@ class SplitClusteringTest < Minitest::Test
   end
 
   def test_cluster_one_phase_vehicle
-    vrp = FCT.load_vrp(self, fixture_file: 'cluster_one_phase.json')
+    vrp = FCT.load_vrp(self, fixture_file: 'cluster_one_phase')
     service_vrp = { vrp: vrp, service: :demo }
 
     total_durations = vrp.services_duration

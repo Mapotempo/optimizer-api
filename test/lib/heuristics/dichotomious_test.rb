@@ -52,7 +52,7 @@ class DichotomiousTest < Minitest::Test
     # clicque like preprocessing inside clustering that way it would be impossible for
     # two very close service ending up in two different routes.
     # Moreover, it would increase the performance of clustering.
-    vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious.json')
+    vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious')
     service_vrp = { vrp: vrp, service: :demo, level: 0 }
     while service_vrp[:vrp].services.size > 100
       services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp, nil)
