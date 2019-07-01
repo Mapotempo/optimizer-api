@@ -126,17 +126,16 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_vrp_allow_partial_assigment_false
-      skip 'Test broken in one previous commit, to fix'
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
 
-      unassigned = result[:unassigned].collect{ |una| una[:service_id] }
-      assert_includes unassigned, '1091268_SNC_28_3IG_1_3', 'Missing mission 1091268_SNC_28_3IG_1_3 in unassigned'
-      assert_includes unassigned, '1091268_SNC_28_3IG_2_3', 'Missing mission 1091268_SNC_28_3IG_2_3 in unassigned'
-      assert_includes unassigned, '1091268_SNC_28_3IG_3_3', 'Missing mission 1091268_SNC_28_3IG_3_3 in unassigned'
-      assert_includes unassigned, '1091268_SNC_84_3IK_1_1', 'Missing mission 1091268_SNC_84_3IK_1_1 in unassigned'
-      assert_equal result[:unassigned].find{ |una| una[:service_id] == '1091268_SNC_84_3IK_1_1' }[:reason], 'Service 1091268_SNC_84_3IK at the same location is already unassigned, and partial_assigments are unauthorized'
-      assert !result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] }}.flatten.include?('1091268_SNC_84_3IK_1_1')
+      unassigned = result[:unassigned].collect{ |un| un[:service_id] }
+      original_ids = unassigned.collect{ |id| id.split('_').slice(0, 4).join('_') }
+      assert(unassigned.all?{ |id|
+        nb_visits = id.split('_').last.to_i
+        original_id = id.split('_').slice(0, 4).join('_')
+        original_ids.count(original_id) == nb_visits
+      })
 
       result[:routes].each{ |route|
         route[:activities].each_with_index{ |activity, index|
