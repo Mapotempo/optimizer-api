@@ -37,6 +37,7 @@ module SchedulingHeuristic
     @planning = {}
     @same_located = {}
     @services_unlocked_by = {} # in the case of same_point_day, service with higher heuristic period unlocks others
+    @unlocked = []
     @starting_time = Time.now
     @to_plan_service_ids = []
     @uninserted = {}
@@ -396,12 +397,24 @@ module SchedulingHeuristic
                   (@same_point_day && services[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] } || !@same_point_day && services[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) &&
                   # service is available at this day
                   !services[service][:unavailable_days].include?(day) }.each{ |service_id|
+
+      # ignore if we have already visited this POINT but not in this route
+      next if @unlocked.include?(service_id) && @candidate_routes[vehicle][day][:current_route].none?{ |stop| stop[:point_id] == services[service_id][:point_id] }
+      same_point_compatible_day = true
+      if @unlocked.include?(service_id) && services[service_id][:heuristic_period]
+        last_visit_day = day + (services[service_id][:nb_visits] - 1) * services[service_id][:heuristic_period]
+        # can not finish later (over whole period) than service at same_point
+        stop = @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:point_id] == services[service_id][:point_id] }
+        stop_last_visit_day = day + (services[stop[:id]][:nb_visits] - stop[:number_in_sequence] ) * services[stop[:id]][:heuristic_period]
+        same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
+      end
+
       period = services[service_id][:heuristic_period]
       n_visits = services[service_id][:nb_visits]
       duration = @same_point_day ? services[service_id][:group_duration] : services[service_id][:duration]
       latest_authorized_day = @schedule_end - (period || 0) * (n_visits - 1)
 
-      if period.nil? || day <= latest_authorized_day && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil?
+      if period.nil? || day <= latest_authorized_day && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil? && same_point_compatible_day
         s_position_in_order = @order.index(services[service_id][:point_id])
         first_bigger_position_in_sol = positions_in_order.select{ |pos| pos > s_position_in_order }.min
         insertion_index = positions_in_order.index(first_bigger_position_in_sol).nil? ? route.size : positions_in_order.index(first_bigger_position_in_sol)
@@ -637,24 +650,6 @@ module SchedulingHeuristic
 
         if !insertion_costs.empty?
           point_to_add = select_point(services_data, insertion_costs)
-          if @candidate_routes[current_vehicle].any?{ |route| route && route[1][:current_route].any?{ |serv| serv[:point_id] == point_to_add[:point] && serv[:id] != point_to_add[:id] }}
-            day = nil
-            routes = @candidate_routes[current_vehicle].collect{ |_day, route_data|
-              route_data && route_data[:current_route].collect{ |serv|
-                if serv[:point_id] == point_to_add[:point] && serv[:id] != point_to_add[:id] && !route_data[:current_route].empty? && !forbbiden_routes.include?(_day)
-                  [_day, route_data]
-                end
-              }.compact.flatten
-            }
-            routes.delete_if{ |route| route.empty? }
-            day = routes.sort_by!{ |_day, route_data|
-              route_data && route_data[:current_route].empty? ? 0 : route_data[:current_route].size
-            }[0][0] if !routes.empty?
-            if day && day <= @schedule_end - (services_data[point_to_add[:id]][:heuristic_period] || 0) * (services_data[point_to_add[:id]][:nb_visits] - 1)
-              best_day = day
-              route_data = @candidate_routes[current_vehicle][best_day]
-            end
-          end
           best_index = find_best_index(services_data, point_to_add[:id], route_data)
           if best_index
             best_index[:end] = best_index[:end] - services_data[best_index[:id]][:group_duration] + services_data[best_index[:id]][:duration]
@@ -692,6 +687,7 @@ module SchedulingHeuristic
 
             if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty?
               @to_plan_service_ids += @services_unlocked_by[best_index[:id]]
+              @unlocked += @services_unlocked_by[best_index[:id]]
               forbbiden_days = [] # new services are available so we may need these days
             end
           else
