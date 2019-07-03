@@ -66,30 +66,6 @@ class Api::V01::WithSolverTest < Api::V01::VrpTest
     end
   end
 
-  def test_vroom_optimize_independent
-    FCT.solve_asynchronously do
-      @job_id = submit_vrp api_key: 'vroom', vrp: JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']
-      result = wait_status @job_id, 'completed', api_key: 'vroom'
-      assert_equal ['vroom', 'vroom', 'vroom', 'vroom', 'vroom'], result['solutions'][0]['solvers']
-      assert_equal 5, result['solutions'][0]['routes'].size
-    end
-  ensure
-    delete_completed_job @job_id, api_key: 'vroom'
-  end
-
-  def test_ortools_optimize_independent
-    FCT.solve_asynchronously do
-      @job_id = submit_vrp api_key: 'ortools', vrp: JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']
-      result = wait_status @job_id, 'completed', api_key: 'ortools'
-      assert_equal ['ortools', 'ortools', 'ortools', 'ortools', 'ortools'], result['solutions'][0]['solvers']
-      assert_equal 5, result['solutions'][0]['routes'].size
-      # TODO: 15000/15000 seems to be amazing in json!?
-      # assert result['solutions'][0]['elapsed'] > 15000 && result['solutions'][0]['elapsed'] < 15000
-    end
-  ensure
-    delete_completed_job @job_id, api_key: 'ortools'
-  end
-
   def test_csv_configuration
     FCT.solve_asynchronously do
       vrp = VRP.lat_lon
