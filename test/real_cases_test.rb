@@ -370,6 +370,15 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
+    # Paris - Multiple independant routes
+    def test_ortools_optimize_each
+      vrp = FCT.load_vrp(self)
+      check_vrp = Marshal.load(Marshal.dump(vrp))
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert result
+      assert_equal 5, result[:routes].size
+    end
+
     def test_dichotomious_check_number_of_services
       # TODO: This test is an old test left here. It doesn't have enough vehicles. It just check if we lose or add services.
       vrp = FCT.load_vrp(self)
@@ -432,6 +441,15 @@ class RealCasesTest < Minitest::Test
       assert result
       assert result[:total_distance] <= 105700
       assert_equal 0, result[:unassigned].size
+    end
+
+    # Paris - Multiple independant routes
+    def test_vroom_optimize_each
+      vrp = FCT.load_vrp(self)
+      check_vrp = Marshal.load(Marshal.dump(vrp))
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:vroom] }}, vrp, nil)
+      assert result
+      assert_equal 5, result[:routes].size
     end
   end
 end
