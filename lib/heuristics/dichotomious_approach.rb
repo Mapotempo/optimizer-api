@@ -94,8 +94,8 @@ module Interpreters
 
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
-      service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 3 : 120000
-      service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 3 : 90000
+      service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 2 : 120000
+      service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
       service_vrp[:vrp].resolution_init_duration = 10 if service_vrp[:vrp].vehicles.size > 10 && service_vrp[:vrp].resolution_vehicle_limit > 10 || service_vrp[:vrp].services.size > 500
@@ -173,8 +173,8 @@ module Interpreters
             }
             rate_vehicles = sub_service_vrp[:vrp].vehicles.size / service_vrp[:vrp].vehicles.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
-            sub_service_vrp[:vrp].resolution_duration = [(service_vrp[:vrp].resolution_duration / (3.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i, 100].max
-            sub_service_vrp[:vrp].resolution_minimum_duration = [(service_vrp[:vrp].resolution_minimum_duration / (3.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i, 100].max
+            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / (2.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / (1.0 * (service_vrp[:level] + 1)) * rate_vehicles * rate_services).to_i
             # sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
 
@@ -311,12 +311,20 @@ module Interpreters
 
           next if related_services.empty?
           related_services.each{ |related_service|
-            data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], [], 0]
+            if related_service[:sticky_vehicle_ids] && related_service[:skills] && !related_service[:skills].empty?
+              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], related_service[:skills], 0]
+            elsif related_service[:sticky_vehicle_ids] && related_service[:skills] && related_service[:skills].empty?
+                data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], [], 0]
+            elsif related_service[:skills] && !related_service[:skills].empty? && !related_service[:sticky_vehicle_ids]
+              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], related_service[:skills], 0]
+            else
+              data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], [], 0]
+            end
           }
         }
 
         # TODO : are there any expected caracteristics ?
-        clusters, _centroid_indices = SplitClustering.kmeans_process([], 100, 5, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, rate_balance: nil)
+        clusters, _centroid_indices = SplitClustering.kmeans_process([], 100, 5, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp, rate_balance: 0)
 
         services_by_cluster = clusters.collect{ |cluster|
           cluster.data_items.collect{ |data|
