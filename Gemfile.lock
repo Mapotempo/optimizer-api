@@ -26,7 +26,7 @@ GEM
     backport (0.3.0)
     benchmark-ips (2.7.2)
     builder (3.2.3)
-    byebug (9.0.6)
+    byebug (11.0.1)
     coercible (1.0.0)
       descendants_tracker (~> 0.0.1)
     concurrent-ruby (1.0.5)
