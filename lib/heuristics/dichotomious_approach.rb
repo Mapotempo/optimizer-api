@@ -74,15 +74,16 @@ module Interpreters
           service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[1][:vrp].resolution_total_split_number
           result = Helper.merge_results(results)
           result[:elapsed] += (t2 - t1) * 1000
-        end
-        Interpreters::SplitClustering.remove_empty_routes(result)
 
-        # Set vehicles before remove routes for end stage to avoid using too many vehicles
-        Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.7 / (service_vrp[:level] + 1))
-        remove_bad_skills(service_vrp, result)
-        result = end_stage_insert_unassigned(service_vrp, result, job)
-        Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.3)
-        result
+          remove_bad_skills(service_vrp, result)
+
+          result = end_stage_insert_unassigned(service_vrp, result, job)
+
+          if service_vrp[:level].zero?
+            # Remove vehicles which are half empty
+            Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], result, 0.5)
+          end
+        end
       else
         service_vrp[:vrp].resolution_init_duration = nil
       end
@@ -94,11 +95,11 @@ module Interpreters
 
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
-      service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? service_vrp[:vrp].resolution_duration / 2 : 120000
-      service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? service_vrp[:vrp].resolution_minimum_duration / 2 : 90000
+      service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.25).to_i : 120000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
+      service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.25).to_i : 90000
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      service_vrp[:vrp].resolution_init_duration = 10 if service_vrp[:vrp].vehicles.size > 10 && service_vrp[:vrp].resolution_vehicle_limit > 10 || service_vrp[:vrp].services.size > 500
+      service_vrp[:vrp].resolution_init_duration = 10 if service_vrp[:vrp].vehicles.size > 4 && service_vrp[:vrp].resolution_vehicle_limit > 4 || service_vrp[:vrp].services.size > 200
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion'] # A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
 
       service_vrp
@@ -122,6 +123,7 @@ module Interpreters
     end
 
     def self.remove_bad_skills(service_vrp, result)
+      Interpreters::SplitClustering.remove_empty_routes(result)
       result[:routes].each{ |r|
         r[:activities].each{ |a|
           if a[:service_id]
@@ -183,6 +185,7 @@ module Interpreters
 
             # Initial routes can be refused... check unassigned size before take into account solution
             if result_loop && remaining_service_ids.size >= result_loop[:unassigned].size
+              remove_bad_skills(sub_service_vrp, result_loop)
               result[:unassigned].delete_if{ |unassigned_activity|
                 result_loop[:routes].any?{ |route|
                   route[:activities].any?{ |activity| activity[:service_id] == unassigned_activity[:service_id] }
