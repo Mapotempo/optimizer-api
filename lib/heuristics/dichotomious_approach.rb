@@ -66,6 +66,8 @@ module Interpreters
           results = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
             sub_service_vrp[:vrp].resolution_split_number = sub_service_vrps[0][:vrp].resolution_split_number + 1 if !index.zero?
             sub_service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[0][:vrp].resolution_total_split_number if !index.zero?
+            sub_service_vrp[:vrp].resolution_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
+            sub_service_vrp[:vrp].resolution_minimum_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             result = OptimizerWrapper.define_process([sub_service_vrp], job, &block)
             if index.zero?
               result[:routes].each{ |r|
