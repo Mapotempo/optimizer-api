@@ -134,7 +134,7 @@ module Interpreters
       if !service_vrp[:level].zero?
         average_exclusion_cost = service_vrp[:vrp].services.collect{ |service| service.exclusion_cost }.sum / service_vrp[:vrp].services.size
         service_vrp[:vrp].services.each{ |service|
-          service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].resolution_mult_level**service_vrp[:level] - 1)
+          service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].resolution_dicho_level_coeff**service_vrp[:level] - 1)
         }
       end
     end
