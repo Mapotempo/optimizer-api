@@ -273,7 +273,7 @@ module Ai4r
 
         # balance between clusters computation
         balance = 1.0
-        if @appy_balancing
+        if @apply_balancing
           # At this "stage" of the clustering we would expect this limit to be met
           expected_cut_limit = limit * @percent_assigned_cut_load
           # Compare "expected_cut_limit to the current cut_value
@@ -304,7 +304,7 @@ module Ai4r
 
         @total_assigned_cut_load = 0
         @percent_assigned_cut_load = 0
-        @appy_balancing = false
+        @apply_balancing = false
         @data_set.data_items.each_with_index do |data_item, data_index|
           cluster_index = eval(data_item)
           @clusters[cluster_index] << data_item
@@ -314,8 +314,8 @@ module Ai4r
             next if unit != @cut_symbol
             @total_assigned_cut_load += data_item[3][unit]
             @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load.to_f
-            if !@appy_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 }
-              @appy_balancing = true
+            if !@apply_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 }
+              @apply_balancing = true
             end
           }
           update_centroid_properties(cluster_index, data_item) # TODO : only if missing caracteristics. Returned through eval ?
