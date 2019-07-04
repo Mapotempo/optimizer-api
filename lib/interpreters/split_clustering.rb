@@ -29,7 +29,6 @@ module Interpreters
   class SplitClustering
     # TODO: private method
     def self.output_clusters(all_service_vrps, vehicles = [], two_stages = false)
-      cache = OptimizerWrapper.dump_vrp_cache
       polygons = []
       csv_lines = [['name', 'lat', 'lng', 'tags', 'start depot', 'end depot']]
       if !two_stages && !vehicles.empty?
@@ -55,15 +54,18 @@ module Interpreters
       checksum = Digest::MD5.hexdigest Marshal.dump(polygons)
       vrp_name = all_service_vrps.first[:vrp].name
       filename = 'generated_clusters_' + (vrp_name ? vrp_name + '_' : '') + checksum
-      # TODO : use file.write
-      cache.write(filename + '_geojson', {
+
+      File.write(File.join(OptimizerWrapper.dump_vrp_cache.cache.cache_path, filename + '_geojson'), {
         type: 'FeatureCollection',
         features: polygons.compact
       }.to_json)
+
       csv_string = CSV.generate do |out_csv|
         csv_lines.each{ |line| out_csv << line }
       end
-      cache.write(filename + '_csv', csv_string)
+
+      File.write(File.join(OptimizerWrapper.dump_vrp_cache.cache.cache_path, filename + '_csv'), csv_string)
+
       puts 'Clusters saved : ' + filename
     end
 
