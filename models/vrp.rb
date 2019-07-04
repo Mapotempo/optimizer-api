@@ -138,22 +138,19 @@ module Models
         average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
         total_service_time = services.map{ |service| service[:activity][:duration].to_i }.reduce(:+)
 
-        data_items = []
-        points.each{ |point|
-          data_items << [point.location.lat, point.location.lon, "#{point.id}", [], [], []]
-        }
-        c = BalancedKmeans.new
-        centroid = c.get_mean_or_mode(DataSet.new(data_items: data_items))
+        average_loc = points.inject([0, 0]) { |sum, point| sum = [sum[0] + point.location.lat, sum[1] + point.location.lon] }
+        average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
+
         #TODO It assums there is only one depot
         depot = vehicles.collect{ |vehicle| [vehicle.start_point.location.lat, vehicle.end_point.location.lon] }.uniq.flatten
-        approx_depot_time_correction = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil * 2 * Helper.flying_distance([centroid[0], centroid[1]], depot)
+        approx_depot_time_correction = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil * 2 * Helper.flying_distance(average_loc, depot)
         total_time_load = total_service_time + total_travel_time + approx_depot_time_correction
 
         average_service_load = total_time_load / services.size.to_f
         average_number_of_services = average_vehicles_work_time / average_service_load
         exclusion_rate = resolution_div_average_service * average_number_of_services
         angle = resolution_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
-        tan_variable =  Math.tan(angle * Math::PI / 180)
+        tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
         coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
         coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
