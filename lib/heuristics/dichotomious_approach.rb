@@ -29,7 +29,7 @@ module Interpreters
     def self.dichotomious_candidate(service_vrp)
       (service_vrp[:level] && service_vrp[:level] > 0) ||
         (service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } &&
-        service_vrp[:vrp].vehicles.size > 3 &&
+        service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit &&
         service_vrp[:vrp].schedule_range_indices.nil? && service_vrp[:vrp].schedule_range_date.nil? &&
         service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > 50 &&
         service_vrp[:vrp].shipments.empty? &&
@@ -110,6 +110,12 @@ module Interpreters
       result
     end
 
+    def self.dicho_level_coeff(service_vrp)
+      balance = 0.66666
+      level_approx = Math.log(service_vrp[:vrp].resolution_dicho_division_vec_limit / service_vrp[:vrp].vehicles.size.to_f, balance)
+      service_vrp[:vrp].resolution_dicho_level_coeff = 2**(1 / (level_approx - service_vrp[:level]).to_f)
+    end
+
     def self.set_config(service_vrp)
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
@@ -118,9 +124,14 @@ module Interpreters
         service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.66).to_i : 90000
       end
 
+      if service_vrp[:level] && service_vrp[:level] == 0
+        dicho_level_coeff(service_vrp)
+      end
+
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      if service_vrp[:vrp].vehicles.size > 3 && service_vrp[:vrp].resolution_vehicle_limit > 3 && service_vrp[:vrp].services.size > 100
+      if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit && service_vrp[:vrp].services.size > 100 &&
+         service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_division_vec_limit
         service_vrp[:vrp].resolution_init_duration = 10
       else
         service_vrp[:vrp].resolution_init_duration = nil
