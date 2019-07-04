@@ -273,9 +273,31 @@ module Interpreters
         end
         # TODO: prefer cluster with sticky vehicle
         # TODO: avoid to prefer always same cluster
-        cluster_index ||= vehicles_by_clusters[0].size <= vehicles_by_clusters[1].size ? 0 : 1
+        if cluster_index &&
+           ((vehicles_by_clusters[1].size - 1) / services_by_cluster[1].size > (vehicles_by_clusters[0].size + 1) / services_by_cluster[0].size || 
+           (vehicles_by_clusters[1].size + 1) / services_by_cluster[1].size < (vehicles_by_clusters[0].size - 1) / services_by_cluster[0].size)
+           cluster_index = nil
+        end
+        if vehicles_by_clusters[0].empty? || vehicles_by_clusters[1].empty?
+          cluster_index ||= vehicles_by_clusters[0].size <= vehicles_by_clusters[1].size ? 0 : 1
+        else
+          cluster_index ||= services_by_cluster[0].size / vehicles_by_clusters[0].size >= services_by_cluster[1].size / vehicles_by_clusters[1].size ? 0 : 1
+        end
         vehicles_by_clusters[cluster_index] << v
       }
+
+      if vehicles_by_clusters.any?(&:empty?)
+        if vehicles_by_clusters[0].empty?
+          vehicles_by_skills1 = vehicles_by_clusters[1].group_by{ |v| v.skills.empty? ? nil : v.skills.uniq.sort }.compact.uniq
+          vehicles_by_clusters[0] << vehicles_by_skills1.max_by{ |vehicles| vehicles[1].size }.last.first
+          vehicles_by_clusters[1].delete(vehicles_by_clusters[0].last)
+        else
+          vehicles_by_skills0 = vehicles_by_clusters[0].group_by{ |v| v.skills.empty? ? nil : v.skills.uniq.sort }.compact.uniq
+          vehicles_by_clusters[1] << vehicles_by_skills0.max_by{ |vehicles| vehicles[1].size }.last.first
+          vehicles_by_clusters[0].delete(vehicles_by_clusters[1].last)
+        end
+      end
+
       vehicles_by_clusters
     end
 
