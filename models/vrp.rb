@@ -33,9 +33,9 @@ module Models
     field :preprocessing_first_solution_strategy, default: nil
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
-    field :resolution_mult_level, default: 1.5
-    field :resolution_angle, default: 40
-    field :resolution_div_average_service, default: 0.33
+    field :resolution_dicho_level_coeff, default: 1.1
+    field :resolution_angle, default: 38
+    field :resolution_div_average_service, default: 0.6
     field :resolution_duration, default: nil
     field :resolution_total_duration, default: nil
     field :resolution_iterations, default: nil
@@ -185,7 +185,7 @@ module Models
 
     def resolution=(resolution)
       self.resolution_angle = resolution[:angle]
-      self.resolution_mult_level = resolution[:mult_level]
+      self.resolution_dicho_level_coeff = resolution[:dicho_level_coeff]
       self.resolution_div_average_service = resolution[:div_average_service]
       self.resolution_duration = resolution[:duration]
       self.resolution_total_duration = resolution[:duration]
