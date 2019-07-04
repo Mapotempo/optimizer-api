@@ -57,7 +57,7 @@ module Interpreters
 
         t2 = Time.now
 
-        if result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size
+        if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && service_vrp[:vrp].vehicles.size > 3
           sub_service_vrps = []
           loop do
             sub_service_vrps = split(service_vrp, job)
