@@ -107,6 +107,14 @@ module Models
     # include ValidateTimewindows #<- This doesn't work
     has_many :rests, class_name: 'Models::Rest'
 
+    def self.create(hash)
+      if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_work_day_indices]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
+        work_day_indices = hash[:sequence_timewindows].collect{ |tw| tw[:day_index] }
+        hash[:unavailable_work_day_indices].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
+      end
+      super(hash)
+    end
+
     def need_matrix_time?
       cost_time_multiplier != 0 || cost_late_multiplier && cost_late_multiplier != 0 || cost_setup_time_multiplier != 0 ||
         !rests.empty? || maximum_ride_time || duration || overall_duration
