@@ -78,6 +78,12 @@ module Interpreters
                   sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
                 end
               }
+              sub_service_vrps[0][:vrp].vehicles.each{ |vehicle|
+                next if !result[:routes].select{ |r| r[:vehicle_id] == vehicle.id }.empty?
+                sub_service_vrps[1][:vrp].vehicles << vehicle
+                sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+                sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
+              }
             end
             result
           }
