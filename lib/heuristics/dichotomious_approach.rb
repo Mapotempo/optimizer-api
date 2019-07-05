@@ -231,8 +231,8 @@ module Interpreters
             }
             rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
-            sub_service_vrp[:vrp].resolution_duration = (service_vrp[:vrp].resolution_duration / 3.99 * rate_vehicles * rate_services).to_i
-            sub_service_vrp[:vrp].resolution_minimum_duration = (service_vrp[:vrp].resolution_minimum_duration / 3.99 * rate_vehicles * rate_services).to_i
+            sub_service_vrp[:vrp].resolution_duration = [(service_vrp[:vrp].resolution_duration / 3.99 * rate_vehicles * rate_services).to_i, 150].max
+            sub_service_vrp[:vrp].resolution_minimum_duration = [(service_vrp[:vrp].resolution_minimum_duration / 3.99 * rate_vehicles * rate_services).to_i, 100].max
             # sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
 
