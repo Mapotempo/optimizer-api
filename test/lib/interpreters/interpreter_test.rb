@@ -1862,82 +1862,86 @@ class InterpreterTest < Minitest::Test
   def test_multi_modal_route_with_skills
     problem = {
         points: [
-        {
-            id: "point_0",
-            location:
-            {
-                lat: 44.8457069,
-                lon: -0.5759024
-            }
-        },
-        {
-            id: "point_1",
-            location:
-            {
-                lat: 44.8446572,
-                lon: -0.5753177
-            }
-        },
-        {
-            id: "point_2",
-            location:
-            {
-                lat: 44.8451706,
-                lon: -0.5764657
-            }
-        },
-        {
-            id: "depot",
-            location:
-            {
-                lat: 44.8507881,
-                lon: -0.5745077
-            }
-        }],
+          {
+              id: 'point_0',
+              location:
+              {
+                  lat: 44.8457069,
+                  lon: -0.5759024
+              }
+          },
+          {
+              id: 'point_1',
+              location:
+              {
+                  lat: 44.8446572,
+                  lon: -0.5753177
+              }
+          },
+          {
+              id: 'point_2',
+              location:
+              {
+                  lat: 44.8451706,
+                  lon: -0.5764657
+              }
+          },
+          {
+              id: 'depot',
+              location:
+              {
+                  lat: 44.8507881,
+                  lon: -0.5745077
+              }
+          }
+        ],
         subtours: [
-        {
-          id: 'sub_test',
-          time_bounds: 180,
-          transmodal_stop_ids: ['point_0'],
-        }],
+          {
+            id: 'sub_test',
+            time_bounds: 180,
+            transmodal_stop_ids: ['point_0'],
+          }
+        ],
         vehicles: [
-        {
-            id: "vehicle_0",
-            start_point_id: "depot",
-            end_point_id: "depot",
-            router_mode: "car",
-            cost_late_multiplier: 0.0,
-            cost_time_multiplier:  1.0,
-            speed_multiplier: 1.0,
-            skills: [['skill0']]
-        }, {
-            id: "vehicle_1",
-            start_point_id: "depot",
-            end_point_id: "depot",
-            router_mode: "car",
-            cost_late_multiplier: 0.0,
-            cost_time_multiplier:  1.0,
-            speed_multiplier: 1.0,
-            skills: [['skill1']]
-        }],
+          {
+              id: 'vehicle_0',
+              start_point_id: 'depot',
+              end_point_id: 'depot',
+              router_mode: 'car',
+              cost_late_multiplier: 0.0,
+              cost_time_multiplier:  1.0,
+              speed_multiplier: 1.0,
+              skills: [['skill0']]
+          }, {
+              id: 'vehicle_1',
+              start_point_id: 'depot',
+              end_point_id: 'depot',
+              router_mode: 'car',
+              cost_late_multiplier: 0.0,
+              cost_time_multiplier:  1.0,
+              speed_multiplier: 1.0,
+              skills: [['skill1']]
+          }
+        ],
         services: [
-        {
-            id: "service_0",
-            activity:
-            {
-                point_id: "point_1",
-                duration: 5
-            },
-            skills: ['skill0']
-        }, {
-            id: "service_1",
-            activity:
-            {
-                point_id: "point_2",
-                duration: 5
-            },
-            skills: ['skill1']
-        }],
+          {
+              id: 'service_0',
+              activity:
+              {
+                  point_id: 'point_1',
+                  duration: 5
+              },
+              skills: ['skill0']
+          }, {
+              id: 'service_1',
+              activity:
+              {
+                  point_id: 'point_2',
+                  duration: 5
+              },
+              skills: ['skill1']
+          }
+        ],
         configuration:
         {
             preprocessing:
@@ -1952,11 +1956,11 @@ class InterpreterTest < Minitest::Test
         }
     }
     vrp = Models::Vrp.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 5, result[:routes][0][:activities].size
-    assert_equal 'service_0' , result[:routes][0][:activities][2][:service_id]
+    assert_equal 'service_0', result[:routes][0][:activities][2][:service_id]
     assert_equal 5, result[:routes][1][:activities].size
-    assert_equal 'service_1' , result[:routes][1][:activities][2][:service_id]
+    assert_equal 'service_1', result[:routes][1][:activities][2][:service_id]
   end
 
   def test_multi_modal_route_with_skills_intersection
