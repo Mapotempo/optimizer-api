@@ -402,14 +402,17 @@ module OptimizerWrapper
     # Don't split vrp if
     return [vrp] if ENV['DUMP_VRP'] || # Dump to compute matrix is needed
                     (vrp.vehicles.size <= 1) ||
-                    (vrp.services.empty? && vrp.shipments.empty?)  # there might be zero services or shipments (check together)
+                    (vrp.services.empty? && vrp.shipments.empty?) # there might be zero services or shipments (check together)
 
     if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 } && vrp.shipments.all?{ |s| s.sticky_vehicles.size == 1 }
       return split_independant_vrp_by_sticky_vehicle(vrp)
     end
 
-    if vrp.services.all?{ |s| !s.skills.empty? && s.sticky_vehicles.empty? &&
-       vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == v_skills.size } } }
+    if vrp.services.all?{ |s|
+         !s.skills.empty? &&
+         s.sticky_vehicles.empty? &&
+         vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == v_skills.size } }
+       }
       return split_independant_vrp_by_skills(vrp)
     end
 
