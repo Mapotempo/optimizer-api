@@ -408,7 +408,8 @@ module OptimizerWrapper
       return split_independant_vrp_by_sticky_vehicle(vrp)
     end
 
-    if vrp.services.all?{ |s|
+    if !vrp.subtours&.any? && # Cannot split if there is multimodal subtours
+       vrp.services.all?{ |s|
          !s.skills.empty? &&
          s.sticky_vehicles.empty? &&
          vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == v_skills.size } }
