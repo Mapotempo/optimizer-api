@@ -368,8 +368,10 @@ module OptimizerWrapper
         vrp: vrp,
       }
       sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, vehicle_ids)
-      sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration && vrp.resolution_duration * sub_service_vrp[:vrp].services.size / vrp.services.size
-      sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration && vrp.resolution_minimum_duration * sub_service_vrp[:vrp].services.size / vrp.services.size) || (vrp.resolution_initial_time_out && vrp.resolution_initial_time_out / vrp.vehicles.size)
+      split_ratio = (sub_service_vrp[:vrp].services.size + sub_service_vrp[:vrp].shipments.size) / (vrp.services.size + vrp.shipments.size).to_f
+      sub_service_vrp[:vrp].resolution_duration = (vrp.resolution_duration &.* split_ratio).to_i
+      sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration &.* split_ratio).to_i
+      sub_service_vrp[:vrp].resolution_iterations_without_improvment = (vrp.resolution_iterations_without_improvment  &.* split_ratio).to_i
       sub_vrps.push(sub_service_vrp[:vrp])
     }
     sub_vrps
