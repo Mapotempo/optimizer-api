@@ -181,13 +181,13 @@ module Wrappers
 
     def run_vroom(vehicles, services, points, matrices, dimensions, prefer_short, job)
       input = Tempfile.new('optimize-vroom-input', tmpdir=@tmp_dir)
-      problem = { vehicles:[], jobs:[], matrix:[] }
+      problem = { vehicles: [], jobs: [], matrix: [] }
       vehicle = vehicles.first
       problem[:vehicles] << {
         id: 0,
         start_index: vehicle.start_point_id ? points[vehicle.start_point_id].matrix_index : nil,
         end_index: vehicle.end_point_id ? points[vehicle.end_point_id].matrix_index : nil
-      }.delete_if{ |k, v| v.nil? }
+      }.delete_if{ |_k, v| v.nil? }
       problem[:jobs] = services.collect.with_index{ |service, index|
         [{
           id: index,
@@ -195,11 +195,34 @@ module Wrappers
         }]
       }.flatten
 
+      matrix_indices = (problem[:jobs].collect{ |jb| jb[:location_index] } + problem[:vehicles].collect{ |vec| [vec[:start_index], vec[:end_index]].uniq.compact }.flatten).uniq.sort
       matrix = matrices.find{ |current_matrix| current_matrix.id == vehicle.matrix_id }
-      size_matrix = [(matrix[:time] || []).size, (matrix[:distance] || []).size, (matrix[:value] || []).size].max - 1
+      size_matrix = matrix_indices.size
 
-      agglomerate_matrix = vehicle.matrix_blend(matrix, (0..size_matrix), [:time, :distance], {cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier})
-      agglomerate_matrix.collect!{ |a| a.collect{ |b| ((100 * b + (prefer_short ? 20 * Math.sqrt(b) : 0))/100 + 0.5) .to_i }}
+      # Index relabeling
+      problem[:jobs].each{ |jb|
+        jb[:location_index] = matrix_indices.find_index{ |ind| ind == jb[:location_index] }
+      }
+      problem[:vehicles].each{ |vec|
+        vec[:start_index] = matrix_indices.find_index{ |ind| ind == vec[:start_index] } if vec[:start_index]
+        vec[:end_index] = matrix_indices.find_index{ |ind| ind == vec[:end_index] } if vec[:end_index]
+      }
+
+      agglomerate_matrix = vehicle.matrix_blend(matrix, matrix_indices, dimensions, cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier)
+      if prefer_short
+        coeff = 20.0 / 100.0
+        (0..size_matrix - 1).each{ |i|
+          (0..size_matrix - 1).each{ |j|
+            agglomerate_matrix[i][j] = (agglomerate_matrix[i][j] + coeff * Math.sqrt(agglomerate_matrix[i][j])).round
+          }
+        }
+      else
+        (0..size_matrix - 1).each{ |i|
+          (0..size_matrix - 1).each{ |j|
+            agglomerate_matrix[i][j] = agglomerate_matrix[i][j].round
+          }
+        }
+      end
 
       problem[:matrix] = agglomerate_matrix
       input.write(problem.to_json)

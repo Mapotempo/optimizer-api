@@ -141,17 +141,26 @@ module Models
     end
 
     def matrix_blend(matrix, matrix_indices, dimensions, options = {})
-      matrix_indices.collect{ |i|
-        matrix_indices.collect{ |j|
-          if i && j
-            blend = (dimensions.include?(:time) && matrix.time ? matrix.time[i][j] * (options[:cost_time_multiplier] || 1) : 0) + # rubocop:disable Lint/UselessAssignment
-                    (dimensions.include?(:distance) && matrix.distance ? matrix.distance[i][j] * (options[:cost_distance_multiplier] || 1) : 0) +
-                    (dimensions.include?(:value) && matrix.value ? matrix.value[i][j] * (options[:value_matrix_multiplier] || 1) : 0)
-          else
-            0
-          end
+      coeff_time = (options[:cost_time_multiplier] || 1).to_f
+      coeff_dist = (options[:cost_distance_multiplier] || 1).to_f
+      coeff_value = (options[:cost_value_multiplier] || 1).to_f
+
+      size_matrix = matrix_indices.size
+
+      blend_matrix = Array.new(size_matrix) { Array.new(size_matrix, 0) }
+
+      (0..size_matrix - 1).each{ |ind_i|
+        i = matrix_indices[ind_i]
+        (0..size_matrix - 1).each{ |ind_j|
+          j = matrix_indices[ind_j]
+          next if i == j
+
+          blend_matrix[ind_i][ind_j] = (matrix.time && dimensions.include?(:time) ? matrix.time[i][j] * coeff_time : 0) +
+                                       (matrix.distance && dimensions.include?(:distance) ? matrix.distance[i][j] * coeff_dist : 0) +
+                                       (matrix.value && dimensions.include?(:value) ? matrix.value[i][j] * coeff_value : 0)
         }
       }
+      blend_matrix
     end
 
     def dimensions
