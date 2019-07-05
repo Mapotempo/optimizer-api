@@ -184,5 +184,43 @@ module Models
         strict_restriction: strict_restriction
       }
     end
+
+    def working_week_days()
+      return @working_week_days ||= self[:sequence_timewindows].collect(&:day_index)
+    end
+
+    def working_day_indices_in_range(range_start, range_end)
+      @working_range_indices ||= {}
+
+      if @working_range_indices[[range_start, range_end]].nil? # if info for this range is not already calculated, calculate
+        range = (range_start..range_end).to_a
+        unavailable_work_day_indices = self[:unavailable_work_day_indices] || [] # We do this because unavailable_work_day_indices can be nil instead of []. Normally create function should handle this
+        @working_range_indices[[range_start, range_end]] = (range - unavailable_work_day_indices).delete_if{ |range_day| !working_week_days().include?(range_day.modulo(7)) }
+      end
+
+      return @working_range_indices[[range_start, range_end]]
+    end
+
+    def total_work_days_in_range(range_start, range_end)
+      return working_day_indices_in_range(range_start, range_end).size
+    end
+
+    def total_work_time_in_range(range_start, range_end)
+      @total_work_time_in_range ||= {}
+
+      if @total_work_time_in_range[[range_start, range_end]].nil? # if info for this range is not already calculated, calculate
+        total_work_time = 0
+        working_day_indices_in_range(range_start, range_end).group_by{ |range_day| range_day.modulo(7) }.each{ |group|
+          week_day_index = group[0]
+          occurence = group[1].size
+          tw_index = working_week_days().find_index(week_day_index)
+          tw = self[:sequence_timewindows][tw_index]
+          total_work_time += (tw[:end] - tw[:start]) * occurence
+        }
+        @total_work_time_in_range[[range_start, range_end]] = total_work_time
+      end
+
+      return @total_work_time_in_range[[range_start, range_end]]
+    end
   end
 end

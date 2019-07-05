@@ -772,21 +772,21 @@ module Interpreters
 
           vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
 
-          vehicle_total_work_times = vrp.vehicles.collect{ |vehicle|
-            vehicle[:sequence_timewindows].sum{ |tw| tw.end - tw.start }
-          }
-          total_work_times = vehicle_total_work_times.sum.to_f
-          vrp.vehicles.each_with_index{ |vehicle, ind|
+          r_start = vrp[:configuration][:schedule][:range_indices][:start]
+          r_end = vrp[:configuration][:schedule][:range_indices][:end]
+
+          total_work_time = vrp.total_cumulated_vehicle_work_times().to_f
+
+          vrp.vehicles.each{ |vehicle|
             limits << {
-                        limit: cumulated_metrics[cut_symbol].to_f * (vehicle_total_work_times[ind] / total_work_times),
-                        total_work_time: vehicle_total_work_times[ind] * 12,        #### !!!!!!!!!!!!!!!!!!! * 12!!!!
-                        total_work_days: vehicle[:sequence_timewindows].size * 12   #### !!!!!!!!!!!!!!!!!!! * 12!!!!
+                        limit: cumulated_metrics[cut_symbol].to_f * (vehicle.total_work_time_in_range(r_start, r_end) / total_work_time),
+                        total_work_time: vehicle.total_work_time_in_range(r_start, r_end),
+                        total_work_days: vehicle.total_work_days_in_range(r_start, r_end)
                       }
           }
         else
           limits = { limit: cumulated_metrics[cut_symbol] / nb_clusters }
         end
-        p limits
         limits
       end
     end
