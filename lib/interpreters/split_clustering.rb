@@ -221,7 +221,7 @@ module Interpreters
       sub_vrp.services = services
       sub_vrp.shipments = shipments
       sub_vrp.rests = vrp.rests.select{ |r| sub_vrp.vehicles.collect{ |v| v.rests.id }.include? r.id }
-      sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } } }
+      sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
       sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + sub_vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten).compact.uniq
       {
         vrp: sub_vrp,
