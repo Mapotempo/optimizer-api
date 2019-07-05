@@ -358,8 +358,8 @@ module OptimizerWrapper
     vehicle_ids_by_skills = all_skills.collect{ |skills| vrp.vehicles.collect{ |v| v.id if v.skills.flatten == skills }.compact }
 
     sub_vrps = vehicle_ids_by_skills.each_with_object([]) { |vehicle_ids, sub_vrps|
-      service_ids = vrp.services.select{ |s| (s.skills & vrp.vehicles.find{ |v| vehicle_id.include?(v.id) }.skills.flatten) == s.skills }.map(&:id)
-      shipment_ids = vrp.shipments.select{ |s| (s.skills & vrp.vehicles.find{ |v| vehicle_id.include?(v.id) }.skills.flatten) == s.skills }.map(&:id)
+      service_ids = vrp.services.select{ |s| (s.skills & vrp.vehicles.find{ |v| vehicle_ids.include?(v.id) }.skills.flatten) == s.skills }.map(&:id)
+      shipment_ids = vrp.shipments.select{ |s| (s.skills & vrp.vehicles.find{ |v| vehicle_ids.include?(v.id) }.skills.flatten) == s.skills }.map(&:id)
 
       next if service_ids.empty? && shipment_ids.empty? # No need to create this sub_problem if there is no shipment nor service in it
 
