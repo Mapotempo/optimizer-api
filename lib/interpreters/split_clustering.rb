@@ -257,13 +257,15 @@ module Interpreters
         else
           ratio_metric[:limit] *= ratio
         end
+
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
+
         c.clusters.delete([])
         values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][cut_symbol] }.sum.to_i }
         limit_score = (0..c.cluster_metrics.size - 1).collect{ |cluster_index|
           centroid_coords = [c.centroids[cluster_index][0], c.centroids[cluster_index][1]]
           distance_to_centroid = c.clusters[cluster_index].data_items.collect{ |item| custom_distance([item[0], item[1]], centroid_coords) }.sum
-          ml = metric_limit.is_a?(Array) ? metric_limit[cluster_index][:limit] : metric_limit[:limit]
+          ml = metric_limit.is_a?(Array) ? ratio_metric[cluster_index][:limit] : metric_limit[:limit]
           if c.clusters[cluster_index].data_items.size == 1
             2**32
           elsif ml.zero? # Why is it possible?
