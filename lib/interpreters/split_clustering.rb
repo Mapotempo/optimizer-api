@@ -258,6 +258,8 @@ module Interpreters
           ratio_metric[:limit] *= ratio
         end
 
+        c.distance_function = options[:distance_function]
+
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
 
         c.clusters.delete([])
@@ -302,13 +304,24 @@ module Interpreters
     end
 
     def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {})
-      default_options = {max_iterations: 300, restarts: 50, cut_symbol: :duration}
+      default_options = { max_iterations: 300, restarts: 50, cut_symbol: :duration }
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
       if vrp.services.all?{ |service| service[:activity] } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
+
+        if options[:entity] == 'work_day' || !vrp.matrices.empty?
+          if vrp.matrices.empty?
+            vrp_need_matrix = OptimizerWrapper.compute_vrp_need_matrix(service_vrp[:vrp])
+            service_vrp[:vrp] = OptimizerWrapper.compute_need_matrix(vrp, vrp_need_matrix)
+          end
+
+          options[:distance_function] = lambda do |data_item_a, data_item_b|
+            vrp.matrices[0][:time][data_item_a[3][:matrix_index]][data_item_b[3][:matrix_index]]
+          end
+        end
 
         data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, options[:entity], unit_symbols, cumulated_metrics)
         limits = centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity])
@@ -318,7 +331,9 @@ module Interpreters
         expected_caracteristics.map!{ |d| "not_day_skill_#{d}" } if options[:entity] == 'work_day'
         # TODO : add skills
 
-        clusters, _centroids = kmeans_process(centroids, options[:max_iterations], options[:restarts], nb_clusters, data_items, unit_symbols, options[:cut_symbol], limits, vrp, expected_caracteristics: expected_caracteristics)
+        options[:expected_caracteristics] = expected_caracteristics
+
+        clusters, _centroids = kmeans_process(centroids, options[:max_iterations], options[:restarts], nb_clusters, data_items, unit_symbols, options[:cut_symbol], limits, vrp, options)
 
         # TODO : possible to remove ?
         # adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
@@ -505,6 +520,11 @@ module Interpreters
             sticky, skills = properties
 
             unit_quantities = Hash.new(0)
+
+            if entity == 'work_day' || !vrp.matrices.empty? #use matrix
+              unit_quantities[:matrix_index] += point[:matrix_index]
+            end
+
             sub_set.sort_by{ |s| - s.visits_number }.each_with_index{ |s, i|
               unit_quantities[:visits] += s.visits_number
               cumulated_metrics[:visits] += s.visits_number
