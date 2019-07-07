@@ -66,6 +66,10 @@ module Ai4r
           clusters.collect{ |cluster_data_points| get_mean_or_mode(cluster_data_points) }
         end
 
+        @distance_function ||= lambda do |a, b|
+          Helper.flying_distance(a, b)
+        end
+
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
         raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
         @iterations = 0
@@ -185,12 +189,15 @@ module Ai4r
         if @cut_symbol
           #if there is balancing.
           @centroids.each_with_index { |centroid, index|
-            #move the data_points closest to the centroid centers so that balancing can start early
+            #move the data_points closest to the centroid centers to the top of the data_items list so that balancing can start early
             point_closest_to_centroid_center = clusters[index].data_items.min_by{ |data_point| Helper::flying_distance(centroid, data_point) }
             @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center)) #move it to the top
 
+            #correct the matrix_index of the centroid with the index of the point_closest_to_centroid_center
+            centroid[3][:matrix_index] = point_closest_to_centroid_center[3][:matrix_index] if centroid[3][:matrix_index]
+
             #correct the distance_from_and_to_depot info of the new cluster with the average of the points
-            centroid[3][:duration_from_and_to_depot] = @clusters[index].data_items.map { |d| d[3][:duration_from_and_to_depot] }.sum / @clusters[index].data_items.size
+            centroid[3][:duration_from_and_to_depot] = @clusters[index].data_items.map { |d| d[3][:duration_from_and_to_depot] }.sum / @clusters[index].data_items.size.to_f
           }
         end
 
@@ -252,7 +259,10 @@ module Ai4r
 
       def distance(a, b, cluster_index)
         # TODO : rename a & b ?
-        fly_distance = Helper.flying_distance(a, b)
+        # TODO: Move extra logic outside of the distance function.
+        # The user should be able to overload 'distance' function witoud losing any functionality
+        fly_distance = @distance_function.call(a, b) # TODO: Left renaming the variable after the merge to avoid conflicts in the merge. flying_distance => distance
+
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
         limit = if @cut_limit.is_a? Array
           @cut_limit[cluster_index][:limit]
