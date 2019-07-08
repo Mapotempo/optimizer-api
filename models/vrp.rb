@@ -232,12 +232,17 @@ module Models
       Helper.services_duration(self.services)
     end
 
-    def total_cumulated_vehicle_work_times()
-      schedule_start = self[:configuration][:schedule][:range_indices][:start]
-      schedule_end = self[:configuration][:schedule][:range_indices][:end]
-      return self[:vehicles].sum{ |vehicle|
+    def total_work_times
+      schedule_start = self.schedule_range_indices[:start]
+      schedule_end = self.schedule_range_indices[:end]
+      work_times = self.vehicles.collect{ |vehicle|
         vehicle.total_work_time_in_range(schedule_start, schedule_end)
       }
+      work_times
+    end
+
+    def total_work_time
+      total_work_times.sum
     end
   end
 end

@@ -108,7 +108,7 @@ module Ai4r
           recompute_centroids
         end
 
-        puts "Clustering converged after #{@iterations} iterations.\n"
+        puts "Clustering converged after #{@iterations} iterations."
 
         self
       end

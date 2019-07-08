@@ -284,8 +284,8 @@ module Interpreters
             (1.0 - balancing_coeff) * distance_to_centroid + balancing_coeff * ((cluster_metric - ml).abs / ml) * distance_to_centroid
           end
         }.sum
-        puts "balance : #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum/values.size).to_i}"
-        puts "Restart: #{restart} ratio_metric: #{ratio_metric} score: #{limit_score} balance : #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum/values.size).to_i} #{(values.min - values.max).to_f / values.max}"
+        puts "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric}"
+        puts "balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
         restart += 1
         empty_clusters_score = c.cluster_metrics.size < nb_clusters && (c.cluster_metrics.size..nb_clusters - 1).collect{ |cluster_index|
             metric_limit.is_a?(Array) ? metric_limit[cluster_index][:limit] : metric_limit[:limit]
@@ -792,12 +792,12 @@ module Interpreters
             point[3][:duration_from_and_to_depot] = time_matrix_from_depot[0][0][index] + time_matrix_to_depot[0][index][0]
           }
 
-          vrp.vehicles.sort_by!{ |vehicle| vehicle[:sequence_timewindows].size }
+          vrp.vehicles.sort_by!{ |vehicle| vehicle.sequence_timewindows.size }
 
-          r_start = vrp[:configuration][:schedule][:range_indices][:start]
-          r_end = vrp[:configuration][:schedule][:range_indices][:end]
+          r_start = vrp.schedule_range_indices[:start]
+          r_end = vrp.schedule_range_indices[:end]
 
-          total_work_time = vrp.total_cumulated_vehicle_work_times().to_f
+          total_work_time = vrp.total_work_time.to_f
 
           vrp.vehicles.each{ |vehicle|
             limits << {
