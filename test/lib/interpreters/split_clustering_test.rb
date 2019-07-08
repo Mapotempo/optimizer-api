@@ -70,7 +70,6 @@ class SplitClusteringTest < Minitest::Test
     services_vrps_days.each{ |service_vrp_day|
       durations << service_vrp_day[:vrp].services_duration
     }
-    puts durations.inspect
 
     average_duration = durations.inject(0, :+) / durations.size
     min_duration = average_duration - 0.5 * average_duration
@@ -79,7 +78,7 @@ class SplitClusteringTest < Minitest::Test
       # assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
       duration < max_duration && duration > min_duration
     }
-    assert o.select{ |i| i }.size > 0.9 * o.size # TODO: All clusters should be balanced -- i.e., not just 90% of them
+    assert o.select{ |i| i }.size > 0.9 * o.size, "Cluster durations are not balanced: #{durations.inspect}" # TODO: All clusters should be balanced -- i.e., not just 90% of them
   end
 
   def test_cluster_one_phase_vehicle
@@ -119,9 +118,9 @@ class SplitClusteringTest < Minitest::Test
     average_duration = durations.inject(0, :+) / durations.size
     min_duration = average_duration - 0.5 * average_duration
     max_duration = average_duration + 0.5 * average_duration
-    puts durations.sort.inspect
+
     durations.each_with_index{ |duration, index|
-      assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration.round(2)}) should be between #{min_duration.round(2)} and #{max_duration.round(2)}"
+      assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration.round(2)}) should be between #{min_duration.round(2)} and #{max_duration.round(2)}. All durations #{durations.inspect}"
     }
 
     overall_min_duration = average_duration
@@ -146,7 +145,7 @@ class SplitClusteringTest < Minitest::Test
       overall_min_duration = [overall_min_duration, durations.min].min
       overall_max_duration = [overall_max_duration, durations.max].max
     }
-    puts "Overall min and max duration are #{overall_min_duration.round(2)} and #{overall_max_duration.round(2)} (#{(100 * (overall_max_duration - overall_min_duration) / overall_max_duration).round(2)}%)"
+    assert overall_max_duration / overall_min_duration < 3.5, "Difference between overall (over all vehicles and all days) min and max duration is too much (#{overall_min_duration.round(2)} and #{overall_max_duration.round(2)})."
   end
 
   def test_length_centroid
