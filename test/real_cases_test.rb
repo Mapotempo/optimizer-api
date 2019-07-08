@@ -436,4 +436,23 @@ class RealCasesTest < Minitest::Test
       assert_equal 0, result[:unassigned].size
     end
   end
+
+  def test_soft_instance_dichotomious
+    vrp = FCT.load_vrp(self)
+    t1 = Time.now
+    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    t2 = Time.now
+    assert result
+
+    # Check activities
+    assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
+
+    # Check routes
+    assert result[:routes].size < 48, "Too many routes: #{result[:routes].size}"
+
+    # Check elapsed time
+    assert result[:elapsed] / 1000 > 4080 * 0.9 && result[:elapsed] / 1000 < 4590 * 1.01, "Incorrect elapsed time: #{result[:elapsed]}"
+    assert t2 - t1 < 4590 * 1.55, "Too long elapsed time: #{t2 - t1}"
+    assert t2 - t1 > 4080, "Too short elapsed time: #{t2 - t1}"
+  end
 end
