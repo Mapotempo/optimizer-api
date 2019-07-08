@@ -113,61 +113,6 @@ module Models
       super(hash)
     end
 
-    def calculate_service_exclusion_costs(type = :time, force_recalc = false)
-      # TODO: This function will calculate an exclusion cost for each service seperately
-      # using the time, distance , capacity or a mix of all.
-      #
-      # It is commited as is due to emercency and it basically prevents optim to use an empty vehicle
-      # if there are less than ~15 services (in theory) but due to other costs etc it might be less.
-      #
-      # type        : [:time, :distance, :capacity]
-      # force_recalc: [true, false] For cases where existing exclusion costs needs to be ignored.
-
-      max_fixed_cost = vehicles.max_by(&:cost_fixed).cost_fixed
-
-      if max_fixed_cost <= 0 || (!force_recalc && services.any?{ |service| service.exclusion_cost && service.exclusion_cost > 0 })
-        return
-      end
-
-      case type
-      when :time
-        tsp = TSPHelper::create_tsp(self, vehicles.first)
-        result = TSPHelper::solve(tsp)
-        total_travel_time = result[:cost]
-
-        total_vehicle_work_time = vehicles.map{ |vehicle| vehicle[:duration] || vehicle[:timewindow][:end] - vehicle[:timewindow][:start] }.reduce(:+)
-        average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
-        total_service_time = services.map{ |service| service[:activity][:duration].to_i }.reduce(:+)
-
-        average_loc = points.inject([0, 0]) { |sum, point| sum = [sum[0] + point.location.lat, sum[1] + point.location.lon] }
-        average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
-
-        #TODO It assums there is only one depot
-        depot = vehicles.collect{ |vehicle| [vehicle.start_point.location.lat, vehicle.end_point.location.lon] }.uniq.flatten
-        approx_depot_time_correction = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil * 2 * Helper.flying_distance(average_loc, depot)
-        total_time_load = total_service_time + total_travel_time + approx_depot_time_correction
-
-        average_service_load = total_time_load / services.size.to_f
-        average_number_of_services = average_vehicles_work_time / average_service_load
-        exclusion_rate = resolution_div_average_service * average_number_of_services
-        angle = resolution_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
-        tan_variable = Math.tan(angle * Math::PI / 180)
-        tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
-        coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
-        coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
-
-        services.each{ |service|
-          service.exclusion_cost = (coeff_variable_cost * (max_fixed_cost / exclusion_rate * service[:activity][:duration] / average_service_load) + coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
-        }
-      when :distance
-        raise 'Distance based exclusion cost calculation is not ready'
-      when :capacity
-        raise 'Capacity based exclusion cost calculation is not ready'
-      end
-
-      return
-    end
-
     def configuration=(configuration)
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
       self.resolution = configuration[:resolution] if configuration[:resolution]
@@ -274,6 +219,61 @@ module Models
 
     def total_work_time
       total_work_times.sum
+    end
+
+    def calculate_service_exclusion_costs(type = :time, force_recalc = false)
+      # TODO: This function will calculate an exclusion cost for each service seperately
+      # using the time, distance , capacity or a mix of all.
+      #
+      # It is commited as is due to emercency and it basically prevents optim to use an empty vehicle
+      # if there are less than ~15 services (in theory) but due to other costs etc it might be less.
+      #
+      # type        : [:time, :distance, :capacity]
+      # force_recalc: [true, false] For cases where existing exclusion costs needs to be ignored.
+
+      max_fixed_cost = vehicles.max_by(&:cost_fixed).cost_fixed
+
+      if max_fixed_cost <= 0 || (!force_recalc && services.any?{ |service| service.exclusion_cost && service.exclusion_cost > 0 })
+        return
+      end
+
+      case type
+      when :time
+        tsp = TSPHelper::create_tsp(self, vehicles.first)
+        result = TSPHelper::solve(tsp)
+        total_travel_time = result[:cost]
+
+        total_vehicle_work_time = vehicles.map{ |vehicle| vehicle[:duration] || vehicle[:timewindow][:end] - vehicle[:timewindow][:start] }.reduce(:+)
+        average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
+        total_service_time = services.map{ |service| service[:activity][:duration].to_i }.reduce(:+)
+
+        average_loc = points.inject([0, 0]) { |sum, point| sum = [sum[0] + point.location.lat, sum[1] + point.location.lon] }
+        average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
+
+        #TODO It assums there is only one depot
+        depot = vehicles.collect{ |vehicle| [vehicle.start_point.location.lat, vehicle.end_point.location.lon] }.uniq.flatten
+        approx_depot_time_correction = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil * 2 * Helper.flying_distance(average_loc, depot)
+        total_time_load = total_service_time + total_travel_time + approx_depot_time_correction
+
+        average_service_load = total_time_load / services.size.to_f
+        average_number_of_service = average_vehicles_work_time / average_service_load
+        exclusion_rate = resolution_div_average_service * average_number_of_service
+        angle = resolution_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
+        tan_variable = Math.tan(angle * Math::PI / 180)
+        tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
+        coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
+        coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
+
+        services.each{ |service|
+          service.exclusion_cost = (coeff_variable_cost * (max_fixed_cost / exclusion_rate * service[:activity][:duration] / average_service_load) + coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
+        }
+      when :distance
+        raise 'Distance based exclusion cost calculation is not ready'
+      when :capacity
+        raise 'Capacity based exclusion cost calculation is not ready'
+      end
+
+      return
     end
   end
 end
