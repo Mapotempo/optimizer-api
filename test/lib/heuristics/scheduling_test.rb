@@ -18,6 +18,9 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
+  def setup
+    @regularity_restarts = ENV['INTENSIVE_TEST'] ? 50 : 5
+  end
 
   def test_not_allowing_partial_affectation
     vrp = VRP.scheduling_seq_timewindows
@@ -496,29 +499,50 @@ class HeuristicTest < Minitest::Test
   def test_results_regularity
     visits_unassigned = []
     services_unassigned = []
-    (0..49).each{ |_tentative|
+    reason_unassigned = []
+    (1..@regularity_restarts).each{ |_tentative|
       vrp = FCT.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: {vrp: [:ortools] } }, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: {vrp: [:ortools] }}, vrp, nil)
       visits_unassigned << result[:unassigned].size
       services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+      reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
     }
-    assert services_unassigned.max / services_unassigned.min.to_f < 2, "#{services_unassigned} should be more regular" # easier to achieve
-    # TODO: visits_unassigned is often 2, but in the worst case 13
-    assert visits_unassigned.max < 14, "#{visits_unassigned} should be more regular"
-  end
 
+    if services_unassigned.max / services_unassigned.min.to_f >= 2 || visits_unassigned.max >= 14
+      reason_unassigned.each_with_index{ |reason, index|
+        puts "unassigned visits ##{index} reason:\n#{reason}"
+      }
+      puts "unassigned services #{services_unassigned}"
+      puts "unassigned visits #{visits_unassigned}"
+    end
+
+    assert services_unassigned.max / services_unassigned.min.to_f < 2, "unassigned services (#{services_unassigned}) should be more regular" # easier to achieve
+    # TODO: visits_unassigned is often 2, but in the worst case 13
+    assert visits_unassigned.max < 14, "unassigned visits (#{visits_unassigned}) should be more regular"
+  end
   def test_results_regularity_2
     visits_unassigned = []
     services_unassigned = []
-    (0..49).each{ |_tentative|
+    reason_unassigned = []
+    (1..@regularity_restarts).each{ |_tentative|
       vrp = FCT.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       visits_unassigned << result[:unassigned].size
       services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+      reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
     }
-    assert services_unassigned.max / services_unassigned.min.to_f < 2, "#{services_unassigned} should be more regular" # easier to achieve
+
+    if services_unassigned.max / services_unassigned.min.to_f >= 2 || visits_unassigned.max / visits_unassigned.min.to_f >= 3
+      reason_unassigned.each_with_index{ |reason, index|
+        puts "unassigned visits ##{index} reason:\n#{reason}"
+      }
+      puts "unassigned services #{services_unassigned}"
+      puts "unassigned visits #{visits_unassigned}"
+    end
+
+    assert services_unassigned.max / services_unassigned.min.to_f < 2, "unassigned services (#{services_unassigned}) should be more regular" # easier to achieve
     # TODO: best visits_unassigned is 8
-    assert visits_unassigned.max / visits_unassigned.min.to_f < 3, "#{visits_unassigned} should be more regular"
+    assert visits_unassigned.max / visits_unassigned.min.to_f < 3, "unassigned visits (#{visits_unassigned}) should be more regular"
   end
 
   def test_callage_freq

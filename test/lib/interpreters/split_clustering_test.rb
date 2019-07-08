@@ -19,12 +19,16 @@ require './test/test_helper'
 require './lib/interpreters/split_clustering.rb'
 
 class SplitClusteringTest < Minitest::Test
+  def setup
+    @split_restarts = ENV['INTENSIVE_TEST'] ? 50 : 5
+  end
+
   def test_cluster_dichotomious
     vrp = FCT.load_vrp(self)
     service_vrp = {vrp: vrp, service: :demo}
     while service_vrp[:vrp].services.size > 100
       service_vrp[:vrp][:vehicles] *= 2
-      services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, cut_symbol: :duration, entity: 'vehicle')
+      services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
       assert_equal 2, services_vrps_dicho.size
 
       # TODO: with rate_balance != 0 there is risk to get services to same lat/lng in different clusters
@@ -63,7 +67,7 @@ class SplitClusteringTest < Minitest::Test
           we expect that the clusters are balanced. However, currently it takes too long and the results are not balanced."
     vrp = FCT.load_vrp(self, fixture_file: 'cluster_two_phases.json')
     service_vrp = { vrp: vrp, service: :demo }
-    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 80, cut_symbol: :duration, entity: 'work_day')
+    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 80, cut_symbol: :duration, entity: 'work_day', restarts: @split_restarts)
     assert_equal 80, services_vrps_days.size
 
     durations = []
@@ -86,7 +90,7 @@ class SplitClusteringTest < Minitest::Test
     service_vrp = { vrp: vrp, service: :demo }
 
     total_durations = vrp.services_duration
-    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: 'vehicle')
+    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
     assert_equal 5, services_vrps_days.size
 
     durations = []
@@ -108,7 +112,7 @@ class SplitClusteringTest < Minitest::Test
   def test_cluster_two_phases
     vrp = FCT.load_vrp(self)
     service_vrp = { vrp: vrp, service: :demo }
-    services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, cut_symbol: :duration, entity: 'vehicle')
+    services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
     assert_equal 16, services_vrps_vehicles.size
 
     durations = []
@@ -129,7 +133,7 @@ class SplitClusteringTest < Minitest::Test
     services_vrps_vehicles.each{ |services_vrps|
       durations = []
       services_vrps[:vrp][:vehicles] *= 5
-      services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, cut_symbol: :duration, entity: 'work_day')
+      services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(services_vrps, 5, cut_symbol: :duration, entity: 'work_day', restarts: @split_restarts)
       assert_equal 5, services_vrps.size
       services_vrps.each{ |service_vrp_day|
         next if service_vrp_day[:vrp].points.size < 10
