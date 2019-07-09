@@ -209,19 +209,22 @@ module Interpreters
     end
 
     def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicle_ids = nil)
+      # WARNING: Below we do marshal dump load but we continue using original objects
+      # That is, if these objects are modified in sub_vrp then they will be modified in vrp too.
+      # However, since original objects are coming from the data and we shouldn't be modifiying them, this doesn't pose a problem.
+      # TOD0: Here we do Marshal.load/dump but we continue to use the original objects (and there is no bugs related to that)
+      # That means we don't need hard copy of obejcts we just need to cut the connection between arrays (like services points etc) that we want to modify.
       vrp = service_vrp[:vrp]
       sub_vrp = Marshal::load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
-      services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
-      shipments = vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
       # TODO: Within Scheduling Vehicles require to have unduplicated ids
       if available_vehicle_ids
         sub_vrp.vehicles.delete_if{ |vehicle| available_vehicle_ids.exclude?(vehicle[:id]) }
         sub_vrp.routes.delete_if{ |r| available_vehicle_ids.exclude? r.vehicle_id }
       end
-      points_ids = services.map{ |s| s.activity.point.id }.uniq.compact + shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
-      sub_vrp.services = services
-      sub_vrp.shipments = shipments
+      sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
+      sub_vrp.shipments = vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
+      points_ids = vrp.services.map{ |s| s.activity.point.id }.uniq.compact + vrp.shipments.map{ |s| [s.pickup.point.id, s.delivery.point.id] }.flatten.uniq.compact
       sub_vrp.rests = vrp.rests.select{ |r| sub_vrp.vehicles.collect{ |v| v.rests.id }.include? r.id }
       sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
       sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + sub_vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten).compact.uniq
