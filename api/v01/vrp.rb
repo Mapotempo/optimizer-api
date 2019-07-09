@@ -421,7 +421,7 @@ module Api
                 Vrp.vrp_request_vehicle(self)
               end
 
-              optional(:services, type: Array, desc: 'Independant activity, which does not require a context') do
+              optional(:services, type: Array, desc: 'Independent activity, which does not require a context') do
                 Vrp.vrp_request_service(self)
               end
               optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off') do
@@ -442,7 +442,7 @@ module Api
               end
 
               optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation') do
-                optional(:preprocessing, type: Hash, desc: 'Parameters independant from the search') do
+                optional(:preprocessing, type: Hash, desc: 'Parameters independent from the search') do
                   Vrp.vrp_request_preprocessing(self)
                 end
                 optional(:resolution, type: Hash, desc: 'Parameters used to stop the search') do
@@ -482,7 +482,7 @@ module Api
               Vrp.vrp_request_quantity(self)
             end
 
-            optional :services, type: Array, desc: 'Independant activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
+            optional :services, type: Array, desc: 'Independent activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_service(self)
             end
 
@@ -573,9 +573,9 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             solution = APIBase.dump_vrp_cache.read("#{id}-#{params[:api_key]}.solution") || OptimizerWrapper::Result.get(id)
-            output_format = params[:format]&.to_sym || (solution['csv'] ? :csv : env['api.format'])
+            output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
 
-            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job || solution
+            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job && job['options']['api_key'] == params[:api_key] || solution
 
             solution ||= {}
 
@@ -667,7 +667,7 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
 
-            if !job || OptimizerWrapper.job_list(params[:api_key]).map{ |j| j[:uuid] }.exclude?(id)
+            if !job || job['options']['api_key'] != params[:api_key]
               status 404
               error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
             else

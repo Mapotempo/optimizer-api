@@ -60,27 +60,31 @@ class Api::V01::WithSolverTest < Api::V01::VrpTest
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
       assert !JSON.parse(last_response.body)['solutions'].nil? && !JSON.parse(last_response.body)['solutions'].empty?
-      delete "0.1/vrp/jobs/#{@job_id}.json", { api_key: 'ortools'}
+      delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'ortools'
       assert_equal 202, last_response.status, last_response.body
       assert !JSON.parse(last_response.body)['solutions'].nil? && !JSON.parse(last_response.body)['solutions'].empty?
     end
   end
 
-  def test_vroom_optimize_each
+  def test_vroom_optimize_independent
     FCT.solve_asynchronously do
       @job_id = submit_vrp api_key: 'vroom', vrp: JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']
       result = wait_status @job_id, 'completed', api_key: 'vroom'
+      assert_equal ['vroom', 'vroom', 'vroom', 'vroom', 'vroom'], result['solutions'][0]['solvers']
       assert_equal 5, result['solutions'][0]['routes'].size
     end
   ensure
     delete_completed_job @job_id, api_key: 'vroom'
   end
 
-  def test_ortools_optimize_each
+  def test_ortools_optimize_independent
     FCT.solve_asynchronously do
       @job_id = submit_vrp api_key: 'ortools', vrp: JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']
       result = wait_status @job_id, 'completed', api_key: 'ortools'
+      assert_equal ['ortools', 'ortools', 'ortools', 'ortools', 'ortools'], result['solutions'][0]['solvers']
       assert_equal 5, result['solutions'][0]['routes'].size
+      # TODO: 15000/15000 seems to be amazing in json!?
+      # assert result['solutions'][0]['elapsed'] > 15000 && result['solutions'][0]['elapsed'] < 15000
     end
   ensure
     delete_completed_job @job_id, api_key: 'ortools'

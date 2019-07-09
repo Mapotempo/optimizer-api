@@ -78,7 +78,7 @@ module OptimizerWrapper
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
 
-    services_vrps = split_independant_vrp(vrp).map.with_index{ |vrp_element, i|
+    services_vrps = split_independent_vrp(vrp).map.with_index{ |vrp_element, i|
       {
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
@@ -152,7 +152,7 @@ module OptimizerWrapper
     @unfeasible_services = []
 
     cluster_reference = 0
-    real_result = join_independant_vrps(services_vrps, block) { |service, vrp, block|
+    real_result = join_independent_vrps(services_vrps, block) { |service, vrp, block|
       cluster_result = nil
       if !vrp.subtours.empty?
         multi_modal = Interpreters::MultiModal.new(vrp, service)
@@ -302,7 +302,7 @@ module OptimizerWrapper
     raise
   end
 
-  def self.split_independant_vrp_by_skills(vrp)
+  def self.split_independent_vrp_by_skills(vrp)
     # TODO : remove this flatten to take into account alternative skills on vehicle
     all_skills = vrp.vehicles.collect{ |v| v.skills.flatten }.uniq
     vehicle_ids_by_skills = all_skills.collect{ |skills| vrp.vehicles.collect{ |v| v.id if v.skills.flatten == skills }.compact }
@@ -327,7 +327,7 @@ module OptimizerWrapper
     sub_vrps
   end
 
-  def self.split_independant_vrp_by_sticky_vehicle(vrp)
+  def self.split_independent_vrp_by_sticky_vehicle(vrp)
     # Intead of map{}.compact() or collect{}.compact() reduce([]){} or each_with_object([]){} is more efficient
     # when there are items to skip in the loop because it makes one pass of the array instead of two
     sub_vrps = vrp.vehicles.map(&:id).each_with_object([]) { |vehicle_id, sub_vrps|
@@ -348,13 +348,13 @@ module OptimizerWrapper
     sub_vrps
   end
 
-  def self.split_independant_vrp(vrp)
+  def self.split_independent_vrp(vrp)
     # Don't split vrp if
     return [vrp] if (vrp.vehicles.size <= 1) ||
                     (vrp.services.empty? && vrp.shipments.empty?) # there might be zero services or shipments (check together)
 
     if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 } && vrp.shipments.all?{ |s| s.sticky_vehicles.size == 1 }
-      return split_independant_vrp_by_sticky_vehicle(vrp)
+      return split_independent_vrp_by_sticky_vehicle(vrp)
     end
 
     if !vrp.subtours&.any? && # Cannot split if there is multimodal subtours
@@ -363,13 +363,13 @@ module OptimizerWrapper
          s.sticky_vehicles.empty? &&
          vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == v_skills.size } }
        }
-      return split_independant_vrp_by_skills(vrp)
+      return split_independent_vrp_by_skills(vrp)
     end
 
     [vrp]
   end
 
-  def self.join_independant_vrps(services_vrps, callback)
+  def self.join_independent_vrps(services_vrps, callback)
     results = services_vrps.each_with_index.map{ |sv, i|
       yield(sv[:service], sv[:vrp], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
         callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
@@ -389,7 +389,7 @@ module OptimizerWrapper
   end
 
   def self.job_list(api_key)
-    jobs = (JobList.get(api_key) || []).collect{ |e|
+    (JobList.get(api_key) || []).collect{ |e|
       if job = Resque::Plugins::Status::Hash.get(e)
         {
           time: job.time,
@@ -401,7 +401,7 @@ module OptimizerWrapper
       else
         Result.remove(api_key, e)
       end
-    }.compact || []
+    }.compact
   end
 
   def self.job_kill(api_key, id)
