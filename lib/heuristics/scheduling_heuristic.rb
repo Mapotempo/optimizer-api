@@ -130,18 +130,23 @@ module SchedulingHeuristic
         group_tw.delete_if{ |tw1|
           @services_data[service[:id]][:tw].none?{ |tw2|
             (tw2[:day_index].nil? || tw2[:day_index] == tw1[:day_index]) &&
-              (tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start] && tw2[:end] >= tw1[:end])
+              (tw2[:start].nil? || tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start]) &&
+              (tw2[:end].nil? || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
           }
         }
 
         next if group_tw.empty?
         # adjust all tws with intersections with this point tws
-        @services_data[service[:id]][:tw].each{ |tw|
-          intersecting_tws = group_tw.select{ |t| (t[:day_index].nil? || tw[:day_index].nil? || t[:day_index] == tw[:day_index]) && (tw[:start].between?(t[:start], t[:end]) || tw[:end].between?(t[:start], t[:end]) || tw[:start] <= t[:start] && tw[:end] >= t[:start]) }
+        @services_data[service[:id]][:tw].each{ |tw1|
+          intersecting_tws = group_tw.select{ |tw2|
+            (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
+              (tw2[:start].nil? || tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start]) &&
+              (tw2[:end].nil? || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
+          }
           next if intersecting_tws.empty?
-          intersecting_tws.each{ |t|
-            t[:start] = [t[:start], tw[:start]].max
-            t[:end] = [t[:end], tw[:end]].min
+          intersecting_tws.each{ |tw2|
+            tw2[:start] = [tw2[:start], tw1[:start]].max
+            tw2[:end] = [tw2[:end], tw1[:end]].min
           }
         }
 
@@ -485,7 +490,7 @@ module SchedulingHeuristic
     sooner_start = inserted_final_time
     if next_service_info[:tw] && !next_service_info[:tw].empty?
       tw = find_corresponding_timewindow(next_service_info[:tw], current_day, next_current_arrival)
-      sooner_start = tw[:start] - dist_from_inserted if tw
+      sooner_start = tw[:start] - dist_from_inserted if tw && tw[:start]
     end
     new_start = [sooner_start, inserted_final_time].max
     new_end = new_start + dist_from_inserted + next_service_considered_setup + next_service_info[:duration]
@@ -811,18 +816,18 @@ module SchedulingHeuristic
       }
     else
       inserted_service_info[:tw].select{ |tw| tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index] % 7 }.each{ |tw|
-        start_time = (insertion_index.zero? ? [route_data[:tw_start], tw[:start] - route_time].max : [previous_service_end, tw[:start] - route_time].max)
+        start_time = insertion_index.zero? ? route_data[:tw_start] : previous_service_end
+        start_time = (insertion_index.zero? ? [route_data[:tw_start], tw[:start] - route_time].max : [previous_service_end, tw[:start] - route_time].max) if tw[:start]
         final_time = start_time + route_time + setup_duration + duration
 
-        if start_time <= tw[:end]
-          list << {
-            start_time: start_time,
-            final_time: final_time,
-            end_tw: tw[:end],
-            max_shift: tw[:end] - (start_time + route_time),
-            setup_duration: setup_duration
-          }
-        end
+        next if tw[:end] && start_time > tw[:end]
+        list << {
+          start_time: start_time,
+          final_time: final_time,
+          end_tw: tw[:end],
+          max_shift: tw[:end] ? tw[:end] - (start_time + route_time) : nil,
+          setup_duration: setup_duration
+        }
       }
     end
 
@@ -1074,6 +1079,10 @@ module SchedulingHeuristic
   end
 
   def self.find_corresponding_timewindow(service_tw, day, time)
-    service_tw.find{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && time.between?(tw[:start], tw[:end]) }
+    service_tw.find{ |tw|
+      (tw[:day_index].nil? || tw[:day_index] == day % 7) &&
+        (tw[:start].nil? || time >= tw[:start]) &&
+        (tw[:end].nil? || time <= tw[:end])
+    }
   end
 end

@@ -190,12 +190,12 @@ module Interpreters
               new_service.activity.timewindows = if !service.activity.timewindows.empty?
                 new_timewindows = service.activity.timewindows.collect{ |timewindow|
                   if timewindow.day_index
-                    Models::Timewindow.new(start: timewindow.start + timewindow.day_index * 86400,
-                                           end: timewindow.end + timewindow.day_index * 86400)
+                    Models::Timewindow.new(start: (timewindow.start || 0) + timewindow.day_index * 86400,
+                                           end: (timewindow.end || 86399) + timewindow.day_index * 86400)
                   elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
                     (0..[6, @schedule_end].min).collect{ |day_index|
-                      Models::Timewindow.new(start: timewindow.start + (day_index).to_i * 86400,
-                                             end: timewindow.end + (day_index).to_i * 86400)
+                      Models::Timewindow.new(start: (timewindow.start || 0) + (day_index).to_i * 86400,
+                                             end: (timewindow.end || 86399) + (day_index).to_i * 86400)
                     }
                   else
                     Models::Timewindow.new(start: timewindow.start, end: timewindow.end)
