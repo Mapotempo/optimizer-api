@@ -78,7 +78,7 @@ class SplitClusteringTest < Minitest::Test
     average_duration = durations.inject(0, :+) / durations.size
     min_duration = average_duration - 0.5 * average_duration
     max_duration = average_duration + 0.5 * average_duration
-    o = durations.map.with_index{ |duration, _index|
+    o = durations.map{ |duration|
       # assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
       duration < max_duration && duration > min_duration
     }
@@ -90,12 +90,12 @@ class SplitClusteringTest < Minitest::Test
     service_vrp = { vrp: vrp, service: :demo }
 
     total_durations = vrp.services_duration
-    services_vrps_days = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
-    assert_equal 5, services_vrps_days.size
+    services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
+    assert_equal 5, services_vrps_vehicles.size
 
     durations = []
-    services_vrps_days.each{ |service_vrp_vehicle|
-      durations << service_vrp[:vrp].services_duration
+    services_vrps_vehicles.each{ |service_vrp_vehicle|
+      durations << service_vrp_vehicle[:vrp].services_duration
     }
     # First balanced duration should be the smallest according vehicle data
     assert 0, durations.index(durations.min)
