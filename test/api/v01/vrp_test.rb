@@ -34,7 +34,7 @@ class Api::V01::VrpTest < Minitest::Test
       job_id = JSON.parse(last_response.body)['job']['id']
       assert job_id
       job_id
-    elsif last_response.status != 400
+    else
       response = JSON.parse(last_response.body)
       assert response['job']['status']['completed'] || response['job']['status']['queued']
     end
@@ -107,7 +107,7 @@ class Api::V01::VrpTest < Minitest::Test
     vrp = VRP.basic
     vrp[:matrices].first[:value] = nil
 
-    submit_vrp api_key: 'demo', vrp: vrp
+    post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
     assert_equal 400, last_response.status, last_response.body
   end
 
@@ -153,7 +153,7 @@ class Api::V01::VrpTest < Minitest::Test
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
-    get "/0.1/vrp/jobs/#{job_id}", api_key: 'vroom'
+    get "/0.1/vrp/jobs/#{@job_id}", api_key: 'vroom'
     assert_equal 404, last_response.status, last_response.body
   ensure
     delete_job @job_id, api_key: 'demo'
