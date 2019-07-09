@@ -28,7 +28,7 @@ class Api::V01::VrpTest < Minitest::Test
 
   def submit_vrp(params)
     post '/0.1/vrp/submit', params
-    assert 200 || 201 == last_response.status
+    assert [200, 201].include? last_response.status
     assert last_response.body
     if last_response.status == 201
       job_id = JSON.parse(last_response.body)['job']['id']
@@ -144,6 +144,17 @@ class Api::V01::VrpTest < Minitest::Test
     get '/0.1/vrp/jobs', api_key: 'vroom'
     assert_equal 200, last_response.status, last_response.body
     refute_includes JSON.parse(last_response.body).map{ |a| a['uuid'] }, @job_id
+  ensure
+    delete_job @job_id, api_key: 'demo'
+  end
+
+  def test_cannot_get_vrp
+    FCT.solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
+    end
+
+    get "/0.1/vrp/jobs/#{job_id}", api_key: 'vroom'
+    assert_equal 404, last_response.status, last_response.body
   ensure
     delete_job @job_id, api_key: 'demo'
   end

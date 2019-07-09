@@ -23,7 +23,7 @@ class OutputTest < Minitest::Test
   def app
     Api::Root
   end
-
+  # TODO: test should not use asynchronous server/worker
   def test_day_week_num
     OptimizerWrapper.config[:solve_synchronously] = false
     Resque.inline = false
@@ -100,14 +100,14 @@ class OutputTest < Minitest::Test
       }
     }
 
-    post '/0.1/vrp/submit', { api_key: 'ortools', vrp: vrp }
+    post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
-    get "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+    get "0.1/vrp/jobs/#{job_id}", api_key: 'demo'
     while last_response.body
-      sleep(1)
+      sleep 1
       assert_equal 206, last_response.status, last_response.body
-      get "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+      get "0.1/vrp/jobs/#{job_id}", api_key: 'demo'
       begin
         JSON.parse(last_response.body)['job']['status']
       rescue
@@ -120,9 +120,10 @@ class OutputTest < Minitest::Test
     assert csv_data.first.include?('day_week_num')
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
+  ensure
     delete "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
   end
-
+  # TODO: test should not use asynchronous server/worker
   def test_no_day_week_num
     OptimizerWrapper.config[:solve_synchronously] = false
     Resque.inline = false
@@ -189,14 +190,14 @@ class OutputTest < Minitest::Test
       }
     }
 
-    post '/0.1/vrp/submit', { api_key: 'ortools', vrp: vrp }
+    post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
-    get "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+    get "0.1/vrp/jobs/#{job_id}", api_key: 'demo'
     while last_response.body
-      sleep(1)
+      sleep 1
       assert_equal 206, last_response.status, last_response.body
-      get "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+      get "0.1/vrp/jobs/#{job_id}", api_key: 'demo'
       begin
         JSON.parse(last_response.body)['job']['status']
       rescue
@@ -209,9 +210,10 @@ class OutputTest < Minitest::Test
     assert !csv_data.first.include?('day_week_num')
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
-    delete "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+  ensure
+    delete "0.1/vrp/jobs/#{job_id}.json", api_key: 'demo'
   end
-
+  # TODO: test should not use asynchronous server/worker
   def test_skill_when_partitions
     OptimizerWrapper.config[:solve_synchronously] = false
     Resque.inline = false
@@ -285,14 +287,14 @@ class OutputTest < Minitest::Test
       }
     }
 
-    post '/0.1/vrp/submit', { api_key: 'ortools', vrp: vrp }
+    post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
     assert_equal 201, last_response.status, last_response.body
     job_id = JSON.parse(last_response.body)['job']['id']
-    get "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+    get "0.1/vrp/jobs/#{job_id}", api_key: 'demo'
     while last_response.body
-      sleep(1)
+      sleep 1
       assert_equal 206, last_response.status, last_response.body
-      get "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+      get "0.1/vrp/jobs/#{job_id}", api_key: 'demo'
       begin
         JSON.parse(last_response.body)['job']['status']
       rescue
@@ -304,6 +306,7 @@ class OutputTest < Minitest::Test
     assert csv_data.select{ |line| line[csv_data.first.find_index('type')] == 'visit' }.all?{ |line| !line[csv_data.first.find_index('skills')].nil? }
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
-    delete "0.1/vrp/jobs/#{job_id}.json", { api_key: 'demo'}
+  ensure
+    delete "0.1/vrp/jobs/#{job_id}.json", api_key: 'demo'
   end
 end
