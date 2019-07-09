@@ -496,9 +496,9 @@ module Api
             begin
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
               if params[:points]
-                APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(''), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles], configuration: params[:vrp][:configuration] } }.to_json)
+                APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(separator: ''), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles], configuration: params[:vrp][:configuration] } }.to_json)
               else
-                APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(''), {vrp: params[:vrp]}.to_json)
+                APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(separator: ''), {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
               params_limit = APIBase.services(params[:api_key])[:params_limit].merge(OptimizerWrapper.access[params[:api_key]][:params_limit] || {})
