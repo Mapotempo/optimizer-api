@@ -361,7 +361,7 @@ module OptimizerWrapper
        vrp.services.all?{ |s|
          !s.skills.empty? &&
          s.sticky_vehicles.empty? &&
-         vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == v_skills.size } }
+         vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == s.skills.size } }
        }
       return split_independent_vrp_by_skills(vrp)
     end
