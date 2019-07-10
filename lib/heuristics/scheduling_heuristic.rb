@@ -51,6 +51,7 @@ module SchedulingHeuristic
     @same_point_day = vrp.resolution_same_point_day
 
     # initialization
+    @sub_pb_solved = 0
     vrp.vehicles.each{ |vehicle|
       @candidate_vehicles << vehicle.id
       @candidate_routes[vehicle.id] = {}
@@ -129,9 +130,9 @@ module SchedulingHeuristic
         # remove all tws with no intersection with this service tws
         group_tw.delete_if{ |tw1|
           @services_data[service[:id]][:tw].none?{ |tw2|
-            (tw2[:day_index].nil? || tw2[:day_index] == tw1[:day_index]) &&
-              (tw2[:start].nil? || tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start]) &&
-              (tw2[:end].nil? || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
+            (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
+              (tw1[:start].nil? || tw2[:end].nil? || tw1[:start] <= tw2[:end]) &&
+              (tw1[:end].nil? || tw2[:start].nil? || tw1[:end] >= tw2[:start])
           }
         }
 
@@ -166,10 +167,10 @@ module SchedulingHeuristic
         last_service = route[:services].last[:id]
         time_back_to_depot = route[:services].last[:end] + matrix(route[:vehicle], last_service, route[:vehicle][:end_point_id])
         if route[:services][0][:start] < route[:vehicle][:tw_start]
-          raise OptimizerWrapper::SchedulingHeuristicError.new('One vehicle is starting too soon')
+          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is starting too soon'
         end
         if time_back_to_depot > route[:vehicle][:tw_end]
-          raise OptimizerWrapper::SchedulingHeuristicError.new('One vehicle is ending too late')
+          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is ending too late'
         end
       }
     }
@@ -181,10 +182,11 @@ module SchedulingHeuristic
           time_to_arrive = (i.zero? ? matrix(route[:vehicle], route[:vehicle][:start_point_id], s[:id]) : matrix(route[:vehicle], route[:services][i - 1][:id], s[:id]))
           time_to_arrive += s[:considered_setup_duration]
           compatible_tw = find_corresponding_timewindow(@services_data[s[:id]][:tw], day, s[:start] + time_to_arrive)
-          if compatible_tw.nil? && @services_data[s[:id]][:tw].each{ |tw| (s[:start] + time_to_arrive) < tw[:start] }
-            s[:start] = @services_data[s[:id]][:tw].collect{ |tw| tw[:start] }.min - time_to_arrive
+
+          if compatible_tw.nil? && @services_data[s[:id]][:tw].any?{ |tw| tw[:day_index] == day % 7 && s[:start] + time_to_arrive + s[:considered_setup_duration] <= tw[:start] }
+            s[:start] = @services_data[s[:id]][:tw].collect{ |tw| tw[:start] if tw[:day_index] == day % 7 && s[:start] + time_to_arrive + s[:considered_setup_duration] <= tw[:start] }.compact.min - time_to_arrive - s[:considered_setup_duration]
           elsif compatible_tw.nil?
-            raise OptimizerWrapper::SchedulingHeuristicError.new('One service timewindows violated')
+            raise OptimizerWrapper::SchedulingHeuristicError, 'One service timewindows violated'
           end
         }
       }
@@ -202,16 +204,15 @@ module SchedulingHeuristic
     (first_index..day_route.size - 1).each{ |position|
       stop = day_route[position]
       route_time = matrix(full_route[:vehicle] || full_route, previous_id, stop[:id])
-      setup_duration = (position > 0 && stop[:point_id] == day_route[position - 1][:point_id]) ? 0 : @services_data[stop[:id]][:setup_duration]
+      stop[:considered_setup_duration] = position.positive? && stop[:point_id] == day_route[position - 1][:point_id] ? 0 : @services_data[stop[:id]][:setup_duration]
 
-      tw = find_corresponding_timewindow(@services_data[stop[:id]][:tw], full_route[:global_day_index] || full_route[:vehicle][:global_day_index], stop[:arrival])
-      raise OptimizerWrapper.SchedulingHeuristicError.new('No timewindow found to update route') if !@services_data[stop[:id]][:tw].empty? && tw.nil?
+      tw = find_corresponding_timewindow(@services_data[stop[:id]][:tw], full_route[:global_day_index] || full_route[:vehicle][:global_day_index], previous_end + route_time + stop[:considered_setup_duration])
+      raise OptimizerWrapper::SchedulingHeuristicError, 'No timewindow found to update route' if !@services_data[stop[:id]][:tw].empty? && tw.nil?
 
-      stop[:start] = [tw[:start] - route_time - setup_duration, previous_end].max
-      previous_arrival = stop[:arrival]
-      stop[:arrival] = stop[:start] + route_time + setup_duration
+      stop[:start] = tw ? [tw[:start] - route_time - stop[:considered_setup_duration], previous_end].max : previous_end
+      stop[:arrival] = stop[:start] + route_time + stop[:considered_setup_duration]
       stop[:end] = stop[:arrival] + @services_data[stop[:id]][:duration]
-      stop[:max_shift] += (previous_arrival - stop[:arrival])
+      stop[:max_shift] = tw ? tw[:end] - stop[:arrival] : nil
 
       previous_id = stop[:id]
       previous_end = stop[:end]
@@ -317,6 +318,7 @@ module SchedulingHeuristic
             representative_ids = []
             last_representative = nil
             # one representative per freq
+            # TODO : use group by
             same_located_set.collect{ |service| @services_data[service[:id]][:heuristic_period] }.uniq.each{ |period|
               sub_set = same_located_set.select{ |s| @services_data[s[:id]][:heuristic_period] == period }
               representative_id = sub_set[0][:id]
@@ -396,9 +398,85 @@ module SchedulingHeuristic
 
     fill_planning
     check_solution_validity
-    routes = prepare_output_and_collect_routes(vrp)
 
+    if vrp.resolution_solver && !@candidate_service_ids.empty?
+      reorder_routes(vrp)
+      check_solution_validity
+    end
+
+    routes = prepare_output_and_collect_routes(vrp)
     routes
+  end
+
+  def self.provide_group_tws(services)
+    services.each{ |service|
+      next if service[:activity][:timewindows].empty?
+
+      service[:activity][:timewindows].each{ |original_tw|
+        corresponding = find_corresponding_timewindow(@services_data[service[:id]][:tw], day, original_tw[:start])
+        corresponding = find_corresponding_timewindow(@services_data[service[:id]][:tw], day, original_tw[:end]) if corresponding.nil?
+
+        if corresponding.nil?
+          service[:activity][:timewindows].delete(original_tw)
+        else
+          original_tw[:start] = corresponding[:start]
+          original_tw[:end] = corresponding[:end]
+          original_tw[:day_index] = corresponding[:day_index]
+        end
+      }
+    }
+  end
+
+  def self.reorder_routes(vrp)
+    # TODO : take this function into account when computing avancement
+
+    vrp.vehicles.each{ |vehicle|
+      # TODO : call reorder routes on @candidate_routes, not planning
+      @planning[vehicle.id].each{ |day, route|
+        next if route[:services].collect{ |s| s[:point_id] }.uniq.size == 1
+
+        puts "Entering reorder_routes function for problem #{@sub_pb_solved}"
+
+        service_ids = route[:services].collect{ |service| service[:id] }
+        route_vrp = construct_sub_vrp(vrp, service_ids)
+
+        # TODO : test with and without providing initial solution ?
+        route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:services])
+        route_vrp.services = provide_group_tws(route_vrp.services) # to have same data in ORtools and scheduling. Customers should ensure all timewindows are the same for same points
+
+        begin
+          result = OptimizerWrapper.solve([service: :ortools, vrp: route_vrp])
+        rescue
+          puts 'ORtools could not find a solution for this problem.'
+        end
+
+        @sub_pb_solved += 1
+
+        next if result.nil? || !result[:unassigned].empty?
+
+        time_back_to_depot = route[:services].last[:end] + matrix(route[:vehicle], route[:services].last[:id], route[:vehicle][:end_point_id])
+        scheduling_route_time = time_back_to_depot - route[:services].first[:start]
+        solver_route_time = (result[:routes].first[:activities].last[:begin_time] - result[:routes].first[:activities].first[:begin_time]) # last activity is vehicle depot
+
+        next if scheduling_route_time - solver_route_time < @candidate_service_ids.collect{ |s| @services_data[s][:duration] }.min ||
+                result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == route[:services].collect{ |s| @indices[s[:id]] } # we did not change our points order
+
+        # we are going to try to optimize this route reoptimized by OR-tools
+        new_route = @candidate_routes[vehicle.id][day].clone
+        begin
+          new_route[:current_route] = compute_route_from(new_route, result[:routes].first[:activities])
+          fill_days
+        rescue OptimizerWrapper::SchedulingHeuristicError
+          puts 'Failing to construct route from OR-tools solution'
+        end
+      }
+    }
+  end
+
+  def self.compute_route_from(new_route, solver_route)
+    solver_order = solver_route.collect{ |s| s[:service_id] }.compact
+    new_route[:current_route].sort_by!{ |stop| solver_order.find_index(stop[:id]) }.collect{ |s| s[:id] }
+    update_route(new_route)
   end
 
   def self.compute_insertion_costs(vehicle, day, positions_in_order, route_data)
@@ -555,7 +633,7 @@ module SchedulingHeuristic
           next_arrival_time: next_arrival,
           next_final_time: next_end,
           potential_shift: current_tw[:max_shift],
-          additional_route_time: [0, shift - duration].max,
+          additional_route_time: [0, shift - duration - current_tw[:setup_duration]].max,
           dist_from_current_route: (0..route.size - 1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min,
           last_service_end: (position == route.size ? final_time : route.last[:end] + shift)
         }
@@ -1085,10 +1163,48 @@ module SchedulingHeuristic
   end
 
   def self.find_corresponding_timewindow(service_tw, day, time)
-    service_tw.find{ |tw|
-      (tw[:day_index].nil? || tw[:day_index] == day % 7) &&
-        (tw[:start].nil? || time >= tw[:start]) &&
-        (tw[:end].nil? || time <= tw[:end])
+    service_tw.select{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && (time.between?(tw[:start], tw[:end]) || time <= tw[:start]) }.min_by{ |tw| tw[:start] }
+  end
+
+  def self.construct_sub_vrp(vrp, service_ids)
+    # TODO : make private
+
+    # TODO : check initial vrp is not modified.
+    # Now it is ok because marshall dump, but do not use mashall dump
+    route_vrp = Marshal.load(Marshal.dump(vrp))
+
+    route_vrp[:services].delete_if{ |service| !service_ids.include?(service[:id]) }
+
+    route_vrp.vehicles = [route_vrp.vehicles.first]
+    route_vrp.vehicles.first.timewindow = {
+      start: route_vrp.vehicles.first.sequence_timewindows.first.start,
+      end: route_vrp.vehicles.first.sequence_timewindows.first.end
     }
+    route_vrp.vehicles.first.sequence_timewindows = []
+
+    # configuration
+    route_vrp.schedule_range_indices = nil
+    route_vrp.schedule_range_date = nil
+
+    route_vrp.resolution_duration = 1000
+    route_vrp.resolution_solver = true
+
+    route_vrp.preprocessing_first_solution_strategy = nil
+    route_vrp.preprocessing_cluster_threshold = 0
+    route_vrp.preprocessing_force_cluster = true
+    route_vrp.preprocessing_partitions = []
+    route_vrp.restitution_csv = false
+
+    # TODO : write conf by hand to avoid mistakes
+    # will need load ? use route_vrp[:configuration] ... or route_vrp.preprocessing_first_sol
+
+    route_vrp
+  end
+
+  def self.collect_generated_routes(vehicle, services)
+    [{
+      vehicle: vehicle,
+      mission_ids: services.collect{ |service| service[:id] }
+    }]
   end
 end
