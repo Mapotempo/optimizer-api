@@ -27,19 +27,31 @@ class DichotomiousTest < Minitest::Test
     assert result
 
     # Check activities
-    assert 30 > result[:unassigned].size, "Too many unassigned services #{result[:unassigned].size}"
+    if result[:routes].size > 11
+      assert result[:unassigned].size < 25, "Too many unassigned services #{result[:unassigned].size}"
+    elsif result[:routes].size == 11
+      assert result[:unassigned].size < 30, "Too many unassigned services #{result[:unassigned].size}"
+    else
+      assert result[:unassigned].size < 45, "Too many unassigned services #{result[:unassigned].size}"
+    end
 
     # Check routes
-    if result[:unassigned].size < 10
-      assert 14 > result[:routes].size, "Too many routes: #{result[:routes].size}"
+    if result[:unassigned].size < 15
+      assert result[:routes].size < 14, "Too many routes: #{result[:routes].size}"
+    elsif result[:unassigned].size < 30
+      assert result[:routes].size < 13, "Too many routes: #{result[:routes].size}"
     else
-      assert 13 > result[:routes].size, "Too many routes: #{result[:routes].size}"
+      assert result[:routes].size < 12, "Too many routes: #{result[:routes].size}"
     end
 
     # Check elapsed time
-    assert t2 - t1 < 765 * 1.25, "Too long elapsed time: #{t2 - t1}"
-    assert t2 - t1 > 510, "Too short elapsed time: #{t2 - t1}"
-    assert result[:elapsed] / 1000 > 510 && result[:elapsed] / 1000 < 765, "Incorrect elapsed time: #{result[:elapsed]}"
+    min_dur = vrp[:configuration][:resolution][:minimum_duration] / 1000.0
+    max_dur = vrp[:configuration][:resolution][:duration] / 1000.0
+
+    assert result[:elapsed] / 1000 < max_dur, "Time spent in optimization (#{result[:elapsed] / 1000}) is greater than the maximum duration asked (#{max_dur})." # Should never be violated!
+    assert result[:elapsed] / 1000 > min_dur, "Time spent in optimization (#{result[:elapsed] / 1000}) is less than the minimum duration asked (#{min_dur})." # Due to "no remaining jobs" in end_stage, it can be violated (randomly).
+    assert t2 - t1 > min_dur, "Too short elapsed time: #{t2 - t1}"
+    assert t2 - t1 < max_dur * 1.35, "Time spend in the API (#{t2 - t1}) is too big compared to maximum optimization duration asked (#{max_dur})." # Due to API overhead, it can be violated (randomly) .
   end
 
   def test_cluster_dichotomious_heuristic
