@@ -299,15 +299,11 @@ module Interpreters
       }
 
       if vehicles_by_clusters.any?(&:empty?)
-        if vehicles_by_clusters[0].empty?
-          vehicles_by_skills1 = vehicles_by_clusters[1].group_by{ |v| v.skills.empty? ? nil : v.skills.uniq.sort }.compact.uniq
-          vehicles_by_clusters[0] << vehicles_by_skills1.max_by{ |vehicles| vehicles[1].size }.last.first
-          vehicles_by_clusters[1].delete(vehicles_by_clusters[0].last)
-        else
-          vehicles_by_skills0 = vehicles_by_clusters[0].group_by{ |v| v.skills.empty? ? nil : v.skills.uniq.sort }.compact.uniq
-          vehicles_by_clusters[1] << vehicles_by_skills0.max_by{ |vehicles| vehicles[1].size }.last.first
-          vehicles_by_clusters[0].delete(vehicles_by_clusters[1].last)
-        end
+        empty_side = vehicles_by_clusters.select(&:empty?)[0]
+        nonempty_side = vehicles_by_clusters.select(&:any?)[0]
+
+        # Move a vehicle from the skill group with most vehicles (from nonempty side to empty side)
+        empty_side << nonempty_side.delete(nonempty_side.group_by{ |v| v.skills.uniq.sort }.to_a.max_by{ |vec_group| vec_group[1].size }.last.first)
       end
 
       vehicles_by_clusters
