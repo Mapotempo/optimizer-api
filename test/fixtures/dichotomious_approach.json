@@ -20484,8 +20484,8 @@
         ]
       },
       "resolution": {
-        "duration": 765000,
-        "initial_time_out": 510000,
+        "duration": 330000,
+        "minimum_duration": 300000,
         "time_out_multiplier": 2,
         "solver": true
       },
