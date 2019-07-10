@@ -799,8 +799,12 @@ module Wrappers
         t = / Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
         if block && r && s && t && vrp.restitution_intermediate_solutions
-          @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
-          block.call(self, iterations, nil, nil, cost, t, @previous_result)
+          begin
+            @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+            block.call(self, iterations, nil, nil, cost, t, @previous_result)
+          rescue => error
+            puts "Error: #{error.message} in run_ortools during parse_output"
+          end
         end
       }
 
