@@ -112,7 +112,7 @@ module Interpreters
 
     def self.dicho_level_coeff(service_vrp)
       balance = 0.66666
-      level_approx = Math.log(service_vrp[:vrp].resolution_dicho_division_vec_limit / service_vrp[:vrp].vehicles.size.to_f, balance)
+      level_approx = Math.log(service_vrp[:vrp].resolution_dicho_division_vec_limit / (service_vrp[:vrp].resolution_vehicle_limit || service_vrp[:vrp].vehicles.size).to_f, balance)
       service_vrp[:vrp].resolution_dicho_level_coeff = 2**(1 / (level_approx - service_vrp[:level]).to_f)
     end
 
