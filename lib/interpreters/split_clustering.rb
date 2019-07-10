@@ -340,7 +340,7 @@ module Interpreters
           }
         }
         puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
-        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, options[:entity])
+        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, options[:entity]) if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
