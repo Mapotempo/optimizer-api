@@ -207,7 +207,7 @@ module SchedulingHeuristic
       raise OptimizerWrapper.SchedulingHeuristicError.new('No timewindow found to update route') if !@services_data[stop[:id]][:tw].empty? && tw.nil?
 
       stop[:start] = [tw[:start] - route_time, previous_end].max
-      previous_arrival = stop[:arrival].dup
+      previous_arrival = stop[:arrival]
       stop[:arrival] = stop[:start] + route_time
       stop[:end] = stop[:arrival] + setup_and_customer_time
       stop[:max_shift] += (previous_arrival - stop[:arrival])
