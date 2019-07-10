@@ -371,7 +371,8 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
-    def test_dichotomious_paris_area
+    def test_dichotomious_check_number_of_services
+      # TODO: This test is an old test left here. It doesn't have enough vehicles. It just check if we lose or add services.
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
