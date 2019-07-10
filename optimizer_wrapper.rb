@@ -207,7 +207,7 @@ module OptimizerWrapper
           if !vrp.services.empty? || !vrp.shipments.empty? || !vrp.rests.empty?
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp)
-            if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver
+            if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
               block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
               # Select best heuristic
               Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)

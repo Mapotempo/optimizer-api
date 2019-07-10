@@ -158,4 +158,15 @@ class HeuristicTest < Minitest::Test
     assert_equal total_visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
       "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{total_visits} expected"
   end
+
+  def test_improve_routes_with_ortools
+    # TDD
+    visits_unassigned = []
+    services_unassigned = []
+
+    vrp = FCT.load_vrp(self)
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, vrp, nil)
+    visits_unassigned << result[:unassigned].size
+    services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+  end
 end
