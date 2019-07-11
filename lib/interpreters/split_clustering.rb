@@ -759,7 +759,7 @@ module Interpreters
 
         if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
 
-          depot = [vrp.vehicles[0].start_point.location.lat, vrp.vehicles[0].start_point.location.lon]
+          depot = [[vrp.vehicles[0].start_point.location.lat, vrp.vehicles[0].start_point.location.lon]]
           points = data_items.collect{ |point| [point[0], point[1]] }
           time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], depot, points)
           time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], points, depot)
