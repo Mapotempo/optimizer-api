@@ -214,7 +214,6 @@ class RealCasesTest < Minitest::Test
 
     # Angers - Route duration and vehicle timewindow are identical
     def test_ortools_global_with_identical_route_duration_and_vehicle_window
-      test_ortools_global_ten_routes_without_rest
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
