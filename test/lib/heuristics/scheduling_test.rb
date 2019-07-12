@@ -506,17 +506,28 @@ class HeuristicTest < Minitest::Test
       reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
     }
 
-    if services_unassigned.max / services_unassigned.min.to_f >= 2 || visits_unassigned.max >= 14
+    if services_unassigned.max - services_unassigned.min.to_f >= 2 || visits_unassigned.max >= 5
       reason_unassigned.each_with_index{ |reason, index|
         puts "unassigned visits ##{index} reason:\n#{reason}"
       }
       puts "unassigned services #{services_unassigned}"
-      puts "unassigned visits #{visits_unassigned}"
+      puts "unassigned visits   #{visits_unassigned}"
     end
 
-    assert services_unassigned.max / services_unassigned.min.to_f < 2, "unassigned services (#{services_unassigned}) should be more regular" # easier to achieve
-    # TODO: visits_unassigned is often 2, but in the worst case 13
-    assert visits_unassigned.max < 14, "unassigned visits (#{visits_unassigned}) should be more regular"
+    # services_unassigned:
+    assert services_unassigned.max - services_unassigned.min <= 2, "unassigned services (#{services_unassigned}) should be more regular" # easier to achieve
+
+    # visits_unassigned:
+    # It is often 2, but in the worst case, 5.
+    assert visits_unassigned.max <= 5, "More than 5 unassigned visits shouldn't happen (#{visits_unassigned})"
+
+    # 5 shouldn't happen more than once unless the test is repeated more than 100s of times.
+    rate_limit_5_unassigned = (@regularity_restarts * 0.01).ceil
+    assert visits_unassigned.count(5) <= rate_limit_5_unassigned, "5 unassigned visits shouldn't appear more than #{rate_limit_5_unassigned} times (#{visits_unassigned})"
+
+    # 3 shouldn't happen too many times (10%)
+    rate_limit_3_unassigned = (@regularity_restarts * 0.10).ceil + 1
+    assert visits_unassigned.count(3) <= rate_limit_3_unassigned, "3 unassigned visits shouldn't appear more than #{rate_limit_3_unassigned} times (#{visits_unassigned})"
   end
 
   def test_results_regularity_2
@@ -531,17 +542,34 @@ class HeuristicTest < Minitest::Test
       reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
     }
 
-    if services_unassigned.max / services_unassigned.min.to_f >= 2 || visits_unassigned.max / visits_unassigned.min.to_f >= 3
+    if services_unassigned.max - services_unassigned.min.to_f >= 7 || visits_unassigned.max >= 15
       reason_unassigned.each_with_index{ |reason, index|
         puts "unassigned visits ##{index} reason:\n#{reason}"
       }
       puts "unassigned services #{services_unassigned}"
-      puts "unassigned visits #{visits_unassigned}"
+      puts "unassigned visits   #{visits_unassigned}"
     end
 
-    assert services_unassigned.max / services_unassigned.min.to_f < 2, "unassigned services (#{services_unassigned}) should be more regular" # easier to achieve
-    # TODO: best visits_unassigned is 8
-    assert visits_unassigned.max / visits_unassigned.min.to_f < 3, "unassigned visits (#{visits_unassigned}) should be more regular"
+    # services_unassigned:
+    # Best is 0. It is often 1,2,3. Rarely more than 6. And it is 9 in the worst case.
+    assert services_unassigned.max < 10, "Number of unassigned services should be less than 10 (#{services_unassigned})" # easier to achieve
+    assert services_unassigned.max - services_unassigned.min <= 7, "Number of unassigned services should be more regular (max-min diff is too much -- #{services_unassigned.max - services_unassigned.min}) (#{services_unassigned})" # can fail rarely but should happen regualarly
+
+    # %95 should be less than or equal to 6
+    rate_upperbound_6_services = (@regularity_restarts * 0.95).floor - 1
+    assert services_unassigned.count{ |x| x <= 6 } < rate_upperbound_6_services, "Number of unassigned services > 6 should appear less than #{@regularity_restarts - rate_upperbound_6_services} times (#{services_unassigned})"
+
+    # visits_unassigned:
+    # Best is 0. It is often 1,2,3. Rarely more than 10. And it is 15 in the worst case.
+    assert visits_unassigned.max <= 15, "More than 15 unassigned visits shouldn't happen (#{visits_unassigned})"
+
+    # 1, 2 and, 3 should be around half unless regularity_restarts number is too low
+    rate_lowerbound_1_2_3_unassigned =  (@regularity_restarts * 0.5).floor - 1
+    assert visits_unassigned.count{ |x| x <= 3 } >= rate_lowerbound_1_2_3_unassigned, "1, 2 and 3 unassigned visits should appear more than #{rate_lowerbound_1_2_3_unassigned} times (#{visits_unassigned})"
+
+    # Rate of unassigned_>_10 shouldn't be higher than 5%
+    rate_lowerbound_10_unassigned = (@regularity_restarts * 0.95).floor - 1
+    assert visits_unassigned.count{ |x| x <= 10 } >= rate_lowerbound_10_unassigned, "unassigned visits > 10 should appear less often than #{@regularity_restarts - rate_lowerbound_10_unassigned} times (#{visits_unassigned})"
   end
 
   def test_callage_freq
@@ -550,5 +578,16 @@ class HeuristicTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert result[:routes].collect{ |r| r[:activities].size }.uniq.size == 1
     assert result[:unassigned].empty?
+  end
+
+  def test_same_point_day_relaxation
+    vrp = FCT.load_vrp(self)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] } }, vrp, nil)
+
+    vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
+      expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
+      days_used = result[:routes].collect{ |r| r[:activities].select{ |stop| stop[:point_id] == point_id }.size }.select(&:positive?).size
+      assert days_used <= expected_number_of_days, "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
+    }
   end
 end
