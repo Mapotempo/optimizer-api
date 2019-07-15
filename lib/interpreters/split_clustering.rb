@@ -53,7 +53,7 @@ module Interpreters
       end
       checksum = Digest::MD5.hexdigest Marshal.dump(polygons)
       vrp_name = all_service_vrps.first[:vrp].name
-      filename = 'generated_clusters_' + (vrp_name ? vrp_name + '_' : '') + checksum
+      filename = ('generated_clusters_' + (vrp_name ? vrp_name + '_' : '') + checksum).parameterize('')
 
       File.write(File.join(OptimizerWrapper.dump_vrp_cache.cache.cache_path, filename + '_geojson'), {
         type: 'FeatureCollection',
