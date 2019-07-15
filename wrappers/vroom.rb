@@ -206,6 +206,9 @@ module Wrappers
       problem[:vehicles].each{ |vec|
         vec[:start_index] = matrix_indices.find_index{ |ind| ind == vec[:start_index] } if vec[:start_index]
         vec[:end_index] = matrix_indices.find_index{ |ind| ind == vec[:end_index] } if vec[:end_index]
+        if vec[:end_index].nil? && vec[:start_index].nil?
+          vec[:start_index] = size_matrix # Add an auxialiary node if there is no start or end depot for the vehicle
+        end
       }
 
       agglomerate_matrix = vehicle.matrix_blend(matrix, matrix_indices, dimensions, cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier)
@@ -222,6 +225,13 @@ module Wrappers
             agglomerate_matrix[i][j] = agglomerate_matrix[i][j].round
           }
         }
+      end
+
+      if vehicle.start_point_id.nil? && vehicle.end_point_id.nil?
+        # If there is no start or end depot for the vehicle
+        # set the distance of the auxiliary node to all other nodes as zero
+        agglomerate_matrix << Array.new(size_matrix, 0)
+        agglomerate_matrix.each{ |row| row << 0 }
       end
 
       problem[:matrix] = agglomerate_matrix
