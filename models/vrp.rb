@@ -227,17 +227,35 @@ module Models
         average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
         total_service_time = services.map{ |service| service[:activity][:duration].to_i }.reduce(:+)
 
-        average_loc = points.inject([0, 0]) { |sum, point| sum = [sum[0] + point.location.lat, sum[1] + point.location.lon] }
-        average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
+        # TODO: It assumes there is only one uniq location for all vehicle starts and ends
+        depot = vehicles.collect(&:start_point).compact[0]
+        approx_depot_time_correction = if depot.nil?
+                                         0
+                                       else
+                                         average_loc = points.inject([0, 0]) { |sum, point| sum = [sum[0] + point.location.lat, sum[1] + point.location.lon] }
+                                         average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
 
-        #TODO It assums there is only one depot
-        depot = vehicles.collect{ |vehicle| [vehicle.start_point.location.lat, vehicle.end_point.location.lon] }.uniq.flatten
-        approx_depot_time_correction = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil * 2 * Helper.flying_distance(average_loc, depot)
+                                         approximate_number_of_vehicles_used = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil
+
+                                         approximate_number_of_vehicles_used * 2 * Helper.flying_distance(average_loc, depot)
+
+                                         # TODO: Here we use flying_distance for approx_depot_time_correction; however, this value is in terms of meters
+                                         # instead of seconds. Still since all dicho paramters    -- i.e.,  resolution_angle, resolution_div_average_service, etc. --
+                                         # are calculated with this functionality, correcting this bug makes the calculated parameters perform less effective.
+                                         # We need to calculate new parameters after correcting the bug.
+                                         #
+
+                                         # point_closest_to_center = points.min_by{ |point| Helper::flying_distance(average_loc, [point.location.lat, point.location.lon]) }
+                                         # ave_dist_to_depot = matrices[0][:time][point_closest_to_center.matrix_index][depot.matrix_index]
+                                         # ave_dist_from_depot = matrices[0][:time][depot.matrix_index][point_closest_to_center.matrix_index]
+                                         # approximate_number_of_vehicles_used * (ave_dist_to_depot + ave_dist_from_depot)
+                                       end
+
         total_time_load = total_service_time + total_travel_time + approx_depot_time_correction
 
         average_service_load = total_time_load / services.size.to_f
-        average_number_of_service = average_vehicles_work_time / average_service_load
-        exclusion_rate = resolution_div_average_service * average_number_of_service
+        average_number_of_services_per_vehicle = average_vehicles_work_time / average_service_load
+        exclusion_rate = resolution_div_average_service * average_number_of_services_per_vehicle
         angle = resolution_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
         tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
