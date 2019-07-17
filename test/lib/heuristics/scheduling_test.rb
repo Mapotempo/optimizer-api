@@ -269,29 +269,29 @@ class HeuristicTest < Minitest::Test
     problem = VRP.lat_lon_scheduling
     problem[:services][0][:visits_number] = 1
     problem[:services][0][:minimum_lapse] = 84
-    problem[:services][0][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
+    problem[:services][0][:activity][:timewindows] = [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     problem[:services][1][:visits_number] = 1
     problem[:services][1][:minimum_lapse] = 84
-    problem[:services][1][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
+    problem[:services][1][:activity][:timewindows] = [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     problem[:services][2][:visits_number] = 1
     problem[:services][2][:minimum_lapse] = 84
-    problem[:services][2][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
+    problem[:services][2][:activity][:timewindows] = [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     problem[:services][3][:visits_number] = 1
     problem[:services][3][:minimum_lapse] = 84
-    problem[:services][3][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
+    problem[:services][3][:activity][:timewindows] = [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     problem[:services][4][:visits_number] = 1
     problem[:services][4][:minimum_lapse] = 84
-    problem[:services][4][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
+    problem[:services][4][:activity][:timewindows] = [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     problem[:services][5][:visits_number] = 1
     problem[:services][5][:minimum_lapse] = 84
-    problem[:services][5][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
+    problem[:services][5][:activity][:timewindows] = [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     problem[:vehicles] = [{
       id: 'vehicle_0',
       start_point_id: 'point_0',
       end_point_id: 'point_0',
       router_mode: 'car',
       router_dimension: 'distance',
-      sequence_timewindows: [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
+      sequence_timewindows: [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     }, {
       id: 'vehicle_1',
       start_point_id: 'point_0',

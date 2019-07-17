@@ -341,7 +341,7 @@ module Interpreters
           }
         }
         puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
-        cluster_vehicles = assign_vehicle_to_clusters(centroid_caracteristics, vrp.vehicles, vrp.points, clusters, options[:entity]) if options[:entity] == 'work_day' || options[:entity] == 'vehicle' # change everywhere
+        cluster_vehicles = assign_vehicle_to_clusters(centroid_caracteristics, vrp.vehicles, vrp.points, clusters, options[:entity]) if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
@@ -415,7 +415,7 @@ module Interpreters
         }.flatten
 
         puts 'Hierarchical Tree : split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
-        cluster_vehicles = assign_vehicle_to_clusters(vrp.vehicles, vrp.points, clusters, options[:entity])
+        cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size , vrp.vehicles, vrp.points, clusters, options[:entity] || '')
         adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
@@ -496,6 +496,7 @@ module Interpreters
         data_items = []
         linked_objects = {}
 
+        vehicles_skills = generate_expected_caracteristics(vrp.vehicles, entity).flatten.uniq
         depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
 
         (vrp.services + vrp.shipments).group_by{ |s|
@@ -511,9 +512,9 @@ module Interpreters
           set_at_point.group_by{ |s|
             related_skills = (s.skills && !s.skills.empty? ? s.skills : [])
             timewindows = s.activity ? s.activity.timewindows : (s.pickup ? s.pickup.timewindows : s.delivery.timewindows)
-            day_skills = entity == 'work_day' ? compute_day_skills(timewindows) : []
+            day_skills = compute_day_skills(timewindows)
 
-            [s[:sticky_vehicle_ids], related_skills + day_skills]
+            [s[:sticky_vehicle_ids], (related_skills + day_skills) & vehicles_skills]
           }.each_with_index{ |(properties, sub_set), sub_set_index|
             sticky, skills = properties
 
@@ -696,12 +697,10 @@ module Interpreters
           conflict_with_clusters -= (available_clusters[cluster_to_affect][:skills] - vehicle.skills).size * available_clusters[cluster_to_affect][:number_items]
           violating << v_i if !(available_clusters[cluster_to_affect][:skills] - vehicle.skills).empty?
 
-          if entity == 'work_day'
-            days = [vehicle[:timewindow] ? (vehicle[:timewindow][:day_index] || all_days) : (vehicle[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days }) ].flatten.uniq
-            conflict_with_clusters = days.collect{ |day| available_ids[:cluster].collect{ |i| available_clusters[i][:days_conflict][day] } }.flatten.sum
-            conflict_with_clusters -= available_clusters[cluster_to_affect][:days_conflict][days.first] if days.size == 1 # 0 if no conflict between service and vehicle day
-            violating << v_i if days.none?{ |day| available_clusters[cluster_to_affect][:day_skills].none?{ |skill| skill.include?(day.to_s) } }
-          end
+          days = [vehicle[:timewindow] ? (vehicle[:timewindow][:day_index] || all_days) : (vehicle[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days }) ].flatten.uniq
+          conflict_with_clusters = days.collect{ |day| available_ids[:cluster].collect{ |i| available_clusters[i][:days_conflict][day] } }.flatten.sum
+          conflict_with_clusters -= available_clusters[cluster_to_affect][:days_conflict][days.first] if days.size == 1 # 0 if no conflict between service and vehicle day
+          violating << v_i if days.none?{ |day| available_clusters[cluster_to_affect][:day_skills].none?{ |skill| skill.include?(day.to_s) } }
 
           # TODO : test case with skills
 
