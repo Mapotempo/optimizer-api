@@ -49,7 +49,8 @@ module Interpreters
           service_vrp[:vrp].compute_matrix
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exlusion_cost(service_vrp)
-        else
+        # Do not solve if vrp has too many vehicles or services - init_duration is set in set_config()
+        elsif service_vrp[:vrp].resolution_init_duration.nil?
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exlusion_cost(service_vrp)
           result = OptimizerWrapper.solve([service_vrp], job, block)
