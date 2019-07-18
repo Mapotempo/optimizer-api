@@ -237,7 +237,7 @@ module Models
 
                                          approximate_number_of_vehicles_used = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil
 
-                                         approximate_number_of_vehicles_used * 2 * Helper.flying_distance(average_loc, depot)
+                                         approximate_number_of_vehicles_used * 2 * Helper.flying_distance(average_loc, [depot.location.lat, depot.location.lon])
 
                                          # TODO: Here we use flying_distance for approx_depot_time_correction; however, this value is in terms of meters
                                          # instead of seconds. Still since all dicho paramters    -- i.e.,  resolution_angle, resolution_div_average_service, etc. --
