@@ -225,9 +225,9 @@ module Interpreters
       sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
       sub_vrp.shipments = vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
       points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.uniq.compact | sub_vrp.shipments.flat_map{ |s| [s.pickup.point.id, s.delivery.point.id] }.uniq.compact
-      sub_vrp.rests = vrp.rests.select{ |r| sub_vrp.vehicles.collect{ |v| v.rests.id }.include? r.id }
+      sub_vrp.rests = vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
       sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
-      sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + sub_vrp.vehicles.collect{ |vehicle| [vehicle.start_point, vehicle.end_point] }.flatten).compact.uniq
+      sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }).compact.uniq
       {
         vrp: sub_vrp,
         service: service_vrp[:service]
