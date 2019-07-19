@@ -422,4 +422,27 @@ class SplitClusteringTest < Minitest::Test
     assert_equal result[:routes][0][:activities].collect{ |activity| activity[:service_id] }.compact, ['service_1', 'service_2']
     assert_equal result[:routes][1][:activities].collect{ |activity| activity[:service_id] }.compact, ['service_3', 'service_4']
   end
+
+  def test_max_split_size
+    vrp = VRP.lat_lon
+    vrp[:vehicles][0][:router_dimension] = 'time'
+    vrp[:vehicles][1] = {
+      id: 'vehicle_1',
+      start_point_id: 'point_0',
+      router_dimension: 'time',
+    }
+    vrp[:vehicles][2] = {
+      id: 'vehicle_2',
+      start_point_id: 'point_0',
+      router_dimension: 'time'
+    }
+    vrp[:configuration][:preprocessing][:max_split_size] = 2
+
+    results = OptimizerWrapper.wrapper_vrp('demo', { services: {vrp: [:ortools] }}, FCT.create(vrp), nil)
+
+    assert 2 <= results[:solvers].size
+    results[:routes].each{ |route|
+      assert route[:activities].collect{ |activity| activity[:service_id] }.compact.size <= 2
+    }
+  end
 end

@@ -224,7 +224,8 @@ module VRP
       configuration: {
         resolution: {
           duration: 2000
-        }
+        },
+        preprocessing: {}
       }
     }
   end
