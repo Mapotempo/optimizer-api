@@ -2801,4 +2801,37 @@ class WrapperTest < Minitest::Test
     }
     assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(Models::Vrp.create(problem)).include?(:assert_vehicle_entity_only_before_work_day)
   end
+
+  def test_unfeasible_services
+    problem = VRP.basic
+    problem[:matrices][0][:time][1][0] = 900
+    problem[:matrices][0][:time][1][2] = 900
+    problem[:matrices][0][:time][2][1] = 900
+    problem[:matrices][0][:time][1][3] = 900
+    problem[:matrices][0][:time][3][1] = 900
+
+    problem[:services][0] = {
+      id: 'service_1',
+      activity: {
+        point_id: 'point_1',
+        timewindows: [{
+          start: 0,
+          end: 2,
+        }]
+      }
+    }
+    problem[:vehicles] = [{
+      id: 'vehicle_0',
+      matrix_id: 'matrix_0',
+      start_point_id: 'point_0',
+      timewindow: {
+        start: 0,
+        end: 100
+      }
+    }]
+
+    vrp = Models::Vrp.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
+    assert vrp[:services].size == result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + result[:unassigned].map{ |u| u[:service_id] }.size
+  end
 end
