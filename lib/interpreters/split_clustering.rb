@@ -198,9 +198,9 @@ module Interpreters
           current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
           current_load[:current_load] / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
         }
-        vehicle_worktime = vehicle.timewindow.start && vehicle.timewindow.end && (vehicle.duration || (vehicle.timewindow.end - vehicle.timewindow.start))
+        vehicle_worktime = vehicle.duration || vehicle.timewindow&.start && vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start)
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
-        time_flag = !vehicle_worktime || route_duration < limit * vehicle_worktime
+        time_flag = vehicle_worktime && route_duration < limit * vehicle_worktime
         if load_flag && time_flag
           result[:unassigned] += route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact
           true
