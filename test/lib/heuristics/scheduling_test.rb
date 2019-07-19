@@ -389,7 +389,6 @@ class HeuristicTest < Minitest::Test
   end
 
   def test_day_closed_on_work_day
-    skip 'Requires modifications in clustering : No vehicle found related'
     problem = VRP.lat_lon_scheduling
     problem[:services][0][:visits_number] = 3
     problem[:services][0][:minimum_lapse] = 7
