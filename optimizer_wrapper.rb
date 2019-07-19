@@ -251,6 +251,10 @@ module OptimizerWrapper
           end
         end
       end
+
+      # Reintegrate unfeasible services deleted from vrp.services to help ortools
+      vrp.services += unfeasible_services
+
       if vrp.preprocessing_partition_method || !vrp.preprocessing_partitions.empty?
         # add associated cluster as skill
         [cluster_result, vrp.preprocessing_heuristic_result].each{ |solution|
