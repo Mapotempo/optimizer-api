@@ -34,7 +34,7 @@ module Interpreters
     def self.generate_matrix(vrp)
       matrix = (0..vrp.matrices[0][:time].size - 1).collect{ |i|
         (0..vrp.matrices[0][:time][i].size - 1).collect{ |j|
-          vrp.matrices[0][:time][i][j] + (rand(3) == 0 ? -1 : 1) * vrp.matrices[0][:time][i][j] * rand(vrp.resolution_variation_ratio)/100
+          vrp.matrices[0][:time][i][j] + (rand(3).zero? ? -1 : 1) * vrp.matrices[0][:time][i][j] * rand(vrp.resolution_variation_ratio) / 100
         }
       }
       while (0..matrix.size - 1).any?{ |i|
@@ -54,7 +54,7 @@ module Interpreters
       vrp = service_vrp[:vrp]
       vrp.compute_matrix if vrp.matrices.empty?
 
-      if i == 0
+      if i.zero? || !service_vrp[:vrp].resolution_variation_ratio
         service_vrp[:vrp].matrices[0][:value] = vrp.matrices[0][:time]
       else
         service_vrp[:vrp].matrices = generate_matrix(vrp)
@@ -67,6 +67,7 @@ module Interpreters
       }
       service_vrp[:vrp][:name] << '_' << i.to_s if service_vrp[:vrp][:name]
       service_vrp[:vrp][:restitution_allow_empty_result] = true
+      service_vrp[:vrp][:resolution_several_solutions] = nil
 
       service_vrp
     end
@@ -122,7 +123,7 @@ module Interpreters
 
     def self.several_solutions(service_vrps)
       service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }.collect{ |service_vrp|
-        (0..service_vrp[:vrp][:resolution_several_solutions]).collect{ |i|
+        (0..service_vrp[:vrp][:resolution_several_solutions] - 1).collect{ |i|
           variate_service_vrp(Marshal::load(Marshal.dump(service_vrp)), i)
         }
       }.flatten.compact
