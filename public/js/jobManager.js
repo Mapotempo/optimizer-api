@@ -10,15 +10,18 @@ var jobsManager = {
 
         currentJob = this;
         var completed = currentJob.status === 'completed' ? true : false;
-
-        $('#jobs-list').append('<div class="job">'
-          + '<span class="job_title">' + 'Job N° ' + currentJob.uuid + '</span> '
+        var jobDOM =
+          '<div class="job">'
+          + '<span class="optim-start">' + (new Date(currentJob.time)).toLocaleString('fr-FR') + ' : </span>'
+          + '<span class="job_title">' + 'Job N° <b>' + currentJob.uuid + '</b></span> '
           + '<button value=' + currentJob.uuid + ' data-role="delete">'
           + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18n.killOptim : i18n.deleteOptim)
           + '</button>'
           + ' (Status: ' + currentJob.status + ')'
           + (completed ? ' <a data-job-id=' + currentJob.uuid + ' href="#">' + 'Telecharger le resultat de l\'optimisation' + '</a>' : '')
-          + '</div>');
+          + '</div>';
+
+        $('#jobs-list').append(jobDOM);
 
         if (completed) {
           $('a[data-job-id="' + currentJob.uuid + '"').on('click', function (e) {
@@ -51,7 +54,6 @@ var jobsManager = {
                 a.click();
               }
             });
-
           })
         }
       });

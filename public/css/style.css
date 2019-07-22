@@ -81,11 +81,17 @@ form #optim-options input {
 .job_title {
   font-family: Courier New, Courier, Lucida Sans Typewriter, Lucida Typewriter, monospace;
 }
-.job button {
-  vertical-align: bottom;
-}
 
 .error {
   font-weight: bold;
   color: red;
+}
+
+.job {
+  line-height: 10px;
+  margin-top: 10px;
+}
+
+.optim-start {
+  margin: 8px 0px;
 }
