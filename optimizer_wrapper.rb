@@ -125,7 +125,7 @@ module OptimizerWrapper
     duplicated_results = duplicated_services.compact.collect{ |service_vrp|
       define_process([service_vrp], job, &block)
     }
-    split_results = nil
+    split_results = []
     definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
       # Split/Clusterize the problem if too large
       unsplit_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp], job, &block) # Call recursively define_process
