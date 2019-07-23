@@ -308,8 +308,7 @@ module OptimizerWrapper
 
   def self.split_independent_vrp_by_skills(vrp)
     # TODO : remove this flatten to take into account alternative skills on vehicle
-    all_skills = vrp.vehicles.collect{ |v| v.skills.flatten }.uniq
-    vehicle_ids_by_skills = all_skills.collect{ |skills| vrp.vehicles.collect{ |v| v.id if v.skills.flatten == skills }.compact }
+    vehicle_ids_by_skills = vrp.vehicles.group_by{ |vehicle| vehicle.skills.flatten }.map{ |skills, vehicles| vehicles.map{ |v| v.id }.flatten }
 
     sub_vrps = vehicle_ids_by_skills.each_with_object([]) { |vehicle_ids, sub_vrps|
       service_ids = vrp.services.select{ |s| (s.skills & vrp.vehicles.find{ |v| vehicle_ids.include?(v.id) }.skills.flatten) == s.skills }.map(&:id)
@@ -361,11 +360,12 @@ module OptimizerWrapper
       return split_independent_vrp_by_sticky_vehicle(vrp)
     end
 
+    all_skills = vrp.vehicles.map{ |v| v.skills.flatten }.uniq
     if !vrp.subtours&.any? && # Cannot split if there is multimodal subtours
        vrp.services.all?{ |s|
          !s.skills.empty? &&
          s.sticky_vehicles.empty? &&
-         vrp.vehicles.any?{ |v| v.skills.any?{ |v_skills| (s.skills & v_skills).size == s.skills.size } }
+         all_skills.one?{ |skills| (s.skills & skills).size == s.skills.size }
        }
       return split_independent_vrp_by_skills(vrp)
     end
