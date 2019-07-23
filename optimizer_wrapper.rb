@@ -186,14 +186,19 @@ module OptimizerWrapper
             total_distance: nil
           }
         else
+          services_to_reinject = []
           unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
-          vrp.services.delete_if{ |service| unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
 
           vrp.compute_matrix(&block)
 
-          unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
-          @unfeasible_services += unfeasible_services
-          vrp.services.delete_if{ |service| @unfeasible_services.any?{ |sub_service| sub_service[:original_service_id] == service.id }}
+          config[:services][service].check_distances(vrp, unfeasible_services).each{ |una_service|
+            index = vrp.services.find_index{ |service| una_service[:original_service_id] == service.id }
+            if index
+              services_to_reinject << vrp.services.slice!(index)
+            end
+          }
+          @unfeasible_services = unfeasible_services
+
           @unfeasible_services.each{ |service|
             next if service[:detail][:skills] && service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
             service[:detail][:skills] = service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
@@ -253,7 +258,7 @@ module OptimizerWrapper
       end
 
       # Reintegrate unfeasible services deleted from vrp.services to help ortools
-      vrp.services += unfeasible_services
+      vrp.services += services_to_reinject
 
       if vrp.preprocessing_partition_method || !vrp.preprocessing_partitions.empty?
         # add associated cluster as skill

@@ -40,6 +40,10 @@ module Interpreters
         service_vrp[:vrp].points.all?{ |point| point.location && point.location.lat && point.location.lon }) #TODO - Remove and use matrix/matrix_index in clustering
     end
 
+    def self.feasible_vrp(result, service_vrp)
+      (result.nil? || (result[:unassigned].size != service_vrp[:vrp].services.size || result[:unassigned].any?{ |unassigned| !unassigned[:reason] }))
+    end
+
     def self.dichotomious_heuristic(service_vrp, job = nil, &block)
       if dichotomious_candidate(service_vrp)
         set_config(service_vrp)
@@ -57,8 +61,8 @@ module Interpreters
         end
 
         t2 = Time.now
-
-        if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && service_vrp[:vrp].vehicles.size > 3
+        if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && service_vrp[:vrp].vehicles.size > 3 && service_vrp[:vrp].services.size > 100 &&
+           feasible_vrp(result, service_vrp)
           sub_service_vrps = []
           loop do
             sub_service_vrps = split(service_vrp, job)
@@ -70,7 +74,7 @@ module Interpreters
             sub_service_vrp[:vrp].resolution_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             sub_service_vrp[:vrp].resolution_minimum_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             result = OptimizerWrapper.define_process([sub_service_vrp], job, &block)
-            if index.zero?
+            if index.zero? && result
               result[:routes].each{ |r|
                 if r[:activities].select{ |a| a[:service_id] }.empty?
                   vehicle = sub_service_vrps[0][:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
