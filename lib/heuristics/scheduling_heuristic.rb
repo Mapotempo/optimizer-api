@@ -283,7 +283,7 @@ module SchedulingHeuristic
         heuristic_period: period,
         nb_visits: service[:visits_number],
         point_id: service[:activity][:point][:location] ? service[:activity][:point][:location][:id] : service[:activity][:point][:matrix_index],
-        tw: service[:activity][:timewindows] ?  service[:activity][:timewindows] : [],
+        tw: service[:activity][:timewindows] || [],
         unavailable_days: service[:unavailable_visit_day_indices],
         priority: service.priority
       }
@@ -578,6 +578,49 @@ module SchedulingHeuristic
     [new_start, new_arrival, new_end]
   end
 
+  def self.acceptable?(shift, route_data, position)
+    computed_shift = shift
+    acceptable = route_data[:current_route][position] && route_data[:current_route][position][:max_shift] ? route_data[:current_route][position][:max_shift] >= shift : true
+
+    if acceptable && route_data[:current_route][position + 1]
+      (position + 1..route_data[:current_route].size - 1).each{ |pos|
+        initial_shift_with_previous = route_data[:current_route][pos][:start] - (route_data[:current_route][pos - 1][:end])
+        computed_shift = [shift - initial_shift_with_previous, 0].max
+        if route_data[:current_route][pos][:max_shift] && route_data[:current_route][pos][:max_shift] < computed_shift
+          acceptable = false
+          break
+        end
+      }
+    end
+
+    [acceptable, computed_shift]
+  end
+
+  def self.acceptable_for_group?(service, tw, shift)
+    acceptable_for_group = true
+
+    # all services start on time
+    additional_durations = @services_data[service][:duration] + tw[:setup_duration]
+    @same_located[service].each{ |id|
+      acceptable_for_group = tw[:max_shift] - additional_durations >= 0
+      additional_durations += @services_data[id][:duration]
+    }
+
+    acceptable_for_group
+  end
+
+  def self.insertion_cost_with_tw(tw, route_data, service, position)
+    next_id = route_data[:current_route][position] ? route_data[:current_route][position][:id] : nil
+    next_start, next_arrival, next_end, shift = compute_shift(route_data, service, tw[:final_time], position, next_id)
+
+    acceptable_shift, computed_shift = acceptable?(shift, route_data, position)
+    time_back_to_depot = (position == route_data[:current_route].size ? tw[:final_time] + matrix(route_data, service, route_data[:end_point_id]) : route_data[:current_route].last[:end] + matrix(route_data, route_data[:current_route].last[:id], route_data[:end_point_id]) + computed_shift)
+    acceptable_shift_for_itself = (tw[:end_tw] ? tw[:arrival_time] <= tw[:end_tw] : true) && (route_data[:duration] ? time_back_to_depot - (position.zero? ? tw[:start_time] : route_data[:current_route].first[:start]) <= route_data[:duration] : true)
+    tw_accepted = acceptable_shift && acceptable_shift_for_itself && time_back_to_depot <= route_data[:tw_end]
+
+    [tw_accepted, next_start, next_arrival, next_end, shift]
+  end
+
   def self.compute_value_at_position(route_data, service, position, possibles, duration, position_in_order, filling_candidate_route = false)
     ### compute cost of inserting [service] at [position] in [route_data]
     value_inserted = false
@@ -588,57 +631,33 @@ module SchedulingHeuristic
     next_id = route[position] ? route[position][:id] : nil
     return [possibles, false] if route_data[:maximum_ride_time] && (position > 0 && matrix(route_data, previous_service, service, :time) > route_data[:maximum_ride_time] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :time) > route_data[:maximum_ride_time])
     return [possibles, false] if route_data[:maximum_ride_distance] && (position > 0 && matrix(route_data, previous_service, service, :distance) > route_data[:maximum_ride_distance] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :distance) > route_data[:maximum_ride_distance])
-    list = find_timewindows(position, previous_service, previous_service_end, service, @services_data[service], route_data, duration, filling_candidate_route)
-    list.each{ |current_tw|
-      start_time = current_tw[:start_time]
-      arrival_time = current_tw[:arrival_time]
-      final_time = current_tw[:final_time]
-      next_start, next_arrival, next_end, shift = compute_shift(route_data, service, final_time, position, next_id)
-      acceptable_shift = route[position] && route[position][:max_shift] ? route[position][:max_shift] >= shift : true
-      computed_shift = Marshal.load(Marshal.dump(shift))
-      if acceptable_shift && route[position + 1]
-        (position + 1..route.size - 1).each{ |pos|
-          initial_shift_with_previous = route[pos][:start] - (route[pos - 1][:end])
-          computed_shift = [shift - initial_shift_with_previous, 0].max
-          if route[pos][:max_shift] && route[pos][:max_shift] < computed_shift
-            acceptable_shift = false
-            break
-          end
-        }
-      end
-      time_back_to_depot = (position == route.size ? final_time + matrix(route_data, service, route_data[:end_point_id]) : route.last[:end] + matrix(route_data, route.last[:id], route_data[:end_point_id]) + computed_shift)
-      acceptable_shift_for_itself = (current_tw[:end_tw] ? arrival_time <= current_tw[:end_tw] : true) && (route_data[:duration] ? time_back_to_depot - (position == 0 ? start_time : route.first[:start]) <= route_data[:duration] : true)
-      acceptable_shift_for_group = true
-      if @same_point_day && !filling_candidate_route && !@services_data[service][:tw].empty?
-        # all services start on time
-        additional_durations = @services_data[service][:duration] + current_tw[:setup_duration]
-        @same_located[service].each{ |id|
-          acceptable_shift_for_group = current_tw[:max_shift] - additional_durations >= 0
-          additional_durations += @services_data[id][:duration]
-        }
-      end
-      if acceptable_shift && time_back_to_depot <= route_data[:tw_end] && acceptable_shift_for_itself && acceptable_shift_for_group
-        value_inserted = true
-        possibles << {
-          id: service,
-          point: @services_data[service][:point_id],
-          shift: shift,
-          start: start_time,
-          arrival: arrival_time,
-          end: final_time,
-          position: position,
-          position_in_order: position_in_order,
-          considered_setup_duration: current_tw[:setup_duration],
-          next_start_time: next_start,
-          next_arrival_time: next_arrival,
-          next_final_time: next_end,
-          potential_shift: current_tw[:max_shift],
-          additional_route_time: [0, shift - duration - current_tw[:setup_duration]].max,
-          dist_from_current_route: (0..route.size - 1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min,
-          last_service_end: (position == route.size ? final_time : route.last[:end] + shift)
-        }
-      end
+
+    potential_tws = find_timewindows(position, previous_service, previous_service_end, service, @services_data[service], route_data, duration, filling_candidate_route)
+    potential_tws.each{ |tw|
+      tw_accepted, next_start, next_arrival, next_end, shift = insertion_cost_with_tw(tw, route_data, service, position)
+      acceptable_shift_for_group = @same_point_day && !filling_candidate_route && !@services_data[service][:tw].empty? ? acceptable_for_group?(service, tw, shift) : true
+      next if !(tw_accepted && acceptable_shift_for_group)
+      value_inserted = true
+      possibles << {
+        id: service,
+        point: @services_data[service][:point_id],
+        shift: shift,
+        start: tw[:start_time],
+        arrival: tw[:arrival_time],
+        end: tw[:final_time],
+        position: position,
+        position_in_order: position_in_order,
+        considered_setup_duration: tw[:setup_duration],
+        next_start_time: next_start,
+        next_arrival_time: next_arrival,
+        next_final_time: next_end,
+        potential_shift: tw[:max_shift],
+        additional_route_time: [0, shift - duration - tw[:setup_duration]].max,
+        dist_from_current_route: (0..route.size - 1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min,
+        last_service_end: (position == route.size ? tw[:final_time] : route.last[:end] + shift)
+      }
     }
+
     [possibles, value_inserted]
   end
 
