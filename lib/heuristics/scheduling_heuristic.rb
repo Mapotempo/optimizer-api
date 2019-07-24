@@ -175,7 +175,9 @@ module SchedulingHeuristic
     @planning.each{ |_vehicle, all_days_routes|
       all_days_routes.each{ |day, route|
         route[:services].each_with_index{ |s, i|
-          next if @services_data[s[:id]][:tw].nil? || @services_data[s[:id]][:tw].empty?
+          next if @services_data[s[:id]][:tw].nil? || @services_data[s[:id]][:tw].empty? ||
+                  i.positive? && can_ignore_tw(route[:services][i - 1][:id], s [:id])
+
           compatible_tw = find_corresponding_timewindow(s[:id], day, s[:arrival])
           next if compatible_tw &&
                   s[:arrival].between?(compatible_tw[:start], compatible_tw[:end]) &&
@@ -197,15 +199,21 @@ module SchedulingHeuristic
     (first_index..day_route.size - 1).each{ |position|
       stop = day_route[position]
       route_time = matrix(full_route[:vehicle] || full_route, previous_id, stop[:id])
-      stop[:considered_setup_duration] = position.positive? && stop[:point_id] == day_route[position - 1][:point_id] ? 0 : @services_data[stop[:id]][:setup_duration]
+      stop[:considered_setup_duration] = position > 0 && stop[:point_id] == day_route[position - 1][:point_id] ? 0 : @services_data[stop[:id]][:setup_duration]
+      if can_ignore_tw(previous_id, stop[:id])
+        stop[:start] = previous_end
+        stop[:arrival] = previous_end
+        stop[:end] = stop[:arrival] + @services_data[stop[:id]][:duration]
+        stop[:max_shift] = day_route[position - 1][:max_shift]
+      else
+        tw = find_corresponding_timewindow(stop[:id], full_route[:global_day_index] || full_route[:vehicle][:global_day_index], previous_end + route_time + stop[:considered_setup_duration])
+        raise OptimizerWrapper::SchedulingHeuristicError, 'No timewindow found to update route' if !@services_data[stop[:id]][:tw].empty? && tw.nil?
 
-      tw = find_corresponding_timewindow(stop[:id], full_route[:global_day_index] || full_route[:vehicle][:global_day_index], previous_end + route_time + stop[:considered_setup_duration])
-      raise OptimizerWrapper::SchedulingHeuristicError, 'No timewindow found to update route' if !@services_data[stop[:id]][:tw].empty? && tw.nil?
-
-      stop[:start] = tw ? [tw[:start] - route_time - stop[:considered_setup_duration], previous_end].max : previous_end
-      stop[:arrival] = stop[:start] + route_time + stop[:considered_setup_duration]
-      stop[:end] = stop[:arrival] + @services_data[stop[:id]][:duration]
-      stop[:max_shift] = tw ? tw[:end] - stop[:arrival] : nil
+        stop[:start] = tw ? [tw[:start] - route_time - stop[:considered_setup_duration], previous_end].max : previous_end
+        stop[:arrival] = stop[:start] + route_time + stop[:considered_setup_duration]
+        stop[:end] = stop[:arrival] + @services_data[stop[:id]][:duration]
+        stop[:max_shift] = tw ? tw[:end] - stop[:arrival] : nil
+      end
 
       previous_id = stop[:id]
       previous_end = stop[:end]
@@ -545,15 +553,19 @@ module SchedulingHeuristic
     route = route_data[:current_route]
 
     if route.empty?
-      [nil, nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted) + matrix(route_data, service_inserted, route_data[:end_point_id])]
+      return [nil, nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted) + matrix(route_data, service_inserted, route_data[:end_point_id])]
     elsif next_service_id
       dist_to_next = matrix(route_data, service_inserted, next_service_id)
-      next_start, next_arrival, next_end = compute_tw_for_next(inserted_final_time, route[next_service][:arrival], next_service_id, route[next_service][:considered_setup_duration], dist_to_next, route_data[:global_day_index])
-      shift = next_end - route[next_service][:end]
+      if can_ignore_tw(service_inserted, route[next_service][:id])
+        return [inserted_final_time, inserted_final_time, inserted_final_time + @services_data[service_inserted][:duration], @services_data[service_inserted][:duration]]
+      else
+        next_start, next_arrival, next_end = compute_tw_for_next(inserted_final_time, route[next_service][:arrival], next_service_id, route[next_service][:considered_setup_duration], dist_to_next, route_data[:global_day_index])
+        shift = next_end - route[next_service][:end]
 
-      [next_start, next_arrival, next_end, shift]
+        return [next_start, next_arrival, next_end, shift]
+      end
     else
-      [nil, nil, nil, inserted_final_time - route.last[:end]]
+      return [nil, nil, nil, inserted_final_time - route.last[:end]]
     end
   end
 
@@ -621,7 +633,6 @@ module SchedulingHeuristic
 
     route = route_data[:current_route]
     previous_service = (position.zero? ? route_data[:start_point_id] : route[position - 1][:id])
-    previous_point = (position.zero? ? route_data[:start_point_id] : route[position - 1][:point_id]) # use it
     previous_service_end = (position.zero? ? nil : route[position - 1][:end])
     next_id = route[position] ? route[position][:id] : nil
     return [possibles, false] if route_data[:maximum_ride_time] && (position > 0 && matrix(route_data, previous_service, service, :time) > route_data[:maximum_ride_time] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :time) > route_data[:maximum_ride_time])
@@ -890,6 +901,16 @@ module SchedulingHeuristic
     }}
   end
 
+  def self.can_ignore_tw(previous_service, service)
+    ### true if arriving on time at previous_service is enough to consider we are on time at service ###
+    # when same point day is activated we can consider two points at same location are the same
+    # when @duration_in_tw is disabled, only arrival time of first point at a given location matters in tw
+    @same_point_day &&
+      !@duration_in_tw &&
+      @services_data.key?(previous_service) && # not coming from depot
+      @services_data[previous_service][:point_id] == @services_data[service][:point_id] # same location as previous
+  end
+
   def self.find_timewindows(insertion_index, previous_service, previous_service_end, inserted_service, inserted_service_info, route_data, duration, filling_candidate_route = false)
     ### find [inserted_service] timewindow which allows to insert it at [insertion_index] in [route_data] ###
     list = []
@@ -919,7 +940,8 @@ module SchedulingHeuristic
         arrival = start + route_time + setup_duration
         final = arrival + duration
 
-        next if tw[:end] && arrival > tw[:end] && (!@duration_in_tw || final <= tw[:end])
+        next if tw[:end] && arrival > tw[:end] && (!@duration_in_tw || final <= tw[:end]) && # tw violation
+                !can_ignore_tw(previous_service, inserted_service)
         list << {
           start_time: start,
           arrival_time: arrival,
@@ -931,7 +953,6 @@ module SchedulingHeuristic
       }
     end
 
-    # will only contain values associated to one tw, that is : only one start,final and max_shift will be returned
     list
   end
 
@@ -1008,25 +1029,32 @@ module SchedulingHeuristic
       if !point_to_add[:shift].zero?
         shift = point_to_add[:shift]
         (point_to_add[:position] + 2..current_route.size - 1).each{ |point|
-          if shift > 0
+          if shift.positive?
             initial_shift_with_previous = current_route[point][:start] - (current_route[point - 1][:end] - shift)
             shift = [shift - initial_shift_with_previous, 0].max
             current_route[point][:start] += shift
             current_route[point][:arrival] += shift
             current_route[point][:end] += shift
             current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
-          elsif shift < 0
+          elsif shift.negative?
+            # TODO : unitary test this case because very uncommon case
             new_potential_start = current_route[point][:arrival] + shift
-            service_tw = find_corresponding_timewindow(current_route[point][:id], day, current_route[point][:arrival])
-            soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]))
-            if soonest_authorized > new_potential_start
-              # barely tested because very few cases :
-              shift = shift - (soonest_authorized - new_potential_start)
+            if can_ignore_tw(current_route[point - 1], current_route[point])
+              current_route[point][:start] = current_route[point - 1][:end]
+              current_route[point][:arrival] = current_route[point - 1][:end]
+              current_route[point][:end] = current_route[point - 1][:end] + @services_data[current_route[point - 1][:id]][:duration]
+              current_route[point][:max_shift] = current_route[point - 1][:max_shift]
+            else
+              service_tw = find_corresponding_timewindow(current_route[point][:id], day, current_route[point][:arrival])
+              soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]))
+              if soonest_authorized > new_potential_start
+                shift -= (soonest_authorized - new_potential_start)
+              end
+              current_route[point][:start] += shift
+              current_route[point][:arrival] += shift
+              current_route[point][:end] += shift
+              current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
             end
-            current_route[point][:start] += shift
-            current_route[point][:arrival] += shift
-            current_route[point][:end] += shift
-            current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
           end
         }
       end
