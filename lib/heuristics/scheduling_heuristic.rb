@@ -388,10 +388,12 @@ module SchedulingHeuristic
     capacities
   end
 
-  def self.compute_initial_solution(vrp)
+  def self.compute_initial_solution(vrp, &block)
     # collecting data
     collect_services_data(vrp)
     generate_route_structure(vrp)
+
+    block&.call()
 
     # Solve TSP - Build a large Tour to define an arbitrary insertion order
     solve_tsp(vrp)
