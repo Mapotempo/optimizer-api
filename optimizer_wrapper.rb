@@ -834,6 +834,7 @@ module OptimizerWrapper
         new_services[i].priority = cluster.data_items.map{ |di| vrp.services[di[0]].priority }.min
 
         new_tws = []
+        to_remove_tws = []
         service_tws = cluster.data_items.map{ |di|
           di.collect{ |index|
             vrp.services[index].activity.timewindows
@@ -844,18 +845,25 @@ module OptimizerWrapper
             new_tws = service_tw
           else
             new_tws.each{ |new_tw|
-              service_tw.each{ |sub_tw|
-                if new_tw[:start] <= sub_tw[:end] && sub_tw[:start] <= new_tw[:end]
-                  new_tw[:start] = [new_tw[:start], sub_tw[:start]].max
-                  new_tw[:end] = [new_tw[:end], sub_tw[:end]].min
-                else
-                  new_tw = nil
-                end
+              # find intersection with tw of service_tw
+              compatible_tws = service_tw.select{ |tw|
+                tw[:day_index].nil? || new_tw[:day_index].nil? || tw[:day_index] == new_tw[:day_index] &&
+                  (tw[:start].nil? || new_tw[:end].nil? || tw[:start] <= new_tw[:end]) &&
+                  (tw[:end].nil? || new_tw[:start].nil? || tw[:end] >= new_tw[:start])
               }
+              if compatible_tws.empty?
+                to_remove_tws << new_tws
+              else
+                compatible_start = compatible_tws.collect{ |tw| tw[:start] }.compact.max
+                compatible_end = compatible_tws.collect{ |tw| tw[:end] }.compact.min
+                new_tw[:start] = [new_tw[:start], compatible_start].max if compatible_start
+                new_tw[:end] = [new_tw[:end], compatible_end].min if compatible_end
+              end
             }
           end
         }
-        new_services[i].activity.timewindows = new_tws.compact
+        raise OptimizerWrapper::DiscordantProblemError, 'Zip cluster : no intersecting tw could be found' if !new_tws.empty? && (new_tws - to_remove_tws).empty?
+        new_services[i].activity.timewindows = (new_tws - to_remove_tws).compact
       end
     end
 
@@ -877,7 +885,6 @@ module OptimizerWrapper
     end
 
     routes = result[:routes].collect{ |route|
-      new_route = []
       vehicle = original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } ? original_vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] } : original_vrp.vehicles[0]
       new_activities = []
       activities = route[:activities].collect.with_index{ |activity, idx_a|
