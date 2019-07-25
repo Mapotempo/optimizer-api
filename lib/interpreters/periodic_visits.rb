@@ -26,7 +26,7 @@ module Interpreters
       @epoch = Date.new(1970, 1, 1)
     end
 
-    def expand(vrp)
+    def expand(vrp, &block)
       if vrp.schedule_range_indices || vrp.schedule_range_date
 
         @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - @epoch).to_i
@@ -54,7 +54,7 @@ module Interpreters
           if vrp.services.empty?
             vrp[:preprocessing_heuristic_result] = {
               cost: nil,
-              solvers: ["heuristic"],
+              solvers: ['scheduling_heuristic'],
               iterations: nil,
               routes: [],
               unassigned: [],
@@ -62,8 +62,8 @@ module Interpreters
               total_distance: nil
             }
           else
-            SchedulingHeuristic::initialize(vrp, @real_schedule_start, @schedule_end, @shift,generate_vehicles(vrp))
-            vrp.routes = SchedulingHeuristic::compute_initial_solution(vrp)
+            SchedulingHeuristic.initialize(vrp, @real_schedule_start, @schedule_end, @shift, generate_vehicles(vrp))
+            vrp.routes = SchedulingHeuristic.compute_initial_solution(vrp, &block)
           end
         end
 
