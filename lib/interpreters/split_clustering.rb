@@ -108,7 +108,8 @@ module Interpreters
       vrp = service_vrp[:vrp]
       if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
         current_service_vrps = [service_vrp]
-        vrp.preprocessing_partitions.each{ |partition|
+        vrp.preprocessing_partitions.each_with_index{ |partition, partition_index|
+          block.call(nil, nil, nil, "clustering #{partition_index}/#{vrp.preprocessing_partitions.size}", nil, nil, nil) if block
           cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
 
           case partition[:method]
