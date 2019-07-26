@@ -164,4 +164,35 @@ class HeuristicTest < Minitest::Test
     s.clean_routes(s.instance_variable_get(:@planning)['vehicle_0'][0][:services].first, 0, 'vehicle_0', [0, 1, 2, 3, 4, 7, 8, 9, 10, 11])
     assert(s.instance_variable_get(:@planning).all?{ |_key, data| data.all?{ |_k, d| d[:services].empty? } })
   end
+
+  def test_check_validity
+    vrp = VRP.scheduling_seq_timewindows
+    vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300}]
+    vrp = FCT.create(vrp)
+    s = SchedulingHeuristic.initialize(vrp, 0, 14, 0, [])
+    s.collect_services_data(vrp)
+    vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index], tw_start: 0, tw_end: 400 }
+    s.instance_variable_set(:@planning,
+      'vehicle_0' => {
+        0 => {
+          services: [{ id: 'service_1', start: 50, arrival: 100, end: 350, considered_setup_duration: 0 }], vehicle: vehicule
+        }
+    })
+    assert s.check_solution_validity
+
+    s.instance_variable_set(:@duration_in_tw, true)
+    assert_raises OptimizerWrapper::SchedulingHeuristicError do
+      s.check_solution_validity
+    end
+
+    s.instance_variable_set(:@planning,
+      'vehicle_0' => {
+        0 => {
+          services: [{ id: 'service_1', start: 50, arrival: 60, end: 80, considered_setup_duration: 0 }], vehicle: vehicule
+        }
+    })
+    assert_raises OptimizerWrapper::SchedulingHeuristicError do
+      s.check_solution_validity
+    end
+  end
 end

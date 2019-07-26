@@ -49,6 +49,7 @@ module SchedulingHeuristic
     # heuristic parameters
     @allow_partial_assignment = vrp.resolution_allow_partial_assignment
     @same_point_day = vrp.resolution_same_point_day
+    @duration_in_tw = false # by default, create parameter this
 
     # initialization
     @sub_pb_solved = 0
@@ -161,17 +162,13 @@ module SchedulingHeuristic
   end
 
   def self.check_solution_validity
-    @planning.each{ |vehicle, all_days_routes|
-      all_days_routes.each{ |day, route|
+    @planning.each{ |_vehicle, all_days_routes|
+      all_days_routes.each{ |_day, route|
         next if route[:services].empty?
         last_service = route[:services].last[:id]
         time_back_to_depot = route[:services].last[:end] + matrix(route[:vehicle], last_service, route[:vehicle][:end_point_id])
-        if route[:services][0][:start] < route[:vehicle][:tw_start]
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is starting too soon'
-        end
-        if time_back_to_depot > route[:vehicle][:tw_end]
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is ending too late'
-        end
+        raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is starting too soon' if route[:services][0][:start] < route[:vehicle][:tw_start]
+        raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is ending too late' if time_back_to_depot > route[:vehicle][:tw_end]
       }
     }
 
@@ -179,15 +176,11 @@ module SchedulingHeuristic
       all_days_routes.each{ |day, route|
         route[:services].each_with_index{ |s, i|
           next if @services_data[s[:id]][:tw].nil? || @services_data[s[:id]][:tw].empty?
-          time_to_arrive = (i.zero? ? matrix(route[:vehicle], route[:vehicle][:start_point_id], s[:id]) : matrix(route[:vehicle], route[:services][i - 1][:id], s[:id]))
-          time_to_arrive += s[:considered_setup_duration]
-          compatible_tw = find_corresponding_timewindow(@services_data[s[:id]][:tw], day, s[:start] + time_to_arrive)
-
-          if compatible_tw.nil? && @services_data[s[:id]][:tw].any?{ |tw| tw[:day_index] == day % 7 && s[:start] + time_to_arrive + s[:considered_setup_duration] <= tw[:start] }
-            s[:start] = @services_data[s[:id]][:tw].collect{ |tw| tw[:start] if tw[:day_index] == day % 7 && s[:start] + time_to_arrive + s[:considered_setup_duration] <= tw[:start] }.compact.min - time_to_arrive - s[:considered_setup_duration]
-          elsif compatible_tw.nil?
-            raise OptimizerWrapper::SchedulingHeuristicError, 'One service timewindows violated'
-          end
+          compatible_tw = find_corresponding_timewindow(s[:id], day, s[:arrival])
+          next if compatible_tw &&
+                  s[:arrival].between?(compatible_tw[:start], compatible_tw[:end]) &&
+                  (!@duration_in_tw || s[:end] <= compatible_tw[:end])
+          raise OptimizerWrapper::SchedulingHeuristicError, 'One service timewindows violated'
         }
       }
     }
@@ -206,7 +199,7 @@ module SchedulingHeuristic
       route_time = matrix(full_route[:vehicle] || full_route, previous_id, stop[:id])
       stop[:considered_setup_duration] = position.positive? && stop[:point_id] == day_route[position - 1][:point_id] ? 0 : @services_data[stop[:id]][:setup_duration]
 
-      tw = find_corresponding_timewindow(@services_data[stop[:id]][:tw], full_route[:global_day_index] || full_route[:vehicle][:global_day_index], previous_end + route_time + stop[:considered_setup_duration])
+      tw = find_corresponding_timewindow(stop[:id], full_route[:global_day_index] || full_route[:vehicle][:global_day_index], previous_end + route_time + stop[:considered_setup_duration])
       raise OptimizerWrapper::SchedulingHeuristicError, 'No timewindow found to update route' if !@services_data[stop[:id]][:tw].empty? && tw.nil?
 
       stop[:start] = tw ? [tw[:start] - route_time - stop[:considered_setup_duration], previous_end].max : previous_end
@@ -413,8 +406,8 @@ module SchedulingHeuristic
       next if service[:activity][:timewindows].empty?
 
       service[:activity][:timewindows].each{ |original_tw|
-        corresponding = find_corresponding_timewindow(@services_data[service[:id]][:tw], day, original_tw[:start])
-        corresponding = find_corresponding_timewindow(@services_data[service[:id]][:tw], day, original_tw[:end]) if corresponding.nil?
+        corresponding = find_corresponding_timewindow(service[:id], day, original_tw[:start])
+        corresponding = find_corresponding_timewindow(service[:id], day, original_tw[:end]) if corresponding.nil?
 
         if corresponding.nil?
           service[:activity][:timewindows].delete(original_tw)
@@ -555,7 +548,7 @@ module SchedulingHeuristic
       [nil, nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted) + matrix(route_data, service_inserted, route_data[:end_point_id])]
     elsif next_service_id
       dist_to_next = matrix(route_data, service_inserted, next_service_id)
-      next_start, next_arrival, next_end = compute_tw_for_next(inserted_final_time, route[next_service][:arrival], @services_data[next_service_id], route[next_service][:considered_setup_duration], dist_to_next, route_data[:global_day_index])
+      next_start, next_arrival, next_end = compute_tw_for_next(inserted_final_time, route[next_service][:arrival], next_service_id, route[next_service][:considered_setup_duration], dist_to_next, route_data[:global_day_index])
       shift = next_end - route[next_service][:end]
 
       [next_start, next_arrival, next_end, shift]
@@ -564,12 +557,13 @@ module SchedulingHeuristic
     end
   end
 
-  def self.compute_tw_for_next(inserted_final_time, next_current_arrival, next_service_info, next_service_considered_setup, dist_from_inserted, current_day)
+  def self.compute_tw_for_next(inserted_final_time, next_current_arrival, next_service_id, next_service_considered_setup, dist_from_inserted, current_day)
     ### compute new start and end times for the service just after inserted point ###
+    next_service_info = @services_data[next_service_id]
     sooner_start = inserted_final_time
     if next_service_info[:tw] && !next_service_info[:tw].empty?
-      tw = find_corresponding_timewindow(next_service_info[:tw], current_day, next_current_arrival)
-      sooner_start = tw[:start] - dist_from_inserted if tw && tw[:start]
+      tw = find_corresponding_timewindow(next_service_id, current_day, next_current_arrival)
+      sooner_start = tw[:start] - dist_from_inserted - next_service_considered_setup if tw && tw[:start]
     end
     new_start = [sooner_start, inserted_final_time].max
     new_arrival = new_start + dist_from_inserted + next_service_considered_setup
@@ -627,6 +621,7 @@ module SchedulingHeuristic
 
     route = route_data[:current_route]
     previous_service = (position.zero? ? route_data[:start_point_id] : route[position - 1][:id])
+    previous_point = (position.zero? ? route_data[:start_point_id] : route[position - 1][:point_id]) # use it
     previous_service_end = (position.zero? ? nil : route[position - 1][:end])
     next_id = route[position] ? route[position][:id] : nil
     return [possibles, false] if route_data[:maximum_ride_time] && (position > 0 && matrix(route_data, previous_service, service, :time) > route_data[:maximum_ride_time] || position < route_data[:current_route].size && matrix(route_data, service, next_id, :time) > route_data[:maximum_ride_time])
@@ -774,6 +769,7 @@ module SchedulingHeuristic
             else
               route_data[:positions_in_order].insert(best_index[:position], -1)
             end
+            # TODO : do not put -1 if position changed just because point at same location
             @to_plan_service_ids.delete(best_index[:id])
 
             # adding all points of same familly and frequence
@@ -920,12 +916,14 @@ module SchedulingHeuristic
         else
           insertion_index.zero? ? route_data[:tw_start] : previous_service_end
         end
+        arrival = start + route_time + setup_duration
+        final = arrival + duration
 
-        next if tw[:end] && start > tw[:end]
+        next if tw[:end] && arrival > tw[:end] && (!@duration_in_tw || final <= tw[:end])
         list << {
           start_time: start,
-          arrival_time: start + route_time + setup_duration,
-          final_time: start + route_time + setup_duration + duration,
+          arrival_time: arrival,
+          final_time: final,
           end_tw: tw[:end],
           max_shift: tw[:end] ? tw[:end] - (start + route_time + setup_duration) : nil,
           setup_duration: setup_duration
@@ -1019,7 +1017,7 @@ module SchedulingHeuristic
             current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
           elsif shift < 0
             new_potential_start = current_route[point][:arrival] + shift
-            service_tw = find_corresponding_timewindow(@services_data[current_route[point][:id]][:tw], day, current_route[point][:arrival])
+            service_tw = find_corresponding_timewindow(current_route[point][:id], day, current_route[point][:arrival])
             soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]))
             if soonest_authorized > new_potential_start
               # barely tested because very few cases :
@@ -1181,8 +1179,12 @@ module SchedulingHeuristic
     end
   end
 
-  def self.find_corresponding_timewindow(service_tw, day, time)
-    service_tw.select{ |tw| (tw[:day_index].nil? || tw[:day_index] == day % 7) && (time.between?(tw[:start], tw[:end]) || time <= tw[:start]) }.min_by{ |tw| tw[:start] }
+  def self.find_corresponding_timewindow(service_id, day, arrival_time)
+    @services_data[service_id][:tw].select{ |tw|
+      (tw[:day_index].nil? || tw[:day_index] == day % 7) && # compatible days
+        (arrival_time.between?(tw[:start], tw[:end]) || arrival_time <= tw[:start]) && # arrival_time is accepted
+        (!@duration_in_tw || ([tw[:start], arrival_time].max + @services_data[service_id][:duration] <= tw[:end])) # duration accepted in tw
+    }.min_by{ |tw| tw[:start] }
   end
 
   def self.construct_sub_vrp(vrp, service_ids)
