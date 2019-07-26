@@ -186,7 +186,8 @@ module Interpreters
             new_service = nil
             if !service.unavailable_visit_indices || service.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
               new_service = Marshal::load(Marshal.dump(service))
-              new_service.id = "#{new_service.id}_#{visit_index+1}_#{new_service.visits_number}"
+              new_service.id = "#{new_service.id}_#{visit_index+1}_#{service.visits_number}"
+              new_service.visits_number = 1
               new_service.activity.timewindows = if !service.activity.timewindows.empty?
                 new_timewindows = service.activity.timewindows.collect{ |timewindow|
                   if timewindow.day_index
