@@ -149,7 +149,7 @@ module OptimizerWrapper
   end
 
   def self.solve(services_vrps, job = nil, block = nil)
-    unfeasible_services = []
+    @unfeasible_services = []
 
     cluster_reference = 0
     real_result = join_independent_vrps(services_vrps, block) { |service, vrp, block|
@@ -192,19 +192,20 @@ module OptimizerWrapper
           vrp.compute_matrix(&block)
 
           unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
-          unfeasible_services.each{ |una_service|
-            index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
-            if index
-              services_to_reinject << vrp.services.slice!(index)
-            end
-
-            next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
-            una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-          }
+          @unfeasible_services += unfeasible_services
 
           vrp = config[:services][service].simplify_constraints(vrp)
 
           if !vrp.services.empty? || !vrp.shipments.empty? || !vrp.rests.empty?
+            unfeasible_services.each{ |una_service|
+              index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+              if index
+                services_to_reinject << vrp.services.slice!(index)
+              end
+
+              next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
+              una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
+            } if vrp.resolution_solver_parameter == -1 || !vrp.resolution_solver || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp) {
               block&.call(nil, nil, nil, "process #{cluster_reference + 1}/#{services_vrps.size}", nil, nil, nil)
@@ -213,6 +214,15 @@ module OptimizerWrapper
               block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
               # Select best heuristic
               Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
+              unfeasible_services.each{ |una_service|
+                index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+                if index
+                  services_to_reinject << vrp.services.slice!(index)
+                end
+
+                next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
+                una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
+              }
               block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
               cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
                 block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
@@ -293,7 +303,7 @@ module OptimizerWrapper
       cluster_result
     }
 
-    real_result[:unassigned] = (real_result[:unassigned] || []) + unfeasible_services if real_result
+    real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
     real_result[:name] = services_vrps[0][:vrp][:name] if real_result
     if real_result && services_vrps.any?{ |service| service[:vrp][:preprocessing_first_solution_strategy] }
       real_result[:heuristic_synthesis] = services_vrps.collect{ |service| service[:vrp][:preprocessing_heuristic_synthesis] }
