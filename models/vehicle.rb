@@ -36,10 +36,13 @@ module Models
 
     field :router_mode, default: :car
     field :router_dimension, default: :time
+    field :traffic, default: false
+    field :departure, default: nil
     field :speed_multiplier, default: 1
     field :area, default: []
     field :speed_multiplier_area, default: []
     field :motorway, default: true
+    field :track, default: true
     field :toll, default: true
     field :trailers, default: nil
     field :weight, default: nil
@@ -149,9 +152,12 @@ module Models
 
     def router_options
       {
+        traffic: traffic,
+        departure: departure,
         speed_multiplier: speed_multiplier,
         area: area,
         speed_multiplier_area: speed_multiplier_area,
+        track: track,
         motorway: motorway,
         toll: toll,
         trailers: trailers,

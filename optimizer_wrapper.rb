@@ -643,7 +643,7 @@ module OptimizerWrapper
     unless segments.empty?
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
         vehicle[:router_mode].to_sym, vehicle[:router_dimension], segments, vrp.restitution_geometry_polyline, vehicle.router_options)
-      raise RouterWrapperError unless details
+      raise RouterError.new('Route details cannot be received') unless details
     end
     details.each{ |d| d[0] = (d[0] / 1000.0).round(4) if d[0] } if details
     details
