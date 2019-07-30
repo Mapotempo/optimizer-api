@@ -524,8 +524,8 @@ module Wrappers
 
     def check(vrp, matrix, unfeasible)
       if !matrix.nil?
-        line_cpt = Array.new(vrp.points.size.size){ 0 }
-        column_cpt = Array.new(vrp.points.size.size){ 0 }
+        line_cpt = Array.new(vrp.points.size){ 0 }
+        column_cpt = Array.new(vrp.points.size){ 0 }
         vrp.points.each_with_index{ |point_a, line|
           vrp.points.each_with_index{ |point_b, col|
             if matrix[point_a.matrix_index][point_b.matrix_index] >= 2**31 - 1
