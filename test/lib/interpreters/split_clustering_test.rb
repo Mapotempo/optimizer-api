@@ -493,4 +493,13 @@ class SplitClusteringTest < Minitest::Test
       assert e.is_a?(OptimizerWrapper::UnsupportedProblemError)
     end
   end
+
+  def test_max_split_size_with_empty_fill
+    vrp = FCT.load_vrp(self)
+    check_vrp = Marshal.load(Marshal.dump(vrp))
+
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal vrp.services.size, result[:unassigned].map{ |s| s[:service_id] }.compact.size + result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size
+    assert_equal vrp.services.size, check_vrp.services.size
+  end
 end

@@ -175,9 +175,15 @@ module Interpreters
         remove_poor_routes(sub_vrp, sub_result)
         raise 'Incorrect activities count' if sub_problem[:vrp][:services].size != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.size
         available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
-        empties_or_fills -= remove_used_empties_and_refills(sub_vrp, sub_result)
+        empties_or_fills_used = remove_used_empties_and_refills(sub_vrp, sub_result).compact
+        empties_or_fills -= empties_or_fills_used
+        sub_problem[:vrp].services -= empties_or_fills_used
+        empties_or_fills_remaining = empties_or_fills - empties_or_fills_used
+        sub_result[:unassigned].delete_if{ |activity| empties_or_fills_remaining.map{ |service| service.id }.include?(activity[:service_id]) } if index.zero?
         result = Helper.merge_results([result, sub_result])
       }
+      vrp.services += empties_or_fills
+
       result
     end
 
