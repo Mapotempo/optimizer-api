@@ -49,7 +49,7 @@ class HeuristicTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(vrp), nil)
 
     assert_equal 4, result[:unassigned].size
-    assert(result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Only partial assignment') })
+    assert(result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Partial assignment only') })
   end
 
   def test_max_ride_time
@@ -553,11 +553,11 @@ class HeuristicTest < Minitest::Test
     # services_unassigned:
     # Best is 0. It is often 1,2,3. Rarely more than 6. And it is 9 in the worst case.
     assert services_unassigned.max < 10, "Number of unassigned services should be less than 10 (#{services_unassigned})" # easier to achieve
-    assert services_unassigned.max - services_unassigned.min <= 7, "Number of unassigned services should be more regular (max-min diff is too much -- #{services_unassigned.max - services_unassigned.min}) (#{services_unassigned})" # can fail rarely but should happen regualarly
+    assert services_unassigned.max - services_unassigned.min <= 8, "Number of unassigned services should be more regular (max-min diff is too much -- #{services_unassigned.max - services_unassigned.min}) (#{services_unassigned})" # can fail rarely but should happen regualarly
 
     # %95 should be less than or equal to 6
     rate_upperbound_6_services = (@regularity_restarts * 0.95).floor - 1
-    assert services_unassigned.count{ |x| x <= 6 } < rate_upperbound_6_services, "Number of unassigned services > 6 should appear less than #{@regularity_restarts - rate_upperbound_6_services} times (#{services_unassigned})"
+    assert services_unassigned.count{ |x| x <= 6 } > rate_upperbound_6_services, "Number of unassigned services > 6 should appear less than #{@regularity_restarts - rate_upperbound_6_services} times (#{services_unassigned})"
 
     # visits_unassigned:
     # Best is 0. It is often 1,2,3. Rarely more than 10. And it is 15 in the worst case.
@@ -582,7 +582,11 @@ class HeuristicTest < Minitest::Test
 
   def test_same_point_day_relaxation
     vrp = FCT.load_vrp(self)
+    total_visits = vrp[:services].collect{ |s| s[:visits_number] }.sum
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] } }, vrp, nil)
+
+    assert_equal total_visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
+      "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{total_visits} expected"
 
     vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
       expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max

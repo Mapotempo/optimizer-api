@@ -240,24 +240,21 @@ module SchedulingHeuristic
     (1..@services_data[service[:id]][:nb_visits]).each{ |number_in_sequence|
       @uninserted["#{service[:id]}_#{number_in_sequence}_#{@services_data[service[:id]][:nb_visits]}"] = {
         original_service: service[:id],
-        reason: "Only partial assignment could be found (#{removed_size} visits had been assigned from day #{day_finished})"
+        reason: 'Partial assignment only'
       }
     }
 
-    @to_plan_service_ids.delete_if{ |service_id|
-      @services_data[service_id][:point_id] == service[:point_id]
-    }
-    @candidate_service_ids.each{ |candidate_service|
-      next if @services_data[candidate_service][:point_id] != service[:point_id]
-      (0..@services_data[candidate_service][:nb_visits] - 1).each{ |visit|
-        @uninserted["#{candidate_service}_#{visit + 1}_#{@services_data[candidate_service][:nb_visits]}"] = {
-          original_service: candidate_service,
-          reason: "Service #{candidate_service} at the same location is already unassigned, and partial_assigments are unauthorized"
+    # unaffected all points at this location
+    points_at_same_location = @candidate_service_ids.select{ |id| @services_data[id][:point_id] == @services_data[service[:id]][:point_id] }
+    points_at_same_location.each{ |id|
+      (1..@services_data[id][:nb_visits]).each{ |visit|
+        @uninserted["#{id}_#{visit}_#{@services_data[id][:nb_visits]}"] = {
+          original_service: id,
+          reason: 'Partial assignment only'
         }
       }
-    }
-    @candidate_service_ids.delete_if{ |service_id|
-      @services_data[service_id][:point_id] == service[:point_id]
+      @candidate_service_ids.delete(id)
+      @to_plan_service_ids.delete(id)
     }
   end
 
@@ -536,7 +533,7 @@ module SchedulingHeuristic
       next if @same_point_day && @unlocked.include?(service_id) && (!possible_vehicles.include?(vehicle) || !possible_days.include?(day))
 
       same_point_compatible_day = true
-      if @unlocked.include?(service_id) && @services_data[service_id][:heuristic_period]
+      if !@relaxed_same_point_day && @unlocked.include?(service_id) && @services_data[service_id][:heuristic_period]
         last_visit_day = day + (@services_data[service_id][:nb_visits] - 1) * @services_data[service_id][:heuristic_period]
         # can not finish later (over whole period) than service at same_point
         stop = @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }
