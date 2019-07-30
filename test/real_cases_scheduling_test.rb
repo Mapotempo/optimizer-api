@@ -152,10 +152,18 @@ class HeuristicTest < Minitest::Test
       total_visits = vrp[:services].collect{ |s| s[:visits_number] }.sum
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
-      assert result[:unassigned].size < total_visits * 5 / 100, "#{result[:unassigned].size * 100 / total_visits}% unassigned instead of 5% authorized"
-      assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
+
       assert_equal total_visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
         "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{total_visits} expected"
+
+      vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
+        expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
+        days_used = result[:routes].collect{ |r| r[:activities].select{ |stop| stop[:point_id] == point_id }.size }.select(&:positive?).size
+        assert days_used <= expected_number_of_days, "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
+      }
+
+      assert result[:unassigned].size < total_visits * 5 / 100, "#{result[:unassigned].size * 100 / total_visits}% unassigned instead of 5% authorized"
+      assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
     end
 
     def test_improve_routes_with_ortools
