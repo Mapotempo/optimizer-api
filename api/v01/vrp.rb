@@ -169,6 +169,7 @@ module Api
         this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) }} : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :traffic, type: Boolean, default: true, desc: 'Take into account traffic or not.'
+        this.optional :departure, type: DateTime, desc: 'Departure date time (only used if router supports traffic).'
         this.optional :track, type: Boolean, default: true, desc: 'Use track or not.'
         this.optional :motorway, type: Boolean, default: true, desc: 'Use motorway or not.'
         this.optional :toll, type: Boolean, default: true, desc: 'Use toll section or not.'

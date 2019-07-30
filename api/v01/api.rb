@@ -52,6 +52,9 @@ module Api
         elsif e.is_a?(OptimizerWrapper::SchedulingHeuristicError)
           response = "#{e.class} : #{e.data}"
           rack_response(format_message(response, nil), 417)
+        elsif e.is_a?(RouterError)
+          response = "#{e.class} : #{e.data}"
+          rack_response(format_message(response, nil), 400)
         else
           rack_response(format_message(response, e.backtrace), 500)
         end

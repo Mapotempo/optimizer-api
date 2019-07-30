@@ -905,6 +905,60 @@ class WrapperTest < Minitest::Test
     end
   end
 
+  def test_router_invalid_parameter_combination_error
+    problem = {
+      points: [
+        {
+          id: "point_0",
+          location: {
+            lat: 47,
+            lon: 0
+          }
+        }, {
+          id: "point_1",
+          location: {
+            lat: 48,
+            lon: 0
+          }
+        }
+      ],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        speed_multiplier: 1,
+        track: false,
+        toll: false
+      }],
+      services: [
+        {
+          id: "service_0",
+          activity: {
+            point_id: "point_0"
+          }
+        }, {
+          id: "service_1",
+          activity: {
+            point_id: "point_1"
+          }
+        }
+      ],
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+
+    begin
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+    rescue StandardError => error
+      assert error.class.name.match 'RouterError'
+    end
+  end
+
   def test_point_id_not_defined
     problem = {
       points: [
