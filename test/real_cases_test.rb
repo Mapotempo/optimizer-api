@@ -398,15 +398,18 @@ class RealCasesTest < Minitest::Test
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert result[:cost] < 99400
+      assert result[:total_distance] <= 85100
+      assert result[:unassigned].size <= 8
     end
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_hv11
+      assert_equal 0, result[:unassigned].size
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert result[:cost] < 4503790100
+      assert result[:total_distance] <= 183800
+      assert_equal 0, result[:unassigned].size
     end
 
     # North West of France - at the fastest with distance minimization
@@ -414,7 +417,19 @@ class RealCasesTest < Minitest::Test
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert result[:cost] < 126082900
+      assert result[:total_distance] <= 97400
+      assert_equal 0, result[:unassigned].size
+    end
+
+    # North West of France - at the fastest with distance minimization with vehicle returning at the depot
+    def test_instance_fr_tv11
+      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
+      vrp.vehicles.first.end_point = vrp.vehicles.first.start_point
+      vrp.vehicles.first.end_point_id = vrp.vehicles.first.start_point_id
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert result
+      assert result[:total_distance] <= 105700
+      assert_equal 0, result[:unassigned].size
     end
   end
 end
