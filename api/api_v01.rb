@@ -204,7 +204,7 @@ Before calling the solvers, a VRP model must be defined, which represent the pro
   "matrices": [..],
   "rests": [..],
   "relations": [..],
-  "configuration": [..]
+  "configuration": {..}
 }
 ```
 Those high level entities are completed by few others as **timewindows** and **activities** which are locally defined.
