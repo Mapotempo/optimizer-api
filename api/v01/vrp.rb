@@ -76,9 +76,9 @@ module Api
 
       def self.vrp_request_matrices(this)
         this.requires(:id, type: String, allow_blank: false)
-        this.optional(:time, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of time, travel duration between each pair of point in the problem')
-        this.optional(:distance, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of distance, travel distance between each pair of point in the problem')
-        this.optional(:value, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related')
+        this.optional(:time, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of time, travel duration between each pair of point in the problem. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix')
+        this.optional(:distance, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of distance, travel distance between each pair of point in the problem. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix')
+        this.optional(:value, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix')
       end
 
       def self.vrp_request_point(this)
@@ -190,7 +190,7 @@ module Api
         this.optional(:distance, types: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
-        this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. Not available with periodic heuristic.')
+        this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. Not available with periodic heuristic. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]')
 
         this.optional(:unavailable_work_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals indices of unavailabilty')
         this.optional(:unavailable_work_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
@@ -287,7 +287,7 @@ module Api
         this.optional(:speed_multiplier, type: Float, default: 1.0, desc: 'multiply the current modality speed, default : 1.0')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this subtour')
         this.optional(:duration, type: Integer, desc: 'Maximum subtour duration')
-        this.optional(:transmodal_stops, type: Hash, desc: 'Point where the vehicles can park and start the subtours') do
+        this.optional(:transmodal_stops, type: Array, desc: 'Point where the vehicles can park and start the subtours') do
           Vrp.vrp_request_point(self)
         end
         this.optional(:capacities, type: Array, desc: 'Define the limit of entities the subtour modality can handle') do
@@ -395,7 +395,7 @@ module Api
             detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
           }
           params {
-            optional(:vrp, type: Hash, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
+            optional(:vrp, type: Hash, documentation: { param_type: 'body' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
               optional(:name, type: String, desc: 'Name of the problem, used as tag for all element in order to name plan when importing returned .csv file')
               optional(:matrices, type: Array, desc: 'Define all the distances between each point of problem') do
                 Vrp.vrp_request_matrices(self)
@@ -460,37 +460,35 @@ module Api
               end
             end
 
-            optional :name, type: String, desc: 'Name of the problem'
-
-            optional :points, type: Array, desc: 'Particular place in the map', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
+            optional :points, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Particular place in the map' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_point(self)
             end
 
-            optional :units, type: Array, desc: 'The name of a Capacity/Quantity', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
+            optional :units, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! The name of a Capacity/Quantity' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_unit(self)
             end
 
-            optional :timewindows, type: Array, desc: 'Time slot while the activity may be performed', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
+            optional :timewindows, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Time slot while the activity may be performed' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_timewindow(self)
             end
 
-            optional :capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
+            optional :capacities, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Define the limit of entities the vehicle could carry' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_capacity(self)
             end
 
-            optional :quantities, type: Array, desc: 'Define the entities which are taken or dropped', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
+            optional :quantities, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Define the entities which are taken or dropped' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_quantity(self)
             end
 
-            optional :services, type: Array, desc: 'Independent activity, which does not require a context', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
+            optional :services, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Independent activity, which does not require a context' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) } do
               Vrp.vrp_request_service(self)
             end
 
-            optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) }) do
+            optional(:shipments, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Link directly one activity of collection to another of drop off' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) }) do
               Vrp.vrp_request_shipment(self)
             end
 
-            optional(:vehicles, type: Array, desc: 'Usually represent a work day of a particular driver/vehicle', coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) }) do
+            optional(:vehicles, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Usually represent a work day of a particular driver/vehicle' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) }) do
               Vrp.vrp_request_vehicle(self)
             end
           }
