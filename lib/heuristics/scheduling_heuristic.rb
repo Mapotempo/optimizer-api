@@ -189,13 +189,16 @@ module SchedulingHeuristic
     }
   end
 
-  def self.update_route(full_route, first_index = 0)
+  def self.update_route(full_route, first_index, first_start = nil)
     # TODO : use in insert_point_in_route
     day_route = full_route[:services] || full_route[:current_route]
     day_route if first_index > day_route.size
 
     previous_id = first_index.zero? ? (full_route[:start_point_id] || full_route[:vehicle][:start_point_id]) : day_route[first_index - 1][:id]
     previous_end = first_index.zero? ? (full_route[:tw_start] || full_route[:vehicle][:tw_start]) : day_route[first_index - 1][:end]
+    if first_start
+      previous_end = first_start
+    end
 
     (first_index..day_route.size - 1).each{ |position|
       stop = day_route[position]
@@ -398,6 +401,15 @@ module SchedulingHeuristic
 
     fill_days
 
+    # Reorder routes with solver and try to add more visits
+    if vrp.resolution_solver && !@candidate_service_ids.empty?
+      reorder_routes(vrp)
+      check_solution_validity
+      fill_days
+    end
+
+    # Relax same_point_day constraint
+    # TODO : check if it is still usefull
     if @same_point_day && !@candidate_service_ids.empty?
       # If there are still unassigned visits
       # relax the @same_point_day constraint but
@@ -412,16 +424,11 @@ module SchedulingHeuristic
     fill_planning
     check_solution_validity
 
-    if vrp.resolution_solver && !@candidate_service_ids.empty?
-      reorder_routes(vrp)
-      check_solution_validity
-    end
-
     routes = prepare_output_and_collect_routes(vrp)
     routes
   end
 
-  def self.provide_group_tws(services)
+  def self.provide_group_tws(services, day)
     services.each{ |service|
       next if service[:activity][:timewindows].empty?
 
@@ -444,18 +451,17 @@ module SchedulingHeuristic
     # TODO : take this function into account when computing avancement
 
     vrp.vehicles.each{ |vehicle|
-      # TODO : call reorder routes on @candidate_routes, not planning
-      @planning[vehicle.id].each{ |day, route|
-        next if route[:services].collect{ |s| s[:point_id] }.uniq.size == 1
+      @candidate_routes[vehicle.id].each{ |day, route|
+        next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size == 1 || @candidate_service_ids.empty?
 
         puts "Entering reorder_routes function for problem #{@sub_pb_solved}"
 
-        service_ids = route[:services].collect{ |service| service[:id] }
+        service_ids = route[:current_route].collect{ |service| service[:id] }
         route_vrp = construct_sub_vrp(vrp, service_ids)
 
         # TODO : test with and without providing initial solution ?
-        route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:services])
-        route_vrp.services = provide_group_tws(route_vrp.services) # to have same data in ORtools and scheduling. Customers should ensure all timewindows are the same for same points
+        route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:current_route])
+        route_vrp.services = provide_group_tws(route_vrp.services, day) # to have same data in ORtools and scheduling. Customers should ensure all timewindows are the same for same points
 
         begin
           result = OptimizerWrapper.solve([service: :ortools, vrp: route_vrp])
@@ -467,18 +473,17 @@ module SchedulingHeuristic
 
         next if result.nil? || !result[:unassigned].empty?
 
-        time_back_to_depot = route[:services].last[:end] + matrix(route[:vehicle], route[:services].last[:id], route[:vehicle][:end_point_id])
-        scheduling_route_time = time_back_to_depot - route[:services].first[:start]
+        time_back_to_depot = route[:current_route].last[:end] + matrix(route, route[:current_route].last[:id], route[:end_point_id])
+        scheduling_route_time = time_back_to_depot - route[:current_route].first[:start]
         solver_route_time = (result[:routes].first[:activities].last[:begin_time] - result[:routes].first[:activities].first[:begin_time]) # last activity is vehicle depot
 
         next if scheduling_route_time - solver_route_time < @candidate_service_ids.collect{ |s| @services_data[s][:duration] }.min ||
-                result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == route[:services].collect{ |s| @indices[s[:id]] } # we did not change our points order
+                result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == route[:current_route].collect{ |s| @indices[s[:id]] } # we did not change our points order
 
         # we are going to try to optimize this route reoptimized by OR-tools
-        new_route = @candidate_routes[vehicle.id][day].clone
         begin
-          new_route[:current_route] = compute_route_from(new_route, result[:routes].first[:activities])
-          fill_days
+          # this will change @candidate_routes, but it should not be a problem since OR-tools returns a valid solution
+          route[:current_route] = compute_route_from(route, result[:routes].first[:activities])
         rescue OptimizerWrapper::SchedulingHeuristicError
           puts 'Failing to construct route from OR-tools solution'
         end
@@ -489,7 +494,7 @@ module SchedulingHeuristic
   def self.compute_route_from(new_route, solver_route)
     solver_order = solver_route.collect{ |s| s[:service_id] }.compact
     new_route[:current_route].sort_by!{ |stop| solver_order.find_index(stop[:id]) }.collect{ |s| s[:id] }
-    update_route(new_route)
+    update_route(new_route, 0, solver_route.first[:begin_time])
   end
 
   def self.possible_for_point(point, nb_visits)
@@ -536,7 +541,7 @@ module SchedulingHeuristic
       if !@relaxed_same_point_day && @unlocked.include?(service_id) && @services_data[service_id][:heuristic_period]
         last_visit_day = day + (@services_data[service_id][:nb_visits] - 1) * @services_data[service_id][:heuristic_period]
         # can not finish later (over whole period) than service at same_point
-        stop = @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }
+        stop = @candidate_routes[vehicle][day][:current_route].select{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }.max_by{ |stop| @services_data[stop[:id]][:nb_visits] }
         stop_last_visit_day = day + (@services_data[stop[:id]][:nb_visits] - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
         same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
       end
@@ -1256,7 +1261,9 @@ module SchedulingHeuristic
     # Now it is ok because marshall dump, but do not use mashall dump
     route_vrp = Marshal.load(Marshal.dump(vrp))
 
-    route_vrp[:services].delete_if{ |service| !service_ids.include?(service[:id]) }
+    route_vrp.services.delete_if{ |service| !service_ids.include?(service[:id]) }
+    route_vrp.services.each{ |service| service[:activity][:duration] = service[:activity][:duration].ceil }
+    route_vrp.services.each{ |service| service[:activity][:setup_duration] = service[:activity][:setup_duration].ceil }
 
     route_vrp.vehicles = [route_vrp.vehicles.first]
     route_vrp.vehicles.first.timewindow = {
@@ -1273,8 +1280,9 @@ module SchedulingHeuristic
     route_vrp.resolution_solver = true
 
     route_vrp.preprocessing_first_solution_strategy = nil
-    route_vrp.preprocessing_cluster_threshold = 0
-    route_vrp.preprocessing_force_cluster = true
+    # NOT READY YET :
+    # route_vrp.preprocessing_cluster_threshold = 0
+    # route_vrp.preprocessing_force_cluster = true
     route_vrp.preprocessing_partitions = []
     route_vrp.restitution_csv = false
 

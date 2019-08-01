@@ -166,15 +166,19 @@ class HeuristicTest < Minitest::Test
       assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
     end
 
-    def test_improve_routes_with_ortools
-      # TDD
-      visits_unassigned = []
-      services_unassigned = []
-
+    def test_scheduling_and_ortools
       vrp = FCT.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, vrp, nil)
-      visits_unassigned << result[:unassigned].size
-      services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+      # clustering before to have no randomness in results
+      clusters = Interpreters::SplitClustering.split_balanced_kmeans({ vrp: vrp, service: :demo }, 5, cut_symbol: :duration, entity: 'vehicle', restarts: 1)
+      clusters.each{ |cluster|
+        cluster[:vrp].preprocessing_partitions = nil
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, Marshal.load(Marshal.dump(cluster[:vrp])), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
+        unassigned = result[:unassigned].size
+
+        cluster[:vrp].resolution_solver = true
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, cluster[:vrp], nil)
+        assert unassigned >= result[:unassigned].size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{result[:unassigned].size} now"
+      }
     end
   end
 end
