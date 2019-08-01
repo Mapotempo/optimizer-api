@@ -200,7 +200,7 @@ module SchedulingHeuristic
     (first_index..day_route.size - 1).each{ |position|
       stop = day_route[position]
       route_time = matrix(full_route[:vehicle] || full_route, previous_id, stop[:id])
-      stop[:considered_setup_duration] = position > 0 && stop[:point_id] == day_route[position - 1][:point_id] ? 0 : @services_data[stop[:id]][:setup_duration]
+      stop[:considered_setup_duration] = route_time.zero? ? 0 : @services_data[stop[:id]][:setup_duration]
       if can_ignore_tw(previous_id, stop[:id])
         stop[:start] = previous_end
         stop[:arrival] = previous_end
@@ -949,7 +949,7 @@ module SchedulingHeuristic
     ### find [inserted_service] timewindow which allows to insert it at [insertion_index] in [route_data] ###
     list = []
     route_time = (insertion_index.zero? ? matrix(route_data, route_data[:start_point_id], inserted_service) : matrix(route_data, previous_service, inserted_service))
-    setup_duration = route_data[:current_route].find{ |step| step[:point_id] == inserted_service_info[:point_id] }.nil? ? inserted_service_info[:setup_duration] : 0
+    setup_duration = route_time.zero? ? 0 : inserted_service_info[:setup_duration]
     if filling_candidate_route
       duration = inserted_service_info[:duration]
     end
