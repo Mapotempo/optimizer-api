@@ -1072,7 +1072,7 @@ module SchedulingHeuristic
             current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
           elsif shift.negative?
             # TODO : unitary test this case because very uncommon case
-            new_potential_start = current_route[point][:arrival] + shift
+            new_potential_start = current_route[point][:start] + shift
             if can_ignore_tw(current_route[point - 1], current_route[point])
               current_route[point][:start] = current_route[point - 1][:end]
               current_route[point][:arrival] = current_route[point - 1][:end]
@@ -1080,9 +1080,9 @@ module SchedulingHeuristic
               current_route[point][:max_shift] = current_route[point - 1][:max_shift]
             else
               service_tw = find_corresponding_timewindow(current_route[point][:id], day, current_route[point][:arrival])
-              soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]))
+              soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]) - current_route[point][:considered_setup_duration])
               if soonest_authorized > new_potential_start
-                shift -= (soonest_authorized - new_potential_start)
+                shift += (soonest_authorized - new_potential_start)
               end
               current_route[point][:start] += shift
               current_route[point][:arrival] += shift
