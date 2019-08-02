@@ -2335,11 +2335,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
           duration: 1,
           point_id: 'point_1',
           timewindows: [{
-            start: 3,
-            end: 4
-          }, {
-            start: 7,
-            end: 8
+            start: 10,
+            end: 15
           }],
           late_multiplier: 0,
         }
@@ -2350,11 +2347,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
           duration: 1,
           point_id: 'point_1',
           timewindows: [{
-            start: 3,
-            end: 4
-          }, {
-            start: 7,
-            end: 8
+            start: 10,
+            end: 15
           }],
           late_multiplier: 0,
         }
@@ -2372,8 +2366,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
-    assert_equal problem[:services].size , result[:routes][0][:activities].size - 1
-    assert_equal problem[:services].size , result[:routes][1][:activities].size - 1
+    assert_equal problem[:services].size, result[:routes][0][:activities].size - 1
+    assert_equal problem[:services].size, result[:routes][1][:activities].size - 1
   end
 
   def test_pickup_delivery
