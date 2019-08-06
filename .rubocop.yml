@@ -47,7 +47,7 @@ Layout/SpaceInsideHashLiteralBraces:
 Style/NegatedIf:
   Enabled: false
 
-Layout/IndentHash:
+Layout/IndentFirstHashElement:
   Enabled: false
 
 Style/NumericLiterals:
@@ -65,7 +65,7 @@ Style/IfUnlessModifier:
 Layout/CommentIndentation:
   Enabled: false
 
-Layout/IndentArray:
+Layout/Layout/IndentFirstArrayElement:
   Enabled: false
 
 Style/ClassAndModuleChildren:
