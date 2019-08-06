@@ -755,18 +755,33 @@ module Interpreters
         returned
       end
 
+      def unsquared_matrix(vrp, a_indices, b_indices, dimension)
+        current_matrix = vrp.matrices.find{ |matrix| matrix.id == vrp.vehicles.first.matrix_id }
+        a_indices.map{ |a|
+          b_indices.map { |b|
+            current_matrix[dimension][b][a]
+          }
+        }
+      end
+
       def centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
         limits = []
 
         if entity == 'vehicle' && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
-
-          depot = [[vrp.vehicles[0].start_point.location.lat, vrp.vehicles[0].start_point.location.lon]]
-          points = data_items.collect{ |point| [point[0], point[1]] }
-          time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], depot, points)
-          time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], points, depot)
+          if vrp.matrices.empty?
+            single_location_array = [[vrp.vehicles[0].start_point.location.lat, vrp.vehicles[0].start_point.location.lon]]
+            locations = data_items.collect{ |point| [point[0], point[1]] }
+            time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], single_location_array, locations).first
+            time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], locations, single_location_array).first
+          else
+            single_index_array = [vrp.vehicles[0].start_point.matrix_index]
+            point_indices = data_items.map{ |point| point[3][:matrix_index] }
+            time_matrix_from_depot = unsquared_matrix(vrp, single_index_array, point_indices, :time)
+            time_matrix_to_depot = unsquared_matrix(vrp, point_indices, single_index_array, :time)
+          end
 
           data_items.each_with_index{ |point, index|
-            point[3][:duration_from_and_to_depot] = time_matrix_from_depot[0][0][index] + time_matrix_to_depot[0][index][0]
+            point[3][:duration_from_and_to_depot] = time_matrix_from_depot[0][index] + time_matrix_to_depot[index][0]
           }
 
           vrp.vehicles.sort_by!{ |vehicle| vehicle.sequence_timewindows.size }
