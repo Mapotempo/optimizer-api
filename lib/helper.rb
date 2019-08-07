@@ -81,3 +81,44 @@ module Helper
     services.collect{ |service| service[:visits_number] }.sum
   end
 end
+
+# Some functions for convenience
+# In the same vein as active_support Enumerable.sum implementation
+module Enumerable
+  # Provide the average on an array
+  #  [5, 15, 7].mean # => 9.0
+  def mean
+    return nil if empty?
+    inject(0) { |sum, x| sum + x } / size.to_f
+  end
+
+  # If the array has an odd number, then simply pick the one in the middle
+  # If the array size is even, then we return the mean of the two middle.
+  #  [5, 15, 7].median # => 7
+  def median(already_sorted = false)
+    return nil if empty?
+    sort! unless already_sorted
+    m_pos = size / 2 # no to_f!
+    size.odd? ? self[m_pos] : self[m_pos - 1..m_pos].mean
+  end
+
+  # The mode is the single most popular item in the array.
+  #  [5, 15, 10, 15].mode # => 15
+  def mode
+    modes(false)[0]
+  end
+
+  # In case there are multiple elements with the highest occurence
+  #  [5, 15, 10, 10, 15].modes # => [10, 15]
+  #  [5, 15, 10, 15].modes     # => [15] (Note that modes() returns an array)
+  def modes(find_all = true)
+    return nil if empty?
+    histogram = each_with_object(Hash.new(0)) { |n, h| h[n] += 1 }
+    modes = nil
+    histogram.each_pair do |item, times|
+      modes << item if find_all && !modes.nil? && times == modes[0]
+      modes = [times, item] if (modes && times > modes[0]) || (modes.nil? && times > 1)
+    end
+    !modes.nil? ? modes[1...modes.size] : nil
+  end
+end
