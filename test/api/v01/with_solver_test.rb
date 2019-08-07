@@ -46,14 +46,6 @@ class Api::V01::WithSolverTest < Api::V01::VrpTest
     end
   end
 
-  # Tests
-  def test_real_problem_without_matrix
-    @job_id = submit_vrp api_key: 'vroom', vrp: VRP.lat_lon
-    assert_equal 1.upto(6).collect{ |i| "service_#{i}" }, (JSON.parse(last_response.body)['solutions'][0]['routes'][0]['activities'][1..-2].collect{ |p| p['service_id'] }.sort_by{ |p| p[-1].to_i })
-  ensure
-    delete_completed_job @job_id, api_key: 'vroom'
-  end
-
   # TODO: Increase problem size to make the solve continue longer
   def test_deleted_job
     FCT.solve_asynchronously do
