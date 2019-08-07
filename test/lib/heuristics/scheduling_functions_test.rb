@@ -25,7 +25,7 @@ class HeuristicTest < Minitest::Test
     vrp[:services][1][:activity][:point_id] = 'point_1'
     vrp = FCT.create(vrp)
 
-    s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+    s = Heuristics::Scheduling.new(vrp, 0, 10, 0, [])
     s.collect_services_data(vrp)
     assert s.instance_variable_get(:@uninserted).empty?
   end
@@ -44,7 +44,7 @@ class HeuristicTest < Minitest::Test
     }]
     vrp = FCT.create(vrp)
 
-    s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+    s = Heuristics::Scheduling.new(vrp, 0, 10, 0, [])
     s.collect_services_data(vrp)
     assert_equal 2, s.instance_variable_get(:@uninserted).size
   end
@@ -63,7 +63,7 @@ class HeuristicTest < Minitest::Test
     }]
     vrp = FCT.create(vrp)
 
-    s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+    s = Heuristics::Scheduling.new(vrp, 0, 10, 0, [])
     s.collect_services_data(vrp)
     data_services = s.instance_variable_get(:@services_data)
     assert(data_services['service_1'][:tw].all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
@@ -76,7 +76,9 @@ class HeuristicTest < Minitest::Test
     vrp[:services] = [vrp[:services].first]
     vrp[:services].first[:activity][:point_id] = vrp[:points].first[:id]
 
-    assert_equal 1, SchedulingHeuristic.solve_tsp(FCT.create(vrp)).size
+    vrp = FCT.create(vrp)
+    s = Heuristics::Scheduling.new(vrp, 0, 10, 0, [])
+    assert_equal 1, s.solve_tsp(vrp).size
   end
 
   def test_compute_service_lapse
@@ -93,7 +95,7 @@ class HeuristicTest < Minitest::Test
     vrp[:services][3][:visits_number] = 2
     vrp[:services][3][:minimum_lapse] = 6
     vrp = FCT.create(vrp)
-    s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+    s = Heuristics::Scheduling.new(vrp, 0, 10, 0, [])
     s.collect_services_data(vrp)
     data_services = s.instance_variable_get(:@services_data)
     assert_equal 6, data_services.size
@@ -109,7 +111,7 @@ class HeuristicTest < Minitest::Test
     vrp[:services][0][:minimum_lapse] = 7
 
     vrp = FCT.create(vrp)
-    s = SchedulingHeuristic.initialize(vrp, 0, 10, 0, [])
+    s = Heuristics::Scheduling.new(vrp, 0, 10, 0, [])
     s.collect_services_data(vrp)
     data_services = s.instance_variable_get(:@services_data)
     assert_equal 7, data_services['service_1'][:heuristic_period]
@@ -141,7 +143,7 @@ class HeuristicTest < Minitest::Test
     }
 
     vrp = FCT.create(vrp)
-    s = SchedulingHeuristic.initialize(vrp, 0, 14, 0, [])
+    s = Heuristics::Scheduling.new(vrp, 0, 14, 0, [])
     s.collect_services_data(vrp)
     vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
     s.instance_variable_set(:@planning,
@@ -169,7 +171,7 @@ class HeuristicTest < Minitest::Test
     vrp = VRP.scheduling_seq_timewindows
     vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300}]
     vrp = FCT.create(vrp)
-    s = SchedulingHeuristic.initialize(vrp, 0, 14, 0, [])
+    s = Heuristics::Scheduling.new(vrp, 0, 14, 0, [])
     s.collect_services_data(vrp)
     vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index], tw_start: 0, tw_end: 400 }
     s.instance_variable_set(:@planning,
