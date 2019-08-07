@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2019
 #
 # This file is part of Mapotempo.
 #
@@ -15,39 +15,15 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './test/test_helper'
-
 require './api/root'
 
-class Api::V01::VrpTest < Minitest::Test
+require './test/api/v01/request_helper'
+
+class Api::V01::VrpTest < Api::V01::RequestHelper
   include Rack::Test::Methods
 
   def app
     Api::Root
-  end
-
-  def submit_vrp(params)
-    post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json'
-    assert [200, 201].include? last_response.status
-    assert last_response.body
-    if last_response.status == 201
-      job_id = JSON.parse(last_response.body)['job']['id']
-      assert job_id
-      job_id
-    else
-      response = JSON.parse(last_response.body)
-      assert response['job']['status']['completed'] || response['job']['status']['queued']
-    end
-  end
-
-  def delete_job(job_id, params)
-    delete "0.1/vrp/jobs/#{job_id}.json", params
-    assert_equal 202, last_response.status, last_response.body
-  end
-
-  def delete_completed_job(job_id, params)
-    delete "0.1/vrp/jobs/#{job_id}.json", params
-    assert_equal 404, last_response.status, last_response.body
   end
 
   # Unit tests
