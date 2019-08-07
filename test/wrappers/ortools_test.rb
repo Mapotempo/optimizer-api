@@ -6109,6 +6109,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
     assert result
-    assert result[:cost].nil?
+    assert result[:cost].zero?
   end
 end
