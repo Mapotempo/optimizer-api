@@ -262,17 +262,19 @@ module OptimizerWrapper
       if vrp.preprocessing_partition_method || !vrp.preprocessing_partitions.empty?
         # add associated cluster as skill
         [cluster_result, vrp.preprocessing_heuristic_result].each{ |solution|
-          if solution && !solution.empty?
-            solution[:routes].each{ |route|
-              route[:activities].each do |stop|
-                next if stop[:service_id].nil?
-                stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-              end
-            }
-            solution[:unassigned].each do |stop|
+          next if solution.nil? || solution.empty?
+
+          solution[:routes].each{ |route|
+            route[:activities].each do |stop|
               next if stop[:service_id].nil?
+
               stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
             end
+          }
+          solution[:unassigned].each do |stop|
+            next if stop[:service_id].nil?
+
+            stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
           end
         }
       end
