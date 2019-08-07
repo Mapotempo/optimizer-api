@@ -45,6 +45,7 @@ module SchedulingHeuristic
     @vehicle_day_completed = {}
     @cost = 0
     @services_data = {}
+    @max_at_point = Hash.new(0)
 
     # heuristic parameters
     @allow_partial_assignment = vrp.resolution_allow_partial_assignment
@@ -228,13 +229,13 @@ module SchedulingHeuristic
 
   def self.clean_routes(service, day_finished, vehicle, days_available)
     ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-    removed_size = @planning[vehicle].collect{ |day, day_route|
+    @planning[vehicle].collect{ |day, day_route|
       remove_index = day_route[:services].find_index{ |stop| stop[:id] == service[:id] }
       day_route[:services].slice!(remove_index) if remove_index
       day_route[:services] = update_route(day_route, remove_index) if remove_index
     }.compact.size
 
-    removed_size += @candidate_routes[vehicle].collect{ |day, day_route|
+    @candidate_routes[vehicle].collect{ |day, day_route|
       remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service[:id] }
       day_route[:current_route].slice!(remove_index) if remove_index
       day_route[:services] = update_route(day_route, remove_index) if remove_index
@@ -404,7 +405,6 @@ module SchedulingHeuristic
     # Reorder routes with solver and try to add more visits
     if vrp.resolution_solver && !@candidate_service_ids.empty?
       reorder_routes(vrp)
-      check_solution_validity
       fill_days
     end
 
@@ -452,7 +452,7 @@ module SchedulingHeuristic
 
     vrp.vehicles.each{ |vehicle|
       @candidate_routes[vehicle.id].each{ |day, route|
-        next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size == 1 || @candidate_service_ids.empty?
+        next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size <= 1
 
         puts "Entering reorder_routes function for problem #{@sub_pb_solved}"
 
@@ -538,12 +538,22 @@ module SchedulingHeuristic
       next if @same_point_day && @unlocked.include?(service_id) && (!possible_vehicles.include?(vehicle) || !possible_days.include?(day))
 
       same_point_compatible_day = true
-      if !@relaxed_same_point_day && @unlocked.include?(service_id) && @services_data[service_id][:heuristic_period]
+      if @services_data[service_id][:heuristic_period]
         last_visit_day = day + (@services_data[service_id][:nb_visits] - 1) * @services_data[service_id][:heuristic_period]
-        # can not finish later (over whole period) than service at same_point
-        stop = @candidate_routes[vehicle][day][:current_route].select{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }.max_by{ |stop| @services_data[stop[:id]][:nb_visits] }
-        stop_last_visit_day = day + (@services_data[stop[:id]][:nb_visits] - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
-        same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
+        if @relaxed_same_point_day
+          involved_days = (day..last_visit_day).step(@services_data[service_id][:heuristic_period]).collect{ |d| d }
+          already_involved = @candidate_routes[vehicle].select{ |_d, r| r[:current_route].any?{ |s| s[:point_id] == @services_data[service_id][:point_id] } }.collect{ |d, _r| d }
+          if @services_data[service_id][:nb_visits] > @max_at_point[@services_data[service_id][:point_id]]
+            same_point_compatible_day = false if !already_involved.empty? && (involved_days & already_involved).size < @max_at_point[@services_data[service_id][:point_id]]
+          else
+            same_point_compatible_day = false if !already_involved.empty? && (involved_days & already_involved).size < involved_days.size
+          end
+        elsif @unlocked.include?(service_id)
+          # can not finish later (over whole period) than service at same_point
+          stop = @candidate_routes[vehicle][day][:current_route].select{ |stop| stop[:point_id] == @services_data[service_id][:point_id] }.max_by{ |stop| @services_data[stop[:id]][:nb_visits] }
+          stop_last_visit_day = day + (@services_data[stop[:id]][:nb_visits] - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
+          same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
+        end
       end
 
       period = @services_data[service_id][:heuristic_period]
@@ -1048,6 +1058,8 @@ module SchedulingHeuristic
     ### modify [route_data] such that [point_to_add] is in the route ###
     current_route = route_data[:current_route]
     @candidate_service_ids.delete(point_to_add[:id])
+
+    @max_at_point[point_to_add[:point]] = [@max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:nb_visits]].max
 
     current_route.insert(point_to_add[:position],
       id: point_to_add[:id],
