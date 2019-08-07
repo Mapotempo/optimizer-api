@@ -15,35 +15,13 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './test/test_helper'
-require './test/api/v01/vrp_test'
+require './test/api/v01/request_helper'
 
-require './api/root'
+class Api::V01::WithSolverTest < Api::V01::RequestHelper
+  include Rack::Test::Methods
 
-class Api::V01::WithSolverTest < Api::V01::VrpTest
-  def wait_status(job_id, status, options)
-    get "0.1/vrp/jobs/#{job_id}.json", options
-    while last_response.body
-      sleep 1
-      assert_equal 206, last_response.status, last_response.body
-      get "0.1/vrp/jobs/#{job_id}.json", options
-      if JSON.parse(last_response.body)['job']['status'] == status
-        break
-      end
-    end
-    JSON.parse(last_response.body)
-  end
-
-  def wait_status_csv(job_id, status, options)
-    get "0.1/vrp/jobs/#{job_id}.csv", options
-    while last_response.body
-      sleep(1)
-      assert_equal 206, last_response.status, last_response.body
-      get "0.1/vrp/jobs/#{job_id}.csv", options
-      if last_response.status == status
-        break
-      end
-    end
+  def app
+    Api::Root
   end
 
   # TODO: Increase problem size to make the solve continue longer
@@ -56,18 +34,20 @@ class Api::V01::WithSolverTest < Api::V01::VrpTest
       assert_equal 202, last_response.status, last_response.body
       assert !JSON.parse(last_response.body)['solutions'].nil? && !JSON.parse(last_response.body)['solutions'].empty?
     end
+  ensure
+    delete_completed_job @job_id, api_key: 'solvers'
   end
 
   def test_csv_configuration
     FCT.solve_asynchronously do
       vrp = VRP.lat_lon
       vrp[:configuration][:restitution] = { csv: true }
-      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
+      @job_id = submit_csv api_key: 'ortools', vrp: vrp
       wait_status_csv @job_id, 200, api_key: 'ortools'
       assert_equal 9, last_response.body.count("\n")
     end
   ensure
-    delete_completed_job @job_id, api_key: 'ortools'
+    delete_completed_job @job_id, api_key: 'solvers'
   end
 
   def test_using_two_solver
