@@ -27,7 +27,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def submit_vrp(params)
-    post '/0.1/vrp/submit', params
+    post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json'
     assert [200, 201].include? last_response.status
     assert last_response.body
     if last_response.status == 201
