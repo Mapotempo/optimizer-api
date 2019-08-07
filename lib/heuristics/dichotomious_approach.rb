@@ -61,8 +61,7 @@ module Interpreters
         end
 
         t2 = Time.now
-        if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && service_vrp[:vrp].vehicles.size > 3 && service_vrp[:vrp].services.size > 100 &&
-           feasible_vrp(result, service_vrp)
+        if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && feasible_vrp(result, service_vrp)
           sub_service_vrps = []
           loop do
             sub_service_vrps = split(service_vrp, job)
@@ -125,8 +124,8 @@ module Interpreters
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
       if service_vrp[:level] && service_vrp[:level] > 0
-        service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.66).to_i : 120000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
-        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.66).to_i : 90000
+        service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.66).to_i : 80000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
+        service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.66).to_i : 70000
       end
 
       if service_vrp[:level] && service_vrp[:level] == 0
@@ -137,7 +136,7 @@ module Interpreters
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
       if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit && service_vrp[:vrp].services.size > 100 &&
          service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_division_vec_limit
-        service_vrp[:vrp].resolution_init_duration = 10
+        service_vrp[:vrp].resolution_init_duration = 1000
       else
         service_vrp[:vrp].resolution_init_duration = nil
       end
@@ -240,7 +239,6 @@ module Interpreters
             sub_service_vrp[:vrp].resolution_minimum_duration = [(service_vrp[:vrp].resolution_minimum_duration / 3.99 * rate_vehicles * rate_services).to_i, 100].max
             # sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
-
             result_loop = OptimizerWrapper.solve([sub_service_vrp], job)
             result[:elapsed] += result_loop[:elapsed] if result_loop && result_loop[:elapsed]
 
