@@ -62,7 +62,7 @@ module Interpreters
               total_distance: nil
             }
           else
-            scheduling_heuristic = Heuristics::Scheduling.new(vrp, @real_schedule_start, @schedule_end, @shift, generate_vehicles(vrp))
+            scheduling_heuristic = Heuristics::Scheduling.new(vrp, generate_vehicles(vrp), { start: @real_schedule_start, end: @schedule_end, shift: @shift })
             vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
           end
         end
