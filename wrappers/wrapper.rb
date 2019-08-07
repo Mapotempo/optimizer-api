@@ -524,20 +524,20 @@ module Wrappers
 
     def check(vrp, matrix, unfeasible)
       if !matrix.nil?
-        line_cpt = Array.new(matrix.size){ 0 }
-        column_cpt = Array.new(matrix.size){ 0 }
-        matrix.each_with_index{ |vector, line|
-          vector.each_with_index{ |value, col|
-            if value.nil? || value >= 2**31 - 1
+        line_cpt = Array.new(vrp.points.size.size){ 0 }
+        column_cpt = Array.new(vrp.points.size.size){ 0 }
+        vrp.points.each{ |point_a|
+          vrp.points.each{ |point_b|
+            if matrix[point_a.matrix_index][point_b.matrix_index] >= 2**31 - 1
               line_cpt[line] += 1
               column_cpt[col] += 1
             end
           }
         }
 
-        (0..matrix.size - 1).each{ |index|
+        (0..vrp.points.size - 1).each{ |index|
           next if (column_cpt[index] == 0 || column_cpt[index] != matrix.size - 1) && (line_cpt[index] == 0 || line_cpt[index] != matrix.size - 1)
-          vrp[:services].select{ |service| service[:activity][:point][:matrix_index] == index }.each{ |service|
+          vrp[:services].select{ |service| service[:activity][:point][:matrix_index] == vrp.points[index][:matrix_index] }.each{ |service|
             if unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
               add_unassigned(unfeasible, vrp, service, 'Unreachable')
             end
