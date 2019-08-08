@@ -546,6 +546,7 @@ class HeuristicTest < Minitest::Test
 
   def test_callage_freq
     vrp = FCT.load_vrp(self)
+    FCT.matrix_required(vrp)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] } }, vrp, nil)
     assert result[:routes].collect{ |r| r[:activities].size }.uniq.size == 1
     assert result[:unassigned].empty?
