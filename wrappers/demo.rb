@@ -23,7 +23,45 @@ module Wrappers
       super(cache, hash)
     end
 
-    def solve(vrp, job = nil, thread_proc = nil, &block)
+    def build_route_activity(mission, activity)
+      timewindows = []
+      if activity.timewindows && !activity.timewindows.empty?
+        timewindows = [{
+          start: timewindows.first.start,
+          end: timewindows.first.end,
+        }]
+      end
+      {
+        point_id: activity.point.id,
+        travel_distance: 0,
+        travel_start_time: 0,
+        waiting_duration: 0,
+        arrival_time: 0,
+        departure_time: 0,
+        detail: {
+          lat: activity.point&.location&.lat,
+          lon: activity.point&.location&.lon,
+          setup_duration: activity.setup_duration,
+          duration: activity.duration,
+          timewindows: timewindows,
+          quantities: mission.quantities,
+        }
+      }
+    end
+
+    def build_route_depot(point)
+      point && {
+          point_id: point.id,
+          travel_distance: 0,
+          travel_start_time: 0,
+          detail: {
+            lat: point.location&.lat,
+            lon: point.location&.lon,
+          }
+      }
+    end
+
+    def solve(vrp, _job = nil, _thread_proc = nil, &_block)
       {
         cost: 0,
         solvers: [:demo],
@@ -32,40 +70,27 @@ module Wrappers
         total_waiting_time: 0,
         start_time: 0,
         end_time: 0,
-        routes: vrp.vehicles && vrp.vehicles.collect{ |vehicle| {
-          vehicle_id: vehicle.id,
-          activities: ([vehicle.start_point && {
-              point_id: vehicle.start_point.id,
-              travel_distance: 0,
-              travel_start_time: 0
-          }] + (vrp.shipments && vrp.shipments.collect{ |shipment|
-            [:pickup, :delivery].collect{ |a|
-              {
-                point_id: shipment.send(a).point.id,
-                travel_distance: 0,
-                travel_start_time: 0,
-                waiting_duration: 0,
-                arrival_time: 0,
-                departure_time: 0,
-                a.to_s + '_shipment_id' => shipment.id
-              } if shipment.send(a)
-            }.compact
-          }.flatten) + (vrp.services && vrp.services.collect{ |service|
-            {
-              point_id: service.activity.point.id,
-              travel_distance: 0,
-              travel_start_time: 0,
-              waiting_duration: 0,
-              arrival_time: 0,
-              departure_time: 0,
-              service_id: service.id
-            }
-          }) + [vehicle.end_point && {
-              point_id: vehicle.end_point.id,
-              travel_distance: 0,
-              travel_start_time: 0
-          }]).compact
-        }} || [],
+        routes: vrp.vehicles.collect{ |vehicle|
+          {
+            vehicle_id: vehicle.id,
+            activities: (
+              [build_route_depot(vehicle.start_point)] +
+              vrp.shipments.collect{ |shipment|
+                [:pickup, :delivery].collect{ |a|
+                  mission_hash = build_route_activity(shipment, shipment.send(a))
+                  mission_hash.merge(a.to_s + '_shipment_id' => shipment.id) if shipment.send(a)
+                  mission_hash
+                }.compact
+              }.flatten +
+              vrp.services.collect{ |service|
+                mission_hash = build_route_activity(service, service.activity || service.activities.first)
+                mission_hash.merge(service_id: service.id)
+                mission_hash
+              } +
+              [build_route_depot(vehicle.end_point)]
+            ).compact
+          }
+        } || [],
         unassigned: []
       }
     end
