@@ -46,10 +46,10 @@ class HeuristicTest < Minitest::Test
         end: 3
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(vrp), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(vrp), nil)
 
     assert_equal 4, result[:unassigned].size
-    assert result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Only partial assignment') }
+    assert(result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Only partial assignment') })
   end
 
   def test_max_ride_time
@@ -65,7 +65,7 @@ class HeuristicTest < Minitest::Test
     }]
     vrp[:vehicles].first[:maximum_ride_time] = 4
 
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, FCT.create(vrp), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(vrp), nil)
     assert result
     assert_equal 2, result[:routes].find{ |route| route[:activities].collect{ |stop| stop[:point_id] }.include?('point_2') }[:activities].size
   end
@@ -89,7 +89,7 @@ class HeuristicTest < Minitest::Test
     }]
     vrp[:vehicles].first[:maximum_ride_distance] = 4
 
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools]}}, FCT.create(vrp), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(vrp), nil)
     assert result
     assert_equal 2, result[:routes].find{ |route| route[:activities].collect{ |stop| stop[:point_id] }.include?('point_2') }[:activities].size
   end
@@ -98,14 +98,14 @@ class HeuristicTest < Minitest::Test
     vrp = VRP.scheduling
     vrp[:vehicles].first[:duration] = 6
 
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(vrp), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(vrp), nil)
     assert result
-    assert result[:routes].none?{ |route| route[:activities].collect{ |stop| stop[:departure_time].to_i - stop[:begin_time].to_i + stop[:travel_time].to_i }.sum > 6 }
+    assert(result[:routes].none?{ |route| route[:activities].collect{ |stop| stop[:departure_time].to_i - stop[:begin_time].to_i + stop[:travel_time].to_i }.sum > 6 })
   end
 
   def test_heuristic_called_with_first_sol_param
     vrp = VRP.scheduling
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(vrp), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(vrp), nil)
     assert result[:solvers].include?('heuristic')
   end
 
@@ -120,8 +120,8 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
-    assert result[:routes].none?{ |r| r[:activities].collect{ |a| a[:point_id] }.size > r[:activities].collect{ |a| a[:point_id] }.uniq.size }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
+    assert(result[:routes].none?{ |r| r[:activities].collect{ |a| a[:point_id] }.size > r[:activities].collect{ |a| a[:point_id] }.uniq.size })
 
     problem[:configuration][:resolution][:allow_partial_assignment] = false
     problem[:configuration][:schedule] = {
@@ -130,7 +130,7 @@ class HeuristicTest < Minitest::Test
         end: 5
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
     assert_equal 10, result[:unassigned].size
   end
 
@@ -138,7 +138,7 @@ class HeuristicTest < Minitest::Test
     problem = VRP.scheduling
     problem[:services].first[:visits_number] = 0
 
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
     assert result[:unassigned].first[:service_id] == 'service_1_0_0'
   end
 
@@ -206,7 +206,7 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, { problem: problem }), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, problem: problem), nil)
     assert result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_3_1_3' } }[:activities].collect{ |activity| activity[:service_id] }.include?('service_4_1_1')
     assert result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_5_1_3' } }[:activities].collect{ |activity| activity[:service_id] }.include?('service_6_1_1')
     assert result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_1_1_3' } }[:activities].collect{ |activity| activity[:service_id] }.include?('service_2_1_1')
@@ -216,27 +216,27 @@ class HeuristicTest < Minitest::Test
     problem = VRP.lat_lon_scheduling
     problem[:services][0][:visits_number] = 3
     problem[:services][0][:minimum_lapse] = 28
-    problem[:services][0][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][0][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
     problem[:services][1][:visits_number] = 1
     problem[:services][1][:minimum_lapse] = 84
-    problem[:services][1][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][1][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
     problem[:services][2][:visits_number] = 3
     problem[:services][2][:minimum_lapse] = 28
-    problem[:services][2][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][2][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
     problem[:services][3][:visits_number] = 2
     problem[:services][3][:minimum_lapse] = 14
-    problem[:services][3][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][3][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
     problem[:services][4][:visits_number] = 3
     problem[:services][4][:minimum_lapse] = 28
-    problem[:services][4][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][4][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
     problem[:services][5][:visits_number] = 1
     problem[:services][5][:minimum_lapse] = 84
-    problem[:services][5][:activity][:timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:services][5][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
     problem[:services][1][:activity][:point_id] = problem[:services][0][:activity][:point_id]
     problem[:services][3][:activity][:point_id] = problem[:services][2][:activity][:point_id]
     problem[:services][5][:activity][:point_id] = problem[:services][4][:activity][:point_id]
     problem[:vehicles].first[:timewindow] = nil
-    problem[:vehicles].first[:sequence_timewindows] = [{start: 0, end: 500000, day_index: 1}]
+    problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
     problem[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
       metric: 'duration',
@@ -259,7 +259,7 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
     assert_equal 3, result[:routes].select{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_1' } }.size
     assert_equal 4, result[:routes].select{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_3' } }.size
     assert_equal 3, result[:routes].select{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_5' } }.size
@@ -289,14 +289,14 @@ class HeuristicTest < Minitest::Test
       id: 'vehicle_0',
       start_point_id: 'point_0',
       end_point_id: 'point_0',
-      router_mode: 'car',
+      matrix_id: 'm1',
       router_dimension: 'distance',
       sequence_timewindows: [{ start: 0, end: 50000, day_index: 0 }, { start: 0, end: 50000, day_index: 1 }]
     }, {
       id: 'vehicle_1',
       start_point_id: 'point_0',
       end_point_id: 'point_0',
-      router_mode: 'car',
+      matrix_id: 'm1',
       router_dimension: 'distance',
       sequence_timewindows: [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
     }]
@@ -322,7 +322,7 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, { problem: problem }), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, problem: problem), nil)
     assert result
     assert result[:routes].collect{ |route| route[:vehicle_id] }.uniq.include?('vehicle_0_0')
     assert result[:routes].collect{ |route| route[:vehicle_id] }.uniq.include?('vehicle_1_0')
@@ -383,7 +383,7 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, { problem: problem }), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, problem: problem), nil)
     assert result[:unassigned].collect{ |una| una[:original_service_id] }.compact.size == result[:unassigned].collect{ |una| una[:original_service_id] }.compact.uniq.size
     assert result[:unassigned].collect{ |una| una[:service_id] }.compact.size == result[:unassigned].collect{ |una| una[:service_id] }.compact.uniq.size
   end
@@ -413,7 +413,7 @@ class HeuristicTest < Minitest::Test
       id: 'vehicle_0',
       start_point_id: 'point_0',
       end_point_id: 'point_0',
-      router_mode: 'car',
+      matrix_id: 'm1',
       router_dimension: 'time',
       sequence_timewindows: [{ start: 0, end: 7000, day_index: 0 }, { start: 0, end: 7000, day_index: 1 }],
       duration: 50000,
@@ -422,7 +422,7 @@ class HeuristicTest < Minitest::Test
       id: 'vehicle_1',
       start_point_id: 'point_0',
       end_point_id: 'point_0',
-      router_mode: 'car',
+      matrix_id: 'm1',
       router_dimension: 'time',
       sequence_timewindows: [{ start: 0, end: 7000, day_index: 0 }, { start: 0, end: 7000, day_index: 1 }],
       duration: 50000,
@@ -450,7 +450,7 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, { problem: problem }), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, problem: problem), nil)
     assert !result[:unassigned].collect{ |una| una[:reason] }.uniq.include?('No vehicle with compatible timewindow')
   end
 
@@ -462,7 +462,7 @@ class HeuristicTest < Minitest::Test
       id: 'vehicle_0',
       start_point_id: 'point_0',
       end_point_id: 'point_0',
-      router_mode: 'car',
+      matrix_id: 'm1',
       router_dimension: 'time',
       sequence_timewindows: [{ start: 0, end: 7000, day_index: 0 }, { start: 0, end: 7000, day_index: 1 }],
       duration: 50000,
@@ -490,7 +490,7 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, { problem: problem }), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.load_vrp(self, problem: problem), nil)
     assert(result[:routes].all?{ |route| route[:activities].all?{ |activity| activity[:detail][:skills].nil? || activity[:detail][:skills].size == 1 } })
   end
 
@@ -500,7 +500,7 @@ class HeuristicTest < Minitest::Test
     reason_unassigned = []
     (1..@regularity_restarts).each{ |_tentative|
       vrp = FCT.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       visits_unassigned << result[:unassigned].size
       services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
       reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
@@ -547,7 +547,7 @@ class HeuristicTest < Minitest::Test
   def test_callage_freq
     vrp = FCT.load_vrp(self)
     FCT.matrix_required(vrp)
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] } }, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert result[:routes].collect{ |r| r[:activities].size }.uniq.size == 1
     assert result[:unassigned].empty?
   end
