@@ -145,28 +145,28 @@ class HeuristicTest < Minitest::Test
         }
       }
     end
-  end
 
-  def test_two_phases_clustering_sched_with_freq_and_same_point_day_5veh
-    # about 3 minutes
-    vrp = FCT.load_vrp(self)
-    total_visits = vrp[:services].collect{ |s| s[:visits_number] }.sum
-    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
-    assert result
-    assert result[:unassigned].size < total_visits * 5 / 100, "#{result[:unassigned].size * 100 / total_visits}% unassigned instead of 5% authorized"
-    assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
-    assert_equal total_visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
-      "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{total_visits} expected"
-  end
+    def test_two_phases_clustering_sched_with_freq_and_same_point_day_5veh
+      # about 3 minutes
+      vrp = FCT.load_vrp(self)
+      total_visits = vrp[:services].collect{ |s| s[:visits_number] }.sum
+      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      assert result
+      assert result[:unassigned].size < total_visits * 5 / 100, "#{result[:unassigned].size * 100 / total_visits}% unassigned instead of 5% authorized"
+      assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
+      assert_equal total_visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
+        "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{total_visits} expected"
+    end
 
-  def test_improve_routes_with_ortools
-    # TDD
-    visits_unassigned = []
-    services_unassigned = []
+    def test_improve_routes_with_ortools
+      # TDD
+      visits_unassigned = []
+      services_unassigned = []
 
-    vrp = FCT.load_vrp(self)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, vrp, nil)
-    visits_unassigned << result[:unassigned].size
-    services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+      vrp = FCT.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, vrp, nil)
+      visits_unassigned << result[:unassigned].size
+      services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+    end
   end
 end
