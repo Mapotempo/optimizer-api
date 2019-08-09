@@ -1,5 +1,10 @@
 language: ruby
 
+env:
+  - TEST_SUITE='basis'
+  - TEST_SUITE='real'
+  - TEST_SUITE='scheduling'
+
 services:
   - docker
 
@@ -14,4 +19,4 @@ before_install:
   - mkdir -p ./redis
 
 script:
-  - bash ci-utils/travis.sh
+  - bash ci-utils/travis.sh ${TEST_SUITE}
