@@ -23,6 +23,7 @@ module Ai4r
     class BalancedKmeans < KMeans
 
       attr_reader :cluster_metrics
+      attr_reader :iterations
 
       parameters_info max_iterations: 'Maximum number of iterations to ' \
                       'build the clusterer. By default it is uncapped.',
@@ -102,8 +103,6 @@ module Ai4r
 
           calculate_membership_clusters
         end
-
-        puts "Clustering converged after #{@iterations} iterations."
 
         self
       end
