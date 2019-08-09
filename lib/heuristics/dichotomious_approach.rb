@@ -70,8 +70,12 @@ module Interpreters
           results = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
             sub_service_vrp[:vrp].resolution_split_number = sub_service_vrps[0][:vrp].resolution_split_number + 1 if !index.zero?
             sub_service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[0][:vrp].resolution_total_split_number if !index.zero?
-            sub_service_vrp[:vrp].resolution_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
-            sub_service_vrp[:vrp].resolution_minimum_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
+            if sub_service_vrp[:vrp].resolution_duration
+              sub_service_vrp[:vrp].resolution_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
+            end
+            if sub_service_vrp[:vrp].resolution_minimum_duration
+              sub_service_vrp[:vrp].resolution_minimum_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
+            end
             result = OptimizerWrapper.define_process([sub_service_vrp], job, &block)
             if index.zero? && result
               result[:routes].each{ |r|
@@ -237,8 +241,12 @@ module Interpreters
             }
             rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
-            sub_service_vrp[:vrp].resolution_duration = [(service_vrp[:vrp].resolution_duration / 3.99 * rate_vehicles * rate_services).to_i, 150].max
-            sub_service_vrp[:vrp].resolution_minimum_duration = [(service_vrp[:vrp].resolution_minimum_duration / 3.99 * rate_vehicles * rate_services).to_i, 100].max
+            if sub_service_vrp[:vrp].resolution_duration
+              sub_service_vrp[:vrp].resolution_duration = [(service_vrp[:vrp].resolution_duration / 3.99 * rate_vehicles * rate_services).to_i, 150].max
+            end
+            if sub_service_vrp[:vrp].resolution_minimum_duration
+              sub_service_vrp[:vrp].resolution_minimum_duration = [(service_vrp[:vrp].resolution_minimum_duration / 3.99 * rate_vehicles * rate_services).to_i, 100].max
+            end
             # sub_service_vrp[:vrp].resolution_vehicle_limit = sub_service_vrp[:vrp].vehicles.size
             sub_service_vrp[:vrp].restitution_allow_empty_result = true
             result_loop = OptimizerWrapper.solve([sub_service_vrp], job)
@@ -291,7 +299,7 @@ module Interpreters
         # TODO: prefer cluster with sticky vehicle
         # TODO: avoid to prefer always same cluster
         if cluster_index &&
-           ((vehicles_by_clusters[1].size - 1) / services_by_cluster[1].size > (vehicles_by_clusters[0].size + 1) / services_by_cluster[0].size || 
+           ((vehicles_by_clusters[1].size - 1) / services_by_cluster[1].size > (vehicles_by_clusters[0].size + 1) / services_by_cluster[0].size ||
            (vehicles_by_clusters[1].size + 1) / services_by_cluster[1].size < (vehicles_by_clusters[0].size - 1) / services_by_cluster[0].size)
            cluster_index = nil
         end

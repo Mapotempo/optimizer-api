@@ -220,12 +220,12 @@ class RealCasesTest < Minitest::Test
       assert result
 
       # Check activities
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service35' }
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service83' }
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service84' }
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service88' || unassigned[:service_id] == 'service89' }
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1169' }
-      assert result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183' }
+      assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service35' })
+      assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service83' })
+      assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service84' })
+      assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service88' || unassigned[:service_id] == 'service89' })
+      assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1169' })
+      assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183' })
       assert_equal check_vrp.services.size - 6, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
