@@ -243,6 +243,7 @@ module Interpreters
       restart = 0
       best_limit_score = nil
       c = nil
+      score_hash = {}
       while restart < restarts
         c = BalancedKmeans.new
         c.max_iterations = max_iterations
@@ -268,7 +269,7 @@ module Interpreters
         c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, cut_symbol, ratio_metric, vrp.debug_output_kmeans_centroids, options)
 
         c.clusters.delete([])
-        values = c.clusters.collect{ |c| c.data_items.collect{ |i| i[3][cut_symbol] }.sum.to_i }
+        values = c.clusters.collect{ |cluster| cluster.data_items.collect{ |i| i[3][cut_symbol] }.sum.to_i }
         limit_score = (0..c.cluster_metrics.size - 1).collect{ |cluster_index|
           centroid_coords = [c.centroids[cluster_index][0], c.centroids[cluster_index][1]]
           distance_to_centroid = c.clusters[cluster_index].data_items.collect{ |item| custom_distance([item[0], item[1]], centroid_coords) }.sum
@@ -289,8 +290,12 @@ module Interpreters
             (1.0 - balancing_coeff) * distance_to_centroid + balancing_coeff * ((cluster_metric - ml).abs / ml) * distance_to_centroid
           end
         }.sum
-        puts "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric}"
-        puts "balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
+        checksum = Digest::MD5.hexdigest Marshal.dump(values)
+        if !score_hash.key?(checksum)
+          puts "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric} iterations: #{c.iterations}"
+          puts " > Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
+          score_hash[checksum] = { iterations: c.iterations, limit_score: limit_score, restart: restart, ratio_metric: ratio_metric, min: values.min, max: values.max, sum: values.sum, size: values.size }
+        end
         restart += 1
         empty_clusters_score = c.cluster_metrics.size < nb_clusters && (c.cluster_metrics.size..nb_clusters - 1).collect{ |cluster_index|
             metric_limit.is_a?(Array) ? metric_limit[cluster_index][:limit] : metric_limit[:limit]
