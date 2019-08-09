@@ -65,7 +65,7 @@ Style/IfUnlessModifier:
 Layout/CommentIndentation:
   Enabled: false
 
-Layout/Layout/IndentFirstArrayElement:
+Layout/IndentFirstArrayElement:
   Enabled: false
 
 Style/ClassAndModuleChildren:
