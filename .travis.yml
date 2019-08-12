@@ -4,6 +4,8 @@ env:
   - TEST_SUITE='basis'
   - TEST_SUITE='dicho'
   - TEST_SUITE='real'
+  - TEST_SUITE='real_dicho'
+  - TEST_SUITE='real_scheduling'
   - TEST_SUITE='scheduling'
 
 services:

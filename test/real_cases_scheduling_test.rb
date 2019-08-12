@@ -36,7 +36,7 @@ class HeuristicTest < Minitest::Test
    end
   end
 
-  if !ENV['SKIP_REAL_SCHEDULING']
+  if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
 
     def test_instance_baleares2
       vrp = FCT.load_vrp(self)
