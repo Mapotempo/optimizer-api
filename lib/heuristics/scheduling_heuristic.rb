@@ -1203,7 +1203,7 @@ module Heuristics
     end
 
     def get_activities(day, vrp, route_activities)
-      day_name = { 0 => 'mon', 1 => 'tue', 2 => 'wed', 3 => 'thu', 4 => 'fri', 5 => 'sat', 6 => 'sun' }
+      day_name = { 0 => 'mon', 1 => 'tue', 2 => 'wed', 3 => 'thu', 4 => 'fri', 5 => 'sat', 6 => 'sun' }[day % 7]
       size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
       route_activities.collect.with_index{ |point, point_index|
         service_in_vrp = vrp.services.find{ |s| s[:id] == point[:id] }
@@ -1211,7 +1211,7 @@ module Heuristics
 
         {
           day_week_num: "#{day % 7}_#{Helper.string_padding(day / 7 + 1, size_weeks)}",
-          day_week: "#{day_name[day % 7]}_w#{Helper.string_padding(day / 7 + 1, size_weeks)}",
+          day_week: "#{day_name}_#{Helper.string_padding(day / 7 + 1, size_weeks)}",
           service_id: "#{point[:id]}_#{point[:number_in_sequence]}_#{service_in_vrp[:visits_number]}",
           point_id: service_in_vrp[:activity][:point_id],
           begin_time: point[:arrival],
@@ -1219,7 +1219,7 @@ module Heuristics
           detail: {
             lat: (associated_point[:location][:lat] if associated_point[:location]),
             lon: (associated_point[:location][:lon] if associated_point[:location]),
-            skills: @services_data[point[:id]][:skills].to_a,
+            skills: @services_data[point[:id]][:skills].to_a << day_name,
             setup_duration: point[:considered_setup_duration],
             duration: service_in_vrp[:activity][:duration],
             timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].select{ |t| t[:day_index] == day % 7 }.collect{ |tw| {start: tw[:start], end: tw[:end] } } : [],
