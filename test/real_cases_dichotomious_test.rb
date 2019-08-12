@@ -18,7 +18,7 @@
 require './test/test_helper'
 
 class RealCasesTest < Minitest::Test
-  if !ENV['SKIP_REAL_DICHO']
+  if !ENV['SKIP_REAL_DICHO'] && !ENV['SKIP_DICHO']
 
     def test_dichotomious_first_instance
       vrp = FCT.load_vrp(self)
