@@ -2,6 +2,7 @@ language: ruby
 
 env:
   - TEST_SUITE='basis'
+  - TEST_SUITE='dicho'
   - TEST_SUITE='real'
   - TEST_SUITE='scheduling'
 
