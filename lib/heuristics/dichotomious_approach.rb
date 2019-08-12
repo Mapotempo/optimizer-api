@@ -79,6 +79,7 @@ module Interpreters
                   vehicle = sub_service_vrps[0][:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
                   sub_service_vrps[1][:vrp].vehicles << vehicle
                   sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+                  sub_service_vrps[1][:vrp] = update_matrices(sub_service_vrps[1][:vrp], service_vrp[:vrp])
                   sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
                 end
               }
@@ -86,6 +87,7 @@ module Interpreters
                 next if !result[:routes].select{ |r| r[:vehicle_id] == vehicle.id }.empty?
                 sub_service_vrps[1][:vrp].vehicles << vehicle
                 sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+                sub_service_vrps[1][:vrp] = update_matrices(sub_service_vrps[1][:vrp], service_vrp[:vrp])
                 sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
               }
             end
@@ -312,6 +314,27 @@ module Interpreters
       vehicles_by_clusters
     end
 
+    def self.update_matrices(sub_vrp, vrp)
+      matrix_indices = sub_vrp.points.collect(&:matrix_index)
+      [:time, :distance].each{ |dimension|
+        sub_vrp.matrices[0][dimension] = sub_vrp.vehicles.first.matrix_blend(vrp.matrices.first, matrix_indices, [dimension], cost_time_multiplier: 1, cost_distance_multiplier: 1)
+      }
+      sub_vrp.points.each_with_index{ |point, index|
+        point.matrix_index = index
+      }
+      sub_vrp.services.each_with_index{ |service, index|
+        service.activity.point.matrix_index = sub_vrp.points.find{ |point| point.id == service.activity.point_id }.matrix_index
+      }
+      sub_vrp.vehicles.select(&:start_point).each{ |v|
+        v.start_point.matrix_index = sub_vrp.points.find{ |point| point.id == v.start_point.id }.matrix_index
+      }
+      sub_vrp.vehicles.select(&:end_point).each{ |v|
+        v.end_point.matrix_index = sub_vrp.points.find{ |point| point.id == v.end_point.id }.matrix_index
+      }
+
+      sub_vrp
+    end
+
     def self.split(service_vrp, job = nil)
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
@@ -327,15 +350,18 @@ module Interpreters
         [0, 1].each{ |i|
           sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id))[:vrp]
           sub_vrp.vehicles = vehicles_by_cluster[i]
+          sub_vrp.points = sub_vrp.services.map{ |service| service.activity.point }.uniq
+          sub_vrp.points += sub_vrp.shipments.flat_map{ |shipment| [shipment.pickup.point, shipment.delivery.point] }.uniq
+          sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact
+
+          sub_vrp = update_matrices(sub_vrp, vrp)
+
           sub_vrp.vehicles.each{ |vehicle|
             vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
             vehicle[:cost_distance_multiplier] = 0.05
           }
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
           sub_vrp.resolution_vehicle_limit = [sub_vrp.vehicles.size, vrp.vehicles.empty? ? 0 : (sub_vrp.vehicles.size / vrp.vehicles.size.to_f * vrp.resolution_vehicle_limit).ceil].min
-          sub_vrp.points = sub_vrp.services.map{ |service| service.activity.point }.uniq
-          sub_vrp.points += sub_vrp.shipments.flat_map{ |shipment| [shipment.pickup.point, shipment.delivery.point] }.uniq
-          sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
           sub_vrp.preprocessing_first_solution_strategy = ['self_selection'] # ???
           sub_vrp.resolution_split_number += i
           sub_vrp.resolution_total_split_number += 1
