@@ -42,7 +42,7 @@ module DistanceMatrix
       }
     }
     if !need_matrix.empty?
-      matrix_points = points.each_with_index.collect{ |point, index|
+      matrix_points = points.collect.with_index{ |point, index|
         point.matrix_index = index
         [point.location.lat, point.location.lon]
       }
