@@ -176,16 +176,16 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_scheduling_and_ortools
-      vrp = FCT.load_vrp(self)
-      # clustering before to have no randomness in results
-      clusters = Interpreters::SplitClustering.split_balanced_kmeans({ vrp: vrp, service: :demo }, 5, cut_symbol: :duration, entity: 'vehicle', restarts: 1)
-      clusters.each{ |cluster|
-        cluster[:vrp].preprocessing_partitions = nil
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, Marshal.load(Marshal.dump(cluster[:vrp])), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
+      vrps = FCT.load_vrps(self)
+      FCT.multipe_matrices_required(vrps, self)
+      vrps.each{ |vrp|
+        vrp.preprocessing_partitions = nil
+        vrp.name = nil
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
         unassigned = result[:unassigned].size
 
-        cluster[:vrp].resolution_solver = true
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] } }, cluster[:vrp], nil)
+        vrp.resolution_solver = true
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         assert unassigned >= result[:unassigned].size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{result[:unassigned].size} now"
       }
     end

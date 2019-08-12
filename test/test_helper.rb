@@ -52,6 +52,13 @@ module FCT
     end
   end
 
+  def self.multipe_matrices_required(vrps, test)
+    if ENV['DUMP_VRP']
+      vrps.each(&:compute_matrix)
+      File.write('test/fixtures/' + test.name[5..-1] + '.dump', Base64.encode64(Marshal::dump(vrps)))
+    end
+  end
+
   def self.load_vrp(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = 'test/fixtures/' + filename + '.dump'
@@ -63,6 +70,19 @@ module FCT
       # File.write(dump_file, Base64.encode64(Marshal::dump(vrp)))
       vrp.name = filename if vrp.matrices.empty?
       vrp
+    end
+  end
+
+  def self.load_vrps(test, options = {})
+    filename = options[:fixture_file] || test.name[5..-1]
+    dump_file = 'test/fixtures/' + filename + '.dump'
+    if File.file?(dump_file) && !ENV['DUMP_VRP']
+      Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
+    else
+      problems = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
+      problems.map{ |problem|
+        Models::Vrp.create(problem)
+      }
     end
   end
 
