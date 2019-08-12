@@ -9,7 +9,7 @@ var jobsManager = {
       $(jobs).each(function () {
 
         currentJob = this;
-        var completed = currentJob.status === 'completed' ? true : false;
+        var completed = (currentJob.status === 'completed' || currentJob.status === 'failed') ? true : false;
         var jobDOM =
           '<div class="job">'
           + '<span class="optim-start">' + (new Date(currentJob.time)).toLocaleString('fr-FR') + ' : </span>'
