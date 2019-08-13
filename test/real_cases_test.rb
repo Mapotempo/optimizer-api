@@ -150,7 +150,6 @@ class RealCasesTest < Minitest::Test
 
     # Lyon - 769 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_ten_routes_with_rest
-      skip 'Test broken in one previous commit, to fix'
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)

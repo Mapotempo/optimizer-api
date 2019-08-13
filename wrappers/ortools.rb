@@ -575,7 +575,7 @@ module Wrappers
 
       return @previous_result if content['routes'].empty? && @previous_result
       collected_indices = []
-      collected_rests_indices = []
+      vehicle_rest_ids = Hash.new(Array.new)
       {
         cost: content['cost'] || 0,
         solvers: ['ortools'],
@@ -681,11 +681,12 @@ module Wrappers
                 current_activity
               end
             elsif activity['type'] == 'break'
-              collected_rests_indices << current_index
-              vehicle_rest = vrp.vehicles.collect{ |vehicle| vehicle.rests }.flatten[current_index]
-              earliest_start = vehicle_rest[:timewindows].nil? ? earliest_start : closest_rest_start(vehicle_rest[:timewindows], earliest_start)
+              activity['id']
+              vehicle_rest_ids[vehicle.id] << activity['id']
+              vehicle_rest = vehicle.rests.find{ |rest| rest.id == activity['id'] }
+              earliest_start = activity['start_time']
               current_rest = {
-                rest_id: vehicle_rest.id,
+                rest_id: activity['id'],
                 begin_time: earliest_start,
                 departure_time: earliest_start + vehicle_rest[:duration],
                 detail: build_rest(vehicle_rest, vehicle.global_day_index ? vehicle.global_day_index%7 : nil)
@@ -725,11 +726,14 @@ module Wrappers
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
           }]
-        }.flatten + (vrp.vehicles.collect{ |vehicle| vehicle.rests.collect(&:id) }.flatten - collected_rests_indices.collect{ |index| index < vrp.rests.size && vrp.rests[index].id }).collect{ |rest_id|
-          rest = vrp.rests.find{ |rest| rest.id == rest_id }
-          {
-            rest_id: rest.id,
-            detail: build_rest(rest, nil)
+        }.flatten + vrp.vehicles.flat_map{ |vehicle|
+          (vehicle.rests.collect(&:id) - vehicle_rest_ids[vehicle.id]).map{ |rest_id|
+            rest = vrp.rests.find{ |rest| rest.id == rest_id }
+            {
+              vehicle_id: vehicle.id,
+              rest_id: rest_id,
+              detail: build_rest(rest, nil)
+            }
           }
         }
       }
