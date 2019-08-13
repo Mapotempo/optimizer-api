@@ -62,7 +62,8 @@ module Interpreters
         end
 
         t2 = Time.now
-        if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && feasible_vrp(result, service_vrp)
+        if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && feasible_vrp(result, service_vrp) &&
+           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit && service_vrp[:vrp].services.size > 100
           sub_service_vrps = []
           loop do
             sub_service_vrps = split(service_vrp, job)
