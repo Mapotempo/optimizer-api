@@ -705,7 +705,7 @@ module SchedulingHeuristic
         next_arrival_time: next_arrival,
         next_final_time: next_end,
         potential_shift: tw[:max_shift],
-        additional_route_time: [0, shift - duration - tw[:setup_duration]].max,
+        additional_route_time: [0, shift - duration - tw[:setup_duration]].max, # TODO : why using max ??min_by in select_point will chose the one that reduces work duration if we keep negative value possible
         dist_from_current_route: (0..route.size - 1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min,
         last_service_end: (position == route.size ? tw[:final_time] : route.last[:end] + shift)
       }
@@ -1087,25 +1087,21 @@ module SchedulingHeuristic
             current_route[point][:arrival] += shift
             current_route[point][:end] += shift
             current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
-          elsif shift.negative?
-            # TODO : unitary test this case because very uncommon case
+          else
             new_potential_start = current_route[point][:start] + shift
-            if can_ignore_tw(current_route[point - 1], current_route[point])
-              current_route[point][:start] = current_route[point - 1][:end]
-              current_route[point][:arrival] = current_route[point - 1][:end]
-              current_route[point][:end] = current_route[point - 1][:end] + @services_data[current_route[point - 1][:id]][:duration]
-              current_route[point][:max_shift] = current_route[point - 1][:max_shift]
+            service_tw = if can_ignore_tw(current_route[point - 1][:id], current_route[point][:id])
+              nil
             else
-              service_tw = find_corresponding_timewindow(current_route[point][:id], day, current_route[point][:arrival])
-              soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]) - current_route[point][:considered_setup_duration])
-              if soonest_authorized > new_potential_start
-                shift += (soonest_authorized - new_potential_start)
-              end
-              current_route[point][:start] += shift
-              current_route[point][:arrival] += shift
-              current_route[point][:end] += shift
-              current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
+              find_corresponding_timewindow(current_route[point][:id], day, current_route[point][:arrival])
             end
+            soonest_authorized = (@services_data[current_route[point][:id]][:tw].empty? || !service_tw ? new_potential_start : service_tw[:start] - matrix(route_data, current_route[point - 1][:id], current_route[point][:id]) - current_route[point][:considered_setup_duration])
+            if soonest_authorized > new_potential_start
+              shift += (soonest_authorized - new_potential_start)
+            end
+            current_route[point][:start] += shift
+            current_route[point][:arrival] += shift
+            current_route[point][:end] += shift
+            current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
           end
         }
       end
