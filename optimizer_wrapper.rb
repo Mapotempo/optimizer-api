@@ -250,8 +250,6 @@ module OptimizerWrapper
                   raise RuntimeError.new('No solution provided') unless vrp.restitution_allow_empty_result
                 end
               end
-            else
-              cluster_result = parse_result(vrp, vrp[:preprocessing_heuristic_result])
             end
           else # TODO remove ?
             cluster_result = {
@@ -263,7 +261,6 @@ module OptimizerWrapper
               elapsed: nil,
               total_distance: nil
             }
-            vrp.preprocessing_heuristic_result = cluster_result
           end
         end
       end
