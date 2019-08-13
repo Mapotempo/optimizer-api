@@ -37,7 +37,7 @@ module Models
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
     field :resolution_dicho_level_coeff, default: 1.1
-    field :resolution_dicho_division_vec_limit, default: 6
+    field :resolution_dicho_division_vec_limit, default: 3
     field :resolution_angle, default: 38
     field :resolution_div_average_service, default: 0.6
     field :resolution_duration, default: nil
