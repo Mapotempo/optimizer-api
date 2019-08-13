@@ -318,7 +318,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           start: 1,
           end: 10
         }
-      },{
+      }, {
         id: 'vehicle_1',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
@@ -352,7 +352,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
     assert result
     assert_equal 3, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_1_0' }[:activities].size
     assert_equal 2, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_0' }[:activities].size
@@ -360,7 +360,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_duration_adjusted_by_presence_of_rest
-    # conflict with rest
+    # Rest duration is added to vehicle duration
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -398,7 +398,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
       services: [{
         id: 'service_1',
         activity: {
-          point_id: 'point_1'
+          point_id: 'point_1',
+          duration: 1
         }
       }, {
         id: 'service_2',
@@ -1242,7 +1243,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
-    assert_equal problem[:services].size + problem[:vehicles].collect{ |vehicle| vehicle[:rest_ids].size }.inject(:+) + 2, result[:routes].collect{ |route| route[:activities].size }.inject(:+)
+    assert_equal problem[:services].size + problem[:vehicles].collect{ |vehicle| vehicle[:rest_ids].size }.inject(:+) + 2,
+                 result[:routes].collect{ |route| route[:activities].size }.sum
   end
 
   def test_negative_time_windows_problem
