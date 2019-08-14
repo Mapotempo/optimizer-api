@@ -153,8 +153,8 @@ class HeuristicTest < Minitest::Test
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal (ENV['TRAVIS'] ? 619 : 620), unassigned_visits.sum, "Expecting #{(ENV['TRAVIS'] ? 619 : 620)} unassigned visits, have #{unassigned_visits.sum}"
-      assert_equal (ENV['TRAVIS'] ? 264 : 265), unassigned_services.sum, "Expecting #{(ENV['TRAVIS'] ? 264 : 265)} unassigned visits, have #{unassigned_services.sum}"
+      assert_equal (ENV['TRAVIS'] ? 598 : 602), unassigned_visits.sum, "Expecting #{(ENV['TRAVIS'] ? 602 : 602)} unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal (ENV['TRAVIS'] ? 314 : 316), unassigned_services.sum, "Expecting #{(ENV['TRAVIS'] ? 316 : 316)} unassigned visits, have #{unassigned_services.sum}"
     end
 
     def test_performance_13vl
@@ -173,8 +173,8 @@ class HeuristicTest < Minitest::Test
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal (ENV['TRAVIS'] ? 367 : 367), unassigned_visits.sum, "Expecting #{(ENV['TRAVIS'] ? 367 : 367)} unassigned visits, have #{unassigned_visits.sum}"
-      assert_equal (ENV['TRAVIS'] ? 232 : 227), unassigned_services.sum, "Expecting #{(ENV['TRAVIS'] ? 232 : 227)} unassigned visits, have #{unassigned_services.sum}"
+      assert_equal (ENV['TRAVIS'] ? 393 : 406), unassigned_visits.sum, "Expecting #{(ENV['TRAVIS'] ? 406 : 406)} unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal (ENV['TRAVIS'] ? 313 : 325), unassigned_services.sum, "Expecting #{(ENV['TRAVIS'] ? 325 : 325)} unassigned visits, have #{unassigned_services.sum}"
     end
   end
 end
