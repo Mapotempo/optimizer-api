@@ -538,13 +538,15 @@ module Heuristics
       ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
       route = route_data[:current_route]
       insertion_costs = []
-      @to_plan_service_ids.select{ |service|
-                    @candidate_services_ids.include?(service) && # TODO : iterate over candidate_service_ids instead of to_plan, should be the same
-                      # quantities are respected
-                      ((@same_point_day && @services_data[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
-                        (!@same_point_day && @services_data[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
-                      # service is available at this day
-                      !@services_data[service][:unavailable_days].include?(day)
+      set = @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:nb_visits] == 1 } : @to_plan_service_ids
+      # we will assign services with one vehicle in relaxed_same_point_day part
+      set.select{ |service|
+        @candidate_services_ids.include?(service) && # should be useless
+        # quantities are respected
+        ((@same_point_day && @services_data[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
+          (!@same_point_day && @services_data[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
+        # service is available at this day
+        !@services_data[service][:unavailable_days].include?(day)
       }.each{ |service_id|
 
         possible_vehicles, possible_days = possible_for_point(@services_data[service_id][:point_id], @services_data[service_id][:nb_visits])
