@@ -526,8 +526,8 @@ module Wrappers
       if !matrix.nil?
         line_cpt = Array.new(vrp.points.size.size){ 0 }
         column_cpt = Array.new(vrp.points.size.size){ 0 }
-        vrp.points.each{ |point_a|
-          vrp.points.each{ |point_b|
+        vrp.points.each_with_index{ |point_a, line|
+          vrp.points.each_with_index{ |point_b, col|
             if matrix[point_a.matrix_index][point_b.matrix_index] >= 2**31 - 1
               line_cpt[line] += 1
               column_cpt[col] += 1
