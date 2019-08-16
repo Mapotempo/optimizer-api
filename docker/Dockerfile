@@ -1,13 +1,14 @@
-ARG OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-dev}
+ARG BRANCH=${BRANCH:-ce}
+ARG OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-latest}
 ARG ORTOOLS_VERSION=${ORTOOLS_VERSION:-latest}
-ARG VROOM_VERSION=${VROOM_VERSION:-latest}
 ARG REGISTRY=${REGISTRY:-registry.mapotempo.com/}
+ARG VROOM_VERSION=${VROOM_VERSION:-latest}
 
 # Install ORTools
 FROM ${REGISTRY}mapotempo/ortools:${ORTOOLS_VERSION} as ortools
 
 # Install Optimizer-ortools
-FROM ${REGISTRY}mapotempo/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION} as optimizer-ortools
+FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION} as optimizer-ortools
 
 # Install Vroom
 FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} as vroom
