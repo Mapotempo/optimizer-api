@@ -21,9 +21,11 @@ docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
 ```
 export ORTOOLS_VERSION=v7.0
 export OPTIMIZER_ORTOOLS_VERSION=dev
+export BRANCH=${BRANCH:-beta}
 docker build --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION} \
   --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
-  -f ./docker/optimizer-ortools/Dockerfile -t ${REGISTRY}mapotempo/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION} .
+  --build-arg BRANCH=${BRANCH} \
+  -f ./docker/optimizer-ortools/Dockerfile -t ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:latest .
 ```
 
 #### Vroom
@@ -37,15 +39,16 @@ docker build --build-arg VROOM_VERSION=${VROOM_VERSION} \
 
 ```
 export CI_COMMIT_REF_NAME=latest
-export OPTIMIZER_ORTOOLS_VERSION=dev
+export OPTIMIZER_ORTOOLS_VERSION=latest
 export ORTOOLS_VERSION=v7.0
 export VROOM_VERSION=v1.2.0
+export BRANCH=${BRANCH:-beta}
 docker build \
   --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
   --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION} \
   --build-arg VROOM_VERSION=${VROOM_VERSION} \
   --build-arg CI_COMMIT_REF_NAME=${CI_COMMIT_REF_NAME} \
-  -f ./docker/Dockerfile -t ${REGISTRY}mapotempo/optimizer-api:${CI_COMMIT_REF_NAME} .
+  -f ./docker/Dockerfile -t ${REGISTRY}mapotempo-${BRANCH}/optimizer-api:${CI_COMMIT_REF_NAME} .
 ```
 
 ## Running services
