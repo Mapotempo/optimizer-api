@@ -117,7 +117,9 @@ module Interpreters
             generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
               # TODO : global variable to know if work_day entity
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
-              split_balanced_kmeans(s_v, [s_v[:vrp].vehicles.size, s_v[:vrp].services.size].min, cut_symbol: cut_symbol, entity: partition[:entity]) { |current_restart, total_restarts|
+              options = { cut_symbol: cut_symbol, entity: partition[:entity] }
+              options[:restarts] = partition[:restarts] if partition[:restarts]
+              split_balanced_kmeans(s_v, [s_v[:vrp].vehicles.size, s_v[:vrp].services.size].min, options) { |current_restart, total_restarts|
                 block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size} - iteration #{current_restart + s_v_i * total_restarts}/#{total_restarts * current_service_vrps.size}", nil, nil, nil)
               }
             }

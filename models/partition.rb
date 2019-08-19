@@ -24,5 +24,6 @@ module Models
     field :metric
     field :entity
     field :threshold
+    field :restarts
   end
 end

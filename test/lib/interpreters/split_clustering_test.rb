@@ -21,6 +21,7 @@ require './lib/interpreters/split_clustering.rb'
 class SplitClusteringTest < Minitest::Test
   def setup
     @split_restarts = ENV['INTENSIVE_TEST'] ? 50 : 5
+    @regularity_restarts = ENV['INTENSIVE_TEST'] ? 50 : 5
   end
 
   def test_cluster_dichotomious
@@ -538,5 +539,59 @@ class SplitClusteringTest < Minitest::Test
 
     # barely checks that function does not produce an error
     Interpreters::SplitClustering.split_clusters([{ vrp: vrp }])
+  end
+
+  def test_results_regularity
+    visits_unassigned = []
+    services_unassigned = []
+    reason_unassigned = []
+    (1..@regularity_restarts).each{ |_tentative|
+      vrp = FCT.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      visits_unassigned << result[:unassigned].size
+      services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+      reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
+    }
+
+    if services_unassigned.max - services_unassigned.min.to_f >= 2 || visits_unassigned.max >= 5
+      reason_unassigned.each_with_index{ |reason, index|
+        puts "unassigned visits ##{index} reason:\n#{reason}"
+      }
+      puts "unassigned services #{services_unassigned}"
+      puts "unassigned visits   #{visits_unassigned}"
+    end
+
+    # visits_unassigned:
+    assert visits_unassigned.max - visits_unassigned.min <= 2, "unassigned services (#{visits_unassigned}) should be more regular" # easier to achieve
+    assert visits_unassigned.max <= 4, "More than 4 unassigned visits shouldn't happen (#{visits_unassigned})"
+
+    # 4 shouldn't happen more than once unless the test is repeated more than 100s of times.
+    rate_limit_4_unassigned = (@regularity_restarts * 0.01).ceil
+    assert visits_unassigned.count(4) <= rate_limit_4_unassigned, "4 unassigned visits shouldn't appear more than #{rate_limit_4_unassigned} times (#{visits_unassigned})"
+  end
+
+  def test_results_regularity_2
+    visits_unassigned = []
+    services_unassigned = []
+    reason_unassigned = []
+    (1..@regularity_restarts).each{ |_tentative|
+      vrp = FCT.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      visits_unassigned << result[:unassigned].size
+      services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+      reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
+    }
+
+    if services_unassigned.max - services_unassigned.min.to_f >= 8 || visits_unassigned.max >= 15
+      reason_unassigned.each_with_index{ |reason, index|
+        puts "unassigned visits ##{index} reason:\n#{reason}"
+      }
+      puts "unassigned services #{services_unassigned}"
+      puts "unassigned visits   #{visits_unassigned}"
+    end
+
+    # visits_unassigned:
+    assert visits_unassigned.max - visits_unassigned.min <= 10, "unassigned visits (#{visits_unassigned}) should be more regular" # easier to achieve
+    assert visits_unassigned.max <= 15, "More than 15 unassigned visits shouldn't happen (#{visits_unassigned})"
   end
 end
