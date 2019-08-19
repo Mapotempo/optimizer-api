@@ -8,18 +8,17 @@ gem 'puma'
 gem 'thin'
 gem 'rack-cors'
 
-gem 'grape'
+gem 'grape', '<0.19.0' # TODO: Grape 1.2.4 reduces performances
 gem 'grape_logging'
 gem 'grape-entity'
-gem 'grape-swagger'
-gem 'grape-swagger-entity'
+gem 'grape-swagger', '<0.26.0' # TODO: Waiting Grape 1+
+gem 'grape-swagger-entity', '<0.1.6' # TODO: Waiting Grape 1+
 
 gem 'i18n'
 gem 'rack-contrib'
 gem 'rest-client'
 gem 'activemodel'
 gem 'active_hash', github: 'Mapotempo/active_hash'
-gem 'hashie'
 gem 'nokogiri'
 gem 'resque', '<2'
 gem 'resque-status', '>0.4'
