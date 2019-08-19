@@ -98,6 +98,14 @@ module OptimizerWrapper
 
     services_vrps = Filters::filter(services_vrps)
 
+    # to make clustering more regular :
+    services_vrps.each{ |service|
+      if service[:vrp].preprocessing_first_solution_strategy.to_a.include?('periodic') &&
+         service[:vrp].preprocessing_partitions.size > 0
+        service[:vrp].resolution_repetition = 3
+      end
+    }
+
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
     elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
@@ -142,6 +150,10 @@ module OptimizerWrapper
       multi.expand(service_vrp[:vrp])
     }
     result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty? && dicho_results.compact.empty?
+    if duplicated_results.size == services_vrps.first[:vrp][:resolution_repetition]
+      result = duplicated_results.min_by{ |r| r[:unassigned].size }
+      duplicated_results = [] # keep those results?
+    end
     result_global = {
       result: ([result] + duplicated_results + split_results + dicho_results).compact
     }

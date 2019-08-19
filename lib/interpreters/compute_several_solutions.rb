@@ -97,13 +97,26 @@ module Interpreters
     end
 
     def self.expand(service_vrps)
-      several_service_vrps = several_solutions(service_vrps)
-      reduced_service_vrps = service_vrps - service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }.compact
-      batched_service_vrps = reduced_service_vrps.collect{ |service_vrp| batch_heuristic(service_vrp) if service_vrp[:vrp][:resolution_batch_heuristic] }.compact
-      untouched_service_vrps = service_vrps -
-                               service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] } -
-                               service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_batch_heuristic] }
-      [untouched_service_vrps, (several_service_vrps + batched_service_vrps) || []]
+      if service_vrps.any?{ |service| service[:vrp].resolution_repetition > 1 }
+        raise OptimizerWrapper::DiscordantProblemError, 'Can only repeat one single vrp.' if service_vrps.size > 1
+
+        duplicated_service_vrps = (0..service_vrps.first[:vrp][:resolution_repetition] - 1).collect{ |_i|
+          sub_vrp = Marshal.load(Marshal.dump(service_vrps.first))
+          sub_vrp[:vrp].resolution_repetition = 1
+          sub_vrp[:vrp].preprocessing_partitions.each{ |partition| partition[:restarts] = 5 } # change restarts ?
+          sub_vrp
+        }.flatten
+
+        [[], duplicated_service_vrps]
+      else
+        several_service_vrps = several_solutions(service_vrps)
+        reduced_service_vrps = service_vrps - service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }.compact
+        batched_service_vrps = reduced_service_vrps.collect{ |service_vrp| batch_heuristic(service_vrp) if service_vrp[:vrp][:resolution_batch_heuristic] }.compact
+        untouched_service_vrps = service_vrps -
+                                 service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] } -
+                                 service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_batch_heuristic] }
+        [untouched_service_vrps, (several_service_vrps + batched_service_vrps) || []]
+      end
     end
 
     def self.custom_heuristics(service, vrp, block)
