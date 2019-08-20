@@ -205,7 +205,8 @@ module OptimizerWrapper
 
               next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
               una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-            } if vrp.resolution_solver_parameter == -1 || !vrp.resolution_solver || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+            } if vrp.resolution_solver_parameter == -1 || !vrp.resolution_solver || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || 
+              !vrp.schedule_range_indices.nil? || !vrp.schedule_range_date.nil? 
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp) {
               block&.call(nil, nil, nil, "process #{cluster_reference + 1}/#{services_vrps.size}", nil, nil, nil)
