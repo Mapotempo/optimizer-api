@@ -7,7 +7,7 @@ DOCKER_SERVICE_NAME=optimizer_api
 CONTAINER=${DOCKER_SERVICE_NAME}.1.$(docker service ps -f "name=${DOCKER_SERVICE_NAME}.1" ${DOCKER_SERVICE_NAME} -q --no-trunc | head -n1)
 case "$1" in
   'basis')
-    TEST_ENV='SKIP_DICHO SKIP_JSPRIT=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true'
+    TEST_ENV='SKIP_DICHO=true SKIP_JSPRIT=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true'
     ;;
   'dicho')
     TEST_ENV='TEST=test/lib/heuristics/dichotomious_test.rb'
