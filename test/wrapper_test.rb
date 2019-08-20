@@ -2464,7 +2464,6 @@ class WrapperTest < Minitest::Test
   end
 
   def test_all_points_rejected_by_capacity
-    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2532,14 +2531,13 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
   end
 
   def test_all_points_rejected_by_tw
-    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2604,14 +2602,13 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 3, result[:unassigned].size
     end
   end
 
   def test_all_points_rejected_by_sequence_tw
-    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2682,14 +2679,13 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
   end
 
   def test_all_points_rejected_by_lapse
-    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2754,7 +2750,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |*a| raise}) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 6, result[:unassigned].size
     end
@@ -2834,7 +2830,8 @@ class WrapperTest < Minitest::Test
 
     vrp = Models::Vrp.create(problem)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-    assert vrp[:services].size == result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + result[:unassigned].map{ |u| u[:service_id] }.size
+    assert_equal problem[:services].size,
+                 result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + result[:unassigned].map{ |u| u[:service_id] }.size
   end
 
   def test_compute_several_solutions

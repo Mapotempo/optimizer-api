@@ -4529,8 +4529,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert_equal 3, result[:routes].size
     assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][1][:activities].size
-    assert_equal 'service_1', result[:routes][0][:activities].first[:service_id]
-    assert_equal 'service_3', result[:routes][1][:activities].first[:service_id]
+    assert(result[:routes].any?{ |route| 'service_1' == route[:activities].first[:service_id] })
+    assert(result[:routes].any?{ |route| 'service_3' == route[:activities].first[:service_id] })
   end
 
   def test_force_end
@@ -4579,11 +4579,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'force_end',
-        type: "force_end",
+        type: 'force_end',
         linked_ids: ['service_1']
       }, {
         id: 'force_end2',
-        type: "force_end",
+        type: 'force_end',
         linked_ids: ['service_3']
       }],
       configuration: {
@@ -4600,8 +4600,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert_equal 2, result[:routes].size
     assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][1][:activities].size
-    assert_equal 'service_1', result[:routes][0][:activities].last[:service_id]
-    assert_equal 'service_3', result[:routes][1][:activities].last[:service_id]
+    assert(result[:routes].any?{ |route| 'service_1' == route[:activities].last[:service_id] })
+    assert(result[:routes].any?{ |route| 'service_3' == route[:activities].last[:service_id] })
   end
 
   def test_never_first
@@ -5191,6 +5191,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_rest_with_late_multiplier
+    skip 'Rest currently cannot be late'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -6009,8 +6010,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 0,
             end: 2,
             day_index: 0
-          },
-          {
+          }, {
             start: 2,
             end: 5,
             day_index: 0
@@ -6025,8 +6025,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 0,
             end: 2,
             day_index: 0
-          },
-          {
+          }, {
             start: 4,
             end: 5,
             day_index: 0
@@ -6037,8 +6036,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         resolution: {
           duration: 10,
         },
-        schedule:{
-          range_indices:{
+        schedule: {
+          range_indices: {
             start: 0,
             end: 1
           }
@@ -6046,7 +6045,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result[:routes][0][:activities].find{ |activity| activity[:service_id] == 'service_1_1_1' }[:detail][:timewindows].size == 1
   end
 
@@ -6109,7 +6108,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = Models::Vrp.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result
     assert result[:cost].zero?
   end
