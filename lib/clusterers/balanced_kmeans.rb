@@ -240,6 +240,9 @@ module Ai4r
 
             # TODO : select among items that NEED one specific skill of skills
             compatible_items = @data_set.data_items.reject{ |item| item[5].empty? }.select{ |item| (item[5] - skills).empty? }
+            if compatible_items.collect{ |c| [c[0], c[1]] }.uniq.size < @data_set.data_items.collect{ |c| [c[0], c[1]] }.uniq.size * 5 / 100
+              compatible_items = @data_set.data_items.select{ |item| (item[5] - skills).empty? }
+            end
 
             counter = 0
             restrictive_caracteristics = true
