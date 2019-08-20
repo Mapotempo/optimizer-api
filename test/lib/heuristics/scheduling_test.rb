@@ -515,20 +515,13 @@ class HeuristicTest < Minitest::Test
         puts "unassigned visits   #{visits_unassigned}"
       end
 
-      # services_unassigned:
-      assert services_unassigned.max - services_unassigned.min <= 2, "unassigned services (#{services_unassigned}) should be more regular" # easier to achieve
-
       # visits_unassigned:
-      # It is often 2, but in the worst case, 5.
-      assert visits_unassigned.max <= 5, "More than 5 unassigned visits shouldn't happen (#{visits_unassigned})"
+      assert visits_unassigned.max - visits_unassigned.min <= 2, "unassigned services (#{visits_unassigned}) should be more regular" # easier to achieve
+      assert visits_unassigned.max <= 4, "More than 4 unassigned visits shouldn't happen (#{visits_unassigned})"
 
-      # 5 shouldn't happen more than once unless the test is repeated more than 100s of times.
-      rate_limit_5_unassigned = (@regularity_restarts * 0.01).ceil
-      assert visits_unassigned.count(5) <= rate_limit_5_unassigned, "5 unassigned visits shouldn't appear more than #{rate_limit_5_unassigned} times (#{visits_unassigned})"
-
-      # 3 shouldn't happen too many times (10%)
-      rate_limit_3_unassigned = (@regularity_restarts * 0.10).ceil + 1
-      assert visits_unassigned.count(3) <= rate_limit_3_unassigned, "3 unassigned visits shouldn't appear more than #{rate_limit_3_unassigned} times (#{visits_unassigned})"
+      # 4 shouldn't happen more than once unless the test is repeated more than 100s of times.
+      rate_limit_4_unassigned = (@regularity_restarts * 0.01).ceil
+      assert visits_unassigned.count(4) <= rate_limit_4_unassigned, "4 unassigned visits shouldn't appear more than #{rate_limit_4_unassigned} times (#{visits_unassigned})"
     end
 
     def test_results_regularity_2
@@ -543,7 +536,7 @@ class HeuristicTest < Minitest::Test
         reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
       }
 
-      if services_unassigned.max - services_unassigned.min.to_f >= 7 || visits_unassigned.max >= 15
+      if services_unassigned.max - services_unassigned.min.to_f >= 20 || visits_unassigned.max >= 25
         reason_unassigned.each_with_index{ |reason, index|
           puts "unassigned visits ##{index} reason:\n#{reason}"
         }
@@ -551,26 +544,9 @@ class HeuristicTest < Minitest::Test
         puts "unassigned visits   #{visits_unassigned}"
       end
 
-      # services_unassigned:
-      # Best is 0. It is often 1,2,3. Rarely more than 6. And it is 9 in the worst case.
-      assert services_unassigned.max < 10, "Number of unassigned services should be less than 10 (#{services_unassigned})" # easier to achieve
-      assert services_unassigned.max - services_unassigned.min <= 8, "Number of unassigned services should be more regular (max-min diff is too much -- #{services_unassigned.max - services_unassigned.min}) (#{services_unassigned})" # can fail rarely but should happen regualarly
-
-      # %95 should be less than or equal to 6
-      rate_upperbound_6_services = (@regularity_restarts * 0.95).floor - 1
-      assert services_unassigned.count{ |x| x <= 6 } > rate_upperbound_6_services, "Number of unassigned services > 6 should appear less than #{@regularity_restarts - rate_upperbound_6_services} times (#{services_unassigned})"
-
       # visits_unassigned:
-      # Best is 0. It is often 1,2,3. Rarely more than 10. And it is 15 in the worst case.
-      assert visits_unassigned.max <= 15, "More than 15 unassigned visits shouldn't happen (#{visits_unassigned})"
-
-      # 1, 2 and, 3 should be around half unless regularity_restarts number is too low
-      rate_lowerbound_1_2_3_unassigned =  (@regularity_restarts * 0.5).floor - 1
-      assert visits_unassigned.count{ |x| x <= 3 } >= rate_lowerbound_1_2_3_unassigned, "1, 2 and 3 unassigned visits should appear more than #{rate_lowerbound_1_2_3_unassigned} times (#{visits_unassigned})"
-
-      # Rate of unassigned_>_10 shouldn't be higher than 5%
-      rate_lowerbound_10_unassigned = (@regularity_restarts * 0.95).floor - 1
-      assert visits_unassigned.count{ |x| x <= 10 } >= rate_lowerbound_10_unassigned, "unassigned visits > 10 should appear less often than #{@regularity_restarts - rate_lowerbound_10_unassigned} times (#{visits_unassigned})"
+      assert visits_unassigned.max - visits_unassigned.min <= 20, "unassigned visits (#{visits_unassigned}) should be more regular" # easier to achieve
+      assert visits_unassigned.max <= 25, "More than 25 unassigned visits shouldn't happen (#{visits_unassigned})"
     end
 
     def test_callage_freq

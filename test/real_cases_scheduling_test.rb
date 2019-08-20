@@ -171,7 +171,7 @@ class HeuristicTest < Minitest::Test
         assert days_used <= expected_number_of_days, "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
       }
 
-      assert result[:unassigned].size < total_visits * 5 / 100, "#{result[:unassigned].size * 100 / total_visits}% unassigned instead of 5% authorized"
+      assert result[:unassigned].size < total_visits * 6 / 100.0, "#{result[:unassigned].size * 100 / total_visits}% unassigned instead of 6% authorized"
       assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
     end
 

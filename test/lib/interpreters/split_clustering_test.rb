@@ -50,8 +50,8 @@ class SplitClusteringTest < Minitest::Test
 
       average_duration = durations.inject(0, :+) / durations.size
       # Clusters should be very well balanced
-      min_duration = average_duration - 0.1 * average_duration
-      max_duration = average_duration + 0.1 * average_duration
+      min_duration = average_duration - 0.2 * average_duration
+      max_duration = average_duration + 0.2 * average_duration
       durations.each_with_index{ |duration, index|
         assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
       }
