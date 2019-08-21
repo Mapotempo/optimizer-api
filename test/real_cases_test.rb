@@ -193,7 +193,6 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - 81 services with time window - late for services & vehicles
     def test_ortools_global_ten_routes_without_rest
-      skip 'Test broken in one previous commit, to fix'
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -202,7 +201,7 @@ class RealCasesTest < Minitest::Test
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
 
       # Check routes
-      assert_equal 4, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert(result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size.positive? }.size <= 4)
 
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 31700, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
@@ -245,9 +244,7 @@ class RealCasesTest < Minitest::Test
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].size
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
       assert_equal 1, result[:unassigned].reject{ |u| u[:reason].nil? }.size
-      services_by_routes = check_vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 6305, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
@@ -264,7 +261,6 @@ class RealCasesTest < Minitest::Test
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      services_by_routes = check_vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       # Check total travel time
       assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 13225, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
@@ -277,12 +273,12 @@ class RealCasesTest < Minitest::Test
     def test_ortools_single_route_with_route_order
       vrp = FCT.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
+      # TODO: move to fixtures at the next update of the dump
+      vrp.preprocessing_prefer_short_segment = false
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal check_vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
-
       expected_ids = vrp.relations.first.linked_ids
       actual_route = result[:routes].first[:activities].collect{ |activity|
         activity[:service_id]
@@ -303,13 +299,11 @@ class RealCasesTest < Minitest::Test
 
     # Nice - A single route with an order defining the most part of the route, many stops
     def test_ortools_single_route_with_route_order_2
-      skip 'Test broken in one previous commit, to fix'
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
       assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
 
       expected_ids = vrp.relations.first.linked_ids
       actual_route = result[:routes].first[:activities].collect{ |activity|
@@ -406,25 +400,38 @@ class RealCasesTest < Minitest::Test
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_g1g2
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp.resolution_minimum_duration = 8000
+      vrp.resolution_duration = 600000
+      vrp.restitution_intermediate_solutions = false
+
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      total_return_distance = result[:routes].collect{ |route| route[:activities].last[:travel_distance] }.sum
       assert result
-      assert result[:total_distance] <= 85100
-      assert result[:unassigned].size <= 8
+      assert result[:total_distance] - total_return_distance <= 85100
+      assert result[:unassigned].size <= 6
     end
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_hv11
-      assert_equal 0, result[:unassigned].size
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp.resolution_minimum_duration = 40000
+      vrp.resolution_duration = 600000
+      vrp.restitution_intermediate_solutions = false
+
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      total_return_distance = result[:routes].collect{ |route| route[:activities].last[:travel_distance] }.sum
       assert result
-      assert result[:total_distance] <= 183800
+      assert result[:total_distance] - total_return_distance <= 183800
       assert_equal 0, result[:unassigned].size
     end
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_tv1
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp.resolution_minimum_duration = 8000
+      vrp.resolution_duration = 600000
+      vrp.restitution_intermediate_solutions = false
+
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       assert result[:total_distance] <= 97400
@@ -434,11 +441,17 @@ class RealCasesTest < Minitest::Test
     # North West of France - at the fastest with distance minimization with vehicle returning at the depot
     def test_instance_fr_tv11
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
+      vrp.resolution_minimum_duration = 8000
+      vrp.resolution_duration = 600000
+      vrp.restitution_intermediate_solutions = false
+
       vrp.vehicles.first.end_point = vrp.vehicles.first.start_point
       vrp.vehicles.first.end_point_id = vrp.vehicles.first.start_point_id
+
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      total_return_distance = result[:routes].collect{ |route| route[:activities].last[:travel_distance] }.sum
       assert result
-      assert result[:total_distance] <= 105700
+      assert result[:total_distance] - total_return_distance <= 105700
       assert_equal 0, result[:unassigned].size
     end
 
