@@ -428,7 +428,7 @@ class RealCasesTest < Minitest::Test
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_tv1
       vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
-      vrp.resolution_minimum_duration = 8000
+      vrp.resolution_minimum_duration = 16000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
 
