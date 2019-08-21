@@ -572,44 +572,4 @@ class HeuristicTest < Minitest::Test
       }
     end
   end
-
-  def test_no_duplicated_skills
-    problem = VRP.lat_lon_scheduling
-    problem[:services] = [problem[:services].first]
-    problem[:services].first[:visits_number] = 4
-    problem[:vehicles] = [{
-      id: 'vehicle_0',
-      start_point_id: 'point_0',
-      end_point_id: 'point_0',
-      router_mode: 'car',
-      router_dimension: 'time',
-      sequence_timewindows: [{start: 0, end: 7000, day_index: 0}, {start: 0, end: 7000, day_index: 1}],
-      duration: 50000,
-      capacities: [{unit_id: "kg", limit: 1100}],
-    }]
-    problem[:configuration][:preprocessing][:partitions] = [{
-      method: 'balanced_kmeans',
-      metric: 'duration',
-      entity: 'vehicle'
-    }, {
-      method: 'balanced_kmeans',
-      metric: 'duration',
-      entity: 'work_day'
-    }]
-    problem[:configuration][:resolution] = {
-      duration: 10,
-      solver: false,
-      same_point_day: true,
-      allow_partial_assignment: true
-    }
-    problem[:configuration][:schedule] = {
-      range_indices: {
-        start: 0,
-        end: 27
-      }
-    }
-
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
-    assert result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:detail][:skills] }.compact.flatten}.all?{ |skill| skill.size == 1 }
-  end
 end
