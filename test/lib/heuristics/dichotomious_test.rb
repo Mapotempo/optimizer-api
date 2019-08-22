@@ -99,5 +99,16 @@ class DichotomiousTest < Minitest::Test
 
       assert !Interpreters::Dichotomious.dichotomious_candidate?(service_vrp)
     end
+
+    def test_split_matrix
+      vrp = FCT.load_vrp(self, fixture_file: "dichotomious_approach")
+      service_vrp = { vrp: vrp, service: :demo, level: 0 }
+
+      services_vrps = Interpreters::Dichotomious.split(service_vrp)
+      services_vrps.each{ |service_vrp|
+        assert_equal service_vrp[:vrp].points.size, service_vrp[:vrp].matrices.first.time.size
+        assert_equal service_vrp[:vrp].points.size, service_vrp[:vrp].matrices.first.distance.size
+      }
+    end
   end
 end
