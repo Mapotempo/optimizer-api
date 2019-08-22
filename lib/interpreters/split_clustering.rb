@@ -209,6 +209,20 @@ module Interpreters
       }
     end
 
+    def self.update_matrix(original_matrices, sub_vrp, matrix_indices)
+      sub_vrp.matrices.each_with_index{ |matrix, index|
+        [:time, :distance].each{ |dimension|
+          matrix[dimension] = sub_vrp.vehicles.first.matrix_blend(original_matrices[index], matrix_indices, [dimension], cost_time_multiplier: 1, cost_distance_multiplier: 1)
+        }
+      }
+    end
+
+    def self.update_matrix_index(vrp)
+      vrp.points.each_with_index{ |point, index|
+        point.matrix_index = index
+      }
+    end
+
     def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicle_ids = nil)
       # WARNING: Below we do marshal dump load but we continue using original objects
       # That is, if these objects are modified in sub_vrp then they will be modified in vrp too.
@@ -223,12 +237,20 @@ module Interpreters
         sub_vrp.vehicles.delete_if{ |vehicle| available_vehicle_ids.exclude?(vehicle[:id]) }
         sub_vrp.routes.delete_if{ |r| available_vehicle_ids.exclude? r.vehicle_id }
       end
-      sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
-      sub_vrp.shipments = vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
+      sub_vrp.services = sub_vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
+      sub_vrp.shipments = sub_vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
       points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.uniq.compact | sub_vrp.shipments.flat_map{ |s| [s.pickup.point.id, s.delivery.point.id] }.uniq.compact
-      sub_vrp.rests = vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
-      sub_vrp.relations = vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
-      sub_vrp.points = (vrp.points.select{ |p| points_ids.include? p.id } + sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }).compact.uniq
+      sub_vrp.rests = sub_vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
+      sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
+      sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
+      sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact
+
+      if !sub_vrp.matrices&.empty?
+        matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
+        update_matrix_index(sub_vrp)
+        update_matrix(sub_vrp.matrices, sub_vrp, matrix_indices)
+      end
+
       {
         vrp: sub_vrp,
         service: service_vrp[:service]

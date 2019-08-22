@@ -84,6 +84,7 @@ module Interpreters
                 if r[:activities].select{ |a| a[:service_id] }.empty?
                   vehicle = sub_service_vrps[0][:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
                   sub_service_vrps[1][:vrp].vehicles << vehicle
+                  sub_service_vrps[0][:vrp].vehicles -= [vehicle]
                   sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
                   sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
                 end
@@ -91,9 +92,15 @@ module Interpreters
               sub_service_vrps[0][:vrp].vehicles.each{ |vehicle|
                 next if !result[:routes].select{ |r| r[:vehicle_id] == vehicle.id }.empty?
                 sub_service_vrps[1][:vrp].vehicles << vehicle
+                sub_service_vrps[0][:vrp].vehicles -= [vehicle]
                 sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
                 sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
               }
+              matrix_indices = sub_service_vrps[1][:vrp].points.map{ |point|
+                service_vrp[:vrp].points.find{ |r_point| point.id == r_point.id }.matrix_index
+              }
+              SplitClustering.update_matrix_index(sub_service_vrps[1][:vrp])
+              SplitClustering.update_matrix(service_vrp[:vrp].matrices, sub_service_vrps[1][:vrp], matrix_indices)
             end
             result
           }
@@ -335,16 +342,13 @@ module Interpreters
           vehicles_by_cluster.reverse
         end
         [0, 1].each{ |i|
-          sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id))[:vrp]
-          sub_vrp.vehicles = vehicles_by_cluster[i]
-          sub_vrp.points = sub_vrp.services.map{ |service| service.activity.point }.uniq
-          sub_vrp.points += sub_vrp.shipments.flat_map{ |shipment| [shipment.pickup.point, shipment.delivery.point] }.uniq
-          sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact
+          sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id), vehicles_by_cluster[i].map(&:id))[:vrp]
 
           sub_vrp.vehicles.each{ |vehicle|
             vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
             vehicle[:cost_distance_multiplier] = 0.05
           }
+
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
           sub_vrp.resolution_vehicle_limit = [sub_vrp.vehicles.size, vrp.vehicles.empty? ? 0 : (sub_vrp.vehicles.size / vrp.vehicles.size.to_f * vrp.resolution_vehicle_limit).ceil].min
           sub_vrp.preprocessing_first_solution_strategy = ['self_selection'] # ???

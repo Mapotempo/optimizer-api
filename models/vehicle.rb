@@ -149,10 +149,8 @@ module Models
 
       blend_matrix = Array.new(size_matrix) { Array.new(size_matrix, 0) }
 
-      (0..size_matrix - 1).each{ |ind_i|
-        i = matrix_indices[ind_i]
-        (0..size_matrix - 1).each{ |ind_j|
-          j = matrix_indices[ind_j]
+      matrix_indices.each_with_index{ |i, ind_i|
+        matrix_indices.each_with_index{ |j, ind_j|
           next if i == j
 
           blend_matrix[ind_i][ind_j] = (matrix.time && dimensions.include?(:time) ? matrix.time[i][j] * coeff_time : 0) +
