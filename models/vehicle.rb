@@ -216,6 +216,21 @@ module Models
       @total_work_time_in_range[[range_start, range_end]]
     end
 
+    def work_duration
+      return 2**32 if self.timewindow.nil? && self.sequence_timewindows.empty?
+
+      return nil if !self.sequence_timewindows.empty? ||
+                    self.timewindow[:start].nil? || self.timewindow[:end].nil?
+
+      return self.timewindow[:end] - self.timewindow[:start]
+    end
+
+    def ignore_computed_data
+      @total_work_time_in_range = nil
+      @working_week_days = nil
+      @working_range_indices = nil
+    end
+
     private
 
     def working_week_days

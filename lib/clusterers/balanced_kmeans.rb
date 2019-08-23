@@ -39,9 +39,10 @@ module Ai4r
                       on_empty: 'Action to take if a cluster becomes empty, with values ' \
                         "'eliminate' (the default action, eliminate the empty cluster), " \
                         "'terminate' (terminate with error), 'random' (relocate the " \
-                        "empty cluster to a random point) ",
+                        'empty cluster to a random point)',
                       expected_caracteristics: 'Expected sets of caracteristics for generated clusters',
-                      possible_caracteristics_combination: 'Set of skills we can combine in the same cluster.'
+                      possible_caracteristics_combination: 'Set of skills we can combine in the same cluster.',
+                      strict_limitations: 'Values that can not be exceeded, for each cluster'
 
       # Build a new clusterer, using data examples found in data_set.
       # Items will be clustered in "number_of_clusters" different
@@ -160,7 +161,8 @@ module Ai4r
 
         # TODO : compute these conflicts in eval, so we do not compute distance for uncompatible clusters
         compatibility = if a[4] && b[4] && (b[4] & a[4]).empty? || # if service sticky or skills are different than centroids sticky/skills,
-                           !(a[5] - b[5]).empty? # or if service and cluster skills have no match
+                           !(a[5] - b[5]).empty? || # or if service and cluster skills have no match
+                           capactity_violation?(a, cluster_index)
                           2**32
                         else
                           0
@@ -204,15 +206,7 @@ module Ai4r
           cluster_index = eval(data_item)
           @clusters[cluster_index] << data_item
           @cluster_indices[cluster_index] << data_index if @on_empty == 'outlier'
-          @unit_symbols.each{ |unit|
-            @cluster_metrics[cluster_index][unit] += data_item[3][unit]
-            next if unit != @cut_symbol
-            @total_assigned_cut_load += data_item[3][unit]
-            @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load.to_f
-            if !@apply_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol] > 0 }
-              @apply_balancing = true
-            end
-          }
+          update_metrics(data_item, cluster_index)
         end
 
         manage_empty_clusters if has_empty_cluster?
@@ -260,6 +254,7 @@ module Ai4r
               tried_ids << item[2]
               next if @centroids.collect{ |centroid| centroid[2] }.flatten.include?(item[2]) #is this possible if index not in tried index ??
               @centroids << [item[0], item[1], item[2], item[3].dup, nil, skills, 0] # TODO : give different ID
+
               @remaining_skills.delete_at(0) if @remaining_skills
               @data_set.data_items.insert(0, @data_set.data_items.delete(item))
             end
@@ -337,11 +332,13 @@ module Ai4r
             old_centroids = @centroids.dup
             old_centroid_indices = @centroid_indices.dup
             old_cluster_metrics = @cluster_metrics.dup
+            old_strict_limitations = @strict_limitations.dup
             cluster_sorted_indices.each_with_index{ |i, j|
               @clusters[@limit_sorted_indices[j]] = old_clusters[i]
               @centroids[@limit_sorted_indices[j]] = old_centroids[i]
               @centroid_indices[@limit_sorted_indices[j]] = old_centroid_indices[i]
               @cluster_metrics[@limit_sorted_indices[j]] = old_cluster_metrics[i]
+              @strict_limitations[@limit_sorted_indices[j]] = old_strict_limitations[i]
             }
           end
         end
@@ -397,6 +394,27 @@ module Ai4r
         @last_n_average_diffs.shift if @last_n_average_diffs.size > (2 * last_n_iterations + 1)
 
         return false
+      end
+
+      def update_metrics(data_item, cluster_index)
+        @unit_symbols.each{ |unit|
+          @cluster_metrics[cluster_index][unit] += data_item[3][unit]
+          next if unit != @cut_symbol
+
+          @total_assigned_cut_load += data_item[3][unit]
+          @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load.to_f
+          if !@apply_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol].positive? }
+            @apply_balancing = true
+          end
+        }
+      end
+
+      def capactity_violation?(item, cluster_index)
+        return false if @strict_limitations.empty?
+
+        @cluster_metrics[cluster_index].any?{ |unit, value|
+          value + item[3][unit] > (@strict_limitations[cluster_index][unit] || 0)
+        }
       end
     end
   end

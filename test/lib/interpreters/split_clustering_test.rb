@@ -456,4 +456,41 @@ class SplitClusteringTest < Minitest::Test
       assert route[:activities].collect{ |activity| activity[:service_id] }.compact.size <= 2
     }
   end
+
+  def test_avoid_capacities_overlap
+    vrp = FCT.load_vrp(self, fixture_file: 'results_regularity')
+    vrp.vehicles.first.capacities.delete_if{ |cap| cap[:unit_id] == 'l' }
+    vrp.vehicles = Interpreters::SplitClustering.list_vehicles(vrp.vehicles)
+    vrp.schedule_range_indices = { start: 0, end: 13 }
+    service_vrp = { vrp: vrp, service: :demo }
+    services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: 'work_day', restarts: @split_restarts)
+
+    assert_equal 5, services_vrps.size
+    services_vrps.each{ |s_v|
+      authorized_kg = 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'kg' }[:limit]
+      assert s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'kg' }[:value] * service[:visits_number] }.sum <= authorized_kg
+
+      authorized_qte = 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'qte' }[:limit]
+      assert s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'qte' }[:value] * service[:visits_number] }.sum <= authorized_qte
+    }
+  end
+
+  def test_fail_when_alternative_skills
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration',
+      entity: 'work_day'
+    }]
+    vrp[:services].first[:skills] = ['skill']
+    vrp[:vehicles][0][:skills] = [['skill'],['other_skill']]
+    vrp[:preprocessing_kmeans_centroids] = [1, 2]
+    service_vrp = { vrp: FCT.create(vrp), service: :demo }
+
+    begin
+      Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+    rescue StandardError => e
+      assert e.is_a?(OptimizerWrapper::UnsupportedProblemError)
+    end
+  end
 end

@@ -18,7 +18,7 @@
 require './test/test_helper'
 
 module Models
-  class ActivityTest < Minitest::Test
+  class VrpTest < Minitest::Test
     include Rack::Test::Methods
 
     def test_schedule_range_computation
