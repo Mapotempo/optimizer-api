@@ -201,6 +201,10 @@ module Models
       total_work_times.sum
     end
 
+    def dichotomious_process?
+      self.resolution_duration != self.resolution_total_duration
+    end
+
     def calculate_service_exclusion_costs(type = :time, force_recalc = false)
       # TODO: This function will calculate an exclusion cost for each service seperately
       # using the time, distance , capacity or a mix of all.
