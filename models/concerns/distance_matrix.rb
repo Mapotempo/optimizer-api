@@ -60,7 +60,7 @@ module DistanceMatrix
       i = 0
       id = 0
       uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
-        block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil) if block
+        block.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil) if block && !self.dichotomious_process?
         # set matrix_time and matrix_distance depending of dimensions order
         router_matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, matrix_points, matrix_points, options)
         m = Models::Matrix.create(

@@ -226,7 +226,7 @@ module OptimizerWrapper
               }
               block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
               cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
-                block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block
+                block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block && !vrp.dichotomious_process?
                 time_start = Time.now
                 result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
                     if job
@@ -238,11 +238,11 @@ module OptimizerWrapper
                       Result.set(job, actual_result)
                     end
                   }) { |wrapper, avancement, total, message, cost, time, solution|
-                  block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block && vrp.resolution_duration == vrp.resolution_total_duration
+                  block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block && !vrp.dichotomious_process?
                 }
                 if result.class.name == 'Hash' # result.is_a?(Hash) not working
                   result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-                  block.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if block && vrp.resolution_duration != vrp.resolution_total_duration
+                  block.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if block && vrp.dichotomious_process?
                   parse_result(cluster_vrp, result)
                 elsif result.class.name == 'String' # result.is_a?(String) not working
                   raise RuntimeError.new(result) unless result == "Job killed"
