@@ -572,6 +572,7 @@ module Api
             job = Resque::Plugins::Status::Hash.get(id)
             solution = APIBase.dump_vrp_cache.read("#{id}-#{params[:api_key]}.solution") || OptimizerWrapper::Result.get(id)
             output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
+            env['api.format'] = output_format # To override json default format
 
             error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job && job['options']['api_key'] == params[:api_key] || solution
 
