@@ -188,6 +188,10 @@ module Models
       Helper.services_duration(self.services)
     end
 
+    def visits
+      Helper.visits(self.services)
+    end
+
     def total_work_times
       schedule_start = self.schedule_range_indices[:start]
       schedule_end = self.schedule_range_indices[:end]
@@ -203,6 +207,16 @@ module Models
 
     def dichotomious_process?
       self.resolution_duration != self.resolution_total_duration
+    end
+
+    def schedule_indices
+      return nil if self.schedule_range_indices.nil? && self.schedule_range_date.nil?
+
+      epoch = Date.new(1970, 1, 1)
+      start_date = self.schedule_range_indices ? self.schedule_range_indices[:start] : (self.schedule_range_date[:start].to_date - epoch).to_i
+      end_date = self.schedule_range_indices ? self.schedule_range_indices[:end] : (self.schedule_range_date[:end].to_date - epoch).to_i
+
+      [0, end_date - start_date]
     end
 
     def calculate_service_exclusion_costs(type = :time, force_recalc = false)
