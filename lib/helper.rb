@@ -76,4 +76,8 @@ module Helper
       sm.activity.setup_duration * sm.visits_number + ss.map{ |s| s.activity.duration * s.visits_number }.sum
     }.sum
   end
+
+  def self.visits(services)
+    services.collect{ |service| service[:visits_number] }.sum
+  end
 end
