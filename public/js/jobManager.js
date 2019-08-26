@@ -173,13 +173,13 @@ var jobsManager = {
         },
         error: function (xhr, status) {
           ++nbError
-          if (nbError > 2) {
-            alert(i18n.failureOptim(nbError, status));
+          // if (nbError > 2) {
             if (jobStatusInterval) {
               clearInterval(jobStatusInterval);
             }
             cb({ xhr, status });
-          }
+            alert(i18n.failureOptim(nbError, status));
+          // }
         },
         complete: function () { pendingRequest = false; }
       });
