@@ -26,7 +26,7 @@ require 'ai4r'
 module Interpreters
   class Dichotomious
 
-    def self.dichotomious_candidate(service_vrp)
+    def self.dichotomious_candidate?(service_vrp)
       (service_vrp[:level] && service_vrp[:level] > 0) ||
         (service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } &&
         service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit &&
@@ -46,7 +46,7 @@ module Interpreters
     end
 
     def self.dichotomious_heuristic(service_vrp, job = nil, &block)
-      if dichotomious_candidate(service_vrp)
+      if dichotomious_candidate?(service_vrp)
         set_config(service_vrp)
         t1 = Time.now
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
