@@ -56,7 +56,7 @@ postForm.on('submit', function (e) {
         });
 
         var lastSolution = null;
-        var delay = 60000;
+        var delay = 5000;
         jobsManager.checkJobStatus({
           job: result.job,
           format: '.json',

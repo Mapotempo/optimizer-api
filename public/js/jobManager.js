@@ -1,5 +1,5 @@
 
-var jobStatusInterval = null;
+var jobStatusTimeout = null;
 var requestPendingAllJobs = false;
 
 var jobsManager = {
@@ -142,15 +142,10 @@ var jobsManager = {
   },
   checkJobStatus: function (options, cb) {
     var nbError = 0;
-    var pendingRequest = false;
+    var requestPendingJobTimeout = false;
 
     if (options.interval) {
-      jobStatusInterval = setInterval(function () {
-        if (!pendingRequest) {
-          pendingRequest = true;
-          requestPendingJob();
-        }
-      }, options.interval);
+      jobStatusTimeout = setTimeout(requestPendingJob, options.interval);
       return;
     }
 
@@ -164,50 +159,57 @@ var jobsManager = {
           + (options.job.id || options.job.uuid)
           + (options.format ? options.format : '')
           + '?api_key=' + getParams()["api_key"],
-        success: function (job, status, xhr) {
-          if (options.format === ".csv") {
-            nbError = 0;
-            onCSVFormat(jobStatusInterval, job, xhr, cb);
+        success: function (job, _, xhr) {
+
+          if (checkJSONJob(job) || checkCSVJob(xhr)) {
+            if (debug) console.log("REQUEST PENDING JOB", checkCSVJob(xhr), checkJSONJob(job));
+            requestPendingJobTimeout = true;
           }
-          else if (options.format === ".json") {
-            nbError = 0;
+
+          nbError = 0;
             onJSONFormat(jobStatusInterval, job, xhr, cb);
           }
           else {
-            cb(null, job, xhr);
+          cb(null, job, xhr);
           }
-        },
+      },
         error: function (xhr, status) {
           ++nbError
-          // if (nbError > 2) {
-            if (jobStatusInterval) {
-              clearInterval(jobStatusInterval);
-            }
+          if (nbError > 2) {
             cb({ xhr, status });
-            alert(i18n.failureOptim(nbError, status));
-          // }
+            return alert(i18n.failureOptim(nbError, status));
+          }
+          requestPendingJobTimeout = true;
         },
-        complete: function () { pendingRequest = false; }
-      });
-    }
+        complete: function () {
+          if (requestPendingJobTimeout) {
+            requestPendingJobTimeout = false;
 
-  },
+            // interval max: 1mins
+            options.interval *= 2;
+            if (options.interval > 60000)  {
+              options.interval = 60000
+            }
+
+            jobStatusTimeout = setTimeout(requestPendingJob, options.interval);
+          }
+        }
+      });
+  }
+
+},
   stopJobChecking: function () {
-    clearInterval(jobStatusInterval);
+    requestPendingJobTimeout = false;
+    clearTimeout(jobStatusTimeout);
   }
 };
 
-function onCSVFormat(jobStatusInterval, job, xhr, cb) {
-  if (xhr.status === 200 || xhr.status === 202 && jobStatusInterval) {
-    clearInterval(jobStatusInterval);
-  }
-  cb(null, job, xhr);
+function checkCSVJob(xhr) {
+  if (debug) console.log(xhr, xhr.status);
+  return (xhr.status !== 200 && xhr.status !== 202);
 }
 
-function onJSONFormat(jobStatusInterval, job, xhr, cb) {
-  if (((job.job && (job.job.status !== 'queued' && job.job.status !== 'working'))
-    || typeof job === 'string') && jobStatusInterval) {
-    clearInterval(jobStatusInterval);
-  }
-  cb(null, job, xhr);
+function checkJSONJob(job) {
+  if (debug) console.log("JOB: ", job, (job.job && job.job.status !== 'completed'));
+  return ((job.job && job.job.status !== 'completed') && typeof job !== 'string')
 }
