@@ -97,7 +97,7 @@ class DichotomiousTest < Minitest::Test
       vrp = FCT.load_vrp(self)
       service_vrp = { vrp: vrp, service: :demo }
 
-      assert !Interpreters::Dichotomious.dichotomious_candidate(service_vrp)
+      assert !Interpreters::Dichotomious.dichotomious_candidate?(service_vrp)
     end
   end
 end
