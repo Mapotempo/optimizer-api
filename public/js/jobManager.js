@@ -9,7 +9,13 @@ var jobsManager = {
       $(jobs).each(function () {
 
         currentJob = this;
+        var donwloadBtn = currentJob.status === 'completed' || currentJob.status === 'failed';
+
         var completed = (currentJob.status === 'completed' || currentJob.status === 'failed') ? true : false;
+        var msg = currentJob.status === 'failed'
+          ? 'Télécharger le rapport d\'erreur de l\'optimisation'
+          : 'Telecharger le resultat de l\'optimisation';
+
         var jobDOM =
           '<div class="job">'
           + '<span class="optim-start">' + (new Date(currentJob.time)).toLocaleString('fr-FR') + ' : </span>'
@@ -18,7 +24,7 @@ var jobsManager = {
           + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18n.killOptim : i18n.deleteOptim)
           + '</button>'
           + ' (Status: ' + currentJob.status + ')'
-          + (completed ? ' <a data-job-id=' + currentJob.uuid + ' href="#">' + 'Telecharger le resultat de l\'optimisation' + '</a>' : '')
+          + (donwloadBtn ? ' <a data-job-id=' + currentJob.uuid + ' href="#">' + msg + '</a>' : '')
           + '</div>';
 
         $('#jobs-list').append(jobDOM);
