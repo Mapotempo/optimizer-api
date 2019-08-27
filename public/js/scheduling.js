@@ -41,8 +41,7 @@ $(document).ready(function() {
         if (job !== null) {
           jobsManager.checkJobStatus({
             job: job,
-            format: '.csv',
-            interval: 3000
+            interval: 5000
           }, function (err, job, xhr) {
             if (err) {
               $('#infos').html(i18n.failureCallOptim(err));
