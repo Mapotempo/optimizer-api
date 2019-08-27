@@ -167,11 +167,7 @@ var jobsManager = {
           }
 
           nbError = 0;
-            onJSONFormat(jobStatusInterval, job, xhr, cb);
-          }
-          else {
           cb(null, job, xhr);
-          }
       },
         error: function (xhr, status) {
           ++nbError
