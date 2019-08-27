@@ -149,7 +149,7 @@ module OptimizerWrapper
   end
 
   def self.solve(services_vrps, job = nil, block = nil)
-    @unfeasible_services = []
+    unfeasible_services = []
 
     cluster_reference = 0
     real_result = join_independent_vrps(services_vrps, block) { |service, vrp, block|
@@ -187,12 +187,12 @@ module OptimizerWrapper
           }
         else
           services_to_reinject = []
-          unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
+          sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
           vrp.compute_matrix(&block)
 
-          unfeasible_services = config[:services][service].check_distances(vrp, unfeasible_services)
-          @unfeasible_services += unfeasible_services
+          sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
+          unfeasible_services += sub_unfeasible_services
 
           vrp = config[:services][service].simplify_constraints(vrp)
 
@@ -300,7 +300,7 @@ module OptimizerWrapper
       end
     }
 
-    real_result[:unassigned] = (real_result[:unassigned] || []) + @unfeasible_services if real_result
+    real_result[:unassigned] = (real_result[:unassigned] || []) + unfeasible_services if real_result
     real_result[:name] = services_vrps[0][:vrp][:name] if real_result
     if real_result && services_vrps.any?{ |service| service[:vrp][:preprocessing_first_solution_strategy] }
       real_result[:heuristic_synthesis] = services_vrps.collect{ |service| service[:vrp][:preprocessing_heuristic_synthesis] }

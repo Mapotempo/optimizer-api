@@ -495,6 +495,14 @@ class HeuristicTest < Minitest::Test
       assert(result[:routes].all?{ |route| route[:activities].all?{ |activity| activity[:detail][:skills].nil? || activity[:detail][:skills].size == 2 } })
     end
 
+    def test_unassigned_collected
+      vrp = FCT.load_vrp(self, fixture_file: 'results_regularity')
+      vrp.resolution_solver = true
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+      assert result[:unassigned].collect{ |un| un[:reason] }.uniq.any?{ |reason| reason.include?('Visits number is 0') }
+    end
+
     def test_results_regularity
       visits_unassigned = []
       services_unassigned = []
