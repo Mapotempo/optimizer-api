@@ -18,26 +18,7 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
-  def compare_data(vrp, result, unit, delta)
-    expected_value = vrp.services.map{ |service| find_service_quantity(service, unit) * service[:visits_number] }.compact.sum.round(3)
-    actual_result_value = result[:routes].flat_map{ |route| route[:activities].map{ |stop| find_detail_quantity(stop, unit) } }.compact.sum.round(3)
-    actual_unassigned_value = result[:unassigned].collect{ |stop| find_detail_quantity(stop, unit) }.compact.sum.round(3)
-    assert_in_delta expected_value, actual_result_value + actual_unassigned_value, delta
-  end
-
-  def find_service_quantity(service, unit)
-    service[:quantities].find{ |qte| qte[:unit][:id] == unit }[:value]
-  end
-
-  def find_detail_quantity(activity, unit)
-    if activity[:service_id]
-      quantity = activity[:detail][:quantities].find{ |qte| qte[:unit] == unit }
-      quantity && quantity[:value]
-   end
-  end
-
   if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
-
     def test_instance_baleares2
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
@@ -87,7 +68,7 @@ class HeuristicTest < Minitest::Test
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal vrp[:services].collect{ |service| service[:visits_number] }.sum.to_i, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
       assert_in_delta vrp.services.collect{ |service| service[:quantities].find{ |qte| qte[:unit][:id] == 'kg' }[:value]*service[:visits_number] }.sum.round(3), (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] && stop[:detail][:quantities].size > 0 && stop[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'kg' }[:value] }}.flatten.compact.sum.round(3) + result[:unassigned].collect{ |service| service[:detail][:quantities].size > 0 && service[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'kg' }[:value] }.flatten.compact.sum).round(3), 1e-3
       assert_in_delta vrp.services.collect{ |service| service[:quantities].find{ |qte| qte[:unit][:id] == 'qte' }[:value]*service[:visits_number] }.sum.round(3), (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] && stop[:detail][:quantities].size > 0 && stop[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'qte' }[:value] }}.flatten.compact.sum.round(3) + result[:unassigned].collect{ |service| service[:detail][:quantities].size > 0 && service[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'qte' }[:value] }.flatten.compact.sum).round(3), 1e-3
       assert_in_delta vrp.services.collect{ |service| service[:quantities].find{ |qte| qte[:unit][:id] == 'l' }[:value]*service[:visits_number] }.sum.round(3), (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] && stop[:detail][:quantities].size > 0 && stop[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'l' }[:value] }}.flatten.compact.sum.round(3) + result[:unassigned].collect{ |service| service[:detail][:quantities].size > 0 && service[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'l' }[:value] }.flatten.compact.sum).round(3), 1e-3
@@ -101,7 +82,7 @@ class HeuristicTest < Minitest::Test
       vrp = FCT.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal vrp[:services].collect{ |service| service[:visits_number] }.sum.to_i, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
       assert_in_delta vrp.services.collect{ |service| service[:quantities].find{ |qte| qte[:unit][:id] == 'kg' }[:value]*service[:visits_number] }.sum.round(3), (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] && stop[:detail][:quantities].size > 0 && stop[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'kg' }[:value] }}.flatten.compact.sum.round(3) + result[:unassigned].collect{ |service| service[:detail][:quantities].size > 0 && service[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'kg' }[:value] }.flatten.compact.sum).round(3), 1e-3
       assert_in_delta vrp.services.collect{ |service| service[:quantities].find{ |qte| qte[:unit][:id] == 'qte' }[:value]*service[:visits_number] }.sum.round(3), (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] && stop[:detail][:quantities].size > 0 && stop[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'qte' }[:value] }}.flatten.compact.sum.round(3) + result[:unassigned].collect{ |service| service[:detail][:quantities].size > 0 && service[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'qte' }[:value] }.flatten.compact.sum).round(3), 1e-3
       assert_in_delta vrp.services.collect{ |service| service[:quantities].find{ |qte| qte[:unit][:id] == 'l' }[:value]*service[:visits_number] }.sum.round(3), (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] && stop[:detail][:quantities].size > 0 && stop[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'l' }[:value] }}.flatten.compact.sum.round(3) + result[:unassigned].collect{ |service| service[:detail][:quantities].size > 0 && service[:detail][:quantities].find{ |qte| qte[:unit][:id] == 'l' }[:value] }.flatten.compact.sum).round(3), 1e-3
@@ -139,12 +120,11 @@ class HeuristicTest < Minitest::Test
     def test_two_phases_clustering_sched_with_freq_and_same_point_day_5veh
       # about 3 minutes
       vrp = FCT.load_vrp(self)
-      total_visits = vrp[:services].collect{ |s| s[:visits_number] }.sum
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
-      assert_equal total_visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
-        "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{total_visits} expected"
+      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
+        "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
@@ -152,23 +132,8 @@ class HeuristicTest < Minitest::Test
         assert days_used <= expected_number_of_days, "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
       }
 
-      assert result[:unassigned].size < total_visits * 6 / 100.0, "#{result[:unassigned].size * 100 / total_visits}% unassigned instead of 6% authorized"
+      assert result[:unassigned].size < vrp.visits * 6 / 100.0, "#{result[:unassigned].size * 100.0 / vrp.visits}% unassigned instead of 6% authorized"
       assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
-    end
-
-    def test_scheduling_and_ortools
-      vrps = FCT.load_vrps(self)
-      FCT.multipe_matrices_required(vrps, self)
-      vrps.each{ |vrp|
-        vrp.preprocessing_partitions = nil
-        vrp.name = nil
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
-        unassigned = result[:unassigned].size
-
-        vrp.resolution_solver = true
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-        assert unassigned >= result[:unassigned].size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{result[:unassigned].size} now"
-      }
     end
 
     def test_performance_12vl
@@ -186,6 +151,7 @@ class HeuristicTest < Minitest::Test
         unassigned_services << result[:unassigned].collect{ |un| un[:service_id].split('_')[0..-3].join('_') }.uniq.size
       }
 
+      # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal 620, unassigned_visits.sum, "Expecting 620 unassigned visits, have #{unassigned_visits.sum}"
       assert_equal 265, unassigned_services.sum, "Expecting 265 unassigned visits, have #{unassigned_services.sum}"
     end
@@ -205,6 +171,7 @@ class HeuristicTest < Minitest::Test
         unassigned_services << result[:unassigned].collect{ |un| un[:service_id].split('_')[0..-3].join('_') }.uniq.size
       }
 
+      # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal 367, unassigned_visits.sum, "Expecting 367 unassigned visits, have #{unassigned_visits.sum}"
       assert_equal 227, unassigned_services.sum, "Expecting 227 unassigned visits, have #{unassigned_services.sum}"
     end
