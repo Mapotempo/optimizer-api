@@ -36,9 +36,9 @@ postForm.on('submit', function (e) {
       type: "POST",
       url: "/0.1/vrp/submit.json?api_key=" + getParams()['api_key'],
       data: JSON.stringify(vrp),
-      success: function (result) {
+      success: function (submittedJob) {
 
-        $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
+        $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + submittedJob.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
         $('#optim-kill').click(function (e) {
           $.ajax({
             type: 'delete',
@@ -47,7 +47,7 @@ postForm.on('submit', function (e) {
             clearInterval(timer);
             jobsManager.stopJobChecking();
             $('#optim-infos').html('');
-            displaySolution(lastSolution, { initForm: true });
+            displaySolution(submittedJob, lastSolution, { initForm: true });
           }).fail(function (jqXHR, textStatus) {
             alert(textStatus);
           });
@@ -58,8 +58,7 @@ postForm.on('submit', function (e) {
         var lastSolution = null;
         var delay = 5000;
         jobsManager.checkJobStatus({
-          job: result.job,
-          format: '.json',
+          job: submittedJob.job,
           interval: delay
         }, function (err, job) {
           if (err) {
@@ -69,7 +68,7 @@ postForm.on('submit', function (e) {
           }
           // vrp returning csv, not json
           if (typeof job === 'string') {
-            return displaySolution(job, {initForm: true});
+            return displaySolution(submittedJob.job.id, job, {initForm: true});
           }
 
           $('#avancement').html(job.job.avancement);
@@ -84,7 +83,7 @@ postForm.on('submit', function (e) {
                 $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
               lastSolution = job.solutions[0];
               $('#display-solution').click(function (e) {
-                displaySolution(lastSolution);
+                displaySolution(submittedJob.job.id, lastSolution);
                 e.preventDefault();
                 return false;
               });
@@ -99,7 +98,7 @@ postForm.on('submit', function (e) {
             if (job.job.graph) {
               displayGraph(job.job.graph);
             }
-            displaySolution(job.solutions[0], {initForm: true});
+            displaySolution(submittedJob.job.id, job.solutions[0], {initForm: true});
           }
           else if (job.job.status == 'failed' || job.job.status == 'killed') {
             if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
@@ -121,15 +120,16 @@ postForm.on('submit', function (e) {
   return false;
 });
 
-var displaySolution = function (solution, options) {
+var displaySolution = function (jobId, solution, options) {
+  var csv = "/0.1/vrp/jobs/" + jobId + '.csv' + '?api_key=' + getParams()['api_key'];
   if (typeof solution === 'string') {
-    $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(solution) + '">' + i18n.downloadCSV + '</a>');
     $('#result').html(solution);
   } else if (typeof solution !== 'string') {
     $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: ' + Math.round(solution.total_distance / 1000) + ')');
-    $('#infos').append(' - <a download="optimized.json" href="data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(solution)) + '">' + i18n.downloadJSON + '</a>');
     $('#result').html(JSON.stringify(solution, null, 4));
   }
+
+  $('#infos').append(' - <a download="optimized.json" href="' + csv + '">' + i18n.downloadCSV + '</a>');
 
   if (options && options.initForm)
     initForm();
