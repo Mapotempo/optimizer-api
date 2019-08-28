@@ -80,22 +80,7 @@ module Interpreters
             end
             result = OptimizerWrapper.define_process([sub_service_vrp], job, &block)
             if index.zero? && result
-              result[:routes].each{ |r|
-                if r[:activities].select{ |a| a[:service_id] }.empty?
-                  vehicle = sub_service_vrps[0][:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
-                  sub_service_vrps[1][:vrp].vehicles << vehicle
-                  sub_service_vrps[0][:vrp].vehicles -= [vehicle]
-                  sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
-                  sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
-                end
-              }
-              sub_service_vrps[0][:vrp].vehicles.each{ |vehicle|
-                next if !result[:routes].select{ |r| r[:vehicle_id] == vehicle.id }.empty?
-                sub_service_vrps[1][:vrp].vehicles << vehicle
-                sub_service_vrps[0][:vrp].vehicles -= [vehicle]
-                sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
-                sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
-              }
+              transfer_unused_vehicles(result, sub_service_vrps)
               matrix_indices = sub_service_vrps[1][:vrp].points.map{ |point|
                 service_vrp[:vrp].points.find{ |r_point| point.id == r_point.id }.matrix_index
               }
@@ -125,6 +110,25 @@ module Interpreters
         service_vrp[:vrp].resolution_init_duration = nil
       end
       result
+    end
+
+    def self.transfer_unused_vehicles(result, sub_service_vrps)
+      result[:routes].each{ |r|
+        if r[:activities].select{ |a| a[:service_id] }.empty?
+          vehicle = sub_service_vrps[0][:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
+          sub_service_vrps[1][:vrp].vehicles << vehicle
+          sub_service_vrps[0][:vrp].vehicles -= [vehicle]
+          sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+          sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
+        end
+      }
+      sub_service_vrps[0][:vrp].vehicles.each{ |vehicle|
+        next if !result[:routes].select{ |r| r[:vehicle_id] == vehicle.id }.empty?
+        sub_service_vrps[1][:vrp].vehicles << vehicle
+        sub_service_vrps[0][:vrp].vehicles -= [vehicle]
+        sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+        sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
+      }
     end
 
     def self.dicho_level_coeff(service_vrp)
