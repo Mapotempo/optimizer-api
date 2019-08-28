@@ -32,7 +32,7 @@ class DichotomiousTest < Minitest::Test
       elsif result[:routes].size == 11
         assert result[:unassigned].size < 30, "Too many unassigned services #{result[:unassigned].size}"
       else
-        assert result[:unassigned].size < 45, "Too many unassigned services #{result[:unassigned].size}"
+        assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
       end
 
       # Check routes
