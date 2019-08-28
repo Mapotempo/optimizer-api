@@ -109,7 +109,6 @@ module Interpreters
       if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
         current_service_vrps = [service_vrp]
         vrp.preprocessing_partitions.each_with_index{ |partition, partition_index|
-          block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size}", nil, nil, nil)
           cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
 
           case partition[:method]
@@ -237,7 +236,7 @@ module Interpreters
     end
 
     # TODO: private method, reduce params
-    def self.kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options = {})
+    def self.kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options = {}, &block)
       biggest_cluster_size = 0
       clusters = []
       day_caracteristics = []
@@ -246,6 +245,7 @@ module Interpreters
       c = nil
       score_hash = {}
       while restart < options[:restarts]
+        block&.call(restart, options[:restarts])
         c = BalancedKmeans.new
         c.max_iterations = options[:max_iterations]
         c.centroid_indices = centroids if centroids && centroids.size == nb_clusters
@@ -315,7 +315,7 @@ module Interpreters
       [clusters, centroids, day_caracteristics]
     end
 
-    def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {})
+    def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {}, &block)
       default_options = { max_iterations: 300, restarts: 50, cut_symbol: :duration }
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
@@ -342,7 +342,7 @@ module Interpreters
         options[:possible_caracteristics] = vrp.vehicles.collect{ |vehicle| vehicle[:skills] }.to_a
         options[:expected_caracteristics] = generate_expected_caracteristics(vrp.vehicles)
         options[:output_centroids] = vrp.debug_output_clusters
-        clusters, _centroids, centroid_caracteristics = kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options)
+        clusters, _centroids, centroid_caracteristics = kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options, &block)
 
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
           cluster.data_items.flat_map{ |i|

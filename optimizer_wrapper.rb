@@ -209,7 +209,7 @@ module OptimizerWrapper
               !vrp.schedule_range_indices.nil? || !vrp.schedule_range_date.nil? 
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp) {
-              block&.call(nil, nil, nil, "process #{cluster_reference + 1}/#{services_vrps.size}", nil, nil, nil)
+              block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
             }
             if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
               block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
