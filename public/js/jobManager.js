@@ -14,7 +14,7 @@ var jobsManager = {
         var completed = (currentJob.status === 'completed' || currentJob.status === 'failed') ? true : false;
         var msg = currentJob.status === 'failed'
           ? 'Télécharger le rapport d\'erreur de l\'optimisation'
-          : 'Telecharger le resultat de l\'optimisation';
+          : 'Télécharger le résultat de l\'optimisation';
 
         var jobDOM =
           '<div class="job">'
