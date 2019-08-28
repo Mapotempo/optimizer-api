@@ -108,14 +108,14 @@ var jobsManager = {
   },
   ajaxDeleteJob: function (uuid) {
     $.ajax({
-      url: '/0.1/vrp/jobs/' + uuid + '.json',
+      url: '/0.1/vrp/jobs/' + uuid,
       type: 'delete',
       dataType: 'json',
       data: {
         api_key: getParams()['api_key']
       },
     }).done(function (data) {
-      if (debug) { console.log("the uuid have been deleted from the jobs queue & the DB"); }
+      if (debug) { console.log("the uuid has been deleted from the jobs queue & the DB"); }
       $('button[data-role="delete"][value="' + uuid + '"]').fadeOut(500, function () { $(this).closest('.job').remove(); });
     });
   },
@@ -157,7 +157,7 @@ var jobsManager = {
         contentType: 'application/json',
         url: '/0.1/vrp/jobs/'
           + (options.job.id || options.job.uuid)
-          + (options.format ? options.format : '')
+          // + (options.format ? options.format : '')
           + '?api_key=' + getParams()["api_key"],
         success: function (job, _, xhr) {
 
