@@ -59,6 +59,9 @@ module Interpreters
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exlusion_cost(service_vrp)
           result = OptimizerWrapper.solve([service_vrp], job, block)
+        else
+          service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
+          update_exlusion_cost(service_vrp)
         end
 
         t2 = Time.now
@@ -147,6 +150,10 @@ module Interpreters
 
       if service_vrp[:level] && service_vrp[:level] == 0
         dicho_level_coeff(service_vrp)
+        service_vrp[:vrp].vehicles.each{ |vehicle|
+          vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
+          vehicle[:cost_distance_multiplier] = 0.05
+        }
       end
 
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
@@ -347,11 +354,6 @@ module Interpreters
         end
         [0, 1].each{ |i|
           sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id), vehicles_by_cluster[i].map(&:id))[:vrp]
-
-          sub_vrp.vehicles.each{ |vehicle|
-            vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
-            vehicle[:cost_distance_multiplier] = 0.05
-          }
 
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
           sub_vrp.resolution_vehicle_limit = [sub_vrp.vehicles.size, vrp.vehicles.empty? ? 0 : (sub_vrp.vehicles.size / vrp.vehicles.size.to_f * vrp.resolution_vehicle_limit).ceil].min
