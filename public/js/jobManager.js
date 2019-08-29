@@ -161,7 +161,7 @@ var jobsManager = {
           + '?api_key=' + getParams()["api_key"],
         success: function (job, _, xhr) {
 
-          if (checkJSONJob(job) || checkCSVJob(xhr)) {
+          if (options.interval && (checkJSONJob(job) || checkCSVJob(xhr))) {
             if (debug) console.log("REQUEST PENDING JOB", checkCSVJob(xhr), checkJSONJob(job));
             requestPendingJobTimeout = true;
           }
