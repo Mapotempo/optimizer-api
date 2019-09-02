@@ -1,3 +1,5 @@
+require 'fileutils'
+
 class CacheManager
   attr_reader :cache
 
@@ -6,15 +8,19 @@ class CacheManager
   end
 
   def read(name, options = nil)
-    @cache.read(name, options)
+    if File.exist?(name)
+      File.open(File.join(@cache, name.parameterize(separator: '')), "r")
+    end
   rescue StandardError => error
     Api::Root.logger.warn("Got error #{error} attempting to read cache #{name}.")
     return nil
   end
 
   def write(name, value, options = nil)
-    # Limit string size to 10kb to avoid cache errors in Redis
-    @cache.write(name, value, options) if value.to_s.bytesize < 100.megabytes
+    FileUtils.mkdir_p(@cache)
+    f = File.new(File.join(@cache, name.parameterize(separator: '')), "w")
+    f.write(value) if value.to_s.bytesize < 100.megabytes
+    f.close
   rescue StandardError => error
     Api::Root.logger.warn("Got error #{error} attempting to write cache #{name}.")
     return nil

@@ -26,17 +26,19 @@ require './lib/cache_manager'
 
 module OptimizerWrapper
   ActiveSupport::Cache.lookup_store :redis_store
-  CACHE = CacheManager.new(ActiveSupport::Cache::RedisStore.new(host: ENV['REDIS_HOST'] || 'localhost', namespace: 'router', expires_in: 60*60*24*1, raise_errors: true))
+  TMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'tmp')
+  @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides]
-  DEMO = Wrappers::Demo.new(CACHE, threads: 4)
-  VROOM = Wrappers::Vroom.new(CACHE, threads: 4)
+  DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR, threads: 4)
+  VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR, threads: 4)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
-  ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple', threads: 4)
+  ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple', threads: 4)
 
   PARAMS_LIMIT = { points: 100000, vehicles: 1000 }
 
-  @@dump_vrp_cache = CacheManager.new(ActiveSupport::Cache::FileStore.new(File.join(Dir.tmpdir, 'mapotempo-optimizer-api'), namespace: 'vrp', expires_in: 60*60*24*10))
+  DUMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'dump')
+  @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
   @@c = {
     product_title: 'Optimizers API',
