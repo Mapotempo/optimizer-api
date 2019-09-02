@@ -496,9 +496,9 @@ module Api
             begin
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
               if params[:points]
-                APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(separator: ''), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles], configuration: params[:vrp][:configuration] } }.to_json)
+                APIBase.dump_vrp_dir.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_'), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles], configuration: params[:vrp][:configuration] } }.to_json)
               else
-                APIBase.dump_vrp_cache.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_').parameterize(separator: ''), {vrp: params[:vrp]}.to_json)
+                APIBase.dump_vrp_dir.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_'), {vrp: params[:vrp]}.to_json)
               end
               vrp = ::Models::Vrp.create({})
               params_limit = APIBase.services(params[:api_key])[:params_limit].merge(OptimizerWrapper.access[params[:api_key]][:params_limit] || {})
@@ -570,7 +570,7 @@ module Api
           get ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
-            solution = APIBase.dump_vrp_cache.read("#{id}-#{params[:api_key]}.solution") || OptimizerWrapper::Result.get(id)
+            solution = APIBase.dump_vrp_dir.read("#{File.join(id, params[:api_key])}.solution") || OptimizerWrapper::Result.get(id)
             output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
@@ -625,7 +625,7 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             else
-              APIBase.dump_vrp_cache.write("#{id}-#{params[:api_key]}.solution", solution) if job
+              APIBase.dump_vrp_dir.write("#{File.join(id, params[:api_key])}.solution", solution) if job
               status 200
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)

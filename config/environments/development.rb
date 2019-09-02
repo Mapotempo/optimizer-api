@@ -25,17 +25,19 @@ require './wrappers/ortools'
 require './lib/cache_manager'
 
 module OptimizerWrapper
-  CACHE = CacheManager.new(ActiveSupport::Cache::FileStore.new(File.join(Dir.tmpdir, 'mapotempo-optimizer-api'), namespace: 'mapotempo-optimizer-api', expires_in: 60*60*24*1))
+  TMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'tmp')
+  @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides]
-  DEMO = Wrappers::Demo.new(CACHE)
-  VROOM = Wrappers::Vroom.new(CACHE)
+  DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR)
+  VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
-  ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
+  ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
 
   PARAMS_LIMIT = { points: 100000, vehicles: 1000 }
 
-  @@dump_vrp_cache = CacheManager.new(ActiveSupport::Cache::FileStore.new(File.join(Dir.tmpdir, 'mapotempo-optimizer-api'), namespace: "vrp", expires_in: 60*60*24*30))
+  DUMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'dump')
+  @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
   @@c = {
     product_title: 'Optimizers API',

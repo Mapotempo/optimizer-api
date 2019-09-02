@@ -55,12 +55,12 @@ module OptimizerWrapper
     @access_by_api_key
   end
 
-  def self.dump_vrp_cache
-    @@dump_vrp_cache
+  def self.dump_vrp_dir
+    @@dump_vrp_dir
   end
 
-  def self.dump_vrp_cache=(cache)
-    @@dump_vrp_cache = cache
+  def self.dump_vrp_dir=(dir)
+    @@dump_vrp_dir = dir
   end
 
   def self.router

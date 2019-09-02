@@ -55,7 +55,7 @@ module Interpreters
       vrp_name = all_service_vrps.first[:vrp].name
       filename = ('generated_clusters_' + (vrp_name ? vrp_name + '_' : '') + checksum).parameterize
 
-      File.write(File.join(OptimizerWrapper.dump_vrp_cache.cache.cache_path, filename + '_geojson'), {
+      Api::V01::APIBase.dump_vrp_dir.write(filename + '_geojson', {
         type: 'FeatureCollection',
         features: polygons.compact
       }.to_json)
@@ -64,7 +64,7 @@ module Interpreters
         csv_lines.each{ |line| out_csv << line }
       end
 
-      File.write(File.join(OptimizerWrapper.dump_vrp_cache.cache.cache_path, filename + '_csv'), csv_string)
+      Api::V01::APIBase.dump_vrp_dir.write(filename + '_csv', csv_string)
 
       puts 'Clusters saved : ' + filename
     end
