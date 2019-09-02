@@ -211,6 +211,9 @@ module OptimizerWrapper
             vrp = periodic.expand(vrp) {
               block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
             }
+            if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
+              add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, unfeasible_services)
+            end
             if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
               block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
               # Select best heuristic
@@ -991,6 +994,21 @@ module OptimizerWrapper
     result[:unassigned] = routes.find{ |route| route[:vehicle_id] == 'unassigned' } ? routes.find{ |route| route[:vehicle_id] == 'unassigned' }[:activities] : []
     result[:routes] = routes.reject{ |route| route[:vehicle_id] == 'unassigned' }
     result
+  end
+
+  def self.add_day_skill(vehicle, result, unfeasible_services)
+    day_names = { 0 => 'mon', 1 => 'tue', 2 => 'wed', 3 => 'thu', 4 => 'fri', 5 => 'sat', 6 => 'sun' }
+    day = day_names[result[:routes].collect{ |route| route[:vehicle_id].split('_').last.to_i }.min]
+
+    result[:routes].each{ |route| route[:activities].each{ |activity|
+      next if !activity[:service_id]
+
+      activity[:detail][:skills] << day
+    }}
+
+    (result[:unassigned] + unfeasible_services).each{ |unassigned|
+      unassigned[:detail][:skills] = unassigned[:detail][:skills].to_a + [day]
+    }
   end
 end
 
