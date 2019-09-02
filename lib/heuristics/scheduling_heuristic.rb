@@ -1219,7 +1219,7 @@ module Heuristics
           detail: {
             lat: (associated_point[:location][:lat] if associated_point[:location]),
             lon: (associated_point[:location][:lon] if associated_point[:location]),
-            skills: @services_data[point[:id]][:skills].to_a << day_name,
+            skills: @services_data[point[:id]][:skills].to_a,
             setup_duration: point[:considered_setup_duration],
             duration: service_in_vrp[:activity][:duration],
             timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].select{ |t| t[:day_index] == day % 7 }.collect{ |tw| {start: tw[:start], end: tw[:end] } } : [],
