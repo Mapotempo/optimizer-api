@@ -580,7 +580,10 @@ module Api
 
             # If job has been killed by restarting queues, need to update job status to 'killed'
             if job&.working?
-              job_ids = Resque.workers.map{ |w| w.job && w.job['payload'] && w.job['payload']['args'].first }
+              job_ids = Resque.workers.map{ |w|
+                j = w.job(false)
+                j['payload'] && j['payload']['args'].first
+              }
               unless job_ids.include? id
                 OptimizerWrapper.job_remove(params[:api_key], id)
                 job.status = 'killed'
