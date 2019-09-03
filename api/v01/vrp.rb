@@ -517,9 +517,9 @@ module Api
 
               if !vrp.valid? || params[:vrp].nil? || params[:vrp].keys.empty?
                 if params[:vrp].nil?
-                  vrp.errors[:empty_file] = 'JSON file is empty'
+                  vrp.errors.add(:empty_file, message: 'JSON file is empty')
                 elsif params[:vrp].keys.empty?
-                  vrp.errors[:empty_vrp] = 'VRP structure is empty'
+                  vrp.errors.add(:empty_vrp, message: 'VRP structure is empty')
                 end
                 error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
               else
