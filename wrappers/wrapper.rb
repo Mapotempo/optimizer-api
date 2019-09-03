@@ -44,7 +44,7 @@ module Wrappers
     end
 
     def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size == 1 && !vrp.schedule_range_indices && !vrp.schedule_range_date
+      vrp.vehicles.size == 1 && !vrp.scheduling?
     end
 
     def assert_vehicles_at_least_one(vrp)
@@ -319,7 +319,7 @@ module Wrappers
     end
 
     def assert_vehicle_tw_if_schedule(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' && !vrp.schedule_range_indices && !vrp.schedule_range_date ||
+      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' ||
       vrp[:vehicles].all?{ |vehicle|
         vehicle[:timewindow] && (vehicle[:timewindow][:start] || vehicle[:timewindow][:end]) ||
         vehicle[:sequence_timewindows] && vehicle[:sequence_timewindows].any?{ |tw| (tw[:start] || tw[:end]) }
@@ -327,11 +327,11 @@ module Wrappers
     end
 
     def assert_if_sequence_tw_then_schedule(vrp)
-      vrp.vehicles.find{ |vehicle| vehicle[:sequence_timewindows] }.nil? || vrp.schedule_range_date || vrp.schedule_range_indices
+      vrp.vehicles.find{ |vehicle| vehicle[:sequence_timewindows] }.nil? || vrp.scheduling?
     end
 
     def assert_if_periodic_heuristic_then_schedule(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.schedule_range_date || vrp.schedule_range_indices
+      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.scheduling?
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
@@ -362,7 +362,7 @@ module Wrappers
     end
 
     def assert_no_scheduling_if_evaluation(vrp)
-      !vrp.schedule_range_indices && !vrp.schedule_range_date || !vrp.resolution_evaluate_only
+      !vrp.scheduling? || !vrp.resolution_evaluate_only
     end
 
     def assert_route_if_evaluation(vrp)
@@ -431,7 +431,7 @@ module Wrappers
 
     def assert_work_day_partitions_only_schedule(vrp)
       vrp.preprocessing_partitions.empty? || vrp.preprocessing_partitions.size < 2 ||
-      (vrp.schedule_range_indices || vrp.schedule_range_date) &&
+      vrp.scheduling? &&
       (vrp.services.none?{ |service| service[:minimum_lapse] } || vrp.services.collect{ |service| service[:minimum_lapse] }.compact.min >= 7)
     end
 
@@ -674,7 +674,7 @@ module Wrappers
         end
 
         # unconsistencies for planning
-        if found && (vrp.schedule_range_indices || vrp.schedule_range_date)
+        if found && vrp.scheduling?
           nb_days = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1 : (vrp.schedule_range_date[:end].to_date - vrp.schedule_range_date[:start].to_date).to_i + 1
           if service[:visits_number] && service[:visits_number] > 1 && service[:minimum_lapse] && nb_days - (service[:visits_number] - 1) * service[:minimum_lapse] <= 0
             found = false

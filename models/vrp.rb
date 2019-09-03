@@ -209,6 +209,10 @@ module Models
       self.resolution_duration != self.resolution_total_duration
     end
 
+    def scheduling?
+      self.schedule_range_indices || self.schedule_range_date
+    end
+
     def schedule_indices
       return nil if self.schedule_range_indices.nil? && self.schedule_range_date.nil?
 

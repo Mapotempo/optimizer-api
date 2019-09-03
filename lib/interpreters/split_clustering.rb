@@ -81,7 +81,7 @@ module Interpreters
         }
         if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
           generate_split_vrps(service_vrp, job, block)
-        elsif vrp.schedule_range_indices.nil? && vrp.schedule_range_date.nil? &&
+        elsif !vrp.scheduling? &&
               vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 &&
               vrp.shipments.size == ship_candidates.size &&
               (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
