@@ -27,6 +27,7 @@ module Heuristics
       @vehicle_day_completed = {}
       @to_plan_service_ids = []
       @services_data = {}
+      @previous_candidate_service_ids = nil
       @candidate_services_ids = []
 
       @order = solve_tsp(vrp) # Solve TSP - Build a large Tour to define an arbitrary insertion order
@@ -40,8 +41,10 @@ module Heuristics
       @freq_max_at_point = Hash.new(0)
 
       @used_to_adjust = []
+      @previous_uninserted = nil
       @uninserted = {}
 
+      @previous_candidate_routes = nil
       @candidate_routes = {}
       @planning = {}
 
@@ -74,11 +77,20 @@ module Heuristics
       block&.call()
 
       fill_days
+      save_status
 
       # Reorder routes with solver and try to add more visits
       if vrp.resolution_solver && !@candidate_services_ids.empty?
         reorder_routes(vrp)
         fill_days
+      end
+
+      begin
+        fill_planning
+        check_solution_validity
+      rescue
+        # TODO : send an alert in this case
+        restore
       end
 
       # Relax same_point_day constraint
@@ -1014,7 +1026,7 @@ module Heuristics
               matrix_id: route_data[:matrix_id],
               router_dimension: route_data[:router_dimension]
             },
-            services: route_data[:current_route]
+            services: route_data[:current_route].collect{ |stop| stop }
           }
         }
       }
@@ -1358,6 +1370,18 @@ module Heuristics
         vehicle: vehicle,
         mission_ids: services.collect{ |service| service[:id] }
       }]
+    end
+
+    def save_status
+      @previous_candidate_routes = Marshal.load(Marshal.dump(@candidate_routes))
+      @previous_uninserted = Marshal.load(Marshal.dump(@uninserted))
+      @previous_candidate_service_ids = Marshal.load(Marshal.dump(@candidate_services_ids))
+    end
+
+    def restore
+      @candidate_routes = @previous_candidate_routes
+      @uninserted = @previous_uninserted
+      @candidate_services_ids = @previous_candidate_service_ids
     end
   end
 end
