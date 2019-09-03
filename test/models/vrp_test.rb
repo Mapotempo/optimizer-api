@@ -52,5 +52,15 @@ module Models
       vrp = FCT.load_vrp(self, fixture_file: 'instance_clustered')
       assert_equal vrp.services.collect{ |s| s[:visits_number] }.sum, vrp.visits
     end
+
+    def test_vrp_scheduling
+      vrp = VRP.toy
+      vrp = FCT.create(vrp)
+      assert !vrp.scheduling?
+      
+      vrp = VRP.scheduling_seq_timewindows
+      vrp = FCT.create(vrp)
+      assert vrp.scheduling?
+    end
   end
 end

@@ -205,8 +205,7 @@ module OptimizerWrapper
 
               next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
               una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-            } if vrp.resolution_solver_parameter == -1 || !vrp.resolution_solver || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || 
-              !vrp.schedule_range_indices.nil? || !vrp.schedule_range_date.nil? 
+            } if vrp.resolution_solver_parameter == -1 || !vrp.resolution_solver || vrp.scheduling?
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp) {
               block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
@@ -776,12 +775,12 @@ module OptimizerWrapper
   end
 
   def self.cluster(vrp, cluster_threshold, force_cluster)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && vrp.schedule_range_indices.nil?
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && !vrp.scheduling?
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && vrp.schedule_range_indices.nil?
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && !vrp.scheduling?
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else

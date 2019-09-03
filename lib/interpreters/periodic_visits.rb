@@ -27,64 +27,64 @@ module Interpreters
     end
 
     def expand(vrp, &block)
-      if vrp.schedule_range_indices || vrp.schedule_range_date
+      return vrp unless vrp.scheduling?
 
-        @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - @epoch).to_i
-        @shift = vrp.schedule_range_indices ? @real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
-        @schedule_start, @schedule_end = vrp.schedule_indices
+      @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - @epoch).to_i
+      @shift = vrp.schedule_range_indices ? @real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
+      @schedule_start, @schedule_end = vrp.schedule_indices
 
-        @have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| service.activity.timewindows.none? || service.activity.timewindows.none?{ |timewindow| timewindow[:day_index] }}
-        @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none? || shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } ||
-          shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] }}
-        @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] }}
+      @have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| service.activity.timewindows.none? || service.activity.timewindows.none?{ |timewindow| timewindow[:day_index] }}
+      @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none? || shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } ||
+        shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] }}
+      @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] }}
 
-        @unavailable_indices = if vrp.schedule_unavailable_indices
-          vrp.schedule_unavailable_indices.collect{ |unavailable_index|
-            unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
-          }.compact
-        elsif vrp.schedule_unavailable_date
-          vrp.schedule_unavailable_date.collect{ |date|
-            (date - @epoch).to_i - @real_schedule_start if (date - @epoch).to_i >= @real_schedule_start
-          }.compact
-        end
+      @unavailable_indices = if vrp.schedule_unavailable_indices
+        vrp.schedule_unavailable_indices.collect{ |unavailable_index|
+          unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
+        }.compact
+      elsif vrp.schedule_unavailable_date
+        vrp.schedule_unavailable_date.collect{ |date|
+          (date - @epoch).to_i - @real_schedule_start if (date - @epoch).to_i >= @real_schedule_start
+        }.compact
+      end
 
-        if vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
-          if vrp.services.empty?
-            vrp[:preprocessing_heuristic_result] = {
-              cost: nil,
-              solvers: ['scheduling_heuristic'],
-              iterations: nil,
-              routes: [],
-              unassigned: [],
-              elapsed: nil,
-              total_distance: nil
-            }
-          else
-            scheduling_heuristic = Heuristics::Scheduling.new(vrp, generate_vehicles(vrp), { start: @real_schedule_start, end: @schedule_end, shift: @shift })
-            vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
-          end
-        end
-
-        vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
-
-        vrp.relations = generate_relations(vrp)
-        vrp.services = generate_services(vrp)
-        compute_days_interval(vrp)
-        vrp.shipments = generate_shipments(vrp)
-
-        @periods.uniq!
-
-        vrp.rests = []
-        vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
-          a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
-        }
-        vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
-        generate_relations_on_periodic_vehicles(vrp,vehicles_linked_by_duration)
-
-        if vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
-          vrp.routes = generate_routes(vrp)
+      if vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
+        if vrp.services.empty?
+          vrp[:preprocessing_heuristic_result] = {
+            cost: nil,
+            solvers: ['scheduling_heuristic'],
+            iterations: nil,
+            routes: [],
+            unassigned: [],
+            elapsed: nil,
+            total_distance: nil
+          }
+        else
+          scheduling_heuristic = Heuristics::Scheduling.new(vrp, generate_vehicles(vrp), { start: @real_schedule_start, end: @schedule_end, shift: @shift })
+          vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
         end
       end
+
+      vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
+
+      vrp.relations = generate_relations(vrp)
+      vrp.services = generate_services(vrp)
+      compute_days_interval(vrp)
+      vrp.shipments = generate_shipments(vrp)
+
+      @periods.uniq!
+
+      vrp.rests = []
+      vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
+        a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+      }
+      vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
+      generate_relations_on_periodic_vehicles(vrp,vehicles_linked_by_duration)
+
+      if vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+        vrp.routes = generate_routes(vrp)
+      end
+
       vrp
     rescue => e
       puts e

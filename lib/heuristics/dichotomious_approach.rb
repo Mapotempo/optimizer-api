@@ -30,7 +30,7 @@ module Interpreters
       (service_vrp[:level] && service_vrp[:level] > 0) ||
         (service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } &&
         service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit &&
-        service_vrp[:vrp].schedule_range_indices.nil? && service_vrp[:vrp].schedule_range_date.nil? &&
+        !service_vrp[:vrp].scheduling? &&
         # TODO: We should introduce a new parameter to avoid this static definition
         service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > 200 &&
         service_vrp[:vrp].shipments.empty? &&
