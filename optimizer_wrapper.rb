@@ -444,8 +444,11 @@ module OptimizerWrapper
 
   def self.job_remove(api_key, id)
     Result.remove(api_key, id)
-    Job.dequeue(Job, id)
-    Resque::Plugins::Status::Hash.remove(id)
+    # remove only queued jobs
+    if Resque::Plugins::Status::Hash.get(id)
+      Job.dequeue(Job, id)
+      Resque::Plugins::Status::Hash.remove(id)
+    end
   end
 
   def self.find_type(activity)
