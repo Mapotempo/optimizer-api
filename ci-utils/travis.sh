@@ -7,22 +7,22 @@ DOCKER_SERVICE_NAME=optimizer_api
 CONTAINER=${DOCKER_SERVICE_NAME}.1.$(docker service ps -f "name=${DOCKER_SERVICE_NAME}.1" ${DOCKER_SERVICE_NAME} -q --no-trunc | head -n1)
 case "$1" in
   'basis')
-    TEST_ENV='SKIP_DICHO=true SKIP_JSPRIT=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true'
+    TEST_ENV='TRAVIS=true SKIP_DICHO=true SKIP_JSPRIT=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true'
     ;;
   'dicho')
-    TEST_ENV='TEST=test/lib/heuristics/dichotomious_test.rb'
+    TEST_ENV='TRAVIS=true TEST=test/lib/heuristics/dichotomious_test.rb'
     ;;
   'real')
-    TEST_ENV='TEST=test/real_cases_test.rb'
+    TEST_ENV='TRAVIS=true TEST=test/real_cases_test.rb'
     ;;
   'real_dicho')
-    TEST_ENV='TEST=test/real_cases_dichotomious_test.rb'
+    TEST_ENV='TRAVIS=true TEST=test/real_cases_dichotomious_test.rb'
     ;;
   'real_scheduling')
-    TEST_ENV='TEST=test/real_cases_scheduling_test.rb'
+    TEST_ENV='TRAVIS=true TEST=test/real_cases_scheduling_test.rb'
     ;;
   'scheduling')
-    TEST_ENV="TEST=test/lib/heuristics/scheduling_*"
+    TEST_ENV="TRAVIS=true TEST=test/lib/heuristics/scheduling_*"
     ;;
   *)
     ;;
