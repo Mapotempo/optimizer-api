@@ -129,7 +129,7 @@ var displaySolution = function (jobId, solution, options) {
     $('#result').html(JSON.stringify(solution, null, 4));
   }
 
-  $('#infos').append(' - <a download="optimized.json" href="' + csv + '">' + i18n.downloadCSV + '</a>');
+  $('#infos').append(' - <a download="optimized.csv" href="' + csv + '">' + i18n.downloadCSV + '</a>');
 
   if (options && options.initForm)
     initForm();
