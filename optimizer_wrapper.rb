@@ -100,10 +100,10 @@ module OptimizerWrapper
 
     # to make clustering more regular :
     services_vrps.each{ |service|
-      if service[:vrp].preprocessing_first_solution_strategy.to_a.include?('periodic') &&
-         service[:vrp].preprocessing_partitions.size > 0
-        service[:vrp].resolution_repetition = 3
-      end
+      next if service[:vrp].preprocessing_partitions.empty? ||
+              !service[:vrp].preprocessing_first_solution_strategy.to_a.include?('periodic')
+
+      service[:vrp].resolution_repetition = 3
     }
 
     if services_vrps.any?{ |sv| !sv[:service] }

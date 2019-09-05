@@ -18,6 +18,9 @@ case "$1" in
   'real_scheduling')
     TEST_ENV='TRAVIS=true TEST=test/real_cases_scheduling_test.rb'
     ;;
+  'real_scheduling_solver')
+    TEST_ENV='TRAVIS=true TEST=test/real_cases_scheduling_solver_test.rb'
+    ;;
   'scheduling')
     TEST_ENV="TRAVIS=true TEST=test/lib/heuristics/scheduling_*"
     ;;

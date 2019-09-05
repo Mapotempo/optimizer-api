@@ -5,6 +5,7 @@ env: # Tests are ordered so that they finish faster when run on three parallel t
   - TEST_SUITE='dicho'
   - TEST_SUITE='scheduling'
   - TEST_SUITE='real_scheduling'
+  - TEST_SUITE='real_scheduling_solver'
   - TEST_SUITE='split_clustering'
   - TEST_SUITE='real'
   # - TEST_SUITE='real_dicho' -> should be runned locally because test are too big to dump matrices
