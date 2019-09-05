@@ -94,7 +94,6 @@ module Heuristics
       end
 
       # Relax same_point_day constraint
-      # TODO : check if it is still usefull
       if @same_point_day && !@candidate_services_ids.empty?
         # If there are still unassigned visits
         # relax the @same_point_day constraint but
@@ -477,8 +476,6 @@ module Heuristics
     end
 
     def reorder_routes(vrp)
-      # TODO : take this function into account when computing avancement
-
       vrp.vehicles.each{ |vehicle|
         @candidate_routes[vehicle.id].each{ |day, route|
           next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size <= 1
@@ -553,12 +550,11 @@ module Heuristics
       set = @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:nb_visits] == 1 } : @to_plan_service_ids
       # we will assign services with one vehicle in relaxed_same_point_day part
       set.select{ |service|
-        @candidate_services_ids.include?(service) && # should be useless
         # quantities are respected
         ((@same_point_day && @services_data[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
           (!@same_point_day && @services_data[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
-        # service is available at this day
-        !@services_data[service][:unavailable_days].include?(day)
+          # service is available at this day
+          !@services_data[service][:unavailable_days].include?(day)
       }.each{ |service_id|
 
         possible_vehicles, possible_days = possible_for_point(@services_data[service_id][:point_id], @services_data[service_id][:nb_visits])
@@ -929,9 +925,10 @@ module Heuristics
             adjust_candidate_routes(current_vehicle, best_day)
 
             if @services_unlocked_by[inserted_id] && !@services_unlocked_by[inserted_id].empty?
-              @to_plan_service_ids += @services_unlocked_by[inserted_id]
-              @unlocked += @services_unlocked_by[inserted_id]
-              forbidden_days = [] # new services are available so we may need these days
+              services_to_add = @services_unlocked_by[inserted_id] - @uninserted.collect{ |un, data| data[:original_service] }
+              @to_plan_service_ids += services_to_add
+              @unlocked += services_to_add
+              forbidden_days = [] unless services_to_add.empty? # new services are available so we may need these days
             end
           else
             forbidden_days << best_day
