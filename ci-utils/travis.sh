@@ -15,9 +15,6 @@ case "$1" in
   'real')
     TEST_ENV='TRAVIS=true TEST=test/real_cases_test.rb'
     ;;
-  'real_dicho')
-    TEST_ENV='TRAVIS=true TEST=test/real_cases_dichotomious_test.rb'
-    ;;
   'real_scheduling')
     TEST_ENV='TRAVIS=true TEST=test/real_cases_scheduling_test.rb'
     ;;

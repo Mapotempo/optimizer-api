@@ -466,13 +466,16 @@ class SplitClusteringTest < Minitest::Test
     services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: 'work_day', restarts: @split_restarts)
 
     assert_equal 5, services_vrps.size
-    services_vrps.each{ |s_v|
-      authorized_kg = 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'kg' }[:limit]
-      assert s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'kg' }[:value] * service[:visits_number] }.sum <= authorized_kg
+    kg_limit = services_vrps.collect{ |s_v| 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'kg' }[:limit] }
+    qte_limit = services_vrps.collect{ |s_v| 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'qte' }[:limit] }
 
-      authorized_qte = 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'qte' }[:limit]
-      assert s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'qte' }[:value] * service[:visits_number] }.sum <= authorized_qte
-    }
+    assert services_vrps.collect{ |s_v| s_v[:vrp].services.collect{ |service|
+      service.quantities.find{ |qty| qty[:unit_id] == 'kg' }[:value] * service[:visits_number] }.sum
+    }.select.with_index{ |value, i| value > kg_limit[i] }.size <= 1
+
+    assert services_vrps.collect{ |s_v| s_v[:vrp].services.collect{ |service|
+      service.quantities.find{ |qty| qty[:unit_id] == 'qte' }[:value] * service[:visits_number] }.sum
+    }.select.with_index{ |value, i| value > qte_limit[i] }.size <= 1
   end
 
   def test_fail_when_alternative_skills
