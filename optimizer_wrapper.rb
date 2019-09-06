@@ -186,6 +186,7 @@ module OptimizerWrapper
             total_distance: nil
           }
         else
+          puts "Solving #{cluster_reference + 1}/#{services_vrps.size}"
           services_to_reinject = []
           sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 

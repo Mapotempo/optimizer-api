@@ -113,6 +113,7 @@ module Interpreters
 
           case partition[:method]
           when 'balanced_kmeans'
+            puts "Starting clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size}"
             generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
               # TODO : global variable to know if work_day entity
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
