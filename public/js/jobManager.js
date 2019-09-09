@@ -2,6 +2,17 @@
 var jobStatusTimeout = null;
 var requestPendingAllJobs = false;
 
+function buildDownloadLink(jobId, state) {
+  var extension = state === 'failed' ? '.json' : '';
+  var msg = state === 'failed'
+          ? 'Télécharger le rapport d\'erreur de l\'optimisation'
+          : 'Télécharger le résultat de l\'optimisation';
+
+  var url = "http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs/" + jobId + extension + '?api_key=' + getParams()['api_key'];
+
+  return ' <a download="result' + extension + '"' +  ' href="' + url + '">' + msg + '</a>';
+}
+
 var jobsManager = {
   jobs: [],
   htmlElements: {
@@ -11,11 +22,6 @@ var jobsManager = {
         currentJob = this;
         var donwloadBtn = currentJob.status === 'completed' || currentJob.status === 'failed';
 
-        var completed = (currentJob.status === 'completed' || currentJob.status === 'failed') ? true : false;
-        var msg = currentJob.status === 'failed'
-          ? 'Télécharger le rapport d\'erreur de l\'optimisation'
-          : 'Télécharger le résultat de l\'optimisation';
-
         var jobDOM =
           '<div class="job">'
           + '<span class="optim-start">' + (new Date(currentJob.time)).toLocaleString('fr-FR') + ' : </span>'
@@ -24,44 +30,11 @@ var jobsManager = {
           + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18n.killOptim : i18n.deleteOptim)
           + '</button>'
           + ' (Status: ' + currentJob.status + ')'
-          + (donwloadBtn ? ' <a data-job-id=' + currentJob.uuid + ' href="#">' + msg + '</a>' : '')
+          + (donwloadBtn ? buildDownloadLink(currentJob.uuid, currentJob.status) : '')
           + '</div>';
 
         $('#jobs-list').append(jobDOM);
 
-        if (completed) {
-          $('a[data-job-id="' + currentJob.uuid + '"').on('click', function (e) {
-            e.preventDefault();
-            jobsManager.checkJobStatus({
-              job: currentJob,
-            }, function (err, job) {
-              if (err) {
-                if (debug) console.error(err);
-                return alert("An error occured");
-              }
-
-              if (typeof job === 'string') {
-                $('#result').html(job)
-                var a = document.createElement('a');
-                a.href = 'data:attachment/csv,' + encodeURIComponent(job);
-                a.target = '_blank';
-                a.download = 'result.csv';
-                document.body.appendChild(a);
-                a.click();
-              }
-              else {
-                var solution = job.solutions[0];
-                $('#result').html(JSON.stringify(solution, null, 4));
-                var a = document.createElement('a');
-                a.href = 'data:attachment/json,' + encodeURIComponent(JSON.stringify(solution, null, 4));
-                a.target = '_blank';
-                a.download = 'result.json';
-                document.body.appendChild(a);
-                a.click();
-              }
-            });
-          })
-        }
       });
       $('#jobs-list button').on('click', function () {
         jobsManager.roleDispatcher(this);
@@ -83,7 +56,7 @@ var jobsManager = {
       if (!requestPendingAllJobs) {
         requestPendingAllJobs = true;
         $.ajax({
-          url: '/0.1/vrp/jobs',
+          url: 'http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs',
           type: 'get',
           dataType: 'json',
           data: { api_key: getParams()['api_key'] },
@@ -108,7 +81,7 @@ var jobsManager = {
   },
   ajaxDeleteJob: function (uuid) {
     $.ajax({
-      url: '/0.1/vrp/jobs/' + uuid,
+      url: 'http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs/0.1/vrp/jobs/' + uuid,
       type: 'delete',
       dataType: 'json',
       data: {
@@ -155,7 +128,7 @@ var jobsManager = {
       $.ajax({
         type: 'GET',
         contentType: 'application/json',
-        url: '/0.1/vrp/jobs/'
+        url: 'http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs/'
           + (options.job.id || options.job.uuid)
           // + (options.format ? options.format : '')
           + '?api_key=' + getParams()["api_key"],
@@ -192,7 +165,6 @@ var jobsManager = {
         }
       });
   }
-
 },
   stopJobChecking: function () {
     requestPendingJobTimeout = false;
