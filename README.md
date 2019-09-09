@@ -1,6 +1,6 @@
-# Mapotempo Optimizer API
+# Mapotempo Optimizer API [![Build Status](https://travis-ci.org/Mapotempo/optimizer-api.svg?branch=master)](https://travis-ci.org/Mapotempo/optimizer-api)
 
-Run an optimizer depending of contraints for a Vehicle Routing Problem (VRP).
+Run an optimizer REST API depending of many contraints for a Vehicle Routing Problem (VRP).
 
 ## Prerequisite
 
@@ -37,7 +37,7 @@ bundle install
 This project requires some solver and interface projects in order to be fully functionnal!
 * [Vroom actual master](https://github.com/VROOM-Project/vroom)
 * [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v6.5](https://github.com/google/or-tools/tree/v6.5)
-* (optional) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
+* (optional / not anymore supported) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
 
 ## Configuration
 
@@ -100,7 +100,7 @@ COUNT=5 QUEUE=* bundle exec rake resque:workers
 curl -X POST --header "Content-Type:application/json" --data @test/fixtures/my_test.json http://localhost:1791/0.1/vrp/submit.json?api_key=key
 ```
 
-If you don't want to run real cases tests you can deactive them:
+If you don't want to run some long real cases tests you can deactive them:
 ```
 SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
 ```
