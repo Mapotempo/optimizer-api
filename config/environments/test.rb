@@ -26,18 +26,19 @@ require './wrappers/ortools'
 require './lib/cache_manager'
 
 module OptimizerWrapper
-  CACHE = CacheManager.new(ActiveSupport::Cache::NullStore.new)
+  TMP_DIR = ActiveSupport::Cache::NullStore.new
+  @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides]
-  DEMO = Wrappers::Demo.new(CACHE)
-  VROOM = Wrappers::Vroom.new(CACHE)
-  JSPRIT = Wrappers::Jsprit.new(CACHE)
+  DEMO = Wrappers::Demo.new(TMP_DIR)
+  VROOM = Wrappers::Vroom.new(TMP_DIR)
+  JSPRIT = Wrappers::Jsprit.new(TMP_DIR)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
-  ORTOOLS = Wrappers::Ortools.new(CACHE, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
+  ORTOOLS = Wrappers::Ortools.new(TMP_DIR, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
 
   PARAMS_LIMIT = { points: 150, vehicles: 10 }
 
-  @@dump_vrp_cache = CacheManager.new(ActiveSupport::Cache::NullStore.new)
+  @@dump_vrp_dir = CacheManager.new(TMP_DIR)
 
   @@c = {
     product_title: 'Optimizers API',
