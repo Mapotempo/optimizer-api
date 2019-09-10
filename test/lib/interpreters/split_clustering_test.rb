@@ -531,4 +531,12 @@ class SplitClusteringTest < Minitest::Test
     assert_equal problem.services.size, result[:unassigned].map{ |s| s[:service_id] }.compact.size + result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size
     assert_equal problem.services.size, check_vrp.services.size
   end
+
+  def test_ignore_debug_parameter_if_no_coordinates
+    vrp = FCT.load_vrp(self)
+    vrp.debug_output_clusters = true
+
+    # barely checks that function does not produce an error
+    Interpreters::SplitClustering.split_clusters([{ vrp: vrp }])
+  end
 end
