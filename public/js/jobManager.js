@@ -64,7 +64,9 @@ var jobsManager = {
         }).done(function (data) {
           jobsManager.shouldUpdate(data);
         }).fail(function (jqXHR, textStatus, errorThrown) {
-          clearInterval(window.AjaxGetRequestInterval);
+          if (jqXHR.status !== 500) {
+            clearInterval(window.AjaxGetRequestInterval);
+          }
           if (jqXHR.status == 401) {
             $('#optim-list-status').prepend('<div class="error">' + i18n.unauthorizedError + '</div>');
             $('form input, form button').prop('disabled', true);
