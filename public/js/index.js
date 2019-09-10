@@ -37,7 +37,6 @@ postForm.on('submit', function (e) {
       url: "/0.1/vrp/submit.json?api_key=" + getParams()['api_key'],
       data: JSON.stringify(vrp),
       success: function (submittedJob) {
-
         $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + submittedJob.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
         $('#optim-kill').click(function (e) {
           $.ajax({
@@ -107,8 +106,10 @@ postForm.on('submit', function (e) {
           }
         });
       },
-      error: function () {
-        alert("An error occured");
+      error: function (xhr, status) {
+        if (xhr.readyState !== 0 && xhr.status !== 0) {
+          alert("An error occured");
+        }
         initForm();
       },
       dataType: 'json',
