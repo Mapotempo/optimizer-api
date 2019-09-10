@@ -96,7 +96,7 @@ module Interpreters
         end
       }.flatten.compact
       two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
-      output_clusters(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps[0][:vrp][:debug_output_clusters]
+      output_clusters(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps[0][:vrp][:debug_output_clusters] && services_vrps.size < all_service_vrps.size
       [all_service_vrps, split_results]
     rescue => e
       puts e
