@@ -203,6 +203,7 @@ module VRP
           [27976.8, 54797.1, 54797.1, 18252.9, 48576, 48576, 0]
         ]
       }],
+      units: [],
       points: [{
         id: 'point_0',
         matrix_index: 0,
