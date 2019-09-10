@@ -8,7 +8,7 @@ function buildDownloadLink(jobId, state) {
           ? 'Télécharger le rapport d\'erreur de l\'optimisation'
           : 'Télécharger le résultat de l\'optimisation';
 
-  var url = "http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs/" + jobId + extension + '?api_key=' + getParams()['api_key'];
+  var url = "/0.1/vrp/jobs/" + jobId + extension + '?api_key=' + getParams()['api_key'];
 
   return ' <a download="result' + extension + '"' +  ' href="' + url + '">' + msg + '</a>';
 }
@@ -56,7 +56,7 @@ var jobsManager = {
       if (!requestPendingAllJobs) {
         requestPendingAllJobs = true;
         $.ajax({
-          url: 'http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs',
+          url: '/0.1/vrp/jobs',
           type: 'get',
           dataType: 'json',
           data: { api_key: getParams()['api_key'] },
@@ -83,7 +83,7 @@ var jobsManager = {
   },
   ajaxDeleteJob: function (uuid) {
     $.ajax({
-      url: 'http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs/0.1/vrp/jobs/' + uuid,
+      url: '/0.1/vrp/jobs/' + uuid,
       type: 'delete',
       dataType: 'json',
       data: {
@@ -130,7 +130,7 @@ var jobsManager = {
       $.ajax({
         type: 'GET',
         contentType: 'application/json',
-        url: 'http://optimizer.alpha.mapotempo.com/0.1/vrp/jobs/'
+        url: '/0.1/vrp/jobs/'
           + (options.job.id || options.job.uuid)
           // + (options.format ? options.format : '')
           + '?api_key=' + getParams()["api_key"],
