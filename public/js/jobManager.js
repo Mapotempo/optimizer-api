@@ -10,7 +10,10 @@ function buildDownloadLink(jobId, state) {
 
   var url = "/0.1/vrp/jobs/" + jobId + extension + '?api_key=' + getParams()['api_key'];
 
-  return ' <a download="result' + extension + '"' +  ' href="' + url + '">' + msg + '</a>';
+  return ' <a download="result'
+    + extension !== '.json' ? '.csv' : extension + '"'
+    + ' href="' + url + '">' + msg
+    + '</a>';
 }
 
 var jobsManager = {
