@@ -1070,7 +1070,7 @@ module Heuristics
           final = arrival + duration
 
           next if tw[:end] && arrival > tw[:end] && (!@duration_in_tw || final <= tw[:end]) &&
-                  !can_ignore_tw(previous[:id], inserted_service)
+                  (previous.nil? || !can_ignore_tw(previous[:id], inserted_service))
 
           list << {
             start_time: start,
