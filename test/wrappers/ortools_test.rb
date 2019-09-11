@@ -347,7 +347,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         schedule:{
           range_indices:{
             start: 0,
-            end: 1
+            end: 0
           }
         }
       }
