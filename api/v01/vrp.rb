@@ -570,7 +570,8 @@ module Api
           get ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
-            solution = APIBase.dump_vrp_dir.read("#{File.join(id, params[:api_key])}.solution") || OptimizerWrapper::Result.get(id)
+            stored_result = APIBase.dump_vrp_dir.read([id, params[:api_key], 'solution'].join('_'))
+            solution = stored_result && Marshal.load(stored_result) || OptimizerWrapper::Result.get(id)
             output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
@@ -625,7 +626,7 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             else
-              APIBase.dump_vrp_dir.write("#{File.join(id, params[:api_key])}.solution", solution) if job
+              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if job
               status 200
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)

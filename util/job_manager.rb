@@ -73,10 +73,12 @@ module OptimizerWrapper
       @data = data
     end
   end
-  class DiscordantProblemError < ProblemError; end
-  class UnsupportedProblemError < ProblemError; end
-  class UnsupportedRouterModeError < StandardError; end
-  class SchedulingHeuristicError < StandardError; end
+  class DiscordantProblemError      < ProblemError;  end
+  class UnsupportedProblemError     < ProblemError;  end
+
+  class CacheError                  < StandardError; end
+  class SchedulingHeuristicError    < StandardError; end
+  class UnsupportedRouterModeError  < StandardError; end
 
   class Result
 

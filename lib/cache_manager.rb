@@ -8,26 +8,28 @@ class CacheManager
   end
 
   def read(name, options = nil)
-    if File.exist?(name)
-      File.open(File.join(@cache, name.parameterize(separator: '')), "r")
+    filtered_name = name.parameterize(separator: '')
+    if File.exist?(File.join(@cache, filtered_name))
+      File.open(File.join(@cache, filtered_name), 'r').read
     end
-  rescue StandardError => error
-    Api::Root.logger.warn("Got error #{error} attempting to read cache #{name}.")
-    return nil
+  rescue StandardError => e
+    raise CacheError.new("Got error #{e} attempting to read cache #{name}.") if !cache.is_a? ActiveSupport::Cache::NullStore
   end
 
-  def write(name, value, options = nil)
+  def write(name, value, _options = nil)
+    raise CacheError.new('Stored value is not a String') if !value.is_a? String
+
     FileUtils.mkdir_p(@cache)
-    f = File.new(File.join(@cache, name.parameterize(separator: '')), "w")
+    f = File.new(File.join(@cache, name.parameterize(separator: '')), 'w')
     f.write(value) if value.to_s.bytesize < 100.megabytes
     f.close
-  rescue StandardError => error
-    Api::Root.logger.warn("Got error #{error} attempting to write cache #{name}.")
-    return nil
+  rescue StandardError => e
+    raise CacheError.new("Got error #{e} attempting to write cache #{name}.") if !cache.is_a? ActiveSupport::Cache::NullStore
   end
 
   def cleanup(options = nil)
     @cache.cleanup(options)
-    return nil
+  rescue StandardError => e
+    raise CacheError.new("Got error #{e} attempting to clean cache.") if !cache.is_a? ActiveSupport::Cache::NullStore
   end
 end
