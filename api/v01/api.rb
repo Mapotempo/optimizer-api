@@ -35,9 +35,9 @@ module Api
           STDERR.puts "\n\n#{e.class} (#{e.message}):\n    " + e.backtrace.join("\n    ") + "\n\n"
         end
 
-        response = {message: e.message}
+        response = { message: e.message }
         if e.is_a?(RangeError) || e.is_a?(Grape::Exceptions::ValidationErrors) ||
-        e.is_a?(Grape::Exceptions::InvalidMessageBody) || e.is_a?(ActiveHash::RecordNotFound)
+           e.is_a?(Grape::Exceptions::InvalidMessageBody) || e.is_a?(ActiveHash::RecordNotFound)
           rack_response(format_message(response, e.backtrace), 400)
         elsif e.is_a?(Grape::Exceptions::MethodNotAllowed)
           rack_response(format_message(response, nil), 405)
@@ -55,6 +55,9 @@ module Api
         elsif e.is_a?(RouterError)
           response = "#{e.class} : #{e.data}"
           rack_response(format_message(response, nil), 400)
+        elsif e.is_a?(OptimizerWrapper::CacheError)
+          response = "#{e.class} : #{e.data}"
+          rack_response(format_message(response, nil), 500)
         else
           rack_response(format_message(response, e.backtrace), 500)
         end
