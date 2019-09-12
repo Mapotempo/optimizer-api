@@ -482,8 +482,9 @@ module Heuristics
 
           puts "Entering reorder_routes function for problem #{@sub_pb_solved}"
 
-          service_ids = route[:current_route].collect{ |service| service[:id] }
-          route_vrp = construct_sub_vrp(vrp, service_ids)
+          services_ids = route[:current_route].collect{ |service| service[:id] }
+          corresponding_vehicle = @expanded_vehicles.select{ |v| v[:original_id] == vehicle.id }.find{ |v| v[:global_day_index] == day }
+          route_vrp = construct_sub_vrp(vrp, corresponding_vehicle, services_ids)
 
           # TODO : test with and without providing initial solution ?
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:current_route])
@@ -1324,23 +1325,17 @@ module Heuristics
       }.min_by{ |tw| tw[:start] }
     end
 
-    def construct_sub_vrp(vrp, service_ids)
+    def construct_sub_vrp(vrp, vehicle, services_ids)
       # TODO : make private
 
       # TODO : check initial vrp is not modified.
       # Now it is ok because marshall dump, but do not use mashall dump
       route_vrp = Marshal.load(Marshal.dump(vrp))
 
-      route_vrp.services.delete_if{ |service| !service_ids.include?(service[:id]) }
+      route_vrp.services.delete_if{ |service| !services_ids.include?(service[:id]) }
       route_vrp.services.each{ |service| service[:activity][:duration] = service[:activity][:duration].ceil }
       route_vrp.services.each{ |service| service[:activity][:setup_duration] = service[:activity][:setup_duration].ceil }
-
-      route_vrp.vehicles = [route_vrp.vehicles.first]
-      route_vrp.vehicles.first.timewindow = {
-        start: route_vrp.vehicles.first.sequence_timewindows.first.start,
-        end: route_vrp.vehicles.first.sequence_timewindows.first.end
-      }
-      route_vrp.vehicles.first.sequence_timewindows = []
+      route_vrp.vehicles = [vehicle]
 
       # configuration
       route_vrp.schedule_range_indices = nil
