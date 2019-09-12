@@ -1126,7 +1126,7 @@ module Heuristics
           setup_duration: service_in_vrp[:activity][:setup_duration],
           duration: service_in_vrp[:activity][:duration],
           timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] } }.sort_by{ |t| t[:start] } : [],
-          quantities: service_in_vrp[:quantities] ? service_in_vrp[:quantities].collect{ |qte| { id: qte[:id], unit: qte[:unit], value: qte[:value] } } : nil
+          quantities: service_in_vrp.quantities.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } }
         },
         reason: reason
       }
@@ -1234,7 +1234,7 @@ module Heuristics
             setup_duration: point[:considered_setup_duration],
             duration: service_in_vrp[:activity][:duration],
             timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].select{ |t| t[:day_index] == day % 7 }.collect{ |tw| {start: tw[:start], end: tw[:end] } } : [],
-            quantities: service_in_vrp[:quantities] ? service_in_vrp[:quantities].collect{ |qte| { unit: qte[:unit], value: qte[:value] } } : nil
+            quantities: service_in_vrp.quantities&.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } }
           }
         }
       }.flatten
