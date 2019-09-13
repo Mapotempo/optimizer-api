@@ -264,7 +264,7 @@ module Heuristics
 
             compatible_tw = find_corresponding_timewindow(s[:id], day, s[:arrival])
             next if compatible_tw &&
-                    s[:arrival].between?(compatible_tw[:start], compatible_tw[:end]) &&
+                    s[:arrival].round.between?(compatible_tw[:start], compatible_tw[:end]) &&
                     (!@duration_in_tw || s[:end] <= compatible_tw[:end])
 
             raise OptimizerWrapper::SchedulingHeuristicError, 'One service timewindows violated'
