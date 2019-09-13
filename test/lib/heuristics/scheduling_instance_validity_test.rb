@@ -152,5 +152,45 @@ class InstanceValidityTest < Minitest::Test
 
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_only_one_activity_with_scheduling_heuristic
     end
+
+    def test_assert_route_day_if_periodic
+      problem = VRP.scheduling
+      problem[:routes] = [{
+        vehicle_id: 'vehicle_0',
+        mission_ids: ['service_1', 'service_3']
+      }]
+      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_route_day_if_periodic
+
+      problem[:routes] = [{
+        vehicle_id: 'vehicle_0',
+        day: 0,
+        mission_ids: ['service_1', 'service_3']
+      }]
+      assert !(OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_route_day_if_periodic)
+    end
+
+    def test_service_with_visit_index_in_route_if_periodic
+      problem = VRP.scheduling
+      problem[:routes] = [{
+        vehicle_id: 'vehicle_0',
+        day: 0,
+        mission_ids: ['service_1', 'service_3']
+      }]
+      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_service_with_visit_index_in_route_if_periodic
+
+      problem[:routes] = [{
+        vehicle_id: 'vehicle_0',
+        day: 0,
+        mission_ids: ['service_1_1_1', 'service_3_1']
+      }]
+      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_service_with_visit_index_in_route_if_periodic
+
+      problem[:routes] = [{
+        vehicle_id: 'vehicle_0',
+        day: 0,
+        mission_ids: ['service_1_1_1', 'service_3_1_2']
+      }]
+      assert !(OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_service_with_visit_index_in_route_if_periodic)
+    end
   end
 end

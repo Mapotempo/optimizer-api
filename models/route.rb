@@ -20,6 +20,7 @@ require './models/base'
 module Models
   class Route < Base
     field :mission_ids, default: []
+    field :day
     belongs_to :vehicle, class_name: 'Models::Vehicle'
   end
 end

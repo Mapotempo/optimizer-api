@@ -24,29 +24,31 @@ module Interpreters
       @periods = []
       @equivalent_vehicles = {}
       @epoch = Date.new(1970, 1, 1)
+
+      if vrp.scheduling?
+        @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - @epoch).to_i
+        @shift = vrp.schedule_range_indices ? @real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
+        @schedule_start, @schedule_end = vrp.schedule_indices
+
+        @have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| service.activity.timewindows.none? || service.activity.timewindows.none?{ |timewindow| timewindow[:day_index] }}
+        @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none? || shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } ||
+          shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] }}
+        @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] }}
+
+        @unavailable_indices = if vrp.schedule_unavailable_indices
+          vrp.schedule_unavailable_indices.collect{ |unavailable_index|
+            unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
+          }.compact
+        elsif vrp.schedule_unavailable_date
+          vrp.schedule_unavailable_date.collect{ |date|
+            (date - @epoch).to_i - @real_schedule_start if (date - @epoch).to_i >= @real_schedule_start
+          }.compact
+        end
+      end
     end
 
     def expand(vrp, &block)
       return vrp unless vrp.scheduling?
-
-      @real_schedule_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : (vrp.schedule_range_date[:start].to_date - @epoch).to_i
-      @shift = vrp.schedule_range_indices ? @real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
-      @schedule_start, @schedule_end = vrp.schedule_indices
-
-      @have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| service.activity.timewindows.none? || service.activity.timewindows.none?{ |timewindow| timewindow[:day_index] }}
-      @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none? || shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } ||
-        shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] }}
-      @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] }}
-
-      @unavailable_indices = if vrp.schedule_unavailable_indices
-        vrp.schedule_unavailable_indices.collect{ |unavailable_index|
-          unavailable_index if unavailable_index >= @schedule_start && unavailable_index <= @schedule_end
-        }.compact
-      elsif vrp.schedule_unavailable_date
-        vrp.schedule_unavailable_date.collect{ |date|
-          (date - @epoch).to_i - @real_schedule_start if (date - @epoch).to_i >= @real_schedule_start
-        }.compact
-      end
 
       if vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
         if vrp.services.empty?
