@@ -82,15 +82,15 @@ class HeuristicTest < Minitest::Test
               qte[:unit] == unit_id
             }[:value]
           }
-        }.flatten.compact.sum.round(3)
+        }.flatten.compact.sum
 
         unassigned_quantities = result[:unassigned].collect{ |activity|
           activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
             qte[:unit] == unit_id
           }[:value]
-        }.flatten.compact.sum.round(3)
+        }.flatten.compact.sum
 
-        assert_in_delta problem_quantities, route_quantities + unassigned_quantities, 1e-3
+        assert_in_delta problem_quantities, (route_quantities + unassigned_quantities).round(3), 1e-3
 
         # Route capacities
         assert(result[:routes].none?{ |route|
@@ -128,15 +128,15 @@ class HeuristicTest < Minitest::Test
               qte[:unit] == unit_id
             }[:value]
           }
-        }.flatten.compact.sum.round(3)
+        }.flatten.compact.sum
 
         unassigned_quantities = result[:unassigned].collect{ |activity|
           activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
             qte[:unit] == unit_id
           }[:value]
-        }.flatten.compact.sum.round(3)
+        }.flatten.compact.sum
 
-        assert_in_delta problem_quantities, route_quantities + unassigned_quantities, 1e-3
+        assert_in_delta problem_quantities, (route_quantities + unassigned_quantities).round(3), 1e-3
 
         # Route capacities
         assert(result[:routes].none?{ |route|
