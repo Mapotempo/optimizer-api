@@ -470,6 +470,22 @@ module Wrappers
       vrp.services.none?{ |s| !s.activities.to_a.empty? } || (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic'))
     end
 
+    def assert_no_route_if_clustering(vrp)
+      vrp.routes.empty? || vrp.preprocessing_partitions.empty?
+    end
+
+    def assert_service_with_visit_index_in_route_if_periodic(vrp)
+      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') ||
+        vrp.routes.collect{ |route| route[:mission_ids] }.flatten.all?{ |id|
+          decomposition = id.split('_')
+          decomposition.size >= 3 && decomposition[-1] >= decomposition[-2] && vrp.services.collect{ |s| s[:id] }.include?(decomposition[0..-3].join('_'))
+        }
+    end
+
+    def assert_route_day_if_periodic(vrp)
+      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:day] }
+    end
+
     def solve_synchronous?(vrp)
       false
     end

@@ -309,6 +309,7 @@ module Api
 
       def self.vrp_request_route(this)
         this.optional(:vehicle_id, type: String, desc: 'vehicle linked to the current described route')
+        this.optional(:day, type: Integer, desc: 'Day indice of the route. Must be provided if first_solution_strategy is \'periodic\'.')
         this.requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route')
       end
 
