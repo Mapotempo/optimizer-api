@@ -60,7 +60,6 @@ module Heuristics
       @schedule_end = schedule[:end]
       @shift = schedule[:shift]
       @expanded_vehicles = expanded_vehicles
-      @sub_pb_solved = 0
       vrp.vehicles.each{ |vehicle|
         @candidate_vehicles << vehicle.id
         @candidate_routes[vehicle.id] = {}
@@ -510,11 +509,13 @@ module Heuristics
         @candidate_routes[vehicle.id].each{ |day, route|
           next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size <= 1
 
-          puts "Entering reorder_routes function for problem #{@sub_pb_solved}"
-
           services_ids = route[:current_route].collect{ |service| service[:id] }
           corresponding_vehicle = @expanded_vehicles.select{ |v| v[:original_id] == vehicle.id }.find{ |v| v[:global_day_index] == day }
+          corresponding_vehicle.timewindow.start = route[:tw_start]
+          corresponding_vehicle.timewindow.end = route[:tw_end]
           route_vrp = construct_sub_vrp(vrp, corresponding_vehicle, services_ids)
+
+          puts "Re-ordering route for #{vehicle.id} at day #{day} : #{services_ids.size}"
 
           # TODO : test with and without providing initial solution ?
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:current_route])
@@ -525,8 +526,6 @@ module Heuristics
           rescue
             puts 'ORtools could not find a solution for this problem.'
           end
-
-          @sub_pb_solved += 1
 
           next if result.nil? || !result[:unassigned].empty?
 
