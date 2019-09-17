@@ -1666,6 +1666,81 @@ class WrapperTest < Minitest::Test
     assert_equal 0, result[:unassigned].size
   end
 
+  def test_skills_sticky_compatibility
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ],
+        distance: [
+          [0, 10, 1],
+          [10, 0, 10],
+          [6, 1, 0]
+        ]
+      }],
+      points: [{
+          id: 'point_0',
+          matrix_index: 0,
+        }, {
+          id: 'point_1',
+          matrix_index: 1,
+        }, {
+          id: 'point_2',
+          matrix_index: 2,
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        speed_multiplier: 1.0,
+        start_point_id: 'point_0',
+        cost_time_multiplier: 1.0,
+        cost_waiting_time_multiplier: 1.0
+      }, {
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0',
+        speed_multiplier: 1.0,
+        cost_time_multiplier: 1.0,
+        cost_waiting_time_multiplier: 1.0
+      }],
+      services: [{
+        id: 'service_1',
+        sticky_vehicle_ids: ['vehicle_0'],
+        activity: {
+          point_id: 'point_1',
+          duration: 600.0
+        }
+      }, {
+        id: 'service_2',
+        sticky_vehicle_ids: ['vehicle_1'],
+        activity: {
+          point_id: 'point_2',
+          duration: 600.0
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 100,
+        }
+      }
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 0, result[:unassigned].size
+
+    problem[:services][0][:sticky_vehicle_ids] << 'vehicle_1'
+    problem[:services].each{ |service|
+      service[:skills] = ['A']
+    }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 0, result[:unassigned].size # no vehicle has the skill, so there is no problem
+
+    problem[:vehicles][0][:skills] = [['A']]
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Incompatibility between service skills and sticky_ids' }.size
+  end
+
   def test_impossible_service_too_far_time
     problem = {
       matrices: [{
@@ -1714,7 +1789,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unreachable' }.size
   end
 
   def test_impossible_service_too_far_distance
@@ -1773,7 +1848,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unreachable' }.size
   end
 
   def test_impossible_service_capacity
@@ -1843,7 +1918,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unsufficient capacity in vehicles' }.size
   end
 
   def test_impossible_service_skills
@@ -1944,7 +2019,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'No vehicle with compatible timewindow' }.size
   end
 
   def test_impossible_service_duration
@@ -1995,7 +2070,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Duration bigger than any vehicle timewindow shift' }.size
   end
 
   def test_impossible_service_duration_with_sequence_tw
@@ -2052,7 +2127,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Duration bigger than any vehicle timewindow shift' }.size
   end
 
   def test_impossible_service_duration_with_two_vehicles
@@ -2173,7 +2248,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'No vehicle with compatible timewindow' }.size
   end
 
   def test_impossible_service_distance
@@ -2219,7 +2294,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unreachable' }.size
   end
 
   def test_impossible_service_unconsistent_minimum_lapse
@@ -2276,7 +2351,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 2, result[:unassigned].size
+    assert_equal 2, result[:unassigned].select{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }.size
   end
 
   def test_wrong_matrix_and_points_definitions
