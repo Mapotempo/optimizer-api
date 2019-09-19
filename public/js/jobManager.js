@@ -24,15 +24,26 @@ var jobsManager = {
 
         currentJob = this;
         var donwloadBtn = currentJob.status === 'completed' || currentJob.status === 'failed';
+        var startTime = (new Date(currentJob.time)).toLocaleString('fr-FR');
+        var completedDate = ''
+
+        if (currentJob.status === 'completed') {
+          var splitedDate = currentJob.avancement
+            .replace("Completed at ", '')
+            .split(' ');
+
+          completedDate = ' ' + (new Date(`${splitedDate[0]}T${splitedDate[1]}${splitedDate[2]}`)).toLocaleString('fr-FR');
+        }
+
 
         var jobDOM =
           '<div class="job">'
-          + '<span class="optim-start">' + (new Date(currentJob.time)).toLocaleString('fr-FR') + ' : </span>'
+          + '<span class="optim-start">' + startTime + ' : </span>'
           + '<span class="job_title">' + 'Job N° <b>' + currentJob.uuid + '</b></span> '
           + '<button value=' + currentJob.uuid + ' data-role="delete">'
           + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18n.killOptim : i18n.deleteOptim)
           + '</button>'
-          + ' (Status: ' + currentJob.status + ')'
+          + ' (Status: ' + i18n[currentJob.status] + completedDate + ')'
           + (donwloadBtn ? buildDownloadLink(currentJob.uuid, currentJob.status) : '')
           + '</div>';
 
