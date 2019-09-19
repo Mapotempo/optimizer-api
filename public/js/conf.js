@@ -32,6 +32,8 @@ var i18n = {
     'status-label': 'Status de votre optimisation :',
     'invalidConfig': 'Fichier de configuration absent'
   },
+  completed: 'Terminée le',
+  failed: 'Echec',
   customers: 'clients',
   vehicles: 'véhicules',
   missingFile: 'Veuillez renseigner un fichier clients et un fichier véhicles.',
