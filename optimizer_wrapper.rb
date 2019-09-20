@@ -166,6 +166,9 @@ module OptimizerWrapper
     cluster_reference = 0
     real_result = join_independent_vrps(services_vrps, block) { |service, vrp, block|
       cluster_result = nil
+
+      config[:services][service].clean_data(vrp)
+
       if !vrp.subtours.empty?
         multi_modal = Interpreters::MultiModal.new(vrp, service)
         cluster_result = multi_modal.multimodal_routes()

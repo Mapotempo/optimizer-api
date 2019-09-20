@@ -353,6 +353,7 @@ module Api
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
+        this.optional(:floating_precision, type: Integer, default: 0, desc: 'Number of decimals used for scheduling computation.')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
         this.mutually_exclusive :initial_time_out, :minimum_duration
       end
