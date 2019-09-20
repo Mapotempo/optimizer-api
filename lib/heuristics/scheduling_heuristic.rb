@@ -77,6 +77,19 @@ module Heuristics
       block&.call()
 
       fill_days
+
+      # Relax same_point_day constraint
+      if @same_point_day && !@candidate_services_ids.empty?
+        # If there are still unassigned visits
+        # relax the @same_point_day constraint but
+        # keep the logic of unlocked for less frequent visits.
+        # We still call fill_grouped but with same_point_day = false
+        @to_plan_service_ids = @candidate_services_ids
+        @same_point_day = false
+        @relaxed_same_point_day = true
+        fill_days
+      end
+
       save_status
 
       # Reorder routes with solver and try to add more visits
@@ -91,18 +104,6 @@ module Heuristics
       rescue
         # TODO : send an alert in this case
         restore
-      end
-
-      # Relax same_point_day constraint
-      if @same_point_day && !@candidate_services_ids.empty?
-        # If there are still unassigned visits
-        # relax the @same_point_day constraint but
-        # keep the logic of unlocked for less frequent visits.
-        # We still call fill_grouped but with same_point_day = false
-        @to_plan_service_ids = @candidate_services_ids
-        @same_point_day = false
-        @relaxed_same_point_day = true
-        fill_days
       end
 
       fill_planning
