@@ -30,7 +30,11 @@ module Interpreters
     # TODO: private method
     def self.output_clusters(all_service_vrps, vehicles = [], two_stages = false)
       polygons = []
-      csv_lines = [['name', 'lat', 'lng', 'tags', 'start depot', 'end depot']]
+      csv_lines = if vehicles.first.sequence_timewindows.size > 1
+        [['name', 'lat', 'lng', 'tags', 'vehicle_id', 'start depot', 'end depot']]
+      else
+        [['name', 'lat', 'lng', 'tags', 'vehicle_id', 'tw_start', 'tw_end', 'day', 'start depot', 'end depot']]
+      end
       if !two_stages && !vehicles.empty?
         # clustering for each vehicle and each day
         # TODO : simplify ? iterate over all_service_vrps rather than over vehicle and finding associated service_vrp ?
@@ -531,8 +535,12 @@ module Interpreters
           service.activity.point.location.lat,
           service.activity.point.location.lon,
           (prefix || '') + cluster_index.to_s,
-          vrp.vehicles.first && vrp.vehicles.first.start_point && vrp.vehicles.first.start_point.id,
-          vrp.vehicles.first && vrp.vehicles.first.end_point && vrp.vehicles.first.end_point.id
+          vrp.vehicles.first&.id,
+          vrp.vehicles.first&.timewindow&.start || vrp.vehicles.first&.sequence_timewindows.first.start,
+          vrp.vehicles.first&.timewindow&.end || vrp.vehicles.first&.sequence_timewindows.first.end,
+          vrp.vehicles.first&.timewindow&.day_index || vrp.vehicles.first&.sequence_timewindows.first.day_index,
+          vrp.vehicles.first&.start_point&.id,
+          vrp.vehicles.first&.end_point&.id
         ]
       end
 
