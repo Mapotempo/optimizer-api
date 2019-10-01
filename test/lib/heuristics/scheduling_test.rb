@@ -18,10 +18,6 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
-  def setup
-    @regularity_restarts = ENV['INTENSIVE_TEST'] ? 50 : 5
-  end
-
   if !ENV['SKIP_SCHEDULING']
     def test_not_allowing_partial_affectation
       vrp = VRP.scheduling_seq_timewindows
