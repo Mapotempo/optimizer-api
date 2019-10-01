@@ -405,7 +405,6 @@ class HeuristicTest < Minitest::Test
       problem[:services][5][:visits_number] = 2
       problem[:services][5][:minimum_lapse] = 12
       problem[:services][5][:activity][:timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
-      problem[:services][1][:activity][:duration] = 1000
       problem[:vehicles] = [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
