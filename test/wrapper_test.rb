@@ -2845,7 +2845,8 @@ class WrapperTest < Minitest::Test
       end: 10
     }
     vrp[:services].first[:activity][:duration] = 15
-    assert_equal OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).size, 1
+    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_equal 1, result.select{ |un| un[:reason] == 'Service duration greater than any vehicle timewindow' }.size
 
     vrp[:vehicles].first[:timewindow] = nil
     vrp[:vehicles].first[:sequence_timewindows] = [{
@@ -2853,7 +2854,8 @@ class WrapperTest < Minitest::Test
       end: 10
     }]
     vrp[:services].first[:activity][:duration] = 15
-    assert_equal OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).size, 1
+    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_equal 1, result.select{ |un| un[:reason] == 'Service duration greater than any vehicle timewindow' }.size
 
     vrp[:vehicles].first[:sequence_timewindows] << {
       start: 0,
@@ -3036,5 +3038,27 @@ class WrapperTest < Minitest::Test
     }) do
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     end
+  end
+
+  def test_impossible_minimum_lapse_opened_days
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:services].first[:visits_number] = 2
+    vrp[:services].first[:minimum_lapse] = 2
+
+    assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+
+    vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 2 }
+    assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    vrp[:vehicles].each{ |v| v[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? } }
+    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_equal 2, result.select{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }.size
+    vrp[:vehicles].each{ |v| v[:sequence_timewindows].select{ |tw| tw[:day_index] == 2 }.each{ |tw| tw[:day_index] = 0 } }
+    assert_equal 2, result.select{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }.size
+  end
+
+  def test_impossible_minimum_lapse_opened_days_real_case
+    vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
+    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
+    assert_equal 12, result.select{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }.collect{ |un| un[:original_service_id] }.uniq.size
   end
 end

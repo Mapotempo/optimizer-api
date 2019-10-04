@@ -683,8 +683,7 @@ module Wrappers
         # unconsistency for planning
         next if !vrp.scheduling?
 
-        nb_days = vrp.schedule_indices[1] - vrp.schedule_indices[0] + 1
-        add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse') if service.visits_number && service.visits_number > 1 && service.minimum_lapse && nb_days - (service.visits_number - 1) * service.minimum_lapse <= 0
+        add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse') unless vrp.can_affect_all_visits?(service)
       }
 
       unfeasible

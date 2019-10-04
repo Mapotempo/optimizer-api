@@ -46,7 +46,7 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
       assert_equal 4, result[:unassigned].size
-      assert(result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Partial assignment only') })
+      assert(result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Partial assignment only') || unassigned[:reason].include?('Unconsistency between visit number and minimum lapse') })
     end
 
     def test_max_ride_time
