@@ -18,10 +18,12 @@
 require './lib/tsp_helper.rb'
 require './models/base'
 require './models/concerns/distance_matrix'
+require './models/concerns/periodic_service'
 
 module Models
   class Vrp < Base
     include DistanceMatrix
+    include PeriodicService
 
     field :name, default: nil
     field :preprocessing_max_split_size, default: nil

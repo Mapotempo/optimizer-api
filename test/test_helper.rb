@@ -633,23 +633,23 @@ module VRP
         router_dimension: 'distance',
         sequence_timewindows: [{
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 0
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 1
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 2
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 3
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 4
         }]
       }, {
@@ -660,23 +660,23 @@ module VRP
         router_dimension: 'distance',
         sequence_timewindows: [{
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 0
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 1
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 2
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 3
         }, {
           start: 0,
-          end: 20,
+          end: 100000,
           day_index: 4
         }]
       }],
