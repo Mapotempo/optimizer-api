@@ -53,20 +53,19 @@ module SchedulingDataInitialization
 
   def collect_services_data(vrp)
     epoch = Date.new(1970, 1, 1)
-    has_sequence_timewindows = vrp[:vehicles][0][:timewindow].nil?
     available_units = vrp.vehicles.collect{ |vehicle| vehicle[:capacities] ? vehicle[:capacities].collect{ |capacity| capacity[:unit_id] } : nil }.flatten.compact.uniq
 
     vrp.services.each{ |service|
       service[:unavailable_visit_day_indices] += service[:unavailable_visit_day_date].to_a.collect{ |unavailable_date|
         (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
       }.compact
-      has_every_day_index = has_sequence_timewindows && !vrp.vehicles[0].sequence_timewindows.empty? && ((vrp.vehicles[0].sequence_timewindows.collect(&:day_index).uniq & (0..6).to_a).size == 7)
+      has_only_one_day = vrp.vehicles.all?{ |v| v.timewindow&.day_index || v.sequence_timewindows.size == 1 && v.sequence_timewindows.first.day_index }
       period = if service[:visits_number] == 1
                   nil
-                elsif service[:minimum_lapse].to_f > 3 && @schedule_end > 3 && has_sequence_timewindows && !has_every_day_index
-                  (service[:minimum_lapse].to_f / 7).ceil * 7
+                elsif has_only_one_day
+                  service[:minimum_lapse] ? (service[:minimum_lapse].to_f / 7).ceil * 7 : 7
                 else
-                  service[:minimum_lapse].nil? ? 1 : service[:minimum_lapse].ceil
+                  service[:minimum_lapse] ? service[:minimum_lapse] : 1
                 end
       @services_data[service.id] = {
         capacity: compute_capacities(service[:quantities], false, available_units),

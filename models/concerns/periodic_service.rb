@@ -25,6 +25,7 @@ module PeriodicService
     return true if service.visits_number == 1
 
     current_day = self.schedule_indices[0]
+    decimal_day = current_day
     current_visit = 0
     while current_visit < service.visits_number && current_day <= self.schedule_indices[1]
       potential_vehicle = self.vehicles.find{ |v|
@@ -35,9 +36,11 @@ module PeriodicService
       }
 
       if potential_vehicle
-        current_day += (service.minimum_lapse || 1)
+        decimal_day += (service.minimum_lapse || 1)
+        current_day = decimal_day.round
         current_visit += 1
       else
+        decimal_day += 1
         current_day += 1
       end
     end

@@ -102,8 +102,8 @@ class HeuristicTest < Minitest::Test
       assert_equal 6, data_services.size
       assert_nil data_services['service_1'][:heuristic_period]
       assert_equal 7, data_services['service_2'][:heuristic_period]
-      assert_equal 14, data_services['service_3'][:heuristic_period]
-      assert_equal 7, data_services['service_4'][:heuristic_period]
+      assert_equal 10, data_services['service_3'][:heuristic_period]
+      assert_equal 6, data_services['service_4'][:heuristic_period]
     end
 
     def test_clean_routes
