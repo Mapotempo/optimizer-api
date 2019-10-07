@@ -208,8 +208,16 @@ module Heuristics
         @services_data[service[:id]][:priority]
       }.each{ |service|
         @used_to_adjust << service[:id]
-        peri = [@services_data[service[:id]][:heuristic_period], 1].compact.max
-        day_to_insert = (peri % 7).positive? ? days_available.select{ |day| day >= day_finished + peri }.min : day_finished + peri
+        peri = @services_data[service[:id]][:heuristic_period]
+
+        next if peri.nil?
+
+        next_day = day_finished + peri
+        day_to_insert = days_available.select{ |day| day >= next_day.round }.min
+        if day_to_insert
+          diff = day_to_insert - next_day.round
+          next_day += diff
+        end
 
 
         this_service_days = [day_finished]
@@ -221,11 +229,13 @@ module Heuristics
             inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number) if days_available.include?(day_to_insert)
             this_service_days << inserted_day if inserted_day
 
-            day_to_insert = if (peri % 7).positive?
-              days_available.select{ |day| day >= day_to_insert + peri }.min
-            else
-              day_to_insert + peri
-            end
+            next_day += peri
+            day_to_insert = days_available.select{ |day| day >= next_day.round }.min
+
+            next if day_to_insert.nil?
+
+            diff = day_to_insert - next_day.round
+            next_day += diff
           end
 
           next if inserted_day
@@ -234,7 +244,7 @@ module Heuristics
             clean_routes(service, vehicle)
             cleaned_service = true
           else
-            need_to_add_visits = true # not in case allow partial assignment false because we unafect all
+            need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
             @uninserted["#{service[:id]}_#{visit_number}_#{@services_data[service[:id]][:nb_visits]}"] = {
               original_service: service[:id],
               reason: "Visit not assignable by heuristic, first visit assigned at day #{day_finished}"
