@@ -393,6 +393,7 @@ module Interpreters
         if vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?
           (@schedule_start..@schedule_end).collect{ |vehicle_day_index|
             next if vehicle.unavailable_work_day_indices && vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
+
             vehicle.sequence_timewindows.select{ |timewindow| timewindow[:day_index].nil? || timewindow[:day_index] == (vehicle_day_index + @shift) % 7 }.collect{ |associated_timewindow|
               new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations, same_vehicle_list, lapses_list)
               t_start = ((vehicle_day_index + @shift) % 7) * 86400 + associated_timewindow[:start]
@@ -404,7 +405,9 @@ module Interpreters
           }.compact
         elsif !@have_services_day_index.nil? && !@have_shipments_day_index || vehicle.timewindow
           (@schedule_start..@schedule_end).collect{ |vehicle_day_index|
-            next if vehicle.unavailable_work_day_indices && vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
+            next if vehicle.unavailable_work_day_indices && vehicle.unavailable_work_day_indices.include?(vehicle_day_index) ||
+                    vehicle.timewindow&.day_index && vehicle_day_index % 7 != vehicle.timewindow.day_index
+
             new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations, same_vehicle_list, lapses_list)
             new_vehicle
           }.compact
