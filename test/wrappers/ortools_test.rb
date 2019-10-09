@@ -4675,7 +4675,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem = {
       units: [{
         id: 'kg',
-        labal: 'kg'
+        label: 'kg'
       }],
       matrices: [{
         id: 'matrix_0',

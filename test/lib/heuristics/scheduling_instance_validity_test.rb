@@ -57,11 +57,11 @@ class InstanceValidityTest < Minitest::Test
 
     def test_reject_if_relation
       problem = VRP.scheduling
-      problem[:relations] = {
+      problem[:relations] = [{
         type: 'vehicle_group_duration_on_weeks',
         lapse: '2',
         linked_vehicle_ids: ['vehicle_0']
-      }
+      }]
 
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_no_relation_with_scheduling_heuristic
     end

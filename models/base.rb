@@ -31,10 +31,10 @@ module Models
     include ActiveHash::Associations
 
     def initialize(hash)
-      super(hash.inject({}) { |memo, (k, v)|
+      super(hash.inject({}){ |memo, (k, v)|
         memo[k.to_sym] = v
         memo
-      }.select{ |k, _v| self.respond_to?(k) || self.respond_to?("#{k}_id") || self.respond_to?("#{k}_ids") || self.respond_to?("#{k}=") })
+      })
     end
 
     def self.has_many(name, options = {})
