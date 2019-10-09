@@ -40,9 +40,12 @@ module Ai4r
                         "'eliminate' (the default action, eliminate the empty cluster), " \
                         "'terminate' (terminate with error), 'random' (relocate the " \
                         'empty cluster to a random point)',
-                      expected_caracteristics: 'Expected sets of caracteristics for generated clusters',
-                      possible_caracteristics_combination: 'Set of skills we can combine in the same cluster.',
-                      strict_limitations: 'Values that can not be exceeded, for each cluster'
+                      expected_characteristics: 'Expected sets of characteristics for generated clusters',
+                      strict_limitations: 'Values that can not be exceeded, for each cluster',
+                      incompatibility_function: 'Custom implementation of an incompatibility_function.'\
+                        'It must be a closure receiving a data item and a centroid and return a '\
+                        'boolean (true: if incompatible and false: if compatible). '\
+                        'By default, this implementation uses a function which always returns false.'
 
       # Build a new clusterer, using data examples found in data_set.
       # Items will be clustered in "number_of_clusters" different
@@ -62,11 +65,15 @@ module Ai4r
         @cut_symbol = cut_symbol
         @output_centroids = output_centroids
         @unit_symbols = unit_symbols
-        @remaining_skills = @expected_caracteristics.dup if @expected_caracteristics
+        @remaining_skills = @expected_characteristics.dup if @expected_characteristics
         @manage_empty_clusters_iterations = 0
 
         @distance_function ||= lambda do |a, b|
           Helper.flying_distance(a, b)
+        end
+
+        @incompatibility_function ||= lambda do |_data_item, _centroid| # By default all items are compatible.
+          false
         end
 
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
@@ -140,17 +147,26 @@ module Ai4r
       # to (0-based).
       def eval(data_item)
         get_min_index(@centroids.collect.with_index{ |centroid, cluster_index|
-          distance(data_item, centroid, cluster_index)
+          dist = distance(data_item, centroid, cluster_index)
+
+          if @incompatibility_function.call(data_item, centroid)
+            dist += 2**32
+          end
+
+          if capactity_violation?(data_item, cluster_index)
+            dist += 2**16
+          end
+
+          dist
         })
       end
 
       protected
 
-      def distance(a, b, cluster_index)
-        # TODO : rename a & b ?
+      def distance(data_item, centroid, cluster_index)
         # TODO: Move extra logic outside of the distance function.
         # The user should be able to overload 'distance' function witoud losing any functionality
-        fly_distance = @distance_function.call(a, b) # TODO: Left renaming the variable after the merge to avoid conflicts in the merge. flying_distance => distance
+        distance = @distance_function.call(data_item, centroid)
 
         cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
         limit = if @cut_limit.is_a? Array
@@ -158,15 +174,6 @@ module Ai4r
         else
           @cut_limit[:limit]
         end
-
-        # TODO : compute these conflicts in eval, so we do not compute distance for uncompatible clusters
-        compatibility = if a[4] && b[4] && (b[4] & a[4]).empty? || # if service sticky or skills are different than centroids sticky/skills,
-                           !(a[5] - b[5]).empty? || # or if service and cluster skills have no match
-                           capactity_violation?(a, cluster_index)
-                          2**32
-                        else
-                          0
-                        end
 
         # balance between clusters computation
         balance = 1.0
@@ -186,9 +193,9 @@ module Ai4r
         end
 
         if @rate_balance
-          (1.0 - @rate_balance) * (fly_distance + compatibility) + @rate_balance * (fly_distance + compatibility) * balance
+          (1.0 - @rate_balance) * distance + @rate_balance * distance * balance
         else
-          (fly_distance + compatibility) * balance
+          distance * balance
         end
       end
 
@@ -226,41 +233,49 @@ module Ai4r
         tried_indexes = []
         case populate_method
         when 'random' # for initial assignment (without the :centroid_indices option) and for reassignment of empty cluster centroids (with :on_empty option 'random')
-          tried_ids = []
-          while @centroids.length < number_of_clusters &&
-                tried_ids.length < @data_set.data_items.length
-            current_cluster = @centroids.size
+          while @centroids.length < number_of_clusters
             skills = @remaining_skills ? @remaining_skills.first : []
 
-            # TODO : select among items that NEED one specific skill of skills
-            compatible_items = @data_set.data_items.reject{ |item| item[5].empty? }.select{ |item| (item[5] - skills).empty? }
-            if compatible_items.collect{ |c| [c[0], c[1]] }.uniq.size < @data_set.data_items.collect{ |c| [c[0], c[1]] }.uniq.size * 5 / 100
-              compatible_items = @data_set.data_items.select{ |item| (item[5] - skills).empty? }
+            # TODO : balanced_kmeans needs to be cleaned from the vrp logic
+            # such as item[4], skills and other logic specific to the usage.
+            # How do clustering know what is in the fourth place in data_item?
+            # How the user will know that the fourth place is skills? etc.
+
+            # Find the items which are not already used, and specifically need the skill set of this cluster
+            compatible_items = @data_set.data_items.select{ |item|
+              !@centroids.collect{ |centroid| centroid[2] }.flatten.include?(item[2]) &&
+                !item[4].empty? &&
+                !(item[4][:v_id].empty? && item[4][:skills].empty?) &&
+                !@incompatibility_function.call(item, [0, 0, 0, 0, skills, 0])
+            }
+
+            if compatible_items.empty?
+              # If there are no items which specifically needs these skills,
+              # then find all the items that can be assigned to this cluster
+              compatible_items = @data_set.data_items.select{ |item|
+                !@centroids.collect{ |centroid| centroid[2] }.flatten.include?(item[2]) &&
+                  !@incompatibility_function.call(item, [0, 0, 0, 0, skills, 0])
+              }
             end
 
-            counter = 0
-            restrictive_caracteristics = true
-            while @centroids.size == current_cluster
-              if counter > compatible_items.size * 2 && restrictive_caracteristics || compatible_items.empty?
-                compatible_items = @data_set.data_items.select{ |item| (item[5] - skills).empty? }
-                restrictive_caracteristics = false
-              end
-
-              counter += 1
-              item = compatible_items[rand(compatible_items.size)]
-
-              next if tried_ids.include?(item[2])
-
-              tried_ids << item[2]
-              next if @centroids.collect{ |centroid| centroid[2] }.flatten.include?(item[2]) #is this possible if index not in tried index ??
-              @centroids << [item[0], item[1], item[2], item[3].dup, nil, skills, 0] # TODO : give different ID
-
-              @remaining_skills.delete_at(0) if @remaining_skills
-              @data_set.data_items.insert(0, @data_set.data_items.delete(item))
+            if compatible_items.empty?
+              # If, still, there are no items that can be assigned to this cluster
+              # initialize it with a random point
+              compatible_items = @data_set.data_items.reject{ |item|
+                @centroids.collect{ |centroid| centroid[2] }.flatten.include?(item[2])
+              }
             end
+
+            item = compatible_items[rand(compatible_items.size)]
+
+            @centroids << [item[0], item[1], item[2], item[3].dup, skills, nil, 0]
+
+            @remaining_skills&.delete_at(0)
+
+            @data_set.data_items.insert(0, @data_set.data_items.delete(item))
           end
           if @output_centroids
-            puts "[DEBUG] kmeans_centroids : #{tried_ids}"
+            puts "[DEBUG] kmeans_centroids : #{@centroids.collect{ |centroid| centroid[2] }.flatten}"
           end
         when 'indices' # for initial assignment only (with the :centroid_indices option)
           @centroid_indices.each do |index|
@@ -270,9 +285,8 @@ module Ai4r
             item = @data_set.data_items[index]
             unless @clusters.collect{ |cluster| cluster.data_items.collect{ |item| item[2] }}.flatten.include?(item[2])
               # TODO : is this possible ? if we did not try this index, can we have two centroids with same ID ..? throw error if yess
-              current_cluster = @centroids.size
-              skills = @remaining_skills ? @remaining_skills.first : [] # order of @centroid_indices is important, should correspond to expected_caracteristics_order!
-              @centroids << [item[0], item[1], item[2], item[3].dup, nil, skills, 0]
+              skills = @remaining_skills ? @remaining_skills.first : [] # order of @centroid_indices is important, should correspond to expected_characteristics_order!
+              @centroids << [item[0], item[1], item[2], item[3].dup, skills, nil, 0]
               # TODO : give different ID
               @remaining_skills.delete_at(0) if @remaining_skills
             end
@@ -291,7 +305,7 @@ module Ai4r
         else
           # try generating all clusters again
           @clusters, @centroids, @cluster_indices = [], [], []
-          @remaining_skills = @expected_caracteristics.dup
+          @remaining_skills = @expected_characteristics.dup
           @number_of_clusters = @centroids.length
         end
         return if self.on_empty == 'eliminate'
@@ -306,7 +320,7 @@ module Ai4r
         @remaining_skills = []
         @number_of_clusters.times do |i|
           if old_clusters[i].data_items.empty?
-            @remaining_skills << old_centroids[i][5]
+            @remaining_skills << old_centroids[i][4]
           else
             @clusters << old_clusters[i]
             @cluster_indices << old_cluster_indices[i]

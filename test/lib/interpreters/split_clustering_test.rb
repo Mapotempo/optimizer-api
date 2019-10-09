@@ -571,6 +571,17 @@ class SplitClusteringTest < Minitest::Test
       assert visits_unassigned.count(4) <= rate_limit_4_unassigned, "4 unassigned visits shouldn't appear more than #{rate_limit_4_unassigned} times (#{visits_unassigned})"
     end
 
+    def test_balanced_split_under_nonuniform_sq_timewindows
+      #Regression test against a fixed bug in clustering skill/day implemetation
+      #which leads to all (!) services with non-uniform sequence_timewindows being
+      #assigned to the vehicles with non-uniform sequence_timewindows.
+      vrp = FCT.load_vrp(self)
+
+      services_vrps = Interpreters::SplitClustering.split_balanced_kmeans({ vrp: vrp, service: :demo }, vrp.vehicles.size, cut_symbol: :duration, entity: 'vehicle', restarts: 1)
+
+      assert (services_vrps[1][:vrp][:services].size - services_vrps[0][:vrp][:services].size).abs.to_f / vrp.services.size < 0.93, 'Split should be more balanced. Possible regression in day/skill management in clustering -- when services and vehicles have non-uniform timewindows.'
+    end
+
     def test_results_regularity_2
       visits_unassigned = []
       services_unassigned = []
