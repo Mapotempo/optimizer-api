@@ -313,8 +313,8 @@ class SplitClusteringTest < Minitest::Test
         entity: 'work_day'
       }]
 
-      vrp[:services][0][:activity][:skills] = ['cold']
-      vrp[:services][3][:activity][:skills] = ['hot']
+      vrp[:services][0][:skills] = ['cold']
+      vrp[:services][3][:skills] = ['hot']
       vrp[:preprocessing_kmeans_centroids] = [0, 2]
       service_vrp = { vrp: FCT.create(vrp), service: :demo }
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
@@ -322,8 +322,8 @@ class SplitClusteringTest < Minitest::Test
       hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
       assert cold_cluster != hot_cluster
 
-      vrp[:services][0][:activity][:skills] = ['cold']
-      vrp[:services][3][:activity][:skills] = ['hot']
+      vrp[:services][0][:skills] = ['cold']
+      vrp[:services][3][:skills] = ['hot']
       vrp[:preprocessing_kmeans_centroids] = [9, 10]
       service_vrp = { vrp: FCT.create(vrp), service: :demo }
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
