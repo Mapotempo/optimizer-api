@@ -497,59 +497,45 @@ module Api
           }
           post do
             begin
+              # Api key is not declared as part of the VRP and must be handled carefully and separatly from other parameters
+              api_key = params[:api_key]
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
-              if params[:points]
-                APIBase.dump_vrp_dir.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_'), {vrp: { points: params[:points], units: params[:units], timewindows: params[:timewindows], capacities: params[:capacities], quantities: params[:quantities], services: params[:services], shipments: params[:shipments], vehicles: params[:vehicles], configuration: params[:vrp][:configuration] } }.to_json)
-              else
-                APIBase.dump_vrp_dir.write([params[:api_key], params[:vrp] && params[:vrp][:name], checksum].compact.join('_'), {vrp: params[:vrp]}.to_json)
-              end
+              d_params = declared(params, include_missing: false)
+              vrp_params = d_params[:points] ? d_params : d_params[:vrp]
+              APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), { vrp: vrp_params }.to_json)
               vrp = ::Models::Vrp.create({})
-              params_limit = APIBase.services(params[:api_key])[:params_limit].merge(OptimizerWrapper.access[params[:api_key]][:params_limit] || {})
-              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows, :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
-                value = params[:vrp] ? params[:vrp][key] : params[key]
+              params_limit = APIBase.services(api_key)[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
+              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
+               :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
+                value = vrp_params[key]
                 if params_limit[key] && value && value.size > params_limit[key]
-                  error!({status: 'Exceeded params limit', detail: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."}, 400)
+                  error!({
+                    status: 'Exceeded params limit',
+                    detail: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."
+                  }, 400)
                 end
-                if params[:vrp] && params[:vrp][key]
-                  vrp.send("#{key}=", params[:vrp][key])
-                end
-                if params[key]
-                  vrp.send("#{key}+=", params[key])
-                end
+                vrp.send("#{key}=", vrp_params[key]) if vrp_params[key]
               }
 
-              if !vrp.valid? || params[:vrp].nil? || params[:vrp].keys.empty?
-                if params[:vrp].nil?
-                  vrp.errors.add(:empty_file, message: 'JSON file is empty')
-                elsif params[:vrp].keys.empty?
-                  vrp.errors.add(:empty_vrp, message: 'VRP structure is empty')
-                end
-                error!({status: 'Model Validation Error', detail: vrp.errors}, 400)
+              if !vrp.valid? || vrp_params.nil? || vrp_params.keys.empty?
+                vrp.errors.add(:empty_file, message: 'JSON file is empty') if vrp_params.nil?
+                vrp.errors.add(:empty_vrp, message: 'VRP structure is empty') if vrp_params&.keys&.empty?
+                error!({ status: 'Model Validation Error', detail: vrp.errors }, 400)
               else
-                ret = OptimizerWrapper.wrapper_vrp(params[:api_key], APIBase.services(params[:api_key]), vrp, checksum)
+                ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.services(api_key), vrp, checksum)
                 if ret.is_a?(String)
                   #present result, with: VrpResult
                   status 201
-                  present({
-                    job: {
-                      id: ret,
-                      status: :queued
-                    }
-                  }, with: Grape::Presenters::Presenter)
+                  present({ job: { id: ret, status: :queued }}, with: Grape::Presenters::Presenter)
                 elsif ret.is_a?(Hash)
                   status 200
                   if vrp.restitution_csv
                     present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
                   else
-                    present({
-                      solutions: [ret],
-                      job: {
-                        status: :completed,
-                      }
-                    }, with: Grape::Presenters::Presenter)
+                    present({ solutions: [ret], job: { status: :completed }}, with: Grape::Presenters::Presenter)
                   end
                 else
-                  error!({status: 'Internal Server Error'}, 500)
+                  error!({ status: 'Internal Server Error' }, 500)
                 end
               end
             ensure
