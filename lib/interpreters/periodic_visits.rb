@@ -369,7 +369,7 @@ module Interpreters
       new_vehicle.rests = generate_rests(vehicle, (vehicle_day_index + @shift) % 7, rests_durations)
       new_vehicle.sequence_timewindows = nil
       vrp.rests += new_vehicle.rests
-      vrp.services.select{ |service| service.sticky_vehicles.any?{ sticky_vehicle == vehicle }}.each{ |service|
+      vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |service|
         service.sticky_vehicles.insert(-1, new_vehicle)
       }
       new_vehicle
