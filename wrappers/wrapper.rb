@@ -386,7 +386,7 @@ module Wrappers
     end
 
     def assert_no_skills_if_heuristic(vrp)
-      vrp.services.none?{ |service| !service[:skills].empty? } || vrp.vehicles.none?{ |vehicle| !vehicle[:skills].empty? } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+      vrp.services.none?{ |service| !service[:skills].empty? } || vrp.vehicles.none?{ |vehicle| !vehicle[:skills].empty? } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || !vrp.preprocessing_partitions.empty?
     end
 
     def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)
