@@ -272,6 +272,8 @@ class RealCasesTest < Minitest::Test
     # Nantes - A single route with an order defining the most part of the route
     def test_ortools_single_route_with_route_order
       vrp = FCT.load_vrp(self)
+      # Letting lateness and wide horizon has bad impact on performances
+      vrp.vehicles.each{ |v| v.cost_late_multiplier = 0 }
       check_vrp = Marshal.load(Marshal.dump(vrp))
       # TODO: move to fixtures at the next update of the dump
       vrp.preprocessing_prefer_short_segment = false
