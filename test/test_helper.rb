@@ -138,6 +138,18 @@ module TestHelper
 
     Process.kill('KILL', -Process.getpgid(pid_worker)) if pid_worker # Kill the process and all of its children
   end
+
+  def self.easy_vehicle_expand(vehicles, schedule_range)
+    vehicles.flat_map{ |vehicle|
+      (0..schedule_range.last).collect{ |day|
+        new_vehicle = Marshal.load(Marshal.dump(vehicle))
+        new_vehicle.id += "_#{day}"
+        new_vehicle.timewindow = { start: 0, end: 10, day_index: day % 7 }
+        new_vehicle.global_day_index = day % 7
+        new_vehicle
+      }
+    }
+  end
 end
 
 module VRP
