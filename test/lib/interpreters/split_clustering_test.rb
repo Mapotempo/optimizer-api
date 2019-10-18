@@ -618,5 +618,19 @@ class SplitClusteringTest < Minitest::Test
       limit_max = ENV['INTENSIVE_TEST'] ? 18 : 15
       assert visits_unassigned.max <= limit_max, "More than #{limit_max} unassigned visits shouldn't happen (#{visits_unassigned}) regularly --  i.e., it might happen once every 4-5 runs."
     end
+
+    def test_basic_split
+      problem = VRP.lat_lon
+      problem[:configuration][:preprocessing][:max_split_size] = 2
+      problem[:vehicles] << {
+        id: 'vehicle_1',
+        matrix_id: 'm1',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        router_dimension: 'distance',
+      }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      assert result
+    end
   end
 end

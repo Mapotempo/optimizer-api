@@ -585,10 +585,10 @@ module Interpreters
 
       def generate_expected_characteristics(vehicles)
         vehicles.collect{ |v|
-          tw = [v[:timewindow] || v[:sequence_timewindows]].flatten.compact
+          tw = [v.timewindow || v.sequence_timewindows].flatten.compact
           {
             v_id: [v.id],
-            skills: v[:skills].flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
+            skills: v.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
             days: compute_day_skills(tw)
           }
         }
