@@ -163,8 +163,7 @@ module Interpreters
         first_results.each_with_index{ |result, i|
           synthesis << {
             heuristic: batched_service_vrps[i][:vrp][:preprocessing_first_solution_strategy].first,
-            quality: result.nil? ? nil : result[:cost].to_i * Math.sqrt([1, result[:unassigned].size].max),
-            finished: !result.nil?,
+            quality: result.nil? ? nil : result[:cost].to_i,
             used: false,
             cost: result ? result[:cost] : nil,
             time_spent: times[i],
