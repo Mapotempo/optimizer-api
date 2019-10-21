@@ -152,7 +152,7 @@ module Interpreters
         dicho_level_coeff(service_vrp)
         service_vrp[:vrp].vehicles.each{ |vehicle|
           vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
-          vehicle[:cost_distance_multiplier] = 0.05
+          vehicle[:cost_distance_multiplier] = 0.05 if vehicle[:cost_distance_multiplier].zero?
         }
       end
 
@@ -255,7 +255,7 @@ module Interpreters
             sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles.map(&:id))
             sub_service_vrp[:vrp].vehicles.each{ |vehicle|
               vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
-              vehicle[:cost_distance_multiplier] = 0.05
+              vehicle[:cost_distance_multiplier] = 0.05 if vehicle[:cost_distance_multiplier].zero?
             }
             rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
             rate_services = services.size / unassigned_services.size.to_f
