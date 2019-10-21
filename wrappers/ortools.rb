@@ -579,6 +579,9 @@ module Wrappers
 
       return @previous_result if content['routes'].empty? && @previous_result
 
+      route_start_time = 0
+      route_end_time = 0
+
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
       {
@@ -617,6 +620,7 @@ module Wrappers
               earliest_start = activity['start_time'] || 0
               if activity['type'] == 'start'
                 load_status = build_quantities(nil, activity_loads)
+                route_start_time = earliest_start
                 if vehicle.start_point
                   previous_matrix_index = points[vehicle.start_point.id].matrix_index
                   current_activity = {
@@ -625,21 +629,24 @@ module Wrappers
                     detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
                   }.delete_if{ |_k, v| !v }
                 end
-              elsif activity['type'] == 'end' && vehicle.end_point
-                current_activity = {
-                  point_id: vehicle.end_point.id,
-                  begin_time: earliest_start,
-                  detail: {
-                    lat: vehicle.end_point.location&.lat,
-                    lon: vehicle.end_point.location&.lon,
-                    quantities: activity_loads.collect{ |current_load|
-                      {
-                        unit: current_load[:unit],
-                        current_load: current_load[:current_load]
+              elsif activity['type'] == 'end'
+                route_end_time = earliest_start
+                if vehicle.end_point
+                  current_activity = {
+                    point_id: vehicle.end_point.id,
+                    begin_time: earliest_start,
+                    detail: {
+                      lat: vehicle.end_point.location&.lat,
+                      lon: vehicle.end_point.location&.lon,
+                      quantities: activity_loads.collect{ |current_load|
+                        {
+                          unit: current_load[:unit],
+                          current_load: current_load[:current_load]
+                        }
                       }
                     }
-                  }
-                }.delete_if{ |_k, v| !v }
+                  }.delete_if{ |_k, v| !v }
+                end
               elsif activity['type'] == 'service'
                 collected_indices << current_index
                 if current_index < vrp.services.size
@@ -701,6 +708,8 @@ module Wrappers
               end
               current_activity
             }.compact,
+            start_time: route_start_time,
+            end_time: route_end_time,
             initial_loads: load_status.collect{ |unit|
               {
                 unit: unit[:unit],

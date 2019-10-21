@@ -664,6 +664,7 @@ module OptimizerWrapper
       if r[:end_time] && r[:start_time]
         r[:total_time] = r[:end_time] - r[:start_time]
       end
+
       matrix = vrp.matrices.find{ |mat| mat.id == v.matrix_id }
       if matrix.time
         r[:total_travel_time] = route_total_dimension(vrp, r, v, :time)
