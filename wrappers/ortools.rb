@@ -530,40 +530,43 @@ module Wrappers
       end
     end
 
+    def empty_result(vrp)
+      {
+        solvers: ['ortools'],
+        cost: 0,
+        iterations: 0,
+        routes: [],
+        unassigned: (vrp.services.collect{ |service|
+          {
+            service_id: service.id,
+            type: service.type.to_s,
+            point_id: service.activity.point_id,
+            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil)
+          }
+        }) + (vrp.shipments.collect{ |shipment|
+          [{
+            shipment_id: shipment.id,
+            type: 'pickup',
+            point_id: shipment.pickup.point_id,
+            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
+          }] << {
+            shipment_id: shipment.id,
+            type: 'delivery',
+            point_id: shipment.delivery.point_id,
+            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
+          }
+        }).flatten + (vrp.rests.collect{ |rest|
+          {
+            rest_id: rest.id,
+            detail: build_rest(rest, nil)
+          }
+        })
+      }
+    end
+
     def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
       if vrp.vehicles.empty? || (vrp.services.nil? || vrp.services.empty?) && (vrp.shipments.nil? || vrp.shipments.empty?)
-        empty_result = {
-          solvers: ['ortools'],
-          cost: 0,
-          iterations: 0,
-          routes: [],
-          unassigned: (vrp.services.collect{ |service|
-            {
-              service_id: service.id,
-              type: service.type.to_s,
-              point_id: service.activity.point_id,
-              detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil)
-            }
-          }) + (vrp.shipments.collect{ |shipment|
-            [{
-              shipment_id: shipment.id,
-              type: 'pickup',
-              point_id: shipment.pickup.point_id,
-              detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
-            }] << {
-              shipment_id: shipment.id,
-              type: 'delivery',
-              point_id: shipment.delivery.point_id,
-              detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
-            }
-          }).flatten + (vrp.rests.collect{ |rest|
-            {
-              rest_id: rest.id,
-              detail: build_rest(rest, nil)
-            }
-          })
-        }
-        return empty_result
+        return empty_result(vrp)
       end
 
       content = OrtoolsResult::Result.decode(output.read)
@@ -829,7 +832,10 @@ module Wrappers
       result = out.split("\n")[-1]
       if @thread.value == 0
         if result == 'No solution found...'
-          nil
+          cost = Helper.fixnum_max
+          iterations = 0
+          @previous_result = empty_result(vrp)
+          @previous_result[:cost] = cost
         else
           cost = if result.include?('Cost : ')
             result.split(' ')[-4].to_i
@@ -844,8 +850,8 @@ module Wrappers
           if block && vrp.restitution_intermediate_solutions
             block.call(self, iterations, nil, nil, cost, time, nil)
           end
-          [cost, iterations, @previous_result]
         end
+        [cost, iterations, @previous_result]
       elsif @thread.value == 9
         out = "Job killed"
         puts (@job ? @job + ' - ' : '') + out # Keep trace in worker

@@ -17,9 +17,16 @@
 #
 
 module Helper
-
   def self.string_padding(value, length)
     value.to_s.rjust(length, '0')
+  end
+
+  def self.fixnum_max
+    (2**(0.size * 8 - 2) - 1)
+  end
+
+  def self.fixnum_min
+    -(2**(0.size * 8 - 2))
   end
 
   def self.flying_distance(loc_a, loc_b)
