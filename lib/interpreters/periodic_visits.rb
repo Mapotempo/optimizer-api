@@ -47,7 +47,7 @@ module Interpreters
       end
     end
 
-    def expand(vrp, &block)
+    def expand(vrp, job, &block)
       return vrp unless vrp.scheduling?
 
       if vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
@@ -62,7 +62,7 @@ module Interpreters
             total_distance: nil
           }
         else
-          scheduling_heuristic = Heuristics::Scheduling.new(vrp, generate_vehicles(vrp), { start: @real_schedule_start, end: @schedule_end, shift: @shift })
+          scheduling_heuristic = Heuristics::Scheduling.new(vrp, generate_vehicles(vrp), { start: @real_schedule_start, end: @schedule_end, shift: @shift }, job)
           vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
         end
       end

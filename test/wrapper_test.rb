@@ -2606,7 +2606,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
+    job = nil
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
@@ -2677,7 +2678,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
+    job = nil
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 3, result[:unassigned].size
     end
@@ -2754,7 +2756,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
+    job = nil
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
@@ -2825,7 +2828,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, &_block| vrp }) do
+    job = nil
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
       assert_equal 6, result[:unassigned].size
     end
