@@ -384,6 +384,7 @@ module Api
         this.optional(:output_kmeans_centroids, type: Boolean, default: OptimizerWrapper.config[:debug_output_kmeans_centroids], desc: '[debug] Outputs centroids used for kmeans clustering if clusters are generated')
         this.optional(:output_clusters, type: Boolean, default: OptimizerWrapper.config[:debug_output_clusters], desc: '[debug] Outputs clusters generated in csv/geojson')
         this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug_batch_heuristic], desc: '[debug] Each heuristic will be computed')
+        this.optional(:schedule_output, type: Boolean, default: OptimizerWrapper.config[:debug_schedule_output], desc: '[debug] Generates file with scheduling heuristic construction steps.')
       end
 
       namespace :vrp do

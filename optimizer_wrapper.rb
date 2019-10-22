@@ -152,6 +152,7 @@ module OptimizerWrapper
     result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty? && dicho_results.compact.empty?
     if duplicated_results.size == services_vrps.first[:vrp][:resolution_repetition]
       result = duplicated_results.min_by{ |r| r[:unassigned].size }
+      puts "#{job}_repetition - #{duplicated_results.collect{ |r| r[:unassigned].size }} : chose to keep #{duplicated_results.find_index(result)}"
       duplicated_results = [] # keep those results?
     end
     result_global = {
@@ -223,7 +224,7 @@ module OptimizerWrapper
               una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
             } if vrp.resolution_solver_parameter == -1 || !vrp.resolution_solver || vrp.scheduling?
             periodic = Interpreters::PeriodicVisits.new(vrp)
-            vrp = periodic.expand(vrp) {
+            vrp = periodic.expand(vrp, job) {
               block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
             }
             if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }

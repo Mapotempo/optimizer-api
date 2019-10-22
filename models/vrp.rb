@@ -77,6 +77,7 @@ module Models
 
     field :debug_output_kmeans_centroids, default: false
     field :debug_output_clusters, default: false
+    field :debug_schedule_output, default: false
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -186,6 +187,7 @@ module Models
     def debug=(debug)
       self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
       self.debug_output_clusters = debug[:output_clusters]
+      self.debug_schedule_output = debug[:schedule_output]
     end
 
     def services_duration

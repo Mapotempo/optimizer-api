@@ -18,10 +18,11 @@
 
 require './lib/helper.rb'
 require './lib/tsp_helper.rb'
+require './lib/output_helper.rb'
 
 module Heuristics
   class Scheduling
-    def initialize(vrp, expanded_vehicles, schedule)
+    def initialize(vrp, expanded_vehicles, schedule, job = nil)
       # heuristic data
       @candidate_vehicles = []
       @vehicle_day_completed = {}
@@ -71,10 +72,13 @@ module Heuristics
       generate_route_structure(vrp)
       @starting_time = Time.now
       @cost = 0
+
+      @output_tool = vrp.debug_schedule_output ? OutputHelper::Scheduling.new(vrp.name, job, @schedule_end) : nil
     end
 
     def compute_initial_solution(vrp, &block)
       block&.call()
+      @output_tool&.start_new_cluster
 
       fill_days
 
@@ -108,6 +112,8 @@ module Heuristics
 
       fill_planning
       check_solution_validity
+
+      @output_tool.close_file if @output_tool
 
       routes = prepare_output_and_collect_routes(vrp)
       routes
@@ -833,6 +839,7 @@ module Heuristics
       if @same_point_day || @relaxed_same_point_day
         fill_grouped
       else
+        @output_tool&.add_comment('You are not using same_point_day option, only first visits will be shown.')
         fill_basic
       end
     end
@@ -852,6 +859,12 @@ module Heuristics
           best_index = find_best_index(point_to_add[:id], route_data)
 
           insert_point_in_route(route_data, best_index, day)
+
+          if @output_tool
+            days = @candidate_routes[vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == point_to_add[:id] } }.keys
+            @output_tool.output_scheduling_insertion(days, point_to_add[:id], @services_data[point_to_add[:id]][:nb_visits], @schedule_end)
+          end
+
           @to_plan_service_ids.delete(point_to_add[:id])
           @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
           if point_to_add[:position] == best_index[:position]
@@ -953,6 +966,11 @@ module Heuristics
           inserted_id = try_to_add_new_point(current_vehicle, best_day, @candidate_routes[current_vehicle][best_day])
 
           if inserted_id
+            if @output_tool
+              days = @candidate_routes[current_vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == inserted_id } }.keys
+              @output_tool.output_scheduling_insertion(days, inserted_id, @services_data[inserted_id][:nb_visits], @schedule_end)
+            end
+
             adjust_candidate_routes(current_vehicle, best_day)
 
             if @services_unlocked_by[inserted_id] && !@services_unlocked_by[inserted_id].empty?
