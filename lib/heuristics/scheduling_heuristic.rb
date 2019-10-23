@@ -1037,7 +1037,7 @@ module Heuristics
       else
         previous_point = route_data[:start_point_id]
         (0..route.size).each{ |position|
-          if position == route.size || route[position][:point_id] != previous_point
+          if !@same_point_day && !@relaxed_same_point_day || position == route.size || route[position][:point_id] != previous_point
             new_cost = if in_adjust
               compute_value_at_position(route_data, service, position, @services_data[service][:duration], true)
             else
@@ -1049,6 +1049,7 @@ module Heuristics
               possibles << new_cost
             end
           end
+
           if position < route.size
             previous_point = route[position][:point_id]
           end
