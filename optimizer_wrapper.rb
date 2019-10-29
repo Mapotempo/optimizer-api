@@ -280,11 +280,11 @@ module OptimizerWrapper
               total_distance: nil
             }
           end
+
+          # Reintegrate unfeasible services deleted from vrp.services to help ortools
+          vrp.services += services_to_reinject
         end
       end
-
-      # Reintegrate unfeasible services deleted from vrp.services to help ortools
-      vrp.services += services_to_reinject
 
       if vrp.preprocessing_partition_method || !vrp.preprocessing_partitions.empty?
         # add associated cluster as skill
