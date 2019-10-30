@@ -539,7 +539,7 @@ module OptimizerWrapper
               quantities = unit_ids.collect{ |unit_id|
                 activity['detail']['quantities'].find{ |quantity| quantity['unit'] == unit_id } && activity['detail']['quantities'].find{ |quantity| quantity['unit'] == unit_id }['value']
               }
-              out_csv << (days_info + common + quantities + timewindows)
+              out_csv << (days_info + common + quantities + timewindows + [nil] )
             }
           }
           solution['unassigned'].each{ |activity|
