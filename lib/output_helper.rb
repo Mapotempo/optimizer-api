@@ -64,7 +64,7 @@ module OutputHelper
 
       Api::V01::APIBase.dump_vrp_dir.write(file_name + '_csv', csv_string)
 
-      puts 'Clusters saved : ' + file_name
+      log 'Clusters saved: ' + file_name, level: :debug
     end
 
     private

@@ -432,7 +432,7 @@ module Interpreters
         }
         services_by_cluster
       else
-        puts 'Split not available when services have no activities'
+        log 'Split not available when services have no activities'
         [vrp]
       end
     end

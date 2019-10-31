@@ -30,7 +30,7 @@ class ScheduleType
       elsif (value.kind_of?(Integer) || value.kind_of?(Float))
         value.to_i
       else
-        puts 'error'
+        log 'error', level: :error
         raise ArgumentError.new("Invalid Time value")
       end
     elsif mandatory

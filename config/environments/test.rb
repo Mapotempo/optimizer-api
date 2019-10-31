@@ -24,6 +24,7 @@ require './wrappers/jsprit'
 require './wrappers/ortools'
 
 require './lib/cache_manager'
+require './util/logger'
 
 module OptimizerWrapper
   TMP_DIR = ActiveSupport::Cache::NullStore.new
@@ -39,6 +40,8 @@ module OptimizerWrapper
   PARAMS_LIMIT = { points: 150, vehicles: 10 }
 
   @@dump_vrp_dir = CacheManager.new(TMP_DIR)
+
+  # OptimizerLogger.level = :info
 
   @@c = {
     product_title: 'Optimizers API',

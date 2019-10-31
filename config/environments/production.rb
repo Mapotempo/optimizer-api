@@ -23,6 +23,7 @@ require './wrappers/vroom'
 require './wrappers/ortools'
 
 require './lib/cache_manager'
+require './util/logger'
 
 module OptimizerWrapper
   ActiveSupport::Cache.lookup_store :redis_store
@@ -39,6 +40,8 @@ module OptimizerWrapper
 
   DUMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'dump')
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
+
+  # OptimizerLogger.level = :info
 
   @@c = {
     product_title: 'Optimizers API',

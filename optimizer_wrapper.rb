@@ -83,11 +83,11 @@ module OptimizerWrapper
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
           if inapplicable.empty?
-            puts "Select service #{s}"
+            log "Select service #{s}"
             true
           else
             inapplicable_services << inapplicable
-            puts "Skip inapplicable #{s}: #{inapplicable.join(', ')}"
+            log "Skip inapplicable #{s}: #{inapplicable.join(', ')}"
             false
           end
         },
@@ -205,7 +205,7 @@ module OptimizerWrapper
           }
         else
           services_to_reinject = []
-          puts "Solving #{cluster_reference + 1}/#{services_vrps.size}" unless services_vrps.size == 1
+          log "Solving #{cluster_reference + 1}/#{services_vrps.size}" unless services_vrps.size == 1
           sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
           vrp.compute_matrix(&block)
@@ -334,10 +334,9 @@ module OptimizerWrapper
 
     real_result
   rescue Resque::Plugins::Status::Killed
-    puts 'Job Killed'
+    log 'Job Killed'
   rescue => e
-    puts e
-    puts e.backtrace
+    log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
     raise
   end
 
