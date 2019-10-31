@@ -784,7 +784,7 @@ module Wrappers
         vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
         "-instance_file '#{input.path}'",
         "-solution_file '#{output.path}'"].compact.join(' ')
-      puts (@job ? @job + ' - ' : '') + cmd
+      log (@job ? @job + ' - ' : '') + cmd
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
@@ -811,7 +811,7 @@ module Wrappers
       time = 0.0
       # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
-        puts (@job ? @job + ' - ' : '') + line
+        log (@job ? @job + ' - ' : '') + line
         out = out + line
         r = /^Iteration : ([0-9]+)/.match(line)
         r && (iterations = Integer(r[1]))
@@ -824,7 +824,7 @@ module Wrappers
             @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
             block.call(self, iterations, nil, nil, cost, t, @previous_result)
           rescue => error
-            puts "Error: #{error.message} in run_ortools during parse_output"
+            log "Error: #{error.message} in run_ortools during parse_output", level: :error
           end
         end
       }
@@ -854,7 +854,7 @@ module Wrappers
         [cost, iterations, @previous_result]
       elsif @thread.value == 9
         out = "Job killed"
-        puts (@job ? @job + ' - ' : '') + out # Keep trace in worker
+        log (@job ? @job + ' - ' : '') + out # Keep trace in worker
         if cost && !result.include?('Iteration : ')
           [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
         else

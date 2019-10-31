@@ -60,8 +60,7 @@ module Interpreters
 
       [all_service_vrps, split_results]
     rescue => e
-      puts e
-      puts e.backtrace
+      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
       raise
     end
 
@@ -74,7 +73,7 @@ module Interpreters
 
           case partition[:method]
           when 'balanced_kmeans'
-            puts "Starting clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size}"
+            log "Starting clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size}"
             generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
               # TODO : global variable to know if work_day entity
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
@@ -286,8 +285,8 @@ module Interpreters
         }.sum
         checksum = Digest::MD5.hexdigest Marshal.dump(values)
         if !score_hash.key?(checksum)
-          puts "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric} iterations: #{c.iterations}"
-          puts " > Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
+          log "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric} iterations: #{c.iterations}"
+          log " > Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
           score_hash[checksum] = { iterations: c.iterations, limit_score: limit_score, restart: restart, ratio_metric: ratio_metric, min: values.min, max: values.max, sum: values.sum, size: values.size }
         end
         restart += 1
@@ -297,7 +296,7 @@ module Interpreters
         limit_score += empty_clusters_score
         if best_limit_score.nil? || c.clusters.size > biggest_cluster_size || (c.clusters.size >= biggest_cluster_size && limit_score < best_limit_score)
           best_limit_score = limit_score
-          puts best_limit_score.to_s + ' -> New best cluster metric (' + c.cluster_metrics.collect{ |cluster_metric| cluster_metric[options[:cut_symbol]] }.join(', ') + ')'
+          log best_limit_score.to_s + ' -> New best cluster metric (' + c.cluster_metrics.collect{ |cluster_metric| cluster_metric[options[:cut_symbol]] }.join(', ') + ')'
           biggest_cluster_size = c.clusters.size
           clusters = c.clusters
           centroids = c.centroid_indices
@@ -347,13 +346,14 @@ module Interpreters
             linked_objects[i[2]]
           }
         }
-        puts 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
+        log 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
         cluster_vehicles = assign_vehicle_to_clusters(centroid_characteristics, nil, nil, clusters) if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
+
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        puts 'Split not available when services have no activity or cluster size is less than 2'
+        log 'Split not available when services have no activity or cluster size is less than 2'
         # TODO : remove marshal dump
         # ensure test_instance_800unaffected_clustered and test_instance_800unaffected_clustered_same_point work
         [Marshal.load(Marshal.dump(service_vrp))]
@@ -380,7 +380,7 @@ module Interpreters
         start_timer = Time.now
         clusterer = c.build(DataSet.new(data_items: data_items), unit_symbols)
         end_timer = Time.now
-        puts "Timer #{end_timer - start_timer}"
+        log "Timer #{end_timer - start_timer}"
 
         metric_limit = cumulated_metrics[options[:cut_symbol]] / nb_clusters
         # raise OptimizerWrapper::DiscordantProblemError.new("Unfitting cluster split metric. Maximum value is greater than average") if max_cut_metrics[options[:cut_symbol]] > metric_limit
@@ -423,14 +423,14 @@ module Interpreters
           linked_objects[i[2]]
         }.flatten
 
-        puts 'Hierarchical Tree : split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
+        log 'Hierarchical Tree : split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
         cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size, vrp.vehicles, vrp.points, clusters)
         adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        puts 'Split hierarchical not available when services have no activity'
+        log 'Split hierarchical not available when services have no activity'
         [service_vrp]
       end
     end

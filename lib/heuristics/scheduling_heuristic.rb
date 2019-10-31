@@ -522,7 +522,7 @@ module Heuristics
           corresponding_vehicle.timewindow.end = route[:tw_end]
           route_vrp = construct_sub_vrp(vrp, corresponding_vehicle, services_ids)
 
-          puts "Re-ordering route for #{vehicle.id} at day #{day} : #{services_ids.size}"
+          log "Re-ordering route for #{vehicle.id} at day #{day} : #{services_ids.size}"
 
           # TODO : test with and without providing initial solution ?
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:current_route])
@@ -531,7 +531,7 @@ module Heuristics
           begin
             result = OptimizerWrapper.solve([service: :ortools, vrp: route_vrp])
           rescue
-            puts 'ORtools could not find a solution for this problem.'
+            log 'ORtools could not find a solution for this problem.'
           end
 
           next if result.nil? || !result[:unassigned].empty?
@@ -548,7 +548,7 @@ module Heuristics
             # this will change @candidate_routes, but it should not be a problem since OR-tools returns a valid solution
             route[:current_route] = compute_route_from(route, result[:routes].first[:activities])
           rescue OptimizerWrapper::SchedulingHeuristicError
-            puts 'Failing to construct route from OR-tools solution'
+            log 'Failing to construct route from OR-tools solution'
           end
         }
       }

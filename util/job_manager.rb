@@ -26,9 +26,19 @@ module OptimizerWrapper
   class Job
     include Resque::Plugins::Status
 
-    def perform
-      tick('Starting job') # Important to kill job before any code
+    @@current_job_id = nil
 
+    def self.current_job_id
+      @@current_job_id
+    end
+
+    def self.current_job_id=(id)
+      @@current_job_id = id
+    end
+
+    def perform
+      Job.current_job_id = self.uuid
+      tick('Starting job') # Important to kill job before any code
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       result = OptimizerWrapper.define_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
@@ -55,8 +65,7 @@ module OptimizerWrapper
       end
       Result.set(self.uuid, p)
     rescue => e
-      puts e
-      puts e.backtrace
+      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
       raise
     end
 

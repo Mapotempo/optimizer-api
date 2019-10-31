@@ -89,8 +89,7 @@ module Interpreters
 
       vrp
     rescue => e
-      puts e
-      puts e.backtrace
+      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
       raise
     end
 
@@ -549,7 +548,7 @@ module Interpreters
         if candidate_route
           candidate_route[:mission_ids] << service.id
         else
-          puts "Can't insert mission #{service.id}"
+          log "Can't insert mission #{service.id}"
         end
       }
       routes

@@ -361,7 +361,7 @@ module Wrappers
         vrp.resolution_vehicle_limit ? "--vehicle_limit #{vrp.resolution_vehicle_limit}" : '',
         "--threads '#{threads}'",
         "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
-      puts cmd
+      log cmd
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
@@ -388,7 +388,7 @@ module Wrappers
       fresh_output = nil
       # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
-        puts (@job ? @job + ' - ' : '') + line
+        log (@job ? @job + ' - ' : '') + line
         out = out ? out + "\n" + line : line
         iterations_start += 1 if /\- iterations start/.match(line)
         if iterations_start == 1
@@ -411,7 +411,7 @@ module Wrappers
       else
         if @thread.value == 9
           out = "Job killed"
-          puts out # Keep trace in worker
+          log out # Keep trace in worker
           out = parse_output(output.path, iterations, fleet, vrp) if cost
         end
         out

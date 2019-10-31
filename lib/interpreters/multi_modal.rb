@@ -208,7 +208,7 @@ module Interpreters
           service: @selected_service,
           vrp: sub_vrp
         }
-        puts "Solve #{sub_vrp.id} sub problem"
+        log "Solve #{sub_vrp.id} sub problem"
         result = OptimizerWrapper.solve([vrp_service])
         result[:routes].each{ |route|
           @convert_table[route[:vehicle_id]] = route[:activities]
@@ -291,8 +291,7 @@ module Interpreters
         rebuild_entire_route(subresults, result)
       end
     rescue => e
-      puts e
-      puts e.backtrace
+      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
       raise
     end
 

@@ -24,6 +24,8 @@ require './wrappers/ortools'
 
 require './lib/cache_manager'
 
+require './util/logger'
+
 module OptimizerWrapper
   TMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'tmp')
   @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
@@ -38,6 +40,8 @@ module OptimizerWrapper
 
   DUMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'dump')
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
+
+  # OptimizerLogger.level = :info
 
   @@c = {
     product_title: 'Optimizers API',

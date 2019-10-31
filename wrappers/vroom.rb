@@ -89,7 +89,7 @@ module Wrappers
 
       return if !result
       tour = result['routes'][0]['steps'].collect{ |step| step['job'] }.compact
-      puts tour.inspect
+      log tour.inspect
 
       cost = (result['summary']['cost']) + vehicle.cost_fixed
       previous = vehicle_have_start ? vehicle.start_point.matrix_index : nil
@@ -242,7 +242,7 @@ module Wrappers
       output.close
 
       cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}'"
-      puts (job ? job + ' - ' : '') + cmd
+      log (job ? job + ' - ' : '') + cmd
       system(cmd)
 
       unless $CHILD_STATUS.nil?

@@ -124,7 +124,7 @@ module Interpreters
 
           sub_problem
         else
-          puts "split hierarchical not available when services have activities"
+          log 'split hierarchical not available when services have activities'
           [vrp]
         end
       }.flatten

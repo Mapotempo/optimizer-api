@@ -37,7 +37,7 @@ module Hull
 
   def self.concave_hull_(vector, k = 3)
     if k == vector.size
-      puts 'ConcaveHull build fail'
+      log 'ConcaveHull build fail'
       return nil
     end
     kk = [[k, 3].max, vector.size - 1].min # make sure k>=3 and k neighbours can be found
@@ -88,7 +88,7 @@ module Hull
   end
 
   def self.convex_hull(vector)
-    puts 'Perform Convex hull'
+    log 'Perform Convex hull'
     vector.sort!{ |a, b| a.last <=> b.last || a.first <=> b.first }.uniq!
     return vector if vector.size <= 3
 

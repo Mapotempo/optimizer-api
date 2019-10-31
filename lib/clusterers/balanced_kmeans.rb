@@ -274,7 +274,7 @@ module Ai4r
             @data_set.data_items.insert(0, @data_set.data_items.delete(item))
           end
           if OptimizerWrapper.config[:debug][:output_kmeans_centroids]
-            puts "[DEBUG] kmeans_centroids : #{@centroids.collect{ |centroid| centroid[2] }.flatten}"
+            log "kmeans_centroids: #{@centroids.collect{ |centroid| centroid[2] }.flatten}", level: :debug
           end
         when 'indices' # for initial assignment only (with the :centroid_indices option)
           @centroid_indices.each do |index|
