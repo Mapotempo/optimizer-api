@@ -41,7 +41,8 @@ module OptimizerWrapper
 
   @@dump_vrp_dir = CacheManager.new(TMP_DIR)
 
-  # OptimizerLogger.level = :info
+  OptimizerLogger.level = :fatal
+  # OptimizerLogger.msg_location_option = nil => nil is default
 
   @@c = {
     product_title: 'Optimizers API',

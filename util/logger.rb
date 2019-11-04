@@ -27,13 +27,39 @@ class OptimizerLogger
     fatal: Logger::FATAL
   }
 
-  @@logger = Logger.new(ENV['LOG_DEV'] || STDOUT)
+  # :full || :partial || nil
+  # :full => display file path and line number of log function call
+  # :partial => display file name and line number of log function call
+  # nil => Do not display any of :partial or :full
+  @@msg_location = nil
+
+  @@logger = Logger.new(ENV['LOG_DEVICE'] || STDOUT)
   @@logger.level = Logger::INFO
 
   @@logger.formatter = proc do |severity, datetime, progname, msg|
     job_id = OptimizerWrapper::Job.current_job_id
     job_id = job_id.nil? ? '' : "#{job_id} - "
-    "[#{datetime}] #{job_id}#{severity} : #{msg}\n"
+
+    progname = progname.empty? ? ' ' : " - #{progname}"
+
+    "[#{datetime}] #{job_id}#{severity}#{progname}: #{msg}\n"
+  end
+
+  def self.define_progname(progname, location_option, caller_loc)
+    call_obj = caller_loc.first.base_label != 'log' ? caller_loc.first : caller_loc.first
+    file = location_option == :full ? call_obj.absolute_path : call_obj.path.scan(/(\w+).rb/)[0][0]
+    lineno = call_obj.lineno
+
+    value = "#{file}:#{lineno}"
+    [progname, value].delete_if(&:empty?).join(' - ')
+  end
+
+  def self.msg_location_option
+    @@msg_location
+  end
+
+  def self.msg_location_option=(value)
+    @@msg_location = value
   end
 
   def self.level=(level)
@@ -48,35 +74,19 @@ class OptimizerLogger
     @@logger.formatter = formatter
   end
 
-  def self.log(msg, options = { level: :info, progname: '' })
-
-    if options[:progname].empty?
-      call_obj = caller_locations.first
-      file = call_obj.path.scan(/(\w+).rb/)[0][0]
-      caller_name = call_obj.base_label
-      lineno = call_obj.lineno
-
-      options[:progname] = "#{file}.#{caller_name}:#{lineno}"
-    end
+  def self.log(msg, level: :info, progname: '')
+    progname = OptimizerLogger.define_progname(progname, @@msg_location, caller_locations) if @@msg_location
 
     @@logger
-      .method(options[:level].nil? ? :info : options[:level])
-      .call(options[:progname]) { msg }
+      .method(level)
+      .call(progname) { msg }
   end
 end
 
 module OptimizerLoggerMethods
   private
+
   def log(msg, level: :info, progname: '')
-    if progname.empty?
-      call_obj = caller_locations.first
-      file = call_obj.path.scan(/(\w+).rb/)[0][0]
-      caller_name = call_obj.base_label
-      lineno = call_obj.lineno
-
-      progname = "#{file}.#{caller_name}:#{lineno}"
-    end
-
     OptimizerLogger.log(msg, level: level, progname: progname)
   end
 end

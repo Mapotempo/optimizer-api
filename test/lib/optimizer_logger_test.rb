@@ -41,7 +41,7 @@ class OptimizerLoggerTest < Minitest::Test
     assert File.exist? './test.log'
     assert_equal 1, File.readlines('./test.log').size
 
-    log 'Unit test logging'
+    log 'Unit test logging', level: :fatal
 
     assert_equal 2, File.readlines('./test.log').size
 
