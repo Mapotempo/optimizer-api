@@ -130,8 +130,10 @@ module OptimizerWrapper
       service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
     }
     unduplicated_services, duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services)
-    duplicated_results = duplicated_services.compact.collect{ |service_vrp|
-      define_process([service_vrp], job, &block)
+    duplicated_results = duplicated_services.compact.collect.with_index{ |service_vrp, repetition|
+      define_process([service_vrp], job) { |wrapper, avancement, total, message, cost, time, solution|
+        block&.call(wrapper, avancement, total, "repetition #{repetition + 1}/#{duplicated_services.size} - " + message, cost, time, solution)
+      }
     }
     split_results = []
     definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
