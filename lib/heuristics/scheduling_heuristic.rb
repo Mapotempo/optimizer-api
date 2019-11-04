@@ -43,7 +43,6 @@ module Heuristics
       @used_to_adjust = []
       @previous_uninserted = nil
       @uninserted = {}
-      @in_initial_routes = vrp.routes.collect{ |route| route[:mission_ids].collect{ |id| id.split('_')[0..-3].join('_') } }.flatten
 
       @previous_candidate_routes = nil
       @candidate_routes = {}
@@ -239,7 +238,6 @@ module Heuristics
       # unaffected all points at this location
       points_at_same_location = @candidate_services_ids.select{ |id| @services_data[id][:point_id] == @services_data[service[:id]][:point_id] }
       points_at_same_location.each{ |id|
-        next if @in_initial_routes.include?(id)
         (1..@services_data[id][:nb_visits]).each{ |visit|
           @uninserted["#{id}_#{visit}_#{@services_data[id][:nb_visits]}"] = {
             original_service: id,
@@ -378,33 +376,63 @@ module Heuristics
     end
 
     def initialize_routes(routes)
-      routes.each{ |defined_route|
-        associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.day.to_i] # TODO : dans clustering vérifier qu'on ne donne pas route à un cluster si le véhicule n'est pas le même
+      inserted_ids = []
+      routes.sort_by{ |route| route[:day] }.each{ |defined_route|
+        associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.day.to_i]
         defined_route.mission_ids.each{ |id|
-          real_id = id.split('_')[0..-3].join('_')
-          associated_route[:current_route] << {
-            id: real_id,
-            point_id: @services_data[real_id][:point_id],
-            considered_setup_duration: @services_data[real_id][:setup_duration],
-            number_in_sequence: id.split('_')[-2].to_i
-          }
-          @candidate_services_ids.delete(real_id)
-          @to_plan_service_ids.delete(real_id)
+          inserted_ids << id
+
+          if associated_route
+            associated_route[:current_route] << {
+              id: id,
+              point_id: @services_data[id][:point_id],
+              number_in_sequence: inserted_ids.count(id)
+            }
+          else
+            @uninserted["#{id}_#{inserted_ids.count(id)}_#{@services_data[id][:nb_visits]}"] = {
+              original_service: id,
+              reason: "Unfeasible route (vehicle #{defined_route.vehicle_id} not available at day #{defined_route.day})"
+            }
+          end
+
+          @candidate_services_ids.delete(id)
+          @to_plan_service_ids.delete(id)
+          # all visits should be assigned manually, or not assigned at all
+          @used_to_adjust << id
 
           # unlock corresponding services
-          services_to_add = @services_unlocked_by[real_id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
+          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
           @to_plan_service_ids += services_to_add
           @unlocked += services_to_add
         }
+
+        next if associated_route.nil?
+
         begin
           update_route(associated_route, 0)
         rescue
           raise OptimizerWrapper::UnsupportedProblemError, 'Initial solution provided is not feasible.'
         end
       }
+
+      check_missing_visits(inserted_ids)
+    end
+
+    def check_missing_visits(inserted_ids)
+      inserted_ids.group_by{ |id| id }.each{ |id, set|
+        next if set.size == @services_data[id][:nb_visits]
+
+        (set.size + 1..@services_data[id][:nb_visits]).each{ |missing_visit|
+          @uninserted["#{id}_#{missing_visit}_#{@services_data[id][:nb_visits]}"] = {
+            original_service: id,
+            reason: "Some visits assigned manually (#{set.size} visits preassigned in routes)"
+          }
+        }
+      }
     end
 
     def update_route(full_route, first_index, first_start = nil)
+      # recomputes each stop associated values (start, arrival, setup ... times) only according to their insertion order
       # TODO : use in insert_point_in_route
       day_route = full_route[:services] || full_route[:current_route]
       day_route if first_index > day_route.size

@@ -473,16 +473,27 @@ module Wrappers
       vrp.routes.empty? || vrp.preprocessing_partitions.empty?
     end
 
-    def assert_service_with_visit_index_in_route_if_periodic(vrp)
-      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') ||
-        vrp.routes.collect{ |route| route[:mission_ids] }.flatten.all?{ |id|
-          decomposition = id.split('_')
-          decomposition.size >= 3 && decomposition[-1] >= decomposition[-2] && vrp.services.collect{ |s| s[:id] }.include?(decomposition[0..-3].join('_'))
-        }
-    end
-
     def assert_route_day_if_periodic(vrp)
       !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:day] }
+    end
+
+    def assert_missions_in_routes_do_exist(vrp)
+      (vrp.routes.to_a.collect{ |r| r[:mission_ids] }.flatten.uniq - vrp.services.collect{ |s| s[:id] }).empty?
+    end
+
+    def assert_not_too_many_visits_in_route(vrp)
+      vrp.routes.to_a.collect{ |r| r[:mission_ids] }.flatten.group_by{ |id| id }.all?{ |id, set|
+        corresponding_service = vrp.services.find{ |s| s[:id] == id }
+        if corresponding_service.nil?
+          true # not to send a confusing error to user, this is detected in assert_missions_in_routes_do_exist
+        else
+          set.size <= corresponding_service.visits_number
+        end
+      }
+    end
+
+    def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
+      vrp.routes.empty? || !vrp.scheduling? || vrp.preprocessing_first_solution_strategy.include?('periodic')
     end
 
     def solve_synchronous?(vrp)

@@ -529,18 +529,14 @@ class HeuristicTest < Minitest::Test
 
     def test_provide_initial_solution
       vrp = FCT.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
-      expected_nb_visits = vrp.visits
-      OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
-
-      routes = [vrp.routes[2]]
-
-      vrp = FCT.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
+      routes = Marshal.load(File.binread('test/fixtures/formatted_route.dump'))
+      routes.first.vehicle.id = 'ANDALUCIA 1'
+      routes.first.mission_ids = ['1810', '1623', '2434', '8508']
+      routes.first.day = 2
       vrp.routes = routes
-      vrp.routes.first.mission_ids.delete_at(1)
-      vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
-      vrp.routes.first.vehicle.id = vehicle_id
-      vrp.routes.first.day = day
+
       expecting = vrp.routes.first.mission_ids
+      expected_nb_visits = vrp.visits
 
       # check generated routes
       periodic = Interpreters::PeriodicVisits.new(vrp)
@@ -549,10 +545,11 @@ class HeuristicTest < Minitest::Test
       assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:current_route].size == expecting.size } })
 
       # providing uncomplete solution (compared to solution without initial routes)
-      puts "On vehicle #{vehicle_id}_#{day}, expecting #{expecting}"
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      puts "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_equal 10, result[:unassigned].select{ |un| un[:reason] == 'Some visits assigned manually (1 visits preassigned in routes)' }.size
       assert_equal expected_nb_visits, result[:routes].collect{ |r| r[:activities].size - 2 }.flatten.sum + result[:unassigned].size
-      assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == "#{vehicle_id}_#{day}" }[:activities].collect{ |a| a[:service_id] } & expecting).size
+      assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == 'ANDALUCIA 1_2' }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
 
       # providing different solution (compared to solution without initial routes)
       vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
@@ -562,21 +559,17 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.vehicle.id = vehicle_id
       vrp.routes.first.day = day
 
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: {vrp: [:ortools] }}, vrp, nil)
       assert_equal expected_nb_visits, result[:routes].collect{ |r| r[:activities].size - 2 }.flatten.sum + result[:unassigned].size
-      assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == "#{vehicle_id}_#{day}" }[:activities].collect{ |a| a[:service_id] } & expecting).size
+      assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == "#{vehicle_id}_#{day}" }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
     end
 
     def test_reject_unfeasible_initial_solution
       vrp = FCT.load_vrp(self, fixture_file: 'instance_baleares2')
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.dump'))
 
-      routes = [vrp.routes[0]]
-
-      vrp = FCT.load_vrp(self, fixture_file: 'instance_baleares2')
-      vrp.routes = routes
-      vrp.services.find{ |s| s[:id] == routes.first.mission_ids[0].split('_').first }[:activity][:timewindows] = [{start: 43500, end: 55500}]
-      vrp.services.find{ |s| s[:id] == routes.first.mission_ids[1].split('_').first }[:activity][:timewindows] = [{start: 31500, end: 43500}]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] = [{ start: 43500, end: 55500 }]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [{ start: 31500, end: 43500 }]
       vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
       vrp.routes.first.vehicle.id = vehicle_id
       vrp.routes.first.day = day
@@ -591,6 +584,17 @@ class HeuristicTest < Minitest::Test
       end
 
       assert errored, 'Expecting this to fail : solution is not feasible'
+    end
+
+    def test_unassign_if_vehicle_not_available_at_provided_day
+      vrp = FCT.load_vrp(self, fixture_file: 'instance_baleares2')
+      vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.dump'))
+      vrp.routes.first.vehicle.id = 'BALEARES'
+      vrp.routes.first.day = 300
+
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_equal 36, result[:unassigned].size
+      assert_equal 9, result[:unassigned].select{ |un| un[:reason] == 'Unfeasible route (vehicle BALEARES not available at day 300)' }.size
     end
   end
 end
