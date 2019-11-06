@@ -1,5 +1,7 @@
 require 'fileutils'
 
+class CacheError < StandardError; end
+
 class CacheManager
   attr_reader :cache
 
@@ -8,7 +10,7 @@ class CacheManager
   end
 
   def read(name, options = nil)
-    filtered_name = name.parameterize(separator: '')
+    filtered_name = name.to_s.parameterize(separator: '')
     if File.exist?(File.join(@cache, filtered_name))
       File.open(File.join(@cache, filtered_name), 'r').read
     end
@@ -20,7 +22,7 @@ class CacheManager
     raise CacheError.new('Stored value is not a String') if !value.is_a? String
 
     FileUtils.mkdir_p(@cache)
-    f = File.new(File.join(@cache, name.parameterize(separator: '')), 'w')
+    f = File.new(File.join(@cache, name.to_s.parameterize(separator: '')), 'w')
     f.write(value) if value.to_s.bytesize < 100.megabytes
     f.close
   rescue StandardError => e
