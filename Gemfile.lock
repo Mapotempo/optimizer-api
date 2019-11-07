@@ -17,6 +17,7 @@ GEM
       tzinfo (~> 1.1)
     ai4r (1.13)
     ansi (1.5.0)
+    anyway_config (1.4.4)
     ast (2.4.0)
     axiom-types (0.1.1)
       descendants_tracker (~> 0.0.4)
@@ -69,6 +70,8 @@ GEM
     jaro_winkler (1.5.3)
     json (2.2.0)
     kramdown (1.17.0)
+    litecable (0.5.0)
+      anyway_config (~> 1.0)
     mime-types (3.2.2)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2019.0331)
@@ -147,6 +150,11 @@ GEM
       rainbow (>= 2.2.2, < 4.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 1.4.0, < 1.7)
+    rubrowser (2.7.1)
+      litecable
+      parser (~> 2.3, >= 2.3.0)
+      puma
+      websocket
     ruby-progressbar (1.10.1)
     sim_annealing (0.0.2)
     simplecov (0.17.0)
@@ -190,6 +198,7 @@ GEM
       coercible (~> 1.0)
       descendants_tracker (~> 0.0, >= 0.0.3)
       equalizer (~> 0.0, >= 0.0.9)
+    websocket (1.2.8)
     yard (0.9.20)
 
 PLATFORMS
@@ -229,6 +238,7 @@ DEPENDENCIES
   rgeo
   rgeo-geojson
   rubocop
+  rubrowser
   sim_annealing
   simplecov
   solargraph
