@@ -36,9 +36,13 @@ gem 'google-protobuf', '>=3'
 group :development, :test do
   gem 'byebug'
   gem 'benchmark-ips'
-  # For linting and offline code analysis in vscode
+
+  # For linting and offline code analysis
   gem 'rubocop'
   gem 'solargraph'
+
+  # For creating dependency graphs
+  gem 'rubrowser'
 
   ## Next gems to use the debuger of vscode directly
   ## but due to a bug in rubyide/vscode-ruby it doesn't
