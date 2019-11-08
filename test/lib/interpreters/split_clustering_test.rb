@@ -536,10 +536,15 @@ class SplitClusteringTest < Minitest::Test
 
     def test_ignore_debug_parameter_if_no_coordinates
       vrp = FCT.load_vrp(self)
-      vrp.debug_output_clusters = true
 
-      # barely checks that function does not produce an error
-      Interpreters::SplitClustering.split_clusters([{ vrp: vrp }])
+      begin
+        OptimizerWrapper.config[:debug][:output_clusters] = true
+
+        # barely checks that function does not produce an error
+        Interpreters::SplitClustering.split_clusters([{ vrp: vrp }])
+      ensure
+        OptimizerWrapper.config[:debug][:output_clusters] == false
+      end
     end
 
     def test_results_regularity

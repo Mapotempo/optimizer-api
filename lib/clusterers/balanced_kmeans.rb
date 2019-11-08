@@ -51,7 +51,7 @@ module Ai4r
       # Items will be clustered in "number_of_clusters" different
       # clusters.
 
-      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, output_centroids, options = {})
+      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, options = {})
         @data_set = data_set
         reduced_number_of_clusters = [number_of_clusters, data_set.data_items.collect{ |data_item| [data_item[0], data_item[1]] }.uniq.size].min
         unless reduced_number_of_clusters == number_of_clusters || @centroid_indices.empty?
@@ -63,7 +63,6 @@ module Ai4r
 
         @cut_limit = cut_limit
         @cut_symbol = cut_symbol
-        @output_centroids = output_centroids
         @unit_symbols = unit_symbols
         @remaining_skills = @expected_characteristics.dup if @expected_characteristics
         @manage_empty_clusters_iterations = 0
@@ -274,7 +273,7 @@ module Ai4r
 
             @data_set.data_items.insert(0, @data_set.data_items.delete(item))
           end
-          if @output_centroids
+          if OptimizerWrapper.config[:debug][:output_kmeans_centroids]
             puts "[DEBUG] kmeans_centroids : #{@centroids.collect{ |centroid| centroid[2] }.flatten}"
           end
         when 'indices' # for initial assignment only (with the :centroid_indices option)

@@ -75,10 +75,6 @@ module Models
     field :schedule_unavailable_indices, default: nil
     field :schedule_unavailable_date, default: nil
 
-    field :debug_output_kmeans_centroids, default: false
-    field :debug_output_clusters, default: false
-    field :debug_schedule_output, default: false
-
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
     #
@@ -124,7 +120,6 @@ module Models
       self.resolution = configuration[:resolution] if configuration[:resolution]
       self.schedule = configuration[:schedule] if configuration[:schedule]
       self.restitution = configuration[:restitution] if configuration[:restitution]
-      self.debug = configuration[:debug] if configuration[:debug]
     end
 
     def restitution=(restitution)
@@ -182,12 +177,6 @@ module Models
       self.schedule_range_date = schedule[:range_date]
       self.schedule_unavailable_indices = schedule[:unavailable_indices]
       self.schedule_unavailable_date = schedule[:unavailable_date]
-    end
-
-    def debug=(debug)
-      self.debug_output_kmeans_centroids = debug[:output_kmeans_centroids]
-      self.debug_output_clusters = debug[:output_clusters]
-      self.debug_schedule_output = debug[:schedule_output]
     end
 
     def services_duration

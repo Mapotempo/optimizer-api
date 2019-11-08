@@ -73,7 +73,7 @@ module Heuristics
       @starting_time = Time.now
       @cost = 0
 
-      @output_tool = vrp.debug_schedule_output ? OutputHelper::Scheduling.new(vrp.name, job, @schedule_end) : nil
+      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, job, @schedule_end) : nil
     end
 
     def compute_initial_solution(vrp, &block)

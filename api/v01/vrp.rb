@@ -352,6 +352,7 @@ module Api
         this.optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
+        this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
         this.optional(:floating_precision, type: Integer, default: 0, desc: 'Number of decimals used for scheduling computation.')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
@@ -378,13 +379,6 @@ module Api
         this.optional(:unavailable_indices, type: Array[Integer], desc: '[planning] Exclude some days indices from the resolution')
         this.optional(:unavailable_date, type: Array[Date], desc: '[planning] Exclude some days from the resolution')
         this.mutually_exclusive :unavailable_indices, :unavailable_date
-      end
-
-      def self.vrp_request_debug(this)
-        this.optional(:output_kmeans_centroids, type: Boolean, default: OptimizerWrapper.config[:debug_output_kmeans_centroids], desc: '[debug] Outputs centroids used for kmeans clustering if clusters are generated')
-        this.optional(:output_clusters, type: Boolean, default: OptimizerWrapper.config[:debug_output_clusters], desc: '[debug] Outputs clusters generated in csv/geojson')
-        this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug_batch_heuristic], desc: '[debug] Each heuristic will be computed')
-        this.optional(:schedule_output, type: Boolean, default: OptimizerWrapper.config[:debug_schedule_output], desc: '[debug] Generates file with scheduling heuristic construction steps.')
       end
 
       namespace :vrp do
@@ -456,9 +450,6 @@ module Api
                 end
                 optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
                   Vrp.vrp_request_schedule(self)
-                end
-                optional(:debug, type: Hash, desc: 'Debug outputs') do
-                  Vrp.vrp_request_debug(self)
                 end
               end
             end
