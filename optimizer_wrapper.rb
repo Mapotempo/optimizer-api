@@ -69,7 +69,7 @@ module OptimizerWrapper
 
   def self.wrapper_vrp(api_key, services, vrp, checksum, job_id = nil)
     # Get complete matrix in case of problem to dump
-    if ENV['DUMP_VRP'] && vrp.name
+    if ENV['DUMP_VRP'].to_s == 'true' && vrp.name
       vrp.compute_matrix
       File.write('test/fixtures/' + vrp.name + '.dump', Base64.encode64(Marshal::dump(vrp)))
     end

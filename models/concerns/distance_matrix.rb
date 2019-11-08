@@ -80,7 +80,7 @@ module DistanceMatrix
   end
 
   def need_matrix_time?
-    ENV['DUMP_VRP'] || !(services.find{ |service|
+    ENV['DUMP_VRP'].to_s == 'true' || !(services.find{ |service|
       !service.activity.timewindows.empty? || service.activity.late_multiplier && service.activity.late_multiplier != 0
     } ||
     shipments.find{ |shipment|
@@ -91,7 +91,7 @@ module DistanceMatrix
   end
 
   def need_matrix_distance?
-    ENV['DUMP_VRP'] || !vehicles.find(&:need_matrix_distance?).nil?
+    ENV['DUMP_VRP'].to_s == 'true' || !vehicles.find(&:need_matrix_distance?).nil?
   end
 
   def need_matrix_value?
