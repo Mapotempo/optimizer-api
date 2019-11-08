@@ -63,6 +63,4 @@ module OptimizerWrapper
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
     }
   }
-
-  DUMP_VRP = false
 end

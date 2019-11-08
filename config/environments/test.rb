@@ -93,6 +93,4 @@ module OptimizerWrapper
     },
     solve_synchronously: true
   }
-
-  DUMP_VRP = false
 end
