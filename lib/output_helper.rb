@@ -93,7 +93,7 @@ module OutputHelper
       }.sum
       {
         type: 'Feature',
-        properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } + [[:duration, duration]]],
+        properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } + [[:duration, duration]] + [[:vehicle, service_vrp[:vrp].vehicles.first&.id]]],
         geometry: {
           type: 'Polygon',
           coordinates: [hull + [hull.first]]
@@ -121,7 +121,7 @@ module OutputHelper
   # To output data about scheduling heuristic process
   class Scheduling
     def initialize(name, job, schedule_end)
-      @file_name = ("scheduling_construction#{"_#{name}" if vrp.name}#{"_#{job}" if job}" + '_' + Time.now.strftime('%H:%M:%S')).parameterize
+      @file_name = ("scheduling_construction#{"_#{name}" if name}#{"_#{job}" if job}").parameterize
 
       @scheduling_file = ''
       @scheduling_file << 'customer_id,nb_visits,'

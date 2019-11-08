@@ -56,7 +56,7 @@ module Interpreters
       }.flatten.compact
       two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
 
-      OutputHelper::Clustering.new(all_service_vrps.first[:vrp].name, job).generate_files(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if services_vrps[0][:vrp][:debug_output_clusters] && services_vrps.size < all_service_vrps.size
+      OutputHelper::Clustering.new(all_service_vrps.first[:vrp].name, job).generate_files(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if OptimizerWrapper.config[:debug][:output_clusters] && services_vrps.size < all_service_vrps.size
 
       [all_service_vrps, split_results]
     rescue => e
@@ -120,7 +120,7 @@ module Interpreters
                           vrp.services.select{ |service| service.quantities.any?(&:empty) }).uniq
       vrp.services -= empties_or_fills
       sub_service_vrps = split_balanced_kmeans(service_vrp, 2)
-      output_clusters(sub_service_vrps, job) if service_vrp[:vrp][:debug_output_clusters]
+      output_clusters(sub_service_vrps, job) if OptimizerWrapper.config[:debug][:output_clusters]
       result = []
       sub_service_vrps.sort_by{ |sub_service_vrp| -sub_service_vrp[:vrp].services.size }.each_with_index{ |sub_service_vrp, index|
         sub_vrp = sub_service_vrp[:vrp]
@@ -260,7 +260,7 @@ module Interpreters
 
         c.incompatibility_function = options[:incompatibility_function]
 
-        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, options[:cut_symbol], ratio_metric, options[:output_centroids], options)
+        c.build(DataSet.new(data_items: data_items), unit_symbols, nb_clusters, options[:cut_symbol], ratio_metric, options)
 
         c.clusters.delete([])
         values = c.clusters.collect{ |cluster| cluster.data_items.collect{ |i| i[3][options[:cut_symbol]] }.sum.to_i }
@@ -340,8 +340,6 @@ module Interpreters
         raise OptimizerWrapper::UnsupportedProblemError, 'Cannot use balanced kmeans if there are vehicles with alternative skills' if vrp.vehicles.any?{ |v| v[:skills].any?{ |skill| skill.is_a?(Array) } && v[:skills].size > 1 }
 
         options[:expected_characteristics] = generate_expected_characteristics(vrp.vehicles)
-        options[:output_centroids] = vrp.debug_output_clusters
-
         clusters, _centroids, centroid_characteristics = kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options, &block)
 
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
