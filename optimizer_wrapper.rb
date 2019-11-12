@@ -251,7 +251,7 @@ module OptimizerWrapper
           if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
             # TODO: Move select best heuristic in each solver
             block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
-            Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
+            Interpreters::SeveralSolutions.custom_heuristics(service, vrp)
 
             block.call(nil, nil, nil, 'process clique clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
             cluster_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
