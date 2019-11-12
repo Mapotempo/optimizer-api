@@ -56,7 +56,7 @@ module Interpreters
       }.flatten.compact
       two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
 
-      OutputHelper::Clustering.new(all_service_vrps.first[:vrp].name, job).generate_files(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages) if OptimizerWrapper.config[:debug][:output_clusters] && services_vrps.size < all_service_vrps.size
+      OutputHelper::Clustering.new.generate_files(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages, job) if OptimizerWrapper.config[:debug][:output_clusters] && services_vrps.size < all_service_vrps.size
 
       [all_service_vrps, split_results]
     rescue => e
@@ -120,7 +120,7 @@ module Interpreters
                           vrp.services.select{ |service| service.quantities.any?(&:empty) }).uniq
       vrp.services -= empties_or_fills
       sub_service_vrps = split_balanced_kmeans(service_vrp, 2)
-      output_clusters(sub_service_vrps, job) if OptimizerWrapper.config[:debug][:output_clusters]
+
       result = []
       sub_service_vrps.sort_by{ |sub_service_vrp| -sub_service_vrp[:vrp].services.size }.each_with_index{ |sub_service_vrp, index|
         sub_vrp = sub_service_vrp[:vrp]
