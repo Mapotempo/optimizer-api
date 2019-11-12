@@ -65,7 +65,12 @@ module Wrappers
 
     def solve(vrp, job = nil, thread_proc = nil, &block)
       if vrp.points.empty? || vrp.services.empty?
-        return
+        return {
+          cost: 0,
+          solvers: ['vroom'],
+          routes: [],
+          unassigned: []
+        }
       end
 
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
