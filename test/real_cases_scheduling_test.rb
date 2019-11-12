@@ -44,9 +44,9 @@ class HeuristicTest < Minitest::Test
 
     def test_instance_andalucia2
       vrp = FCT.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal 11, result[:unassigned].size
+      assert_equal 35, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
       assert_equal result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:service_id] }.collect{ |activity| activity[:detail][:quantities][0][:value] }.sum }.sum + result[:unassigned].collect{ |unassigned| unassigned[:detail][:quantities][0][:value] }.sum, vrp.services.collect{ |service| service[:quantities][0][:value] }.sum
       assert result[:routes].none?{ |route| route[:activities].reject{ |stop| stop[:detail][:quantities].empty? }.collect{ |stop| stop[:detail][:quantities][0][:value] }.sum > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] }
@@ -202,19 +202,16 @@ class HeuristicTest < Minitest::Test
       FCT.multipe_matrices_required(vrps, self)
 
       unassigned_visits = []
-      unassigned_services = []
       vrps.each_with_index{ |vrp, vrp_i|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
         vrp.name = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
         unassigned_visits << result[:unassigned].size
-        unassigned_services << result[:unassigned].collect{ |un| un[:service_id].split('_')[0..-3].join('_') }.uniq.size
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal (ENV['TRAVIS'] ? 466 : 464), unassigned_visits.sum, "Expecting #{(ENV['TRAVIS'] ? 466 : 464)} unassigned visits, have #{unassigned_visits.sum}"
-      assert_equal (ENV['TRAVIS'] ? 272 : 272), unassigned_services.sum, "Expecting #{(ENV['TRAVIS'] ? 272 : 272)} unassigned visits, have #{unassigned_services.sum}"
+      assert_equal 421, unassigned_visits.sum, "Expecting 421 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_performance_13vl
@@ -222,19 +219,16 @@ class HeuristicTest < Minitest::Test
       FCT.multipe_matrices_required(vrps, self)
 
       unassigned_visits = []
-      unassigned_services = []
       vrps.each_with_index{ |vrp, vrp_i|
         puts "solving problem #{vrp_i + 1}/#{vrps.size}"
         vrp.preprocessing_partitions = nil
         vrp.name = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
         unassigned_visits << result[:unassigned].size
-        unassigned_services << result[:unassigned].collect{ |un| un[:service_id].split('_')[0..-3].join('_') }.uniq.size
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal (ENV['TRAVIS'] ? 338 : 343), unassigned_visits.sum, "Expecting #{(ENV['TRAVIS'] ? 338 : 343)} unassigned visits, have #{unassigned_visits.sum}"
-      assert_equal (ENV['TRAVIS'] ? 299 : 293), unassigned_services.sum, "Expecting #{(ENV['TRAVIS'] ? 299 : 293)} unassigned visits, have #{unassigned_services.sum}"
+      assert_equal 356, unassigned_visits.sum, "Expecting 356 unassigned visits, have #{unassigned_visits.sum}"
     end
   end
 end
