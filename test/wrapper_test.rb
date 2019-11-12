@@ -1789,7 +1789,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unreachable' }.size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.' }.size
   end
 
   def test_impossible_service_too_far_distance
@@ -1848,7 +1848,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unreachable' }.size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.' }.size
   end
 
   def test_impossible_service_capacity
@@ -2860,6 +2860,47 @@ class WrapperTest < Minitest::Test
       end: 20
     }
     assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(FCT.create(vrp))
+  end
+
+  def test_feasible_if_tardiness_allowed
+    vrp = VRP.basic
+
+    vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
+    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(FCT.create(vrp), []).size, 'All services (3) should be eliminated'
+
+    vrp[:vehicles].first[:cost_late_multiplier] = 1
+    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(FCT.create(vrp), []).size, 'No services should be eliminated due to vehicle timewindow since tardiness is allowed'
+
+    vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 3 }]
+    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(FCT.create(vrp), []).size, 'First service should be eliminated due its timewindow'
+
+    vrp[:services].first[:activity][:late_multiplier] = 1
+    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(FCT.create(vrp), []).size, 'First service should not be eliminated due to its timewindow since tardiness is allowed'
+  end
+
+  def test_return_empty_if_all_eliminated
+    vrp = VRP.basic
+    vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
+    vrp[:vehicles].first[:end_point_id] = vrp[:vehicles].first[:start_point_id]
+    assert OptimizerWrapper.solve([service: :vroom, vrp: Models::Vrp.create(vrp)])
+  end
+
+  def test_eliminate_even_if_no_start_or_end
+    vrp = VRP.basic
+    vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
+
+    vrp[:vehicles].first[:start_point_id] = nil
+    vrp[:vehicles].first[:end_point_id] = 'point_0'
+    assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(FCT.create(vrp), []).size, 'Two services should be eliminated even if there is no vehicle start'
+
+    vrp[:vehicles].first[:start_point_id] = 'point_0'
+    vrp[:vehicles].first[:end_point_id] = nil
+    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(FCT.create(vrp), []).size, 'All services (3) should be eliminated even if there is no vehicle end'
+
+    vrp[:vehicles].first[:start_point_id] = nil
+    vrp[:vehicles].first[:end_point_id] = nil
+    vrp[:services].first[:activity][:duration] = 2
+    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(FCT.create(vrp), []).size, 'First service should be eliminated even if there is no vehicle start nor end'
   end
 
   def test_work_day_entity_after_eventual_vehicle

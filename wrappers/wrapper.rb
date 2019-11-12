@@ -676,20 +676,25 @@ module Wrappers
       # check distances from vehicle depot is feasible
       vrp.services.each{ |service|
         index = service.activity.point.matrix_index
-        found = vrp.vehicles.find{ |vehicle|
-          if vehicle.start_point_id && vehicle.end_point_id &&
-            (vehicle.cost_time_multiplier > 0 && (vehicle.timewindow && vehicle.timewindow.start && vehicle.timewindow.end || vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?) ||
-            vehicle.cost_distance_multiplier > 0 && vehicle.distance)
 
-            start_index = vehicle.start_point.matrix_index
-            end_index = vehicle.end_point.matrix_index
+        # Check via vehicle time-windows
+        reachable_by_a_vehicle = vrp.vehicles.find{ |vehicle|
+          if (vehicle.cost_time_multiplier&.positive? && !vehicle.cost_late_multiplier&.positive? && ((vehicle.timewindow&.start && vehicle.timewindow&.end) || vehicle.sequence_timewindows&.size&.positive? )) ||
+             (vehicle.cost_distance_multiplier&.positive? && vehicle.distance)
 
-            metric = vehicle.cost_time_multiplier > 0 ? :time : :distance
-            cost = vrp.matrices[0][metric][start_index][index] + vrp.matrices[0][metric][index][end_index]
+            metric = vehicle.cost_time_multiplier&.positive? ? :time : :distance
+
+            start_index = vehicle.start_point&.matrix_index
+            end_index = vehicle.end_point&.matrix_index
+
+            cost = 0
+            cost += vrp.matrices[0][metric][start_index][index]                   if start_index
+            cost += service.activity.duration                                     if metric == :time
+            cost += vrp.matrices[0][metric][index][end_index]                     if end_index
 
             if metric == :time
               vehicle_available_time = vehicle.timewindow.end - vehicle.timewindow.start if vehicle.timewindow
-              vehicle_available_time = vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max if vehicle.sequence_timewindows && !vehicle.sequence_timewindows.empty?
+              vehicle_available_time = vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max if vehicle.sequence_timewindows&.size&.positive?
               vehicle_available_time >= cost
             else
               vehicle.distance >= cost
@@ -698,23 +703,40 @@ module Wrappers
             true
           end
         }
-        check_approach_return = vrp.matrices.all?{ |matrix| matrix[:time] } && vrp.vehicles.all?{ |vehicle|
-          matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }
-          earliest_arrival = vehicle.timewindow.start + matrix[:time][vehicle.start_point.matrix_index][index] if vehicle.start_point_id && vehicle.timewindow && vehicle.timewindow.start
-          latest_arrival = vehicle.timewindow.end - service.activity.duration - matrix[:time][index][vehicle.end_point.matrix_index] if vehicle.end_point_id && vehicle.timewindow && vehicle.timewindow.end
 
-          check_approach = (service.activity.late_multiplier.nil? || service.activity.late_multiplier == 0) && !service.activity.timewindows.empty? && service.activity.timewindows.all?{ |tw|
-            tw.end && earliest_arrival && earliest_arrival > tw.end
-          }
-          check_return = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier == 0) && !service.activity.timewindows.empty? && service.activity.timewindows.all?{ |tw|
-            tw.start && latest_arrival && tw.start > latest_arrival
-          }
-          check_approach || check_return || latest_arrival && earliest_arrival && earliest_arrival > latest_arrival
-        }
+        if !reachable_by_a_vehicle
+          add_unassigned(unfeasible, vrp, service, 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.')
+          next
+        end
 
-        if !found && unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
-          add_unassigned(unfeasible, vrp, service, 'Unreachable')
-        elsif check_approach_return
+        # Check via service time-windows
+        service_unreachable_within_its_tw = false
+        if !service.activity.timewindows.empty?
+          service_unreachable_within_its_tw = vrp.matrices.all?{ |matrix| matrix[:time] } && vrp.vehicles.all?{ |vehicle|
+            matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }
+
+            if !service.activity.late_multiplier&.positive? # if service tw_violation is not allowed
+              earliest_arrival = 0
+              earliest_arrival += vehicle.timewindow.start                               if vehicle.timewindow&.start
+              earliest_arrival += matrix[:time][vehicle.start_point.matrix_index][index] if vehicle.start_point_id
+              timely_arrival_not_possible = service.activity.timewindows.all?{ |tw|
+                tw.end && earliest_arrival && earliest_arrival > tw.end
+              }
+            end
+
+            if !vehicle.cost_late_multiplier&.positive? && (vehicle.timewindow&.end || vehicle.sequence_timewindows&.size&.positive?) # if vehicle tw_violation is not allowed
+              vehicle_end = vehicle.timewindow&.end || vehicle.sequence_timewindows.collect(&:end).max
+              latest_arrival = vehicle_end - service.activity.duration
+              latest_arrival -= matrix[:time][index][vehicle.end_point.matrix_index] if vehicle.end_point_id
+              timely_return_not_possible = service.activity.timewindows.all?{ |tw|
+                tw.start && latest_arrival && latest_arrival < tw.start
+              }
+            end
+            timely_arrival_not_possible || timely_return_not_possible
+          }
+        end
+
+        if service_unreachable_within_its_tw
           add_unassigned(unfeasible, vrp, service, 'Service cannot be reached within its timewindows')
         end
       }
