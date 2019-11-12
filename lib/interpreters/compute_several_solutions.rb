@@ -123,7 +123,9 @@ module Interpreters
       end
     end
 
-    def self.custom_heuristics(service, vrp, block)
+    def self.custom_heuristics(service, vrp)
+      return { vrp: vrp, service: service } if service == :vroom
+
       service_vrp = { vrp: vrp, service: service }
       if vrp.preprocessing_first_solution_strategy && !vrp.preprocessing_first_solution_strategy.include?('periodic')
         find_best_heuristic(service_vrp)
