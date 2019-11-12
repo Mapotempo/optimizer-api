@@ -21,12 +21,10 @@ module OutputHelper
 
   # To output clusters generated
   class Clustering
-    def initialize(vrp_name, job)
-      @job = job
-      @file_name = ('generated_clusters' + ("_#{vrp_name}" if vrp_name).to_s + ("_#{@job}" if @job).to_s + '_' + Time.now.strftime('%H:%M:%S')).parameterize
-    end
+    def generate_files(all_service_vrps, vehicles = [], two_stages = false, job = nil)
+      vrp_name = all_service_vrps.first[:vrp].name
+      @file_name = ('generated_clusters' + ("_#{vrp_name}" if vrp_name).to_s + ("_#{job}" if job).to_s + '_' + Time.now.strftime('%H:%M:%S')).parameterize
 
-    def generate_files(all_service_vrps, vehicles = [], two_stages = false)
       csv_lines = if vehicles.first.sequence_timewindows.size > 1
         [['name', 'lat', 'lng', 'tags', 'vehicle_id', 'start depot', 'end depot']]
       else
@@ -109,9 +107,9 @@ module OutputHelper
         service.activity.point.location.lon,
         (prefix || '') + cluster_index.to_s,
         vrp.vehicles.first&.id,
-        tw_reference.start,
-        tw_reference.end,
-        tw_reference.day_index,
+        tw_reference&.start,
+        tw_reference&.end,
+        tw_reference&.day_index,
         vrp.vehicles.first&.start_point&.id,
         vrp.vehicles.first&.end_point&.id
       ]

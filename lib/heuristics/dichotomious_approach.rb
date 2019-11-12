@@ -382,7 +382,7 @@ module Interpreters
           level: service_vrp[:level]
         }
       end
-      SplitClustering.output_clusters(split_service_vrps) if OptimizerWrapper.config[:debug][:output_clusters]
+      OutputHelper::Clustering.new.generate_files(split_service_vrps) if OptimizerWrapper.config[:debug][:output_clusters]
 
       split_service_vrps
     end
