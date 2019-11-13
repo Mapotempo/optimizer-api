@@ -193,7 +193,7 @@ class HeuristicTest < Minitest::Test
       }
 
       limit = ENV['TRAVIS'] ? vrp.visits * 7.5 / 100.0 : vrp.visits * 6 / 100.0
-      assert result[:unassigned].size < limit, "#{result[:unassigned].size * 100.0 / vrp.visits}% unassigned instead of #{limit}% authorized"
+      assert result[:unassigned].size < limit, "#{result[:unassigned].size}(#{result[:unassigned].size * 100.0 / vrp.visits}%) unassigned instead of #{limit}(#{limit * 100.0 / vrp.visits}%) authorized"
       assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
     end
 
