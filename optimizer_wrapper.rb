@@ -226,73 +226,54 @@ module OptimizerWrapper
 
           vrp = config[:services][service].simplify_constraints(vrp)
 
-          if !vrp.services.empty? || !vrp.shipments.empty? || !vrp.rests.empty?
-            unfeasible_services.each{ |una_service|
-              index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
-              if index
-                services_to_reinject << vrp.services.slice!(index)
-              end
-
-              next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
-              una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-            } if vrp.resolution_solver_parameter == -1 || !vrp.resolution_solver || vrp.scheduling?
-            periodic = Interpreters::PeriodicVisits.new(vrp)
-            vrp = periodic.expand(vrp, job) {
-              block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
-            }
-            if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
-              add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, unfeasible_services)
+          # Remove infeasible services
+          unfeasible_services.each{ |una_service|
+            index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+            if index
+              services_to_reinject << vrp.services.slice!(index)
             end
-            if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
-              block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
-              # Select best heuristic
-              Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
-              unfeasible_services.each{ |una_service|
-                index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
-                if index
-                  services_to_reinject << vrp.services.slice!(index)
-                end
 
-                next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
-                una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-              }
-              block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
-              cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
-                block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block && !vrp.dichotomious_process?
-                time_start = Time.now
-                result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
-                    if job
-                      actual_result = Result.get(job) || { 'pids' => nil }
-                      if cluster_vrp[:restitution_csv]
-                        actual_result[:csv] = true
-                      end
-                      actual_result['pids'] = pids
-                      Result.set(job, actual_result)
+            next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
+            una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
+          }
+
+          periodic = Interpreters::PeriodicVisits.new(vrp)
+          vrp = periodic.expand(vrp, job) {
+            block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
+          }
+          if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
+            add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, unfeasible_services)
+          end
+          if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+            block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
+            # Select best heuristic
+            Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
+            block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
+            cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
+              block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block && !vrp.dichotomious_process?
+              time_start = Time.now
+              result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
+                  if job
+                    actual_result = Result.get(job) || { 'pids' => nil }
+                    if cluster_vrp[:restitution_csv]
+                      actual_result[:csv] = true
                     end
-                  }) { |wrapper, avancement, total, message, cost, time, solution|
-                  block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block && !vrp.dichotomious_process?
-                }
-                if result.class.name == 'Hash' # result.is_a?(Hash) not working
-                  result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-                  block.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if block && vrp.dichotomious_process?
-                  parse_result(cluster_vrp, result)
-                elsif result.class.name == 'String' # result.is_a?(String) not working
-                  raise RuntimeError.new(result) unless result == "Job killed"
-                elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
-                  raise RuntimeError.new('No solution provided') unless vrp.restitution_allow_empty_result
-                end
+                    actual_result['pids'] = pids
+                    Result.set(job, actual_result)
+                  end
+                }) { |wrapper, avancement, total, message, cost, time, solution|
+                block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block && !vrp.dichotomious_process?
+              }
+              if result.class.name == 'Hash' # result.is_a?(Hash) not working
+                result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+                block.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if block && vrp.dichotomious_process?
+                parse_result(cluster_vrp, result)
+              elsif result.class.name == 'String' # result.is_a?(String) not working
+                raise RuntimeError.new(result) unless result == "Job killed"
+              elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
+                raise RuntimeError.new('No solution provided') unless vrp.restitution_allow_empty_result
               end
             end
-          else # TODO remove ?
-            cluster_result = {
-              cost: nil,
-              solvers: [service.to_s],
-              iterations: nil,
-              routes: [],
-              unassigned: [],
-              elapsed: nil,
-              total_distance: nil
-            }
           end
 
           # Reintegrate unfeasible services deleted from vrp.services to help ortools
