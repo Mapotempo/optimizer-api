@@ -21,11 +21,11 @@ module OutputHelper
 
   # To output clusters generated
   class Clustering
-    def generate_files(all_service_vrps, vehicles = [], two_stages = false, job = nil)
+    def self.generate_files(all_service_vrps, vehicles = [], two_stages = false, job = nil)
       vrp_name = all_service_vrps.first[:vrp].name
-      @file_name = ('generated_clusters' + ("_#{vrp_name}" if vrp_name).to_s + ("_#{job}" if job).to_s + '_' + Time.now.strftime('%H:%M:%S')).parameterize
+      file_name = ('generated_clusters' + '_' + ([vrp_name, job, Time.now.strftime('%H:%M:%S')].compact.join('_'))).parameterize
 
-      csv_lines = if vehicles.first.sequence_timewindows.size > 1
+      csv_lines = if !vehicles.empty? && vehicles.first.sequence_timewindows.to_a.size > 1
         [['name', 'lat', 'lng', 'tags', 'vehicle_id', 'start depot', 'end depot']]
       else
         [['name', 'lat', 'lng', 'tags', 'vehicle_id', 'tw_start', 'tw_end', 'day', 'start depot', 'end depot']]
@@ -53,7 +53,7 @@ module OutputHelper
         }
       end
 
-      Api::V01::APIBase.dump_vrp_dir.write(@file_name + '_geojson', {
+      Api::V01::APIBase.dump_vrp_dir.write(file_name + '_geojson', {
         type: 'FeatureCollection',
         features: polygons.compact
       }.to_json)
@@ -62,14 +62,14 @@ module OutputHelper
         csv_lines.each{ |line| out_csv << line }
       end
 
-      Api::V01::APIBase.dump_vrp_dir.write(@file_name + '_csv', csv_string)
+      Api::V01::APIBase.dump_vrp_dir.write(file_name + '_csv', csv_string)
 
-      puts 'Clusters saved : ' + @file_name
+      puts 'Clusters saved : ' + file_name
     end
 
     private
 
-    def collect_hulls(service_vrp)
+    def self.collect_hulls(service_vrp)
       vector = service_vrp[:vrp].services.collect{ |service|
         [service.activity.point.location.lon, service.activity.point.location.lat]
       }
@@ -99,7 +99,7 @@ module OutputHelper
       }
     end
 
-    def csv_line(vrp, service, cluster_index, prefix = nil)
+    def self.csv_line(vrp, service, cluster_index, prefix = nil)
       tw_reference = vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows.first
       [
         service.id,

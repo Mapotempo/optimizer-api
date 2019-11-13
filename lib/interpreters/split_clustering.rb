@@ -56,7 +56,7 @@ module Interpreters
       }.flatten.compact
       two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
 
-      OutputHelper::Clustering.new.generate_files(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages, job) if OptimizerWrapper.config[:debug][:output_clusters] && services_vrps.size < all_service_vrps.size
+      OutputHelper::Clustering.generate_files(all_service_vrps, services_vrps[0][:vrp][:vehicles], two_stages, job) if OptimizerWrapper.config[:debug][:output_clusters] && services_vrps.size < all_service_vrps.size
 
       [all_service_vrps, split_results]
     rescue => e
