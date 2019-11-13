@@ -9,7 +9,7 @@ class CacheManager
     @cache = cache
   end
 
-  def read(name, options = nil)
+  def read(name, _options = nil)
     filtered_name = name.to_s.parameterize(separator: '')
     if File.exist?(File.join(@cache, filtered_name))
       File.open(File.join(@cache, filtered_name), 'r').read
@@ -18,22 +18,11 @@ class CacheManager
     raise CacheError.new("Got error #{e} attempting to read cache #{name}.") if !cache.is_a? ActiveSupport::Cache::NullStore
   end
 
-  def write(name, value, _options = nil)
+  def write(name, value, options = { mode: 'w' })
     raise CacheError.new('Stored value is not a String') if !value.is_a? String
 
     FileUtils.mkdir_p(@cache)
-    f = File.new(File.join(@cache, name.to_s.parameterize(separator: '')), 'w')
-    f.write(value) if value.to_s.bytesize < 100.megabytes
-    f.close
-  rescue StandardError => e
-    raise CacheError.new("Got error #{e} attempting to write cache #{name}.") if !cache.is_a? ActiveSupport::Cache::NullStore
-  end
-
-  def append(name, value, _options = nil)
-    raise CacheError.new('Stored value is not a String') if !value.is_a? String
-
-    FileUtils.mkdir_p(@cache)
-    f = File.new(File.join(@cache, name.parameterize(separator: '')), 'a')
+    f = File.new(File.join(@cache, name.to_s.parameterize(separator: '')), options[:mode])
     f.write(value) if value.to_s.bytesize < 100.megabytes
     f.close
   rescue StandardError => e

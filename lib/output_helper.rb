@@ -150,7 +150,7 @@ module OutputHelper
     end
 
     def close_file
-      Api::V01::APIBase.dump_vrp_dir.append(@file_name, @scheduling_file)
+      Api::V01::APIBase.dump_vrp_dir.write(@file_name, @scheduling_file, mode: 'a')
     end
   end
 end
