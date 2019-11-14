@@ -60,7 +60,7 @@ module Interpreters
 
       [all_service_vrps, split_results]
     rescue => e
-      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
+      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :fatal
       raise
     end
 
@@ -71,9 +71,9 @@ module Interpreters
         vrp.preprocessing_partitions.each_with_index{ |partition, partition_index|
           cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
 
+          log "Starting clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size}"
           case partition[:method]
           when 'balanced_kmeans'
-            log "Starting clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size}"
             generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
               # TODO : global variable to know if work_day entity
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
@@ -286,7 +286,7 @@ module Interpreters
         checksum = Digest::MD5.hexdigest Marshal.dump(values)
         if !score_hash.key?(checksum)
           log "Restart: #{restart} score: #{limit_score} ratio_metric: #{ratio_metric} iterations: #{c.iterations}"
-          log " > Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
+          log "Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%"
           score_hash[checksum] = { iterations: c.iterations, limit_score: limit_score, restart: restart, ratio_metric: ratio_metric, min: values.min, max: values.max, sum: values.sum, size: values.size }
         end
         restart += 1
@@ -346,14 +346,14 @@ module Interpreters
             linked_objects[i[2]]
           }
         }
-        log 'Balanced K-Means : split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
+        log 'Balanced K-Means: split ' + data_items.size.to_s + ' into ' + clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+) })" }.join(' & ')
         cluster_vehicles = assign_vehicle_to_clusters(centroid_characteristics, nil, nil, clusters) if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
 
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        log 'Split not available when services have no activity or cluster size is less than 2'
+        log 'Split not available when services have no activity or cluster size is less than 2', level: :error
         # TODO : remove marshal dump
         # ensure test_instance_800unaffected_clustered and test_instance_800unaffected_clustered_same_point work
         [Marshal.load(Marshal.dump(service_vrp))]
@@ -423,14 +423,14 @@ module Interpreters
           linked_objects[i[2]]
         }.flatten
 
-        log 'Hierarchical Tree : split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
+        log 'Hierarchical Tree: split ' + data_items.size.to_s + ' into ' + clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')
         cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size, vrp.vehicles, vrp.points, clusters)
         adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
         result_items.collect.with_index{ |result_item, result_index|
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        log 'Split hierarchical not available when services have no activity'
+        log 'Split hierarchical not available when services have no activity', level: :error
         [service_vrp]
       end
     end
@@ -535,7 +535,7 @@ module Interpreters
 
             if vehicles_characteristics.none?{ |v_characteristics| compatible_characteristics?(s_characteristics, v_characteristics) }
               #TODO: These cases need to be eliminted during preprocessing phases.
-              puts "There are no vehicles that can serve service #{s.id}."
+              log "There are no vehicles that can serve service #{s.id}.", level: :warn
             end
 
             s_characteristics

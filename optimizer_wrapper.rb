@@ -336,7 +336,7 @@ module OptimizerWrapper
   rescue Resque::Plugins::Status::Killed
     log 'Job Killed'
   rescue => e
-    log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
+    log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :fatal
     raise
   end
 
