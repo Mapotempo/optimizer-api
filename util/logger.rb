@@ -31,7 +31,7 @@ class OptimizerLogger
   # :full => display file path and line number of log function call
   # :partial => display file name and line number of log function call
   # nil => Do not display any of :partial or :full
-  @@msg_location = nil
+  @@caller_location = nil
 
   @@logger = Logger.new(ENV['LOG_DEVICE'] || STDOUT)
   @@logger.level = Logger::INFO
@@ -45,25 +45,27 @@ class OptimizerLogger
     "[#{datetime}] #{job_id}#{severity}#{progname}: #{msg}\n"
   end
 
-  def self.define_progname(progname, location_option, caller_loc)
-    call_obj = caller_loc.first.base_label != 'log' ? caller_loc.first : caller_loc.first
-    file = location_option == :full ? call_obj.absolute_path : call_obj.path.scan(/(\w+).rb/)[0][0]
-    lineno = call_obj.lineno
+  def self.define_progname(progname)
+    location = if @@caller_location
+      call_obj = caller_locations.first.base_label != 'log' || caller_locations.size == 1 ? caller_locations.first : caller_locations.second
+      file = @@caller_location == :full ? call_obj.absolute_path : call_obj.path.scan(/(\w+).rb/)[0][0]
+      lineno = call_obj.lineno
 
-    value = "#{file}:#{lineno}"
-    [progname, value].delete_if(&:empty?).join(' - ')
+      "#{file}:#{lineno}"
+    end
+    [progname, location].compact.join(' - ')
   end
 
-  def self.msg_location_option
-    @@msg_location
+  def self.caller_location
+    @@caller_location
   end
 
-  def self.msg_location_option=(value)
-    @@msg_location = value
+  def self.caller_location=(value)
+    @@caller_location = value
   end
 
   def self.level=(level)
-    @@logger.level = @@lvl_map[level]
+    @@logger.level = @@level_map[level]
   end
 
   def self.log_device=(file)
@@ -74,8 +76,8 @@ class OptimizerLogger
     @@logger.formatter = formatter
   end
 
-  def self.log(msg, level: :info, progname: '')
-    progname = OptimizerLogger.define_progname(progname, @@msg_location, caller_locations) if @@msg_location
+  def self.log(msg, level: :info, progname: nil)
+    progname = OptimizerLogger.define_progname(progname)
 
     @@logger
       .method(level)
@@ -86,7 +88,7 @@ end
 module OptimizerLoggerMethods
   private
 
-  def log(msg, level: :info, progname: '')
+  def log(msg, level: :info, progname: nil)
     OptimizerLogger.log(msg, level: level, progname: progname)
   end
 end

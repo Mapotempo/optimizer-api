@@ -41,8 +41,8 @@ module OptimizerWrapper
   DUMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'dump')
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
-  # OptimizerLogger.level = :info
-  OptimizerLogger.msg_location_option = :partial
+  OptimizerLogger.level = :debug
+  OptimizerLogger.caller_location = :partial
 
   @@c = {
     product_title: 'Optimizers API',
