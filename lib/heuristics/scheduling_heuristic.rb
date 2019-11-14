@@ -113,7 +113,7 @@ module Heuristics
       fill_planning
       check_solution_validity
 
-      @output_tool.close_file if @output_tool
+      @output_tool&.close_file
 
       routes = prepare_output_and_collect_routes(vrp)
       routes
@@ -862,7 +862,7 @@ module Heuristics
 
           if @output_tool
             days = @candidate_routes[vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == point_to_add[:id] } }.keys
-            @output_tool.output_scheduling_insertion(days, point_to_add[:id], @services_data[point_to_add[:id]][:nb_visits], @schedule_end)
+            @output_tool.output_scheduling_insert(days, point_to_add[:id], @services_data[point_to_add[:id]][:nb_visits], @schedule_end)
           end
 
           @to_plan_service_ids.delete(point_to_add[:id])
@@ -968,7 +968,7 @@ module Heuristics
           if inserted_id
             if @output_tool
               days = @candidate_routes[current_vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == inserted_id } }.keys
-              @output_tool.output_scheduling_insertion(days, inserted_id, @services_data[inserted_id][:nb_visits], @schedule_end)
+              @output_tool.output_scheduling_insert(days, inserted_id, @services_data[inserted_id][:nb_visits], @schedule_end)
             end
 
             adjust_candidate_routes(current_vehicle, best_day)

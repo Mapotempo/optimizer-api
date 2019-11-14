@@ -21,37 +21,18 @@ module OutputHelper
 
   # To output clusters generated
   class Clustering
-    def self.generate_files(all_service_vrps, vehicles = [], two_stages = false, job = nil)
+    def self.generate_files(all_service_vrps, two_stages = false, job = nil)
       vrp_name = all_service_vrps.first[:vrp].name
       file_name = ('generated_clusters' + '_' + ([vrp_name, job, Time.now.strftime('%H:%M:%S')].compact.join('_'))).parameterize
 
-      csv_lines = if !vehicles.empty? && vehicles.first.sequence_timewindows.to_a.size > 1
-        [['name', 'lat', 'lng', 'tags', 'vehicle_id', 'start depot', 'end depot']]
-      else
-        [['name', 'lat', 'lng', 'tags', 'vehicle_id', 'tw_start', 'tw_end', 'day', 'start depot', 'end depot']]
-      end
-
       polygons = []
-      if !two_stages && !vehicles.empty?
-        # clustering for each vehicle and each day
-        # TODO : simplify ? iterate over all_service_vrps rather than over vehicle and finding associated service_vrp ?
-        vehicles.each_with_index{ |vehicle, v_index|
-          all_service_vrps.select{ |service| service[:vrp].vehicles.first.id == vehicle.id }.each_with_index{ |service_vrp, cluster_index|
-            polygons << collect_hulls(service_vrp) unless service_vrp[:vrp].services.empty?
-            service_vrp[:vrp].services.each{ |service|
-              csv_lines << csv_line(service_vrp[:vrp], service, cluster_index, 'v' + v_index.to_s + '_pb')
-            }
-          }
+      csv_lines = [['id', 'lat', 'lon', 'cluster', 'vehicles_ids', 'vehicle_tw_if_only_one']]
+      all_service_vrps.each_with_index{ |service_vrp, cluster_index|
+        polygons << collect_hulls(service_vrp) # unless service_vrp[:vrp].services.empty? -----> possible to get here if cluster empty ??
+        service_vrp[:vrp].services.each{ |service|
+          csv_lines << csv_line(service_vrp[:vrp], service, cluster_index, two_stages)
         }
-      else
-        # clustering for each vehicle
-        all_service_vrps.each_with_index{ |service_vrp, cluster_index|
-          polygons << collect_hulls(service_vrp) unless service_vrp[:vrp].services.empty?
-          service_vrp[:vrp].services.each{ |service|
-            csv_lines << csv_line(service_vrp[:vrp], service, cluster_index)
-          }
-        }
-      end
+      }
 
       Api::V01::APIBase.dump_vrp_dir.write(file_name + '_geojson', {
         type: 'FeatureCollection',
@@ -65,9 +46,8 @@ module OutputHelper
       Api::V01::APIBase.dump_vrp_dir.write(file_name + '_csv', csv_string)
 
       log 'Clusters saved: ' + file_name, level: :debug
+      file_name
     end
-
-    private
 
     def self.collect_hulls(service_vrp)
       vector = service_vrp[:vrp].services.collect{ |service|
@@ -91,7 +71,7 @@ module OutputHelper
       }.sum
       {
         type: 'Feature',
-        properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } + [[:duration, duration]] + [[:vehicle, service_vrp[:vrp].vehicles.first&.id]]],
+        properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } + [[:duration, duration]] + [[:vehicle, service_vrp[:vrp].vehicles.size == 1 ? service_vrp[:vrp].vehicles.first&.id : nil]]],
         geometry: {
           type: 'Polygon',
           coordinates: [hull + [hull.first]]
@@ -99,19 +79,14 @@ module OutputHelper
       }
     end
 
-    def self.csv_line(vrp, service, cluster_index, prefix = nil)
-      tw_reference = vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows.first
+    def self.csv_line(vrp, service, cluster_index, two_stages = false)
       [
         service.id,
         service.activity.point.location.lat,
         service.activity.point.location.lon,
-        (prefix || '') + cluster_index.to_s,
-        vrp.vehicles.first&.id,
-        tw_reference&.start,
-        tw_reference&.end,
-        tw_reference&.day_index,
-        vrp.vehicles.first&.start_point&.id,
-        vrp.vehicles.first&.end_point&.id
+        'cluster_' + cluster_index.to_s,
+        "#{vrp.vehicles.collect{ |v| v[:id] }}",
+        two_stages ? vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows : nil
       ]
     end
   end
@@ -133,7 +108,7 @@ module OutputHelper
       @scheduling_file << "------ new cluster ------\n"
     end
 
-    def output_scheduling_insertion(days, inserted_id, nb_visits, schedule_end)
+    def output_scheduling_insert(days, inserted_id, nb_visits, schedule_end)
       line = "#{inserted_id},#{nb_visits}"
       (0..schedule_end).each{ |day|
         line << if days.include?(day)
