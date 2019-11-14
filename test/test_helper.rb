@@ -39,6 +39,7 @@ require 'minitest/stub_any_instance'
 require 'minitest/focus'
 require 'byebug'
 require 'rack/test'
+require 'find'
 
 module FCT
   def self.create(problem)

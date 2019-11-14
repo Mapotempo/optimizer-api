@@ -107,7 +107,7 @@ module Interpreters
         duplicated_service_vrps = (0..service_vrps.first[:vrp][:resolution_repetition] - 1).collect{ |_i|
           sub_vrp = Marshal.load(Marshal.dump(service_vrps.first))
           sub_vrp[:vrp].resolution_repetition = 1
-          sub_vrp[:vrp].preprocessing_partitions.each{ |partition| partition[:restarts] = 5 } # change restarts ?
+          sub_vrp[:vrp].preprocessing_partitions.each{ |partition| partition[:restarts] = [partition[:restarts], 5].compact.min } # change restarts ?
           sub_vrp
         }.flatten
 

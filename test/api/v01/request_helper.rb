@@ -71,6 +71,9 @@ class Api::V01::RequestHelper < Minitest::Test
       job_id = JSON.parse(last_response.body)['job']['id']
       assert job_id
       job_id
+    else
+      response = last_response.body.slice(1..-1).split('\n').map{ |line| line.split(',') }
+      response
     end
   end
 

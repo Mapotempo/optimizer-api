@@ -25,299 +25,159 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
   end
 
   def test_day_week_num
-    vrp = {
-      matrices: [{
-        id: 'm1',
-        time: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
-        ],
-        distance: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_1',
-        matrix_index: 1,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_2',
-        matrix_index: 2,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_3',
-        matrix_index: 3,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'm1',
-        timewindow: {
-          start: 0,
-          end: 20
-        },
-        duration: 6
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_3'
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 10,
-          solver: false
-        },
-        preprocessing: {
-          first_solution_strategy: ['periodic']
-        },
-        schedule: {
-          range_indices: {
-            start: 0,
-            end: 3
-          }
-        },
-        restitution: {
-          csv: true
-        }
-      }
-    }
+    vrp = VRP.scheduling
+    vrp[:configuration][:restitution] = { csv: true }
 
-    FCT.solve_asynchronously do
-      @job_id = submit_csv api_key: 'demo', vrp: vrp
-      wait_status_csv @job_id, 200, api_key: 'demo'
-      csv_data = last_response.body.split("\n").map{ |line| line.split(',') }
-      assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
-      assert csv_data.first.include?('day_week')
-      assert csv_data.first.include?('day_week_num')
-    end
-  ensure
-    delete_completed_job @job_id, api_key: 'solvers'
+    csv_data = submit_csv api_key: 'demo', vrp: vrp
+    assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
+    assert csv_data.first.include?('day_week')
+    assert csv_data.first.include?('day_week_num')
   end
 
   def test_no_day_week_num
-    vrp = {
-      matrices: [{
-        id: 'm1',
-        time: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
-        ],
-        distance: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_1',
-        matrix_index: 1,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_2',
-        matrix_index: 2,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_3',
-        matrix_index: 3,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'm1',
-        timewindow: {
-          start: 0,
-          end: 20
-        },
-        duration: 6
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_3'
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 10
-        },
-        restitution: {
-          csv: true
-        }
-      }
-    }
+    vrp = VRP.basic
+    vrp[:configuration][:restitution] = { csv: true }
 
-    FCT.solve_asynchronously do
-      @job_id = submit_csv api_key: 'demo', vrp: vrp
-      wait_status_csv @job_id, 200, api_key: 'demo'
-      csv_data = last_response.body.split("\n").map{ |line| line.split(',') }
-      assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
-      assert !csv_data.first.include?('day_week')
-      assert !csv_data.first.include?('day_week_num')
-    end
-  ensure
-    delete_completed_job @job_id, api_key: 'solvers'
+    csv_data = submit_csv api_key: 'demo', vrp: vrp
+    assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
+    assert !csv_data.first.include?('day_week')
+    assert !csv_data.first.include?('day_week_num')
   end
 
   def test_skill_when_partitions
-    vrp = {
-      matrices: [{
-        id: 'm1',
-        time: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
-        ],
-        distance: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_1',
-        matrix_index: 1,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_2',
-        matrix_index: 2,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }, {
-        id: 'point_3',
-        matrix_index: 3,
-        location: {
-          lat: 39.5897,
-          lon: 2.6579
-        }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'm1',
-        timewindow: {
-          start: 0,
-          end: 20
-        },
-        duration: 6
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_3'
-        }
-      }],
-      configuration: {
-        preprocessing: {
-          partitions: [{
-            method: 'balanced_kmeans',
-            metric: 'duration',
-            entity: 'vehicle'
-          }]
-        },
-        resolution: {
-          duration: 10
-        },
-        restitution: {
-          csv: true
-        }
-      }
-    }
-    FCT.solve_asynchronously do
-      @job_id = submit_csv api_key: 'demo', vrp: vrp
-      wait_status_csv @job_id, 200, api_key: 'demo'
-      csv_data = last_response.body.split("\n").map{ |line| line.split(',') }
-      assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
-      assert(csv_data.select{ |line| line[csv_data.first.find_index('type')] == 'visit' }.all?{ |line| !line[csv_data.first.find_index('skills')].nil? })
-    end
+    vrp = VRP.basic
+    vrp[:configuration][:restitution] = { csv: true }
+    vrp[:configuration][:preprocessing][:partitions] = [{
+      method: 'balanced_kmeans',
+      metric: 'duration', # generates warning in output
+      entity: 'vehicle' # generates warning in output
+    }]
+
+    csv_data = submit_csv api_key: 'demo', vrp: vrp
+    assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
+    assert(csv_data.select{ |line| line[csv_data.first.find_index('type')] == 'visit' }.all?{ |line| line[csv_data.first.find_index('skills')] && line[csv_data.first.find_index('skills')] != '' })
+  end
+
+  def test_clustering_generated_files
+    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
+
+    all_services_vrps = Marshal.load(File.binread('test/fixtures/cluster_to_output.dump'))
+    file = OutputHelper::Clustering.generate_files(all_services_vrps, true)
+    generated_file = Api::V01::APIBase.dump_vrp_dir.cache + '/' + file
+
+    assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
+    assert File.exist?(generated_file + '_csv'), 'Csv file not found'
+    csv = CSV.read(generated_file + '_csv')
+
+    assert_equal all_services_vrps.collect{ |service| service[:vrp].services.size }.sum + 1, csv.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
+    assert csv.all?{ |line| line[4].count(',').zero? }, 'There should be only one vehicle in vehicles_ids column'
+    assert csv.none?{ |line| line[5].nil? }, 'All timewindows of this vehicle should be shown'
+
+    File.delete(generated_file + '_csv')
+    File.delete(generated_file + '_geojson')
   ensure
-    delete_completed_job @job_id, api_key: 'solvers'
+    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
+  end
+
+  def test_clustering_generated_files_from_dicho
+    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
+
+    all_services_vrps = Marshal.load(File.binread('test/fixtures/dicho_cluster_to_output.dump'))
+    file = OutputHelper::Clustering.generate_files(all_services_vrps)
+    generated_file = Api::V01::APIBase.dump_vrp_dir.cache + '/' + file
+
+    assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
+    assert File.exist?(generated_file + '_csv'), 'Csv file not found'
+    csv = CSV.read(generated_file + '_csv')
+
+    assert_equal all_services_vrps.collect{ |service| service[:vrp].services.size }.sum + 1, csv.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
+    assert_equal [nil], csv.collect(&:last).uniq - ['vehicle_tw_if_only_one']
+
+    File.delete(generated_file + '_csv')
+    File.delete(generated_file + '_geojson')
+  ensure
+    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
+  end
+
+  def test_scheduling_generated_file
+    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
+
+    name = 'test'
+    job = 'fake_job'
+    schedule_end = 5
+
+    output_tool = OutputHelper::Scheduling.new(name, job, schedule_end)
+    file_name = Api::V01::APIBase.dump_vrp_dir.cache + '/scheduling_construction_test_fake_job'
+
+    assert !File.exist?(file_name), 'File created before end of generation'
+
+    output_tool.start_new_cluster
+    output_tool.add_comment('my comment')
+    days = [0, 2, 4]
+    output_tool.output_scheduling_insert(days, 'service_id', 3, schedule_end)
+    output_tool.start_new_cluster
+    output_tool.close_file
+
+    assert File.exist?(file_name), 'File not found'
+
+    csv = CSV.read(file_name)
+    assert_equal 2, csv.select{ |line| line.first.include?(' new cluster ') }.size
+    assert(csv.any?{ |line| line.first == 'my comment' })
+    assert(csv.any?{ |line|
+      line[0] == 'service_id' &&
+        line[1] == '3' &&
+        line[2] == 'X' && line[4] == 'X' && line[6] == 'X' &&
+        line.count('X') == days.size
+    })
+
+    File.delete(file_name)
+  ensure
+    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
+  end
+
+  def test_files_generated
+    name = 'test_files_generated'
+    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
+    OptimizerWrapper.config[:debug][:output_clusters] = true
+    OptimizerWrapper.config[:debug][:output_schedule] = true
+
+    vrp = FCT.load_vrp(self, fixture_file: 'instance_clustered')
+    vrp[:configuration][:resolution][:repetition] = 1
+    vrp[:name] = name
+    vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
+
+    Heuristics::Scheduling.stub_any_instance(:compute_initial_solution, lambda { |vrp|
+      @output_tool&.start_new_cluster
+
+      fill_planning
+      check_solution_validity
+
+      @output_tool&.close_file
+
+      prepare_output_and_collect_routes(vrp)
+    }) do
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+
+    files = Find.find('test/temp/').select { |path|
+      path.include?(name)
+    }
+
+    assert_equal 3, files.size
+    assert files.include?("test/temp/scheduling_construction_#{name}")
+    assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('csv') }, 'Geojson file not found')
+    assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('json') }, 'Csv file not found')
+
+    files.each{ |f|
+      File.delete(f)
+    }
+  ensure
+    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
+    OptimizerWrapper.config[:debug][:output_clusters] = false
+    OptimizerWrapper.config[:debug][:output_schedule] = false
   end
 end
