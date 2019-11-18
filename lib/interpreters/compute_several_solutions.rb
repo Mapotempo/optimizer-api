@@ -149,11 +149,12 @@ module Interpreters
       if custom_heuristics.size > 1
         batched_service_vrps = batch_heuristic(service_vrp, custom_heuristics)
         times = []
+        total_time_allocated_for_heuristic_selection = service_vrp[:vrp][:resolution_duration].to_f * 0.30 # spend at most 30% of the time for heuristic selection
         first_results = batched_service_vrps.collect{ |s_vrp|
           s_vrp[:vrp][:resolution_batch_heuristic] = true
           s_vrp[:vrp][:resolution_initial_time_out] = nil
           s_vrp[:vrp][:resolution_min_duration] = nil
-          s_vrp[:vrp][:resolution_duration] = (service_vrp[:vrp][:resolution_duration].to_f / custom_heuristics.size).floor
+          s_vrp[:vrp][:resolution_duration] = [(total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i, 300000].min # do not spend more than 5 min for a single heuristic
           heuristic_solution = OptimizerWrapper.solve([s_vrp])
           times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
@@ -163,7 +164,7 @@ module Interpreters
         first_results.each_with_index{ |result, i|
           synthesis << {
             heuristic: batched_service_vrps[i][:vrp][:preprocessing_first_solution_strategy].first,
-            quality: result.nil? ? nil : result[:cost].to_i,
+            quality: result.nil? ? nil : result[:cost].to_i + (times[i] / 1000).to_i,
             used: false,
             cost: result ? result[:cost] : nil,
             time_spent: times[i],
@@ -171,11 +172,8 @@ module Interpreters
           }
         }
         sorted_heuristics = synthesis.sort_by{ |element| element[:quality].nil? ? synthesis.collect{ |data| data[:quality] }.compact.max * 10 : element[:quality] }
-        best_heuristic = if sorted_heuristics[0][:heuristic] == 1 && sorted_heuristics[0][:quality] == sorted_heuristics[1][:quality]
-                            sorted_heuristics[1][:heuristic]
-                          else
-                            sorted_heuristics[0][:heuristic]
-                          end
+
+        best_heuristic = sorted_heuristics[0][:heuristic]
 
         synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:used] = true
 
