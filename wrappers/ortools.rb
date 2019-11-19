@@ -819,7 +819,7 @@ module Wrappers
         t = / Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
         log line.strip, level: /Final Iteration :/.match(line) ? :info : r || s || t ? :debug : :error
-        out = out + line
+        out += line
         if block && r && s && t && vrp.restitution_intermediate_solutions
           begin
             @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
@@ -834,27 +834,14 @@ module Wrappers
       if @thread.value == 0
         if result == 'No solution found...'
           cost = Helper.fixnum_max
-          iterations = 0
           @previous_result = empty_result(vrp)
           @previous_result[:cost] = cost
         else
-          cost = if result.include?('Cost : ')
-            result.split(' ')[-4].to_i
-          end
-          iterations = if result.include?('Final Iteration : ')
-            result.split(' ')[3].to_i
-          end
-          time = if result.include?('Time : ')
-            result.split(' ')[-1].to_f
-          end
           @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
-          if block && vrp.restitution_intermediate_solutions
-            block.call(self, iterations, nil, nil, cost, time, nil)
-          end
         end
         [cost, iterations, @previous_result]
       elsif @thread.value == 9
-        out = "Job killed"
+        out = 'Job killed'
         log out, level: :fatal # Keep trace in worker
         if cost && !result.include?('Iteration : ')
           [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
