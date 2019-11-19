@@ -2019,7 +2019,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'No vehicle with compatible timewindow' }.size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('No vehicle with compatible timewindow') }.size
   end
 
   def test_impossible_service_duration
@@ -2962,5 +2962,21 @@ class WrapperTest < Minitest::Test
     vrp = Models::Vrp.create(problem)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert_equal result.size, vrp.resolution_several_solutions
+  end
+
+  def test_add_unassigned
+    vrp = FCT.create(VRP.scheduling)
+    vrp[:services].first.visits_number = 4
+
+    unfeasible = []
+
+    unfeasible = OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible, vrp, vrp[:services][1], 'reason1')
+    assert_equal 1, unfeasible.size
+
+    unfeasible = OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible, vrp, vrp[:services][0], 'reason2')
+    assert_equal 5, unfeasible.size
+
+    unfeasible = OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible, vrp, vrp[:services][0], 'reason3')
+    assert_equal 5, unfeasible.size
   end
 end

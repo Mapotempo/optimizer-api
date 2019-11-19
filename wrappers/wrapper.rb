@@ -570,29 +570,36 @@ module Wrappers
 
     def add_unassigned(unfeasible, vrp, service, reason)
       log "service #{service[:id]} cannot be assigned, reason: #{reason}", level: :warn
-      return unfeasible if unfeasible.any?{ |unfeas| unfeas[:original_service_id] == service[:id] }
-
-      unfeasible << (0..service.visits_number).collect{ |index|
-        service_unassigned = unfeasible.find{ |una| una[:original_service_id] == service[:id] }
-        service_unassigned[:reason] += " && #{reason}" if service_unassigned
-        next if service_unassigned || service.visits_number.positive? && index.zero?
-
-        {
-          original_service_id: service[:id],
-          service_id: vrp.scheduling? ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
-          point_id: service[:activity] ? service[:activity][:point_id] : nil,
-          detail: {
-            lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
-            lon: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lon] : nil,
-            setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
-            duration: service[:activity] ? service[:activity][:duration] : nil,
-            timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
-            quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit].id, value: qte[:value] } } : nil
-          },
-          reason: reason
+      if unfeasible.any?{ |unfeas| unfeas[:original_service_id] == service[:id] }
+        # we update reason to have more details
+        unfeasible.select{ |unfeas| unfeas[:original_service_id] == service[:id] }.each{ |unfeas|
+          unfeas[:reason] += " && #{reason}"
         }
-      }.compact
-      unfeasible.flatten!
+      else
+        unfeasible << (0..service.visits_number).collect{ |index|
+          service_unassigned = unfeasible.find{ |una| una[:original_service_id] == service[:id] }
+          service_unassigned[:reason] += " && #{reason}" if service_unassigned
+          next if service_unassigned || service.visits_number.positive? && index.zero?
+
+          {
+            original_service_id: service[:id],
+            service_id: vrp.scheduling? ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
+            point_id: service[:activity] ? service[:activity][:point_id] : nil,
+            detail: {
+              lat: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lat] : nil,
+              lon: service[:activity] && service[:activity][:point][:location] ? service[:activity][:point][:location][:lon] : nil,
+              setup_duration: service[:activity] ? service[:activity][:setup_duration] : nil,
+              duration: service[:activity] ? service[:activity][:duration] : nil,
+              timewindows: service[:activity][:timewindows] ? service[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] }} : [],
+              quantities: service[:quantities] ? service[:quantities].collect{ |qte| { unit: qte[:unit].id, value: qte[:value] } } : nil
+            },
+            reason: reason
+          }
+        }.compact
+        unfeasible.flatten!
+      end
+
+      unfeasible
     end
 
     def compute_vehicles_shift(vehicles)
