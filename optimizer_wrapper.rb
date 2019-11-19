@@ -237,21 +237,27 @@ module OptimizerWrapper
             una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
           }
 
-          periodic = Interpreters::PeriodicVisits.new(vrp)
-          vrp = periodic.expand(vrp, job) {
-            block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
-          }
-          if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
-            add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, unfeasible_services)
+          # TODO: refactor with dedicated class
+          if vrp.scheduling?
+            periodic = Interpreters::PeriodicVisits.new(vrp)
+            vrp = periodic.expand(vrp, job) {
+              block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
+            }
+            if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
+              add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, unfeasible_services)
+            end
           end
+
           if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+            # TODO: Move select best heuristic in each solver
             block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
-            # Select best heuristic
             Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
-            block.call(nil, nil, nil, 'process clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
-            cluster_result = cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
-              block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block && !vrp.dichotomious_process?
+
+            block.call(nil, nil, nil, 'process clique clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
+            cluster_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
               time_start = Time.now
+
+              block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block && !vrp.dichotomious_process?
               result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
                   if job
                     actual_result = Result.get(job) || { 'pids' => nil }
@@ -264,12 +270,13 @@ module OptimizerWrapper
                 }) { |wrapper, avancement, total, message, cost, time, solution|
                 block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block && !vrp.dichotomious_process?
               }
+
               if result.class.name == 'Hash' # result.is_a?(Hash) not working
                 result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
                 block.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if block && vrp.dichotomious_process?
                 parse_result(cluster_vrp, result)
               elsif result.class.name == 'String' # result.is_a?(String) not working
-                raise RuntimeError.new(result) unless result == "Job killed"
+                raise RuntimeError.new(result) unless result == 'Job killed'
               elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
                 raise RuntimeError.new('No solution provided') unless vrp.restitution_allow_empty_result
               end
@@ -760,7 +767,7 @@ module OptimizerWrapper
     end
   end
 
-  def self.cluster(vrp, cluster_threshold, force_cluster)
+  def self.clique_cluster(vrp, cluster_threshold, force_cluster)
     if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && !vrp.scheduling?
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
