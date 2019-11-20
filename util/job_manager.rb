@@ -86,6 +86,7 @@ module OptimizerWrapper
   class DiscordantProblemError      < ProblemError;  end
   class UnsupportedProblemError     < ProblemError;  end
 
+  class ClusteringError             < StandardError; end
   class SchedulingHeuristicError    < StandardError; end
   class UnsupportedRouterModeError  < StandardError; end
 

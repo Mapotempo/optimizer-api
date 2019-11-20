@@ -80,7 +80,7 @@ module Interpreters
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
               options = { cut_symbol: cut_symbol, entity: partition[:entity] }
               options[:restarts] = partition[:restarts] if partition[:restarts]
-              split_balanced_kmeans(s_v, [s_v[:vrp].vehicles.size, s_v[:vrp].services.size].min, options) { |current_restart, total_restarts|
+              split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options) { |current_restart, total_restarts|
                 block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size} - iteration #{current_restart + s_v_i * total_restarts}/#{total_restarts * current_service_vrps.size}", nil, nil, nil)
               }
             }
@@ -321,6 +321,11 @@ module Interpreters
 
     def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {}, &block)
       log '--> split_balanced_kmeans', level: :debug
+
+      if options[:entity] && nb_clusters != service_vrp[:vrp].vehicles.size
+        raise OptimizerWrapper::ClusteringError, 'Usage of options[:entity] requires that number of clusters (nb_clusters) is equal to number of vehicles in the vrp.'
+      end
+
       default_options = { max_iterations: 300, restarts: 50, cut_symbol: :duration }
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
