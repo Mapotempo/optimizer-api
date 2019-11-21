@@ -90,7 +90,7 @@ Once launched, the dump file of the problem will be created and put aswell in `t
 
 If you create a test by using `.dump`, your test will fail as soon as vrp model is changed. Just run following task to update fixtures:
 ```
-DUMP_VRP=true APP_ENV=test bundle exec rake test TEST=test/real_cases_test.rb
+TEST_DUMP_VRP=true APP_ENV=test bundle exec rake test TEST=test/real_cases_test.rb
 ```
 
 Note: you can update a test and run the modified scenario with new vrp `.json`:

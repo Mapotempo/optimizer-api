@@ -95,6 +95,10 @@ module OptimizerWrapper
       api_key: ENV['ROUTER_API_KEY'] || 'demo',
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
     },
+    dump: {
+      vrp: ENV['OPTIM_DUMP_VRP'] == 'true' || false,
+      solution: ENV['OPTIM_DUMP_SOLUTION'] == 'true' || false
+    },
     debug: {
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
       output_schedule: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
