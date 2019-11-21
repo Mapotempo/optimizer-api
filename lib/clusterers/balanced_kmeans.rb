@@ -273,9 +273,7 @@ module Ai4r
 
             @data_set.data_items.insert(0, @data_set.data_items.delete(item))
           end
-          if OptimizerWrapper.config[:debug][:output_kmeans_centroids]
-            log "kmeans_centroids: #{@centroids.collect{ |centroid| centroid[2] }.flatten}", level: :debug
-          end
+          log "kmeans_centroids: #{@centroids.collect{ |centroid| centroid[2] }.flatten}", level: :debug
         when 'indices' # for initial assignment only (with the :centroid_indices option)
           @centroid_indices.each do |index|
             raise ArgumentError, "Invalid centroid index #{index}" unless (index.is_a? Integer) && index >= 0 && index < @data_set.data_items.length
