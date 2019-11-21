@@ -5673,6 +5673,50 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result[:heuristic_synthesis].sort_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[0][:used]
   end
 
+  def test_self_selection_computes_saving_only_once_if_rest
+    vrp = FCT.create(VRP.lat_lon)
+    vrp[:vehicles] << vrp[:vehicles].first
+    vrp[:vehicles][1][:id] += '_duplicated'
+    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
+    assert_equal 3, list.size
+
+    vrp.rests = [{
+      id: 'rest_0',
+      timewindows: [{
+        day_index: 0,
+        start: 1,
+        end: 1
+      }],
+      duration: 1
+    }]
+    vrp.vehicles.first.rest_ids = ['rest_0']
+
+    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
+    assert_equal 3, list.size
+  end
+
+  def test_self_selection_first_solution_strategy_with_rest
+    vrp = FCT.create(VRP.lat_lon)
+    vrp.vehicles.first.end_point_id = 'point_1'
+    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
+
+    assert !list.include?('savings')
+
+    vrp.rests = [{
+      id: 'rest_0',
+      timewindows: [{
+        day_index: 0,
+        start: 1,
+        end: 1
+      }],
+      duration: 1
+    }]
+    vrp.vehicles.first.rest_ids = ['rest_0']
+
+    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
+    assert list.include?('savings')
+  end
+
   def test_no_solver_with_ortools_single_heuristic
     problem = {
       matrices: [{

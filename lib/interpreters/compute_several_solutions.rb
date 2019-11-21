@@ -82,7 +82,8 @@ module Interpreters
     def self.collect_heuristics(vrp, first_solution_strategy)
       if first_solution_strategy.first == 'self_selection'
         mandatory_heuristic = select_best_heuristic(vrp)
-        if vrp[:vehicles].any?{ |vehicle| vehicle[:force_start] || vehicle[:shift_preference] && vehicle[:shift_preference] == 'force_start' }
+
+        heuristic_list = if vrp[:vehicles].any?{ |vehicle| vehicle[:force_start] || vehicle[:shift_preference] && vehicle[:shift_preference] == 'force_start' }
           [mandatory_heuristic, verified('local_cheapest_insertion'), verified('global_cheapest_arc')]
         elsif mandatory_heuristic == 'savings'
           [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
@@ -91,6 +92,9 @@ module Interpreters
         else
           [mandatory_heuristic]
         end
+
+        heuristic_list |= ['savings'] if vrp.vehicles.collect{ |vehicle| vehicle[:rests].to_a.size }.sum.positive? # while waiting for self_selection improve
+        heuristic_list
       else
         first_solution_strategy
       end
@@ -223,11 +227,11 @@ module Interpreters
       elsif loop_route && unique_configuration &&
             (vehicles.any?{ |vehicle| vehicle[:duration] } && vehicles.size == 1 || size_mtws.to_f / (services.collect{ |service| service[:visits_number] }.sum + shipments.size * 2) > 0.2 && size_rest.zero?)
         verified('global_cheapest_arc')
-      elsif vehicles.size == 1 && size_rest > 0 || !shipments.empty? || size_mtws > 0
+      elsif vehicles.size == 1 && size_rest.positive? || !shipments.empty? || size_mtws > 0
         verified('local_cheapest_insertion')
-      elsif size_rest.zero? && loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?{ |vehicle| vehicle[:duration] }
+      elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?{ |vehicle| vehicle[:duration] }
         verified('savings')
-      elsif size_rest > 0 || unique_configuration || loop_route
+      elsif size_rest.positive? || unique_configuration || loop_route
         verified('parallel_cheapest_insertion')
       else
         verified('first_unbound')
