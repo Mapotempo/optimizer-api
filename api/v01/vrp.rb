@@ -493,7 +493,7 @@ module Api
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
               d_params = declared(params, include_missing: false)
               vrp_params = d_params[:points] ? d_params : d_params[:vrp]
-              APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), { vrp: vrp_params }.to_json)
+              APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), { vrp: vrp_params }.to_json) if OptimizerWrapper.config[:dump][:vrp]
               vrp = ::Models::Vrp.create({})
               params_limit = APIBase.services(api_key)[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
               [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
@@ -606,7 +606,7 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             else
-              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if job
+              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if job && OptimizerWrapper.config[:dump][:solution]
               status 200
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
