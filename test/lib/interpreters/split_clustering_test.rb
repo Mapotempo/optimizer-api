@@ -25,38 +25,113 @@ class SplitClusteringTest < Minitest::Test
       @regularity_restarts = ENV['INTENSIVE_TEST'] ? 20 : 5
     end
 
-    def test_cluster_dichotomious
-      vrp = FCT.load_vrp(self)
+    def test_cluster_balance
+      # Clusters should be well balanced
+      # The test is done dicho-style (but not for dicho). A vrp is split into two sub-vrps
+      # then one of the sub-vrps replace the current vrp and it is split into two sub-vrps.
+      # The routine continues until the current vrp is too small.
+      # During this process max balance deviation is recorded and the process is restarted
+      # @regularity_restarts times so that clustering irregularity does not effect the results.
+      # Basically, we want the balance violations to be as small as possible.
+
+      balance_deviations = []
+      (1..@regularity_restarts).each{ |_tentative|
+        max_balance_deviation = 0
+
+        service_vrp = { vrp: FCT.load_vrp(self, fixture_file: 'cluster_dichotomious'), service: :demo }
+        service_vrp[:vrp].services.each{ |s| s.skills = [] }         # The instance has "Pas X" style day skills, we purposely ignore them otherwise balance is not possible
+        service_vrp[:vrp].vehicles = [service_vrp[:vrp].vehicles[0]] # entity: `vehicle` settting only makes sense if the number of clusters is equal to the number of vehicles.
+        service_vrp[:vrp].vehicles *= 2
+
+        while service_vrp[:vrp].services.size > 100
+          total_load_by_units = Hash.new(0)
+          service_vrp[:vrp].services.each{ |s| s.quantities.each{ |q| total_load_by_units[q.unit.id] += q.value } }
+
+          #Correct the capacity of the vehicles wrt the services in the sub_vrp
+          service_vrp[:vrp][:vehicles].each{ |v|
+            v.capacities = []
+            service_vrp[:vrp].units.each{ |u|
+              v.capacities << Models::Capacity.new(unit: u, limit: total_load_by_units[u.id] * 0.65)
+            }
+          }
+
+          services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, cut_symbol: :duration, entity: 'vehicle', restarts: 2) # Do not use @split_restarts it changes the stats
+          assert_equal 2, services_vrps_dicho.size, 'The number of clusters is not correct'
+
+          durations = services_vrps_dicho.collect{ |s| s[:vrp].services_duration }
+          assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i, 'The sum of service durations is not correct'
+
+          max_balance_deviation = [max_balance_deviation, durations.max.to_f / durations.sum * 2 - 1].max
+
+          service_vrp = services_vrps_dicho.first
+        end
+
+        balance_deviations << max_balance_deviation
+      }
+
+      # The limits of max_dev and the RHS of the asserts represent the current performance of the clustering algorighm.
+      # The limit values are tightest possible to ensure that any degredation would trip the assert.
+      # False negative are very rare, once every ~10 runs on local and once every ~30 runs on Travis.
+      # That is, if the test fails there probably is a performance degredation.
+      asserts = [
+        {
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.25 } <= (@regularity_restarts * 0.02).ceil,
+          message: 'The maximum balance deviation can be larger than 25% only very rarely -- <2% of the trials.'
+        }, {
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.21 } <= (@regularity_restarts * 0.15).ceil,
+          message: 'The maximum balance deviation sould not be larger than 21% for more than 15% of the trials.'
+        }, {
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.16 } <= (@regularity_restarts * 0.30).ceil,
+          message: 'The maximum balance deviation sould not be larger than 16% for more than 30% of the trials.'
+        }, {
+          condition: balance_deviations.count{ |max_dev| max_dev < 0.12 } >= (@regularity_restarts * 0.50).floor,
+          message: 'The maximum balance deviation sould be less than 12% most of the time -- >50% of the trials.'
+        }
+      ]
+
+      log balance_deviations.collect{ |i| i.round(3) }, level: :fatal if asserts.any?{ |assert| !assert[:condition] }
+
+      asserts.each { |assert|
+        assert assert[:condition], assert[:message]
+      }
+    end
+
+    def test_same_location_different_clusters
+      skip "This test fails. It is created for Test-Driven Development.
+            The functionality is not ready yet, it is skipped for devs not working on the functionality.
+            Basically, we want to be able to cluster with balancing (i.e., rate_balance != 0) but
+            we expect that the services of same lat/lng end up in the same cluster.
+            To achieve this,
+            either the duplicate points need to be eliminated (data_set is created by points)
+            or data_set needs to be created by lat/lon instead of by points (eliminates the possiblity of two items of the same lat/lon)
+            or balanced_kmeans can have a preprocessing (which uses compatibility function to check if points can be merged)."
+
+      vrp = FCT.load_vrp(self, fixture_file: 'cluster_dichotomious')
       service_vrp = { vrp: vrp, service: :demo }
+      vrp.services.each{ |s| s.skills = [] }                 # The instance has old "Pas X" style day skills, we purposely ignore them otherwise balance is not possible
+      original_vehicles = service_vrp[:vrp][:vehicles][0..1] # entity: `vehicle` settting only works if the number of clusters is equal to the number of vehicles.
       while service_vrp[:vrp].services.size > 100
-        service_vrp[:vrp][:vehicles] *= 2
+        total = Hash.new(0)
+        service_vrp[:vrp].services.each{ |s| s.quantities.each{ |q| total[q.unit.id] += q.value } }
+        original_vehicles.each{ |v|
+          v.capacities = []
+          service_vrp[:vrp].units.each{ |u|
+            v.capacities << Models::Capacity.new(unit: u, limit: total[u.id] * 0.65)
+          }
+        }
+        service_vrp[:vrp][:vehicles] = original_vehicles
         services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
-        assert_equal 2, services_vrps_dicho.size
 
-        # TODO: with rate_balance != 0 there is risk to get services to same lat/lng in different clusters
-        # locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.first.data_items.map{ |d| [d[0], d[1]] }
-        # locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }#clusters.second.data_items.map{ |d| [d[0], d[1]] }
-        # (locations_one & locations_two).each{ |loc|
-        #   point_id_first = services_vrps_dicho.first[:vrp].points.find{ |p| p.location.lat == loc[0] && p.location.lon == loc[1] }.id
-        #   puts "service from #{point_id_first} in cluster #0" + services_vrps_dicho.first[:vrp].services.select{ |s| s.activity.point_id == point_id_first }.to_s
-        #   point_id_second = services_vrps_dicho.second[:vrp].points.find{ |p| p.location.lat == loc[0] && p.location.lon == loc[1] }.id
-        #   puts "service from #{point_id_second} in cluster #1" + services_vrps_dicho.second[:vrp].services.select{ |s| s.activity.point_id == point_id_second }.to_s
-        # }
-        # assert_equal 0, (locations_one & locations_two).size
-
-        durations = []
-        services_vrps_dicho.each{ |service_vrp_dicho|
-          durations << service_vrp_dicho[:vrp].services_duration
+        ## TODO: with rate_balance != 0 there is risk to get services of same lat/lng in different clusters
+        locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } #clusters.first.data_items.map{ |d| [d[0], d[1]] }
+        locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } #clusters.second.data_items.map{ |d| [d[0], d[1]] }
+        (locations_one & locations_two).each{ |loc|
+          point_id_first = services_vrps_dicho.first[:vrp].points.find{ |p| p.location.lat == loc[0] && p.location.lon == loc[1] }.id
+          puts "service from #{point_id_first} in cluster #0" + services_vrps_dicho.first[:vrp].services.select{ |s| s.activity.point_id == point_id_first }.to_s
+          point_id_second = services_vrps_dicho.second[:vrp].points.find{ |p| p.location.lat == loc[0] && p.location.lon == loc[1] }.id
+          puts "service from #{point_id_second} in cluster #1" + services_vrps_dicho.second[:vrp].services.select{ |s| s.activity.point_id == point_id_second }.to_s
         }
-        assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
-
-        average_duration = durations.inject(0, :+) / durations.size
-        # Clusters should be very well balanced
-        min_duration = average_duration - 0.2 * average_duration
-        max_duration = average_duration + 0.2 * average_duration
-        durations.each_with_index{ |duration, index|
-          assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
-        }
+        assert_equal 0, (locations_one & locations_two).size
 
         service_vrp = services_vrps_dicho.first
       end
