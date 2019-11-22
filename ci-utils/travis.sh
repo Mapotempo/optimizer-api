@@ -7,25 +7,25 @@ DOCKER_SERVICE_NAME=optimizer_api
 CONTAINER=${DOCKER_SERVICE_NAME}.1.$(docker service ps -f "name=${DOCKER_SERVICE_NAME}.1" ${DOCKER_SERVICE_NAME} -q --no-trunc | head -n1)
 case "$1" in
   'basis')
-    TEST_ENV='TRAVIS=true SKIP_DICHO=true SKIP_JSPRIT=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true SKIP_SPLIT_CLUSTERING=true'
+    TEST_ENV='TRAVIS=true COV=false SKIP_DICHO=true SKIP_JSPRIT=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true SKIP_SPLIT_CLUSTERING=true'
     ;;
   'dicho')
-    TEST_ENV='TRAVIS=true TEST=test/lib/heuristics/dichotomious_test.rb'
+    TEST_ENV='TRAVIS=true COV=false TEST=test/lib/heuristics/dichotomious_test.rb'
     ;;
   'real')
-    TEST_ENV='TRAVIS=true TEST=test/real_cases_test.rb'
+    TEST_ENV='TRAVIS=true COV=false TEST=test/real_cases_test.rb'
     ;;
   'real_scheduling')
-    TEST_ENV='TRAVIS=true TEST=test/real_cases_scheduling_test.rb'
+    TEST_ENV='TRAVIS=true COV=false TEST=test/real_cases_scheduling_test.rb'
     ;;
   'real_scheduling_solver')
-    TEST_ENV='TRAVIS=true TEST=test/real_cases_scheduling_solver_test.rb'
+    TEST_ENV='TRAVIS=true COV=false TEST=test/real_cases_scheduling_solver_test.rb'
     ;;
   'scheduling')
-    TEST_ENV="TRAVIS=true TEST=test/lib/heuristics/scheduling_*"
+    TEST_ENV="TRAVIS=true COV=false TEST=test/lib/heuristics/scheduling_*"
     ;;
   'split_clustering')
-    TEST_ENV='TRAVIS=true INTENSIVE_TEST=true TEST=test/lib/interpreters/split_clustering_test.rb'
+    TEST_ENV='TRAVIS=true COV=false INTENSIVE_TEST=true TEST=test/lib/interpreters/split_clustering_test.rb'
     ;;
   *)
     ;;
