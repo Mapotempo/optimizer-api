@@ -25,16 +25,16 @@ module Models
       vrp = VRP.scheduling_seq_timewindows
       vrp = FCT.create(vrp)
 
-      assert_equal nil, vrp.vehicles.first.work_duration # assert_nil KO
+      assert_nil vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.sequence_timewindows = []
       assert_equal 2**32, vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.timewindow = { start: 10 }
-      assert_equal nil, vrp.vehicles.first.work_duration
+      assert_nil vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.timewindow = { end: 10 }
-      assert_equal nil, vrp.vehicles.first.work_duration
+      assert_nil vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.timewindow = { start: 10, end: 20 }
       assert_equal 10, vrp.vehicles.first.work_duration
