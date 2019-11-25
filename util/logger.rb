@@ -27,10 +27,11 @@ class OptimizerLogger
     fatal: Logger::FATAL
   }
 
-  # :full || :partial || nil
-  # :full => display file path and line number of log function call
-  # :partial => display file name and line number of log function call
-  # nil => Do not display any of :partial or :full
+  # :absolute || :relative || :filename || nil
+  # :absolute => display full file path and line number of log function call
+  # :relative => display relative file path and line number of log function call
+  # :filename => display file name and line number of log function call
+  # nil => Do not display any caller location information
   @@caller_location = nil
 
   @@logger = Logger.new(ENV['LOG_DEVICE'] || STDOUT)
@@ -46,12 +47,24 @@ class OptimizerLogger
   end
 
   def self.define_progname(progname)
-    location = if @@caller_location
-      call_obj = caller_locations.first.base_label != 'log' || caller_locations.size == 1 ? caller_locations.first : caller_locations.second
-      file = @@caller_location == :full ? call_obj.absolute_path : call_obj.path.scan(/(\w+).rb/)[0][0]
+    location = nil
+    if @@caller_location
+      call_obj = caller_locations.second.base_label == 'log' ? caller_locations.third : caller_locations.second
+
+      file =  case @@caller_location
+              when :filename
+                call_obj.path.scan(/(\w+).rb/)[0][0]
+              when :absolute
+                call_obj.absolute_path
+              when :relative
+                ".#{call_obj.path.scan(/optimizer-api(.*\.rb)/)[0][0]}"
+              else
+                raise NotImplementedError, "Unknown option (#{@@caller_location}) OptimizerLogger.caller_location parameter -- :absolute || :relative || :filename || nil"
+              end
+
       lineno = call_obj.lineno
 
-      "#{file}:#{lineno}"
+      location = "#{file}:#{lineno}"
     end
     [progname, location].compact.join(' - ')
   end
@@ -77,12 +90,14 @@ class OptimizerLogger
   end
 
   def self.log(msg, level: :info, progname: nil)
-    progname = OptimizerLogger.define_progname(progname)
+    progname = define_progname(progname)
 
     @@logger
       .method(level)
       .call(progname) { msg }
   end
+
+  private_class_method :define_progname
 end
 
 module OptimizerLoggerMethods
