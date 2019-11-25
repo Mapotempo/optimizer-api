@@ -2070,7 +2070,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Duration bigger than any vehicle timewindow shift' }.size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('Duration bigger than any vehicle timewindow shift') }.size
   end
 
   def test_impossible_service_duration_with_sequence_tw
@@ -2127,7 +2127,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Duration bigger than any vehicle timewindow shift' }.size
+    assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('Duration bigger than any vehicle timewindow shift') }.size
   end
 
   def test_impossible_service_duration_with_two_vehicles
