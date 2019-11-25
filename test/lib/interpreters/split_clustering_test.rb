@@ -71,7 +71,7 @@ class SplitClusteringTest < Minitest::Test
 
       # The limits of max_dev and the RHS of the asserts represent the current performance of the clustering algorighm.
       # The limit values are tightest possible to ensure that any degredation would trip the assert.
-      # False negative are very rare, once every ~10 runs on local and once every ~30 runs on Travis.
+      # False negative are rare, once every ~10 runs on local and once every ~30 runs on Travis.
       # That is, if the test fails there probably is a performance degredation.
       asserts = [
         {
@@ -81,11 +81,11 @@ class SplitClusteringTest < Minitest::Test
           condition: balance_deviations.count{ |max_dev| max_dev > 0.21 } <= (@regularity_restarts * 0.15).ceil,
           message: 'The maximum balance deviation sould not be larger than 21% for more than 15% of the trials.'
         }, {
-          condition: balance_deviations.count{ |max_dev| max_dev > 0.16 } <= (@regularity_restarts * 0.30).ceil,
-          message: 'The maximum balance deviation sould not be larger than 16% for more than 30% of the trials.'
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.17 } <= (@regularity_restarts * 0.35).ceil,
+          message: 'The maximum balance deviation sould not be larger than 17% for more than 35% of the trials.'
         }, {
-          condition: balance_deviations.count{ |max_dev| max_dev < 0.12 } >= (@regularity_restarts * 0.50).floor,
-          message: 'The maximum balance deviation sould be less than 12% most of the time -- >50% of the trials.'
+          condition: balance_deviations.count{ |max_dev| max_dev <= 0.125 } >= (@regularity_restarts * 0.50).floor,
+          message: 'The maximum balance deviation sould be less than 12.5% most of the time -- >50% of the trials.'
         }
       ]
 
@@ -684,18 +684,18 @@ class SplitClusteringTest < Minitest::Test
 
       # visits_unassigned:
       # TODO:  Current range for number of unassigned visits is [3-23]
-      # with mean 10.8, median 11 and std dev 3.
-      # The limits are calculated so that the test passes 75% of the time
+      # with mean 10.54, median 10 and std dev 3.25.
+      # The limits are calculated so that the test passes 80% of the time
       # both under intensive and non-intensive versions. Note that @regularity_restarts depends on ENV['INTENSIVE_TEST'].
       # However, the goal of the test is decrease the limit_range, limit_max and range_max values
       # to more acceptable levels -- e.g., 8, 12, and 18
       range_max = 23
       assert visits_unassigned.max <= range_max, "More than #{range_max} unassigned visits should never happen." #easy to achieve. If this is violated there probably is a degredation.
 
-      limit_range = ENV['INTENSIVE_TEST'] ? 13 : 10
+      limit_range = ENV['INTENSIVE_TEST'] ? 15 : 11
       assert visits_unassigned.max - visits_unassigned.min <= limit_range, "unassigned visits (#{visits_unassigned}) should be more regular (max - min <= #{limit_range})" # This check might fail once every 4 - 5 runs.
 
-      limit_max = ENV['INTENSIVE_TEST'] ? 18 : 15
+      limit_max = ENV['INTENSIVE_TEST'] ? 19 : 16
       assert visits_unassigned.max <= limit_max, "More than #{limit_max} unassigned visits shouldn't happen (#{visits_unassigned}) regularly --  i.e., it might happen once every 4-5 runs."
     end
 
