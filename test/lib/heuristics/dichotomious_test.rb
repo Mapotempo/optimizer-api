@@ -21,6 +21,7 @@ class DichotomiousTest < Minitest::Test
   if !ENV['SKIP_DICHO']
     def test_dichotomious_approach
       vrp = FCT.load_vrp(self)
+      vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
       t1 = Time.now
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       t2 = Time.now
@@ -102,6 +103,7 @@ class DichotomiousTest < Minitest::Test
 
     def test_split_matrix
       vrp = FCT.load_vrp(self, fixture_file: "dichotomious_approach")
+      vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
       service_vrp = { vrp: vrp, service: :demo, level: 0 }
 
       services_vrps = Interpreters::Dichotomious.split(service_vrp)

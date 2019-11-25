@@ -25,20 +25,16 @@ require 'ai4r'
 
 module Interpreters
   class Dichotomious
-
     def self.dichotomious_candidate?(service_vrp)
-      (service_vrp[:level] && service_vrp[:level] > 0) ||
-        (service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } &&
-        service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit &&
-        !service_vrp[:vrp].scheduling? &&
-        # TODO: We should introduce a new parameter to avoid this static definition
-        service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > 200 &&
-        service_vrp[:vrp].shipments.empty? &&
-        # (service_vrp[:vrp].vehicles.all?(&:force_start) || service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle[:shift_preference] == 'force_start' }) &&
-        service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier == 0 } &&
-        service_vrp[:vrp].services.all?{ |service| service.activity.late_multiplier.nil? || service.activity.late_multiplier == 0 } &&
-        service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? } &&
-        service_vrp[:vrp].points.all?{ |point| point.location && point.location.lat && point.location.lon }) #TODO - Remove and use matrix/matrix_index in clustering
+      service_vrp[:level]&.positive? ||
+        (
+          service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } && #TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
+          service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit &&
+          service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
+          !service_vrp[:vrp].scheduling? &&
+          service_vrp[:vrp].shipments.empty? && #TODO: check dicho with a P&D instance to remove this condition
+          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } #TODO: Remove and use matrix/matrix_index in clustering
+        )
     end
 
     def self.feasible_vrp(result, service_vrp)
@@ -66,7 +62,7 @@ module Interpreters
 
         t2 = Time.now
         if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && feasible_vrp(result, service_vrp) &&
-           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit && service_vrp[:vrp].services.size > 100
+           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit && service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit
           sub_service_vrps = []
           loop do
             sub_service_vrps = split(service_vrp, job)
@@ -143,7 +139,7 @@ module Interpreters
 
     def self.dicho_level_coeff(service_vrp)
       balance = 0.66666
-      level_approx = Math.log(service_vrp[:vrp].resolution_dicho_division_vec_limit / (service_vrp[:vrp].resolution_vehicle_limit || service_vrp[:vrp].vehicles.size).to_f, balance)
+      level_approx = Math.log(service_vrp[:vrp].resolution_dicho_division_vehicle_limit / (service_vrp[:vrp].resolution_vehicle_limit || service_vrp[:vrp].vehicles.size).to_f, balance)
       service_vrp[:vrp].resolution_dicho_level_coeff = 2**(1 / (level_approx - service_vrp[:level]).to_f)
     end
 
@@ -165,8 +161,9 @@ module Interpreters
 
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vec_limit && service_vrp[:vrp].services.size > 100 &&
-         service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_division_vec_limit
+      if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit &&
+         service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit &&
+         service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_division_vehicle_limit
         service_vrp[:vrp].resolution_init_duration = 1000
       else
         service_vrp[:vrp].resolution_init_duration = nil
