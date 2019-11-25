@@ -36,10 +36,16 @@ module Models
     field :preprocessing_first_solution_strategy, default: nil
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
-    field :resolution_dicho_level_coeff, default: 1.1
-    field :resolution_dicho_division_vec_limit, default: 3
-    field :resolution_angle, default: 38
-    field :resolution_div_average_service, default: 0.6
+    #The following 7 variables are used for dicho development
+    #TODO: Wait for the dev to finish to expose the dicho parameters
+    field :resolution_dicho_level_coeff, default: 1.1 #This variable is calculated inside dicho by default (TODO: check if it is really necessary)
+    field :resolution_dicho_algorithm_service_limit, default: 500
+    field :resolution_dicho_algorithm_vehicle_limit, default: 3
+    field :resolution_dicho_division_service_limit, default: 100 #This variable needs to corrected using the average number of services per vehicle.
+    field :resolution_dicho_division_vehicle_limit, default: 3
+    field :resolution_dicho_exclusion_scaling_angle, default: 38
+    field :resolution_dicho_exclusion_rate, default: 0.6
+
     field :resolution_duration, default: nil
     field :resolution_total_duration, default: nil
     field :resolution_iterations, default: nil
@@ -131,9 +137,6 @@ module Models
     end
 
     def resolution=(resolution)
-      self.resolution_angle = resolution[:angle]
-      self.resolution_dicho_level_coeff = resolution[:dicho_level_coeff]
-      self.resolution_div_average_service = resolution[:div_average_service]
       self.resolution_duration = resolution[:duration]
       self.resolution_total_duration = resolution[:duration]
       self.resolution_iterations = resolution[:iterations]
@@ -257,7 +260,7 @@ module Models
                                          approximate_number_of_vehicles_used * 2 * Helper.flying_distance(average_loc, [depot.location.lat, depot.location.lon])
 
                                          # TODO: Here we use flying_distance for approx_depot_time_correction; however, this value is in terms of meters
-                                         # instead of seconds. Still since all dicho paramters    -- i.e.,  resolution_angle, resolution_div_average_service, etc. --
+                                         # instead of seconds. Still since all dicho paramters    -- i.e.,  resolution_dicho_exclusion_scaling_angle, resolution_dicho_exclusion_rate, etc. --
                                          # are calculated with this functionality, correcting this bug makes the calculated parameters perform less effective.
                                          # We need to calculate new parameters after correcting the bug.
                                          #
@@ -272,8 +275,8 @@ module Models
 
         average_service_load = total_time_load / services.size.to_f
         average_number_of_services_per_vehicle = average_vehicles_work_time / average_service_load
-        exclusion_rate = resolution_div_average_service * average_number_of_services_per_vehicle
-        angle = resolution_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
+        exclusion_rate = resolution_dicho_exclusion_rate * average_number_of_services_per_vehicle
+        angle = resolution_dicho_exclusion_scaling_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
         tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
         coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
