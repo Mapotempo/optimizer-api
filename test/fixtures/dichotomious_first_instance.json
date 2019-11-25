@@ -89801,14 +89801,14 @@
         ]
       },
       "resolution": {
-        "duration": 4590000,
-        "initial_time_out": 4080000,
+        "duration": 2700000,
+        "minimum_duration": 2100000,
         "time_out_multiplier": 2,
         "solver": true,
         "allow_partial_assignment": true
       },
       "restitution": {
-        "intermediate_solutions": false
+        "intermediate_solutions": true
       }
     },
     "name": "c15 soft_instance_dichotomious"

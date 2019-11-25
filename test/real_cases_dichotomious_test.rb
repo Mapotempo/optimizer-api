@@ -20,25 +20,6 @@ require './test/test_helper'
 class RealCasesTest < Minitest::Test
   if !ENV['SKIP_REAL_DICHO'] && !ENV['SKIP_DICHO'] && !ENV['TRAVIS']
 
-    def test_soft_instance_dichotomious
-      vrp = FCT.load_vrp(self)
-      t1 = Time.now
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
-      t2 = Time.now
-      assert result
-  
-      # Check activities
-      assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
-  
-      # Check routes
-      assert result[:routes].size < 48, "Too many routes: #{result[:routes].size}"
-  
-      # Check elapsed time
-      assert result[:elapsed] / 1000 > 4080 * 0.9 && result[:elapsed] / 1000 < 4590 * 1.01, "Incorrect elapsed time: #{result[:elapsed]}"
-      assert t2 - t1 < 4590 * 1.55, "Too long elapsed time: #{t2 - t1}"
-      assert t2 - t1 > 4080, "Too short elapsed time: #{t2 - t1}"
-    end
-
     def test_dichotomious_first_instance
       vrp = FCT.load_vrp(self)
       t1 = Time.now
@@ -46,13 +27,30 @@ class RealCasesTest < Minitest::Test
       t2 = Time.now
       assert result
 
+      #TODO: remove the logs after dicho overhead problem is fixed
+      log "duration_min = #{vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f}", level: :debug
+      log "duration_max = #{vrp[:configuration][:resolution][:duration] / 1000.to_f}", level: :debug
+      log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug
+      log "duration_elapsed =  #{t2 - t1}", level: :debug
+
       # Check activities
       assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
 
-      # Check elapsed time
-      assert result[:elapsed] / 1000 > 7110 * 0.9 && result[:elapsed] / 1000 < 6320 * 1.01, "Incorrect elapsed time: #{result[:elapsed]}"
-      assert t2 - t1 < 7110 * 1.55, "Too long elapsed time: #{t2 - t1}"
-      assert t2 - t1 > 6320 * 0.9, "Too short elapsed time: #{t2 - t1}"
+      # Check time
+      duration_min = vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f
+      duration_max = vrp[:configuration][:resolution][:duration] / 1000.to_f
+      duration_optimization = result[:elapsed] / 1000.to_f
+      duration_elapsed =  t2 - t1
+
+      # Check time elapsed inside optimization
+      optim_time_info_str = "#{duration_optimization}s -- optimisation duration demanded between [#{duration_min}, #{duration_max}]"
+      assert duration_optimization > duration_min * 0.90, "Not enough time spent in optimization: #{optim_time_info_str}"
+      assert duration_optimization < duration_max * 1.01, "Too much time spent in optimization: #{optim_time_info_str}"
+
+      # Check time spent inside api
+      elapsed_time_info_str = "#{duration_elapsed}s for an optimisation of #{duration_optimization}s ([#{duration_min}, #{duration_max}])"
+      assert duration_elapsed > duration_min * 0.90, "Too little time spent inside api: #{elapsed_time_info_str}"
+      assert duration_elapsed < duration_max * 1.55, "Too much time spent inside api: #{elapsed_time_info_str}"
     end
 
     def test_dichotomious_second_instance
@@ -62,24 +60,11 @@ class RealCasesTest < Minitest::Test
       t2 = Time.now
       assert result
 
-      # Check activities
-      assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
-
-      # Check routes
-      assert result[:routes].size < 48, "Too many routes: #{result[:routes].size}"
-
-      # Check elapsed time
-      assert result[:elapsed] / 1000 > 4080 * 0.9 && result[:elapsed] / 1000 < 4590 * 1.01, "Incorrect elapsed time: #{result[:elapsed]}"
-      assert t2 - t1 < 4590 * 1.55, "Too long elapsed time: #{t2 - t1}"
-      assert t2 - t1 > 4080, "Too short elapsed time: #{t2 - t1}"
-    end
-
-    def test_soft_instance_dichotomious
-      vrp = FCT.load_vrp(self)
-      t1 = Time.now
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
-      t2 = Time.now
-      assert result
+      #TODO: remove the logs after dicho overhead problem is fixed
+      log "duration_min = #{vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f}", level: :debug
+      log "duration_max = #{vrp[:configuration][:resolution][:duration] / 1000.to_f}", level: :debug
+      log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug
+      log "duration_elapsed =  #{t2 - t1}", level: :debug
 
       # Check activities
       assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
@@ -87,10 +72,22 @@ class RealCasesTest < Minitest::Test
       # Check routes
       assert result[:routes].size < 48, "Too many routes: #{result[:routes].size}"
 
-      # Check elapsed time
-      assert result[:elapsed] / 1000 > 4080 * 0.9 && result[:elapsed] / 1000 < 4590 * 1.01, "Incorrect elapsed time: #{result[:elapsed]}"
-      assert t2 - t1 < 4590 * 1.55, "Too long elapsed time: #{t2 - t1}"
-      assert t2 - t1 > 4080, "Too short elapsed time: #{t2 - t1}"
+      # Check time
+      duration_min = vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f
+      duration_max = vrp[:configuration][:resolution][:duration] / 1000.to_f
+      duration_optimization = result[:elapsed] / 1000.to_f
+      duration_elapsed =  t2 - t1
+
+      # Check time elapsed inside optimization
+      optim_time_info_str = "#{duration_optimization}s -- optimisation duration demanded between [#{duration_min}, #{duration_max}]"
+      assert duration_optimization > duration_min * 0.90, "Not enough time spent in optimization: #{optim_time_info_str}"
+      assert duration_optimization < duration_max * 1.01, "Too much time spent in optimization: #{optim_time_info_str}"
+
+      # Check time spent inside api
+      elapsed_time_info_str = "#{duration_elapsed}s for an optimisation of #{duration_optimization}s ([#{duration_min}, #{duration_max}])"
+      assert duration_elapsed > duration_min * 0.90, "Too little time spent inside api: #{elapsed_time_info_str}"
+      assert duration_elapsed < duration_max * 1.55, "Too much time spent inside api: #{elapsed_time_info_str}"
     end
+
   end
 end
