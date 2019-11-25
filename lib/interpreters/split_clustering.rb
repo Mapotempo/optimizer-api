@@ -205,6 +205,8 @@ module Interpreters
     end
 
     def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicle_ids = nil)
+      log '---> build_partial_service_vrp', level: :debug
+      tic = Time.now
       # WARNING: Below we do marshal dump load but we continue using original objects
       # That is, if these objects are modified in sub_vrp then they will be modified in vrp too.
       # However, since original objects are coming from the data and we shouldn't be modifiying them, this doesn't pose a problem.
@@ -232,6 +234,7 @@ module Interpreters
         update_matrix(sub_vrp.matrices, sub_vrp, matrix_indices)
       end
 
+      log "<--- build_partial_service_vrp takes #{Time.now - tic}", level: :debug
       {
         vrp: sub_vrp,
         service: service_vrp[:service]
