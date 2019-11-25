@@ -42,7 +42,7 @@ module OptimizerWrapper
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
   OptimizerLogger.level = :debug
-  OptimizerLogger.caller_location = :partial
+  OptimizerLogger.caller_location = :relative
 
   @@c = {
     product_title: 'Optimizers API',
