@@ -29,20 +29,22 @@ class DichotomiousTest < Minitest::Test
 
       # Check activities
       if result[:routes].size > 11
-        assert result[:unassigned].size < 25, "Too many unassigned services #{result[:unassigned].size}"
+        assert result[:unassigned].size < 25, "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
       elsif result[:routes].size == 11
-        assert result[:unassigned].size < 30, "Too many unassigned services #{result[:unassigned].size}"
+        assert result[:unassigned].size < 30, "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
       else
-        assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
+        assert result[:unassigned].size < 55, "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
       end
 
       # Check routes
-      if result[:unassigned].size < 15
-        assert result[:routes].size < 14, "Too many routes: #{result[:routes].size}"
-      elsif result[:unassigned].size < 30
-        assert result[:routes].size < 13, "Too many routes: #{result[:routes].size}"
+      if result[:unassigned].size > 30
+        assert result[:routes].size < 12, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
+      elsif result[:unassigned].size > 15
+        assert result[:routes].size < 13, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
+      elsif result[:unassigned].size > 5
+        assert result[:routes].size < 14, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
       else
-        assert result[:routes].size < 12, "Too many routes: #{result[:routes].size}"
+        assert result[:routes].size < 15, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
       end
 
       # Check elapsed time
