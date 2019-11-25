@@ -136810,14 +136810,14 @@
         ]
       },
       "resolution": {
-        "duration": 7110000,
-        "initial_time_out": 6320000,
+        "duration": 3300000,
+        "minimum_duration": 2700000,
         "time_out_multiplier": 2,
         "solver": true,
         "allow_partial_assignment": true
       },
       "restitution": {
-        "intermediate_solutions": false
+        "intermediate_solutions": true
       }
     },
     "name": "c11 Gravigny_for_test"
