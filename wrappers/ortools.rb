@@ -762,34 +762,40 @@ module Wrappers
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
       log "----> run_ortools services(#{services.size}) preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
       tic = Time.now
-      if vrp.vehicles.size == 0 || (vrp.services.nil? || vrp.services.size == 0) && (vrp.shipments.nil? || vrp.shipments.size == 0)
+      if vrp.vehicles.empty? || (vrp.services.nil? || vrp.services.empty?) && (vrp.shipments.nil? || vrp.shipments.empty?)
         return [0, 0, @previous_result = parse_output(vrp, services, points, matrix_indices, 0, 0, nil)]
       end
+
       input = Tempfile.new('optimize-or-tools-input', tmpdir=@tmp_dir)
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close
 
       output = Tempfile.new('optimize-or-tools-output', tmpdir=@tmp_dir)
 
-      correspondant = { 'path_cheapest_arc' => 0, 'global_cheapest_arc' => 1, 'local_cheapest_insertion' => 2, 'savings' => 3, 'parallel_cheapest_insertion' => 4, 'first_unbound' => 5, 'christofides' => 6}
-      raise StandardError.new('Unconsistent first solution strategy used internally: ' + vrp.preprocessing_first_solution_strategy.to_s) if vrp.preprocessing_first_solution_strategy && correspondant[vrp.preprocessing_first_solution_strategy.first].nil?
+      correspondant = { 'path_cheapest_arc' => 0, 'global_cheapest_arc' => 1, 'local_cheapest_insertion' => 2, 'savings' => 3, 'parallel_cheapest_insertion' => 4, 'first_unbound' => 5, 'christofides' => 6 }
+
+      raise StandardError, "Inconsistent first solution strategy used internally: #{vrp.preprocessing_first_solution_strategy}" if vrp.preprocessing_first_solution_strategy && correspondant[vrp.preprocessing_first_solution_strategy.first].nil?
+
       cmd = [
-        "#{@exec_ortools} ",
-        (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
-        vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
-        (vrp.resolution_evaluate_only ? nil : (vrp.preprocessing_neighbourhood_size ? "-neighbourhood #{vrp.preprocessing_neighbourhood_size}" : nil)),
-        (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,
-        (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) && '-minimum_duration ' + (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out).to_s,
-        (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
-        vrp.resolution_init_duration ? "-init_duration #{vrp.resolution_init_duration}" : nil,
-        vrp.resolution_vehicle_limit && vrp.resolution_vehicle_limit < problem.vehicles.size ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
-        vrp.resolution_solver_parameter ? "-solver_parameter #{vrp.resolution_solver_parameter}" : nil,
-        vrp.preprocessing_first_solution_strategy ? "-solver_parameter #{correspondant[vrp.preprocessing_first_solution_strategy.first]}" : nil,
-        vrp.resolution_evaluate_only || vrp.resolution_batch_heuristic ? '-only_first_solution': nil,
-        vrp.restitution_intermediate_solutions ? "-intermediate_solutions" : nil,
-        "-instance_file '#{input.path}'",
-        "-solution_file '#{output.path}'"].compact.join(' ')
+              "#{@exec_ortools} ",
+              (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).to_s,
+              vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
+              (vrp.resolution_evaluate_only ? nil : (vrp.preprocessing_neighbourhood_size ? "-neighbourhood #{vrp.preprocessing_neighbourhood_size}" : nil)),
+              (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,
+              (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) && '-minimum_duration ' + (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out).to_s,
+              (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
+              vrp.resolution_init_duration ? "-init_duration #{vrp.resolution_init_duration}" : nil,
+              vrp.resolution_vehicle_limit && vrp.resolution_vehicle_limit < problem.vehicles.size ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
+              vrp.resolution_solver_parameter ? "-solver_parameter #{vrp.resolution_solver_parameter}" : nil,
+              vrp.preprocessing_first_solution_strategy ? "-solver_parameter #{correspondant[vrp.preprocessing_first_solution_strategy.first]}" : nil,
+              vrp.resolution_evaluate_only || vrp.resolution_batch_heuristic ? '-only_first_solution': nil,
+              vrp.restitution_intermediate_solutions ? '-intermediate_solutions' : nil,
+              "-instance_file '#{input.path}'",
+              "-solution_file '#{output.path}'"
+            ].compact.join(' ')
+
       log cmd
+
       stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
@@ -806,9 +812,7 @@ module Wrappers
       end.compact || []
       childs << @thread.pid
 
-      if thread_proc
-        thread_proc.call(childs)
-      end
+      thread_proc&.call(childs)
 
       out = ''
       iterations = 0
@@ -824,18 +828,19 @@ module Wrappers
         t && (time = t[1].to_f)
         log line.strip, level: /Final Iteration :/.match(line) || /First solution strategy :/.match(line) || /Using initial solution provided./.match(line) ? :info : r || s || t ? :debug : :error
         out += line
-        if block && r && s && t && vrp.restitution_intermediate_solutions
-          begin
-            @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
-            block.call(self, iterations, nil, nil, cost, t, @previous_result)
-          rescue => error
-            log "Error: #{error.message} in run_ortools during parse_output", level: :error
-          end
+
+        next unless block && r && s && t && vrp.restitution_intermediate_solutions
+
+        begin
+          @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+          block.call(self, iterations, nil, nil, cost, t, @previous_result)
+        rescue StandardError => e
+          log "Error: #{e.message} in run_ortools during parse_output", level: :error
         end
       }
 
       result = out.split("\n")[-1]
-      if @thread.value == 0
+      if @thread.value.exitstatus.zero?
         if result == 'No solution found...'
           cost = Helper.fixnum_max
           @previous_result = empty_result(vrp)
@@ -844,7 +849,7 @@ module Wrappers
           @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
         end
         [cost, iterations, @previous_result]
-      elsif @thread.value == 9
+      elsif @thread.value.exitstatus == 9
         out = 'Job killed'
         log out, level: :fatal # Keep trace in worker
         if cost && !result.include?('Iteration : ')
@@ -853,15 +858,15 @@ module Wrappers
           out
         end
       else
-        raise RuntimeError.new(result) unless vrp.restitution_allow_empty_result
+        raise RuntimeError, result unless vrp.restitution_allow_empty_result
       end
     ensure
-      input && input.unlink
-      output && output.unlink
-      @thread.value if @thread # wait for the termination of the thread in case there is one
-      stdin.close if stdin
-      stdout_and_stderr.close if stdout_and_stderr
-      pipe.close if pipe
+      input&.unlink
+      output&.unlink
+      @thread&.value # wait for the termination of the thread in case there is one
+      stdin&.close
+      stdout_and_stderr&.close
+      pipe&.close
       log "<---- run_ortools #{Time.now - tic}sec elapsed", level: :debug
     end
   end
