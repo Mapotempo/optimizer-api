@@ -108,22 +108,19 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     job = 'fake_job'
     schedule_end = 5
 
-    output_tool = OutputHelper::Scheduling.new(name, job, schedule_end)
+    output_tool = OutputHelper::Scheduling.new(name, 'fake_vehicles', job, schedule_end)
     file_name = Api::V01::APIBase.dump_vrp_dir.cache + '/scheduling_construction_test_fake_job'
 
     assert !File.exist?(file_name), 'File created before end of generation'
 
-    output_tool.start_new_cluster
     output_tool.add_comment('my comment')
     days = [0, 2, 4]
-    output_tool.output_scheduling_insert(days, 'service_id', 3, schedule_end)
-    output_tool.start_new_cluster
+    output_tool.output_scheduling_insert(days, 'service_id', 3)
     output_tool.close_file
 
     assert File.exist?(file_name), 'File not found'
 
     csv = CSV.read(file_name)
-    assert_equal 2, csv.select{ |line| line.first.include?(' new cluster ') }.size
     assert(csv.any?{ |line| line.first == 'my comment' })
     assert(csv.any?{ |line|
       line[0] == 'service_id' &&
@@ -148,8 +145,6 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
 
     Heuristics::Scheduling.stub_any_instance(:compute_initial_solution, lambda { |vrp|
-      @output_tool&.start_new_cluster
-
       fill_planning
       check_solution_validity
 

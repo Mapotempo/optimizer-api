@@ -76,12 +76,12 @@ module Heuristics
       @starting_time = Time.now
       @cost = 0
 
-      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, job, @schedule_end) : nil
+      vehicle_names = expanded_vehicles.collect{ |v| v.id.split('_').slice(0, 2).join('_') }.uniq
+      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, vehicle_names, job, @schedule_end) : nil
     end
 
     def compute_initial_solution(vrp, &block)
       block&.call()
-      @output_tool&.start_new_cluster
 
       fill_days
 
@@ -211,11 +211,15 @@ module Heuristics
         peri = [@services_data[service[:id]][:heuristic_period], 1].compact.max
         day_to_insert = (peri % 7).positive? ? days_available.select{ |day| day >= day_finished + peri }.min : day_finished + peri
 
+
+        this_service_days = [day_finished]
         cleaned_service = false
+        need_to_add_visits = false
         (2..@services_data[service[:id]][:nb_visits]).each{ |visit_number|
           inserted_day = nil
           while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
             inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number) if days_available.include?(day_to_insert)
+            this_service_days << inserted_day if inserted_day
 
             day_to_insert = if (peri % 7).positive?
               days_available.select{ |day| day >= day_to_insert + peri }.min
@@ -230,6 +234,7 @@ module Heuristics
             clean_routes(service, vehicle)
             cleaned_service = true
           else
+            need_to_add_visits = true # not in case allow partial assignment false because we unafect all
             @uninserted["#{service[:id]}_#{visit_number}_#{@services_data[service[:id]][:nb_visits]}"] = {
               original_service: service[:id],
               reason: "Visit not assignable by heuristic, first visit assigned at day #{day_finished}"
@@ -632,32 +637,16 @@ module Heuristics
 
     def fill_basic
       ### fill planning without same_point_day option ###
-      until @candidate_vehicles.empty? || @candidate_services_ids.empty?
-        current_vehicle = @candidate_vehicles[0]
-        days_available = @candidate_routes[current_vehicle].keys.sort_by!{ |day|
-          [@candidate_routes[current_vehicle][day][:current_route].size, @candidate_routes[current_vehicle][day][:tw_end] - @candidate_routes[current_vehicle][day][:tw_start]]
+      all_days = @candidate_routes.collect{ |_vehicle, data| data.keys }.flatten.uniq
+
+      all_days.each{ |day|
+        @candidate_vehicles.each{ |vehicle|
+          next if @candidate_routes[vehicle][day].nil?
+
+          fill_day_in_planning(vehicle, @candidate_routes[vehicle][day])
+          adjust_candidate_routes(vehicle, day)
         }
-        current_day = days_available[0]
-
-        until @candidate_services_ids.empty? || current_day.nil?
-          fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day])
-          adjust_candidate_routes(current_vehicle, current_day)
-          days_available.delete(current_day)
-          @candidate_routes[current_vehicle].delete(current_day)
-          while @candidate_routes[current_vehicle].any?{ |_day, day_data| !day_data[:current_route].empty? }
-            current_day = @candidate_routes[current_vehicle].max_by{ |_day, day_data| day_data[:current_route].size }.first
-            fill_day_in_planning(current_vehicle, @candidate_routes[current_vehicle][current_day])
-            adjust_candidate_routes(current_vehicle, current_day)
-            days_available.delete(current_day)
-            @candidate_routes[current_vehicle].delete(current_day)
-          end
-
-          current_day = days_available[0]
-        end
-
-        # we have filled all days for current vehicle
-        @candidate_vehicles.delete(current_vehicle)
-      end
+      }
     end
 
     def fill_days
@@ -687,7 +676,7 @@ module Heuristics
 
           if @output_tool
             days = @candidate_routes[vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == point_to_add[:id] } }.keys
-            @output_tool.output_scheduling_insert(days, point_to_add[:id], @services_data[point_to_add[:id]][:nb_visits], @schedule_end)
+            @output_tool.output_scheduling_insert(days, point_to_add[:id], @services_data[point_to_add[:id]][:nb_visits])
           end
 
           @to_plan_service_ids.delete(point_to_add[:id])
@@ -695,18 +684,6 @@ module Heuristics
         else
           service_to_insert = false
           @vehicle_day_completed[vehicle][day] = true
-          @planning[vehicle][day] = {
-            vehicle: {
-              vehicle_id: route_data[:vehicle_id],
-              start_point_id: route_data[:start_point_id],
-              end_point_id: route_data[:end_point_id],
-              tw_start: route_data[:tw_start],
-              tw_end: route_data[:tw_end],
-              matrix_id: route_data[:matrix_id],
-              router_dimension: route_data[:router_dimension]
-            },
-            services: current_route
-          }
 
           next if current_route.empty?
 
@@ -777,7 +754,7 @@ module Heuristics
           if inserted_id
             if @output_tool
               days = @candidate_routes[current_vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == inserted_id } }.keys
-              @output_tool.output_scheduling_insert(days, inserted_id, @services_data[inserted_id][:nb_visits], @schedule_end)
+              @output_tool.output_scheduling_insert(days, inserted_id, @services_data[inserted_id][:nb_visits])
             end
 
             adjust_candidate_routes(current_vehicle, best_day)
