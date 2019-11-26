@@ -19,6 +19,7 @@
 require 'logger'
 
 class OptimizerLogger
+  @@level = :info
   @@level_map = {
     debug: Logger::DEBUG,
     info: Logger::INFO,
@@ -35,7 +36,7 @@ class OptimizerLogger
   @@caller_location = nil
 
   @@logger = Logger.new(ENV['LOG_DEVICE'] || STDOUT)
-  @@logger.level = Logger::INFO
+  @@logger.level = @@level_map[@@level]
 
   @@logger.formatter = proc do |severity, datetime, progname, msg|
     job_id = OptimizerWrapper::Job.current_job_id
@@ -77,7 +78,12 @@ class OptimizerLogger
     @@caller_location = value
   end
 
+  def self.level
+    @@level
+  end
+
   def self.level=(level)
+    @@level = level
     @@logger.level = @@level_map[level]
   end
 
