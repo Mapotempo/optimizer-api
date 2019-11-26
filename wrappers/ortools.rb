@@ -816,13 +816,13 @@ module Wrappers
       time = 0.0
       # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
-        r = /^Iteration : ([0-9]+)/.match(line)
+        r = /Iteration : ([0-9]+)/.match(line)
         r && (iterations = Integer(r[1]))
         s = / Cost : ([0-9.eE+]+)/.match(line)
         s && (cost = Float(s[1]))
         t = / Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
-        log line.strip, level: /Final Iteration :/.match(line) ? :info : r || s || t ? :debug : :error
+        log line.strip, level: /Final Iteration :/.match(line) || /First solution strategy :/.match(line) || /Using initial solution provided./.match(line) ? :info : r || s || t ? :debug : :error
         out += line
         if block && r && s && t && vrp.restitution_intermediate_solutions
           begin
