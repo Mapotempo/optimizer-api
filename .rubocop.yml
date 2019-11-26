@@ -100,3 +100,6 @@ Style/WordArray:
 
 Style/ParallelAssignment:
   Enabled: false
+
+Style/RedundantException:
+  Enabled: false
