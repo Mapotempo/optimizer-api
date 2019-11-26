@@ -24,4 +24,4 @@ before_install:
   - mkdir -p ./redis
 
 script:
-  - travis_wait 30 bash ci-utils/travis.sh ${TEST_SUITE}
+  - travis_wait 60 bash ci-utils/travis.sh ${TEST_SUITE}
