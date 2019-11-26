@@ -85,7 +85,7 @@ module OutputHelper
         service.activity.point.location.lat,
         service.activity.point.location.lon,
         'cluster_' + cluster_index.to_s,
-        "#{vrp.vehicles.collect{ |v| v[:id] }}",
+        vrp.vehicles.collect{ |v| v[:id] }.to_s,
         two_stages ? vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows : nil
       ]
     end
@@ -93,24 +93,23 @@ module OutputHelper
 
   # To output data about scheduling heuristic process
   class Scheduling
-    def initialize(name, job, schedule_end)
-      @file_name = ("scheduling_construction#{"_#{name}" if name}#{"_#{job}" if job}").parameterize
+    def initialize(name, vehicle_names, job, schedule_end)
+      @file_name = "scheduling_construction#{"_#{name}" if name}#{"_#{job}" if job}".parameterize
+      @nb_days = schedule_end
 
       @scheduling_file = ''
       @scheduling_file << 'customer_id,nb_visits,'
-      (0..schedule_end).each{ |day|
+      (0..@nb_days).each{ |day|
         @scheduling_file << "#{day},"
       }
       @scheduling_file << "\n"
+
+      @scheduling_file << "CLUSTER WITH VEHICLES #{vehicle_names} ------\n"
     end
 
-    def start_new_cluster
-      @scheduling_file << "------ new cluster ------\n"
-    end
-
-    def output_scheduling_insert(days, inserted_id, nb_visits, schedule_end)
+    def output_scheduling_insert(days, inserted_id, nb_visits = nil)
       line = "#{inserted_id},#{nb_visits}"
-      (0..schedule_end).each{ |day|
+      (0..@nb_days).each{ |day|
         line << if days.include?(day)
           ',X'
         else
