@@ -88,12 +88,16 @@ module FCT
   end
 
   def self.solve_asynchronously
+    pid_worker = Process.spawn('COUNT=1 QUEUE=DEFAULT bundle exec rake resque:workers', pgroup: true)
+
     OptimizerWrapper.config[:solve_synchronously] = false
     Resque.inline = false
     yield
   ensure
     Resque.inline = true
     OptimizerWrapper.config[:solve_synchronously] = true
+
+    Process.kill('KILL', -Process.getpgid(pid_worker)) if pid_worker #Kill the process and all of its children
   end
 end
 
