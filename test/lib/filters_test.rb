@@ -69,6 +69,9 @@ class FiltersTest < Minitest::Test
   # Therefore this test checks if the calculated unit.precision_coef is correct but it can
   # check the actual capacity and quantity values after precision_coef is put upto use.
   def test_if_ortools_recieves_correct_capacity_quantity_balancing_precision_coef
+    skip "precision_coeffision calculation is disactivated. The test should be
+          corrected and activated when precision coefficion implementaion is corrected.
+          Model::X.all's needs to be corrected in the test as well."
     OptimizerWrapper.config[:solve_synchronously] = true
     prob = {
       matrices: [

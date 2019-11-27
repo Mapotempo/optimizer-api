@@ -22,7 +22,7 @@ module Filters
     services_vrps = merge_timewindows(services_vrps)
     filter_skills(services_vrps)
 
-    calculate_unit_precision # TODO: treat only input vrp, not all models in memory from other vrps
+    #calculate_unit_precision # TODO: treat only input vrp, not all models in memory from other vrps
 
     services_vrps
   end
