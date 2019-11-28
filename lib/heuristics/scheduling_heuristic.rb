@@ -1371,8 +1371,9 @@ module Heuristics
     def find_corresponding_timewindow(service_id, day, arrival_time)
       @services_data[service_id][:tw].select{ |tw|
         (tw[:day_index].nil? || tw[:day_index] == day % 7) && # compatible days
-          (arrival_time.between?(tw[:start], tw[:end]) || arrival_time <= tw[:start]) && # arrival_time is accepted
-          (!@duration_in_tw || ([tw[:start], arrival_time].max + @services_data[service_id][:duration] <= tw[:end])) # duration accepted in tw
+          (tw[:start].nil? && tw[:end].nil? ||
+            (arrival_time.between?(tw[:start], tw[:end]) || arrival_time <= tw[:start]) && # arrival_time is accepted
+            (!@duration_in_tw || ([tw[:start], arrival_time].max + @services_data[service_id][:duration] <= tw[:end]))) # duration accepted in tw
       }.min_by{ |tw| tw[:start] }
     end
 
