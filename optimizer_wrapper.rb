@@ -103,7 +103,7 @@ module OptimizerWrapper
       next if service[:vrp].preprocessing_partitions.empty? ||
               !service[:vrp].preprocessing_first_solution_strategy.to_a.include?('periodic')
 
-      service[:vrp].resolution_repetition = service[:vrp][:configuration][:resolution][:repetition] || 3
+      service[:vrp].resolution_repetition ||= 3
     }
 
     if services_vrps.any?{ |sv| !sv[:service] }
