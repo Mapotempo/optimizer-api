@@ -67,8 +67,8 @@ module OptimizerWrapper
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
     },
     dump: {
-      vrp: ENV['OPTIM_DUMP_VRP'] == 'true' || true,
-      solution: ENV['OPTIM_DUMP_SOLUTION'] == 'true' || true
+      vrp: ENV['OPTIM_DUMP_VRP'] ? ENV['OPTIM_DUMP_VRP'] == 'true' : true,
+      solution: ENV['OPTIM_DUMP_SOLUTION'] ? ENV['OPTIM_DUMP_SOLUTION'] == 'true' : true
     },
     debug: {
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
