@@ -106,7 +106,7 @@ module Heuristics
         fill_planning
         check_solution_validity
       rescue
-        # TODO : send an alert in this case
+        log 'Solution after calling solver to reorder routes is unfeasible.', level: :warn
         restore
       end
 
@@ -531,7 +531,7 @@ module Heuristics
           begin
             result = OptimizerWrapper.solve([service: :ortools, vrp: route_vrp])
           rescue
-            log 'ORtools could not find a solution for this problem.'
+            log 'ORtools could not find a solution for this problem.', level: :warn
           end
 
           next if result.nil? || !result[:unassigned].empty?

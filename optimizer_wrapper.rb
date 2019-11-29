@@ -128,6 +128,7 @@ module OptimizerWrapper
   def self.define_process(services_vrps, job = nil, &block)
     log "--> define_process #{services_vrps.size} VRPs with levels #{services_vrps.map{ |sv| sv[:level] }}", level: :debug
     t = Time.now
+    expecting = services_vrps.collect{ |service| service[:vrp].visits + service[:vrp].shipments.size * 2 }.sum
     log "min_durations #{services_vrps.map{ |sv| sv[:vrp].resolution_minimum_duration }} max_durations #{services_vrps.map{ |sv| sv[:vrp].resolution_duration }}", level: :debug
     log "resolution_vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].resolution_vehicle_limit }}", level: :debug
 
@@ -167,6 +168,7 @@ module OptimizerWrapper
     }
 
     log "<-- define_process levels #{services_vrps.map{ |sv| sv[:level] }} elapsed: #{(Time.now - t).round(2)}sec", level: :debug
+    check_result_consistency(expecting, result_global[:result])
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end
 
@@ -559,6 +561,15 @@ module OptimizerWrapper
   end
 
   private
+
+  def self.check_result_consistency(expected_value, results)
+    results.each{ |result|
+      nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
+      nb_unassigned = result[:unassigned].size
+
+      log 'Wrong number of visits returned in result', level: :warn if expected_value != nb_assigned + nb_unassigned
+    }
+  end
 
   def self.adjust_vehicles_duration(vrp)
       vrp.vehicles.select{ |v| v.duration? && v.rests.size > 0 }.each{ |v|
