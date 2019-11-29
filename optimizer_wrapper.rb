@@ -158,7 +158,7 @@ module OptimizerWrapper
     }
     result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty? && dicho_results.compact.empty?
     if duplicated_results.size == services_vrps.first[:vrp][:resolution_repetition]
-      result = duplicated_results.min_by{ |r| r[:unassigned].size }
+      result = duplicated_results.compact.min_by{ |r| r[:unassigned].size }
       log "#{job}_repetition - #{duplicated_results.collect{ |r| r[:unassigned].size }} : chose to keep #{duplicated_results.find_index(result)}"
       duplicated_results = [] # keep those results?
     end
