@@ -72,17 +72,16 @@ module Interpreters
         vrp.preprocessing_partitions.each_with_index{ |partition, partition_index|
           cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
 
-          log "Starting clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size}"
           case partition[:method]
           when 'balanced_kmeans'
             generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
+              block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
+
               # TODO : global variable to know if work_day entity
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
               options = { cut_symbol: cut_symbol, entity: partition[:entity] }
               options[:restarts] = partition[:restarts] if partition[:restarts]
-              split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options) { |current_restart, total_restarts|
-                block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size} - iteration #{current_restart + s_v_i * total_restarts}/#{total_restarts * current_service_vrps.size}", nil, nil, nil)
-              }
+              split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options)
             }
             current_service_vrps = generated_service_vrps.flatten
           when 'hierarchical_tree'
@@ -251,7 +250,7 @@ module Interpreters
       c = nil
       score_hash = {}
       while restart < options[:restarts]
-        block&.call(restart, options[:restarts])
+        log "Restart #{restart}/#{options[:restarts]}", level: :debug
         c = BalancedKmeans.new
         c.max_iterations = options[:max_iterations]
         c.centroid_indices = centroids if centroids && centroids.size == nb_clusters
