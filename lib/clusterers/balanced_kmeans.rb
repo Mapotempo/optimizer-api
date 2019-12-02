@@ -416,7 +416,7 @@ module Ai4r
           @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load.to_f
           if !@apply_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol].positive? }
             @apply_balancing = true
-            log "Balancing activated late at iteration #{@iterations} after #{(@percent_assigned_cut_load * 100).round(2)}% of the services", level: :warn if @percent_assigned_cut_load > 0.2
+            log "Balancing activated late at iteration #{@iterations} after #{(@percent_assigned_cut_load * 100).round(2)}% of the services", level: :debug if @percent_assigned_cut_load > 0.2 && @iterations.positive?
           end
         }
       end
