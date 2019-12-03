@@ -22,6 +22,14 @@ class DichotomiousTest < Minitest::Test
     def test_dichotomious_approach
       vrp = FCT.load_vrp(self)
       vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
+
+      if ENV['TRAVIS'] # Compansate for travis performance
+        vrp[:configuration][:resolution][:minimum_duration] *= 1.50
+        vrp[:configuration][:resolution][:duration] *= 1.50
+        vrp.resolution_duration *= 1.50
+        vrp.resolution_minimum_duration *= 1.50
+      end
+
       t1 = Time.now
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       t2 = Time.now
