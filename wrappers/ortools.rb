@@ -840,7 +840,7 @@ module Wrappers
       }
 
       result = out.split("\n")[-1]
-      if @thread.value.exitstatus.zero?
+      if @thread.value.success?
         if result == 'No solution found...'
           cost = Helper.fixnum_max
           @previous_result = empty_result(vrp)
@@ -849,7 +849,7 @@ module Wrappers
           @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
         end
         [cost, iterations, @previous_result]
-      elsif @thread.value.exitstatus == 9
+      elsif @thread.value.signaled? && @thread.value.termsig == 9
         out = 'Job killed'
         log out, level: :fatal # Keep trace in worker
         if cost && !result.include?('Iteration : ')
@@ -858,7 +858,8 @@ module Wrappers
           out
         end
       else
-        raise RuntimeError, result unless vrp.restitution_allow_empty_result
+        log "Job terminated with unknown thread status #{@thread.value}", level: :fatal # Keep trace in worker
+        raise RuntimeError, 'Job terminated with unknown thread status'
       end
     ensure
       input&.unlink
