@@ -39,12 +39,11 @@ class OptimizerLogger
   @@logger.level = @@level_map[@@level]
 
   @@logger.formatter = proc do |severity, datetime, progname, msg|
-    job_id = OptimizerWrapper::Job.current_job_id
-    job_id = job_id.nil? ? '' : "#{job_id} - "
+    datetime = OptimizerLogger::with_datetime ? "[#{datetime}]" : nil
+    job_id = OptimizerWrapper::Job.current_job_id ? "#{OptimizerWrapper::Job.current_job_id} -" : nil
+    progname = progname.empty? ? nil : "- #{progname}"
 
-    progname = progname.empty? ? ' ' : " - #{progname}"
-
-    "[#{datetime}] #{job_id}#{severity}#{progname}: #{msg}\n"
+    [datetime, job_id, severity, progname].compact.join(' ') + ": #{msg}\n"
   end
 
   def self.define_progname(progname)
@@ -76,6 +75,14 @@ class OptimizerLogger
 
   def self.caller_location=(value)
     @@caller_location = value
+  end
+
+  def self.with_datetime
+    @@with_datetime
+  end
+
+  def self.with_datetime=(value)
+    @@with_datetime = value
   end
 
   def self.level

@@ -42,6 +42,7 @@ module OptimizerWrapper
   @@dump_vrp_dir = CacheManager.new(TMP_DIR)
 
   OptimizerLogger.level = ENV['LOG_LEVEL']&.to_sym || :fatal
+  OptimizerLogger.with_datetime = true
   # OptimizerLogger.caller_location = nil => nil is default
 
   @@c = {
