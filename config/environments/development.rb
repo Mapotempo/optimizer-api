@@ -42,6 +42,7 @@ module OptimizerWrapper
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
   OptimizerLogger.level = :debug
+  OptimizerLogger.with_datetime = true
   OptimizerLogger.caller_location = :relative
 
   @@c = {
