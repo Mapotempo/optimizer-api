@@ -2979,4 +2979,50 @@ class WrapperTest < Minitest::Test
     unfeasible = OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible, vrp, vrp[:services][0], 'reason3')
     assert_equal 5, unfeasible.size
   end
+
+  def test_repetition
+    solve_call = 0
+    vrp = FCT.create(VRP.scheduling)
+    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
+      solve_call += 1
+      { routes: [], unassigned: vrp.services.collect{ |s| s }}
+    }) do
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+    assert_equal 1, solve_call # 1 repetition if only periodic
+
+    solve_call = 0
+    vrp = FCT.create(VRP.scheduling)
+    vrp.preprocessing_partitions = [{ 'method': 'balanced_kmeans', 'metric': 'duration', 'entity': 'vehicle' }]
+    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
+      solve_call += 1
+      { routes: [], unassigned: vrp.services.collect{ |s| s }}
+    }) do
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+    assert_equal 3, solve_call # 3 repetitions if periodic + clustering
+
+    solve_call = 0
+    vrp = FCT.create(VRP.scheduling)
+    vrp.preprocessing_partitions = [{ 'method': 'balanced_kmeans', 'metric': 'duration', 'entity': 'vehicle' }]
+    vrp.preprocessing_first_solution_strategy = nil
+    vrp.resolution_solver = true
+    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
+      solve_call += 1
+      { routes: [], unassigned: vrp.services.collect{ |s| s }}
+    }) do
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+    assert_equal 1, solve_call # 1 repetition if only clustering
+
+    solve_call = 0
+    vrp = FCT.create(VRP.basic)
+    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
+      solve_call += 1
+      { routes: [], unassigned: vrp.services.collect{ |s| s }}
+    }) do
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+    assert_equal 1, solve_call # 1 repetition if basic instance
+  end
 end

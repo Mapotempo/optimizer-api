@@ -67,7 +67,7 @@ module Models
     field :resolution_several_solutions, default: nil
     field :resolution_variation_ratio, default: nil
     field :resolution_batch_heuristic, default: false
-    field :resolution_repetition, default: 1
+    field :resolution_repetition, default: nil
     field :resolution_floating_precision, default: 0
 
     field :restitution_geometry, default: false
