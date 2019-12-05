@@ -503,11 +503,8 @@ module Wrappers
       end
     end
 
-    def build_rest(rest, day_index)
-      {
-        duration: rest.duration,
-        timewindows: build_timewindows(rest, day_index)
-      }
+    def build_rest(rest, day_index, job_load)
+      build_detail(nil, rest, nil, day_index, job_load, nil, nil)
     end
 
     def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
@@ -515,9 +512,9 @@ module Wrappers
         lat: point && point.location && point.location.lat,
         lon: point && point.location && point.location.lon,
         skills: job && job.skills,
-        setup_duration: activity && activity.setup_duration,
+        setup_duration: activity && activity[:setup_duration],
         duration: activity && activity.duration,
-        additional_value: activity && activity.additional_value,
+        additional_value: activity && activity[:additional_value],
         timewindows: activity && build_timewindows(activity, day_index),
         quantities: build_quantities(job, job_load, delivery),
         router_mode: vehicle ? vehicle.router_mode : nil,
@@ -561,7 +558,7 @@ module Wrappers
         }).flatten + (vrp.rests.collect{ |rest|
           {
             rest_id: rest.id,
-            detail: build_rest(rest, nil)
+            detail: build_rest(rest, nil, {})
           }
         })
       }
@@ -609,7 +606,7 @@ module Wrappers
           earliest_start = route_start
           {
             vehicle_id: vehicle.id,
-            activities: route['activities'].collect{ |activity|
+            activities: route['activities'].collect.with_index{ |activity, activity_index|
               current_activity = nil
               current_index = activity['index'] || 0
               activity_loads = load_status.collect.with_index{ |load_quantity, load_index|
@@ -617,9 +614,13 @@ module Wrappers
                 {
                   unit: unit.id,
                   label: unit.label,
-                  current_load: vehicle.end_point && activity['type'] == 'end' ?
-                                (route['activities'][-2]['quantities'][load_index] || 0).round(2) :
-                                (activity['quantities'][load_index] || 0).round(2),
+                  current_load: (if vehicle.end_point && activity['type'] == 'end'
+                                  route['activities'][-2]['quantities'][load_index]
+                                elsif activity['type'] == 'break' && activity_index.positive?
+                                  route['activities'][activity_index - 1]['quantities'][load_index]
+                                else
+                                  activity['quantities'][load_index]
+                                end || 0).round(2),
                   counting: unit.counting
                 }
               }
@@ -708,7 +709,7 @@ module Wrappers
                   rest_id: activity['id'],
                   begin_time: earliest_start,
                   departure_time: earliest_start + vehicle_rest[:duration],
-                  detail: build_rest(vehicle_rest, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil)
+                  detail: build_rest(vehicle_rest, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads)
                 }
                 earliest_start += vehicle_rest[:duration]
               end
@@ -752,7 +753,7 @@ module Wrappers
             {
               vehicle_id: vehicle.id,
               rest_id: rest_id,
-              detail: build_rest(rest, nil)
+              detail: build_rest(rest, nil, {})
             }
           }
         }
