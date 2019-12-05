@@ -78,13 +78,15 @@ module OptimizerWrapper
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
 
+    Filters::filter(vrp)
+
     vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
       3
     else
       1
     end
 
-    services_vrps = split_independent_vrp(vrp).map.with_index{ |vrp_element, i|
+    services_vrps = split_independent_vrp(vrp).map{ |vrp_element|
       {
         service: services[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
@@ -101,8 +103,6 @@ module OptimizerWrapper
         level: 0
       }
     }
-
-    services_vrps = Filters::filter(services_vrps)
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)

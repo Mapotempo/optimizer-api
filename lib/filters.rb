@@ -18,13 +18,13 @@
 require './models/timewindow.rb'
 
 module Filters
-  def self.filter(services_vrps)
-    services_vrps = merge_timewindows(services_vrps)
-    filter_skills(services_vrps)
+  def self.filter(vrp)
+    merge_timewindows(vrp)
+
+    filter_skills(vrp)
 
     #calculate_unit_precision # TODO: treat only input vrp, not all models in memory from other vrps
-
-    services_vrps
+    nil
   end
 
   # Calculates a coefficient for each unit so that when multiplied with
@@ -164,65 +164,127 @@ module Filters
     result
   end
 
-  def self.merge_timewindows(services_vrps)
-    services_vrps.each{ |service_vrp|
-      service_vrp[:vrp].services.each{ |service|
-        next if !service.activity
-        unified_timewindows = {}
-        inter = {}
-        new_timewindows = []
-        if service.activity.timewindows.size > 1
-          service.activity.timewindows.each{ |timewindow|
-            unified_timewindows[timewindow.id] = {
-              start: timewindow.start && ((timewindow.day_index || 0) * 86400 + timewindow.start) || (0 + (timewindow.day_index || 0) * 86400),
-              end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end) || (0 + (1 + (timewindow.day_index || 6)) * 86400)
-            }
-            inter[timewindow.id] = []
-          }
-          unified_timewindows.each{ |key, value|
-            unified_timewindows.each{ |s_key, s_value|
-              next if key == s_key || s_value.include?(key) || value.include?(s_key)
-              if value[:start] >= s_value[:start] && value[:start] <= s_value[:end] ||
-                 value[:end] >= s_value[:start] && value[:end] <= s_value[:end]
-                inter[key].each{ |k_value| inter[k_value] << s_key }
-                inter[s_key].each{ |k_value| inter[k_value] << key }
-                inter[key] << s_key
-                inter[s_key] << key
-              end
-            }
-          }
-          to_merge_ids = []
-          if inter.any?{ |key, value| !value.empty? }
-            inter.each{ |key, value|
-              to_merge_ids = ([key] + value).uniq
-              to_merge_ids.each{ |id| inter.delete(id) }
-              inter.delete(to_merge_ids)
-              to_merge_tws = service.activity.timewindows.select{ |timewindow| to_merge_ids.include?(timewindow.id) }
-              day_indices = to_merge_tws.collect{ |tw| tw.day_index }
-              starts = to_merge_tws.collect{ |tw| tw.start }
-              ends = to_merge_tws.collect{ |tw| tw.end }
-              earliest_day_index = day_indices.include?(nil) ? nil : day_indices.min
-              latest_day_index = day_indices.include?(nil) ? nil : day_indices.max
-              earliest_start = starts.include?(nil) ? nil : starts.min
-              latest_end = ends.include?(nil) ? nil : ends.max
-              new_timewindows << Models::Timewindow.new(start: earliest_start, end: latest_end, day_index: earliest_day_index)
-            }
-            service.activity.timewindows = new_timewindows
-          end
-        end
+  def self.merge_timewindows(vrp)
+    vrp.services.each{ |service|
+      next if !service.activity || service.activity.timewindows.size <= 1
+
+      unified_timewindows = {}
+      inter = {}
+      new_timewindows = []
+
+      service.activity.timewindows.each{ |timewindow|
+        unified_timewindows[timewindow.id] = {
+          start: timewindow.start && ((timewindow.day_index || 0) * 86400 + timewindow.start) || (0 + (timewindow.day_index || 0) * 86400),
+          end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end) || (0 + (1 + (timewindow.day_index || 6)) * 86400)
+        }
+        inter[timewindow.id] = []
       }
+
+      unified_timewindows.each{ |key, value|
+        unified_timewindows.each{ |s_key, s_value|
+          next if key == s_key || s_value.include?(key) || value.include?(s_key)
+
+          next unless value[:start] >= s_value[:start] && value[:start] <= s_value[:end] || value[:end] >= s_value[:start] && value[:end] <= s_value[:end]
+
+          inter[key].each{ |k_value| inter[k_value] << s_key }
+          inter[s_key].each{ |k_value| inter[k_value] << key }
+          inter[key] << s_key
+          inter[s_key] << key
+        }
+      }
+      to_merge_ids = []
+
+      next unless inter.any?{ |_key, value| !value.empty? }
+
+      inter.each{ |key, value|
+        to_merge_ids = ([key] + value).uniq
+        to_merge_ids.each{ |id| inter.delete(id) }
+        inter.delete(to_merge_ids)
+        to_merge_tws = service.activity.timewindows.select{ |timewindow| to_merge_ids.include?(timewindow.id) }
+        day_indices = to_merge_tws.collect(&:day_index)
+        starts = to_merge_tws.collect(&:start)
+        ends = to_merge_tws.collect(&:end)
+        earliest_day_index = day_indices.include?(nil) ? nil : day_indices.min
+        #latest_day_index = day_indices.include?(nil) ? nil : day_indices.max
+        earliest_start = starts.include?(nil) ? nil : starts.min
+        latest_end = ends.include?(nil) ? nil : ends.max
+        new_timewindows << Models::Timewindow.new(start: earliest_start, end: latest_end, day_index: earliest_day_index)
+      }
+      service.activity.timewindows = new_timewindows
     }
+
+    nil
   end
 
-  def self.filter_skills(services_vrps)
-    services_vrps.each{ |service_vrp|
-      vrp = service_vrp[:vrp]
-      vrp.services.each{ |service|
-        service.skills = service.skills.uniq.sort unless service.skills.empty?
-      }
-      vrp.vehicles.each{ |vehicle|
-        vehicle.skills = vehicle.skills.map{ |or_skills| or_skills.uniq.sort unless or_skills.empty? }.uniq.compact
+  def self.filter_skills(vrp)
+    # Remove duplicate skills and sort
+    vrp.services.each{ |s|
+      s.skills = s.skills&.uniq&.sort
+    }
+
+    vrp.shipments.each{ |s|
+      s.skills = s.skills&.uniq&.sort
+    }
+
+    vrp.vehicles.each{ |v|
+      v.skills = v.skills.map{ |s| s&.uniq&.sort }.compact.uniq
+    }
+
+    # Remove infeasible skills
+    filter_infeasible_service_shipment_skills(vrp)
+    filter_unnecessary_vehicle_skills(vrp)
+
+    nil
+  end
+
+  def self.filter_infeasible_service_shipment_skills(vrp)
+    # Eliminate skills of services and shipments if there is no vehicle to serve it
+    available_vehicle_skills = vrp.vehicles.flat_map(&:skills).compact.uniq
+
+    [vrp.services, vrp.shipments].each{ |activity_group|
+      activity_group.each{ |s|
+        next if s.skills.empty?
+
+        unavailable_skills = available_vehicle_skills.collect{ |veh_skills|
+          skill_diff = s.skills - veh_skills
+
+          break if skill_diff.empty?
+
+          skill_diff
+        }&.uniq
+
+        next if unavailable_skills.nil? # There is a vehicle that can serve this service
+
+        skills_to_eliminate = unavailable_skills.min_by(2, &:size)
+
+        if skills_to_eliminate[0].size == skills_to_eliminate[1]&.size
+          message = 'There is at least one service or shipment with multiple skills which are not avaiable in any vehicles.'\
+                    'Cannot eliminate them automatically. Make sure all destinations are serviceable by at least one vehicle.'
+          log message, level: :fatal
+          raise OptimizerWrapper::DiscordantProblemError, message
+        end
+
+        s.skills -= skills_to_eliminate[0] # Erase the skill that cannot be served
       }
     }
+
+    nil
+  end
+
+  def self.filter_unnecessary_vehicle_skills(vrp)
+    # Eliminate skills of vehicles if there is no service needing it
+    needed_service_skills = (vrp.services.flat_map(&:skills) + vrp.shipments.flat_map(&:skills)).compact.uniq
+
+    vrp.vehicles.each{ |v|
+      next if v.skills.empty?
+
+      v.skills.each.with_index{ |veh_skill, s_ind|
+        next if veh_skill.empty?
+
+        v.skills[s_ind] -= veh_skill - needed_service_skills
+      }
+    }
+
+    nil
   end
 end
