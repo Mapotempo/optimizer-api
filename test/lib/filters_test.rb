@@ -216,4 +216,18 @@ class FiltersTest < Minitest::Test
       OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(prob), nil)
     end
   end
+
+  def test_if_filter_cannot_eliminate_multiple_infeasible_skills
+    # Filter cannot decide which service skill to ignore if there are multiple viable options
+    vrp = VRP.basic
+
+    vrp[:services][0][:skills] = ['A', 'B']
+    vrp[:vehicles][0][:skills] = [['A']]
+    vrp[:vehicles] << vrp[:vehicles][0].dup
+    vrp[:vehicles][1][:skills] = [['B']]
+
+    assert_raises OptimizerWrapper::DiscordantProblemError do
+      Filters.filter_infeasible_service_shipment_skills(Models::Vrp.create(vrp))
+    end
+  end
 end
