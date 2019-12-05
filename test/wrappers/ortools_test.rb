@@ -6156,4 +6156,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert result[:cost].zero?
   end
+
+  def test_build_rest
+    rest = Models::Rest.new(duration: 1)
+    assert OptimizerWrapper.config[:services][:ortools].send(:build_rest, rest, nil, {})
+  end
 end
