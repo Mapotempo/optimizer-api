@@ -74,10 +74,9 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
     assert csv.all?{ |line| line[4].count(',').zero? }, 'There should be only one vehicle in vehicles_ids column'
     assert csv.none?{ |line| line[5].nil? }, 'All timewindows of this vehicle should be shown'
-
+  ensure
     File.delete(generated_file + '_csv')
     File.delete(generated_file + '_geojson')
-  ensure
     OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
   end
 
@@ -96,10 +95,9 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq.size
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
     assert_equal [nil], csv.collect(&:last).uniq - ['vehicle_tw_if_only_one']
-
+  ensure
     File.delete(generated_file + '_csv')
     File.delete(generated_file + '_geojson')
-  ensure
     OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
   end
 
@@ -133,9 +131,8 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
         line[2] == 'X' && line[4] == 'X' && line[6] == 'X' &&
         line.count('X') == days.size
     })
-
-    File.delete(file_name)
   ensure
+    File.delete(file_name)
     OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
   end
 
@@ -146,7 +143,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     OptimizerWrapper.config[:debug][:output_schedule] = true
 
     vrp = FCT.load_vrp(self, fixture_file: 'instance_clustered')
-    vrp[:configuration][:resolution][:repetition] = 1
+    vrp.resolution_repetition = 1
     vrp[:name] = name
     vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
 
@@ -171,11 +168,11 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert files.include?("test/temp/scheduling_construction_#{name}")
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('csv') }, 'Geojson file not found')
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('json') }, 'Csv file not found')
-
+  ensure
     files.each{ |f|
       File.delete(f)
     }
-  ensure
+
     OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
     OptimizerWrapper.config[:debug][:output_clusters] = false
     OptimizerWrapper.config[:debug][:output_schedule] = false

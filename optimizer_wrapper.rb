@@ -78,6 +78,12 @@ module OptimizerWrapper
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
 
+    vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      3
+    else
+      1
+    end
+
     services_vrps = split_independent_vrp(vrp).map.with_index{ |vrp_element, i|
       {
         service: services[:services][:vrp].find{ |s|
@@ -97,14 +103,6 @@ module OptimizerWrapper
     }
 
     services_vrps = Filters::filter(services_vrps)
-
-    # to make clustering more regular :
-    services_vrps.each{ |service|
-      next if service[:vrp].preprocessing_partitions.empty? ||
-              !service[:vrp].preprocessing_first_solution_strategy.to_a.include?('periodic')
-
-      service[:vrp].resolution_repetition ||= 3
-    }
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new(inapplicable_services)
