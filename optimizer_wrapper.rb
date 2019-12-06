@@ -734,11 +734,7 @@ module OptimizerWrapper
       next if zone.vehicles.compact.empty?
 
       zone.vehicles.each{ |vehicle|
-        if vehicle.skills.empty?
-          vehicle.skills = [[zone[:id]]]
-        else
-          vehicle.skills.each{ |alternative| alternative << zone[:id] }
-        end
+        vehicle.skills.each{ |skillset| skillset << zone[:id] }
       }
     }
 

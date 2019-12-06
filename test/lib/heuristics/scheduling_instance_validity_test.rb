@@ -89,7 +89,7 @@ class InstanceValidityTest < Minitest::Test
 
     def test_reject_if_vehicle_skills
       problem = VRP.scheduling
-      problem[:vehicles].first[:skills] = ['skill']
+      problem[:vehicles].first[:skills] = [['skill']]
       problem[:services].first[:skills] = ['skill']
 
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include? :assert_no_skills_if_heuristic
