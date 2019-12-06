@@ -723,60 +723,67 @@ module OptimizerWrapper
 
   def self.apply_zones(vrp)
     vrp.zones.each{ |zone|
-      if !zone.allocations.empty?
-        zone.vehicles = if zone.allocations.size == 1
-          zone.allocations[0].collect{ |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id } }.compact
+      next if zone.allocations.empty?
+
+      zone.vehicles = if zone.allocations.size == 1
+                        zone.allocations[0].collect{ |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id } }.compact
+                      else
+                        zone.allocations.collect{ |allocation| vrp.vehicles.find{ |vehicle| vehicle.id == allocation.first } }.compact
+                      end
+
+      next if zone.vehicles.compact.empty?
+
+      zone.vehicles.each{ |vehicle|
+        if vehicle.skills.empty?
+          vehicle.skills = [[zone[:id]]]
         else
-          zone.allocations.collect{ |allocation| vrp.vehicles.find{ |vehicle| vehicle.id == allocation.first } }.compact
-        end
-        if !zone.vehicles.compact.empty?
-          zone.vehicles.each{ |vehicle|
-            if vehicle.skills.empty?
-              vehicle.skills = [[zone[:id]]]
-            else
-              vehicle.skills.each{ |alternative| alternative << zone[:id] }
-            end
-          }
-        end
-      end
-    }
-    if vrp.points.all?{ |point| point.location }
-      vrp.zones.each{ |zone|
-        related_ids = vrp.services.collect{ |service|
-          activity_point = vrp.points.find{ |point| point.id == service.activity.point_id }
-          if zone.inside(activity_point.location.lat, activity_point.location.lon)
-            service.sticky_vehicles += zone.vehicles
-            service.sticky_vehicles.uniq!
-            service.skills += [zone[:id]]
-            service.id
-          end
-        }.compact + vrp.shipments.collect{ |shipment|
-          shipments_ids = []
-          pickup_point = vrp.points.find{ |point| point[:id] == shipment[:pickup][:point_id] }
-          delivery_point = vrp.points.find{ |point| point[:id] == shipment[:delivery][:point_id] }
-          if zone.inside(pickup_point[:location][:lat], pickup_point[:location][:lon]) && zone.inside(delivery_point[:location][:lat], delivery_point[:location][:lon])
-            shipment.sticky_vehicles += zone.vehicles
-            shipment.sticky_vehicles.uniq!
-          end
-          if zone.inside(pickup_point[:location][:lat], pickup_point[:location][:lon])
-            shipment.skills += [zone[:id]]
-            shipments_ids << shipment.id + 'pickup'
-          end
-          if zone.inside(delivery_point[:location][:lat], delivery_point[:location][:lon])
-            shipment.skills += [zone[:id]]
-            shipments_ids << shipment.id + 'delivery'
-          end
-          shipments_ids.uniq
-        }.compact
-        # Remove zone allocation verification if we need to assign zone without vehicle affectation together
-        if !zone.allocations.empty? && zone.allocations.size > 1 && !related_ids.empty? && related_ids.size > 1
-          vrp.relations += [{
-            type: :same_route,
-            linked_ids: related_ids.flatten,
-          }]
+          vehicle.skills.each{ |alternative| alternative << zone[:id] }
         end
       }
-    end
+    }
+
+    return unless vrp.points.all?(&:location)
+
+    vrp.zones.each{ |zone|
+      related_ids = vrp.services.collect{ |service|
+        activity_loc = service.activity.point.location
+
+        next unless zone.inside(activity_loc.lat, activity_loc.lon)
+
+        service.sticky_vehicles += zone.vehicles
+        service.sticky_vehicles.uniq!
+        service.skills += [zone[:id]]
+        service.id
+      }.compact
+
+      related_ids += vrp.shipments.collect{ |shipment|
+        shipments_ids = []
+        pickup_loc = shipment.pickup.point.location
+        delivery_loc = shipment.delivery.point.location
+
+        if zone.inside(pickup_loc[:lat], pickup_loc[:lon]) && zone.inside(delivery_loc[:lat], delivery_loc[:lon])
+          shipment.sticky_vehicles += zone.vehicles
+          shipment.sticky_vehicles.uniq!
+        end
+        if zone.inside(pickup_loc[:lat], pickup_loc[:lon])
+          shipment.skills += [zone[:id]]
+          shipments_ids << shipment.id + 'pickup'
+        end
+        if zone.inside(delivery_loc[:lat], delivery_loc[:lon])
+          shipment.skills += [zone[:id]]
+          shipments_ids << shipment.id + 'delivery'
+        end
+        shipments_ids.uniq
+      }.compact
+
+      # Remove zone allocation verification if we need to assign zone without vehicle affectation together
+      next unless zone.allocations.size > 1 && related_ids.size > 1
+
+      vrp.relations += [{
+        type: :same_route,
+        linked_ids: related_ids.flatten,
+      }]
+    }
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
