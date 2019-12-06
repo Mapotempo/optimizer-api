@@ -70,7 +70,7 @@ module Models
     field :unavailable_work_date, default: nil
     field :global_day_index, default: nil
 
-    field :skills, default: []
+    has_many :skills, class_name: 'Array' # Vehicles can have multiple alternative skillsets
 
     field :free_approach, default: false
     field :free_return, default: false
@@ -112,6 +112,9 @@ module Models
         work_day_indices = hash[:sequence_timewindows].collect{ |tw| tw[:day_index] }
         hash[:unavailable_work_day_indices].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
       end
+
+      hash[:skills] = [[]] if !hash.keys.include?(:skills) # If vehicle has no skills, it has the empty skillset
+
       super(hash)
     end
 
