@@ -65,6 +65,43 @@ class DichotomiousTest < Minitest::Test
       assert t2 - t1 < max_dur * 1.35, "Time spend in the API (#{t2 - t1}) is too big compared to maximum optimization duration asked (#{max_dur})." # Due to API overhead, it can be violated (randomly) .
     end
 
+    def test_dichotomious_condition_limits
+      # Currently dicho limit is set to 500 which is less than the default max_split_size.
+      # That is, one needs to manually set max_split_size to a higher value to use dicho.
+      # If the dicho limits are changed the test needs to be corrected with new values.
+
+      limits = { service: 500, vehicle: 3 } # Do not replace with class values, correct manually.
+
+      limit_vrp = VRP.toy
+
+      limit_vrp[:services] = []
+      limits[:service].times{ |i|
+        limit_vrp[:services] << { id: "s#{i + 1}", type: 'service', activity: { point_id: 'p1' }}
+      }
+
+      limit_vrp[:vehicles] = []
+      limits[:vehicle].times{ |i|
+        limit_vrp[:vehicles] << { id: "v#{i + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
+      }
+
+      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: FCT.create(limit_vrp), service: :demo, level: 0)
+
+      vrp = limit_vrp.dup
+      vrp[:vehicles] = limit_vrp[:vehicles].dup
+      vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
+      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: FCT.create(vrp), service: :demo, level: 0)
+
+      vrp = limit_vrp.dup
+      vrp[:services] = limit_vrp[:services].dup
+      vrp[:services] << { id: "s#{limits[:service] + 1}", type: 'service', activity: { point_id: 'p1' }}
+      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: FCT.create(vrp), service: :demo, level: 0)
+
+      vrp = limit_vrp.dup
+      vrp[:services] << { id: "s#{limits[:service] + 1}", type: 'service', activity: { point_id: 'p1' }}
+      vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
+      assert Interpreters::Dichotomious.dichotomious_candidate?(vrp: FCT.create(vrp), service: :demo, level: 0)
+    end
+
     def test_cluster_dichotomious_heuristic
       # Warning: This test is not enough to ensure that two services at the same point will
       # not end up in two different routes because after clustering there is tsp_simple.
