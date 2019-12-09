@@ -221,7 +221,7 @@ module Api
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4. 0 is the highest priority level). Not available with same_point_day option.')
         this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost. Not available with periodic heuristic.')
 
-        this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
+        this.optional(:visits_number, type: Integer, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
         this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
 
@@ -253,7 +253,7 @@ module Api
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
         this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost')
 
-        this.optional(:visits_number, type: Integer, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
+        this.optional(:visits_number, type: Integer, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
         this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
 
