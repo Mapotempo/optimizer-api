@@ -85,7 +85,7 @@ module Helper
   end
 
   def self.visits(services)
-    services.inject(0){ |sum, s| s[:visits_number] ? sum + s[:visits_number] : sum }
+    services.sum(&:visits_number)
   end
 end
 
