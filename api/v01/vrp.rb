@@ -83,8 +83,8 @@ module Api
 
       def self.vrp_request_point(this)
         this.requires(:id, type: String, allow_blank: false)
-        this.optional(:matrix_index, type: Integer, desc: 'Index within the matrices, required if the matrices are already given')
-        this.optional(:location, type: Hash, desc: 'Location of the point if matrices are not given') do
+        this.optional(:matrix_index, type: Integer, allow_blank: false, desc: 'Index within the matrices, required if the matrices are already given')
+        this.optional(:location, type: Hash, allow_blank: false, desc: 'Location of the point if matrices are not given') do
           self.requires(:lat, type: Float, allow_blank: false, desc: 'Latitude coordinate')
           self.requires(:lon, type: Float, allow_blank: false, desc: 'Longitude coordinate')
         end
@@ -301,10 +301,10 @@ module Api
         this.requires(:type, type: String, allow_blank: false, values: %w[same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse force_first never_first force_end vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months],
                              desc: 'Relations allow to define constraints explicitly between activities and/or vehicles. It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse, shipment, meetup, maximum_duration_lapse, force_first, never_first, force_end, vehicle_group_duration, vehicle_group_duration_on_weeks or vehicle_group_duration_on_months')
         this.optional(:lapse, type: Integer, desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
-        this.optional(:linked_ids, type: Array[String], desc: 'List of activities involved in the relation')
-        this.optional(:linked_vehicle_ids, type: Array[String], desc: 'List of vehicles involved in the relation')
+        this.optional(:linked_ids, type: Array[String], allow_blank: false, desc: 'List of activities involved in the relation')
+        this.optional(:linked_vehicle_ids, type: Array[String], allow_blank: false, desc: 'List of vehicles involved in the relation')
         this.optional(:periodicity, type: Integer, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')
-        this.at_least_one_of :linked_ids, :linked_vehicles_ids
+        this.at_least_one_of :linked_ids, :linked_vehicle_ids
       end
 
       def self.vrp_request_route(this)
@@ -336,13 +336,13 @@ module Api
       end
 
       def self.vrp_request_resolution(this)
-        this.optional(:duration, type: Integer, desc: 'Maximum duration of resolution')
-        this.optional(:iterations, type: Integer, desc: 'Maximum number of iterations (Jsprit only)')
-        this.optional(:iterations_without_improvment, type: Integer, desc: 'Maximum number of iterations without improvment from the best solution already found')
-        this.optional(:stable_iterations, type: Integer, desc: 'maximum number of iterations without variation in the solve bigger than the defined coefficient (Jsprit only)')
-        this.optional(:stable_coefficient, type: Float, desc: 'variation coefficient related to stable_iterations (Jsprit only)')
-        this.optional(:initial_time_out, type: Integer, desc: '[ DEPRECATED : use minimum_duration instead]')
-        this.optional(:minimum_duration, type: Integer, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
+        this.optional(:duration, type: Integer, allow_blank: false, desc: 'Maximum duration of resolution')
+        this.optional(:iterations, type: Integer, allow_blank: false, desc: 'Maximum number of iterations (Jsprit only)')
+        this.optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvment from the best solution already found')
+        this.optional(:stable_iterations, type: Integer, allow_blank: false, desc: 'maximum number of iterations without variation in the solve bigger than the defined coefficient (Jsprit only)')
+        this.optional(:stable_coefficient, type: Float, allow_blank: false, desc: 'variation coefficient related to stable_iterations (Jsprit only)')
+        this.optional(:initial_time_out, type: Integer, allow_blank: false, desc: '[ DEPRECATED : use minimum_duration instead]')
+        this.optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
         this.optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
         this.optional(:solver_parameter, type: Integer, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
