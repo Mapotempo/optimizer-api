@@ -112,7 +112,7 @@ module Interpreters
 
     def self.split_solve(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
-      available_vehicle_ids = vrp.vehicles.collect{ |vehicle| vehicle.id }
+      available_vehicle_ids = vrp.vehicles.collect(&:id)
       log "available_vehicle_ids: #{available_vehicle_ids.size} - #{available_vehicle_ids}", level: :debug
 
       problem_size = vrp.services.size + vrp.shipments.size
@@ -125,8 +125,9 @@ module Interpreters
       sub_service_vrps.sort_by{ |sub_service_vrp| -sub_service_vrp[:vrp].services.size }.each_with_index{ |sub_service_vrp, index|
         sub_vrp = sub_service_vrp[:vrp]
         sub_vrp.resolution_duration = vrp.resolution_duration / problem_size * (sub_vrp.services.size + sub_vrp.shipments.size)
-        sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size *
-                                                (sub_vrp.services.size + sub_vrp.shipments.size) if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
+        if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
+          sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * (sub_vrp.services.size + sub_vrp.shipments.size)
+        end
         sub_vrp.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.10 + sub_vrp.services.size.to_f / vrp.services.size)).to_i
         sub_problem = {
           vrp: sub_vrp,
@@ -135,16 +136,20 @@ module Interpreters
         sub_vrp.services += empties_or_fills
         sub_vrp.points += empties_or_fills.map{ |empti_of_fill| vrp.points.find{ |point| empti_of_fill.activity.point.id == point.id }}
         sub_vrp.vehicles.select!{ |vehicle| available_vehicle_ids.include?(vehicle.id) }
+
         sub_result = OptimizerWrapper.define_process([sub_problem], job, &block)
+
         remove_poor_routes(sub_vrp, sub_result)
+
         log "sub vrp (size: #{sub_problem[:vrp][:services].size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
         raise 'Incorrect activities count' if sub_problem[:vrp][:services].size != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.size
+
         available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         empties_or_fills_used = remove_used_empties_and_refills(sub_vrp, sub_result).compact
         empties_or_fills -= empties_or_fills_used
         sub_problem[:vrp].services -= empties_or_fills_used
         empties_or_fills_remaining = empties_or_fills - empties_or_fills_used
-        sub_result[:unassigned].delete_if{ |activity| empties_or_fills_remaining.map{ |service| service.id }.include?(activity[:service_id]) } if index.zero?
+        sub_result[:unassigned].delete_if{ |activity| empties_or_fills_remaining.map(&:id).include?(activity[:service_id]) } if index.zero?
         result = Helper.merge_results([result, sub_result])
       }
       vrp.services += empties_or_fills
