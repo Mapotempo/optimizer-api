@@ -858,9 +858,14 @@ module Wrappers
         else
           out
         end
-      else
-        log "Job terminated with unknown thread status #{@thread.value}", level: :fatal # Keep trace in worker
-        raise RuntimeError, 'Job terminated with unknown thread status'
+      else # Fatal Error
+        message = if @thread.value == 127
+                    'Executable does not exist'
+                  else
+                    "Job terminated with unknown thread status: #{@thread.value}"
+                  end
+        log message, level: :fatal
+        raise RuntimeError, message
       end
     ensure
       input&.unlink
