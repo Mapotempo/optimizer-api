@@ -17,7 +17,7 @@
 #
 class Grape::Entity
   def self.expose_not_nil(*args, &block)
-    args[1][:if] = Proc.new{ |g| g.key?(args[0]) && !g[args[0]].nil? && !g[args[0]].nil? && !g[args[0]].to_s.empty? }
+    args[1][:if] = Proc.new{ |g| g.has_key?(args[0]) && !g[args[0]].nil? && !g[args[0]].nil? && !g[args[0]].to_s.empty? }
     expose(*args, &block)
   end
 end

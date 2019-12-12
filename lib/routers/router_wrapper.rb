@@ -63,7 +63,7 @@ module Routers
           }
           if request != ''
             datas = JSON.parse request
-            if datas && datas.key?('features') && !datas['features'].empty?
+            if datas && datas.has_key?('features') && !datas['features'].empty?
               slice_segments.each_with_index{ |s, i|
                 data = datas['features'][i]
                 if data
@@ -134,7 +134,7 @@ module Routers
       unless request.to_s.empty?
         data = JSON.parse(request)
         dimensions.collect{ |dim|
-          if data.key?("matrix_#{dim}")
+          if data.has_key?("matrix_#{dim}")
             data["matrix_#{dim}"].collect{ |r|
               r.collect{ |rr|
                 rr || 2147483647

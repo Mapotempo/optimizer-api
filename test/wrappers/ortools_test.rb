@@ -5795,7 +5795,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
     assert result
-    assert result.key?(:cost)
+    assert result.has_key?(:cost)
   end
 
   def test_assemble_heuristic

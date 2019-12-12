@@ -48,7 +48,7 @@ module OptimizerWrapper
         log "avancement: #{message} #{avancement}"
         if avancement && cost
           p = Result.get(self.uuid) || { 'graph' => [] }
-          p['graph'] = [] if !p.key?('graph')
+          p['graph'] = [] if !p.has_key?('graph')
           p['csv'] = true if ask_restitution_csv
           p['graph'] << { iteration: avancement, cost: cost, time: time }
           p['result'] = solution if solution

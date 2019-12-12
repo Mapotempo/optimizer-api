@@ -686,7 +686,7 @@ module Interpreters
             r[:linked_vehicle_ids].each{ |v|
               v_date = (r[:type]=='vehicle_group_duration_on_months' ? (vrp.schedule_range_date[:start] + v.split("_").last.to_i).month : (vrp.schedule_range_date[:start] + v.split("_").last.to_i).strftime('%W').to_i)
               relation_nb = ((v_date - first_date) / r[:periodicity]).floor
-              if relations.key?(relation_nb)
+              if relations.has_key?(relation_nb)
                 relations[relation_nb][:vehicles] << v
               else
                 relations[relation_nb] = {
@@ -702,7 +702,7 @@ module Interpreters
                 week_nb = (vehicle.global_day_index + @shift)/7.floor
                 periodicity = (r[:periodicity].nil? ? 1 : r[:periodicity])
                 relation_nb = week_nb/periodicity.floor
-                if relations.key?(relation_nb)
+                if relations.has_key?(relation_nb)
                   relations[relation_nb][:vehicles] << vehicle.id
                 else
                   relations[relation_nb] = {

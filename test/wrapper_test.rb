@@ -1541,17 +1541,17 @@ class WrapperTest < Minitest::Test
     }
 
     result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
-    assert result[:routes][0][:activities][1].key?(:pickup_shipment_id)
-    assert !result[:routes][0][:activities][1].key?(:delivery_shipment_id)
-    assert !result[:routes][0][:activities][2].key?(:pickup_shipment_id)
-    assert result[:routes][0][:activities][2].key?(:delivery_shipment_id)
+    assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
+    assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
+    assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
+    assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
 
     if !ENV['SKIP_JSPRIT']
       result = OptimizerWrapper.solve([service: :jsprit, vrp: Models::Vrp.create(problem)])
-      assert result[:routes][0][:activities][1].key?(:pickup_shipment_id)
-      assert !result[:routes][0][:activities][1].key?(:delivery_shipment_id)
-      assert !result[:routes][0][:activities][2].key?(:pickup_shipment_id)
-      assert result[:routes][0][:activities][2].key?(:delivery_shipment_id)
+      assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
+      assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
+      assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
+      assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
     end
   end
 

@@ -1085,7 +1085,7 @@ module Heuristics
       # when @duration_in_tw is disabled, only arrival time of first point at a given location matters in tw
       (@same_point_day || @relaxed_same_point_day) &&
         !@duration_in_tw &&
-        @services_data.key?(previous_service) && # not coming from depot
+        @services_data.has_key?(previous_service) && # not coming from depot
         @services_data[previous_service][:point_id] == @services_data[service][:point_id] # same location as previous
     end
 
