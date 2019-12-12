@@ -101,5 +101,8 @@ Style/WordArray:
 Style/ParallelAssignment:
   Enabled: false
 
+Style/PreferredHashMethods:
+  EnforcedStyle: verbose
+
 Style/RedundantException:
   Enabled: false
