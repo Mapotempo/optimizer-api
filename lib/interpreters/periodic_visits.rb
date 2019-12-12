@@ -88,9 +88,6 @@ module Interpreters
       end
 
       vrp
-    rescue => e
-      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
-      raise
     end
 
     def generate_relations(vrp)
