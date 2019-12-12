@@ -113,7 +113,7 @@ module Models
         hash[:unavailable_work_day_indices].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
       end
 
-      hash[:skills] = [[]] if !hash.keys.include?(:skills) # If vehicle has no skills, it has the empty skillset
+      hash[:skills] = [[]] unless hash.has_key?(:skills) # If vehicle has no skills, it has the empty skillset
 
       super(hash)
     end
