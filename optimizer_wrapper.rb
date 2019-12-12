@@ -331,11 +331,6 @@ module OptimizerWrapper
     log "<-- optim_wrap::solve elapsed: #{(Time.now - t).round(2)}sec", level: :debug
 
     real_result
-  rescue Resque::Plugins::Status::Killed
-    log 'Job Killed'
-  rescue => e
-    log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :fatal
-    raise
   end
 
   def self.split_independent_vrp_by_skills(vrp)

@@ -59,9 +59,6 @@ module Interpreters
       OutputHelper::Clustering.generate_files(all_service_vrps, two_stages, job) if OptimizerWrapper.config[:debug][:output_clusters] && services_vrps.size < all_service_vrps.size
 
       [all_service_vrps, split_results]
-    rescue => e
-      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :fatal
-      raise
     end
 
     def self.generate_split_vrps(service_vrp, job = nil, block)

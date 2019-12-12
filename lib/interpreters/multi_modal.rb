@@ -290,9 +290,6 @@ module Interpreters
         result = override_original_vrp(subresults)
         rebuild_entire_route(subresults, result)
       end
-    rescue => e
-      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
-      raise
     end
 
   end
