@@ -40,6 +40,27 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_equal 401, last_response.status, last_response.body
   end
 
+  def test_dont_ignore_legitimate_skills
+    OptimizerWrapper.stub(
+      :define_process,
+      lambda { |services_vrps, _job|
+        assert_equal [['skill']], services_vrps[0][:vrp][:vehicles][0][:skills]
+        assert_equal ['skill'], services_vrps[0][:vrp][:services][0][:skills]
+        assert_equal [[]], services_vrps[0][:vrp][:vehicles][1][:skills]
+        assert_equal [], services_vrps[0][:vrp][:services][1][:skills]
+        {}
+      }
+    ) do
+      vrp = VRP.toy
+      vrp[:vehicles] << vrp[:vehicles][0].dup
+      vrp[:services] << vrp[:services][0].dup
+      vrp[:vehicles][0][:skills] = [['skill']]
+      vrp[:services][0][:skills] = ['skill']
+      vrp[:config] = { solve_synchronously: true }
+      submit_vrp api_key: 'demo', vrp: vrp
+    end
+  end
+
   def test_exceed_params_limit
     vrp = VRP.toy
     vrp[:points] *= 151
