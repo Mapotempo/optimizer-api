@@ -313,6 +313,21 @@ module Api
         this.requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route')
       end
 
+      def self.vrp_request_configuration(this)
+        this.optional(:preprocessing, type: Hash, desc: 'Parameters independent from the search') do
+          Vrp.vrp_request_preprocessing(self)
+        end
+        this.optional(:resolution, type: Hash, desc: 'Parameters used to stop the search') do
+          Vrp.vrp_request_resolution(self)
+        end
+        this.optional(:restitution, type: Hash, desc: 'Restitution paramaters') do
+          Vrp.vrp_request_restitution(self)
+        end
+        this.optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
+          Vrp.vrp_request_schedule(self)
+        end
+      end
+
       def self.vrp_request_partition(this)
         this.requires(:method, type: String, values: %w[hierarchical_tree balanced_kmeans], desc: 'Method used to partition')
         this.optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
@@ -439,18 +454,7 @@ module Api
               end
 
               optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation') do
-                optional(:preprocessing, type: Hash, desc: 'Parameters independent from the search') do
-                  Vrp.vrp_request_preprocessing(self)
-                end
-                optional(:resolution, type: Hash, desc: 'Parameters used to stop the search') do
-                  Vrp.vrp_request_resolution(self)
-                end
-                optional(:restitution, type: Hash, desc: 'Restitution paramaters') do
-                  Vrp.vrp_request_restitution(self)
-                end
-                optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
-                  Vrp.vrp_request_schedule(self)
-                end
+                Vrp.vrp_request_configuration(self)
               end
             end
 
@@ -485,6 +489,10 @@ module Api
             optional(:vehicles, type: Array, documentation: { hidden: true, format: 'CSV', desc: 'Warning : CSV Format expected here ! Usually represent a work day of a particular driver/vehicle' }, coerce_with: ->(c) { CSVParser.call(File.open(c.tempfile, 'r:bom|utf-8').read, nil) }) do
               Vrp.vrp_request_vehicle(self)
             end
+
+            optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation', coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
+                Vrp.vrp_request_configuration(self)
+              end
           }
           post do
             begin
