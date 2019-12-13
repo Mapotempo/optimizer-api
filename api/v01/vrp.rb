@@ -59,6 +59,7 @@ module Api
       default_format :json
 
       def self.vrp_request_timewindow(this)
+        this.optional(:id, types: String)
         this.optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
         this.optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
         this.optional(:day_index, type: Integer, values: 0..6, desc: '[ Planning ] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
@@ -201,17 +202,21 @@ module Api
 
         this.optional(:start_point_id, type: String, desc: 'Begin of the tour')
         this.optional(:end_point_id, type: String, desc: 'End of the tour')
+        this.optional(:capacity_ids, type: String, documentation: { hidden: true }, desc: 'Capacities to consider, CSV front only')
         this.optional(:capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry') do
           Vrp.vrp_request_capacity(self)
         end
+        this.mutually_exclusive :capacity_ids, :capacities
 
+        this.optional(:sequence_timewindow_ids, type: String, documentation: { hidden: true }, desc: 'Sequence timewindows to consider, CSV front only')
         this.optional(:sequence_timewindows, type: Array, desc: '[planning] Define the vehicle work schedule over a period') do
           Vrp.vrp_request_timewindow(self)
         end
+        this.optional(:timewindow_id, type: String, desc: 'Sequence timewindows to consider')
         this.optional(:timewindow, type: Hash, desc: 'Time window whithin the vehicle may be on route') do
           Vrp.vrp_request_timewindow(self)
         end
-        this.mutually_exclusive :sequence_timewindows, :timewindow
+        this.mutually_exclusive :sequence_timewindows, :sequence_timewindow_ids, :timewindow
 
         this.optional(:rest_ids, type: Array[String], desc: 'Breaks whithin the tour')
       end
@@ -243,9 +248,11 @@ module Api
           Vrp.vrp_request_activity(self)
         end
         this.mutually_exclusive :activity, :activities
+        this.optional(:quantity_ids, type: String, documentation: { hidden: true }, desc: 'Quantities to consider, CSV front only')
         this.optional(:quantities, type: Array, desc: 'Define the entities which are taken or dropped') do
           Vrp.vrp_request_quantity(self)
         end
+        this.mutually_exclusive :quantity_ids, :quantities
       end
 
       def self.vrp_request_shipment(this)
