@@ -717,7 +717,7 @@ module Interpreters
           current_service = nil
           route[:activities].select{ |activity| activity[:service_id] }.collect{ |activity|
             current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
-            current_service if current_service && current_service.quantities.any?(&:fill) || current_service.quantities.any?(&:empty)
+            current_service if current_service&.quantities&.any?(&:fill) || current_service&.quantities&.any?(&:empty)
           }
         }.flatten
       end
