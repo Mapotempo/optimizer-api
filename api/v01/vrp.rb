@@ -433,10 +433,10 @@ module Api
                 Vrp.vrp_request_vehicle(self)
               end
 
-              optional(:services, type: Array, desc: 'Independent activity, which does not require a context') do
+              optional(:services, type: Array, allow_blank: false, desc: 'Independent activity, which does not require a context') do
                 Vrp.vrp_request_service(self)
               end
-              optional(:shipments, type: Array, desc: 'Link directly one activity of collection to another of drop off') do
+              optional(:shipments, type: Array, allow_blank: false, desc: 'Link directly one activity of collection to another of drop off') do
                 Vrp.vrp_request_shipment(self)
               end
               at_least_one_of :services, :shipments
