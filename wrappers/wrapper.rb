@@ -648,14 +648,6 @@ module Wrappers
       capacities.reject{ |_k, v| v.nil? || v.negative? }
     end
 
-    def clean_data(vrp)
-      if vrp.resolution_floating_precision.zero?
-        vrp.services.map{ |service| service.activity.duration = service.activity.duration.ceil }
-      else
-        vrp.services.map{ |service| service.activity.duration = service.activity.duration.round(vrp.resolution_floating_precision) }
-      end
-    end
-
     def detect_unfeasible_services(vrp)
       unfeasible = []
       vehicle_max_shift = compute_vehicles_shift(vrp.vehicles)

@@ -369,7 +369,6 @@ module Api
         this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
         this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
-        this.optional(:floating_precision, type: Integer, default: 0, desc: 'Number of decimals used for scheduling computation.')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
         this.mutually_exclusive :initial_time_out, :minimum_duration
       end
