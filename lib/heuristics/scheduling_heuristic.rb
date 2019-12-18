@@ -465,7 +465,8 @@ module Heuristics
         ((@same_point_day && @services_data[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
           (!@same_point_day && @services_data[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
           # service is available at this day
-          !@services_data[service][:unavailable_days].include?(day)
+          !@services_data[service][:unavailable_days].include?(day) &&
+          (@services_data[service][:sticky_vehicles_ids].empty? || @services_data[service][:sticky_vehicles_ids].include?(vehicle))
       }.each{ |service_id|
 
         possible_vehicles, possible_days = possible_for_point(@services_data[service_id][:point_id], @services_data[service_id][:nb_visits])
@@ -1120,8 +1121,12 @@ module Heuristics
 
     def try_to_insert_at(vehicle, day, service, visit_number)
       # when adjusting routes, tries to insert [service] at [day] for [vehicle]
-      if !@vehicle_day_completed[vehicle][day]
-        best_index = find_best_index(service[:id], @candidate_routes[vehicle][day], true) if @services_data[service[:id]][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 }
+      if !@vehicle_day_completed[vehicle][day] &&
+         @services_data[service[:id]][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 } &&
+         @services_data[service[:id]][:sticky_vehicles_ids].empty? || @services_data[service[:id]][:sticky_vehicles_ids].include?(vehicle)
+
+        best_index = find_best_index(service[:id], @candidate_routes[vehicle][day], true)
+
         if best_index
           insert_point_in_route(@candidate_routes[vehicle][day], best_index, day)
           @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:id] == service[:id] }[:number_in_sequence] = visit_number

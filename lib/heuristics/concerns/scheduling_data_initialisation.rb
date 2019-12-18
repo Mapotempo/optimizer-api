@@ -54,7 +54,6 @@ module SchedulingDataInitialization
   def collect_services_data(vrp)
     epoch = Date.new(1970, 1, 1)
     available_units = vrp.vehicles.collect{ |vehicle| vehicle[:capacities] ? vehicle[:capacities].collect{ |capacity| capacity[:unit_id] } : nil }.flatten.compact.uniq
-
     vrp.services.each{ |service|
       service[:unavailable_visit_day_indices] += service[:unavailable_visit_day_date].to_a.collect{ |unavailable_date|
         (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
@@ -76,7 +75,8 @@ module SchedulingDataInitialization
         point_id: service[:activity][:point][:location] ? service[:activity][:point][:location][:id] : service[:activity][:point][:matrix_index],
         tw: service[:activity][:timewindows] || [],
         unavailable_days: service[:unavailable_visit_day_indices],
-        priority: service.priority
+        priority: service.priority,
+        sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
       }
 
       @candidate_services_ids << service.id
