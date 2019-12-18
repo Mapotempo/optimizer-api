@@ -580,5 +580,16 @@ class HeuristicTest < Minitest::Test
       assert_equal 38, result[:unassigned].size
       assert_equal 9, result[:unassigned].select{ |un| un[:reason] == 'Unfeasible route (vehicle BALEARES not available at day 300)' }.size
     end
+
+    def test_sticky_in_scheduling
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id].include?('vehicle_0_') # default result
+
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:services].find{ |s| s[:id] == 'service_6' }[:sticky_vehicle_ids] = ['vehicle_1']
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert !result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id].include?('vehicle_0_')
+    end
   end
 end
