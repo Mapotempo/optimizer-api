@@ -30,9 +30,8 @@ module Interpreters
         @shift = vrp.schedule_range_indices ? @real_schedule_start : vrp.schedule_range_date[:start].to_date.cwday - 1
         @schedule_start, @schedule_end = vrp.schedule_indices
 
-        @have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| service.activity.timewindows.none? || service.activity.timewindows.none?{ |timewindow| timewindow[:day_index] }}
-        @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none? || shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } ||
-          shipment.delivery.timewindows.none? || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] }}
+        @have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| (service.activity ? [service.activity] : service.activities).all?{ |activity| activity.timewindows.none?{ |timewindow| timewindow[:day_index] } } }
+        @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] } }
         @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] }}
 
         @unavailable_indices = if vrp.schedule_unavailable_indices

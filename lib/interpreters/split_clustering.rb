@@ -548,6 +548,8 @@ module Interpreters
             s.delivery.point.id
           elsif s.pickup.point && depot_ids.include?(s.delivery.point.id)
             s.pickup.point.id
+          elsif s.activities.size.positive?
+            raise UnsupportedProblemError.new('Clustering is not supported yet if one service has serveral activies.')
           end
         }.each{ |point, set_at_point|
           next if !point
