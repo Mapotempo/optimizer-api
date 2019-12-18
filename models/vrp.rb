@@ -68,7 +68,6 @@ module Models
     field :resolution_variation_ratio, default: nil
     field :resolution_batch_heuristic, default: false
     field :resolution_repetition, default: nil
-    field :resolution_floating_precision, default: 0
 
     field :restitution_geometry, default: false
     field :restitution_geometry_polyline, default: false
@@ -158,7 +157,6 @@ module Models
       self.resolution_variation_ratio = resolution[:variation_ratio]
       self.resolution_batch_heuristic = resolution[:batch_heuristic]
       self.resolution_repetition = resolution[:repetition]
-      self.resolution_floating_precision = resolution[:floating_precision]
     end
 
     def preprocessing=(preprocessing)
