@@ -63,6 +63,7 @@ module Api
         this.optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
         this.optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
         this.optional(:day_index, type: Integer, values: 0..6, desc: '[ Planning ] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
+        this.at_least_one_of :start, :end, :day_index
       end
 
       def self.vrp_request_indice_range(this)

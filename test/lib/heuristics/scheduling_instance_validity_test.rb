@@ -141,18 +141,6 @@ class InstanceValidityTest < Minitest::Test
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_no_scheduling_if_evaluation
     end
 
-    def test_no_activities
-      problem = VRP.scheduling
-      problem[:services].first[:activity] = nil
-      problem[:services].first[:activities] = [{
-        point_id: 'point_1'
-      }, {
-        point_id: 'point_2'
-      }]
-
-      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_only_one_activity_with_scheduling_heuristic
-    end
-
     def test_assert_route_day_if_periodic
       problem = VRP.scheduling
       problem[:routes] = [{

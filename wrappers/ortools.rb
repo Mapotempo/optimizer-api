@@ -79,7 +79,6 @@ module Wrappers
         :assert_no_initial_centroids_with_partitions,
         :assert_valid_partitions,
         :assert_no_relation_with_scheduling_heuristic,
-        :assert_only_one_activity_with_scheduling_heuristic,
         :assert_route_day_if_periodic,
         :assert_no_route_if_clustering,
         :assert_missions_in_routes_do_exist,
