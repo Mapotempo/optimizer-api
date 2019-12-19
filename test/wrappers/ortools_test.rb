@@ -62,7 +62,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -127,7 +127,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 3, result[:routes][1][:activities].size
   end
@@ -195,7 +195,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             },
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
     assert_equal result[:routes][0][:activities].size, result[:routes][1][:activities].size
@@ -275,7 +275,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             },
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
     assert_equal 3, result[:routes][2][:activities].size
@@ -352,7 +352,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 3, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_1_0' }[:activities].size
     assert_equal 2, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_0' }[:activities].size
@@ -413,7 +413,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].size
   end
 
@@ -489,7 +489,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 3, result[:routes][0][:activities].size
   end
@@ -560,7 +560,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -631,7 +631,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -702,7 +702,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 1, result[:unassigned].size
   end
@@ -773,7 +773,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -844,7 +844,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -915,7 +915,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 1, result[:unassigned].size
   end
@@ -968,7 +968,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1040,7 +1040,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1110,7 +1110,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1172,7 +1172,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1239,7 +1239,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -1301,7 +1301,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1370,7 +1370,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1430,7 +1430,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1490,7 +1490,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1560,7 +1560,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -1631,7 +1631,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1706,7 +1706,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1775,7 +1775,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1850,7 +1850,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -1963,7 +1963,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2033,7 +2033,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2105,7 +2105,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -2198,7 +2198,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2286,7 +2286,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2364,7 +2364,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -2469,7 +2469,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -2585,7 +2585,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2699,7 +2699,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -2783,7 +2783,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:unassigned].size
@@ -2872,7 +2872,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -2965,7 +2965,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -3055,7 +3055,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -3145,7 +3145,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -3210,7 +3210,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -3290,7 +3290,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 5, result[:routes].size
@@ -3412,7 +3412,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 5, result[:routes].size
@@ -3508,7 +3508,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -3588,7 +3588,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
@@ -3677,7 +3677,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} + 1 == result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
@@ -3764,7 +3764,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal result[:routes][0][:activities].find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1, result[:routes][0][:activities].find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
@@ -3845,7 +3845,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
@@ -3926,7 +3926,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
@@ -4032,7 +4032,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 4, result[:routes][0][:activities].size
@@ -4105,7 +4105,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     assert !ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
     vrp[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
     assert ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
@@ -4192,7 +4192,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4270,7 +4270,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4355,7 +4355,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           }
       }]
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
     assert result
     assert_equal 4, result[:routes][0][:activities].size
@@ -4446,7 +4446,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -4524,7 +4524,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 3, result[:routes].size
@@ -4595,7 +4595,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4662,7 +4662,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -4745,7 +4745,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal problem[:services].size, result[:routes][0][:activities].size
@@ -4802,7 +4802,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
@@ -4863,7 +4863,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal problem[:services].size + 1 , result[:routes][1][:activities].size
@@ -4926,7 +4926,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert_equal result[:routes][0][:activities].size , result[:routes][1][:activities].size
   end
@@ -4987,7 +4987,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -5066,7 +5066,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     # Initial routes are soft assignment
@@ -5125,7 +5125,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal [], result[:unassigned]
@@ -5186,7 +5186,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 0, result[:unassigned].size
   end
 
@@ -5242,7 +5242,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 0, result[:unassigned].size
   end
 
@@ -5294,7 +5294,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 0, result[:unassigned].size
@@ -5351,7 +5351,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
@@ -5411,7 +5411,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
@@ -5493,7 +5493,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 2310, result[:cost]
 
@@ -5502,7 +5502,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       mission_ids: ['service_2','service_1'],
       vehicle_id: 'vehicle_1'
     }]
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 2310, result[:cost]
     assert_equal 1, result[:iterations]
   end
@@ -5583,7 +5583,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
     assert result[:heuristic_synthesis].sort_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[0][:used]
@@ -5667,7 +5667,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
     assert result[:heuristic_synthesis].sort_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[0][:used]
@@ -5793,7 +5793,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result
     assert result.has_key?(:cost)
   end
@@ -5855,7 +5855,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     service_vrp = {
       service: ortools,
       vrp: vrp
@@ -6004,7 +6004,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = ortools.solve(vrp, 'test')
     vrp[:relations].each_with_index{ |relation, index|
       previous_index = nil
@@ -6088,7 +6088,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result[:routes][0][:activities].find{ |activity| activity[:service_id] == 'service_1_1_1' }[:detail][:timewindows].size == 1
   end
@@ -6151,7 +6151,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result
     assert result[:cost].zero?

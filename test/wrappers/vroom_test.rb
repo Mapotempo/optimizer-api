@@ -53,7 +53,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
 
     result = vroom.solve(vrp)
 
@@ -119,7 +119,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -183,7 +183,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -243,7 +243,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -290,7 +290,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -368,7 +368,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -448,7 +448,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -528,7 +528,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size

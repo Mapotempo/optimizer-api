@@ -602,7 +602,7 @@ class SplitClusteringTest < Minitest::Test
       }
       vrp[:name] = 'max_split_size_with_empty_fill'
 
-      problem = Models::Vrp.create(vrp)
+      problem = FCT.create(vrp)
       check_vrp = Marshal.load(Marshal.dump(problem))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       assert_equal problem.services.size, result[:unassigned].map{ |s| s[:service_id] }.compact.size + result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size
@@ -709,7 +709,7 @@ class SplitClusteringTest < Minitest::Test
         end_point_id: 'point_0',
         router_dimension: 'distance',
       }
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
       assert result
     end
   end
