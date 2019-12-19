@@ -42,9 +42,9 @@ module OptimizerWrapper
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       result = OptimizerWrapper.define_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+        at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         @killed && wrapper.kill && return
         @wrapper = wrapper
-        at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         log "avancement: #{message} #{avancement}"
         if avancement && cost
           p = Result.get(self.uuid) || { 'graph' => [] }
