@@ -70,17 +70,6 @@ class HeuristicTest < Minitest::Test
       assert_equal 0, s.instance_variable_get(:@uninserted).size
     end
 
-    def test_solve_tsp_with_one_point
-      vrp = VRP.scheduling
-      vrp[:points] = [vrp[:points].first]
-      vrp[:services] = [vrp[:services].first]
-      vrp[:services].first[:activity][:point_id] = vrp[:points].first[:id]
-
-      vrp = TestHelper.create(vrp)
-      s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
-      assert_equal 1, s.solve_tsp(vrp).size
-    end
-
     def test_compute_service_lapse
       vrp = VRP.scheduling_seq_timewindows
       vrp[:services][0][:visits_number] = 1
