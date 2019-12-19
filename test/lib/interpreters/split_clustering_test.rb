@@ -78,8 +78,8 @@ class SplitClusteringTest < Minitest::Test
           condition: balance_deviations.count{ |max_dev| max_dev > 0.25 } <= (@regularity_restarts * 0.02).ceil,
           message: 'The maximum balance deviation can be larger than 25% only very rarely -- <2% of the trials.'
         }, {
-          condition: balance_deviations.count{ |max_dev| max_dev > 0.21 } <= (@regularity_restarts * 0.15).ceil,
-          message: 'The maximum balance deviation sould not be larger than 21% for more than 15% of the trials.'
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.21 } <= (@regularity_restarts * 0.20).ceil,
+          message: 'The maximum balance deviation sould not be larger than 21% for more than 20% of the trials.'
         }, {
           condition: balance_deviations.count{ |max_dev| max_dev > 0.17 } <= (@regularity_restarts * 0.35).ceil,
           message: 'The maximum balance deviation sould not be larger than 17% for more than 35% of the trials.'

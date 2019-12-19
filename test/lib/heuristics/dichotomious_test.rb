@@ -36,23 +36,25 @@ class DichotomiousTest < Minitest::Test
       assert result
 
       # Check activities
+      activity_assert_message = "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
       if result[:routes].size > 11
-        assert result[:unassigned].size < 25, "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
+        assert result[:unassigned].size <= 25, activity_assert_message
       elsif result[:routes].size == 11
-        assert result[:unassigned].size < 30, "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
+        assert result[:unassigned].size <= 35, activity_assert_message
       else
-        assert result[:unassigned].size < 55, "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
+        assert result[:unassigned].size <= 55, activity_assert_message
       end
 
       # Check routes
+      route_assert_message = "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
       if result[:unassigned].size > 30
-        assert result[:routes].size < 12, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
+        assert result[:routes].size < 12, route_assert_message
       elsif result[:unassigned].size > 15
-        assert result[:routes].size < 13, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
+        assert result[:routes].size < 13, route_assert_message
       elsif result[:unassigned].size > 5
-        assert result[:routes].size < 14, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
+        assert result[:routes].size < 14, route_assert_message
       else
-        assert result[:routes].size < 15, "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
+        assert result[:routes].size < 15, route_assert_message
       end
 
       # Check elapsed time
