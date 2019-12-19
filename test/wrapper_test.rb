@@ -80,7 +80,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_no_zip_cluster
@@ -131,7 +131,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_no_zip_cluster_tws
@@ -196,7 +196,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_force_zip_cluster_with_quantities
@@ -271,7 +271,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, true).size
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, true).size
   end
 
   def test_force_zip_cluster_with_timewindows
@@ -326,7 +326,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 3, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, true).size
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, true).size
   end
 
   def test_zip_cluster_with_timewindows
@@ -381,7 +381,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size
   end
 
   def test_zip_cluster_with_multiple_vehicles_and_duration
@@ -437,7 +437,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size
   end
 
   def test_zip_cluster_with_multiple_vehicles_without_duration
@@ -492,7 +492,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size
   end
 
   def test_zip_cluster_with_real_matrix
@@ -544,7 +544,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 3, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_no_zip_cluster_with_real_matrix
@@ -590,7 +590,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, Models::Vrp.create(problem), 5, false).size # without start/end/rest
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, FCT.create(problem), 5, false).size # without start/end/rest
   end
 
   def test_with_cluster
@@ -641,7 +641,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     [:ortools, ENV['SKIP_JSPRIT'] ? nil : :jsprit, :vroom].compact.each{ |o|
       result = OptimizerWrapper.solve([service: o, vrp: vrp])
       assert_equal size - 1 + 1, result[:routes][0][:activities].size, "[#{o}] "
@@ -729,7 +729,7 @@ class WrapperTest < Minitest::Test
     }
     original_stdout = $stdout
     $stdout = StringIO.new('', 'w')
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    result = OptimizerWrapper.solve([service: :ortools, vrp: FCT.create(problem)])
     traces = $stdout.string
     $stdout = original_stdout
     puts traces
@@ -810,7 +810,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
+    assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
   end
 
   def test_multiple_matrices_not_provided
@@ -897,7 +897,7 @@ class WrapperTest < Minitest::Test
 
     begin
       Routers::RouterWrapper.stub_any_instance(:matrix, lambda{ |*a| raise RouterError.new('STUB: Expectation Failed - RouterWrapper::OutOfSupportedAreaOrNotSupportedDimensionError') }) do
-        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
       end
     rescue StandardError => error
       assert error.class.name.match 'RouterError'
@@ -953,7 +953,7 @@ class WrapperTest < Minitest::Test
 
     begin
       Routers::RouterWrapper.stub_any_instance(:matrix, lambda{ |*a| raise RouterError.new('STUB: Internal Server Error - OSRM request fails with: InvalidValue Exclude flag combination is not supported.') }) do
-        OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, Models::Vrp.create(problem), nil)
+        OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, FCT.create(problem), nil)
       end
     rescue StandardError => error
       assert error.class.name.match 'RouterError'
@@ -1002,7 +1002,7 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
     rescue StandardError => error
       assert error.is_a?(ActiveHash::RecordNotFound)
       assert error.message.match 'Couldn\'t find Models::Point with ID=point_2'
@@ -1070,7 +1070,7 @@ class WrapperTest < Minitest::Test
     }
 
     begin
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Models::Vrp.create(problem), nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, FCT.create(problem), nil)
     rescue StandardError => error
       assert error.is_a?(OptimizerWrapper::DiscordantProblemError)
       assert error.data.match 'Trace is not available if locations are not defined'
@@ -1540,14 +1540,14 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.solve([service: :ortools, vrp: Models::Vrp.create(problem)])
+    result = OptimizerWrapper.solve([service: :ortools, vrp: FCT.create(problem)])
     assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
     assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
     assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
     assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
 
     if !ENV['SKIP_JSPRIT']
-      result = OptimizerWrapper.solve([service: :jsprit, vrp: Models::Vrp.create(problem)])
+      result = OptimizerWrapper.solve([service: :jsprit, vrp: FCT.create(problem)])
       assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
       assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
       assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
@@ -1662,7 +1662,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 0, result[:unassigned].size
   end
 
@@ -1726,18 +1726,18 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 0, result[:unassigned].size
 
     problem[:services][0][:sticky_vehicle_ids] << 'vehicle_1'
     problem[:services].each{ |service|
       service[:skills] = ['A']
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 0, result[:unassigned].size # no vehicle has the skill, so there is no problem
 
     problem[:vehicles][0][:skills] = [['A']]
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Incompatibility between service skills and sticky_ids' }.size
   end
 
@@ -1788,7 +1788,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.' }.size
   end
 
@@ -1847,7 +1847,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.' }.size
   end
 
@@ -1917,7 +1917,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unsufficient capacity in vehicles' }.size
   end
 
@@ -1964,7 +1964,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 0, result[:unassigned].size
   end
 
@@ -2018,7 +2018,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('No vehicle with compatible timewindow') }.size
   end
 
@@ -2069,7 +2069,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('Duration bigger than any vehicle timewindow shift') }.size
   end
 
@@ -2126,7 +2126,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('Duration bigger than any vehicle timewindow shift') }.size
   end
 
@@ -2181,7 +2181,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert result[:unassigned].empty?
   end
 
@@ -2247,7 +2247,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'No vehicle with compatible timewindow' }.size
   end
 
@@ -2293,7 +2293,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unreachable' }.size
   end
 
@@ -2350,7 +2350,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 2, result[:unassigned].select{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }.size
   end
 
@@ -2419,7 +2419,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
     assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
   end
@@ -2533,7 +2533,7 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
     assert_equal 1, result[:routes].collect{ |route| route[:activities].reject{ |activity| activity[:service_id].nil? }.size }.reduce(&:+)
     assert_equal 5, result[:unassigned].size
   end
@@ -2608,7 +2608,7 @@ class WrapperTest < Minitest::Test
     }
     job = nil
     Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
   end
@@ -2680,7 +2680,7 @@ class WrapperTest < Minitest::Test
     }
     job = nil
     Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
       assert_equal 3, result[:unassigned].size
     end
   end
@@ -2758,7 +2758,7 @@ class WrapperTest < Minitest::Test
     }
     job = nil
     Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
   end
@@ -2830,7 +2830,7 @@ class WrapperTest < Minitest::Test
     }
     job = nil
     Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(problem), nil)
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
       assert_equal 6, result[:unassigned].size
     end
   end
@@ -2882,7 +2882,7 @@ class WrapperTest < Minitest::Test
     vrp = VRP.basic
     vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
     vrp[:vehicles].first[:end_point_id] = vrp[:vehicles].first[:start_point_id]
-    assert OptimizerWrapper.solve([service: :vroom, vrp: Models::Vrp.create(vrp)])
+    assert OptimizerWrapper.solve([service: :vroom, vrp: FCT.create(vrp)])
   end
 
   def test_eliminate_even_if_no_start_or_end
@@ -2910,14 +2910,14 @@ class WrapperTest < Minitest::Test
       metric: 'duration',
       entity: 'work_day'
     }]
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(Models::Vrp.create(problem)).empty?
+    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).empty?
 
     problem[:configuration][:preprocessing][:partitions] << {
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'vehicle'
     }
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(Models::Vrp.create(problem)).include?(:assert_vehicle_entity_only_before_work_day)
+    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(FCT.create(problem)).include?(:assert_vehicle_entity_only_before_work_day)
   end
 
   def test_unfeasible_services
@@ -2948,7 +2948,7 @@ class WrapperTest < Minitest::Test
       }
     }]
 
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert_equal problem[:services].size,
                  result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + result[:unassigned].map{ |u| u[:service_id] }.size
@@ -2959,7 +2959,7 @@ class WrapperTest < Minitest::Test
     problem[:configuration][:resolution][:several_solutions] = 2
     problem[:configuration][:resolution][:variation_ratio] = 25
 
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert_equal result.size, vrp.resolution_several_solutions
   end

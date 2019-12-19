@@ -57,7 +57,7 @@ class FiltersTest < Minitest::Test
         }
       ],
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     assert ortools.solve(vrp, 'test')
   end
 
@@ -213,7 +213,7 @@ class FiltersTest < Minitest::Test
         "Job killed" # Return "Job killed" to stop gracefully
       }
     ) do
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, Models::Vrp.create(prob), nil)
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(prob), nil)
     end
   end
 
@@ -227,7 +227,7 @@ class FiltersTest < Minitest::Test
     vrp[:vehicles][1][:skills] = [['B']]
 
     assert_raises OptimizerWrapper::DiscordantProblemError do
-      Filters.filter_infeasible_service_shipment_skills(Models::Vrp.create(vrp))
+      Filters.filter_infeasible_service_shipment_skills(FCT.create(vrp))
     end
   end
 

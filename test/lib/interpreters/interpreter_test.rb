@@ -95,7 +95,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 2, expanded_vrp[:vehicles].size
@@ -182,7 +182,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 2, expanded_vrp[:vehicles].size
@@ -295,7 +295,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 10, expanded_vrp[:vehicles].size
@@ -396,7 +396,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 4, expanded_vrp[:vehicles].size
@@ -503,7 +503,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 4, expanded_vrp[:vehicles].size
@@ -603,7 +603,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 2, expanded_vrp[:vehicles].size
@@ -676,7 +676,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 1, expanded_vrp[:vehicles].size
@@ -744,7 +744,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 1, expanded_vrp[:vehicles].size
@@ -1144,7 +1144,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.min
     assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.max
@@ -1229,7 +1229,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 3, result[:routes][0][:activities].size
     assert_equal 3, result[:routes][10][:activities].size
@@ -1377,7 +1377,7 @@ class InterpreterTest < Minitest::Test
         }
       }]
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     route_s01 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_0_1_2' } }
     route_s02 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_0_2_2' } }
@@ -1500,7 +1500,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 5, result[:routes].size
     assert_equal 4, result[:routes][0][:activities].size
@@ -1608,7 +1608,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 4, result[:routes][0][:activities].size
   end
@@ -1716,7 +1716,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 5, result[:routes][0][:activities].size
   end
@@ -1809,7 +1809,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 7, result[:routes][0][:activities].size
   end
@@ -1893,7 +1893,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 5, result[:routes][0][:activities].size
     assert_equal 'service_0', result[:routes][0][:activities][2][:service_id]
@@ -1981,7 +1981,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 1, result[:routes].size
     assert_equal 6, result[:routes][0][:activities].size
@@ -2074,7 +2074,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 11, result[:routes][0][:activities].size
     assert_equal 9.9, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_1' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
@@ -2168,7 +2168,7 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
-    vrp = Models::Vrp.create(problem)
+    vrp = FCT.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 10, result[:routes][0][:activities].size
     assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_1' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)

@@ -67,7 +67,7 @@ module FCT
       Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
     else
       problem = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
-      vrp = Models::Vrp.create(problem)
+      vrp = create(problem)
       # File.write(dump_file, Base64.encode64(Marshal::dump(vrp)))
       vrp.name = filename if vrp.matrices.empty?
       vrp
@@ -82,7 +82,7 @@ module FCT
     else
       problems = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
       problems.map{ |problem|
-        Models::Vrp.create(problem)
+        create(problem)
       }
     end
   end

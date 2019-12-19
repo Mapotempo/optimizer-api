@@ -401,7 +401,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_g1g2
-      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -415,7 +415,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_hv11
-      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 40000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -429,7 +429,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_tv1
-      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 16000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -442,7 +442,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization with vehicle returning at the depot
     def test_instance_fr_tv11
-      vrp = Models::Vrp.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
+      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
