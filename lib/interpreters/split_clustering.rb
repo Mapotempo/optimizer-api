@@ -113,6 +113,8 @@ module Interpreters
     def self.split_solve(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
       available_vehicle_ids = vrp.vehicles.collect(&:id)
+      transfer_unused_vehicle_limit = 0
+      transfer_unused_time_limit = 0
       log "available_vehicle_ids: #{available_vehicle_ids.size} - #{available_vehicle_ids}", level: :debug
 
       problem_size = vrp.services.size + vrp.shipments.size
@@ -124,11 +126,12 @@ module Interpreters
       result = []
       sub_service_vrps.sort_by{ |sub_service_vrp| -sub_service_vrp[:vrp].services.size }.each_with_index{ |sub_service_vrp, index|
         sub_vrp = sub_service_vrp[:vrp]
-        sub_vrp.resolution_duration = vrp.resolution_duration / problem_size * (sub_vrp.services.size + sub_vrp.shipments.size)
-        if vrp.resolution_minimum_duration || vrp.resolution_initial_time_out
-          sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) / problem_size * (sub_vrp.services.size + sub_vrp.shipments.size)
-        end
-        sub_vrp.resolution_vehicle_limit = ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * (0.10 + sub_vrp.services.size.to_f / vrp.services.size)).to_i
+        sub_problem_size_ratio = (sub_vrp.services.size + sub_vrp.shipments.size).to_f / problem_size
+
+        sub_vrp.resolution_duration = vrp.resolution_duration * sub_problem_size_ratio + transfer_unused_time_limit
+        sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) &.* sub_problem_size_ratio
+        sub_vrp.resolution_vehicle_limit = [1, ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * sub_problem_size_ratio).round(0) + transfer_unused_vehicle_limit].max
+
         sub_problem = {
           vrp: sub_vrp,
           service: service_vrp[:service]
@@ -140,6 +143,9 @@ module Interpreters
         sub_result = OptimizerWrapper.define_process([sub_problem], job, &block)
 
         remove_poor_routes(sub_vrp, sub_result)
+
+        transfer_unused_vehicle_limit = sub_vrp.resolution_vehicle_limit - sub_result[:routes].size
+        transfer_unused_time_limit = sub_vrp.resolution_duration - sub_result[:elapsed].to_f
 
         log "sub vrp (size: #{sub_problem[:vrp][:services].size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
         raise 'Incorrect activities count' if sub_vrp.visits != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.compact.size
