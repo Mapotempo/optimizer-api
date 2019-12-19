@@ -122,19 +122,6 @@ module Heuristics
       routes
     end
 
-    def solve_tsp(vrp)
-      if vrp.points.size == 1
-        [vrp.points[0][:location] ? vrp.points[0][:location][:id] : vrp.points[0][:matrix_index]]
-      else
-        tsp = TSPHelper.create_tsp(vrp, vrp[:vehicles][0])
-        result = TSPHelper.solve(tsp)
-        result[:routes][0][:activities].collect{ |stop|
-          associated_point = vrp.points.find{ |pt| pt[:id] == stop[:point_id] }
-          associated_point[:location] ? associated_point[:location][:id] : associated_point[:matrix_index]
-        }
-      end
-    end
-
     def clean_routes(service, vehicle)
       ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
       @planning[vehicle].collect{ |_day, day_route|
@@ -680,18 +667,16 @@ module Heuristics
         insertion_costs = compute_insertion_costs(vehicle, day, route_data)
         if !insertion_costs.empty?
           # there are services we can add
-          point_to_add = select_point(insertion_costs)
-          best_index = find_best_index(point_to_add[:id], route_data)
-
+          best_index = select_point(insertion_costs)
           insert_point_in_route(route_data, best_index, day)
 
           if @output_tool
-            days = @candidate_routes[vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == point_to_add[:id] } }.keys
-            @output_tool.output_scheduling_insert(days, point_to_add[:id], @services_data[point_to_add[:id]][:nb_visits])
+            days = @candidate_routes[vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == best_index[:id] } }.keys
+            @output_tool.output_scheduling_insert(days, best_index[:id], @services_data[best_index[:id]][:nb_visits])
           end
 
-          @to_plan_service_ids.delete(point_to_add[:id])
-          @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+          @to_plan_service_ids.delete(best_index[:id])
+          @services_data[best_index[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
         else
           service_to_insert = false
           @vehicle_day_completed[vehicle][day] = true
@@ -733,14 +718,13 @@ module Heuristics
 
       return nil if insertion_costs.empty?
 
-      point_to_add = select_point(insertion_costs)
-      best_index = find_best_index(point_to_add[:id], route_data)
+      best_index = select_point(insertion_costs)
 
       return nil if best_index.nil?
 
       best_index[:end] = best_index[:end] - @services_data[best_index[:id]][:group_duration] + @services_data[best_index[:id]][:duration] if @same_point_day
       insert_point_in_route(route_data, best_index, day)
-      @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+      @services_data[best_index[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
       add_same_freq_located_points(best_index, route_data) if @same_point_day
 
       @to_plan_service_ids.delete(best_index[:id])
@@ -808,7 +792,6 @@ module Heuristics
               arrival: tw[:arrival_time],
               end: tw[:final_time],
               position: 0,
-              position_in_order: -1,
               considered_setup_duration: tw[:setup_duration],
               next_start_time: nil,
               next_arrival_time: nil,
@@ -828,7 +811,6 @@ module Heuristics
         end
 
         if new_cost
-          new_cost[:position_in_order] = -1
           possibles << new_cost
         end
       else
@@ -842,7 +824,6 @@ module Heuristics
             end
 
             if new_cost
-              new_cost[:position_in_order] = -1
               possibles << new_cost
             end
           end
