@@ -563,7 +563,7 @@ module OptimizerWrapper
   def self.check_result_consistency(expected_value, results)
     results.each{ |result|
       nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
-      nb_unassigned = result[:unassigned].size
+      nb_unassigned = result[:unassigned].select{ |unassigned| unassigned[:service_id] }.size
 
       log 'Wrong number of visits returned in result', level: :warn if expected_value != nb_assigned + nb_unassigned
     }
