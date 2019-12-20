@@ -30,6 +30,7 @@ module Interpreters
         (
           service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } && #TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit &&
+          (service_vrp[:vrp].resolution_vehicle_limit.nil? || service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit) &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
           !service_vrp[:vrp].scheduling? &&
           service_vrp[:vrp].shipments.empty? && #TODO: check dicho with a P&D instance to remove this condition
@@ -119,22 +120,32 @@ module Interpreters
     end
 
     def self.transfer_unused_vehicles(result, sub_service_vrps)
+      sv_zero = sub_service_vrps[0][:vrp]
+      sv_one = sub_service_vrps[1][:vrp]
+
+      #First transfer empty vehicles that appear in the routes
       result[:routes].each{ |r|
-        if r[:activities].select{ |a| a[:service_id] }.empty?
-          vehicle = sub_service_vrps[0][:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
-          sub_service_vrps[1][:vrp].vehicles << vehicle
-          sub_service_vrps[0][:vrp].vehicles -= [vehicle]
-          sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
-          sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
-        end
+        next if !r[:activities].select{ |a| a[:service_id] }.empty?
+
+        vehicle = sv_zero.vehicles.find{ |v| v.id == r[:vehicle_id] }
+        sv_one.vehicles << vehicle
+        sv_zero.vehicles -= [vehicle]
+        sv_one.points += sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
       }
-      sub_service_vrps[0][:vrp].vehicles.each{ |vehicle|
-        next if !result[:routes].select{ |r| r[:vehicle_id] == vehicle.id }.empty?
-        sub_service_vrps[1][:vrp].vehicles << vehicle
-        sub_service_vrps[0][:vrp].vehicles -= [vehicle]
-        sub_service_vrps[1][:vrp].points += sub_service_vrps[0][:vrp].points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
-        sub_service_vrps[1][:vrp].resolution_vehicle_limit += 1
+
+      #Then transfer the vehicles which do not appear in the routes.
+      sv_zero.vehicles.each{ |vehicle|
+        next if result[:routes].any?{ |r| r[:vehicle_id] == vehicle.id }
+
+        sv_one.vehicles << vehicle
+        sv_zero.vehicles -= [vehicle]
+        sv_one.points += sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
       }
+
+      #Transfer unsued vehicle limit to the other side as well
+      sv_zero_used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } }
+      sv_zero_unused_vehicle_limit = sv_zero.resolution_vehicle_limit - sv_zero_used_vehicle_count
+      sv_one.resolution_vehicle_limit += sv_zero_unused_vehicle_limit
     end
 
     def self.dicho_level_coeff(service_vrp)
@@ -349,8 +360,22 @@ module Interpreters
         empty_side << nonempty_side.delete(nonempty_side.group_by{ |v| v.skills.uniq.sort }.to_a.max_by{ |vec_group| vec_group[1].size }.last.first)
       end
 
+      if vehicles_by_clusters[1].size > vehicles_by_clusters[0].size
+        services_by_cluster.reverse!
+        vehicles_by_clusters.reverse!
+      end
+
       log "<--- dicho::split_vehicles #{vehicles_by_clusters.map(&:size)}", level: :debug
       vehicles_by_clusters
+    end
+
+    def self.split_vehicle_limits(vrp, vehicles_by_cluster)
+      vehicle_shares = vehicles_by_cluster.collect(&:size)
+
+      smaller_side = [1, (vehicle_shares.min.to_f / vehicle_shares.sum * vrp.resolution_vehicle_limit).round].max
+      bigger_side  = vrp.resolution_vehicle_limit - smaller_side
+
+      vehicle_shares[0] < vehicle_shares[1] ? [smaller_side, bigger_side] : [bigger_side, smaller_side]
     end
 
     def self.split(service_vrp, job = nil)
@@ -362,16 +387,13 @@ module Interpreters
       if services_by_cluster.size == 2
         # Kmeans return 2 vrps
         vehicles_by_cluster = split_vehicles(vrp, services_by_cluster)
-        if vehicles_by_cluster[1].size > vehicles_by_cluster[0].size
-          services_by_cluster.reverse
-          vehicles_by_cluster.reverse
-        end
+        vehicle_limits_by_cluster = split_vehicle_limits(vrp, vehicles_by_cluster)
+
         [0, 1].each{ |i|
           sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id), vehicles_by_cluster[i].map(&:id))[:vrp]
 
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
-          sub_vrp.resolution_vehicle_limit = [sub_vrp.vehicles.size, vrp.vehicles.empty? ? 0 : (sub_vrp.vehicles.size / vrp.vehicles.size.to_f * vrp.resolution_vehicle_limit).ceil].min
-          sub_vrp.preprocessing_first_solution_strategy = ['self_selection'] # ???
+          sub_vrp.resolution_vehicle_limit = vehicle_limits_by_cluster[i]
           sub_vrp.resolution_split_number += i
           sub_vrp.resolution_total_split_number += 1
 
