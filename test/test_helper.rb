@@ -42,8 +42,28 @@ require 'rack/test'
 require 'find'
 
 module FCT
+  def self.coerce(vrp)
+    # This function is called both with a JSON and Model::Vrp
+    # That is, service[:activity]&.fetch(symbol) do not work
+    # Code needs to be valid both for vrp and json.
+    # Thus `if service[:activity] && service[:activity][symbol]` style verificiations.
+
+    # TODO: Either find a way to call grape validators automatically or add necessary grape coerces here
+    [:duration, :setup_duration].each { |symbol|
+      vrp[:services]&.each{ |service|
+        service[:activity][symbol] = ScheduleType.new.type_cast(service[:activity][symbol]) if service[:activity] && service[:activity][symbol]
+        service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.new.type_cast(activity[symbol]) if activity && activity[symbol] }
+      }
+      vrp[:shipments]&.each{ |shipment|
+        shipment[:pickup][symbol]   = ScheduleType.new.type_cast(shipment[:pickup][symbol])   if shipment[:pickup] && shipment[:pickup][symbol]
+        shipment[:delivery][symbol] = ScheduleType.new.type_cast(shipment[:delivery][symbol]) if shipment[:delivery] && shipment[:delivery][symbol]
+      }
+    }
+    vrp
+  end
+
   def self.create(problem)
-    Models::Vrp.create(problem)
+    Models::Vrp.create(coerce(problem))
   end
 
   def self.matrix_required(vrp)
@@ -64,7 +84,8 @@ module FCT
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = 'test/fixtures/' + filename + '.dump'
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
+      problem = Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
+      coerce(problem)
     else
       problem = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
       vrp = create(problem)
@@ -78,7 +99,8 @@ module FCT
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = 'test/fixtures/' + filename + '.dump'
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
+      problems = Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
+      problems.each{ |p| coerce(p) }
     else
       problems = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
       problems.map{ |problem|
