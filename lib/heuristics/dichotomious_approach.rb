@@ -44,6 +44,13 @@ module Interpreters
 
     def self.dichotomious_heuristic(service_vrp, job = nil, &block)
       if dichotomious_candidate?(service_vrp)
+        vrp = service_vrp[:vrp]
+        message = "dicho - level(#{service_vrp[:level]}) "\
+                  "activities: #{vrp.services.size + vrp.shipments.size * 2} "\
+                  "vehicles (limit): #{vrp.vehicles.size}(#{vrp.resolution_vehicle_limit})"\
+                  "duration [min, max]: [#{vrp.resolution_minimum_duration&.round},#{vrp.resolution_duration&.round}]"
+        log message, level: :info
+
         set_config(service_vrp)
         t1 = Time.now
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
@@ -479,6 +486,8 @@ module Interpreters
                    strict_limit: {}}
 
         clusters, _centroid_indices = SplitClustering.kmeans_process([], nb_clusters, data_items, unit_symbols, limits, options)
+
+        log "Dicho K-Means: split #{data_items.size} into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
 
         services_by_cluster = clusters.collect{ |cluster|
           cluster.data_items.collect{ |data|
