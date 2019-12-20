@@ -129,7 +129,7 @@ class DichotomiousTest < Minitest::Test
           durations << service_vrp_dicho[:vrp].services_duration
         }
         assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
-        assert durations[0] <= durations[1]
+        assert services_vrps_dicho[0][:vrp].vehicles.size >= services_vrps_dicho[1][:vrp].vehicles.size, 'Dicho should start solving the side with more vehicles first'
 
         average_duration = durations.inject(0, :+) / durations.size
         # Clusters should be balanced but the priority is the geometry
@@ -139,7 +139,7 @@ class DichotomiousTest < Minitest::Test
           assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
         }
 
-        service_vrp = services_vrps_dicho.first
+        service_vrp = services_vrps_dicho.min_by{ |sv| sv[:vrp].services_duration }
       end
     end
 
