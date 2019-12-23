@@ -609,6 +609,27 @@ class SplitClusteringTest < Minitest::Test
       assert_equal problem.services.size, check_vrp.services.size
     end
 
+    def test_max_split_poorly_populated_route_limit_result
+      vrp = FCT.load_vrp(self, fixture_file: 'max_split_functionality')
+      result = Marshal.load(Base64.decode64(File.read('test/fixtures/max_split_poorly_populated_route_limit_result.dump')))
+      Interpreters::SplitClustering.remove_poor_routes(vrp, result)
+
+      assert_equal result[:unassigned], [], "remove_poor_routes shouldn't remove too many services"
+    end
+
+    def test_max_split_functionality
+      vrp = FCT.load_vrp(self)
+      FCT.matrix_required(vrp)
+
+      Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
+        result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+
+        assert_equal result[:unassigned], [], 'There should be no unassigned services.'
+        assert result[:routes].size <= 7, "There shouldn't be more than 7 routes -- it is #{result[:routes].size}"
+        return
+      end
+    end
+
     def test_ignore_debug_parameter_if_no_coordinates
       vrp = FCT.load_vrp(self)
 
