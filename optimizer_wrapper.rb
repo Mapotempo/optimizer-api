@@ -412,16 +412,7 @@ module OptimizerWrapper
       } : nil)
     }
 
-    services_vrps.size == 1 ? results[0] : {
-      solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
-      cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
-      routes: results.flat_map{ |r| r && r[:routes] }.compact,
-      unassigned: results.flat_map{ |r| r && r[:unassigned] }.compact,
-      elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
-      total_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
-      total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
-      total_distance: results.map{ |r| r && r[:total_distance] }.compact.reduce(&:+)
-    }
+    Helper.merge_results(results, true)
   end
 
   def self.job_list(api_key)
@@ -700,19 +691,18 @@ module OptimizerWrapper
         r[:geometry] = details.map(&:last) if details
       end
     }
-    if result[:routes].all?{ |r| r[:total_time] }
-      result[:total_time] = result[:routes].collect{ |r|
-        r[:total_time]
-      }.reduce(:+)
-    end
 
-    if result[:routes].all?{ |r| r[:total_distance] }
-      result[:total_distance] = result[:routes].collect{ |r|
-        r[:total_distance]
-      }.reduce(:+)
-    end
+    [:total_time, :total_travel_time, :total_travel_value, :total_distance].each{ |stat_symbol|
+      next if !result[:routes].all?{ |r| r[stat_symbol] }
 
-    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.services.size}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.services.size + 2 * vrp.shipments.size) * 100).round(1)}%), vehicles used: #{result[:routes].map{ |r| r[:vehicle_id] if r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }}"
+      result[stat_symbol] = result[:routes].collect{ |r|
+        r[stat_symbol]
+      }.reduce(:+)
+    }
+
+    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.services.size}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.services.size + 2 * vrp.shipments.size) * 100).round(1)}%)"
+    used_vehicles = result[:routes].map{ |r| r[:vehicle_id] if r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }.compact
+    log "result - #{used_vehicles.size}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicles}"
     log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
 
     result
