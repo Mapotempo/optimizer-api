@@ -588,9 +588,10 @@ module Heuristics
       [tw_accepted, next_start, next_arrival, next_end, shift, time_back_to_depot]
     end
 
-    def compute_value_at_position(route_data, service, position, duration, filling_candidate_route = false)
+    def compute_value_at_position(route_data, service, position, in_adjust)
       ### compute cost of inserting [service] at [position] in [route_data]
       value_inserted = false
+      duration = @same_point_day && !in_adjust ? @services_data[service][:group_duration] : @services_data[service][:duration]
 
       route = route_data[:current_route]
       previous_service = (position.zero? ? route_data[:start_point_id] : route[position - 1][:id])
@@ -604,10 +605,10 @@ module Heuristics
       end
 
       previous = { id: previous_service, end: previous_service_end } if position.positive?
-      potential_tws = find_timewindows(previous, service, route_data, duration, filling_candidate_route)
+      potential_tws = find_timewindows(previous, service, route_data, duration, in_adjust)
       potential_tws.each{ |tw|
         tw_accepted, next_start, next_arrival, next_end, shift, back_depot = insertion_cost_with_tw(tw, route_data, service, position)
-        acceptable_shift_for_group = @same_point_day && !filling_candidate_route && !@services_data[service][:tw].empty? ? acceptable_for_group?(service, tw) : true
+        acceptable_shift_for_group = @same_point_day && !in_adjust && !@services_data[service][:tw].empty? ? acceptable_for_group?(service, tw) : true
         next if !(tw_accepted && acceptable_shift_for_group)
 
         value_inserted = true
@@ -773,66 +774,30 @@ module Heuristics
 
     def find_best_index(service, route_data, in_adjust = false)
       ### find the best position in [route_data] to insert [service] ###
-      route = route_data[:current_route]
+
       possibles = []
-      duration = @services_data[service][:duration]
-      if !in_adjust
-        duration = @same_point_day ? @services_data[service][:group_duration] : @services_data[service][:duration] # this should always work
-      end
+      route = route_data[:current_route]
+      service_data = @services_data[service]
 
-      if route.empty?
-        if @services_data[service][:tw].empty? || @services_data[service][:tw].find{ |tw| tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index] % 7 }
-          tw = find_timewindows(nil, service, route_data, duration)[0]
-          if tw[:final_time] + matrix(route_data, service, route_data[:end_point_id]) <= route_data[:tw_end]
-            possibles << {
-              id: service,
-              point: @services_data[service][:point_id],
-              shift: matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id]) + @services_data[service][:duration],
-              start: tw[:start_time],
-              arrival: tw[:arrival_time],
-              end: tw[:final_time],
-              position: 0,
-              considered_setup_duration: tw[:setup_duration],
-              next_start_time: nil,
-              next_arrival_time: nil,
-              next_final_time: nil,
-              potential_shift: tw[:max_shift],
-              additional_route_time: matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id]),
-              dist_from_current_route: (0..route.size - 1).collect{ |current_service| matrix(route_data, service, route[current_service][:id]) }.min
-            }
-          end
-        end
-      elsif route.find_index{ |stop| stop[:point_id] == @services_data[service][:point_id] }
-        same_point_index = route.size - route.reverse.find_index{ |stop| stop[:point_id] == @services_data[service][:point_id] }
-        new_cost = if in_adjust
-          compute_value_at_position(route_data, service, same_point_index, @services_data[service][:duration], true)
-        else
-          new_cost = compute_value_at_position(route_data, service, same_point_index, duration, false)
-        end
-
-        if new_cost
-          possibles << new_cost
-        end
+      positions_to_try = if route.empty?
+        [0]
+      elsif route.find_index{ |stop| stop[:point_id] == service_data[:point_id] }
+        [route.size - route.reverse.find_index{ |stop| stop[:point_id] == service_data[:point_id] }]
       else
-        previous_point = route_data[:start_point_id]
-        (0..route.size).each{ |position|
-          if !@same_point_day && !@relaxed_same_point_day || position == route.size || route[position][:point_id] != previous_point
-            new_cost = if in_adjust
-              compute_value_at_position(route_data, service, position, @services_data[service][:duration], true)
-            else
-              compute_value_at_position(route_data, service, position, duration, false)
-            end
-
-            if new_cost
-              possibles << new_cost
-            end
-          end
-
-          if position < route.size
-            previous_point = route[position][:point_id]
-          end
-        }
+        (0..route.size).collect{ |position| position }
       end
+
+      positions_to_try.each{ |position|
+        previous_point = position.zero? ? route_data[:start_point_id] : route[position - 1][:point_id]
+        next if (@same_point_day || @relaxed_same_point_day) && !(position == route.size || route[position][:point_id] != previous_point)
+
+        possibles << compute_value_at_position(route_data, service, position, in_adjust)
+
+        next if !route.empty? || possibles.last.nil?
+
+        possibles.last[:shift] = matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id]) + (@same_point_day && !in_adjust ? @services_data[service][:group_duration] : @services_data[service][:duration])
+        possibles.last[:additional_route_time]  = matrix(route_data, route_data[:start_point_id], service) + matrix(route_data, service, route_data[:end_point_id])
+      }
 
       possibles.compact.sort_by!{ |possible_position| possible_position[:back_to_depot] }[0]
     end
