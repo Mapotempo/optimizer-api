@@ -203,5 +203,22 @@ class InstanceValidityTest < Minitest::Test
       problem[:configuration][:preprocessing][:first_solution_strategy] = []
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_no_route_if_schedule_without_periodic_heuristic
     end
+
+    def test_reject_if_route_and_schedule_range_date
+      vrp = VRP.scheduling_seq_timewindows
+      assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(vrp))
+
+      vrp = VRP.scheduling_seq_timewindows
+      vrp[:routes] = [{
+        mission_ids: ['service_1']
+      }]
+      vrp[:configuration][:schedule][:range_indices] = nil
+      vrp[:configuration][:schedule][:range_date] = {
+        start: Date.new(2017, 1, 15),
+        end: Date.new(2017, 1, 27)
+      }
+      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(vrp)).include? :assert_routes_not_compatible_with_schedule_date
+      puts 'done'
+    end
   end
 end
