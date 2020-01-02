@@ -321,19 +321,9 @@ module Interpreters
               end
 
               remove_bad_skills(sub_service_vrp, result_loop)
-              result[:unassigned].delete_if{ |unassigned_activity|
-                result_loop[:routes].any?{ |route|
-                  route[:activities].any?{ |activity| activity[:service_id] == unassigned_activity[:service_id] }
-                }
-              }
-              # result[:unassigned] |= result_loop[:unassigned] # Cannot use | operator because :type field not always present...
-              result[:unassigned].delete_if{ |activity| result_loop[:unassigned].map{ |a| a[:service_id] }.include?(activity[:service_id]) }
-              result[:unassigned] += result_loop[:unassigned]
-              result[:routes].delete_if{ |old_route|
-                result_loop[:routes].map{ |r| r[:vehicle_id] }.include?(old_route[:vehicle_id])
-              }
-              result[:routes] += result_loop[:routes]
-              # TODO: merge costs, total_infos...
+
+              Helper.replace_routes_in_result(result, result_loop)
+
               sub_results << result_loop
             end
           end
