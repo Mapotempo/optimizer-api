@@ -65,6 +65,12 @@ module TestHelper
       next if vrp.is_a?(Hash) && !s.has_key?(:visits_number)
 
       raise StandardError, "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid." unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
+
+      [s[:activity] || s[:activities] || s[:pickup] || s[:delivery]].flatten.each{ |activity|
+        next unless activity[:position]
+
+        activity[:position] = activity[:position].to_sym
+      }
     }
 
     if vrp.is_a?(Hash) # TODO: make this work for the model as well. So that, it can detect model change and dump incompatibility.

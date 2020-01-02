@@ -124,6 +124,7 @@ module Models
 
       vrp = super({})
       self.check_consistency(hash)
+      self.ensure_retrocompatibility(hash)
       self.filter(hash) # TODO : add filters.rb here
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
@@ -136,12 +137,60 @@ module Models
     end
 
     def self.check_consistency(hash)
-      raise DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
-                                                                                                                              (!hash[:configuration][:schedule] || hash[:configuration][:schedule][:range_indice])
+      forbidden_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
+      hash[:shipments].to_a.each{ |shipment|
+        raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
+      }
+
+      periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
+      return unless periodic
+
+      if hash[:relations]
+        incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - ['force_first', 'never_first', 'force_end']
+        raise OptimizerWrapper::DiscordantProblemError, "#{incompatible_relation_types} relations not available with specified first_solution_strategy" unless incompatible_relation_types.empty?
+      end
     end
 
     def self.expand_data(vrp)
       vrp.add_sticky_vehicle_if_routes_and_partitions
+    end
+
+    def self.convert_position_relations(hash)
+      relations_to_remove = []
+      hash[:relations].to_a.each_with_index{ |r, r_i|
+        case r[:type]
+        when 'force_first'
+          r[:linked_ids].each{ |id|
+            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            raise OptimizerWrapper::DiscordantProblemError, 'Force first relation with service with activities. Use position field instead.' unless to_modify[:activity]
+
+            to_modify[:activity][:position] = :always_first
+          }
+          relations_to_remove << r_i
+        when 'never_first'
+          r[:linked_ids].each{ |id|
+            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            raise OptimizerWrapper::DiscordantProblemError, 'Never first relation with service with activities. Use position field instead.' unless to_modify[:activity]
+
+            to_modify[:activity][:position] = :never_first
+          }
+          relations_to_remove << r_i
+        when 'force_end'
+          r[:linked_ids].each{ |id|
+            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            raise OptimizerWrapper::DiscordantProblemError, 'Force end relation with service with activities. Use position field instead.' unless to_modify[:activity]
+
+            to_modify[:activity][:position] = :always_last
+          }
+          relations_to_remove << r_i
+        end
+      }
+
+      relations_to_remove.reverse_each{ |index| hash[:relations].delete_at(index) }
+    end
+
+    def self.ensure_retrocompatibility(hash)
+      self.convert_position_relations(hash)
     end
 
     def self.filter(hash)

@@ -452,10 +452,6 @@ module Wrappers
         (vrp.preprocessing_partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.preprocessing_partitions.size)
     end
 
-    def assert_no_relation_with_scheduling_heuristic(vrp)
-      (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic')) || (!vrp.relations || vrp.relations.empty?)
-    end
-
     def assert_no_route_if_clustering(vrp)
       vrp.routes.empty? || vrp.preprocessing_partitions.empty?
     end

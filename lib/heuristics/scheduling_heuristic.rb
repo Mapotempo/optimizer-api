@@ -122,33 +122,42 @@ module Heuristics
       routes
     end
 
-    def clean_routes(service, vehicle)
-      ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-      @candidate_routes[vehicle].collect{ |_day, day_route|
-        remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service[:id] }
-        day_route[:current_route].slice!(remove_index) if remove_index
-        day_route[:current_route] = update_route(day_route, remove_index) if remove_index
-      }.compact.size
+    def compute_consistent_positions_to_insert(position_requirement, service_points_ids, route)
+      first_index = 0
+      last_index = route.size
 
-      (1..@services_data[service[:id]][:nb_visits]).each{ |number_in_sequence|
-        @uninserted["#{service[:id]}_#{number_in_sequence}_#{@services_data[service[:id]][:nb_visits]}"] = {
-          original_service: service[:id],
-          reason: 'Partial assignment only'
-        }
-      }
+      first_unforced_first = (0..route.size).find{ |position| route[position].nil? || (route[position][:requirement] != :always_first && route[position][:requirement] != :never_middle) }
+      first_forced_last = (0..route.size).find{ |position| route[position].nil? || route[position][:requirement] == :always_last || position > first_unforced_first && route[position][:requirement] == :never_middle }
 
-      # unaffected all points at this location
-      points_at_same_location = @candidate_services_ids.select{ |id| @services_data[id][:points_ids] == @services_data[service[:id]][:points_ids] }
-      points_at_same_location.each{ |id|
-        (1..@services_data[id][:nb_visits]).each{ |visit|
-          @uninserted["#{id}_#{visit}_#{@services_data[id][:nb_visits]}"] = {
-            original_service: id,
-            reason: 'Partial assignment only'
-          }
+      positions_to_try = if position_requirement == :always_first
+        (first_index..first_unforced_first).to_a
+      elsif position_requirement == :always_middle
+        full = (first_unforced_first..first_forced_last).to_a
+        cleaned = full - (0..first_unforced_first - 1).to_a - (first_forced_last + 1..last_index).to_a
+        cleaned.delete(0)           # can not be the very first
+        cleaned.delete(route.size)  # can not be the very last
+        cleaned
+      elsif position_requirement == :always_last
+        (first_forced_last..last_index).to_a
+      elsif position_requirement == :never_first
+        route.empty? ? [] : ([1, first_unforced_first].max..first_forced_last).to_a
+      elsif position_requirement == :never_middle
+        ((first_index..first_unforced_first).to_a + (first_forced_last..last_index).to_a).uniq
+      elsif position_requirement == :never_last
+        route.empty? || [route.size - 1, first_forced_last].min < first_unforced_first ? [] : (first_unforced_first..[(route.size - 1), first_forced_last].min).to_a
+      else # position_requirement == :neutral
+        (first_unforced_first..first_forced_last).to_a
+      end
+
+      if service_points_ids.size == 1 && positions_to_try.find{ |position| route[position] && route[position][:point_id] == service_points_ids.first }
+        same_location_position = positions_to_try.select{ |position| route[position] && route[position][:point_id] == service_points_ids.first }
+        positions_to_try.delete_if{ |position|
+          !same_location_position.include?(position) &&
+            !same_location_position.include?(position - 1)
         }
-        @candidate_services_ids.delete(id)
-        @to_plan_service_ids.delete(id)
-      }
+      end
+
+      positions_to_try
     end
 
     def check_solution_validity
@@ -219,7 +228,7 @@ module Heuristics
           next if inserted_day
 
           if !@allow_partial_assignment
-            clean_routes(service, vehicle)
+            clean_routes(service[:id], vehicle)
             cleaned_service = true
           else
             need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
@@ -250,7 +259,7 @@ module Heuristics
     def update_route(full_route, first_index, first_start = nil)
       # recomputes each stop associated values (start, arrival, setup ... times) only according to their insertion order
       day_route = full_route[:current_route]
-      day_route if first_index > day_route.size
+      return day_route if day_route.empty? || first_index > day_route.size
 
       previous_id = first_index.zero? ? full_route[:start_point_id] : day_route[first_index - 1][:id]
       previous_point_id = first_index.zero? ? previous_id : day_route[first_index - 1][:point_id]
@@ -371,6 +380,63 @@ module Heuristics
             log 'Failing to construct route from OR-tools solution'
           end
         }
+      }
+    end
+
+    def clean_position_dependent_services(vehicle, route, removed_index)
+      if removed_index == route.size
+        index = removed_index - 1
+        while route[index] && [:never_last, :always_middle].include?(route[index][:requirement])
+          clean_routes(route[index][:id], vehicle, true)
+          # index removed so no need to increment index
+        end
+      end
+
+      index = removed_index
+      while route[index] && [:never_first, :always_middle].include?(route[index][:requirement])
+        clean_routes(route[index][:id], vehicle, true)
+        # index removed so no need to increment index
+      end
+    end
+
+    def clean_routes(service, vehicle, reaffect = false)
+      ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
+      @candidate_routes[vehicle].collect{ |_day, day_route|
+        remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service }
+        if remove_index
+          day_route[:current_route].slice!(remove_index)
+          clean_position_dependent_services(vehicle, day_route[:current_route], remove_index) unless day_route[:current_route].empty?
+          day_route[:current_route] = update_route(day_route, remove_index)
+        end
+      }.compact.size
+
+      if reaffect
+        @candidate_services_ids << service
+        @uninserted.each{ |id, info|
+          @uninserted.delete(id) if info[:original_service] == service
+        }
+      else
+        (1..@services_data[service][:nb_visits]).each{ |number_in_sequence|
+          @uninserted["#{service}_#{number_in_sequence}_#{@services_data[service][:nb_visits]}"] = {
+            original_service: service,
+            reason: 'Partial assignment only'
+          }
+        }
+      end
+
+      return if reaffect
+
+      # unaffected all points at this location
+      points_at_same_location = @candidate_services_ids.select{ |id| @services_data[id][:points_ids] == @services_data[service][:points_ids] }
+      points_at_same_location.each{ |id|
+        (1..@services_data[id][:nb_visits]).each{ |visit|
+          @uninserted["#{id}_#{visit}_#{@services_data[id][:nb_visits]}"] = {
+            original_service: id,
+            reason: 'Partial assignment only'
+          }
+        }
+        @candidate_services_ids.delete(id)
+        @to_plan_service_ids.delete(id)
       }
     end
 
@@ -575,65 +641,6 @@ module Heuristics
       [activity, tw_accepted, shift, time_back_to_depot]
     end
 
-    def compute_value_at_position(route_data, service, position, in_adjust)
-      ### compute cost of inserting [service] at [position] in [route_data]
-      values = []
-      service_data = @services_data[service]
-      route = route_data[:current_route]
-      previous_info = @services_data[route[position - 1][:id]] if position.positive?
-      previous = {
-        id: position.zero? ? route_data[:start_point_id] : route[position - 1][:id],
-        point_id: position.zero? ? route_data[:start_point_id] : route[position - 1][:point_id],
-        setup_duration: position.zero? ? 0 : previous_info[:setup_durations][route[position - 1][:activity]],
-        duration: position.zero? ? 0 : previous_info[:durations][route[position - 1][:activity]],
-        tw: position.zero? ? [] : previous_info[:tws_sets][route[position - 1][:activity]],
-        end: position.zero? ? route_data[:tw_start] : route[position - 1][:end]
-      }
-
-      (0..service_data[:nb_activities] - 1).collect{ |activity|
-        next_point = (position == route_data[:current_route].size) ? route_data[:end_point_id] : route[position][:point_id]
-        next if position.positive? && position < route.size && # not first neither last position
-                previous[:point_id] == next_point && previous[:point_id] != @services_data[service][:points_ids][activity] # there is no point in testing a position that will imply useless route time
-
-        duration = (@same_point_day && !in_adjust) ? service_data[:group_duration] : service_data[:durations][activity]
-
-        next if route_data[:maximum_ride_time] &&
-                (position.positive? && matrix(route_data, previous[:point_id], service_data[:points_ids][activity], :time) > route_data[:maximum_ride_time] ||
-                position < route_data[:current_route].size && matrix(route_data, service_data[:points_ids][activity], route[position][:point_id], :time) > route_data[:maximum_ride_time])
-
-        next if route_data[:maximum_ride_distance] &&
-                (position.positive? && matrix(route_data, previous[:point_id], service_data[:points_ids][activity], :distance) > route_data[:maximum_ride_distance] ||
-                position < route_data[:current_route].size && matrix(route_data, service_data[:points_ids][activity], route[position][:point_id], :distance) > route_data[:maximum_ride_distance])
-
-        potential_tws = find_timewindows(previous, { id: service, point_id: service_data[:points_ids][activity], setup_duration: service_data[:setup_durations][activity], duration: duration, tw: service_data[:tws_sets][activity] }, route_data)
-
-        potential_tws.each{ |tw|
-          next_activity, tw_accepted, shift, back_depot = insertion_cost_with_tw(tw, route_data, { id: service, point_id: service_data[:points_ids][activity], duration: duration }, position)
-          service_info = { id: service, tw: service_data[:tws_sets][activity], duration: service_data[:durations][activity] }
-          acceptable_shift_for_group = in_adjust ? true : acceptable_for_group?(service_info, tw)
-
-          next if !(tw_accepted && acceptable_shift_for_group)
-
-          values << {
-            id: service,
-            point: service_data[:points_ids][activity],
-            start: tw[:start_time],
-            arrival: tw[:arrival_time],
-            end: tw[:final_time],
-            position: position,
-            considered_setup_duration: tw[:setup_duration],
-            next_activity: next_activity,
-            potential_shift: tw[:max_shift],
-            additional_route_time: [0, shift - duration - tw[:setup_duration]].max, # TODO : why using max ??min_by in select_point will chose the one that reduces work duration if we keep negative value possible
-            back_to_depot: back_depot,
-            activity: activity,
-          }
-        }
-      }
-
-      values.min_by{ |value| value[:back_to_depot] }
-    end
-
     def fill_basic
       ### fill planning without same_point_day option ###
       all_days = @candidate_routes.collect{ |_vehicle, data| data.keys }.flatten.uniq
@@ -773,29 +780,78 @@ module Heuristics
       }
     end
 
+    def get_previous_info(route_data, position)
+      previous_info = @services_data[route_data[:current_route][position - 1][:id]] if position.positive?
+      {
+        id: position.zero? ? route_data[:start_point_id] : route_data[:current_route][position - 1][:id],
+        point_id: position.zero? ? route_data[:start_point_id] : route_data[:current_route][position - 1][:point_id],
+        setup_duration: position.zero? ? 0 : previous_info[:setup_durations][route_data[:current_route][position - 1][:activity]],
+        duration: position.zero? ? 0 : previous_info[:durations][route_data[:current_route][position - 1][:activity]],
+        tw: position.zero? ? [] : previous_info[:tws_sets][route_data[:current_route][position - 1][:activity]],
+        end: position.zero? ? route_data[:tw_start] : route_data[:current_route][position - 1][:end]
+      }
+    end
+
+    def best_cost_according_to_tws(route_data, service, service_data, previous, options)
+      activity = options[:activity]
+      duration = (@same_point_day && !options[:in_adjust]) ? service_data[:group_duration] : service_data[:durations][activity]
+      potential_tws = find_timewindows(previous, { id: service, point_id: service_data[:points_ids][activity], setup_duration: service_data[:setup_durations][activity], duration: duration, tw: service_data[:tws_sets][activity] }, route_data)
+
+      potential_tws.collect{ |tw|
+        next_activity, tw_accepted, shift, back_depot = insertion_cost_with_tw(tw, route_data, { id: service, point_id: service_data[:points_ids][activity], duration: duration }, options[:position])
+        service_info = { id: service, tw: service_data[:tws_sets][activity], duration: service_data[:durations][activity] }
+        acceptable_shift_for_group = options[:in_adjust] ? true : acceptable_for_group?(service_info, tw)
+
+        next if !(tw_accepted && acceptable_shift_for_group)
+
+        {
+          id: service,
+          point: service_data[:points_ids][activity],
+          start: tw[:start_time],
+          arrival: tw[:arrival_time],
+          end: tw[:final_time],
+          position: options[:position],
+          considered_setup_duration: tw[:setup_duration],
+          next_activity: next_activity,
+          potential_shift: tw[:max_shift],
+          additional_route_time: [0, shift - duration - tw[:setup_duration]].max, # TODO : why using max ??min_by in select_point will chose the one that reduces work duration if we keep negative value possible
+          back_to_depot: back_depot,
+          activity: activity,
+        }
+      }.compact.min_by{ |cost| cost[:back_to_depot] }
+    end
+
     def find_best_index(service, route_data, in_adjust = false)
       ### find the best position in [route_data] to insert [service] ###
-
-      possibles = []
       route = route_data[:current_route]
+      service_data = @services_data[service]
 
-      positions_to_try = if route.empty?
-        [0]
-      elsif @services_data[service][:points_ids].size == 1 && route.find_index{ |stop| stop[:point_id] == @services_data[service][:points_ids].first }
-        [route.size - route.reverse.find_index{ |stop| stop[:point_id] == @services_data[service][:points_ids].first }]
-      else
-        (0..route.size).collect{ |position| position }
-      end
+      best_index = (0..service_data[:nb_activities] - 1).collect{ |activity|
+        positions_to_try = compute_consistent_positions_to_insert(@services_data[service][:positions_in_route][activity], @services_data[service][:points_ids], route)
+        positions_to_try.collect{ |position|
+          ### compute cost of inserting service activity [activity] at [position] in [route_data]
+          previous = get_previous_info(route_data, position)
 
-      positions_to_try.each{ |position|
-        possibles << compute_value_at_position(route_data, service, position, in_adjust)
+          next_point = (position == route_data[:current_route].size) ? route_data[:end_point_id] : route[position][:point_id]
+          next if position.positive? && position < route.size && # not first neither last position
+                  previous[:point_id] == next_point && previous[:point_id] != @services_data[service][:points_ids][activity] # there is no point in testing a position that will imply useless route time
 
-        next if !(route.empty? && possibles.last)
+          next if route_data[:maximum_ride_time] &&
+                  (position.positive? && matrix(route_data, previous[:point_id], service_data[:points_ids][activity], :time) > route_data[:maximum_ride_time] ||
+                  position < route_data[:current_route].size && matrix(route_data, service_data[:points_ids][activity], route[position][:point_id], :time) > route_data[:maximum_ride_time])
 
-        possibles.last[:additional_route_time] = matrix(route_data, route_data[:start_point_id], possibles.last[:point]) + matrix(route_data, possibles.last[:point], route_data[:end_point_id])
-      }
+          next if route_data[:maximum_ride_distance] &&
+                  (position.positive? && matrix(route_data, previous[:point_id], service_data[:points_ids][activity], :distance) > route_data[:maximum_ride_distance] ||
+                  position < route_data[:current_route].size && matrix(route_data, service_data[:points_ids][activity], route[position][:point_id], :distance) > route_data[:maximum_ride_distance])
 
-      possibles.flatten.compact.sort_by!{ |possible_position| possible_position[:back_to_depot] }[0]
+          best_cost_according_to_tws(route_data, service, service_data, previous, position: position, activity: activity, in_adjust: in_adjust)
+        }
+      }.flatten.compact.min_by{ |cost| cost[:back_to_depot] }
+
+      return best_index if !route.empty? || best_index.nil?
+
+      best_index[:additional_route_time] = matrix(route_data, route_data[:start_point_id], best_index[:point]) + matrix(route_data, best_index[:point], route_data[:end_point_id])
+      best_index
     end
 
     def can_ignore_tw(previous_service, service)
@@ -881,7 +937,8 @@ module Heuristics
                            considered_setup_duration: point_to_add[:considered_setup_duration],
                            max_shift: point_to_add[:potential_shift],
                            number_in_sequence: 1,
-                           activity: point_to_add[:activity])
+                           activity: point_to_add[:activity],
+                           requirement: @services_data[point_to_add[:id]][:positions_in_route][point_to_add[:activity]])
 
       add_same_freq_located_points(point_to_add, route_data, adjusting_candidate_routes) if @same_point_day
 

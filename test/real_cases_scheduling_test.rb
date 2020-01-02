@@ -238,7 +238,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 335, unassigned_visits.sum, "Expecting 335 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 255, unassigned_visits.sum, "Expecting 255 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_performance_13vl
@@ -257,7 +257,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 302, unassigned_visits.sum, "Expecting 302 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 267, unassigned_visits.sum, "Expecting 267 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_fill_days_and_post_processing
@@ -268,6 +268,26 @@ class HeuristicTest < Minitest::Test
       assert_equal 26, result[:unassigned].size
       assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
                    "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
+    end
+
+    def test_treatment_site
+      # treatment site
+      vrp = TestHelper.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_empty result[:unassigned]
+      assert_equal 262, result[:routes].select{ |r| r[:activities].any?{ |a| a[:service_id]&.include? 'service_0_' } }.collect{ |r| r[:vehicle_id] }.size # one treatment site per day
+      assert(result[:routes].all?{ |r| r[:activities][-2][:service_id].include? 'service_0_' })
+
+      vrp = TestHelper.load_vrp(self)
+      vrp[:services].each{ |s|
+        next if s[:id] == 'service_0' || s[:visits_number] == 1
+
+        days_used = result[:routes].select{ |r| r[:activities].any?{ |a| a[:service_id]&.include? "#{s[:id]}_" } }.collect{ |r| r[:vehicle_id].split('_').last.to_i }.sort
+        assert_equal s[:visits_number], days_used.size
+        (1..days_used.size - 1).each{ |index|
+          assert days_used[index] - days_used[index - 1] >= s[:minimum_lapse]
+        }
+      }
     end
   end
 end

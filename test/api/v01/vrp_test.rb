@@ -313,4 +313,55 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_equal 'vehicle_0', vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicles.first.id
     assert_equal 'vehicle_1', vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicles.first.id
   end
+
+  def test_reject_if_service_with_activities_in_position_relation
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:services].first[:activities] = [vrp[:services].first[:activity]]
+    vrp[:services].first.delete(:activity)
+    vrp[:relations] = [{
+      id: 'force_first',
+      type: 'force_first',
+      linked_ids: [vrp[:services].first[:id]]
+    }]
+
+    assert_raises OptimizerWrapper::DiscordantProblemError do
+      TestHelper.create(vrp)
+    end
+  end
+
+  def test_reject_if_periodic_with_any_relation
+    vrp = VRP.scheduling
+    ['consecutive_shipments', 'shipment', 'meetup',
+     'same_route', 'sequence', 'order',
+     'minimum_day_lapse', 'maximum_day_lapse', 'minimum_duration_lapse', 'maximum_duration_lapse',
+     'vehicle_group_duration', 'vehicle_group_duration_on_weeks', 'vehicle_group_duration_on_months'].each{ |relation_type|
+        vrp[:relations] = [{
+          type: relation_type,
+          linked_ids: ['service_1', 'service_2']
+        }]
+
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          TestHelper.create(vrp)
+        end
+    }
+  end
+
+  def test_reject_if_pickup_position_uncompatible_with_delivery
+    vrp = VRP.toy
+    vrp[:shipments] = [{
+      id: 'shipment_0',
+      pickup: {
+        point_id: 'point_0',
+        position: :always_last
+      },
+      delivery: {
+        point_id: 'point_1',
+        position: :always_first
+      }
+    }]
+
+    assert_raises OptimizerWrapper::DiscordantProblemError do
+      TestHelper.create(vrp)
+    end
+  end
 end

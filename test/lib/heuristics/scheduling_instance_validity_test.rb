@@ -43,17 +43,6 @@ class InstanceValidityTest < Minitest::Test
       assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_same_point_day_if_no_heuristic
     end
 
-    def test_reject_if_relation
-      problem = VRP.scheduling
-      problem[:relations] = [{
-        type: 'vehicle_group_duration_on_weeks',
-        lapse: '2',
-        linked_vehicle_ids: ['vehicle_0']
-      }]
-
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_relation_with_scheduling_heuristic
-    end
-
     def test_reject_if_vehicle_shift_preference
       problem = VRP.scheduling
       problem[:vehicles].first[:shift_preference] = 'force_start'
