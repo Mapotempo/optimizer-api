@@ -84,6 +84,7 @@ module Wrappers
         :assert_missions_in_routes_do_exist,
         :assert_not_too_many_visits_in_route,
         :assert_no_route_if_schedule_without_periodic_heuristic,
+        :assert_routes_not_compatible_with_schedule_date,
       ]
     end
 

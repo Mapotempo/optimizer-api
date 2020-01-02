@@ -473,6 +473,10 @@ module Wrappers
       !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:day] }
     end
 
+    def assert_routes_not_compatible_with_schedule_date(vrp)
+      vrp.routes.empty? || vrp.schedule_range_date.nil?
+    end
+
     def assert_missions_in_routes_do_exist(vrp)
       (vrp.routes.to_a.collect{ |r| r[:mission_ids] }.flatten.uniq - vrp.services.collect{ |s| s[:id] }).empty?
     end
