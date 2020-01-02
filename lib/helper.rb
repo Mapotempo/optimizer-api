@@ -79,6 +79,37 @@ module Helper
     }
   end
 
+  def self.replace_routes_in_result(result, new_result)
+    # Updates the routes of result with the ones in new_result and corrects the total stats
+    # TODO: Correct total cost (needs cost per route!!!)
+
+    # Correct unassigned services
+    result[:unassigned].delete_if{ |activity|
+      # Remove from unassigned if they appear in new unasigned or if they are served in new routes
+      new_result[:unassigned].any?{ |a| a[:service_id] == activity[:service_id] } ||
+        new_result[:routes].any?{ |r| r[:activities].any?{ |a| a[:service_id] == activity[:service_id] } }
+    }
+    result[:unassigned] += new_result[:unassigned]
+
+    # Correct total stats and delete old routes
+    new_result[:routes].each{ |new_route|
+      old_route = result[:routes].find{ |r| r[:vehicle_id] == new_route[:vehicle_id] } || {} # this vehicle might not be used in the old results
+
+      [:total_time, :total_travel_time, :total_travel_value, :total_distance].each{ |stat|
+        next if new_route[stat].nil? && old_route[stat].nil? # if both nil no correction necessary
+
+        result[stat] = result[stat].to_f + new_route[stat].to_f - old_route[stat].to_f # = to_f incase this stat was nil
+      }
+
+      result[:routes].delete(old_route)
+    }
+
+    # Add the new routes
+    result[:routes] += new_result[:routes]
+
+    result
+  end
+
   def self.services_duration(services)
     services.group_by{ |s| s.activity.point_id }.map{ |_point_id, ss|
       sm = ss.max_by(&:visits_number)
