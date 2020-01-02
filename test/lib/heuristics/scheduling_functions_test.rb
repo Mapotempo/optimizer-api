@@ -113,7 +113,7 @@ class HeuristicTest < Minitest::Test
           }
         }
       )
-      s.clean_routes(s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first, 'vehicle_0')
+      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first[:id], 'vehicle_0')
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:current_route].size
     end
@@ -149,7 +149,7 @@ class HeuristicTest < Minitest::Test
                             })
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 3, data_services['service_1'][:heuristic_period]
-      s.clean_routes(s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first, 'vehicle_0')
+      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first[:id], 'vehicle_0')
       assert(s.instance_variable_get(:@candidate_routes).all?{ |_key, data| data.all?{ |_k, d| d[:current_route].empty? } })
     end
 
@@ -171,6 +171,47 @@ class HeuristicTest < Minitest::Test
                                uninserted.size +
                                candidate_services_ids.collect{ |id| s.instance_variable_get(:@services_data)[id][:nb_visits] }.sum
       assert starting_with >= s.instance_variable_get(:@uninserted).size
+    end
+
+    def test_clean_routes_with_position_requirement_never_first
+      vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
+      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
+      s = Heuristics::Scheduling.new(vrp, expanded_vehicles)
+
+      vehicule = { matrix_id: vrp.vehicles.first.start_point.matrix_index }
+      s.instance_variable_set(:@candidate_routes,
+                              'vehicle_0' => {
+                                0 => {
+                                  current_route: [{ id: 'service_1', requirement: :neutral }, { id: 'service_2', requirement: :never_first }], vehicle: vehicule
+                                }
+                              })
+      assert_equal vrp.services.size, s.instance_variable_get(:@candidate_services_ids).size
+      s.instance_variable_get(:@candidate_services_ids).delete('service_1')
+      s.instance_variable_get(:@candidate_services_ids).delete('service_2')
+      assert_equal vrp.services.size - 2, s.instance_variable_get(:@candidate_services_ids).size
+      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first[:id], 'vehicle_0')
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
+      assert(s.instance_variable_get(:@uninserted).none?{ |id, _info| id.include?('service_2') })
+      assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size # service 2 can be assigned again
+    end
+
+    def test_clean_routes_with_position_requirement_never_last
+      vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
+      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
+      s = Heuristics::Scheduling.new(vrp, expanded_vehicles)
+
+      vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
+      s.instance_variable_set(:@candidate_routes,
+                              'vehicle_0' => {
+                                0 => {
+                                  current_route: [{ id: 'service_1', requirement: :never_last }, { id: 'service_2', requirement: :neutral }], vehicle: vehicule
+                                }
+                              })
+      s.instance_variable_get(:@candidate_services_ids).delete('service_1')
+      s.instance_variable_get(:@candidate_services_ids).delete('service_2')
+      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route][1][:id], 'vehicle_0')
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
+      assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size # service 1 can be assigned again
     end
 
     def test_check_validity
@@ -240,6 +281,91 @@ class HeuristicTest < Minitest::Test
 
       assert_equal 0, route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:activity]
       assert_equal 'point_1', route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:point_id]
+    end
+
+    def test_compute_shift_two_potential_tws
+      vrp = VRP.scheduling
+      s = Heuristics::Scheduling.new(TestHelper.create(vrp), [])
+      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_shift_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_shift_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@indices, '1028167' => 0, 'endvehicule8' => 270)
+      s.instance_variable_set(:@same_point_day, true)
+      route_data = Marshal.load(File.binread('test/fixtures/compute_shift_route_data.bindump')) # rubocop: disable Security/MarshalLoad
+      potential_tws = Marshal.load(File.binread('test/fixtures/compute_shift_potential_tws.bindump')) # rubocop: disable Security/MarshalLoad
+
+      service_to_plan = '1028167_CLI_84_1AB'
+      service_data = s.instance_variable_get(:@services_data)[service_to_plan]
+      route_data[:current_route] = [
+        { id: '1028167_INI_84_1AB', point_id: '1028167', start: 21600, arrival: 21700, end: 22000, considered_setup_duration: 120, activity: 0 }
+      ]
+      route_data[:current_route][0][:point_id] = service_data[:points_ids][0]
+      times_back_to_depot = potential_tws.collect{ |tw|
+        _next_a, _accepted, _shift, back_depot = s.send(:insertion_cost_with_tw, tw, route_data, { id: service_to_plan, point_id: service_data[:points_ids][0], duration: 876 }, 0)
+        back_depot
+      }
+      assert_operator times_back_to_depot[0], :!=, times_back_to_depot[1]
+    end
+
+    def test_positions_provided
+      vrp = VRP.scheduling_seq_timewindows
+      vrp = TestHelper.create(vrp)
+      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
+      s = Heuristics::Scheduling.new(vrp, expanded_vehicles)
+
+      assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [])
+      assert_equal [0, 1], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+                                                                                                     { requirement: :neutral, point_id: 'point' }])
+      assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [0, 1, 2, 3], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+                                                                                                           { requirement: :never_middle, point_id: 'point' },
+                                                                                                           { requirement: :always_first, point_id: 'point' },
+                                                                                                           { requirement: :neutral, point_id: 'point' },
+                                                                                                           { requirement: :neutral, point_id: 'point' },
+                                                                                                           { requirement: :always_last, point_id: 'point' }])
+
+      assert_equal [], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [])
+      assert_equal [1], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+                                                                                                   { requirement: :always_last, point_id: 'point' }])
+      assert_equal [1], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+                                                                                                   { requirement: :neutral, point_id: 'point' }])
+      assert_equal [1, 2], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+                                                                                                      { requirement: :always_middle, point_id: 'point' },
+                                                                                                      { requirement: :neutral, point_id: 'point' }])
+
+      assert_equal [0], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [])
+      assert_equal [1], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [2, 3, 4, 5], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+                                                                                                          { requirement: :neutral, point_id: 'point' },
+                                                                                                          { requirement: :always_last, point_id: 'point' },
+                                                                                                          { requirement: :always_last, point_id: 'point' },
+                                                                                                          { requirement: :always_last, point_id: 'point' }])
+
+      assert_equal [], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [])
+      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+                                                                                                 { requirement: :always_last, point_id: 'point' }])
+      assert_equal [1, 2], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+                                                                                                    { requirement: :neutral, point_id: 'point' },
+                                                                                                    { requirement: :always_last, point_id: 'point' }])
+
+      assert_equal [0], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [])
+      assert_equal [0, 1], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [0, 1, 3], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+                                                                                                        { requirement: :neutral, point_id: 'point' },
+                                                                                                        { requirement: :neutral, point_id: 'point' }])
+
+      assert_equal [], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [])
+      assert_equal [], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [0], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [0], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
+
+      # with point at same location :
+      assert_equal [2, 3], s.compute_consistent_positions_to_insert(:always_middle, ['same_point'], [{ requirement: :always_first, point_id: 'point' },
+                                                                                                     { requirement: :neutral, point_id: 'point' },
+                                                                                                     { requirement: :neutral, point_id: 'same_point' },
+                                                                                                     { requirement: :neutral, point_id: 'point' }])
     end
   end
 end

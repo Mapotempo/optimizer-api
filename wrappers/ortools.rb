@@ -76,7 +76,6 @@ module Wrappers
         :assert_partitions_entity,
         :assert_no_initial_centroids_with_partitions,
         :assert_valid_partitions,
-        :assert_no_relation_with_scheduling_heuristic,
         :assert_route_date_or_indice_if_periodic,
         :assert_no_route_if_clustering,
         :assert_missions_in_routes_do_exist,
@@ -126,6 +125,7 @@ module Wrappers
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
       relations = []
       services = []
+      services_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
       vrp.services.each_with_index{ |service, service_index|
         vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) && service[:unavailable_visit_day_indices].empty?
           []
@@ -141,37 +141,38 @@ module Wrappers
         end
         if service.activity
           services << OrtoolsVrp::Service.new(
-          time_windows: service.activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
-            start: tw.start || -2**56,
-            end: tw.end || 2**56,
-          ) },
-          quantities: vrp.units.collect{ |unit|
-            is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
-            q = service.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.value ? (is_empty_unit ? -1 : 1) * (service.type.to_s == "delivery" ? -1 : 1) * (q.value * (unit.counting ? 1 : 1000)).round : 0
-          },
-          duration: service.activity.duration,
-          additional_value: service.activity.additional_value,
-          priority: service.priority,
-          matrix_index: points[service.activity.point_id].matrix_index,
-          vehicle_indices: service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0 ?
-            service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
-          setup_duration: service.activity.setup_duration,
-          id: service.id,
-          late_multiplier: service.activity.late_multiplier || 0,
-          setup_quantities: vrp.units.collect{ |unit|
-            q = service.quantities.find{ |quantity| quantity.unit == unit }
-            q && q.setup_value && unit.counting ? q.setup_value.to_i : 0
-          },
-          exclusion_cost: service.exclusion_cost && service.exclusion_cost.to_i || -1,
-          refill_quantities: vrp.units.collect{ |unit|
-            q = service.quantities.find{ |quantity| quantity.unit == unit }
-            !q.nil? && (q.fill || q.empty)
-          },
-          problem_index: service_index,
-        )
+            time_windows: service.activity.timewindows.collect{ |tw|
+              OrtoolsVrp::TimeWindow.new(start: tw.start || -2**56, end: tw.end || 2**56)
+            },
+            quantities: vrp.units.collect{ |unit|
+              is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
+              q = service.quantities.find{ |quantity| quantity.unit == unit }
+              (q&.value) ? (is_empty_unit ? -1 : 1) * ((service.type.to_s == 'delivery') ? -1 : 1) * (q.value * (unit.counting ? 1 : 1000)).round : 0
+            },
+            duration: service.activity.duration,
+            additional_value: service.activity.additional_value,
+            priority: service.priority,
+            matrix_index: points[service.activity.point_id].matrix_index,
+            vehicle_indices: (service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0) ?
+              service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
+            setup_duration: service.activity.setup_duration,
+            id: service.id,
+            late_multiplier: service.activity.late_multiplier || 0,
+            setup_quantities: vrp.units.collect{ |unit|
+              q = service.quantities.find{ |quantity| quantity.unit == unit }
+              (q && q.setup_value && unit.counting) ? q.setup_value.to_i : 0
+            },
+            exclusion_cost: service.exclusion_cost && service.exclusion_cost.to_i || -1,
+            refill_quantities: vrp.units.collect{ |unit|
+              q = service.quantities.find{ |quantity| quantity.unit == unit }
+              !q.nil? && (q.fill || q.empty)
+            },
+            problem_index: service_index,
+          )
+
+          services = update_services_positions(services, services_positions, service.id, service.activity.position, service_index)
         elsif service.activities
-          service.activities.each{ |possible_activity|
+          service.activities.each_with_index{ |possible_activity, activity_index|
             services << OrtoolsVrp::Service.new(
               time_windows: possible_activity.timewindows.collect{ |tw| OrtoolsVrp::TimeWindow.new(
                 start: tw.start || -2**56,
@@ -189,7 +190,7 @@ module Wrappers
               vehicle_indices: service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0 ?
                 service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
               setup_duration: possible_activity.setup_duration,
-              id: service.id,
+              id: "#{service.id}_activity#{activity_index}",
               late_multiplier: possible_activity.late_multiplier || 0,
               setup_quantities: vrp.units.collect{ |unit|
                 q = service.quantities.find{ |quantity| quantity.unit == unit }
@@ -202,6 +203,8 @@ module Wrappers
               },
               problem_index: service_index,
             )
+
+            services = update_services_positions(services, services_positions, service.id, possible_activity.position, service_index)
           }
         end
       }
@@ -433,6 +436,11 @@ module Wrappers
           }.uniq
         )
       }
+
+      relations << OrtoolsVrp::Relation.new(type: 'force_first', linked_ids: services_positions[:always_first], lapse: -1) unless services_positions[:always_first].empty?
+      relations << OrtoolsVrp::Relation.new(type: 'never_first', linked_ids: services_positions[:never_first], lapse: -1) unless services_positions[:never_first].empty?
+      relations << OrtoolsVrp::Relation.new(type: 'never_last', linked_ids: services_positions[:never_last], lapse: -1) unless services_positions[:never_last].empty?
+      relations << OrtoolsVrp::Relation.new(type: 'force_end', linked_ids: services_positions[:always_last], lapse: -1) unless services_positions[:always_last].empty?
 
       problem = OrtoolsVrp::Problem.new(
         vehicles: vehicles,
@@ -877,6 +885,23 @@ module Wrappers
       stdout_and_stderr&.close
       pipe&.close
       log "<---- run_ortools #{Time.now - tic}sec elapsed", level: :debug
+    end
+
+    def update_services_positions(services, services_positions, id, position, service_index)
+      services_positions[:always_first] << id if position == :always_first
+      services_positions[:never_first] << id if [:never_first, :always_middle].include?(position)
+      services_positions[:never_last] << id if [:never_last, :always_middle].include?(position)
+      services_positions[:always_last] << id if position == :always_last
+
+      return services if position != :never_middle
+
+      services + services.select{ |s| s.problem_index == service_index }.collect{ |s|
+        services_positions[:always_first] << id
+        services_positions[:always_last] << "#{id}_alternative"
+        copy_s = s.dup
+        copy_s.id += '_alternative'
+        copy_s
+      }
     end
   end
 end

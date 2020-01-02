@@ -4142,139 +4142,48 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_force_first
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0',
-      }, {
-        id: 'vehicle_1',
-        matrix_id: 'matrix_0',
-      }, {
-        id: 'vehicle_2',
-        matrix_id: 'matrix_0',
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        },
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_2'
-        },
-      }],
-      relations: [{
-        id: 'force_first',
-        type: 'force_first',
-        linked_ids: ['service_1', 'service_3']
-      }],
-      configuration: {
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
+    problem = VRP.basic
+    problem[:vehicles] << problem[:vehicles][0]
+    problem[:vehicles][1][:id] += '_copy'
+    problem[:vehicles].each{ |v| v[:start_point_id] = nil }
+    problem[:relations] = [{
+      id: 'force_first',
+      type: 'force_first',
+      linked_ids: ['service_1', 'service_3']
+    }]
+
     vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
+    assert_equal :always_first, vrp.services[0].activity.position
+    assert_equal :neutral, vrp.services[1].activity.position
+    assert_equal :always_first, vrp.services[2].activity.position
+    result = OptimizerWrapper.config[:services][:ortools].solve(vrp, 'test')
     assert result
-    assert_equal 3, result[:routes].size
+    assert_equal 2, result[:routes].size
     assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][1][:activities].size
     assert(result[:routes].any?{ |route| route[:activities].first[:service_id] == 'service_1' })
     assert(result[:routes].any?{ |route| route[:activities].first[:service_id] == 'service_3' })
   end
 
   def test_force_end
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0',
-      }, {
-        id: 'vehicle_1',
-        matrix_id: 'matrix_0',
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        },
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_2'
-        },
-      }],
-      relations: [{
-        id: 'force_end',
-        type: 'force_end',
-        linked_ids: ['service_1']
-      }, {
-        id: 'force_end2',
-        type: 'force_end',
-        linked_ids: ['service_3']
-      }],
-      configuration: {
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
+    problem = VRP.basic
+    problem[:vehicles] << problem[:vehicles][0]
+    problem[:vehicles][1][:id] += '_copy'
+    problem[:vehicles].each{ |v| v[:start_point_id] = nil }
+    problem[:relations] = [{
+      id: 'force_end',
+      type: 'force_end',
+      linked_ids: ['service_1']
+    }, {
+      id: 'force_end2',
+      type: 'force_end',
+      linked_ids: ['service_3']
+    }]
+
     vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
+    assert_equal :always_last, vrp.services[0].activity.position
+    assert_equal :neutral, vrp.services[1].activity.position
+    assert_equal :always_last, vrp.services[2].activity.position
+    result = OptimizerWrapper.config[:services][:ortools].solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
     assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][1][:activities].size
@@ -4283,69 +4192,54 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_never_first
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0',
-      }, {
-        id: 'vehicle_1',
-        matrix_id: 'matrix_0',
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      relations: [{
-        id: 'never_first',
-        type: 'never_first',
-        linked_ids: ['service_1', 'service_3']
-      }],
-      configuration: {
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
+    problem = VRP.basic
+    problem[:vehicles] << problem[:vehicles][0]
+    problem[:vehicles][1][:id] += '_copy'
+    problem[:vehicles].each{ |v| v[:start_point_id] = nil }
+    problem[:relations] = [{
+      id: 'never_first',
+      type: 'never_first',
+      linked_ids: ['service_1', 'service_3']
+    }]
+
     vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
+    assert_equal :never_first, vrp.services[0].activity.position
+    assert_equal :never_first, vrp.services[2].activity.position
+    result = OptimizerWrapper.config[:services][:ortools].solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
     assert_equal problem[:services].size, [result[:routes][0][:activities].size, result[:routes][1][:activities].size].max
     assert_equal 'service_2', result[:routes][0][:activities].first[:service_id] || result[:routes][1][:activities].first[:service_id]
+  end
+
+  def test_never_last
+    problem = VRP.basic
+    result = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    assert_equal 'service_3', result[:routes][0][:activities].last[:service_id]
+
+    problem[:services].last[:activity][:position] = :never_last
+    result = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    assert_operator 'service_3', :!=, result[:routes][0][:activities].last[:service_id]
+  end
+
+  def test_always_middle
+    problem = VRP.basic
+    result = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    assert_equal 'service_3', result[:routes][0][:activities].last[:service_id]
+
+    problem[:services].last[:activity][:position] = :always_middle
+    result = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    assert_equal 'service_3', result[:routes][0][:activities][2][:service_id]
+  end
+
+  def test_never_middle
+    problem = VRP.basic
+    result = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    assert_equal 'service_2', result[:routes][0][:activities][2][:service_id]
+
+    problem[:services][1][:activity][:position] = :never_middle
+    result = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    refute_equal('service_2', result[:routes][0][:activities][2][:service_id])
   end
 
   def test_fill_quantities

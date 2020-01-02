@@ -24,6 +24,7 @@ module Models
     field :setup_duration, default: 0
     field :additional_value, default: 0
     field :late_multiplier, default: nil
+    field :position, default: :neutral
 
     # FIXME: ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params

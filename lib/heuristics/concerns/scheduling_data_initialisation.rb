@@ -126,6 +126,7 @@ module SchedulingDataInitialization
         unavailable_days: service.unavailable_visit_day_indices,
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
+        positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),
         nb_activities: service.activity ? 1 : service.activities.size,
       }
 
@@ -166,6 +167,7 @@ module SchedulingDataInitialization
           @services_data[representative_id][:group_capacity] = Marshal.load(Marshal.dump(@services_data[representative_id][:capacity]))
           @same_located[representative_id].each{ |service_id|
             @services_data[service_id][:capacity].each{ |unit, value| @services_data[representative_id][:group_capacity][unit] += value }
+            @services_data[service_id][:tws_sets] = [group_tw]
           }
         }
 
