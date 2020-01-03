@@ -230,4 +230,45 @@ class FiltersTest < Minitest::Test
       Filters.filter_infeasible_service_shipment_skills(Models::Vrp.create(vrp))
     end
   end
+
+  def test_do_not_filter_limit_cases
+    vrp = VRP.basic
+    vrp[:units] = [{ id: 'kg' }]
+    vrp[:vehicles][0][:timewindow] = { start: 5, end: 25 }
+    vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 3 }]
+    # vrp[:services][0][:activity][:late_multiplier] = 0.3
+
+    vrp[:vehicles][0][:capacities] = [{ unit_id: 'kg', limit: 5, overload_multiplier: 0 }]
+    vrp[:services][1][:quantities] = [{ unit_id: 'kg', value: 10 }]
+
+    vrp[:matrices].first[:time].map!{ |l| l << 50 }
+    vrp[:matrices].first[:time] << [50, 50, 50, 50, 0]
+    vrp[:vehicles][0][:cost_late_multiplier] = 0
+
+    vrp[:services][2][:activity][:duration] = 30
+
+    OptimizerWrapper.config[:services][:ortools].stub(
+      :solve, #(cluster_vrp, job, proc)
+      lambda { |cluster_vrp, _, _,|
+        assert_equal cluster_vrp.services.size, 0
+        'Job killed'
+      }
+    ) do
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+    end
+
+    vrp[:services][0][:activity][:late_multiplier] = 0.3
+    vrp[:vehicles][0][:capacities] = [{ unit_id: 'kg', limit: 5, overload_multiplier: 1 }]
+    vrp[:vehicles][0][:cost_late_multiplier] = 0.3
+
+    OptimizerWrapper.config[:services][:ortools].stub(
+      :solve, #(cluster_vrp, job, proc)
+      lambda { |cluster_vrp, _, _,|
+        assert_equal cluster_vrp.services.size, 3
+        'Job killed'
+      }
+    ) do
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+    end
+  end
 end

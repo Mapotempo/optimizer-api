@@ -511,7 +511,7 @@ module Wrappers
       t_start = timewindow[:start]
       t_end = timewindow[:end]
       t_day = timewindow[:day_index]
-      t_late = service[:activity][:late_multiplier]
+      t_late = service.activity&.late_multiplier&.positive?
 
       vrp[:vehicles].select{ |vehicle| vehicle[:timewindow] }.any?{ |vehicle|
         v_start = vehicle[:timewindow][:start]
@@ -604,6 +604,8 @@ module Wrappers
 
     def compute_vehicles_shift(vehicles)
       max_shift = vehicles.collect{ |vehicle|
+        next if vehicle&.cost_late_multiplier&.positive?
+
         if vehicle.timewindow&.start && vehicle.timewindow&.end
           vehicle.timewindow.end - vehicle.timewindow.start
         elsif vehicle.sequence_timewindows.all?{ |tw| tw.start && tw.end }
@@ -615,11 +617,18 @@ module Wrappers
 
     def compute_vehicles_capacity(vrp)
       capacities = {}
-      vrp.units.each{ |unit|
-        this_limits = vrp.vehicles.collect{ |v| v.capacities ? v.capacities.find{ |capacity| capacity.unit_id == unit.id }&.limit : nil }.flatten
-        capacities[unit.id] = this_limits.include?(nil) ? nil : this_limits.max
+      vrp.vehicles.first.capacities.map{ |capacity| capacities[capacity.unit.id] = capacity.limit }
+      vrp.vehicles.each{ |v|
+        limits = Hash[vrp.units.map(&:id).product([nil])]
+        v.capacities.each{ |capacity| # Si overload nil ou overload nul alors on prend capacity si il existe sinon nil
+          limits[capacity.unit.id] = capacity.limit if capacity.overload_multiplier.nil? || capacity.overload_multiplier.zero?
+        }
+        limits.each{ |k, v|
+          capacities[k] = nil if v.nil?
+          capacities[k] = [v, capacities[k]].max if capacities.has_key?(k)
+        }
       }
-
+      vrp.units.each{ |unit| capacities[unit.id] = nil if !capacities.has_key?(unit.id) }
       capacities
     end
 

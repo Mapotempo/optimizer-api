@@ -133,6 +133,7 @@ module VRP
 
   def self.basic
     {
+      units: [],
       matrices: [{
         id: 'matrix_0',
         time: [
