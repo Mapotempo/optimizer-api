@@ -542,28 +542,32 @@ module Wrappers
         } || vrp[:vehicles].any?{ |vehicle| vehicle[:cost_late_multiplier] && vehicle.cost_late_multiplier.positive? }
     end
 
-    def check(vrp, matrix, unfeasible)
-      if !matrix.nil?
-        line_cpt = Array.new(vrp.points.size){ 0 }
-        column_cpt = Array.new(vrp.points.size){ 0 }
-        vrp.points.each_with_index{ |point_a, line|
-          vrp.points.each_with_index{ |point_b, col|
-            if matrix[point_a.matrix_index][point_b.matrix_index] >= 2**31 - 1
+    def check(vrp, dimension, unfeasible)
+      return unfeasible if vrp.matrices.any?{ |matrix| matrix[dimension].nil? || matrix[dimension].size == 1 }
+
+      matrix_indices = vrp.points.map(&:matrix_index).uniq
+      line_cpt = Array.new(matrix_indices.size){ 0 }
+      column_cpt = Array.new(matrix_indices.size){ 0 }
+      vrp.matrices.each{ |matrix|
+        matrix_indices.each_with_index{ |index_a, line|
+          matrix_indices.each_with_index{ |index_b, col|
+            if matrix[dimension][index_a][index_b] >= 2**31 - 1
               line_cpt[line] += 1
               column_cpt[col] += 1
             end
           }
         }
+      }
 
-        (0..vrp.points.size - 1).each{ |index|
-          next if (column_cpt[index] == 0 || column_cpt[index] != matrix.size - 1) && (line_cpt[index] == 0 || line_cpt[index] != matrix.size - 1)
-          vrp[:services].select{ |service| service[:activity][:point][:matrix_index] == vrp.points[index][:matrix_index] }.each{ |service|
-            if unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
-              add_unassigned(unfeasible, vrp, service, 'Unreachable')
-            end
-          }
+      matrix_indices.each.with_index{ |matrix_index, index|
+        next if (column_cpt[index] < vrp.matrices.first[dimension].size - 1) && (line_cpt[index] < vrp.matrices.first[dimension].size - 1)
+
+        vrp.services.select{ |service| service.activity.point.matrix_index == matrix_index }.each{ |service|
+          if unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
+            add_unassigned(unfeasible, vrp, service, 'Unreachable')
+          end
         }
-      end
+      }
 
       unfeasible
     end
@@ -687,11 +691,9 @@ module Wrappers
     end
 
     def check_distances(vrp, unfeasible)
-      vrp[:matrices].each{ |matrix|
-        unfeasible = check(vrp, matrix[:time], unfeasible)
-        unfeasible = check(vrp, matrix[:distance], unfeasible)
-        unfeasible = check(vrp, matrix[:value], unfeasible)
-      }
+      unfeasible = check(vrp, :time, unfeasible)
+      unfeasible = check(vrp, :distance, unfeasible)
+      unfeasible = check(vrp, :value, unfeasible)
 
       # check distances from vehicle depot is feasible
       vrp.services.each{ |service|
