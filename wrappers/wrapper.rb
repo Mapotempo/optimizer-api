@@ -113,8 +113,8 @@ module Wrappers
       vrp.shipments.empty? || vrp.shipments.none? { |shipment|
         first_open = shipment.pickup.timewindows.min_by(&:start)
         last_close = shipment.delivery.timewindows.max_by(&:end)
-        first_open && last_close && (first_open.start.to_i || 0) + 86400 * (first_open.day_index || 0) >
-          (last_close.end.to_i || 86399 ) + 86400 * (last_close.day_index || 0)
+        first_open && last_close && (first_open.start || 0) + 86400 * (first_open.day_index || 0) >
+          (last_close.end || 86399 ) + 86400 * (last_close.day_index || 0)
       }
     end
 
