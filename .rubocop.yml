@@ -22,7 +22,7 @@ Metrics/PerceivedComplexity:
 Metrics/CyclomaticComplexity:
   Enabled: false
 
-Layout/AlignParameters:
+Layout/ParameterAlignment:
   Enabled: false
 
 Style/DoubleNegation:
@@ -47,7 +47,7 @@ Layout/SpaceInsideHashLiteralBraces:
 Style/NegatedIf:
   Enabled: false
 
-Layout/IndentFirstHashElement:
+Layout/FirstHashElementIndentation:
   Enabled: false
 
 Style/NumericLiterals:
@@ -65,7 +65,7 @@ Style/IfUnlessModifier:
 Layout/CommentIndentation:
   Enabled: false
 
-Layout/IndentFirstArrayElement:
+Layout/FirstArrayElementIndentation:
   Enabled: false
 
 Style/ClassAndModuleChildren:
