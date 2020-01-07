@@ -271,4 +271,19 @@ class FiltersTest < Minitest::Test
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
     end
   end
+
+  def test_independant_filter
+    vrp = VRP.independant
+    vrp[:vehicles][1][:timewindow] = { start: 20, end: 60 }
+    # Have one service filtered for each independant problem
+    vrp[:services][0][:activity][:duration] = 21
+    vrp[:services][4][:activity][:timewindows] = [{ start: 0, end: 10 }]
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+
+    assert_equal 2, result[:unassigned].size
+    result[:routes].each{ |route|
+      assert_equal 2, route[:activities].select{ |activity| activity[:service_id] }.size
+    }
+  end
 end

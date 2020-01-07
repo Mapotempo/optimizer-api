@@ -836,4 +836,114 @@ module VRP
       }
     }
   end
+
+  def self.independant
+    {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5, 7, 2, 3],
+          [6, 0, 1, 5, 2, 2, 4],
+          [1, 2, 0, 5, 1, 6, 8],
+          [5, 5, 5, 0, 2, 3, 3],
+          [5, 5, 5, 2, 0, 3, 3],
+          [5, 5, 5, 2, 3, 0, 3],
+          [5, 5, 5, 2, 3, 3, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }, {
+        id: 'point_4',
+        matrix_index: 4
+      }, {
+        id: 'point_5',
+        matrix_index: 5
+      }, {
+        id: 'point_6',
+        matrix_index: 6
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 20
+        }
+      }, {
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0',
+        timewindow: {
+          start: 0,
+          end: 20
+        }
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+        },
+        sticky_vehicle_ids: [
+          'vehicle_0'
+        ],
+      }, {
+        id: 'service_2',
+        activity: {
+          point_id: 'point_2'
+        },
+        sticky_vehicle_ids: [
+          'vehicle_0'
+        ],
+      }, {
+        id: 'service_3',
+        activity: {
+          point_id: 'point_3'
+        },
+        sticky_vehicle_ids: [
+          'vehicle_0'
+        ],
+      }, {
+        id: 'service_4',
+        activity: {
+          point_id: 'point_4',
+        },
+        sticky_vehicle_ids: [
+          'vehicle_1'
+        ],
+      }, {
+        id: 'service_5',
+        activity: {
+          point_id: 'point_5'
+        },
+        sticky_vehicle_ids: [
+          'vehicle_1'
+        ],
+      }, {
+        id: 'service_6',
+        activity: {
+          point_id: 'point_6'
+        },
+        sticky_vehicle_ids: [
+          'vehicle_1'
+        ],
+      }],
+      configuration: {
+        resolution: {
+          duration: 10
+        }
+      }
+    }
+  end
 end
