@@ -11,6 +11,7 @@ $(document).ready(function() {
   $('#csv-quantities-label').append(i18n.form['csv-quantities-label']);
   $('#csv-timewindows-label').append(i18n.form['csv-timewindows-label']);
   $('#csv-services-label').append(i18n.form['csv-services-label']);
+  $('#csv-shipments-label').append(i18n.form['csv-shipments-label']);
   $('#csv-vehicles-label').append(i18n.form['csv-vehicles-label']);
   $('#json-config-label').append(i18n.form['json-config-label']);
 
