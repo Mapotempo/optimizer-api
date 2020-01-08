@@ -26,6 +26,7 @@ var i18n = {
     'csv-quantities-label': 'Votre fichier quantities csv :',
     'csv-timewindows-label': 'Votre fichier timewindows csv :',
     'csv-services-label': 'Votre fichier services csv :',
+    'csv-shipments-label': 'Votre fichier shipments csv :',
     'csv-vehicles-label': 'Votre fichier vehicules csv :',
     'json-config-label': 'Votre fichier de configuration :',
     'result-label': 'Résultat de votre optimisation :',
