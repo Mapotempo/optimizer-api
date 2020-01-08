@@ -853,13 +853,8 @@ module Wrappers
         end
         [cost, iterations, @previous_result]
       elsif @thread.value.signaled? && @thread.value.termsig == 9
-        out = 'Job killed'
-        log out, level: :fatal # Keep trace in worker
-        if cost && !result.include?('Iteration : ')
-          [cost, iterations, @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)]
-        else
-          out
-        end
+        log 'Job killed', level: :fatal # Keep trace in worker
+        raise OptimizerWrapper::JobKilledError
       else # Fatal Error
         message = if @thread.value == 127
                     'Executable does not exist'

@@ -65,8 +65,11 @@ module OptimizerWrapper
         p['result'].first['elapsed'] = p['graph'].last['time']
       end
       Result.set(self.uuid, p)
-    rescue => e
-      log "#{e}\n\t\t#{e.backtrace[0..5].join("\n\t\t")}", level: :error
+    rescue Resque::Plugins::Status::Killed, JobKilledError
+      log 'Job Killed'
+      false
+    rescue StandardError => e
+      log "#{e}\n\t\t#{e.backtrace.join("\n\t\t")}", level: :fatal
       raise
     end
 
@@ -83,10 +86,12 @@ module OptimizerWrapper
       @data = data
     end
   end
+
   class DiscordantProblemError      < ProblemError;  end
   class UnsupportedProblemError     < ProblemError;  end
 
   class ClusteringError             < StandardError; end
+  class JobKilledError              < StandardError; end
   class SchedulingHeuristicError    < StandardError; end
   class UnsupportedRouterModeError  < StandardError; end
 
