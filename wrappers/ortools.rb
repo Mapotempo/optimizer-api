@@ -832,11 +832,13 @@ module Wrappers
         log line.strip, level: /Final Iteration :/.match(line) || /First solution strategy :/.match(line) || /Using initial solution provided./.match(line) ? :info : r || s || t ? :debug : :error
         out += line
 
-        next unless block && r && s && t && vrp.restitution_intermediate_solutions
+        next unless r && t # if there is no iteration and time then there is nothing to do
 
         begin
-          @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
-          block.call(self, iterations, nil, nil, cost, t, @previous_result)
+          @previous_result = if vrp.restitution_intermediate_solutions && s
+                               parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+                             end
+          block&.call(self, iterations, nil, nil, cost, time, @previous_result) # if @previous_result=nil, it will not override the existing solution
         rescue StandardError => e
           log "Error: #{e.message} in run_ortools during parse_output", level: :error
         end
