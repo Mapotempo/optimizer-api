@@ -272,6 +272,34 @@ class FiltersTest < Minitest::Test
     end
   end
 
+  def test_do_not_filter_nil_capacities
+    vrp = VRP.basic
+    vrp[:units] = [{ id: 'kg' }, { id: 'kg1' }, { id: 'kg2' }, { id: 'kg3' }, { id: 'kg4' }, { id: 'kg5' }]
+    vrp[:vehicles] << { id: 'vehicle_1', matrix_id: 'matrix_0', start_point_id: 'point_0' }
+    vrp[:vehicles][0][:capacities] = [
+      { unit_id: 'kg1', limit: 10 }, { unit_id: 'kg2', limit: 10 }, { unit_id: 'kg3', limit: nil },
+      { unit_id: 'kg5', limit: 10, overload_multiplier: 1 }
+    ]
+    vrp[:vehicles][1][:capacities] = [
+      { unit_id: 'kg2', limit: nil }, { unit_id: 'kg3', limit: 10 }, { unit_id: 'kg4', limit: 10 },
+      { unit_id: 'kg5', limit: 10, overload_multiplier: 1 }
+    ]
+
+    vrp[:services][0][:quantities] = [{ unit_id: 'kg', value: 11 }, { unit_id: 'kg1', value: 11 }]
+    vrp[:services][1][:quantities] = [{ unit_id: 'kg2', value: 11 }, { unit_id: 'kg2', value: 11 }]
+    vrp[:services][2][:quantities] = [{ unit_id: 'kg3', value: 11 }, { unit_id: 'kg5', value: 11 }]
+
+    OptimizerWrapper.config[:services][:ortools].stub(
+      :solve, #(cluster_vrp, job, proc)
+      lambda { |cluster_vrp, _, _,|
+        assert_equal cluster_vrp.services.size, 3
+        'Job killed'
+      }
+    ) do
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+    end
+  end
+
   def test_independant_filter
     vrp = VRP.independant
     vrp[:vehicles][1][:timewindow] = { start: 20, end: 60 }
