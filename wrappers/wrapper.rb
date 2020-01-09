@@ -616,20 +616,21 @@ module Wrappers
     end
 
     def compute_vehicles_capacity(vrp)
-      capacities = {}
-      vrp.vehicles.first.capacities.map{ |capacity| capacities[capacity.unit.id] = capacity.limit }
-      vrp.vehicles.each{ |v|
-        limits = Hash[vrp.units.map(&:id).product([nil])]
-        v.capacities.each{ |capacity| # Si overload nil ou overload nul alors on prend capacity si il existe sinon nil
-          limits[capacity.unit.id] = capacity.limit if capacity.overload_multiplier.nil? || capacity.overload_multiplier.zero?
+      unit_ids = vrp.units.map(&:id)
+      capacities = Hash[unit_ids.product([-1])]
+      vrp.vehicles.each{ |vehicle|
+        limits = Hash[unit_ids.product([-1])] # We expect to detect every undefined capacity
+
+        vehicle.capacities.each{ |capacity| # Defined capacities are scanned
+          limits[capacity.unit.id] = capacity.overload_multiplier&.positive? ? nil : capacity.limit
         }
-        limits.each{ |k, v|
-          capacities[k] = nil if v.nil?
-          capacities[k] = [v, capacities[k]].max if capacities.has_key?(k)
+
+        limits.each{ |k, v| # Unfound units are tagged as infinite
+          capacities[k] = nil if v.nil? || v.negative?
+          capacities[k] = [v, capacities[k]].max unless capacities[k].nil?
         }
       }
-      vrp.units.each{ |unit| capacities[unit.id] = nil if !capacities.has_key?(unit.id) }
-      capacities
+      capacities.reject{ |_k, v| v.nil? || v.negative? }
     end
 
     def clean_data(vrp)
