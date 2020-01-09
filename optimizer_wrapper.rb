@@ -81,7 +81,7 @@ module OptimizerWrapper
     Filters::filter(vrp)
 
     vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
-      3
+      6
     else
       1
     end
