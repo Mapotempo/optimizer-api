@@ -239,7 +239,7 @@ class FiltersTest < Minitest::Test
         'Job killed'
       }
     ) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     end
 
     vrp[:services][0][:activity][:late_multiplier] = 0.3
@@ -253,7 +253,7 @@ class FiltersTest < Minitest::Test
         'Job killed'
       }
     ) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     end
   end
 
@@ -281,7 +281,7 @@ class FiltersTest < Minitest::Test
         'Job killed'
       }
     ) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     end
   end
 
@@ -292,7 +292,7 @@ class FiltersTest < Minitest::Test
     vrp[:services][0][:activity][:duration] = 21
     vrp[:services][4][:activity][:timewindows] = [{ start: 0, end: 10 }]
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
     assert_equal 2, result[:unassigned].size
     result[:routes].each{ |route|
