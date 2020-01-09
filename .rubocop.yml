@@ -1,7 +1,9 @@
+require: rubocop-performance
+
 AllCops:
   TargetRubyVersion: 2.3
 
-Metrics/LineLength:
+Layout/LineLength:
   Enabled: false
 
 Layout/SpaceBeforeBlockBraces:

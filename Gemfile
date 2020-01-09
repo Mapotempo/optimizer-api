@@ -39,6 +39,7 @@ group :development, :test do
 
   # For linting and offline code analysis
   gem 'rubocop'
+  gem 'rubocop-performance'
   gem 'solargraph'
 
   # For creating dependency graphs
