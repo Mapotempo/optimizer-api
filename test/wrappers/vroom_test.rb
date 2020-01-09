@@ -53,7 +53,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
 
     result = vroom.solve(vrp)
 
@@ -119,7 +119,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -183,7 +183,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -243,7 +243,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -290,7 +290,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -368,7 +368,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -448,7 +448,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -528,7 +528,7 @@ class Wrappers::VroomTest < Minitest::Test
         }
       }],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     result = vroom.solve(vrp)
     assert result
     assert_equal 1, result[:routes].size
@@ -547,7 +547,7 @@ class Wrappers::VroomTest < Minitest::Test
                                                       vroom_counter += 1
                                                     }) do
       begin
-        OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }}, FCT.create(vrp), nil)
+        OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }}, TestHelper.create(vrp), nil)
       rescue => e
         puts e
       end

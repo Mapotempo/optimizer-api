@@ -57,7 +57,7 @@ class FiltersTest < Minitest::Test
         }
       ],
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     assert ortools.solve(vrp, 'test')
   end
 
@@ -212,7 +212,7 @@ class FiltersTest < Minitest::Test
         "Job killed" # Return "Job killed" to stop gracefully
       }
     ) do
-      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(prob), nil)
+      OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(prob), nil)
     end
   end
 

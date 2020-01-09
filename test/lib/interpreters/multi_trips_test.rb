@@ -77,7 +77,7 @@ class MultiTripsTest < Minitest::Test
         }
       }
     }
-    vrp = FCT.create(problem)
+    vrp = TestHelper.create(problem)
     periodic = Interpreters::MultiTrips.new
     res_vrp = periodic.send(:expand, vrp)
 
@@ -151,7 +151,7 @@ class MultiTripsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, FCT.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 2, result[:routes].size
     route_0 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_0' }
     route_1 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_1' }

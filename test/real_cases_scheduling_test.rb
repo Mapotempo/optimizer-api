@@ -20,7 +20,7 @@ require './test/test_helper'
 class HeuristicTest < Minitest::Test
   if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
     def test_instance_baleares2
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       assert result[:unassigned].size <= 3
@@ -31,7 +31,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_instance_baleares2_with_priority
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       assert(result[:unassigned].none?{ |service| service[:service_id].include?('3359') })
@@ -43,7 +43,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_instance_andalucia2
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       assert_equal 35, result[:unassigned].size
@@ -54,7 +54,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_instance_andalucia1_two_vehicles
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
       assert_equal 0, result[:unassigned].size
@@ -65,7 +65,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_instance_clustered
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
@@ -111,7 +111,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_instance_same_point_day
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
@@ -157,7 +157,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_vrp_allow_partial_assigment_false
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
 
       unassigned = result[:unassigned].collect{ |un| un[:service_id] }
@@ -179,7 +179,7 @@ class HeuristicTest < Minitest::Test
 
     def test_two_phases_clustering_sched_with_freq_and_same_point_day_5veh
       # about 3 minutes
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       assert result
 
@@ -198,8 +198,8 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_performance_12vl
-      vrps = FCT.load_vrps(self)
-      FCT.multipe_matrices_required(vrps, self)
+      vrps = TestHelper.load_vrps(self)
+      TestHelper.multipe_matrices_required(vrps, self)
 
       unassigned_visits = []
       vrps.each_with_index{ |vrp, vrp_i|
@@ -215,8 +215,8 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_performance_13vl
-      vrps = FCT.load_vrps(self)
-      FCT.multipe_matrices_required(vrps, self)
+      vrps = TestHelper.load_vrps(self)
+      TestHelper.multipe_matrices_required(vrps, self)
 
       unassigned_visits = []
       vrps.each_with_index{ |vrp, vrp_i|

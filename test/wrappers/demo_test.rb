@@ -21,7 +21,7 @@ require './test/test_helper'
 class Wrappers::DemoTest < Minitest::Test
   def test_demo
     demo = OptimizerWrapper.config[:services][:demo]
-    vrp = FCT.create({})
+    vrp = TestHelper.create({})
     assert demo.inapplicable_solve?(vrp).empty?
     assert demo.solve(vrp)
   end

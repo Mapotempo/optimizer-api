@@ -28,7 +28,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
   # Unit tests
   def test_submit_vrp_in_queue
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
   ensure
@@ -121,7 +121,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   end
 
   def test_list_vrp
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -133,7 +133,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   end
 
   def test_cannot_list_vrp
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -145,7 +145,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   end
 
   def test_cannot_get_vrp
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -156,7 +156,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   end
 
   def test_delete_vrp
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -168,7 +168,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   end
 
   def test_cannot_delete_vrp
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 

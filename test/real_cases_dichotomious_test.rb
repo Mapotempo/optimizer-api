@@ -21,7 +21,7 @@ class RealCasesTest < Minitest::Test
   if !ENV['SKIP_REAL_DICHO'] && !ENV['SKIP_DICHO'] && !ENV['TRAVIS']
 
     def test_dichotomious_first_instance
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       t1 = Time.now
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       t2 = Time.now
@@ -54,7 +54,7 @@ class RealCasesTest < Minitest::Test
     end
 
     def test_dichotomious_second_instance
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       t1 = Time.now
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
       t2 = Time.now

@@ -41,9 +41,9 @@ require 'byebug'
 require 'rack/test'
 require 'find'
 
-module FCT
+module TestHelper
   def self.coerce(vrp)
-    # This function is called both with a JSON and Model::Vrp
+    # This function is called both with a JSON and Models::Vrp
     # That is, service[:activity]&.fetch(symbol) do not work
     # Code needs to be valid both for vrp and json.
     # Thus `if service[:activity] && service[:activity][symbol]` style verificiations.
