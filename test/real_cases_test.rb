@@ -26,7 +26,7 @@ class RealCasesTest < Minitest::Test
     # ########## TEST PATTERN
     # ##################################
     # def test_***
-    #   vrp = FCT.load_vrp(self)
+    #   vrp = TestHelper.load_vrp(self)
     #   result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp)
     #   assert result
 
@@ -45,7 +45,7 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - 25 services with time window - dimension distance car - no late for vehicle
     def test_ortools_one_route_without_rest
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -65,7 +65,7 @@ class RealCasesTest < Minitest::Test
 
     # Strasbourg - 107 services with few time windows - dimension distance car - late for services & vehicles
     def test_ortools_one_route_without_rest_2
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -85,7 +85,7 @@ class RealCasesTest < Minitest::Test
 
     # Béziers - 203 services with time window - dimension time car - late for services & vehicles - force start and no wait cost
     def test_ortools_one_route_many_stops
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -108,7 +108,7 @@ class RealCasesTest < Minitest::Test
 
     # Lyon - 65 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_one_route_with_rest
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -132,7 +132,7 @@ class RealCasesTest < Minitest::Test
 
     # Mont-de-Marsan - 61 services with time window + rest - dimension time car - late for services & vehicles
     def test_ortools_one_route_with_rest_and_waiting_time
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -150,7 +150,7 @@ class RealCasesTest < Minitest::Test
 
     # Lyon - 769 services (without tw) + rest - dimension time car_urban - late for services & vehicles
     def test_ortools_ten_routes_with_rest
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -173,7 +173,7 @@ class RealCasesTest < Minitest::Test
 
     # Lille - 141 services with time window and quantity - no late for services
     def test_ortools_global_six_routes_without_rest
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
@@ -193,7 +193,7 @@ class RealCasesTest < Minitest::Test
 
     # Bordeaux - 81 services with time window - late for services & vehicles
     def test_ortools_global_ten_routes_without_rest
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -212,7 +212,7 @@ class RealCasesTest < Minitest::Test
 
     # Angers - Route duration and vehicle timewindow are identical
     def test_ortools_global_with_identical_route_duration_and_vehicle_window
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -238,7 +238,7 @@ class RealCasesTest < Minitest::Test
 
     # La Roche-Sur-Yon - A single route with a single double timewindow
     def test_ortools_one_route_with_single_mtws
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -255,7 +255,7 @@ class RealCasesTest < Minitest::Test
 
     # Haute-Savoie - A single route with a visit with 2 open timewindows (0 ; x] [y ; ∞)
     def test_ortools_open_timewindows
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -271,7 +271,7 @@ class RealCasesTest < Minitest::Test
 
     # Nantes - A single route with an order defining the most part of the route
     def test_ortools_single_route_with_route_order
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       # Letting lateness and wide horizon has bad impact on performances
       vrp.vehicles.each{ |v| v.cost_late_multiplier = 0 }
       check_vrp = Marshal.load(Marshal.dump(vrp))
@@ -301,7 +301,7 @@ class RealCasesTest < Minitest::Test
 
     # Nice - A single route with an order defining the most part of the route, many stops
     def test_ortools_single_route_with_route_order_2
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
@@ -330,7 +330,7 @@ class RealCasesTest < Minitest::Test
       skip "Multimodal implementation might be making a hard copy instead of a soft one.
             and it losses the connection between vrp.points and vrp.services[#].activity.point._blankslate_as_name.
             Gwen said he will fix it."
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert result
@@ -350,7 +350,7 @@ class RealCasesTest < Minitest::Test
       skip "Multimodal implementation might be making a hard copy instead of a soft one.
             and it losses the connection between vrp.points and vrp.services[#].activity.point._blankslate_as_name.
             Gwen said he will fix it."
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert result
@@ -367,7 +367,7 @@ class RealCasesTest < Minitest::Test
 
     # Paris - Multiple independant routes
     def test_ortools_optimize_each
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
@@ -376,7 +376,7 @@ class RealCasesTest < Minitest::Test
 
     def test_dichotomious_check_number_of_services
       # TODO: This test is an old test left here. It doesn't have enough vehicles. It just check if we lose or add services.
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
       routes = result[:routes]
@@ -401,7 +401,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_g1g2
-      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -415,7 +415,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_hv11
-      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 40000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -429,7 +429,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_tv1
-      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 16000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -442,7 +442,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization with vehicle returning at the depot
     def test_instance_fr_tv11
-      vrp = FCT.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -459,7 +459,7 @@ class RealCasesTest < Minitest::Test
 
     # Paris - Multiple independant routes
     def test_vroom_optimize_each
-      vrp = FCT.load_vrp(self)
+      vrp = TestHelper.load_vrp(self)
       check_vrp = Marshal.load(Marshal.dump(vrp))
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:vroom] }}, vrp, nil)
       assert result

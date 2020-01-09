@@ -20,8 +20,8 @@ require './test/test_helper'
 class HeuristicTest < Minitest::Test
   if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
     def test_scheduling_and_ortools
-      vrps = FCT.load_vrps(self)
-      FCT.multipe_matrices_required(vrps, self)
+      vrps = TestHelper.load_vrps(self)
+      TestHelper.multipe_matrices_required(vrps, self)
       vrps.each{ |vrp|
         vrp.preprocessing_partitions = nil
         vrp.name = nil
@@ -35,7 +35,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_two_phases_clustering_sched_with_freq_and_same_point_day_5veh_with_solver
-      vrp = FCT.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
+      vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
       vrp.resolution_solver = true
       vrp.preprocessing_partitions.each{ |p| p.restarts = 1 }
       result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
@@ -56,8 +56,8 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_performance_12vl_with_solver
-      vrps = FCT.load_vrps(self, fixture_file: 'performance_12vl')
-      FCT.multipe_matrices_required(vrps, self)
+      vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
+      TestHelper.multipe_matrices_required(vrps, self)
 
       assigned_visits = []
       unassigned_visits = []

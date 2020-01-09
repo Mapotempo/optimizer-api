@@ -23,7 +23,7 @@ module Models
 
     def test_work_duration
       vrp = VRP.scheduling_seq_timewindows
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
 
       assert_nil vrp.vehicles.first.work_duration
 

@@ -142,7 +142,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     OptimizerWrapper.config[:debug][:output_clusters] = true
     OptimizerWrapper.config[:debug][:output_schedule] = true
 
-    vrp = FCT.load_vrp(self, fixture_file: 'instance_clustered')
+    vrp = TestHelper.load_vrp(self, fixture_file: 'instance_clustered')
     vrp.resolution_repetition = 1
     vrp[:name] = name
     vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }

@@ -23,7 +23,7 @@ module Models
 
     def test_schedule_range_computation
       vrp = VRP.scheduling_seq_timewindows
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
 
       assert_equal 10, vrp.schedule_indices[1]
 
@@ -33,33 +33,33 @@ module Models
         start: Date.new(2017, 1, 15),
         end: Date.new(2017, 1, 27)
       }
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       assert_equal 12, vrp.schedule_indices[1]
     end
 
     def test_visits_computation
       vrp = VRP.scheduling_seq_timewindows
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
 
       assert_equal vrp.services.size, vrp.visits
 
       vrp = VRP.scheduling_seq_timewindows
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       vrp.services.each{ |service| service[:visits_number] *= 2 }
 
       assert_equal 2 * vrp.services.size, vrp.visits
 
-      vrp = FCT.load_vrp(self, fixture_file: 'instance_clustered')
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_clustered')
       assert_equal vrp.services.collect{ |s| s[:visits_number] }.sum, vrp.visits
     end
 
     def test_vrp_scheduling
       vrp = VRP.toy
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       assert !vrp.scheduling?
       
       vrp = VRP.scheduling_seq_timewindows
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       assert vrp.scheduling?
     end
   end

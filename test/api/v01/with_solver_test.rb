@@ -26,7 +26,7 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
 
   # TODO: Increase problem size to make the solve continue longer
   def test_deleted_job
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
       assert !JSON.parse(last_response.body)['solutions'].nil? && !JSON.parse(last_response.body)['solutions'].empty?
@@ -39,7 +39,7 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
   end
 
   def test_csv_configuration
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       vrp = VRP.lat_lon
       vrp[:configuration][:restitution] = { csv: true }
       @job_id = submit_csv api_key: 'ortools', vrp: vrp
@@ -51,7 +51,7 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
   end
 
   def test_using_two_solver
-    FCT.solve_asynchronously do
+    TestHelper.solve_asynchronously do
       problem = VRP.lat_lon
       problem[:vehicles].first[:end_point_id] = nil
       problem[:vehicles] << Marshal.load(Marshal.dump(problem[:vehicles].first))

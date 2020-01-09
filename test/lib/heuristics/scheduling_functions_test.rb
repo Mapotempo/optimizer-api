@@ -23,7 +23,7 @@ class HeuristicTest < Minitest::Test
       vrp = VRP.scheduling_seq_timewindows
       vrp[:configuration][:resolution][:same_point_day] = true
       vrp[:services][1][:activity][:point_id] = 'point_1'
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
 
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 10, shift: 0 })
       s.collect_services_data(vrp)
@@ -42,7 +42,7 @@ class HeuristicTest < Minitest::Test
         start: 11,
         end: 20
       }]
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
 
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 10, shift: 0 })
       s.collect_services_data(vrp)
@@ -61,7 +61,7 @@ class HeuristicTest < Minitest::Test
         start: 5,
         end: 20
       }]
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
 
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 10, shift: 0 })
       s.collect_services_data(vrp)
@@ -76,7 +76,7 @@ class HeuristicTest < Minitest::Test
       vrp[:services] = [vrp[:services].first]
       vrp[:services].first[:activity][:point_id] = vrp[:points].first[:id]
 
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 10, shift: 0 })
       assert_equal 1, s.solve_tsp(vrp).size
     end
@@ -94,7 +94,7 @@ class HeuristicTest < Minitest::Test
 
       vrp[:services][3][:visits_number] = 2
       vrp[:services][3][:minimum_lapse] = 6
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 10, shift: 0 })
       s.collect_services_data(vrp)
       data_services = s.instance_variable_get(:@services_data)
@@ -110,7 +110,7 @@ class HeuristicTest < Minitest::Test
       vrp[:services][0][:visits_number] = 2
       vrp[:services][0][:minimum_lapse] = 7
 
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 10, shift: 0 })
       s.collect_services_data(vrp)
       data_services = s.instance_variable_get(:@services_data)
@@ -142,7 +142,7 @@ class HeuristicTest < Minitest::Test
         }
       }
 
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 14, shift: 0 })
       s.collect_services_data(vrp)
       vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
@@ -170,7 +170,7 @@ class HeuristicTest < Minitest::Test
     def test_check_validity
       vrp = VRP.scheduling_seq_timewindows
       vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300 }]
-      vrp = FCT.create(vrp)
+      vrp = TestHelper.create(vrp)
       s = Heuristics::Scheduling.new(vrp, [], { start: 0, end: 14, shift: 0 })
       s.collect_services_data(vrp)
       vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index], tw_start: 0, tw_end: 400 }

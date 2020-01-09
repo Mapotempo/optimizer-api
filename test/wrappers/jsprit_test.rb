@@ -62,7 +62,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
@@ -114,7 +114,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       assert_raises do
         jsprit.solve(vrp, 'test')
@@ -188,7 +188,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
@@ -240,7 +240,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
@@ -299,7 +299,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
@@ -380,7 +380,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
@@ -466,7 +466,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
@@ -549,7 +549,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
@@ -615,7 +615,7 @@ class Wrappers::JspritTest < Minitest::Test
           }
         }
       }
-      vrp = FCT.create(problem)
+      vrp = TestHelper.create(problem)
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
