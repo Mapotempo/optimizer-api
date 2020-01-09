@@ -43,7 +43,7 @@ module OptimizerWrapper
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       result = OptimizerWrapper.define_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
-        @killed && wrapper.kill && return
+        @killed && wrapper.kill && return # Stops the worker if the job is killed
         @wrapper = wrapper
         log "avancement: #{message} #{avancement}"
         if avancement && cost
