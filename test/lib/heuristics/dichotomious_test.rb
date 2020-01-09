@@ -86,22 +86,22 @@ class DichotomiousTest < Minitest::Test
         limit_vrp[:vehicles] << { id: "v#{i + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
       }
 
-      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(limit_vrp), service: :demo, level: 0)
+      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(limit_vrp), service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:vehicles] = limit_vrp[:vehicles].dup
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
-      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, level: 0)
+      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:services] = limit_vrp[:services].dup
       vrp[:services] << { id: "s#{limits[:service] + 1}", type: 'service', activity: { point_id: 'p1' }}
-      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, level: 0)
+      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:services] << { id: "s#{limits[:service] + 1}", type: 'service', activity: { point_id: 'p1' }}
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
-      assert Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, level: 0)
+      assert Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
     end
 
     def test_cluster_dichotomious_heuristic
@@ -115,7 +115,7 @@ class DichotomiousTest < Minitest::Test
       # two very close service ending up in two different routes.
       # Moreover, it would increase the performance of clustering.
       vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious')
-      service_vrp = { vrp: vrp, service: :demo, level: 0 }
+      service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
       while service_vrp[:vrp].services.size > 100
         services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp, nil)
         assert_equal 2, services_vrps_dicho.size
@@ -153,7 +153,7 @@ class DichotomiousTest < Minitest::Test
     def test_split_matrix
       vrp = TestHelper.load_vrp(self, fixture_file: "dichotomious_approach")
       vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
-      service_vrp = { vrp: vrp, service: :demo, level: 0 }
+      service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
 
       services_vrps = Interpreters::Dichotomious.split(service_vrp)
       services_vrps.each{ |service_vrp|

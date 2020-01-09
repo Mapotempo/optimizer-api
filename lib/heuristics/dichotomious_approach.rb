@@ -26,7 +26,7 @@ require 'ai4r'
 module Interpreters
   class Dichotomious
     def self.dichotomious_candidate?(service_vrp)
-      service_vrp[:level]&.positive? ||
+      service_vrp[:dicho_level]&.positive? ||
         (
           service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } && #TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit &&
@@ -45,7 +45,7 @@ module Interpreters
     def self.dichotomious_heuristic(service_vrp, job = nil, &block)
       if dichotomious_candidate?(service_vrp)
         vrp = service_vrp[:vrp]
-        message = "dicho - level(#{service_vrp[:level]}) "\
+        message = "dicho - level(#{service_vrp[:dicho_level]}) "\
                   "activities: #{vrp.services.size + vrp.shipments.size * 2} "\
                   "vehicles (limit): #{vrp.vehicles.size}(#{vrp.resolution_vehicle_limit})"\
                   "duration [min, max]: [#{vrp.resolution_minimum_duration&.round},#{vrp.resolution_duration&.round}]"
@@ -54,7 +54,7 @@ module Interpreters
         set_config(service_vrp)
         t1 = Time.now
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
-        if service_vrp[:level].zero?
+        if service_vrp[:dicho_level].zero?
           service_vrp[:vrp].compute_matrix
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exlusion_cost(service_vrp)
@@ -100,17 +100,17 @@ module Interpreters
           service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[1][:vrp].resolution_total_split_number
           result = Helper.merge_results(results)
           result[:elapsed] += (t2 - t1) * 1000
-          log "dicho - level(#{service_vrp[:level]}) before remove_bad_skills unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+          log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
 
           remove_bad_skills(service_vrp, result)
           Interpreters::SplitClustering.remove_empty_routes(result)
 
-          log "dicho - level(#{service_vrp[:level]}) before end_stage_insert  unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+          log "dicho - level(#{service_vrp[:dicho_level]}) before end_stage_insert  unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
 
           result = end_stage_insert_unassigned(service_vrp, result, job)
           Interpreters::SplitClustering.remove_empty_routes(result)
 
-          if service_vrp[:level].zero?
+          if service_vrp[:dicho_level].zero?
             # Remove vehicles which are half empty
             Interpreters::SplitClustering.remove_empty_routes(result)
             log "dicho - before remove_poorly_populated_routes: #{result[:routes].size}", level: :debug
@@ -118,7 +118,7 @@ module Interpreters
             log "dicho - after remove_poorly_populated_routes: #{result[:routes].size}", level: :debug
           end
 
-          log "dicho - level(#{service_vrp[:level]}) unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
+          log "dicho - level(#{service_vrp[:dicho_level]}) unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
         end
       else
         service_vrp[:vrp].resolution_init_duration = nil
@@ -158,18 +158,18 @@ module Interpreters
     def self.dicho_level_coeff(service_vrp)
       balance = 0.66666
       level_approx = Math.log(service_vrp[:vrp].resolution_dicho_division_vehicle_limit / (service_vrp[:vrp].resolution_vehicle_limit || service_vrp[:vrp].vehicles.size).to_f, balance)
-      service_vrp[:vrp].resolution_dicho_level_coeff = 2**(1 / (level_approx - service_vrp[:level]).to_f)
+      service_vrp[:vrp].resolution_dicho_level_coeff = 2**(1 / (level_approx - service_vrp[:dicho_level]).to_f)
     end
 
     def self.set_config(service_vrp)
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
-      if service_vrp[:level] && service_vrp[:level] > 0
+      if service_vrp[:dicho_level] && service_vrp[:dicho_level] > 0
         service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.66).to_i : 80000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
         service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.66).to_i : 70000
       end
 
-      if service_vrp[:level] && service_vrp[:level] == 0
+      if service_vrp[:dicho_level] && service_vrp[:dicho_level] == 0
         dicho_level_coeff(service_vrp)
         service_vrp[:vrp].vehicles.each{ |vehicle|
           vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
@@ -192,10 +192,10 @@ module Interpreters
     end
 
     def self.update_exlusion_cost(service_vrp)
-      if !service_vrp[:level].zero?
+      if !service_vrp[:dicho_level].zero?
         average_exclusion_cost = service_vrp[:vrp].services.collect{ |service| service.exclusion_cost }.sum / service_vrp[:vrp].services.size
         service_vrp[:vrp].services.each{ |service|
-          service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].resolution_dicho_level_coeff**service_vrp[:level] - 1)
+          service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].resolution_dicho_level_coeff**service_vrp[:dicho_level] - 1)
         }
       end
     end
@@ -239,7 +239,7 @@ module Interpreters
     end
 
     def self.end_stage_insert_unassigned(service_vrp, result, job = nil)
-      log "---> dicho::end_stage - level(#{service_vrp[:level]})", level: :debug
+      log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
       if !result[:unassigned].empty?
         vrp = service_vrp[:vrp]
         log "try to insert #{result[:unassigned].size} unassigned from #{vrp.services.size} services"
@@ -340,7 +340,7 @@ module Interpreters
           vrp.routes += new_routes
         }
       end
-      log "<--- dicho::end_stage - level(#{service_vrp[:level]})", level: :debug
+      log "<--- dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
       result
     end
 
@@ -404,7 +404,7 @@ module Interpreters
     end
 
     def self.split(service_vrp, job = nil)
-      log "---> dicho::split - level(#{service_vrp[:level]})", level: :debug
+      log "---> dicho::split - level(#{service_vrp[:dicho_level]})", level: :debug
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
       services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }
@@ -425,7 +425,7 @@ module Interpreters
           split_service_vrps << {
             service: service_vrp[:service],
             vrp: sub_vrp,
-            level: service_vrp[:level] + 1
+            dicho_level: service_vrp[:dicho_level] + 1
           }
         }
       else
@@ -440,12 +440,12 @@ module Interpreters
         split_service_vrps << {
           service: service_vrp[:service],
           vrp: sub_vrp,
-          level: service_vrp[:level]
+          dicho_level: service_vrp[:dicho_level]
         }
       end
       OutputHelper::Clustering.generate_files(split_service_vrps) if OptimizerWrapper.config[:debug][:output_clusters]
 
-      log "<--- dicho::split - level(#{service_vrp[:level]})", level: :debug
+      log "<--- dicho::split - level(#{service_vrp[:dicho_level]})", level: :debug
       split_service_vrps
     end
 

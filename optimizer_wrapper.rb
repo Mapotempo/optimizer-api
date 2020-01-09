@@ -100,7 +100,7 @@ module OptimizerWrapper
           end
         },
         vrp: vrp_element,
-        level: 0
+        dicho_level: 0
       }
     }
 
@@ -124,7 +124,7 @@ module OptimizerWrapper
 
   # Recursive method
   def self.define_process(services_vrps, job = nil, &block)
-    log "--> define_process #{services_vrps.size} VRPs with levels #{services_vrps.map{ |sv| sv[:level] }}", level: :debug
+    log "--> define_process #{services_vrps.size} VRPs with levels #{services_vrps.map{ |sv| sv[:dicho_level] }}", level: :debug
     t = Time.now
     expecting = services_vrps.collect{ |service| service[:vrp].visits + service[:vrp].shipments.size * 2 }.sum
     log "min_durations #{services_vrps.map{ |sv| sv[:vrp].resolution_minimum_duration }} max_durations #{services_vrps.map{ |sv| sv[:vrp].resolution_duration }}", level: :debug
@@ -165,20 +165,20 @@ module OptimizerWrapper
       result: ([result] + duplicated_results + split_results + dicho_results).compact
     }
 
-    log "<-- define_process levels #{services_vrps.map{ |sv| sv[:level] }} elapsed: #{(Time.now - t).round(2)}sec", level: :debug
+    log "<-- define_process levels #{services_vrps.map{ |sv| sv[:dicho_level] }} elapsed: #{(Time.now - t).round(2)}sec", level: :debug
     check_result_consistency(expecting, result_global[:result])
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end
 
   def self.solve(services_vrps, job = nil, block = nil)
-    log "--> optim_wrap::solve #{services_vrps.size} VRPs with levels #{services_vrps.map{ |sv| sv[:level] }}", level: :debug
+    log "--> optim_wrap::solve #{services_vrps.size} VRPs with levels #{services_vrps.map{ |sv| sv[:dicho_level] }}", level: :debug
     t = Time.now
     log "resolution_vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].resolution_vehicle_limit }}", level: :debug
 
     unfeasible_services = []
 
     cluster_reference = 0
-    real_result = join_independent_vrps(services_vrps, block) { |service, vrp, block|
+    real_result = join_independent_vrps(services_vrps, block) { |service, dicho_level, vrp, block|
       cluster_result = nil
       if !vrp.subtours.empty?
         multi_modal = Interpreters::MultiModal.new(vrp, service)
@@ -254,7 +254,7 @@ module OptimizerWrapper
             cluster_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
               time_start = Time.now
 
-              block.call(nil, 0, nil, 'run optimization', nil, nil, nil) if block && !vrp.dichotomious_process?
+              block&.call(nil, 0, nil, 'run optimization', nil, nil, nil) if dicho_level.nil? || dicho_level.zero?
               result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, Proc.new{ |pids|
                   if job
                     actual_result = Result.get(job) || { 'pids' => nil }
@@ -265,12 +265,12 @@ module OptimizerWrapper
                     Result.set(job, actual_result)
                   end
                 }) { |wrapper, avancement, total, message, cost, time, solution|
-                block.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if block && !vrp.dichotomious_process?
+                block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if dicho_level.nil? || dicho_level.zero?
               }
 
               if result.class.name == 'Hash' # result.is_a?(Hash) not working
                 result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-                block.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if block && vrp.dichotomious_process?
+                block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
                 parse_result(cluster_vrp, result)
               elsif result.class.name == 'String' # result.is_a?(String) not working
                 raise RuntimeError.new(result) unless result == 'Job killed'
@@ -402,7 +402,7 @@ module OptimizerWrapper
 
   def self.join_independent_vrps(services_vrps, callback)
     results = services_vrps.each_with_index.map{ |sv, i|
-      yield(sv[:service], sv[:vrp], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
+      yield(sv[:service], sv[:dicho_level], sv[:vrp], services_vrps.size == 1 ? callback : callback ? lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
         callback.call(wrapper, avancement, total, "process #{i+1}/#{services_vrps.size} - " + message, cost, time, solution)
       } : nil)
     }

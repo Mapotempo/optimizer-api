@@ -201,10 +201,6 @@ module Models
       total_work_times.sum
     end
 
-    def dichotomious_process?
-      self.resolution_duration != self.resolution_total_duration
-    end
-
     def scheduling?
       self.schedule_range_indices || self.schedule_range_date
     end

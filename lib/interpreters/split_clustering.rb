@@ -50,7 +50,7 @@ module Interpreters
           {
             service: service_vrp[:service],
             vrp: vrp,
-            level: (service_vrp[:level] || 0)
+            dicho_level: (service_vrp[:dicho_level] || 0)
           }
         end
       }.flatten.compact
