@@ -179,7 +179,7 @@ module Interpreters
           current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
           current_load[:current_load] / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
         }
-        vehicle_worktime = vehicle.duration || vehicle.timewindow&.start && vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start) #can be nil!
+        vehicle_worktime = vehicle.duration || vehicle.timewindow&.start && vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start) # can be nil!
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
 
         log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime} percent: #{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :debug
@@ -295,7 +295,7 @@ module Interpreters
           else
             cluster_metric = c.clusters[cluster_index].data_items.collect{ |i| i[3][options[:cut_symbol]] }.sum.to_f
             # TODO: large clusters having great difference with target metric should have a large (bad) score
-            #distance_to_centroid * ((cluster_metric - ml).abs / ml)
+            # distance_to_centroid * ((cluster_metric - ml).abs / ml)
             balancing_coeff = if options[:entity] == 'work_day'
                                 1.0
                               else
@@ -499,7 +499,7 @@ module Interpreters
         fly_distance = Helper.flying_distance(a, b)
         # units_distance = (0..unit_sets.size - 1).any? { |index| a[3 + index] + b[3 + index] == 1 } ? 2**56 : 0
         # timewindows_distance = a[2].overlaps?(b[2]) ? 0 : 2**56
-        fly_distance #+ units_distance + timewindows_distance
+        fly_distance # + units_distance + timewindows_distance
       end
 
       def compute_day_skills(timewindows)
@@ -564,7 +564,7 @@ module Interpreters
             }
 
             if vehicles_characteristics.none?{ |v_characteristics| compatible_characteristics?(s_characteristics, v_characteristics) }
-              #TODO: These cases need to be eliminted during preprocessing phases.
+              # TODO: These cases need to be eliminted during preprocessing phases.
               log "There are no vehicles that can serve service #{s.id}.", level: :warn
             end
 
@@ -572,7 +572,7 @@ module Interpreters
           }.each_with_index{ |(characteristics, sub_set), sub_set_index|
             unit_quantities = Hash.new(0)
 
-            if entity == 'work_day' || !vrp.matrices.empty? #use matrix
+            if entity == 'work_day' || !vrp.matrices.empty? # use matrix
               unit_quantities[:matrix_index] += point[:matrix_index]
             end
 
@@ -624,8 +624,8 @@ module Interpreters
 
       def assign_vehicle_to_clusters(clusters_characteristics, vehicles, points, clusters)
         if !vehicles.nil? || !points.nil?
-          #TODO: This function is only implemented for balanced_kmeans
-          #it needs to be implemented for hierarchical_tree split case
+          # TODO: This function is only implemented for balanced_kmeans
+          # it needs to be implemented for hierarchical_tree split case
           raise 'This function is not ready for hierarchical_tree split case'
         end
 

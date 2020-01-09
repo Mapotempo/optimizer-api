@@ -99,7 +99,7 @@ module Ai4r
           update_cut_limit
 
           calculate_membership_clusters
-          #sort_clusters
+          # sort_clusters
           recompute_centroids
         end
 
@@ -123,14 +123,14 @@ module Ai4r
 
           point_closest_to_centroid_center = clusters[index].data_items.min_by{ |data_point| Helper::flying_distance(centroid, data_point) }
 
-          #correct the matrix_index of the centroid with the index of the point_closest_to_centroid_center
+          # correct the matrix_index of the centroid with the index of the point_closest_to_centroid_center
           centroid[3][:matrix_index] = point_closest_to_centroid_center[3][:matrix_index] if centroid[3][:matrix_index]
 
           if @cut_symbol
-            #move the data_points closest to the centroid centers to the top of the data_items list so that balancing can start early
-            @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center)) #move it to the top
+            # move the data_points closest to the centroid centers to the top of the data_items list so that balancing can start early
+            @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center)) # move it to the top
 
-            #correct the distance_from_and_to_depot info of the new cluster with the average of the points
+            # correct the distance_from_and_to_depot info of the new cluster with the average of the points
             centroid[3][:duration_from_and_to_depot] = @clusters[index].data_items.map { |d| d[3][:duration_from_and_to_depot] }.sum / @clusters[index].data_items.size.to_f
           end
         }
@@ -329,7 +329,7 @@ module Ai4r
 
       def stop_criteria_met
         @old_centroids_lat_lon == @centroids.collect{ |c| [c[0], c[1]] } ||
-          same_centroid_distance_moving_average(Math.sqrt(@iterations).to_i) || #Check if there is a loop of size Math.sqrt(@iterations)
+          same_centroid_distance_moving_average(Math.sqrt(@iterations).to_i) || # Check if there is a loop of size Math.sqrt(@iterations)
           (@max_iterations && (@max_iterations <= @iterations))
       end
 
@@ -365,7 +365,7 @@ module Ai4r
 
       def update_cut_limit
         return if @rate_balance == 0.0 || @cut_symbol.nil? || @cut_symbol != :duration || !@cut_limit.is_a?(Array)
-        #TODO: This functionality is implemented only for duration cut_symbol. Make sure it doesn't interfere with other cut_symbols
+        # TODO: This functionality is implemented only for duration cut_symbol. Make sure it doesn't interfere with other cut_symbols
         vehicle_work_time = compute_vehicle_work_time_with(1.5)
         vehicle_work_time = compute_vehicle_work_time_with(1) if vehicle_work_time.any?{ |value| value.negative? }
         total_vehicle_work_times = vehicle_work_time.sum.to_f

@@ -55,9 +55,6 @@ Layout/FirstHashElementIndentation:
 Style/NumericLiterals:
   Enabled: false
 
-Layout/LeadingCommentSpace:
-  Enabled: false
-
 Style/SignalException:
   Enabled: false
 

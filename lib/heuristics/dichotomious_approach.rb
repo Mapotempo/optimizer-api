@@ -28,13 +28,13 @@ module Interpreters
     def self.dichotomious_candidate?(service_vrp)
       service_vrp[:dicho_level]&.positive? ||
         (
-          service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } && #TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
+          service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } && # TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit &&
           (service_vrp[:vrp].resolution_vehicle_limit.nil? || service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit) &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
           !service_vrp[:vrp].scheduling? &&
-          service_vrp[:vrp].shipments.empty? && #TODO: check dicho with a P&D instance to remove this condition
-          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } #TODO: Remove and use matrix/matrix_index in clustering
+          service_vrp[:vrp].shipments.empty? && # TODO: check dicho with a P&D instance to remove this condition
+          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } # TODO: Remove and use matrix/matrix_index in clustering
         )
     end
 
@@ -130,7 +130,7 @@ module Interpreters
       sv_zero = sub_service_vrps[0][:vrp]
       sv_one = sub_service_vrps[1][:vrp]
 
-      #First transfer empty vehicles that appear in the routes
+      # First transfer empty vehicles that appear in the routes
       result[:routes].each{ |r|
         next if !r[:activities].select{ |a| a[:service_id] }.empty?
 
@@ -140,7 +140,7 @@ module Interpreters
         sv_one.points += sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
       }
 
-      #Then transfer the vehicles which do not appear in the routes.
+      # Then transfer the vehicles which do not appear in the routes.
       sv_zero.vehicles.each{ |vehicle|
         next if result[:routes].any?{ |r| r[:vehicle_id] == vehicle.id }
 
@@ -149,7 +149,7 @@ module Interpreters
         sv_one.points += sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
       }
 
-      #Transfer unsued vehicle limit to the other side as well
+      # Transfer unsued vehicle limit to the other side as well
       sv_zero_used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } }
       sv_zero_unused_vehicle_limit = sv_zero.resolution_vehicle_limit - sv_zero_used_vehicle_count
       sv_one.resolution_vehicle_limit += sv_zero_unused_vehicle_limit
@@ -270,13 +270,13 @@ module Interpreters
           # With shuffle we distribute the existing routes accross all sub-vrps we create
           vehicles_with_skills.shuffle!
 
-          #TODO: Here we launch the optim of a single skill however, it make sense to include the vehicles without skills
-          #(especially the ones with existing routes) in the sub_vrp because that way optim can move poits between vehicles
-          #and serve an unserviced point with skills.
+          # TODO: Here we launch the optim of a single skill however, it make sense to include the vehicles without skills
+          # (especially the ones with existing routes) in the sub_vrp because that way optim can move poits between vehicles
+          # and serve an unserviced point with skills.
 
-          #TODO: We do not consider the geographic closeness/distance of routes and points.
-          #This might be the reason why sometimes we have solutions with long detours.
-          #However, it is not very easy to find a generic and effective way.
+          # TODO: We do not consider the geographic closeness/distance of routes and points.
+          # This might be the reason why sometimes we have solutions with long detours.
+          # However, it is not very easy to find a generic and effective way.
 
           sub_results = []
           vehicle_count = skills.empty? && !vrp.routes.empty? ? [vrp.routes.size, 6].min : 3

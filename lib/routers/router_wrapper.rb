@@ -17,7 +17,7 @@
 #
 require 'json'
 require 'rest_client'
-#RestClient.log = $stdout
+# RestClient.log = $stdout
 
 class RouterError < StandardError; end
 

@@ -177,7 +177,7 @@ class FiltersTest < Minitest::Test
     true_quantities = {'unit_0' => 1, 'unit_1' => 3, 'unit_3' => 1, 'unit_counting' => 1}
 
     OptimizerWrapper.config[:services][:ortools].stub(
-      :run_ortools, #(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
+      :run_ortools, # (problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
       lambda { |problem, vrp, services, _, _, _|
         # Check if precision coefficient turns the values to integer (i.e., (float.round - float).abs < dalta ).
         Models::Capacity.all.each{ |cap|
@@ -206,10 +206,10 @@ class FiltersTest < Minitest::Test
         }
         services[0].quantities.each_with_index{ |qan_value, index|
           assert_equal (true_quantities[vrp.units[index].id].nil? ? 0 : (true_quantities[vrp.units[index].id] / vrp.units[index].precision_coef * (vrp.units[index].counting ? 1 : 1000.0)).round), qan_value
-          #assert_equal (true_quantities[vrp.units[index].id].nil? ? 0 : true_quantities[vrp.units[index].id]), qan_value
+          # assert_equal (true_quantities[vrp.units[index].id].nil? ? 0 : true_quantities[vrp.units[index].id]), qan_value
         }
 
-        "Job killed" # Return "Job killed" to stop gracefully
+        'Job killed' # Return "Job killed" to stop gracefully
       }
     ) do
       OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(prob), nil)
@@ -233,7 +233,7 @@ class FiltersTest < Minitest::Test
     vrp[:services][2][:activity][:duration] = 30
 
     OptimizerWrapper.config[:services][:ortools].stub(
-      :solve, #(cluster_vrp, job, proc)
+      :solve, # (cluster_vrp, job, proc)
       lambda { |cluster_vrp, _, _,|
         assert_equal cluster_vrp.services.size, 0
         'Job killed'
@@ -247,7 +247,7 @@ class FiltersTest < Minitest::Test
     vrp[:vehicles][0][:cost_late_multiplier] = 0.3
 
     OptimizerWrapper.config[:services][:ortools].stub(
-      :solve, #(cluster_vrp, job, proc)
+      :solve, # (cluster_vrp, job, proc)
       lambda { |cluster_vrp, _, _,|
         assert_equal cluster_vrp.services.size, 3
         'Job killed'
@@ -275,7 +275,7 @@ class FiltersTest < Minitest::Test
     vrp[:services][2][:quantities] = [{ unit_id: 'kg3', value: 11 }, { unit_id: 'kg5', value: 11 }]
 
     OptimizerWrapper.config[:services][:ortools].stub(
-      :solve, #(cluster_vrp, job, proc)
+      :solve, # (cluster_vrp, job, proc)
       lambda { |cluster_vrp, _, _,|
         assert_equal cluster_vrp.services.size, 3
         'Job killed'

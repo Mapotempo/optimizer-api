@@ -522,7 +522,7 @@ module Api
               else
                 ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.services(api_key), vrp, checksum)
                 if ret.is_a?(String)
-                  #present result, with: VrpResult
+                  # present result, with: VrpResult
                   status 201
                   present({ job: { id: ret, status: :queued }}, with: Grape::Presenters::Presenter)
                 elsif ret.is_a?(Hash)

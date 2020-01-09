@@ -119,7 +119,7 @@ module TestHelper
     Resque.inline = true
     OptimizerWrapper.config[:solve][:synchronously] = true
 
-    Process.kill('KILL', -Process.getpgid(pid_worker)) if pid_worker #Kill the process and all of its children
+    Process.kill('KILL', -Process.getpgid(pid_worker)) if pid_worker # Kill the process and all of its children
   end
 end
 

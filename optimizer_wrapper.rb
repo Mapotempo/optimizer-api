@@ -572,7 +572,7 @@ module OptimizerWrapper
   def self.route_total_dimension(vrp, route, vehicle, dimension)
     previous = nil
     route[:activities].sum{ |a|
-      #TODO: This next operation is expensive for big instances. Is there a better way?
+      # TODO: This next operation is expensive for big instances. Is there a better way?
       point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
         s.id == a[:service_id]
       }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|

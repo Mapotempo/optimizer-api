@@ -36,12 +36,12 @@ module Models
     field :preprocessing_first_solution_strategy, default: nil
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
-    #The following 7 variables are used for dicho development
-    #TODO: Wait for the dev to finish to expose the dicho parameters
-    field :resolution_dicho_level_coeff, default: 1.1 #This variable is calculated inside dicho by default (TODO: check if it is really necessary)
+    # The following 7 variables are used for dicho development
+    # TODO: Wait for the dev to finish to expose the dicho parameters
+    field :resolution_dicho_level_coeff, default: 1.1 # This variable is calculated inside dicho by default (TODO: check if it is really necessary)
     field :resolution_dicho_algorithm_service_limit, default: 500
     field :resolution_dicho_algorithm_vehicle_limit, default: 3
-    field :resolution_dicho_division_service_limit, default: 100 #This variable needs to corrected using the average number of services per vehicle.
+    field :resolution_dicho_division_service_limit, default: 100 # This variable needs to corrected using the average number of services per vehicle.
     field :resolution_dicho_division_vehicle_limit, default: 3
     field :resolution_dicho_exclusion_scaling_angle, default: 38
     field :resolution_dicho_exclusion_rate, default: 0.6
