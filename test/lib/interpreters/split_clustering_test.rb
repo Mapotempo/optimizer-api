@@ -47,7 +47,7 @@ class SplitClusteringTest < Minitest::Test
           total_load_by_units = Hash.new(0)
           service_vrp[:vrp].services.each{ |s| s.quantities.each{ |q| total_load_by_units[q.unit.id] += q.value } }
 
-          #Correct the capacity of the vehicles wrt the services in the sub_vrp
+          # Correct the capacity of the vehicles wrt the services in the sub_vrp
           service_vrp[:vrp][:vehicles].each{ |v|
             v.capacities = []
             service_vrp[:vrp].units.each{ |u|
@@ -123,8 +123,8 @@ class SplitClusteringTest < Minitest::Test
         services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
 
         ## TODO: with rate_balance != 0 there is risk to get services of same lat/lng in different clusters
-        locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } #clusters.first.data_items.map{ |d| [d[0], d[1]] }
-        locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } #clusters.second.data_items.map{ |d| [d[0], d[1]] }
+        locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } # clusters.first.data_items.map{ |d| [d[0], d[1]] }
+        locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } # clusters.second.data_items.map{ |d| [d[0], d[1]] }
         (locations_one & locations_two).each{ |loc|
           point_id_first = services_vrps_dicho.first[:vrp].points.find{ |p| p.location.lat == loc[0] && p.location.lon == loc[1] }.id
           puts "service from #{point_id_first} in cluster #0" + services_vrps_dicho.first[:vrp].services.select{ |s| s.activity.point_id == point_id_first }.to_s
@@ -673,9 +673,9 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_balanced_split_under_nonuniform_sq_timewindows
-      #Regression test against a fixed bug in clustering skill/day implemetation
-      #which leads to all (!) services with non-uniform sequence_timewindows being
-      #assigned to the vehicles with non-uniform sequence_timewindows.
+      # Regression test against a fixed bug in clustering skill/day implemetation
+      # which leads to all (!) services with non-uniform sequence_timewindows being
+      # assigned to the vehicles with non-uniform sequence_timewindows.
       vrp = TestHelper.load_vrp(self)
 
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans({ vrp: vrp, service: :demo }, vrp.vehicles.size, cut_symbol: :duration, entity: 'vehicle', restarts: 1)
@@ -711,7 +711,7 @@ class SplitClusteringTest < Minitest::Test
       # However, the goal of the test is decrease the limit_range, limit_max and range_max values
       # to more acceptable levels -- e.g., 8, 12, and 18
       range_max = 23
-      assert visits_unassigned.max <= range_max, "More than #{range_max} unassigned visits should never happen." #easy to achieve. If this is violated there probably is a degredation.
+      assert visits_unassigned.max <= range_max, "More than #{range_max} unassigned visits should never happen." # easy to achieve. If this is violated there probably is a degredation.
 
       limit_range = ENV['INTENSIVE_TEST'] ? 15 : 11
       assert visits_unassigned.max - visits_unassigned.min <= limit_range, "unassigned visits (#{visits_unassigned}) should be more regular (max - min <= #{limit_range})" # This check might fail once every 4 - 5 runs.

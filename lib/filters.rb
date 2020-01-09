@@ -23,7 +23,7 @@ module Filters
 
     filter_skills(vrp)
 
-    #calculate_unit_precision # TODO: treat only input vrp, not all models in memory from other vrps
+    # calculate_unit_precision # TODO: treat only input vrp, not all models in memory from other vrps
     nil
   end
 
@@ -45,7 +45,7 @@ module Filters
     # First check the capacities to initialize the hash
     Models::Capacity.all.each{ |capacity|
       if all_values_by_units[capacity.unit].nil?
-        all_values_by_units[capacity.unit] = [] #create the array of the unit if first
+        all_values_by_units[capacity.unit] = [] # create the array of the unit if first
       end
       all_values_by_units[capacity.unit].push(capacity.limit) unless capacity.limit.nil? || capacity.limit.zero?
     }
@@ -206,7 +206,7 @@ module Filters
         starts = to_merge_tws.collect(&:start)
         ends = to_merge_tws.collect(&:end)
         earliest_day_index = day_indices.include?(nil) ? nil : day_indices.min
-        #latest_day_index = day_indices.include?(nil) ? nil : day_indices.max
+        # latest_day_index = day_indices.include?(nil) ? nil : day_indices.max
         earliest_start = starts.include?(nil) ? nil : starts.min
         latest_end = ends.include?(nil) ? nil : ends.max
         new_timewindows << Models::Timewindow.new(start: earliest_start, end: latest_end, day_index: earliest_day_index)

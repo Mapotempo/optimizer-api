@@ -231,7 +231,7 @@ module Interpreters
               activity: {
                 point: @original_vrp.points.find{ |point| point.id == route[:activities].first[:point_id] },
                 duration: (route[:activities][-2][:departure_time] + route[:activities].last[:travel_time]) - (route[:activities][1][:begin_time] - route[:activities][1][:travel_time])
-                #Timewindows ?
+                # Timewindows ?
               },
               skills: route[:activities][1..-2].collect{ |activity|
                 @original_vrp.services.find{ |original_service| original_service.id == activity[:service_id] }.skills

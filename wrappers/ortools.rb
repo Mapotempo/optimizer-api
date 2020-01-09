@@ -682,7 +682,7 @@ module Wrappers
                   shipment_index = ((current_index - vrp.services.size) / 2).to_i
                   shipment_activity = (current_index - vrp.services.size) % 2
                   shipment = vrp.shipments[shipment_index]
-                  point = shipment_activity.zero? ? shipment.pickup.point : shipment.delivery.point #TODO: consider alternatives
+                  point = shipment_activity.zero? ? shipment.pickup.point : shipment.delivery.point # TODO: consider alternatives
                   current_matrix_index = point.matrix_index
                   earliest_start = activity['start_time'] || 0
                   travel_time = (previous_matrix_index && current_matrix_index && vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0)

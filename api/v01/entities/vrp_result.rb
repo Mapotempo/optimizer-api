@@ -15,7 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-#require './api/v01/entities/vrp_result_*'
+# require './api/v01/entities/vrp_result_*'
 
 
 module Api

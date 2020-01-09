@@ -27,7 +27,7 @@ class RealCasesTest < Minitest::Test
       t2 = Time.now
       assert result
 
-      #TODO: remove the logs after dicho overhead problem is fixed
+      # TODO: remove the logs after dicho overhead problem is fixed
       log "duration_min = #{vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f}", level: :debug
       log "duration_max = #{vrp[:configuration][:resolution][:duration] / 1000.to_f}", level: :debug
       log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug
@@ -60,7 +60,7 @@ class RealCasesTest < Minitest::Test
       t2 = Time.now
       assert result
 
-      #TODO: remove the logs after dicho overhead problem is fixed
+      # TODO: remove the logs after dicho overhead problem is fixed
       log "duration_min = #{vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f}", level: :debug
       log "duration_max = #{vrp[:configuration][:resolution][:duration] / 1000.to_f}", level: :debug
       log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug

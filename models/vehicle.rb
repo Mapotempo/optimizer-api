@@ -104,7 +104,7 @@ module Models
     belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
     belongs_to :timewindow, class_name: 'Models::Timewindow'
     has_many :capacities, class_name: 'Models::Capacity'
-    # include ValidateTimewindows #<- This doesn't work
+    # include ValidateTimewindows # <- This doesn't work
     has_many :rests, class_name: 'Models::Rest'
 
     def self.create(hash)
