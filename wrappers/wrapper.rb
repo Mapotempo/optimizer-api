@@ -645,30 +645,33 @@ module Wrappers
       unfeasible = []
       vehicle_max_shift = compute_vehicles_shift(vrp.vehicles)
       vehicle_max_capacities = compute_vehicles_capacity(vrp)
-      check_sticky_skills = vrp.services.any?{ |service| service.sticky_vehicles.size > 1 } # if only one sticky, each service will be assigned to one vehicle, we ignore uncompatible skill
-      vehicle_available_skills = vrp.vehicles.collect(&:skills).flatten.uniq
+      available_vehicle_skillsets = vrp.vehicles.flat_map(&:skills).uniq
 
       vrp.services.each{ |service|
         # TODO : detect with grape (needs grape update)
         add_unassigned(unfeasible, vrp, service, 'Visits number is 0') if service.visits_number.zero?
 
         service.quantities.each{ |qty|
-          add_unassigned(unfeasible, vrp, service, 'Unsufficient capacity in vehicles') if vehicle_max_capacities[qty.unit_id] && qty.value && vehicle_max_capacities[qty.unit_id] < qty.value
+          if vehicle_max_capacities[qty.unit_id] && qty.value && vehicle_max_capacities[qty.unit_id] < qty.value
+            add_unassigned(unfeasible, vrp, service, 'Service quantity greater than any vehicle capacity')
+            break
+          end
         }
 
-        # no need to check service and vehicle skills compatibility
-        # if no vehicle has the skills for a given service we consider service's skills are unconsistent for current problem
-
-        if check_sticky_skills && !service.skills.empty?
-          if service.sticky_vehicles.none?{ |vehicle| (service.skills & vehicle_available_skills).empty? || vehicle.skills.any?{ |alternative| (service.skills & alternative).size == (service.skills & vehicle_available_skills).size } }
-            add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky_ids')
+        if !service.skills.empty?
+          if service.sticky_vehicles.empty?
+            if available_vehicle_skillsets.none?{ |skillset| (service.skills - skillset).empty? }
+              add_unassigned(unfeasible, vrp, service, 'Service skill combination is not available on any vehicle')
+            end
+          elsif service.sticky_vehicles.all?{ |vehicle| vehicle.skills.none?{ |skillset| (service.skills - skillset).empty? } }
+            add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky vehicles')
           end
         end
 
         next if service.activity.nil? && service.activities.empty?
 
         duration = service.activity ? service.activity.duration : service.activities.collect(&:duration).min
-        add_unassigned(unfeasible, vrp, service, 'Duration bigger than any vehicle timewindow shift') if vehicle_max_shift && duration > vehicle_max_shift
+        add_unassigned(unfeasible, vrp, service, 'Service duration greater than any vehicle timewindow') if vehicle_max_shift && duration > vehicle_max_shift
 
         timewindows = service.activity ? service.activity.timewindows : service.activities.collect(&timewindows)
         add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow') if !timewindows.empty? && timewindows.none?{ |tw| find_vehicle(vrp, service, tw) }

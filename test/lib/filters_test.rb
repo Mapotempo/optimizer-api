@@ -217,20 +217,6 @@ class FiltersTest < Minitest::Test
     end
   end
 
-  def test_if_filter_cannot_eliminate_multiple_infeasible_skills
-    # Filter cannot decide which service skill to ignore if there are multiple viable options
-    vrp = VRP.basic
-
-    vrp[:services][0][:skills] = ['A', 'B']
-    vrp[:vehicles][0][:skills] = [['A']]
-    vrp[:vehicles] << vrp[:vehicles][0].dup
-    vrp[:vehicles][1][:skills] = [['B']]
-
-    assert_raises OptimizerWrapper::DiscordantProblemError do
-      Filters.filter_infeasible_service_shipment_skills(FCT.create(vrp))
-    end
-  end
-
   def test_do_not_filter_limit_cases
     vrp = VRP.basic
     vrp[:units] = [{ id: 'kg' }]
