@@ -81,7 +81,7 @@ module OptimizerWrapper
     Filters::filter(vrp)
 
     vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
-      6
+      config[:solve][:repetition]
     else
       1
     end
@@ -109,7 +109,7 @@ module OptimizerWrapper
     elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
       raise DiscordantProblemError.new("Geometry is not available if locations are not defined")
     else
-      if config[:solve_synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
+      if config[:solve][:synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         # The job seems easy enough to perform it with the server
         define_process(services_vrps, job_id)
       else

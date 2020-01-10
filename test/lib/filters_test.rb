@@ -72,7 +72,6 @@ class FiltersTest < Minitest::Test
     skip "precision_coeffision calculation is disactivated. The test should be
           corrected and activated when precision coefficion implementaion is corrected.
           Model::X.all's needs to be corrected in the test as well."
-    OptimizerWrapper.config[:solve_synchronously] = true
     prob = {
       matrices: [
         {

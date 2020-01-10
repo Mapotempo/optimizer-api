@@ -56,7 +56,6 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       vrp[:services] << vrp[:services][0].dup
       vrp[:vehicles][0][:skills] = [['skill']]
       vrp[:services][0][:skills] = ['skill']
-      vrp[:config] = { solve_synchronously: true }
       submit_vrp api_key: 'demo', vrp: vrp
     end
   end
