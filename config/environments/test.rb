@@ -92,6 +92,10 @@ module OptimizerWrapper
         params_limit: PARAMS_LIMIT
       },
     },
+    solve: {
+      synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] ? !(ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'false') : true,
+      repetition: ENV['OPTIM_CLUST_SCHED_REPETITION'] || 3
+    },
     router: {
       api_key: ENV['ROUTER_API_KEY'] || 'demo',
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
@@ -104,7 +108,6 @@ module OptimizerWrapper
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
       output_schedule: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
-    },
-    solve_synchronously: true
+    }
   }
 end

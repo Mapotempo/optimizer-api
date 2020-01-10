@@ -63,6 +63,10 @@ module OptimizerWrapper
         params_limit: PARAMS_LIMIT
       }
     },
+    solve: {
+      synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'true',
+      repetition: ENV['OPTIM_CLUST_SCHED_REPETITION'] || 1
+    },
     router: {
       api_key: ENV['ROUTER_API_KEY'] || 'demo',
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
