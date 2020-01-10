@@ -20,10 +20,12 @@ require './lib/helper.rb'
 require './lib/tsp_helper.rb'
 require './lib/output_helper.rb'
 require './lib/heuristics/concerns/scheduling_data_initialisation.rb'
+require './lib/heuristics/concerns/scheduling_end_phase'
 
 module Heuristics
   class Scheduling
     include SchedulingDataInitialization
+    include SchedulingEndPhase
 
     def initialize(vrp, expanded_vehicles, schedule, job = nil)
       # heuristic data
@@ -47,6 +49,7 @@ module Heuristics
       @used_to_adjust = []
       @previous_uninserted = nil
       @uninserted = {}
+      @missing_visits = {}
 
       @previous_candidate_routes = nil
       @candidate_routes = {}
@@ -104,6 +107,8 @@ module Heuristics
         reorder_routes(vrp)
         fill_days
       end
+
+      add_missing_visits if @allow_partial_assignment && !@same_point_day
 
       begin
         fill_planning
@@ -206,7 +211,6 @@ module Heuristics
           next_day += diff
         end
 
-
         this_service_days = [day_finished]
         cleaned_service = false
         need_to_add_visits = false
@@ -238,6 +242,8 @@ module Heuristics
             }
           end
         }
+
+        @missing_visits[vehicle] << { id: service[:id], used_days: this_service_days } if need_to_add_visits
       }
     end
 
