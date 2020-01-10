@@ -35,7 +35,8 @@ class SplitClusteringTest < Minitest::Test
       # Basically, we want the balance violations to be as small as possible.
 
       balance_deviations = []
-      (1..@regularity_restarts).each{ |_tentative|
+      (1..@regularity_restarts).each{ |trial|
+        puts "Regularity trial: #{trial}/#{@regularity_restarts}"
         max_balance_deviation = 0
 
         service_vrp = { vrp: TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious'), service: :demo }
@@ -647,9 +648,10 @@ class SplitClusteringTest < Minitest::Test
       visits_unassigned = []
       services_unassigned = []
       reason_unassigned = []
-      (1..@regularity_restarts).each{ |_tentative|
-        vrp = TestHelper.load_vrp(self)
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
+      (1..@regularity_restarts).each{ |trial|
+        puts "Regularity trial: #{trial}/#{@regularity_restarts}"
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil)
         visits_unassigned << result[:unassigned].size
         services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
         reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
@@ -665,11 +667,11 @@ class SplitClusteringTest < Minitest::Test
 
       # visits_unassigned:
       assert visits_unassigned.max - visits_unassigned.min <= 2, "unassigned services (#{visits_unassigned}) should be more regular" # easier to achieve
-      assert visits_unassigned.max <= 4, "More than 4 unassigned visits shouldn't happen (#{visits_unassigned})"
+      assert visits_unassigned.max <= 2, "More than 2 unassigned visits shouldn't happen (#{visits_unassigned})"
 
-      # 4 shouldn't happen more than once unless the test is repeated more than 100s of times.
-      rate_limit_4_unassigned = (@regularity_restarts * 0.01).ceil
-      assert visits_unassigned.count(4) <= rate_limit_4_unassigned, "4 unassigned visits shouldn't appear more than #{rate_limit_4_unassigned} times (#{visits_unassigned})"
+      # 2 shouldn't happen more than once unless the test is repeated more than 100s of times.
+      rate_limit_2_unassigned = (@regularity_restarts * 0.01).ceil
+      assert visits_unassigned.count(2) <= rate_limit_2_unassigned, "2 unassigned visits shouldn't appear more than #{rate_limit_2_unassigned} times (#{visits_unassigned})"
     end
 
     def test_balanced_split_under_nonuniform_sq_timewindows
@@ -687,9 +689,10 @@ class SplitClusteringTest < Minitest::Test
       visits_unassigned = []
       services_unassigned = []
       reason_unassigned = []
-      (1..@regularity_restarts).each{ |_tentative|
-        vrp = TestHelper.load_vrp(self)
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
+      (1..@regularity_restarts).each{ |trial|
+        puts "Regularity trial: #{trial}/#{@regularity_restarts}"
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil)
         visits_unassigned << result[:unassigned].size
         services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
         reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h

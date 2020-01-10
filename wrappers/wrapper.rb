@@ -655,9 +655,6 @@ module Wrappers
       available_vehicle_skillsets = vrp.vehicles.flat_map(&:skills).uniq
 
       vrp.services.each{ |service|
-        # TODO : detect with grape (needs grape update)
-        add_unassigned(unfeasible, vrp, service, 'Visits number is 0') if service.visits_number.zero?
-
         service.quantities.each{ |qty|
           if vehicle_max_capacities[qty.unit_id] && qty.value && vehicle_max_capacities[qty.unit_id] < qty.value
             add_unassigned(unfeasible, vrp, service, 'Service quantity greater than any vehicle capacity')
