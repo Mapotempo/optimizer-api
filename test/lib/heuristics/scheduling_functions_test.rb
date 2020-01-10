@@ -159,6 +159,27 @@ class HeuristicTest < Minitest::Test
       assert(s.instance_variable_get(:@planning).all?{ |_key, data| data.all?{ |_k, d| d[:services].empty? } })
     end
 
+    def test_add_missing_visits
+      vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
+      expanded = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
+      s = Heuristics::Scheduling.new(vrp, expanded, start: 0, end: 365, shift: 0)
+      s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.dump')))
+      s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.dump')))
+      s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.dump')))
+      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/add_missing_visits_indices.dump')))
+      s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.dump')))
+      starting_with = s.instance_variable_get(:@uninserted).size
+      s.add_missing_visits
+
+      candidate_routes = s.instance_variable_get(:@candidate_routes)
+      uninserted = s.instance_variable_get(:@uninserted)
+      candidate_services_ids = s.instance_variable_get(:@candidate_services_ids)
+      assert_equal vrp.visits, candidate_routes.collect{ |v, d| d.collect{ |_day, route| route[:current_route].size } }.flatten.sum +
+                               uninserted.size +
+                               candidate_services_ids.collect{ |id| s.instance_variable_get(:@services_data)[id][:nb_visits] }.sum
+      assert starting_with >= s.instance_variable_get(:@uninserted).size
+    end
+
     def test_check_validity
       vrp = VRP.scheduling_seq_timewindows
       vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300 }]

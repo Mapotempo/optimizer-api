@@ -46,6 +46,7 @@ module SchedulingDataInitialization
         router_dimension: vehicle[:router_dimension].to_sym
       }
       @vehicle_day_completed[original_vehicle_id][vehicle.global_day_index] = false
+      @missing_visits[original_vehicle_id] = []
     }
 
     initialize_routes(vrp.routes) unless vrp.routes.empty?
@@ -71,6 +72,8 @@ module SchedulingDataInitialization
         setup_duration: service[:activity][:setup_duration],
         duration: service[:activity][:duration],
         heuristic_period: period,
+        minimum_lapse: service[:minimum_lapse],
+        maximum_lapse: service[:maximum_lapse],
         nb_visits: service[:visits_number],
         point_id: service[:activity][:point][:location] ? service[:activity][:point][:location][:id] : service[:activity][:point][:matrix_index],
         tw: service[:activity][:timewindows] || [],
