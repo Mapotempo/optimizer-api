@@ -1738,7 +1738,7 @@ class WrapperTest < Minitest::Test
 
     problem[:vehicles][0][:skills] = [['A']]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Incompatibility between service skills and sticky_ids' }.size
+    assert_equal 1, (result[:unassigned].count{ |un| un[:reason] == 'Incompatibility between service skills and sticky vehicles' })
   end
 
   def test_impossible_service_too_far_time
@@ -1918,7 +1918,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason] == 'Unsufficient capacity in vehicles' }.size
+    assert_equal 1, (result[:unassigned].count{ |un| un[:reason] == 'Service quantity greater than any vehicle capacity' })
   end
 
   def test_impossible_service_skills
@@ -2070,7 +2070,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('Duration bigger than any vehicle timewindow shift') }.size
+    assert_equal 1, (result[:unassigned].count{ |un| un[:reason].include?('Service duration greater than any vehicle timewindow') })
   end
 
   def test_impossible_service_duration_with_sequence_tw
@@ -2127,7 +2127,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, FCT.create(problem), nil)
-    assert_equal 1, result[:unassigned].select{ |un| un[:reason].include?('Duration bigger than any vehicle timewindow shift') }.size
+    assert_equal 1, (result[:unassigned].count{ |un| un[:reason].include?('Service duration greater than any vehicle timewindow') })
   end
 
   def test_impossible_service_duration_with_two_vehicles

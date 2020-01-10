@@ -111,10 +111,11 @@ module Filters
     # so that max capacity of each unit is in the same order of magnitude
     max_capacity_by_unit_after_precision_coef.each_pair{ |unit, max_unit_capacity|
       next if max_overall_capacity_after_prec_coef == max_unit_capacity
+
       unit.precision_coef *= (max_overall_capacity_after_prec_coef.to_f / max_unit_capacity).round
     }
 
-    return
+    nil
   end
 
   # Returns the smallest coefficient which turns an array of floatig point numbers into integer
@@ -238,33 +239,14 @@ module Filters
   end
 
   def self.filter_infeasible_service_shipment_skills(vrp)
-    # Eliminate skills of services and shipments if there is no vehicle to serve it
-    available_vehicle_skills = vrp.vehicles.flat_map(&:skills).compact.uniq
+    # Eliminate the skills which do not appear in any vehicle
+    individual_vehicle_skills = vrp.vehicles.map(&:skills).flatten(2).compact.uniq
 
     [vrp.services, vrp.shipments].each{ |activity_group|
       activity_group.each{ |s|
         next if s.skills.empty?
 
-        unavailable_skills = available_vehicle_skills.collect{ |veh_skills|
-          skill_diff = s.skills - veh_skills
-
-          break if skill_diff.empty?
-
-          skill_diff
-        }&.uniq
-
-        next if unavailable_skills.nil? # There is a vehicle that can serve this service
-
-        skills_to_eliminate = unavailable_skills.min_by(2, &:size)
-
-        if skills_to_eliminate[0].size == skills_to_eliminate[1]&.size
-          message = 'There is at least one service or shipment with multiple skills which are not avaiable in any vehicles.'\
-                    'Cannot eliminate them automatically. Make sure all destinations are serviceable by at least one vehicle.'
-          log message, level: :fatal
-          raise OptimizerWrapper::DiscordantProblemError, message
-        end
-
-        s.skills -= skills_to_eliminate[0] # Erase the skill that cannot be served
+        s.skills -= s.skills - individual_vehicle_skills
       }
     }
 
