@@ -27,7 +27,7 @@ Metrics/CyclomaticComplexity:
 Layout/ParameterAlignment:
   Enabled: false
 
-Style/DoubleNegation:
+Style/Documentation:
   Enabled: false
 
 Style/TrailingCommaInArrayLiteral:
