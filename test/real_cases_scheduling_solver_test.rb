@@ -72,7 +72,7 @@ class HeuristicTest < Minitest::Test
       }
       assert_equal vrps.collect(&:visits).sum + vrps.collect{ |vrp| vrp.services.select{ |s| s[:visits_number].zero? }.size }.sum, assigned_visits.sum + unassigned_visits.sum,
                    "Expecting #{vrps.collect(&:visits).sum} visits, only have #{vrps.collect(&:visits).sum}"
-      assert unassigned_visits.sum <= 600, "Expecting 600 unassigned visits, have #{unassigned_visits.sum}"
+      assert unassigned_visits.sum <= 441, "Expecting less than 441 unassigned visits, have #{unassigned_visits.sum}"
     end
   end
 end

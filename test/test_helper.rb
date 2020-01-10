@@ -59,6 +59,14 @@ module TestHelper
         shipment[:delivery][symbol] = ScheduleType.new.type_cast(shipment[:delivery][symbol]) if shipment[:delivery] && shipment[:delivery][symbol]
       }
     }
+
+    [vrp[:services], vrp[:shipments]].flatten.each{ |s|
+      next if s.nil?
+      next if vrp.is_a?(Hash) && !s.has_key?(:visits_number)
+
+      raise StandardError, "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid." unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
+    }
+
     vrp
   end
 

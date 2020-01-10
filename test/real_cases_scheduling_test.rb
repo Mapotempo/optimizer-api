@@ -211,7 +211,7 @@ class HeuristicTest < Minitest::Test
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal 439, unassigned_visits.sum, "Expecting 439 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 441, unassigned_visits.sum, "Expecting 441 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_performance_13vl

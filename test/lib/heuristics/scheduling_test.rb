@@ -131,14 +131,6 @@ class HeuristicTest < Minitest::Test
       assert_equal 10, result[:unassigned].size
     end
 
-    def test_visits_number_0
-      problem = VRP.scheduling
-      problem[:services].first[:visits_number] = 0
-
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-      assert result[:unassigned].first[:service_id] == 'service_1_0_0'
-    end
-
     def test_visit_every_day_2
       problem = VRP.scheduling
       problem[:services].first[:visits_number] = 1
@@ -488,14 +480,6 @@ class HeuristicTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
       assert(result[:routes].all?{ |route| route[:activities].all?{ |activity| activity[:detail][:skills].nil? || activity[:detail][:skills].size == 2 } })
-    end
-
-    def test_unassigned_collected
-      vrp = TestHelper.load_vrp(self, fixture_file: 'results_regularity')
-      vrp.resolution_solver = true
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-
-      assert result[:unassigned].collect{ |un| un[:reason] }.uniq.any?{ |reason| reason.include?('Visits number is 0') }
     end
 
     def test_callage_freq
