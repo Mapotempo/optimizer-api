@@ -54,11 +54,12 @@ group :development, :test do
 end
 
 group :test do
-  gem 'rack-test'
   gem 'minitest'
+  gem 'minitest-bisect' # to identify randomly failing order-depoendent tests
+  gem 'minitest-focus'
   gem 'minitest-reporters'
   gem 'minitest-stub_any_instance'
-  gem 'minitest-focus'
+  gem 'rack-test'
   gem 'simplecov', require: false
 end
 
