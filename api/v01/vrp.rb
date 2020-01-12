@@ -562,7 +562,7 @@ module Api
             output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
-            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job && job['options']['api_key'] == params[:api_key] || solution
+            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job && !job.killed? && job['options']['api_key'] == params[:api_key] || solution
 
             solution ||= {}
 
@@ -657,7 +657,7 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
 
-            if !job || job['options']['api_key'] != params[:api_key]
+            if !job || job&.killed? || job['options']['api_key'] != params[:api_key]
               status 404
               error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
             else
