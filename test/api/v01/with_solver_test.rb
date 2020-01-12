@@ -24,7 +24,6 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
     Api::Root
   end
 
-  # TODO: Increase problem size to make the solve continue longer
   def test_deleted_job
     TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
@@ -35,7 +34,7 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
       assert !JSON.parse(last_response.body)['solutions'].nil? && !JSON.parse(last_response.body)['solutions'].empty?
     end
   ensure
-    delete_completed_job @job_id, api_key: 'solvers'
+    delete_completed_job @job_id, api_key: 'ortools'
   end
 
   def test_csv_configuration
@@ -47,7 +46,7 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
       assert_equal 9, last_response.body.count("\n")
     end
   ensure
-    delete_completed_job @job_id, api_key: 'solvers'
+    delete_completed_job @job_id, api_key: 'ortools'
   end
 
   def test_using_two_solver
