@@ -67,7 +67,8 @@ module OptimizerWrapper
       Result.set(self.uuid, p)
     rescue Resque::Plugins::Status::Killed, JobKilledError
       log 'Job Killed'
-      false
+      tick('Job Killed')
+      nil
     rescue StandardError => e
       log "#{e}\n\t\t#{e.backtrace.join("\n\t\t")}", level: :fatal
       raise
