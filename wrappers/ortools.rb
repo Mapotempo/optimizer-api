@@ -827,7 +827,7 @@ module Wrappers
         r && (iterations = Integer(r[1]))
         s = / Cost : ([0-9.eE+]+)/.match(line)
         s && (cost = Float(s[1]))
-        t = / Time : ([0-9.eE+]+)/.match(line)
+        t = /Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
         log line.strip, level: /Final Iteration :/.match(line) || /First solution strategy :/.match(line) || /Using initial solution provided./.match(line) ? :info : r || s || t ? :debug : :error
         out += line
