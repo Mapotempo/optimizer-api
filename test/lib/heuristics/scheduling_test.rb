@@ -344,6 +344,7 @@ class HeuristicTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
+        matrix_id: 'm1',
         router_mode: 'car',
         router_dimension: 'distance',
         sequence_timewindows: [{ start: 0, end: 24500, day_index: 1 }],
@@ -576,7 +577,7 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.day = 300
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 36, result[:unassigned].size
+      assert_equal 37, result[:unassigned].size
       assert_equal 9, result[:unassigned].select{ |un| un[:reason] == 'Unfeasible route (vehicle BALEARES not available at day 300)' }.size
     end
   end
