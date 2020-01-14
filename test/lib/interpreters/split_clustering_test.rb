@@ -34,12 +34,14 @@ class SplitClusteringTest < Minitest::Test
       # @regularity_restarts times so that clustering irregularity does not effect the results.
       # Basically, we want the balance violations to be as small as possible.
 
+      vrp = Marshal.dump(TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious')) # call load_vrp only once to not to dump for each restart
+
       balance_deviations = []
       (1..@regularity_restarts).each{ |trial|
         puts "Regularity trial: #{trial}/#{@regularity_restarts}"
         max_balance_deviation = 0
 
-        service_vrp = { vrp: TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious'), service: :demo }
+        service_vrp = { vrp:  Marshal.load(vrp), service: :demo }
         service_vrp[:vrp].services.each{ |s| s.skills = [] }         # The instance has "Pas X" style day skills, we purposely ignore them otherwise balance is not possible
         service_vrp[:vrp].vehicles = [service_vrp[:vrp].vehicles[0]] # entity: `vehicle` settting only makes sense if the number of clusters is equal to the number of vehicles.
         service_vrp[:vrp].vehicles *= 2
@@ -165,7 +167,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_cluster_one_phase_vehicle
       vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_one_phase')
-      TestHelper.matrix_required(vrp)
+
       service_vrp = { vrp: vrp, service: :demo }
 
       total_durations = vrp.services_duration
@@ -190,7 +192,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_cluster_two_phases
       vrp = TestHelper.load_vrp(self)
-      TestHelper.matrix_required(vrp)
+
       service_vrp = { vrp: vrp, service: :demo }
       services_vrps_vehicles = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 16, cut_symbol: :duration, entity: 'vehicle', restarts: @split_restarts)
       assert_equal 16, services_vrps_vehicles.size
@@ -241,10 +243,8 @@ class SplitClusteringTest < Minitest::Test
 
     def test_length_centroid
       vrp = TestHelper.load_vrp(self)
-      TestHelper.matrix_required(vrp)
-      service_vrp = { vrp: vrp, service: :demo }
 
-      services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp, nil, nil)
+      services_vrps = Interpreters::SplitClustering.generate_split_vrps({ vrp: vrp, service: :demo }, nil, nil)
       assert services_vrps
       assert_equal services_vrps.size, 2
     end
@@ -460,9 +460,8 @@ class SplitClusteringTest < Minitest::Test
 
     def test_no_doubles_3000
       vrp = TestHelper.load_vrp(self)
-      TestHelper.matrix_required(vrp)
-      service_vrp = { vrp: vrp, service: :demo }
-      generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
+
+      generated_services_vrps = Interpreters::SplitClustering.split_clusters([{ vrp: vrp, service: :demo }]).flatten.compact
       assert_equal generated_services_vrps.size, 15
       generated_services_vrps.each{ |service|
         vehicle_day = service[:vrp][:vehicles].first[:sequence_timewindows].first[:day_index]
@@ -620,7 +619,6 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_functionality
       vrp = TestHelper.load_vrp(self)
-      TestHelper.matrix_required(vrp)
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
         result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)

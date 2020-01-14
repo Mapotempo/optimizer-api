@@ -20,9 +20,9 @@ SimpleCov.start if (!ENV.has_key?('COV') && !ENV.has_key?('COVERAGE')) || (ENV['
 
 ENV['APP_ENV'] ||= 'test'
 require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
-Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].each{ |file| require file }
+Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].sort.each{ |file| require file }
 
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].each{ |file| require file }
+Dir[File.dirname(__FILE__) + '/../models/*.rb'].sort.each{ |file| require file }
 require './optimizer_wrapper'
 require './api/root'
 
@@ -92,13 +92,17 @@ module TestHelper
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = 'test/fixtures/' + filename + '.dump'
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      problem = Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
-      coerce(problem)
+      vrp = Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
+      coerce(vrp)
     else
-      problem = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
-      vrp = create(problem)
-      # File.write(dump_file, Base64.encode64(Marshal::dump(vrp)))
-      vrp.name = filename if vrp.matrices.empty?
+      vrp = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
+      vrp = create(vrp)
+
+      if vrp.matrices.empty?
+        vrp.name = filename
+        matrix_required(vrp)
+      end
+
       vrp
     end
   end
@@ -107,13 +111,18 @@ module TestHelper
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = 'test/fixtures/' + filename + '.dump'
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      problems = Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
-      problems.each{ |p| coerce(p) }
+      vrps = Marshal.load(Base64.decode64(File.open(dump_file).to_a.join))
+      vrps.map!{ |vrp| coerce(vrp) }
     else
-      problems = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
-      problems.map{ |problem|
-        create(problem)
+      vrps = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
+
+      vrps.map!{ |vrp|
+        create(vrp)
       }
+
+      multipe_matrices_required(vrps, test)
+
+      vrps
     end
   end
 

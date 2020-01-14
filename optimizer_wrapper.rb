@@ -68,12 +68,6 @@ module OptimizerWrapper
   end
 
   def self.wrapper_vrp(api_key, services, vrp, checksum, job_id = nil)
-    # Get complete matrix in case of problem to dump
-    if ENV['TEST_DUMP_VRP'].to_s == 'true' && vrp.name
-      vrp.compute_matrix
-      File.write('test/fixtures/' + vrp.name + '.dump', Base64.encode64(Marshal::dump(vrp)))
-    end
-
     inapplicable_services = []
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
