@@ -3025,4 +3025,16 @@ class WrapperTest < Minitest::Test
     end
     assert_equal 1, solve_call # 1 repetition if basic instance
   end
+
+  def test_skills_independent
+    vrp = TestHelper.create(VRP.independent_skills)
+    OptimizerWrapper.stub(:define_process, lambda { |services_vrps, _job_id|
+      assert_equal 3, services_vrps.size
+      services_vrps.each{ |service_vrp|
+        assert_equal 2, service_vrp[:vrp].services.size
+      }
+    }) do
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+  end
 end
