@@ -145,7 +145,6 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
 
     Heuristics::Scheduling.stub_any_instance(:compute_initial_solution, lambda { |vrp|
-      fill_planning
       check_solution_validity
 
       @output_tool&.close_file

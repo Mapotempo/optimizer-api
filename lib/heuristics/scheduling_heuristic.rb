@@ -53,7 +53,6 @@ module Heuristics
 
       @previous_candidate_routes = nil
       @candidate_routes = {}
-      @planning = {}
 
       # heuristic options
       @allow_partial_assignment = vrp.resolution_allow_partial_assignment
@@ -70,7 +69,6 @@ module Heuristics
         @candidate_vehicles << vehicle.id
         @candidate_routes[vehicle.id] = {}
         @vehicle_day_completed[vehicle.id] = {}
-        @planning[vehicle.id] = {}
       }
 
       collect_services_data(vrp)
@@ -112,14 +110,12 @@ module Heuristics
       add_missing_visits if @allow_partial_assignment && !@same_point_day
 
       begin
-        fill_planning
         check_solution_validity
       rescue
         log 'Solution after calling solver to reorder routes is unfeasible.', level: :warn
         restore
       end
 
-      fill_planning
       check_solution_validity
 
       @output_tool&.close_file
@@ -130,16 +126,10 @@ module Heuristics
 
     def clean_routes(service, vehicle)
       ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-      @planning[vehicle].collect{ |_day, day_route|
-        remove_index = day_route[:services].find_index{ |stop| stop[:id] == service[:id] }
-        day_route[:services].slice!(remove_index) if remove_index
-        day_route[:services] = update_route(day_route, remove_index) if remove_index
-      }.compact.size
-
       @candidate_routes[vehicle].collect{ |_day, day_route|
         remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service[:id] }
         day_route[:current_route].slice!(remove_index) if remove_index
-        day_route[:services] = update_route(day_route, remove_index) if remove_index
+        day_route[:current_route] = update_route(day_route, remove_index) if remove_index
       }.compact.size
 
       (1..@services_data[service[:id]][:nb_visits]).each{ |number_in_sequence|
@@ -164,20 +154,20 @@ module Heuristics
     end
 
     def check_solution_validity
-      @planning.each{ |_vehicle, all_days_routes|
+      @candidate_routes.each{ |_vehicle, all_days_routes|
         all_days_routes.each{ |_day, route|
-          next if route[:services].empty?
+          next if route[:current_route].empty?
 
-          time_back_to_depot = route[:services].last[:end] + matrix(route[:vehicle], route[:services].last[:point_id], route[:vehicle][:end_point_id])
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is starting too soon' if route[:services][0][:start] < route[:vehicle][:tw_start]
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is ending too late' if time_back_to_depot > route[:vehicle][:tw_end]
+          time_back_to_depot = route[:current_route].last[:end] + matrix(route, route[:current_route].last[:point_id], route[:end_point_id])
+          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is starting too soon' if route[:current_route][0][:start] < route[:tw_start]
+          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is ending too late' if time_back_to_depot > route[:tw_end]
         }
       }
 
-      @planning.each{ |_vehicle, all_days_routes|
+      @candidate_routes.each{ |_vehicle, all_days_routes|
         all_days_routes.each{ |day, route|
-          route[:services].each_with_index{ |s, i|
-            next if @services_data[s[:id]][:tws_sets].flatten.empty? || i.positive? && can_ignore_tw(route[:services][i - 1][:id], s[:id])
+          route[:current_route].each_with_index{ |s, i|
+            next if @services_data[s[:id]][:tws_sets].flatten.empty? || i.positive? && can_ignore_tw(route[:current_route][i - 1][:id], s[:id])
 
             compatible_tw = find_corresponding_timewindow(day, s[:arrival], @services_data[s[:id]][:tws_sets][s[:activity]], s[:end] - s[:arrival])
             next if compatible_tw &&
@@ -310,19 +300,19 @@ module Heuristics
     def update_route(full_route, first_index, first_start = nil)
       # recomputes each stop associated values (start, arrival, setup ... times) only according to their insertion order
       # TODO : use in insert_point_in_route
-      day_route = full_route[:services] || full_route[:current_route]
+      day_route = full_route[:current_route]
       day_route if first_index > day_route.size
 
-      previous_id = first_index.zero? ? (full_route[:start_point_id] || full_route[:vehicle][:start_point_id]) : day_route[first_index - 1][:id]
+      previous_id = first_index.zero? ? full_route[:start_point_id] : day_route[first_index - 1][:id]
       previous_point_id = first_index.zero? ? previous_id : day_route[first_index - 1][:point_id]
-      previous_end = first_index.zero? ? (full_route[:tw_start] || full_route[:vehicle][:tw_start]) : day_route[first_index - 1][:end]
+      previous_end = first_index.zero? ? full_route[:tw_start] : day_route[first_index - 1][:end]
       if first_start
         previous_end = first_start
       end
 
       (first_index..day_route.size - 1).each{ |position|
         stop = day_route[position]
-        route_time = matrix(full_route[:vehicle] || full_route, previous_point_id, stop[:point_id])
+        route_time = matrix(full_route, previous_point_id, stop[:point_id])
         stop[:considered_setup_duration] = route_time.zero? ? 0 : @services_data[stop[:id]][:setup_durations][stop[:activity]]
 
         if can_ignore_tw(previous_id, stop[:id])
@@ -331,7 +321,7 @@ module Heuristics
           stop[:end] = stop[:arrival] + @services_data[stop[:id]][:durations][stop[:activity]]
           stop[:max_shift] = day_route[position - 1][:max_shift]
         else
-          tw = find_corresponding_timewindow(full_route[:global_day_index] || full_route[:vehicle][:global_day_index], previous_end + route_time + stop[:considered_setup_duration], @services_data[stop[:id]][:tws_sets][stop[:activity]], stop[:end] - stop[:arrival])
+          tw = find_corresponding_timewindow(full_route[:global_day_index], previous_end + route_time + stop[:considered_setup_duration], @services_data[stop[:id]][:tws_sets][stop[:activity]], stop[:end] - stop[:arrival])
           raise OptimizerWrapper::SchedulingHeuristicError, 'No timewindow found to update route' if !@services_data[stop[:id]][:tws_sets][stop[:activity]].empty? && tw.nil?
 
           stop[:start] = tw ? [tw[:start] - route_time - stop[:considered_setup_duration], previous_end].max : previous_end
@@ -853,26 +843,6 @@ module Heuristics
       possibles.flatten.compact.sort_by!{ |possible_position| possible_position[:back_to_depot] }[0]
     end
 
-    def fill_planning
-      ### collect solution to fille @planning ###
-      @candidate_routes.each{ |vehicle, data|
-        data.each{ |day, route_data|
-          @planning[vehicle][day] = {
-            vehicle: {
-              vehicle_id: route_data[:vehicle_id],
-              start_point_id: route_data[:start_point_id],
-              end_point_id: route_data[:end_point_id],
-              tw_start: route_data[:tw_start],
-              tw_end: route_data[:tw_end],
-              matrix_id: route_data[:matrix_id],
-              router_dimension: route_data[:router_dimension]
-            },
-            services: route_data[:current_route].collect{ |stop| stop }
-          }
-        }
-      }
-    end
-
     def can_ignore_tw(previous_service, service)
       ### true if arriving on time at previous_service is enough to consider we are on time at service ###
       # when same point day is activated we can consider two points at same location are the same
@@ -1051,24 +1021,24 @@ module Heuristics
       routes = []
       solution = []
 
-      @planning.each{ |_vehicle, all_days_routes|
+      @candidate_routes.each{ |_vehicle, all_days_routes|
         all_days_routes.keys.sort.each{ |day|
           route = all_days_routes[day]
           computed_activities = []
 
-          computed_activities << get_stop(vrp, route[:vehicle][:start_point_id]) if route[:vehicle][:start_point_id]
-          computed_activities += get_activities(day, vrp, route[:services])
-          computed_activities << get_stop(vrp, route[:vehicle][:end_point_id]) if route[:vehicle][:end_point_id]
+          computed_activities << get_stop(vrp, route[:start_point_id]) if route[:start_point_id]
+          computed_activities += get_activities(day, vrp, route[:current_route])
+          computed_activities << get_stop(vrp, route[:end_point_id]) if route[:end_point_id]
 
           routes << {
             vehicle: {
-              id: route[:vehicle][:vehicle_id]
+              id: route[:vehicle_id]
             },
             mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
           }
 
           solution << {
-            vehicle_id: route[:vehicle][:vehicle_id],
+            vehicle_id: route[:vehicle_id],
             activities: computed_activities
           }
         }
