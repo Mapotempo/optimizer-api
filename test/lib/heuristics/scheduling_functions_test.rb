@@ -26,7 +26,6 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
 
       s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
-      s.collect_services_data(vrp)
       assert s.instance_variable_get(:@uninserted).empty?
     end
 
@@ -45,7 +44,6 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
 
       s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
-      s.collect_services_data(vrp)
       assert_equal 2, s.instance_variable_get(:@uninserted).size
     end
 
@@ -64,7 +62,6 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
 
       s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
-      s.collect_services_data(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert(data_services['service_1'][:tws_sets].first.all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
       assert_equal 0, s.instance_variable_get(:@uninserted).size
@@ -86,7 +83,6 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
       expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
       s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 10, shift: 0)
-      s.collect_services_data(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 6, data_services.size
       assert_nil data_services['service_1'][:heuristic_period]
@@ -103,23 +99,21 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
       expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
       s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 10, shift: 0)
-      s.collect_services_data(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 7, data_services['service_1'][:heuristic_period]
 
-      vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
-      s.instance_variable_set(:@planning,
+      s.instance_variable_set(:@candidate_routes,
         'vehicle_0' => {
           0 => {
-            services: [{ id: 'service_1' }], vehicle: vehicule
+            current_route: [{ id: 'service_1' }], vehicle_id: vrp.vehicles.first.id
           },
           7 => {
-            services: [{ id: 'service_1' }], vehicle: vehicule
+            current_route: [{ id: 'service_1' }], vehicle_id: vrp.vehicles.first.id
           }
       })
-      s.clean_routes(s.instance_variable_get(:@planning)['vehicle_0'][0][:services].first, 'vehicle_0')
-      assert_equal 0, s.instance_variable_get(:@planning)['vehicle_0'][0][:services].size
-      assert_equal 0, s.instance_variable_get(:@planning)['vehicle_0'][7][:services].size
+      s.clean_routes(s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first, 'vehicle_0')
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:current_route].size
     end
 
     def test_clean_routes_small_lapses
@@ -136,27 +130,25 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
       expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
       s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 14, shift: 0)
-      s.collect_services_data(vrp)
-      vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
-      s.instance_variable_set(:@planning,
+      s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  services: [{ id: 'service_1' }], vehicle: vehicule
+                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
                                 },
                                 3 => {
-                                  services: [{ id: 'service_1' }], vehicle: vehicule
+                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
                                 },
                                 7 => {
-                                  services: [{ id: 'service_1' }], vehicle: vehicule
+                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
                                 },
                                 10 => {
-                                  services: [{ id: 'service_1' }], vehicle: vehicule
+                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
                                 }
                             })
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 3, data_services['service_1'][:heuristic_period]
-      s.clean_routes(s.instance_variable_get(:@planning)['vehicle_0'][0][:services].first, 'vehicle_0')
-      assert(s.instance_variable_get(:@planning).all?{ |_key, data| data.all?{ |_k, d| d[:services].empty? } })
+      s.clean_routes(s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first, 'vehicle_0')
+      assert(s.instance_variable_get(:@candidate_routes).all?{ |_key, data| data.all?{ |_k, d| d[:current_route].empty? } })
     end
 
     def test_add_missing_visits
@@ -184,12 +176,10 @@ class HeuristicTest < Minitest::Test
       vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300 }]
       vrp = TestHelper.create(vrp)
       s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 14, shift: 0)
-      s.collect_services_data(vrp)
-      vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index], tw_start: 0, tw_end: 400 }
-      s.instance_variable_set(:@planning,
+      s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  services: [{
+                                  current_route: [{
                                     id: 'service_1',
                                     start: 50,
                                     arrival: 100,
@@ -197,7 +187,9 @@ class HeuristicTest < Minitest::Test
                                     considered_setup_duration: 0,
                                     activity: 0
                                   }],
-                                  vehicle: vehicule
+                                  vehicle_id: vrp.vehicles.first.id,
+                                  tw_start: 0,
+                                  tw_end: 400
                                 }
                             })
       assert s.check_solution_validity
@@ -207,10 +199,10 @@ class HeuristicTest < Minitest::Test
         s.check_solution_validity
       end
 
-      s.instance_variable_set(:@planning,
+      s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  services: [{
+                                  current_route: [{
                                     id: 'service_1',
                                     start: 50,
                                     arrival: 60,
@@ -218,7 +210,9 @@ class HeuristicTest < Minitest::Test
                                     considered_setup_duration: 0,
                                     activity: 0
                                   }],
-                                  vehicle: vehicule
+                                  vehicle_id: vrp.vehicles.first.id,
+                                  tw_start: 0,
+                                  tw_end: 400
                                 }
                             })
       assert_raises OptimizerWrapper::SchedulingHeuristicError do
