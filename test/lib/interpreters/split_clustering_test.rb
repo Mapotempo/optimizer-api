@@ -611,7 +611,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_poorly_populated_route_limit_result
       vrp = TestHelper.load_vrp(self, fixture_file: 'max_split_functionality')
-      result = Marshal.load(Base64.decode64(File.read('test/fixtures/max_split_poorly_populated_route_limit_result.dump')))
+      result = Marshal.load(File.binread('test/fixtures/max_split_poorly_populated_route_limit_result.bindump'))
       Interpreters::SplitClustering.remove_poor_routes(vrp, result)
 
       assert_equal result[:unassigned], [], "remove_poor_routes shouldn't remove too many services"
