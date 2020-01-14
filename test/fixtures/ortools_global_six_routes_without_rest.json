@@ -1240,15 +1240,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 10.92
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s35993",
@@ -1261,15 +1261,15 @@
               "end": 11700
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 10.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s35994",
@@ -1282,15 +1282,15 @@
               "end": 11700
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 2.88
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s35995",
@@ -1298,15 +1298,15 @@
         "activity": {
           "point_id": "p3",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s35996",
@@ -1314,15 +1314,15 @@
         "activity": {
           "point_id": "p4",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s35997",
@@ -1335,15 +1335,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.7
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s35998",
@@ -1356,15 +1356,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 22.65
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s35999",
@@ -1377,15 +1377,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 46.74
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36000",
@@ -1398,15 +1398,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 19.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36001",
@@ -1419,15 +1419,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.75
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36002",
@@ -1440,15 +1440,15 @@
               "end": 9900
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36003",
@@ -1461,15 +1461,15 @@
               "end": 28800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 4.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36004",
@@ -1477,15 +1477,15 @@
         "activity": {
           "point_id": "p12",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36005",
@@ -1498,15 +1498,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 13.9
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36006",
@@ -1519,15 +1519,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 3.84
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36007",
@@ -1540,15 +1540,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 50.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36008",
@@ -1556,15 +1556,15 @@
         "activity": {
           "point_id": "p16",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 8.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36009",
@@ -1572,15 +1572,15 @@
         "activity": {
           "point_id": "p17",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 22.79
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36010",
@@ -1593,15 +1593,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 9.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36011",
@@ -1609,15 +1609,15 @@
         "activity": {
           "point_id": "p19",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 11.32
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36012",
@@ -1630,15 +1630,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.25
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36013",
@@ -1651,15 +1651,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 26.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36014",
@@ -1672,15 +1672,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 5.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36015",
@@ -1688,15 +1688,15 @@
         "activity": {
           "point_id": "p23",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.28
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36016",
@@ -1709,15 +1709,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 8.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36017",
@@ -1730,15 +1730,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.3
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36018",
@@ -1751,15 +1751,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 18.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36019",
@@ -1772,15 +1772,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 19.95
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36020",
@@ -1793,15 +1793,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 5.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36021",
@@ -1814,15 +1814,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 35.1
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36022",
@@ -1835,15 +1835,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 30.003
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36023",
@@ -1856,15 +1856,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 13.9
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36024",
@@ -1877,15 +1877,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 33.7
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36025",
@@ -1893,15 +1893,15 @@
         "activity": {
           "point_id": "p33",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 23.361
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36027",
@@ -1909,15 +1909,15 @@
         "activity": {
           "point_id": "p34",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 100.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36028",
@@ -1925,15 +1925,15 @@
         "activity": {
           "point_id": "p35",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 24.88
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36029",
@@ -1946,15 +1946,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 15.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36030",
@@ -1967,15 +1967,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 49.16
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36031",
@@ -1983,15 +1983,15 @@
         "activity": {
           "point_id": "p38",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 17.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36034",
@@ -1999,15 +1999,15 @@
         "activity": {
           "point_id": "p39",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 16.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36035",
@@ -2020,15 +2020,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36036",
@@ -2041,15 +2041,15 @@
               "end": 18000
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 8.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36037",
@@ -2057,15 +2057,15 @@
         "activity": {
           "point_id": "p42",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 61.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36038",
@@ -2078,15 +2078,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 33.3
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36039",
@@ -2094,15 +2094,15 @@
         "activity": {
           "point_id": "p44",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 46.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36040",
@@ -2115,15 +2115,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 20.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36041",
@@ -2136,15 +2136,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 5.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36042",
@@ -2157,15 +2157,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 116.68
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36043",
@@ -2173,15 +2173,15 @@
         "activity": {
           "point_id": "p48",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 46.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36044",
@@ -2189,15 +2189,15 @@
         "activity": {
           "point_id": "p49",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 49.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36045",
@@ -2210,15 +2210,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 10.5
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36046",
@@ -2231,15 +2231,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 13.5
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36047",
@@ -2252,15 +2252,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 14.9
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36048",
@@ -2273,15 +2273,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 1.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36049",
@@ -2289,15 +2289,15 @@
         "activity": {
           "point_id": "p54",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 24.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36050",
@@ -2310,15 +2310,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 11.5
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36052",
@@ -2331,15 +2331,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.45
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36053",
@@ -2352,15 +2352,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 24.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36054",
@@ -2373,15 +2373,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 5.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36055",
@@ -2389,15 +2389,15 @@
         "activity": {
           "point_id": "p59",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 18.15
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36056",
@@ -2410,15 +2410,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 31.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36057",
@@ -2431,15 +2431,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 9.32
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36058",
@@ -2447,15 +2447,15 @@
         "activity": {
           "point_id": "p62",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 58.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36059",
@@ -2463,15 +2463,15 @@
         "activity": {
           "point_id": "p63",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 9.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36060",
@@ -2479,15 +2479,15 @@
         "activity": {
           "point_id": "p64",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 18.9
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36061",
@@ -2495,15 +2495,15 @@
         "activity": {
           "point_id": "p65",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 76.74
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36062",
@@ -2511,15 +2511,15 @@
         "activity": {
           "point_id": "p66",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 102.42
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36063",
@@ -2532,15 +2532,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 19.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36064",
@@ -2553,15 +2553,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 3.84
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36065",
@@ -2574,15 +2574,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 6.32
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36066",
@@ -2590,15 +2590,15 @@
         "activity": {
           "point_id": "p70",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 33.64
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36067",
@@ -2611,15 +2611,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 1.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36068",
@@ -2632,15 +2632,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 8.16
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36069",
@@ -2653,15 +2653,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 23.2
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36070",
@@ -2669,15 +2669,15 @@
         "activity": {
           "point_id": "p74",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 25.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36071",
@@ -2690,15 +2690,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 15.306
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36072",
@@ -2711,15 +2711,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 48.88
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36073",
@@ -2732,15 +2732,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 16.1
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36074",
@@ -2748,15 +2748,15 @@
         "activity": {
           "point_id": "p78",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 28.36
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36075",
@@ -2769,15 +2769,15 @@
               "end": 21600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 10.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36076",
@@ -2790,15 +2790,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 15.46
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36077",
@@ -2806,15 +2806,15 @@
         "activity": {
           "point_id": "p81",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 15.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36078",
@@ -2822,15 +2822,15 @@
         "activity": {
           "point_id": "p82",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 9.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36079",
@@ -2838,15 +2838,15 @@
         "activity": {
           "point_id": "p83",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 1.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36080",
@@ -2859,15 +2859,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 27.81
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36081",
@@ -2880,15 +2880,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 6.08
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36082",
@@ -2901,15 +2901,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 15.22
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36083",
@@ -2922,15 +2922,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 18.2
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36084",
@@ -2943,15 +2943,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 10.5
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36085",
@@ -2959,15 +2959,15 @@
         "activity": {
           "point_id": "p89",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 91.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36086",
@@ -2980,15 +2980,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 138.33
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36087",
@@ -3001,15 +3001,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 11.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36088",
@@ -3022,15 +3022,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 25.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36089",
@@ -3043,15 +3043,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 16.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36090",
@@ -3059,15 +3059,15 @@
         "activity": {
           "point_id": "p94",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 4.59
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36091",
@@ -3080,15 +3080,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 36.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36092",
@@ -3101,15 +3101,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 27.36
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36093",
@@ -3122,15 +3122,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 3.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36094",
@@ -3143,15 +3143,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 25.06
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36095",
@@ -3164,15 +3164,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 32.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36096",
@@ -3180,15 +3180,15 @@
         "activity": {
           "point_id": "p100",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 83.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36097",
@@ -3201,15 +3201,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 162.5
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36098",
@@ -3217,15 +3217,15 @@
         "activity": {
           "point_id": "p102",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 13.4
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36099",
@@ -3233,15 +3233,15 @@
         "activity": {
           "point_id": "p103",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 1.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36100",
@@ -3254,15 +3254,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 25.1
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36101",
@@ -3275,15 +3275,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 22.3
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36102",
@@ -3296,15 +3296,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 49.2
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36103",
@@ -3317,15 +3317,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 8.28
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36104",
@@ -3338,15 +3338,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 30.44
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36105",
@@ -3359,15 +3359,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 8.04
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36106",
@@ -3380,15 +3380,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 26.35
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36107",
@@ -3401,15 +3401,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 3.85
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36108",
@@ -3417,15 +3417,15 @@
         "activity": {
           "point_id": "p112",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 21.24
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36109",
@@ -3433,15 +3433,15 @@
         "activity": {
           "point_id": "p113",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.75
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36110",
@@ -3454,15 +3454,15 @@
               "end": 18000
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 60.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36111",
@@ -3475,15 +3475,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 10.8
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36112",
@@ -3496,15 +3496,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 18.9
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36113",
@@ -3517,15 +3517,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 11.44
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36114",
@@ -3538,15 +3538,15 @@
               "end": 10800
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 24.45
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36115",
@@ -3559,15 +3559,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 9.55
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36116",
@@ -3580,15 +3580,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 1.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36117",
@@ -3601,15 +3601,15 @@
               "end": 9000
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 6.14
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36118",
@@ -3622,15 +3622,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36119",
@@ -3643,15 +3643,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 16.82
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36120",
@@ -3664,15 +3664,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 13.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36121",
@@ -3685,15 +3685,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 30.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36122",
@@ -3706,15 +3706,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 23.2
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36123",
@@ -3727,15 +3727,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 36.6
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36124",
@@ -3748,15 +3748,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 6.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36125",
@@ -3769,15 +3769,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 79.7
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36126",
@@ -3790,15 +3790,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.58
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36127",
@@ -3806,15 +3806,15 @@
         "activity": {
           "point_id": "p131",
           "timewindows": [],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 13.9
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36128",
@@ -3827,15 +3827,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 5.76
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36129",
@@ -3848,15 +3848,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 8.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36130",
@@ -3869,15 +3869,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.32
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36131",
@@ -3890,15 +3890,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 37.7
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36132",
@@ -3911,15 +3911,15 @@
               "end": 14400
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 19.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36133",
@@ -3932,15 +3932,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 9.5
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36134",
@@ -3953,15 +3953,15 @@
               "end": 12600
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 12.94
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36135",
@@ -3974,15 +3974,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 7.0
           }
-        ],
-        "late_multiplier": null
+        ]
       },
       {
         "id": "s36136",
@@ -3995,15 +3995,15 @@
               "end": 13500
             }
           ],
-          "duration": 300.0
+          "duration": 300.0,
+          "late_multiplier": null
         },
         "quantities": [
           {
             "unit_id": "unit1",
             "value": 20.0
           }
-        ],
-        "late_multiplier": null
+        ]
       }
     ],
     "configuration": {
@@ -4012,7 +4012,7 @@
         "iterations_without_improvment": 100,
         "initial_time_out": 18000,
         "time_out_multiplier": 2
-      },
+      }
     }
   }
 }
