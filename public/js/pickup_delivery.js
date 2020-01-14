@@ -359,6 +359,9 @@ $(document).ready(function() {
         }
       });
 
+      if (vrp.services.length == 0) delete vrp.services;
+      if (vrp.shipments.length == 0) delete vrp.shipments;
+
       return vrp;
     }
   };
