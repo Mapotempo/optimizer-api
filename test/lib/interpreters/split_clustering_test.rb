@@ -603,10 +603,10 @@ class SplitClusteringTest < Minitest::Test
       vrp[:name] = 'max_split_size_with_empty_fill'
 
       problem = TestHelper.create(vrp)
-      check_vrp = Marshal.load(Marshal.dump(problem))
+      check_vrp_services_size = problem.services.size
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       assert_equal problem.services.size, result[:unassigned].map{ |s| s[:service_id] }.compact.size + result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size
-      assert_equal problem.services.size, check_vrp.services.size
+      assert_equal problem.services.size, check_vrp_services_size
     end
 
     def test_max_split_poorly_populated_route_limit_result
