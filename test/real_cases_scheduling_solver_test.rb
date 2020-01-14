@@ -21,10 +21,9 @@ class HeuristicTest < Minitest::Test
   if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
     def test_scheduling_and_ortools
       vrps = TestHelper.load_vrps(self)
-      TestHelper.multipe_matrices_required(vrps, self)
+
       vrps.each{ |vrp|
         vrp.preprocessing_partitions = nil
-        vrp.name = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
         unassigned = result[:unassigned].size
 
@@ -57,14 +56,12 @@ class HeuristicTest < Minitest::Test
 
     def test_performance_12vl_with_solver
       vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
-      TestHelper.multipe_matrices_required(vrps, self)
 
       assigned_visits = []
       unassigned_visits = []
       vrps.each_with_index{ |vrp, vrp_i|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
-        vrp.name = nil
         vrp.resolution_solver = true
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
         assigned_visits << result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum

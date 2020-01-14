@@ -199,13 +199,11 @@ class HeuristicTest < Minitest::Test
 
     def test_performance_12vl
       vrps = TestHelper.load_vrps(self)
-      TestHelper.multipe_matrices_required(vrps, self)
 
       unassigned_visits = []
       vrps.each_with_index{ |vrp, vrp_i|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
-        vrp.name = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
         unassigned_visits << result[:unassigned].size
       }
@@ -216,13 +214,11 @@ class HeuristicTest < Minitest::Test
 
     def test_performance_13vl
       vrps = TestHelper.load_vrps(self)
-      TestHelper.multipe_matrices_required(vrps, self)
 
       unassigned_visits = []
       vrps.each_with_index{ |vrp, vrp_i|
         puts "solving problem #{vrp_i + 1}/#{vrps.size}"
         vrp.preprocessing_partitions = nil
-        vrp.name = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
         unassigned_visits << result[:unassigned].size
       }

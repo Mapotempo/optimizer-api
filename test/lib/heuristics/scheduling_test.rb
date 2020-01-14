@@ -484,7 +484,6 @@ class HeuristicTest < Minitest::Test
 
     def test_callage_freq
       vrp = TestHelper.load_vrp(self)
-      TestHelper.matrix_required(vrp)
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
       assert result[:routes].collect{ |r| r[:activities].size }.uniq.size == 1
       assert result[:unassigned].empty?
