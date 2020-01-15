@@ -364,7 +364,7 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 10000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
-    # Paris - Multiple independant routes
+    # Paris - Multiple independent routes
     def test_ortools_optimize_each
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -455,7 +455,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 0, result[:unassigned].size
     end
 
-    # Paris - Multiple independant routes
+    # Paris - Multiple independent routes
     def test_vroom_optimize_each
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:vroom] }}, vrp, nil)
