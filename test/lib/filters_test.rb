@@ -285,10 +285,10 @@ class FiltersTest < Minitest::Test
     end
   end
 
-  def test_independant_filter
-    vrp = VRP.independant
+  def test_independent_filter
+    vrp = VRP.independent
     vrp[:vehicles][1][:timewindow] = { start: 20, end: 60 }
-    # Have one service filtered for each independant problem
+    # Have one service filtered for each independent problem
     vrp[:services][0][:activity][:duration] = 21
     vrp[:services][4][:activity][:timewindows] = [{ start: 0, end: 10 }]
 

@@ -876,7 +876,7 @@ module VRP
     }
   end
 
-  def self.independant
+  def self.independent
     {
       matrices: [{
         id: 'matrix_0',
