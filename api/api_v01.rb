@@ -689,7 +689,10 @@ Schedule parameters are only usefull in the case of Schedule Optimisation. Those
 An alternative exist to those parameters in order to define it by date instead of indices __schedule_range_date__ and __schedule_unavailable_date__.
 
 More specific parameters are also available when dealing with Schedule Optimisation:
-* **same_point_day** : all services located at the same geografical point will take place on the same day of the week.
+* **same_point_day** : all services located at the same geografical point will take place on the same days.
+For instance, two visits at the same location with the same minimum_lapse = maximum_lapse = 7 will be served by same vehicle and will take place on every monday if first visit is assigned to monday.
+Another exemple : two visits with minimum_lapse = maximum_lapse = 2 will be served by the same vehicle and, if first visit is assigned on tuesday, both second visits will take place on next thursday, third visit
+will take place on next saturday and so on.
 * **allow_partial_assignment** : solution is valid even if only a subset of one service\'s visits are affected. Default : true.
 
 Restitution parameters allow to have some control on the API response
