@@ -66,7 +66,7 @@ class HeuristicTest < Minitest::Test
       s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
       s.collect_services_data(vrp)
       data_services = s.instance_variable_get(:@services_data)
-      assert(data_services['service_1'][:tw].all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
+      assert(data_services['service_1'][:tws_sets].first.all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
       assert_equal 0, s.instance_variable_get(:@uninserted).size
     end
 
@@ -166,7 +166,6 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.dump')))
       s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.dump')))
       s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.dump')))
-      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/add_missing_visits_indices.dump')))
       s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.dump')))
       starting_with = s.instance_variable_get(:@uninserted).size
       s.add_missing_visits
@@ -195,7 +194,8 @@ class HeuristicTest < Minitest::Test
                                     start: 50,
                                     arrival: 100,
                                     end: 350,
-                                    considered_setup_duration: 0
+                                    considered_setup_duration: 0,
+                                    activity: 0
                                   }],
                                   vehicle: vehicule
                                 }
@@ -215,7 +215,8 @@ class HeuristicTest < Minitest::Test
                                     start: 50,
                                     arrival: 60,
                                     end: 80,
-                                    considered_setup_duration: 0
+                                    considered_setup_duration: 0,
+                                    activity: 0
                                   }],
                                   vehicle: vehicule
                                 }

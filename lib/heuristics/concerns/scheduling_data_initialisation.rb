@@ -69,49 +69,53 @@ module SchedulingDataInitialization
                 end
       @services_data[service.id] = {
         capacity: compute_capacities(service[:quantities], false, available_units),
-        setup_duration: service[:activity][:setup_duration],
-        duration: service[:activity][:duration],
+        setup_durations: service.activity ? [service.activity.setup_duration] : service.activities.collect(&:setup_duration),
+        durations: service.activity ? [service.activity.duration] : service.activities.collect(&:duration),
         heuristic_period: period,
-        minimum_lapse: service[:minimum_lapse],
-        maximum_lapse: service[:maximum_lapse],
-        nb_visits: service[:visits_number],
-        point_id: service[:activity][:point][:location] ? service[:activity][:point][:location][:id] : service[:activity][:point][:matrix_index],
-        tw: service[:activity][:timewindows] || [],
-        unavailable_days: service[:unavailable_visit_day_indices],
+        minimum_lapse: service.minimum_lapse,
+        maximum_lapse: service.maximum_lapse,
+        nb_visits: service.visits_number,
+        points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
+        tws_sets: service.activity ? [service.activity.timewindows || []] : service.activities.collect(&:timewindows || []),
+        unavailable_days: service.unavailable_visit_day_indices,
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
+        nb_activities: service.activity ? 1 : service.activities.size,
       }
 
       @candidate_services_ids << service.id
       @to_plan_service_ids << service.id
-
-      @indices[service[:id]] = vrp[:points].find{ |pt| pt[:id] == service[:activity][:point][:id] }[:matrix_index]
     }
 
     adapt_services_data(vrp) if @same_point_day
   end
 
   def adapt_services_data(vrp)
+    # reminder : services in (relaxed_)same_point_day relation have only one point_id
+
     @to_plan_service_ids = []
     vrp.points.each{ |point|
       same_located_set = vrp.services.select{ |service|
-        service[:activity][:point][:location] && service[:activity][:point][:location][:id] == point[:location][:id] ||
-          service[:activity][:point_id] == point[:id]
-      }.sort_by{ |s| s[:visits_number] }
+        (service.activity ? [service.activity] : service.activities).any?{ |activity|
+          activity.point.id == point.id
+        }
+      }.sort_by(&:visits_number)
 
       next if same_located_set.empty?
 
+      raise OptimizerWrapper.UnsupportedProblemError, 'Same_point_day is not supported if a set has one service with several activities' if same_located_set.any?{ |s| !s.activities.empty? }
+
       group_tw = best_common_tw(same_located_set)
-      if group_tw.empty? && !same_located_set.all?{ |service| @services_data[service[:id]][:tw].nil? || @services_data[service[:id]][:tw].empty? }
+      if group_tw.empty? && !same_located_set.all?{ |service| @services_data[service[:id]][:tws_sets].first.empty? }
         reject_group(same_located_set)
       else
         representative_ids = []
         # one representative per freq
-        same_located_set.group_by{ |service| @services_data[service[:id]][:heuristic_period] }.each{ |period, sub_set|
+        same_located_set.group_by{ |service| @services_data[service[:id]][:heuristic_period] }.each{ |_period, sub_set|
           representative_id = sub_set[0][:id]
           representative_ids << representative_id
-          @services_data[representative_id][:tw] = group_tw
-          @services_data[representative_id][:group_duration] = sub_set.sum{ |s| s[:activity][:duration] }
+          @services_data[representative_id][:tws_sets] = [group_tw]
+          @services_data[representative_id][:group_duration] = sub_set.sum{ |s| s.activity.duration }
           @same_located[representative_id] = sub_set.delete_if{ |s| s[:id] == representative_id }.collect{ |s| s[:id] }
           @services_data[representative_id][:group_capacity] = Marshal.load(Marshal.dump(@services_data[representative_id][:capacity]))
           @same_located[representative_id].each{ |service_id|
@@ -122,6 +126,12 @@ module SchedulingDataInitialization
         @to_plan_service_ids << representative_ids.last
         @services_unlocked_by[representative_ids.last] = representative_ids.slice(0, representative_ids.size - 1).to_a
       end
+    }
+  end
+
+  def collect_indices(vrp)
+    @services_data.collect{ |_id, data| data[:points_ids] }.flatten.uniq.sort.each{ |point_id|
+      @indices[point_id] = vrp.points.find{ |pt| pt.id == point_id }&.matrix_index
     }
   end
 
@@ -164,9 +174,9 @@ module SchedulingDataInitialization
 
   def best_common_tw(set)
     ### finds the biggest tw common to all services in [set] ###
-    first_with_tw = set.find{ |service| @services_data[service[:id]][:tw] && !@services_data[service[:id]][:tw].empty? }
+    first_with_tw = set.find{ |service| !@services_data[service[:id]][:tws_sets].first.empty? }
     if first_with_tw
-      group_tw = @services_data[first_with_tw[:id]][:tw].collect{ |tw| { day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
+      group_tw = @services_data[first_with_tw[:id]][:tws_sets].first.collect{ |tw| { day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
       # all timewindows are assigned to a day
       group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw|
         (0..6).each{ |day|
@@ -177,11 +187,11 @@ module SchedulingDataInitialization
 
       # finding minimal common timewindow
       set.each{ |service|
-        next if @services_data[service[:id]][:tw].empty?
+        next if @services_data[service[:id]][:tws_sets].first.empty?
 
         # remove all tws with no intersection with this service tws
         group_tw.delete_if{ |tw1|
-          @services_data[service[:id]][:tw].none?{ |tw2|
+          @services_data[service[:id]][:tws_sets].first.none?{ |tw2|
             (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
               (tw1[:start].nil? || tw2[:end].nil? || tw1[:start] <= tw2[:end]) &&
               (tw1[:end].nil? || tw2[:start].nil? || tw1[:end] >= tw2[:start])
@@ -191,7 +201,7 @@ module SchedulingDataInitialization
         next if group_tw.empty?
 
         # adjust all tws with intersections with this point tws
-        @services_data[service[:id]][:tw].each{ |tw1|
+        @services_data[service[:id]][:tws_sets].first.each{ |tw1|
           intersecting_tws = group_tw.select{ |tw2|
             (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
               (tw2[:start].nil? || tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start]) &&

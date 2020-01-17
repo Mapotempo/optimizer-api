@@ -177,33 +177,36 @@ module Interpreters
           visit_period = (@schedule_end + 1).to_f/service.visits_number
           timewindows_iterations = (visit_period /(6 || 1)).ceil
           ## Create as much service as needed
-          (0..service.visits_number-1).collect{ |visit_index|
+          (0..service.visits_number - 1).collect{ |visit_index|
             new_service = nil
             if !service.unavailable_visit_indices || service.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
               new_service = Marshal::load(Marshal.dump(service))
               new_service.id = "#{new_service.id}_#{visit_index+1}_#{service.visits_number}"
               new_service.visits_number = 1
-              new_service.activity.timewindows = if !service.activity.timewindows.empty?
-                new_timewindows = service.activity.timewindows.collect{ |timewindow|
-                  if timewindow.day_index
-                    Models::Timewindow.new(start: (timewindow.start || 0) + timewindow.day_index * 86400,
-                                           end: (timewindow.end || 86399) + timewindow.day_index * 86400)
-                  elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
-                    (0..[6, @schedule_end].min).collect{ |day_index|
-                      Models::Timewindow.new(start: (timewindow.start || 0) + (day_index).to_i * 86400,
-                                             end: (timewindow.end || 86399) + (day_index).to_i * 86400)
-                    }
-                  else
-                    Models::Timewindow.new(start: timewindow.start, end: timewindow.end)
+              (new_service.activity ? [new_service.activity] : new_service.activities).each{ |activity|
+                activity.timewindows = if !activity.timewindows.empty?
+                  new_timewindows = activity.timewindows.collect{ |timewindow|
+                    if timewindow.day_index
+                      Models::Timewindow.new(start: (timewindow.start || 0) + timewindow.day_index * 86400,
+                                            end: (timewindow.end || 86399) + timewindow.day_index * 86400)
+                    elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
+                      (0..[6, @schedule_end].min).collect{ |day_index|
+                        Models::Timewindow.new(start: (timewindow.start || 0) + (day_index).to_i * 86400,
+                                              end: (timewindow.end || 86399) + (day_index).to_i * 86400)
+                      }
+                    else
+                      Models::Timewindow.new(start: timewindow.start, end: timewindow.end)
+                    end
+                  }.flatten.sort_by{ |timewindow| timewindow.start }.compact.uniq
+                  if new_timewindows.size > 0
+                    new_timewindows
                   end
-                }.flatten.sort_by{ |timewindow| timewindow.start }.compact.uniq
-                if new_timewindows.size > 0
-                  new_timewindows
                 end
-              end
-              if !service.minimum_lapse && !service.maximum_lapse
-                new_service.skills += ["#{visit_index+1}_f_#{service.visits_number}"]
-              end
+                if !service.minimum_lapse && !service.maximum_lapse
+                  new_service.skills += ["#{visit_index+1}_f_#{service.visits_number}"]
+                end
+              }
+
               new_service
             else
               nil
