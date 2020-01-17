@@ -213,18 +213,17 @@ module OptimizerWrapper
           vrp.compute_matrix(&block)
 
           sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
-          unfeasible_services += sub_unfeasible_services
 
           vrp = config[:services][service].simplify_constraints(vrp)
 
           # Remove infeasible services
-          unfeasible_services.each{ |una_service|
+          sub_unfeasible_services.each{ |una_service|
             index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
             if index
               services_to_reinject << vrp.services.slice!(index)
             end
 
-            next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') }
+            next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') } || services_vrps.size == 1
             una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
           }
 
@@ -235,9 +234,11 @@ module OptimizerWrapper
               block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
             }
             if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
-              add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, unfeasible_services)
+              add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, sub_unfeasible_services)
             end
           end
+
+          unfeasible_services += sub_unfeasible_services
 
           if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
             # TODO: Move select best heuristic in each solver
