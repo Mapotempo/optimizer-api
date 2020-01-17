@@ -591,5 +591,28 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert !result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id].include?('vehicle_0_')
     end
+
+    def test_with_activities
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:services] << {
+        id: 'service_with_activities',
+        visits_number: 4,
+        minimum_lapse: 1,
+        priority: 0,
+        activities: [{
+          duration: 0,
+          point_id: 'point_1'
+        },{
+          duration: 0,
+          point_id: 'point_6'
+        }]
+      }
+
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      routes_with_activities = result[:routes].select{ |r| r[:activities].collect{ |a| a[:service_id] }.any?{ |id| id&.include?('service_with_activities') } }
+      assert_equal 4, routes_with_activities.size # all activities scheduled (high priority)
+      assert_equal 1, routes_with_activities.collect{ |r| r[:vehicle_id] }.collect{ |id| id.split('_').slice(0,2) }.uniq.size # every activity on same vehicle
+      assert_equal 2, result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id]&.include?('service_with_activities') } }.flatten.collect{ |a| a[:point_id] }.uniq.size
+    end
   end
 end
