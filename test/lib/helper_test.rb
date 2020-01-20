@@ -30,4 +30,19 @@ class HelperTest < Minitest::Test
     assert Helper.merge_results(results)
     assert Helper.merge_results(results, false)
   end
+
+  def test_rounding_with_steps
+    decimal_max = 4
+
+    floats = (0..10**decimal_max - 1).collect{ |i| Rational(i, 10**decimal_max) }
+
+    (0..decimal_max).each{ |decimal|
+      (0..9).each{ |step|
+        rounded = floats.collect{ |i| i.to_f.round_with_steps(decimal, step) } # use round with steps on float
+        manual = floats.collect{ |i| (Rational(i, (1r / 10**decimal) / (step + 1)).round(0) * ((1r / 10**decimal) / (step + 1))).to_f.round(decimal + 1) } # Manually calculate using rational numbers
+
+        assert_equal manual, rounded, "floats[#{rounded.find_index.with_index{ |r, i| r - manual[i] != 0 }}].to_f.round_with_steps(#{decimal}, #{step}) does not produce the correct result"
+      }
+    }
+  end
 end

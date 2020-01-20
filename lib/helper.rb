@@ -129,6 +129,7 @@ module Enumerable
   #  [5, 15, 7].mean # => 9.0
   def mean
     return nil if empty?
+
     inject(0) { |sum, x| sum + x } / size.to_f
   end
 
@@ -137,6 +138,7 @@ module Enumerable
   #  [5, 15, 7].median # => 7
   def median(already_sorted = false)
     return nil if empty?
+
     sort! unless already_sorted
     m_pos = size / 2 # no to_f!
     size.odd? ? self[m_pos] : self[m_pos - 1..m_pos].mean
@@ -153,6 +155,7 @@ module Enumerable
   #  [5, 15, 10, 15].modes     # => [15] (Note that modes() returns an array)
   def modes(find_all = true)
     return nil if empty?
+
     histogram = each_with_object(Hash.new(0)) { |n, h| h[n] += 1 }
     modes = nil
     histogram.each_pair do |item, times|
@@ -160,5 +163,41 @@ module Enumerable
       modes = [times, item] if (modes && times > modes[0]) || (modes.nil? && times > 1)
     end
     !modes.nil? ? modes[1...modes.size] : nil
+  end
+end
+
+class Numeric
+  # rounds the value to the closests multiple of `num`
+  # https://en.wikipedia.org/wiki/Rounding#Rounding_to_other_values
+  def round_to_multiple_of(num)
+    (self / num).round(6).round(0) * num # .round(6).round(0) to prevent floating point errors
+  end
+
+  # rounds the number to the closests step in between [val.round(ndigits), val.round(ndigits) + 1/10**ndigits].
+  # Useful when rounding is performed to reduce the number of uniq elements.
+  #
+  # ndigits: the number of decimal places (when nsteps = 0)
+  #
+  # nsteps: the number of steps between val.round(ndigits) and val.round(ndigits) + 1/10**ndigits
+  #
+  # For example,
+  # array = [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
+  #
+  # With round():
+  # array.collect{ |val| val.round(1) }.uniq      :=>      [0.1, 0.2]                                                       # too little
+  # array.collect{ |val| val.round(2) }.uniq      :=>      [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2] # too much
+  #
+  # With nsteps the number of uniq elements between two decimals can be controlled:
+  # array.collect{ |val| val.round_with_steps(1, 0) }.uniq      :=>     [0.1, 0.2]                                                         # same with round(1)
+  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra step in between
+  # ...
+  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 9) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]   # same with round(2)
+  #
+  # Theoretically, val.round_with_steps(ndigits, nsteps) is
+  # equivalent to  val.round_to_multiple_of(1.0 / (nsteps + 1) / 10**ndigits )
+  def round_with_steps(ndigits, nsteps = 0)
+    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nsteps + 1.0)).round(ndigits) / (nsteps + 1.0)).round(ndigits + 1)
   end
 end

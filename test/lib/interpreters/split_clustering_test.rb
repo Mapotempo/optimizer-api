@@ -614,7 +614,7 @@ class SplitClusteringTest < Minitest::Test
       result = Marshal.load(File.binread('test/fixtures/max_split_poorly_populated_route_limit_result.bindump'))
       Interpreters::SplitClustering.remove_poor_routes(vrp, result)
 
-      assert_equal result[:unassigned], [], "remove_poor_routes shouldn't remove too many services"
+      assert_equal 0, result[:unassigned].size, 'remove_poor_routes should not remove any services from this result'
     end
 
     def test_max_split_functionality
@@ -623,8 +623,8 @@ class SplitClusteringTest < Minitest::Test
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
         result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
 
-        assert_equal result[:unassigned], [], 'There should be no unassigned services.'
         assert result[:routes].size <= 7, "There shouldn't be more than 7 routes -- it is #{result[:routes].size}"
+        assert_equal [], result[:unassigned], 'There should be no unassigned services.'
         return
       end
     end

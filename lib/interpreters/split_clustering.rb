@@ -358,7 +358,7 @@ module Interpreters
           true
         end
 
-        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, options[:entity], unit_symbols, cumulated_metrics)
+        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
         limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]),
                    strict_limit: centroid_strict_limits(vrp) }
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && options[:entity] != 'work_day'
@@ -401,7 +401,7 @@ module Interpreters
 
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
-        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, options[:entity], unit_symbols, cumulated_metrics, max_cut_metrics)
+        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics, max_cut_metrics)
 
         custom_distance = lambda do |a, b|
           custom_distance(a, b)
@@ -533,7 +533,7 @@ module Interpreters
         true # if not, they are compatible
       end
 
-      def collect_data_items_metrics(vrp, entity, unit_symbols, cumulated_metrics, max_cut_metrics = nil)
+      def collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics, max_cut_metrics = nil)
         data_items = []
         linked_objects = {}
 
@@ -541,18 +541,25 @@ module Interpreters
         vehicle_units = vrp.vehicles.collect{ |v| v.capacities.to_a.collect{ |capacity| capacity.unit.id } }.flatten.uniq
         depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
 
+        decimal = {
+          digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
+          steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
+        }
+
         (vrp.services + vrp.shipments).group_by{ |s|
-          if s.activity
-            s.activity.point
-          elsif s.delivery.point && depot_ids.include?(s.pickup.point.id)
-            s.delivery.point.id
-          elsif s.pickup.point && depot_ids.include?(s.delivery.point.id)
-            s.pickup.point.id
-          elsif s.activities.size.positive?
-            raise UnsupportedProblemError.new('Clustering is not supported yet if one service has serveral activies.')
-          end
-        }.each{ |point, set_at_point|
-          next if !point
+          location = if s.activity
+                      s.activity.point.location
+                    elsif s.delivery.point && depot_ids.include?(s.pickup.point.id) # if the delivery or pickup of a shipment is at the depot then this can be clustered like an ordinary service
+                      s.delivery.point.location
+                    elsif s.pickup.point && depot_ids.include?(s.delivery.point.id)
+                      s.pickup.point.location
+                    elsif s.activities.size.positive?
+                      raise UnsupportedProblemError.new('Clustering is not supported yet if one service has serveral activies.')
+                    end
+
+          [location.lat, location.lon].collect{ |coor| coor.round_with_steps(decimal[:digits], decimal[:steps]) } # group_by rounded lat/lon rounding
+        }.each{ |point_lat_lon, set_at_point|
+          next if !point_lat_lon # skip real shipments ('nil' group)
 
           set_at_point.group_by{ |s|
             related_skills = s.skills.to_a
@@ -574,8 +581,10 @@ module Interpreters
           }.each_with_index{ |(characteristics, sub_set), sub_set_index|
             unit_quantities = Hash.new(0)
 
-            if entity == 'work_day' || !vrp.matrices.empty? # use matrix
-              unit_quantities[:matrix_index] += point[:matrix_index]
+            point = sub_set[0].activity.point
+
+            if !vrp.matrices.empty? # use matrix if there is one
+              unit_quantities[:matrix_index] = point[:matrix_index]
             end
 
             sub_set.sort_by{ |s| - s.visits_number }.each_with_index{ |s, i|
