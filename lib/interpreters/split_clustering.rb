@@ -78,7 +78,7 @@ module Interpreters
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
               options = { cut_symbol: cut_symbol, entity: partition[:entity] }
               options[:restarts] = partition[:restarts] if partition[:restarts]
-              split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options)
+              split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
             }
             current_service_vrps = generated_service_vrps.flatten
           when 'hierarchical_tree'
@@ -258,6 +258,7 @@ module Interpreters
       c = nil
       score_hash = {}
       while restart < options[:restarts]
+        block&.call() # in case job is killed during restarts
         log "Restart #{restart}/#{options[:restarts]}", level: :debug
         c = BalancedKmeans.new
         c.max_iterations = options[:max_iterations]
