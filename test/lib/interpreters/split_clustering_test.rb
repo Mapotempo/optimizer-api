@@ -31,14 +31,14 @@ class SplitClusteringTest < Minitest::Test
       # then one of the sub-vrps replace the current vrp and it is split into two sub-vrps.
       # The routine continues until the current vrp is too small.
       # During this process max balance deviation is recorded and the process is restarted
-      # @regularity_restarts times so that clustering irregularity does not effect the results.
+      # regularity_restart times so that clustering irregularity does not effect the results.
       # Basically, we want the balance violations to be as small as possible.
 
       vrp = Marshal.dump(TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious')) # call load_vrp only once to not to dump for each restart
-
+      regularity_restart = 5
       balance_deviations = []
-      (1..@regularity_restarts).each{ |trial|
-        puts "Regularity trial: #{trial}/#{@regularity_restarts}"
+      (1..regularity_restart).each{ |trial|
+        puts "Regularity trial: #{trial}/#{regularity_restart}"
         max_balance_deviation = 0
 
         service_vrp = { vrp:  Marshal.load(vrp), service: :demo }
@@ -78,16 +78,16 @@ class SplitClusteringTest < Minitest::Test
       # That is, if the test fails there probably is a performance degredation.
       asserts = [
         {
-          condition: balance_deviations.count{ |max_dev| max_dev > 0.25 } <= (@regularity_restarts * 0.02).ceil,
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.25 } <= (regularity_restart * 0.02).ceil,
           message: 'The maximum balance deviation can be larger than 25% only very rarely -- <2% of the trials.'
         }, {
-          condition: balance_deviations.count{ |max_dev| max_dev > 0.21 } <= (@regularity_restarts * 0.20).ceil,
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.21 } <= (regularity_restart * 0.20).ceil,
           message: 'The maximum balance deviation sould not be larger than 21% for more than 20% of the trials.'
         }, {
-          condition: balance_deviations.count{ |max_dev| max_dev > 0.17 } <= (@regularity_restarts * 0.35).ceil,
+          condition: balance_deviations.count{ |max_dev| max_dev > 0.17 } <= (regularity_restart * 0.35).ceil,
           message: 'The maximum balance deviation sould not be larger than 17% for more than 35% of the trials.'
         }, {
-          condition: balance_deviations.count{ |max_dev| max_dev <= 0.135 } >= (@regularity_restarts * 0.45).floor,
+          condition: balance_deviations.count{ |max_dev| max_dev <= 0.135 } >= (regularity_restart * 0.45).floor,
           message: 'The maximum balance deviation sould be less than 13.5% most of the time -- >45% of the trials.'
         }
       ]
