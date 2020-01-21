@@ -542,10 +542,17 @@ module Interpreters
         vehicle_units = vrp.vehicles.collect{ |v| v.capacities.to_a.collect{ |capacity| capacity.unit.id } }.flatten.uniq
         depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
 
-        decimal = {
-          digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-          steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
-        }
+        decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance].empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
+                    {
+                      digits: 4, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
+                      steps: 5   # digits.steps 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
+                    }
+                  else
+                    {
+                      digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
+                      steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
+                    }
+                  end
 
         (vrp.services + vrp.shipments).group_by{ |s|
           location = if s.activity
@@ -563,7 +570,7 @@ module Interpreters
           next if !point_lat_lon # skip real shipments ('nil' group)
 
           set_at_point.group_by{ |s|
-            related_skills = s.skills.to_a
+            related_skills = s.skills.to_a.dup
             timewindows = s.activity&.timewindows || (s.pickup ? s.pickup.timewindows : s.delivery.timewindows)
             day_skills = compute_day_skills(timewindows)
 
@@ -610,7 +617,66 @@ module Interpreters
           }
         }
 
+        zip_dataitems(vrp, data_items, linked_objects) if !vrp.matrices.empty? && !vrp.matrices[0][:distance].empty?
+
         [data_items, cumulated_metrics, linked_objects]
+      end
+
+      def zip_dataitems(vrp, items, linked_objects)
+        vehicle_characteristics = generate_expected_characteristics(vrp.vehicles)
+
+        compatible_vehicles = Hash.new{}
+        items.each{ |data_item|
+          compatible_vehicles[data_item[2]] = vehicle_characteristics.collect.with_index{ |veh_char, veh_ind| veh_ind if compatible_characteristics?(data_item[4], veh_char) }.compact
+        }
+
+        max_distance = 50 # meters
+
+        c = CompleteLinkageMaxDistance.new
+
+        c.distance_function = lambda do |data_item_a, data_item_b|
+          # If there is no vehicle that can serve both points at the same time, make sure they are not merged
+          return max_distance + 1 if (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty?
+
+          [
+            vrp.matrices[0][:distance][data_item_a[3][:matrix_index]][data_item_b[3][:matrix_index]],
+            vrp.matrices[0][:distance][data_item_b[3][:matrix_index]][data_item_a[3][:matrix_index]]
+          ].min
+        end
+
+        # Cluster points closer than max_distance to eachother
+        clusterer = c.build(DataSet.new(data_items: items), max_distance)
+
+        # Correct items and linked_objects
+        clusterer.clusters.each{ |cluster|
+          next unless cluster.data_items.size > 1 # Didn't merge any items
+
+          item0 = items[items.index(cluster.data_items[0])]
+
+          cluster.data_items[1..-1].each{ |d_i|
+            # Merge linked_objects
+            linked_objects[item0[2]].concat(linked_objects.delete(d_i[2]))
+
+            # Merge items
+            index_i = items.index(d_i)
+            item_i = items[index_i]
+
+            # Transfer the load (duration, visits, quantity, etc.)
+            item_i[3].each{ |key, val|
+              next if key == :matrix_index
+
+              item0[3][key] += val
+            }
+
+            # Merge the characteristics (sticky, skills, days)
+            item0[4][:v_id] &= item_i[4][:v_id]
+            item0[4][:days] &= item_i[4][:days]
+            item0[4][:skills].concat item_i[4][:skills]
+            item0[4][:skills].uniq!
+
+            items.delete_at(index_i)
+          }
+        }
       end
 
       def generate_expected_characteristics(vehicles)
