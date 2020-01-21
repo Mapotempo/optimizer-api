@@ -359,7 +359,7 @@ module Interpreters
           true
         end
 
-        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics)
+        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, cumulated_metrics)
         limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]),
                    strict_limit: centroid_strict_limits(vrp) }
         centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && options[:entity] != 'work_day'
@@ -402,7 +402,7 @@ module Interpreters
 
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
-        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics, max_cut_metrics)
+        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, cumulated_metrics)
 
         custom_distance = lambda do |a, b|
           custom_distance(a, b)
@@ -534,7 +534,7 @@ module Interpreters
         true # if not, they are compatible
       end
 
-      def collect_data_items_metrics(vrp, unit_symbols, cumulated_metrics, max_cut_metrics = nil)
+      def collect_data_items_metrics(vrp, cumulated_metrics)
         data_items = []
         linked_objects = {}
 
@@ -608,19 +608,9 @@ module Interpreters
             # TODO : group sticky and skills (in expected characteristics too)
             data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, characteristics, nil, 0]
           }
-
-          next if !max_cut_metrics
-
-          unit_symbols.each{ |unit|
-            max_cut_metrics[unit] = [unit_quantities[unit], max_cut_metrics[unit]].max
-          }
         }
 
-        if max_cut_metrics
-          [data_items, cumulated_metrics, linked_objects, max_cut_metrics]
-        else
-          [data_items, cumulated_metrics, linked_objects]
-        end
+        [data_items, cumulated_metrics, linked_objects]
       end
 
       def generate_expected_characteristics(vehicles)
