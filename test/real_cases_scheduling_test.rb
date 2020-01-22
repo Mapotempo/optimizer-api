@@ -64,6 +64,21 @@ class HeuristicTest < Minitest::Test
       assert_equal result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.size, result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.uniq.size
     end
 
+    def test_without_same_point_day
+      vrp = TestHelper.load_vrp(self)
+      expecting = vrp.visits
+      vrp[:configuration][:resolution][:solver] = false
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_equal expecting, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+      unassigned = result[:unassigned].size
+
+      vrp = TestHelper.load_vrp(self)
+      vrp[:configuration][:resolution][:solver] = true
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert unassigned >= result[:unassigned].size
+      assert_equal expecting, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+    end
+
     def test_instance_clustered
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
