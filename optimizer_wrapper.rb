@@ -223,7 +223,8 @@ module OptimizerWrapper
               services_to_reinject << vrp.services.slice!(index)
             end
 
-            next if una_service[:detail][:skills] && una_service[:detail][:skills].any?{ |skill| skill.include?('cluster') } || services_vrps.size == 1
+            next if una_service[:detail][:skills]&.any?{ |skill| skill.include?('cluster') } || services_vrps.size == 1
+
             una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
           }
 
@@ -584,7 +585,7 @@ module OptimizerWrapper
   def self.check_result_consistency(expected_value, results)
     results.each{ |result|
       nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
-      nb_unassigned = result[:unassigned].select{ |unassigned| unassigned[:service_id] }.size
+      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:shipment_id] }
 
       log 'Wrong number of visits returned in result', level: :warn if expected_value != nb_assigned + nb_unassigned
     }
