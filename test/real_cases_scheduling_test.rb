@@ -216,30 +216,38 @@ class HeuristicTest < Minitest::Test
       vrps = TestHelper.load_vrps(self)
 
       unassigned_visits = []
+      expected = vrps.collect(&:visits).reduce(&:+)
+      seen = 0
       vrps.each_with_index{ |vrp, vrp_i|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << result[:unassigned].size
+        seen += result[:unassigned].size + result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id] }.size }.flatten.reduce(&:+)
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal 441, unassigned_visits.sum, "Expecting 441 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
+      assert_equal 320, unassigned_visits.sum, "Expecting 320 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_performance_13vl
       vrps = TestHelper.load_vrps(self)
 
       unassigned_visits = []
+      expected = vrps.collect(&:visits).reduce(&:+)
+      seen = 0
       vrps.each_with_index{ |vrp, vrp_i|
         puts "solving problem #{vrp_i + 1}/#{vrps.size}"
         vrp.preprocessing_partitions = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << result[:unassigned].size
+        seen += result[:unassigned].size + result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id] }.size }.flatten.reduce(&:+)
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal 312, unassigned_visits.sum, "Expecting 312 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
+      assert_equal 305, unassigned_visits.sum, "Expecting 305 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_fill_days_and_post_processing

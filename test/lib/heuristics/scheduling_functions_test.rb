@@ -219,5 +219,23 @@ class HeuristicTest < Minitest::Test
         s.check_solution_validity
       end
     end
+
+    def test_compute_next_insertion_cost_when_activities
+      s = Heuristics::Scheduling.new(TestHelper.create(VRP.basic), [], start: 0, end: 365, shift: 0)
+
+      service = { id: 'service_2', point_id: 'point_2', duration: 0 }
+      timewindow = { start_time: 47517.6, arrival_time: 48559.4, final_time: 48559.4, setup_duration: 0 }
+      route_data = { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 },
+                                     { id: 'service_with_activities', point_id: 'point_1', start: 47517.6, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 }],
+                     tw_end: 100000, router_dimension: :time, matrix_id: 'm1' }
+      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_services_data.dump')))
+      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_matrices.dump')))
+      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_indices.dump')))
+
+      s.send(:insertion_cost_with_tw, timewindow, route_data, service, 1)
+
+      assert_equal 0, route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:activity]
+      assert_equal 'point_1', route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:point_id]
+    end
   end
 end

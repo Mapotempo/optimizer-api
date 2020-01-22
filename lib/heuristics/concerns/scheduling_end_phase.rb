@@ -42,7 +42,7 @@ module SchedulingEndPhase
         found[id] = [[vehicle, day]]
         @missing_visits[vehicle].find{ |missing| missing[:id] == best_cost[0] }[:used_days].each{ |assigned_day| found[id] << [vehicle, assigned_day] }
       end
-      insert_point_in_route(@candidate_routes[vehicle][day], best_cost[1][:cost], day)
+      insert_point_in_route(@candidate_routes[vehicle][day], best_cost[1][:cost])
       @output_tool&.output_scheduling_insert([day], id)
       @services_data[id][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
       @missing_visits[vehicle].find{ |missing| missing[:id] == best_cost[0] }[:used_days] << day
