@@ -335,6 +335,9 @@ module Heuristics
         previous_end = stop[:end]
       }
 
+      raise OptimizerWrapper::SchedulingHeuristicError, 'Vehicle end violated after updating route' if day_route.size.positive? &&
+                                                                                                       day_route.last[:end] + matrix(full_route, day_route.last[:point_id], full_route[:end_point_id]) > full_route[:tw_end]
+
       day_route
     end
 
