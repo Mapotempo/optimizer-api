@@ -2,40 +2,40 @@ source 'https://rubygems.org'
 
 gem 'require_all'
 
-gem 'rack'
-gem 'rakeup'
 gem 'puma'
-gem 'thin'
+gem 'rack'
 gem 'rack-cors'
+gem 'rakeup'
+gem 'thin'
 
 gem 'grape', '<0.19.0' # TODO: Grape 1.2.4 reduces performances
-gem 'grape_logging'
 gem 'grape-entity'
 gem 'grape-swagger', '<0.26.0' # TODO: Waiting Grape 1+
 gem 'grape-swagger-entity', '<0.1.6' # TODO: Waiting Grape 1+
+gem 'grape_logging'
 
-gem 'i18n'
-gem 'rack-contrib'
-gem 'rest-client'
-gem 'activemodel'
 gem 'active_hash', github: 'Mapotempo/active_hash'
+gem 'activemodel'
+gem 'i18n'
 gem 'nokogiri'
+gem 'rack-contrib'
+gem 'redis', '<4'
 gem 'resque', '<2'
 gem 'resque-status', '>0.4'
-gem 'redis', '<4'
+gem 'rest-client'
 
 gem 'ai4r'
 gem 'sim_annealing'
 
+gem 'polylines'
 gem 'rgeo'
 gem 'rgeo-geojson'
-gem 'polylines'
 
 gem 'google-protobuf', '>=3'
 
 group :development, :test do
+  gem 'benchmark-ips' # to in-place benchmark of different implementations
   gem 'byebug'
-  gem 'benchmark-ips'
 
   # For linting and offline code analysis
   gem 'rubocop'
