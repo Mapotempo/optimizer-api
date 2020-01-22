@@ -299,7 +299,6 @@ module Heuristics
 
     def update_route(full_route, first_index, first_start = nil)
       # recomputes each stop associated values (start, arrival, setup ... times) only according to their insertion order
-      # TODO : use in insert_point_in_route
       day_route = full_route[:current_route]
       day_route if first_index > day_route.size
 
@@ -524,21 +523,22 @@ module Heuristics
       route = route_data[:current_route]
 
       if route.empty?
-        return [nil, nil, nil, matrix(route_data, route_data[:start_point_id], service_inserted[:point_id]) + matrix(route_data, service_inserted[:point_id], route_data[:end_point_id])]
+        matrix(route_data, route_data[:start_point_id], service_inserted[:point_id]) + matrix(route_data, service_inserted[:point_id], route_data[:end_point_id])
       elsif next_service
         dist_to_next = matrix(route_data, service_inserted[:point_id], next_service[:point_id])
+        shift = 0
         if can_ignore_tw(service_inserted[:id], next_service[:id])
-          return [inserted_final_time, inserted_final_time, inserted_final_time + service_inserted[:duration], service_inserted[:duration]]
+          shift += service_inserted[:duration]
         else
           next_service[:tw] = @services_data[next_service[:id]][:tws_sets][next_service[:activity]]
           next_service[:duration] = @services_data[next_service[:id]][:durations][next_service[:activity]]
-          next_start, next_arrival, next_end = compute_tw_for_next(inserted_final_time, next_service, dist_to_next, route_data[:global_day_index])
-          shift = next_end - next_service[:end]
-
-          return [next_start, next_arrival, next_end, shift]
+          next_end = compute_tw_for_next(inserted_final_time, next_service, dist_to_next, route_data[:global_day_index])
+          shift += next_end - next_service[:end]
         end
+
+        shift
       else
-        return [nil, nil, nil, inserted_final_time - route.last[:end]]
+        inserted_final_time - route.last[:end]
       end
     end
 
@@ -553,7 +553,7 @@ module Heuristics
       new_arrival = new_start + dist_from_inserted + route_next[:considered_setup_duration]
       new_end = new_arrival + route_next[:duration]
 
-      [new_start, new_arrival, new_end]
+      new_end
     end
 
     def acceptable?(shift, route_data, position)
@@ -592,13 +592,19 @@ module Heuristics
       original_next_activity = route_data[:current_route][position][:activity] if route_data[:current_route][position]
       nb_activities_index = route_data[:current_route][position] ? @services_data[route_data[:current_route][position][:id]][:nb_activities] - 1 : 0
 
-      next_start, next_arrival, next_end, shift, activity, time_back_to_depot, tw_accepted = (0..nb_activities_index).collect{ |activity|
+      shift, activity, time_back_to_depot, tw_accepted = (0..nb_activities_index).collect{ |activity|
         if route_data[:current_route][position]
           route_data[:current_route][position][:activity] = activity
           route_data[:current_route][position][:point_id] = @services_data[route_data[:current_route][position][:id]][:points_ids][activity]
         end
 
-        next_start, next_arrival, next_end, shift = compute_shift(route_data, service, timewindow[:final_time], route_data[:current_route][position])
+        shift = compute_shift(route_data, service, timewindow[:final_time], route_data[:current_route][position])
+        if route_data[:current_route][position + 1] && activity != original_next_activity
+          next_id = route_data[:current_route][position][:id]
+          next_next_point_id = route_data[:current_route][position + 1][:point_id]
+          shift += matrix(route_data, @services_data[next_id][:points_ids][activity], next_next_point_id) -
+                   matrix(route_data, @services_data[next_id][:points_ids][original_next_activity], next_next_point_id)
+        end
         acceptable_shift, computed_shift = acceptable?(shift, route_data, position)
         time_back_to_depot = if position == route_data[:current_route].size
           timewindow[:final_time] + matrix(route_data, service[:point_id], route_data[:end_point_id])
@@ -612,12 +618,13 @@ module Heuristics
         acceptable_shift_for_itself = end_respected && duration_respected
         tw_accepted = acceptable_shift && acceptable_shift_for_itself && time_back_to_depot <= route_data[:tw_end]
 
-        [next_start, next_arrival, next_end, shift, activity, time_back_to_depot, tw_accepted]
+        [shift, activity, time_back_to_depot, tw_accepted]
       }.min_by{ |next_info| next_info[5] }
 
       route_data[:current_route][position][:activity] = original_next_activity if route_data[:current_route][position]
+      route_data[:current_route][position][:point_id] = @services_data[route_data[:current_route][position][:id]][:points_ids][original_next_activity] if route_data[:current_route][position]
 
-      [activity, tw_accepted, next_start, next_arrival, next_end, shift, time_back_to_depot]
+      [activity, tw_accepted, shift, time_back_to_depot]
     end
 
     def compute_value_at_position(route_data, service, position, in_adjust)
@@ -649,7 +656,7 @@ module Heuristics
         potential_tws = find_timewindows(previous, { id: service, point_id: service_data[:points_ids][activity], setup_duration: service_data[:setup_durations][activity], duration: duration, tw: service_data[:tws_sets][activity] }, route_data)
 
         potential_tws.each{ |tw|
-          next_activity, tw_accepted, next_start, next_arrival, next_end, shift, back_depot = insertion_cost_with_tw(tw, route_data, { id: service, point_id: service_data[:points_ids][activity], duration: duration }, position)
+          next_activity, tw_accepted, shift, back_depot = insertion_cost_with_tw(tw, route_data, { id: service, point_id: service_data[:points_ids][activity], duration: duration }, position)
           service_info = { id: service, tw: service_data[:tws_sets][activity], duration: service_data[:durations][activity] }
           acceptable_shift_for_group = in_adjust ? true : acceptable_for_group?(service_info, tw)
 
@@ -658,16 +665,12 @@ module Heuristics
           values << {
             id: service,
             point: service_data[:points_ids][activity],
-            shift: shift,
             start: tw[:start_time],
             arrival: tw[:arrival_time],
             end: tw[:final_time],
             position: position,
             considered_setup_duration: tw[:setup_duration],
             next_activity: next_activity,
-            next_start_time: next_start,
-            next_arrival_time: next_arrival,
-            next_final_time: next_end,
             potential_shift: tw[:max_shift],
             additional_route_time: [0, shift - duration - tw[:setup_duration]].max, # TODO : why using max ??min_by in select_point will chose the one that reduces work duration if we keep negative value possible
             back_to_depot: back_depot,
@@ -714,7 +717,7 @@ module Heuristics
         if !insertion_costs.empty?
           # there are services we can add
           best_index = select_point(insertion_costs)
-          insert_point_in_route(route_data, best_index, day)
+          insert_point_in_route(route_data, best_index)
 
           if @output_tool
             days = @candidate_routes[vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == best_index[:id] } }.keys
@@ -736,27 +739,29 @@ module Heuristics
       end
     end
 
-    def add_same_freq_located_points(best_index, route_data)
-      start = best_index[:end]
-      max_shift = best_index[:potential_shift]
-      additional_durations = @services_data[best_index[:id]][:durations].first + best_index[:considered_setup_duration]
-      @same_located[best_index[:id]].each_with_index{ |service_id, i|
-        route_data[:current_route].insert(best_index[:position] + i + 1,
-                                          id: service_id,
-                                          point_id: best_index[:point],
-                                          start: start,
-                                          arrival: start,
-                                          end: start + @services_data[service_id][:durations].first,
-                                          considered_setup_duration: 0,
-                                          max_shift: max_shift ? max_shift - additional_durations : nil,
-                                          number_in_sequence: 1,
-                                          activity: 0) # when using same_point_day, points in same_located relation can not have serveral activities
-        additional_durations += @services_data[service_id][:durations].first
-        @to_plan_service_ids.delete(service_id)
-        @candidate_services_ids.delete(service_id)
-        start += @services_data[service_id][:durations].first
-        @services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
-      }
+    def add_same_freq_located_points(best_index, route_data, adjusting_candidate_routes)
+      unless adjusting_candidate_routes
+        start = best_index[:end]
+        max_shift = best_index[:potential_shift]
+        additional_durations = @services_data[best_index[:id]][:durations].first + best_index[:considered_setup_duration]
+        @same_located[best_index[:id]].each_with_index{ |service_id, i|
+          route_data[:current_route].insert(best_index[:position] + i + 1,
+                                            id: service_id,
+                                            point_id: best_index[:point],
+                                            start: start,
+                                            arrival: start,
+                                            end: start + @services_data[service_id][:durations].first,
+                                            considered_setup_duration: 0,
+                                            max_shift: max_shift ? max_shift - additional_durations : nil,
+                                            number_in_sequence: 1,
+                                            activity: 0) # when using same_point_day, points in same_located relation can not have serveral activities
+          additional_durations += @services_data[service_id][:durations].first
+          @to_plan_service_ids.delete(service_id)
+          @candidate_services_ids.delete(service_id)
+          start += @services_data[service_id][:durations].first
+          @services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
+        }
+      end
     end
 
     def try_to_add_new_point(vehicle, day, route_data)
@@ -769,9 +774,8 @@ module Heuristics
       return nil if best_index.nil?
 
       best_index[:end] = best_index[:end] - @services_data[best_index[:id]][:group_duration] + @services_data[best_index[:id]][:durations].first if @same_point_day
-      insert_point_in_route(route_data, best_index, day)
+      insert_point_in_route(route_data, best_index)
       @services_data[best_index[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
-      add_same_freq_located_points(best_index, route_data) if @same_point_day
 
       @to_plan_service_ids.delete(best_index[:id])
 
@@ -839,7 +843,6 @@ module Heuristics
 
         next if !(route.empty? && possibles.last)
 
-        possibles.last[:shift] = matrix(route_data, route_data[:start_point_id], possibles.last[:point]) + matrix(route_data, possibles.last[:point], route_data[:end_point_id]) + (@same_point_day && !in_adjust ? @services_data[service][:group_duration] : @services_data[service][:durations][possibles.last[:activity]])
         possibles.last[:additional_route_time] = matrix(route_data, route_data[:start_point_id], possibles.last[:point]) + matrix(route_data, possibles.last[:point], route_data[:end_point_id])
       }
 
@@ -913,7 +916,7 @@ module Heuristics
       }
     end
 
-    def insert_point_in_route(route_data, point_to_add, day)
+    def insert_point_in_route(route_data, point_to_add, adjusting_candidate_routes = false)
       ### modify [route_data] such that [point_to_add] is in the route ###
       current_route = route_data[:current_route]
       @candidate_services_ids.delete(point_to_add[:id])
@@ -931,40 +934,13 @@ module Heuristics
                            number_in_sequence: 1,
                            activity: point_to_add[:activity])
 
+      add_same_freq_located_points(point_to_add, route_data, adjusting_candidate_routes) if @same_point_day
+
       if point_to_add[:position] < current_route.size - 1
         current_route[point_to_add[:position] + 1][:activity] = point_to_add[:next_activity]
         current_route[point_to_add[:position] + 1][:point_id] = @services_data[current_route[point_to_add[:position] + 1][:id]][:points_ids][point_to_add[:next_activity]]
-        current_route[point_to_add[:position] + 1][:start] = point_to_add[:next_start_time]
-        current_route[point_to_add[:position] + 1][:arrival] = point_to_add[:next_arrival_time]
-        current_route[point_to_add[:position] + 1][:end] = point_to_add[:next_final_time]
-        current_route[point_to_add[:position] + 1][:max_shift] = current_route[point_to_add[:position] + 1][:max_shift] ? current_route[point_to_add[:position] + 1][:max_shift] - point_to_add[:shift] : nil
-        # TODO : use update route function for that
-        if !point_to_add[:shift].zero?
-          shift = point_to_add[:shift]
-          (point_to_add[:position] + 2..current_route.size - 1).each{ |point|
-            if shift.positive?
-              initial_shift_with_previous = current_route[point][:start] - (current_route[point - 1][:end] - shift)
-              shift = [shift - initial_shift_with_previous, 0].max
-              current_route[point][:start] += shift
-              current_route[point][:arrival] += shift
-              current_route[point][:end] += shift
-              current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
-            else
-              new_potential_start = current_route[point][:start] + shift
-              service_tw = can_ignore_tw(current_route[point - 1][:id], current_route[point][:id]) ?
-                           nil :
-                           find_corresponding_timewindow(day, current_route[point][:arrival], @services_data[current_route[point][:id]][:tws_sets][current_route[point][:activity]], current_route[point][:end] - current_route[point][:arrival])
-              soonest_authorized = (@services_data[current_route[point][:id]][:tws_sets][current_route[point][:activity]].empty? || !service_tw ?
-                                   new_potential_start :
-                                   service_tw[:start] - matrix(route_data, current_route[point - 1][:point_id], current_route[point][:point_id]) - current_route[point][:considered_setup_duration])
-              shift += (soonest_authorized - new_potential_start) if soonest_authorized > new_potential_start
-              current_route[point][:start] += shift
-              current_route[point][:arrival] += shift
-              current_route[point][:end] += shift
-              current_route[point][:max_shift] = current_route[point][:max_shift] ? current_route[point][:max_shift] - shift : nil
-            end
-          }
-        end
+
+        update_route(route_data, point_to_add[:position] + 1)
       end
     end
 
@@ -1090,7 +1066,7 @@ module Heuristics
         best_index = find_best_index(service[:id], @candidate_routes[vehicle][day], true)
 
         if best_index
-          insert_point_in_route(@candidate_routes[vehicle][day], best_index, day)
+          insert_point_in_route(@candidate_routes[vehicle][day], best_index, true)
           @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:id] == service[:id] }[:number_in_sequence] = visit_number
 
           @services_data[service[:id]][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
