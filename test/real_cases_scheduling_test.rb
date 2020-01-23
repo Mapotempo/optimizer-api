@@ -71,6 +71,7 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expecting, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
       unassigned = result[:unassigned].size
+      assert_equal 35, unassigned
 
       vrp = TestHelper.load_vrp(self)
       vrp[:configuration][:resolution][:solver] = true

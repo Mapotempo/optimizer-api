@@ -588,6 +588,11 @@ class HeuristicTest < Minitest::Test
 
     def test_with_activities
       vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:vehicles].each{ |v|
+        v[:sequence_timewindows].each{ |tw|
+          tw[:end] = 10000
+        }
+      }
       vrp[:services] << {
         id: 'service_with_activities',
         visits_number: 4,
@@ -595,10 +600,10 @@ class HeuristicTest < Minitest::Test
         priority: 0,
         activities: [{
           duration: 0,
-          point_id: 'point_1'
+          point_id: 'point_2'
         }, {
           duration: 0,
-          point_id: 'point_6'
+          point_id: 'point_10'
         }]
       }
 

@@ -525,14 +525,14 @@ module Heuristics
       if route.empty?
         matrix(route_data, route_data[:start_point_id], service_inserted[:point_id]) + matrix(route_data, service_inserted[:point_id], route_data[:end_point_id])
       elsif next_service
-        dist_to_next = matrix(route_data, service_inserted[:point_id], next_service[:point_id])
+        time_to_next = matrix(route_data, service_inserted[:point_id], next_service[:point_id])
         shift = 0
         if can_ignore_tw(service_inserted[:id], next_service[:id])
           shift += service_inserted[:duration]
         else
           next_service[:tw] = @services_data[next_service[:id]][:tws_sets][next_service[:activity]]
           next_service[:duration] = @services_data[next_service[:id]][:durations][next_service[:activity]]
-          next_end = compute_tw_for_next(inserted_final_time, next_service, dist_to_next, route_data[:global_day_index])
+          next_end = compute_tw_for_next(inserted_final_time, next_service, time_to_next, route_data[:global_day_index])
           shift += next_end - next_service[:end]
         end
 
@@ -944,14 +944,13 @@ module Heuristics
       end
     end
 
-    def matrix(route_data, start, arrival, dimension = nil)
+    def matrix(route_data, start, arrival, dimension = :time)
       ### return [dimension] between [start] and [arrival] ###
       if start.nil? || arrival.nil?
         0
       else
         start = @indices[start] if start.is_a?(String)
         arrival = @indices[arrival] if arrival.is_a?(String)
-        dimension = route_data[:router_dimension] if dimension.nil?
 
         @matrices.find{ |matrix| matrix[:id] == route_data[:matrix_id] }[dimension][start][arrival]
       end
