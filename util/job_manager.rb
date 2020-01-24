@@ -42,6 +42,10 @@ module OptimizerWrapper
       services_vrps = Marshal.load(Base64.decode64(options['services_vrps']))
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       result = OptimizerWrapper.define_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+        if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
+          tick # call tick in case job is killed
+          next # if not go back to optimization
+        end
         at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         @killed && wrapper.kill && return # Stops the worker if the job is killed
         @wrapper = wrapper
