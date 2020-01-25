@@ -516,7 +516,7 @@ class HeuristicTest < Minitest::Test
       routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
       routes.first.vehicle.id = 'ANDALUCIA 1'
       routes.first.mission_ids = ['1810', '1623', '2434', '8508']
-      routes.first.day = 2
+      routes.first.indice = 2
       vrp.routes = routes
 
       expecting = vrp.routes.first.mission_ids
@@ -541,7 +541,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
       vrp.routes.first.vehicle.id = vehicle_id
-      vrp.routes.first.day = day
+      vrp.routes.first.indice = day
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expected_nb_visits, result[:routes].collect{ |r| r[:activities].size - 2 }.flatten.sum + result[:unassigned].size
@@ -556,7 +556,7 @@ class HeuristicTest < Minitest::Test
       vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [{ start: 31500, end: 43500 }]
       vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
       vrp.routes.first.vehicle.id = vehicle_id
-      vrp.routes.first.day = day
+      vrp.routes.first.indice = day.to_i
 
       assert_raises OptimizerWrapper::UnsupportedProblemError do
         periodic = Interpreters::PeriodicVisits.new(vrp)
@@ -568,7 +568,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
       vrp.routes.first.vehicle.id = 'BALEARES'
-      vrp.routes.first.day = 300
+      vrp.routes.first.indice = 300
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 36, result[:unassigned].size
@@ -612,6 +612,90 @@ class HeuristicTest < Minitest::Test
       assert_equal 4, routes_with_activities.size # all activities scheduled (high priority)
       assert_equal 1, routes_with_activities.collect{ |r| r[:vehicle_id] }.collect{ |id| id.split('_').slice(0, 2) }.uniq.size # every activity on same vehicle
       assert_equal 2, result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id]&.include?('service_with_activities') } }.flatten.collect{ |a| a[:point_id] }.uniq.size
+    end
+
+    def test_unavailability_in_schedule
+      vrp = VRP.scheduling
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 4, result[:routes].size
+
+      vrp[:configuration][:schedule][:unavailable_indices] = [2]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 3, result[:routes].size
+      assert(result[:routes].collect{ |r| r[:vehicle_id] }.none?{ |id| id.split.last == 2 })
+
+      # with date :
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule] = {
+        range_date: {
+          start: Date.new(2017, 1, 2),
+          end: Date.new(2017, 1, 5)
+        }
+      }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 4, result[:routes].size
+
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule] = {
+        range_date: {
+          start: Date.new(2017, 1, 2),
+          end: Date.new(2017, 1, 5)
+        }
+      }
+      vrp[:configuration][:schedule][:unavailable_date] = [Date.new(2017, 1, 4)]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 3, result[:routes].size
+      assert(result[:routes].collect{ |r| r[:vehicle_id] }.none?{ |id| id.split.last == 3 })
+    end
+
+    def test_make_start_tuesday
+      problem = VRP.scheduling
+      problem[:vehicles].first[:id] = 'vehicle'
+      problem[:vehicles].first[:timewindow] = nil
+      problem[:vehicles].first[:sequence_timewindows] = [{
+        start: 0,
+        end: 100,
+        day_index: 0
+      }, {
+        start: 0,
+        end: 200,
+        day_index: 1
+      }, {
+        start: 0,
+        end: 300,
+        day_index: 2
+      }, {
+        start: 0,
+        end: 400,
+        day_index: 3
+      }, {
+        start: 0,
+        end: 500,
+        day_index: 4
+      }]
+      problem[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
+      problem[:services][1][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 2 }]
+      problem[:services][2][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 3 }]
+      problem[:configuration][:schedule][:range_indices] = { start: 1, end: 3 }
+
+      vrp = TestHelper.create(problem)
+
+      periodic = Interpreters::PeriodicVisits.new(vrp)
+      generated_vehicles = periodic.generate_vehicles(vrp)
+      assert_equal(['vehicle_1', 'vehicle_2', 'vehicle_3'], generated_vehicles.collect{ |v| v[:id] })
+      assert_equal([1, 2, 3], generated_vehicles.collect{ |v| v[:global_day_index] })
+
+      s = Heuristics::Scheduling.new(vrp, generated_vehicles)
+      generated_starting_routes = s.instance_variable_get(:@candidate_routes)
+      assert_equal([1, 2, 3], generated_starting_routes['vehicle'].keys)
+      assert_equal([200, 300, 400], generated_starting_routes['vehicle'].collect{ |_day, route_data| route_data[:tw_end] }) # correct timewindow was provided
+
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      assert_equal(['vehicle_1', 'vehicle_2', 'vehicle_3'], result[:routes].collect{ |r| r[:vehicle_id] })
+      result[:routes].each{ |route|
+        assert_equal 2, route[:activities].size
+      }
+      assert_equal(['tue_1', 'wed_1', 'thu_1'], result[:routes].collect{ |r| r[:activities][1][:day_week] })
     end
   end
 end

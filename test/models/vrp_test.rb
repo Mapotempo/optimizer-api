@@ -21,20 +21,26 @@ module Models
   class VrpTest < Minitest::Test
     include Rack::Test::Methods
 
-    def test_schedule_range_computation
-      vrp = VRP.scheduling_seq_timewindows
-      vrp = TestHelper.create(vrp)
-
-      assert_equal 10, vrp.schedule_indices[1]
-
-      vrp = VRP.scheduling_seq_timewindows
-      vrp[:configuration][:schedule][:range_indices] = nil
-      vrp[:configuration][:schedule][:range_date] = {
-        start: Date.new(2017, 1, 15),
-        end: Date.new(2017, 1, 27)
+    def test_deduced_range_indices
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule] = {
+        range_date: {
+          start: Date.new(2020, 1, 1), # wednesday
+          end: Date.new(2020, 1, 6) # saturday
+        }
       }
-      vrp = TestHelper.create(vrp)
-      assert_equal 12, vrp.schedule_indices[1]
+
+      new_vrp = TestHelper.create(vrp)
+      assert_equal({ start: 2, end: 7 }, new_vrp.schedule_range_indices)
+
+      vrp[:configuration][:schedule] = {
+        range_date: {
+          start: Date.new(2019, 12, 30), # wednesday
+          end: Date.new(2020, 1, 6) # saturday
+        }
+      }
+      new_vrp = TestHelper.create(vrp)
+      assert_equal({ start: 0, end: 7 }, new_vrp.schedule_range_indices)
     end
 
     def test_visits_computation
@@ -56,11 +62,38 @@ module Models
     def test_vrp_scheduling
       vrp = VRP.toy
       vrp = TestHelper.create(vrp)
-      assert !vrp.scheduling?
+      assert !vrp.schedule_range_indices
 
       vrp = VRP.scheduling_seq_timewindows
       vrp = TestHelper.create(vrp)
-      assert vrp.scheduling?
+      assert vrp.schedule_range_indices
+    end
+
+    def test_month_indice_generation
+      problem = VRP.basic
+      problem[:relations] = [{
+        type: 'vehicle_group_duration_on_months',
+        linked_vehicle_ids: ['vehicle_0'],
+        lapse: 2,
+        periodicity: 1
+      }]
+      problem[:configuration][:preprocessing]
+      problem[:configuration][:schedule] = {
+        range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
+      }
+
+      vrp = TestHelper.create(problem)
+      assert_equal [[4], [5]], vrp.schedule_months_indices
+    end
+
+    def test_unavailable_visit_day_date_transformed_into_indice
+      vrp = VRP.basic
+      vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
+      vrp[:services][0][:unavailable_visit_day_date] = [Date.new(2020, 1, 1)]
+      vrp[:services][1][:unavailable_visit_day_date] = [Date.new(2020, 1, 2)]
+      created_vrp = TestHelper.create(vrp)
+      assert_equal [2], created_vrp.services[0].unavailable_visit_day_indices
+      assert_equal [3], created_vrp.services[1].unavailable_visit_day_indices
     end
   end
 end

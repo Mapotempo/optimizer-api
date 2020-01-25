@@ -78,10 +78,9 @@ module Models
     field :restitution_csv, default: false
     field :restitution_allow_empty_result, default: false
 
-    field :schedule_range_indices, default: nil
-    field :schedule_range_date, default: nil
-    field :schedule_unavailable_indices, default: nil
-    field :schedule_unavailable_date, default: nil
+    field :schedule_range_indices, default: nil # extends schedule_range_date
+    field :schedule_unavailable_indices, default: nil  # extends unavailable_date
+    field :schedule_months_indices, default: []
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -122,13 +121,95 @@ module Models
       Models.delete_all if delete
 
       vrp = super({})
-
+      self.check_consistency(hash)
+      self.generate_schedule_indices_from_date(hash) unless hash.empty? || hash[:configuration].nil?
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
         vrp.send("#{key}=", hash[key]) if hash[key]
       }
 
       vrp
+    end
+
+    def self.check_consistency(hash)
+      raise DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
+                                                                                                                              (!hash[:configuration][:schedule] || hash[:configuration][:schedule][:range_indice])
+    end
+
+    def self.generate_schedule_indices_from_date(hash)
+      return hash if !hash[:configuration] ||
+                     !hash[:configuration][:schedule] ||
+                     hash[:configuration][:schedule][:range_indices]
+
+      start_indice = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1
+      end_indice = (hash[:configuration][:schedule][:range_date][:end].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
+
+      # remove service unavailable_visit_day_date
+      [hash[:services].to_a + hash[:shipments].to_a].flatten.each{ |s|
+        next if s[:unavailable_visit_day_date].to_a.empty?
+
+        s[:unavailable_visit_day_indices] = [] unless s[:unavailable_visit_day_indices]
+        s[:unavailable_visit_day_indices] += s[:unavailable_visit_day_date].to_a.collect{ |unavailable_date|
+          (unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
+        }.compact
+        s.delete(:unavailable_visit_day_date)
+      }
+
+      # remove vehicle unavailable_work_date
+      hash[:vehicles].each{ |vehicle|
+        next if vehicle[:unavailable_work_date].to_a.empty?
+
+        vehicle[:unavailable_work_day_indices] = [] unless vehicle[:unavailable_work_day_indices]
+        vehicle[:unavailable_work_day_indices] += vehicle[:unavailable_work_date].collect{ |unavailable_date|
+          (unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
+        }.compact
+        vehicle.delete(:unavailable_work_date)
+      }
+
+      # remove schedule unavailable_date
+      if hash[:configuration][:schedule]
+        hash[:configuration][:schedule][:unavailable_indices] = [] unless hash[:configuration][:schedule][:unavailable_indices]
+        hash[:configuration][:schedule][:unavailable_indices] += hash[:configuration][:schedule][:unavailable_date].to_a.collect{ |date|
+          (date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
+        }.compact
+        hash[:configuration][:schedule].delete(:unavailable_date)
+      end
+
+      # provide months
+      months_indices = []
+      current_month = hash[:configuration][:schedule][:range_date][:start].to_date.month
+      current_indices = []
+      current_index = start_indice
+      (hash[:configuration][:schedule][:range_date][:start].to_date..hash[:configuration][:schedule][:range_date][:end].to_date).each{ |date|
+        if date.month == current_month
+          current_indices << current_index
+        else
+          months_indices << current_indices
+          current_indices = [current_index]
+          current_month = date.month
+        end
+
+        current_index += 1
+      }
+      months_indices << current_indices
+      hash[:configuration][:schedule][:month_indices] = months_indices
+
+      # convert route dates into indices
+      hash[:routes]&.each{ |route|
+        next if route[:indice]
+
+        route[:indice] = (route[:date].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
+        route.delete(:date)
+      }
+
+      # remove schedule_range_date
+      hash[:configuration][:schedule][:range_indices] = {
+        start: start_indice,
+        end: end_indice
+      }
+      hash[:configuration][:schedule].delete(:range_date)
+
+      hash
     end
 
     def configuration=(configuration)
@@ -186,9 +267,8 @@ module Models
 
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
-      self.schedule_range_date = schedule[:range_date]
       self.schedule_unavailable_indices = schedule[:unavailable_indices]
-      self.schedule_unavailable_date = schedule[:unavailable_date]
+      self.schedule_months_indices = schedule[:month_indices]
     end
 
     def services_duration
@@ -210,20 +290,6 @@ module Models
 
     def total_work_time
       total_work_times.sum
-    end
-
-    def scheduling?
-      self.schedule_range_indices || self.schedule_range_date
-    end
-
-    def schedule_indices
-      return nil if self.schedule_range_indices.nil? && self.schedule_range_date.nil?
-
-      epoch = Date.new(1970, 1, 1)
-      start_date = self.schedule_range_indices ? self.schedule_range_indices[:start] : (self.schedule_range_date[:start].to_date - epoch).to_i
-      end_date = self.schedule_range_indices ? self.schedule_range_indices[:end] : (self.schedule_range_date[:end].to_date - epoch).to_i
-
-      [0, end_date - start_date]
     end
 
     def calculate_service_exclusion_costs(type = :time, force_recalc = false)

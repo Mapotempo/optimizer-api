@@ -32,8 +32,8 @@ module SchedulingDataInitialization
       @candidate_routes[original_vehicle_id][vehicle[:global_day_index]] = {
         vehicle_id: vehicle[:id],
         global_day_index: vehicle[:global_day_index],
-        tw_start: vehicle.timewindow.start < 84600 ? vehicle.timewindow.start : vehicle.timewindow.start - ((vehicle.global_day_index + @shift) % 7) * 86400,
-        tw_end: vehicle.timewindow.end < 84600 ? vehicle.timewindow.end : vehicle.timewindow.end - ((vehicle.global_day_index + @shift) % 7) * 86400,
+        tw_start: vehicle.timewindow.start < 84600 ? vehicle.timewindow.start : vehicle.timewindow.start - (vehicle.global_day_index % 7) * 86400,
+        tw_end: vehicle.timewindow.end < 84600 ? vehicle.timewindow.end : vehicle.timewindow.end - (vehicle.global_day_index % 7) * 86400,
         start_point_id: vehicle[:start_point_id],
         end_point_id: vehicle[:end_point_id],
         duration: vehicle[:duration] || (vehicle.timewindow.end - vehicle.timewindow.start),
@@ -52,13 +52,59 @@ module SchedulingDataInitialization
     initialize_routes(vrp.routes) unless vrp.routes.empty?
   end
 
+  def initialize_routes(routes)
+    inserted_ids = []
+    routes.sort_by{ |route| route.indice }.each{ |defined_route|
+      associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.indice.to_i]
+      defined_route.mission_ids.each{ |id|
+        next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
+
+        inserted_ids << id
+
+        raise UnsupportedProblemError, 'Services in initialize routes should have only one activity' if @services_data[id][:nb_activities] > 1
+
+        if associated_route
+          associated_route[:current_route] << {
+            id: id,
+            point_id: @services_data[id][:points_ids].first,
+            arrival: 0,                                # needed to compute route data
+            end: @services_data[id][:durations].first, # needed to compute route data
+            number_in_sequence: inserted_ids.count(id),
+            activity: 0,
+          }
+        else
+          @uninserted["#{id}_#{inserted_ids.count(id)}_#{@services_data[id][:nb_visits]}"] = {
+            original_service: id,
+            reason: "Unfeasible route (vehicle #{defined_route.vehicle_id} not available at day #{defined_route.indice})"
+          }
+        end
+
+        @candidate_services_ids.delete(id)
+        @to_plan_service_ids.delete(id)
+        # all visits should be assigned manually, or not assigned at all
+        @used_to_adjust << id
+
+        # unlock corresponding services
+        services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
+        @to_plan_service_ids += services_to_add
+        @unlocked += services_to_add
+      }
+
+      next if associated_route.nil?
+
+      begin
+        update_route(associated_route, 0)
+      rescue
+        raise OptimizerWrapper::UnsupportedProblemError, 'Initial solution provided is not feasible.'
+      end
+    }
+
+    check_missing_visits(inserted_ids)
+  end
+
   def collect_services_data(vrp)
-    epoch = Date.new(1970, 1, 1)
     available_units = vrp.vehicles.collect{ |vehicle| vehicle[:capacities] ? vehicle[:capacities].collect{ |capacity| capacity[:unit_id] } : nil }.flatten.compact.uniq
     vrp.services.each{ |service|
-      service[:unavailable_visit_day_indices] += service[:unavailable_visit_day_date].to_a.collect{ |unavailable_date|
-        (unavailable_date.to_date - epoch).to_i - @real_schedule_start if (unavailable_date.to_date - epoch).to_i >= @real_schedule_start
-      }.compact
       has_only_one_day = vrp.vehicles.all?{ |v| v.timewindow&.day_index || v.sequence_timewindows.size == 1 && v.sequence_timewindows.first.day_index }
       period = if service[:visits_number] == 1
                   nil

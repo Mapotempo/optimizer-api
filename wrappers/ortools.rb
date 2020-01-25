@@ -46,7 +46,6 @@ module Wrappers
         :assert_points_same_definition,
         :assert_vehicles_no_zero_duration,
         :assert_at_least_one_mission,
-        :assert_range_date_if_month_duration,
         :assert_correctness_provided_matrix_indices,
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_square_matrix,
@@ -79,12 +78,11 @@ module Wrappers
         :assert_no_initial_centroids_with_partitions,
         :assert_valid_partitions,
         :assert_no_relation_with_scheduling_heuristic,
-        :assert_route_day_if_periodic,
+        :assert_route_date_or_indice_if_periodic,
         :assert_no_route_if_clustering,
         :assert_missions_in_routes_do_exist,
         :assert_not_too_many_visits_in_route,
         :assert_no_route_if_schedule_without_periodic_heuristic,
-        :assert_routes_not_compatible_with_schedule_date,
       ]
     end
 
@@ -525,7 +523,7 @@ module Wrappers
     end
 
     def check_services_compatible_days(vrp, vehicle, service)
-      if vrp.scheduling? && (service.minimum_lapse || service.maximum_lapse)
+      if vrp.schedule_range_indices && (service.minimum_lapse || service.maximum_lapse)
         vehicle.global_day_index >= service[:first_possible_day] && vehicle.global_day_index <= service[:last_possible_day] ? true : false
       else
         true

@@ -23,7 +23,7 @@ module Models
     field :lapse, default: nil
     field :linked_ids, default: []
     field :linked_vehicle_ids, default: []
-    field :periodicity, default: nil
+    field :periodicity, default: 1
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params

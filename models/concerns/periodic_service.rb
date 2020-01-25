@@ -24,10 +24,10 @@ module PeriodicService
   def can_affect_all_visits?(service)
     return true if service.visits_number == 1
 
-    current_day = self.schedule_indices[0]
+    current_day = self.schedule_range_indices[:start]
     decimal_day = current_day
     current_visit = 0
-    while current_visit < service.visits_number && current_day <= self.schedule_indices[1]
+    while current_visit < service.visits_number && current_day <= self.schedule_range_indices[:end]
       potential_vehicle = self.vehicles.find{ |v|
         !v.unavailable_work_day_indices.include?(current_day) &&
           v.timewindow.nil? && v.sequence_timewindows.empty? ||
