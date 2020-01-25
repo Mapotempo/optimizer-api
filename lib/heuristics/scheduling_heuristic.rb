@@ -27,7 +27,7 @@ module Heuristics
     include SchedulingDataInitialization
     include SchedulingEndPhase
 
-    def initialize(vrp, expanded_vehicles, schedule, job = nil)
+    def initialize(vrp, expanded_vehicles, job = nil)
       # heuristic data
       @candidate_vehicles = []
       @vehicle_day_completed = {}
@@ -61,9 +61,7 @@ module Heuristics
       @duration_in_tw = false # TODO: create parameter for this
 
       # global data
-      @real_schedule_start = schedule[:start]
-      @schedule_end = schedule[:end]
-      @shift = schedule[:shift]
+      @schedule_end = vrp.schedule_range_indices[:end]
       @expanded_vehicles = expanded_vehicles
       vrp.vehicles.each{ |vehicle|
         @candidate_vehicles << vehicle.id
@@ -234,54 +232,6 @@ module Heuristics
 
         @missing_visits[vehicle] << { id: service[:id], used_days: this_service_days } if need_to_add_visits
       }
-    end
-
-    def initialize_routes(routes)
-      inserted_ids = []
-      routes.sort_by{ |route| route[:day] }.each{ |defined_route|
-        associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.day.to_i]
-        defined_route.mission_ids.each{ |id|
-          inserted_ids << id
-
-          raise UnsupportedProblemError, 'Services in initialize routes should have only one activity' if @services_data[id][:nb_activities] > 1
-
-          if associated_route
-            associated_route[:current_route] << {
-              id: id,
-              point_id: @services_data[id][:points_ids].first,
-              arrival: 0,                                # needed to compute route data
-              end: @services_data[id][:durations].first, # needed to compute route data
-              number_in_sequence: inserted_ids.count(id),
-              activity: 0,
-            }
-          else
-            @uninserted["#{id}_#{inserted_ids.count(id)}_#{@services_data[id][:nb_visits]}"] = {
-              original_service: id,
-              reason: "Unfeasible route (vehicle #{defined_route.vehicle_id} not available at day #{defined_route.day})"
-            }
-          end
-
-          @candidate_services_ids.delete(id)
-          @to_plan_service_ids.delete(id)
-          # all visits should be assigned manually, or not assigned at all
-          @used_to_adjust << id
-
-          # unlock corresponding services
-          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
-          @to_plan_service_ids += services_to_add
-          @unlocked += services_to_add
-        }
-
-        next if associated_route.nil?
-
-        begin
-          update_route(associated_route, 0)
-        rescue
-          raise OptimizerWrapper::UnsupportedProblemError, 'Initial solution provided is not feasible.'
-        end
-      }
-
-      check_missing_visits(inserted_ids)
     end
 
     def check_missing_visits(inserted_ids)
@@ -1103,7 +1053,6 @@ module Heuristics
 
       # configuration
       route_vrp.schedule_range_indices = nil
-      route_vrp.schedule_range_date = nil
 
       route_vrp.resolution_duration = 1000
       route_vrp.resolution_solver = true

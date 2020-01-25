@@ -36,8 +36,7 @@ module Models
 
     field :unavailable_visit_indices, default: nil
 
-    field :unavailable_visit_day_indices, default: []
-    field :unavailable_visit_day_date, default: nil
+    field :unavailable_visit_day_indices, default: [] # extends unavailable_visit_day_date
 
     field :minimum_lapse, default: nil
     field :maximum_lapse, default: nil

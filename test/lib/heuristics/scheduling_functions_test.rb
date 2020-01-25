@@ -81,7 +81,7 @@ class HeuristicTest < Minitest::Test
       vrp[:services][3][:visits_number] = 2
       vrp[:services][3][:minimum_lapse] = 6
       vrp = TestHelper.create(vrp)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
+      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
       s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 10, shift: 0)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 6, data_services.size
@@ -97,7 +97,7 @@ class HeuristicTest < Minitest::Test
       vrp[:services][0][:minimum_lapse] = 7
 
       vrp = TestHelper.create(vrp)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
+      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
       s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 10, shift: 0)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 7, data_services['service_1'][:heuristic_period]
@@ -128,7 +128,7 @@ class HeuristicTest < Minitest::Test
       }
 
       vrp = TestHelper.create(vrp)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
+      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
       s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 14, shift: 0)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
@@ -153,7 +153,7 @@ class HeuristicTest < Minitest::Test
 
     def test_add_missing_visits
       vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
-      expanded = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
+      expanded = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
       s = Heuristics::Scheduling.new(vrp, expanded, start: 0, end: 365, shift: 0)
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.dump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.dump'))) # rubocop: disable Security/MarshalLoad
@@ -221,7 +221,9 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_compute_next_insertion_cost_when_activities
-      s = Heuristics::Scheduling.new(TestHelper.create(VRP.basic), [], start: 0, end: 365, shift: 0)
+      vrp = TestHelper.create(VRP.basic)
+      vrp.schedule_range_indices = { start: 0, end: 365 }
+      s = Heuristics::Scheduling.new(vrp, [])
 
       service = { id: 'service_2', point_id: 'point_2', duration: 0 }
       timewindow = { start_time: 47517.6, arrival_time: 48559.4, final_time: 48559.4, setup_duration: 0 }

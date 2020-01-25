@@ -66,8 +66,7 @@ module Models
     field :matrix_id, default: nil
     field :value_matrix_id, default: nil
 
-    field :unavailable_work_day_indices, default: []
-    field :unavailable_work_date, default: nil
+    field :unavailable_work_day_indices, default: [] # extends unavailable_work_date
     field :global_day_index, default: nil
 
     has_many :skills, class_name: 'Array' # Vehicles can have multiple alternative skillsets

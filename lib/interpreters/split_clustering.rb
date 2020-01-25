@@ -40,7 +40,7 @@ module Interpreters
         }
         if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
           generate_split_vrps(service_vrp, job, block)
-        elsif !vrp.scheduling? &&
+        elsif !vrp.schedule_range_indices &&
               vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 &&
               vrp.shipments.size == ship_candidates.size &&
               (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
@@ -868,8 +868,8 @@ module Interpreters
       def centroid_strict_limits(vrp)
         units = vrp.vehicles.collect{ |v| v[:capacities]&.collect{ |c| c[:unit_id] } }.flatten.compact.uniq # ignore units not referenced in vehicle capacities
         vrp.vehicles.collect.with_index{ |vehicle, v_i|
-          schedule_indices = vrp.schedule_indices
-          vehicle_working_days = schedule_indices ? vehicle.total_work_days_in_range(vrp.schedule_indices[0], vrp.schedule_indices[1]) : 1
+          schedule_indices = vrp.schedule_range_indices
+          vehicle_working_days = schedule_indices ? vehicle.total_work_days_in_range(vrp.schedule_range_indices[:start], vrp.schedule_range_indices[:end]) : 1
           total_duration = schedule_indices ? vrp.total_work_times[v_i] : vehicle.work_duration
           s_l = { duration: total_duration }
           units.each{ |unit|

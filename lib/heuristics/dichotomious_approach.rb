@@ -32,7 +32,7 @@ module Interpreters
           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit &&
           (service_vrp[:vrp].resolution_vehicle_limit.nil? || service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit) &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
-          !service_vrp[:vrp].scheduling? &&
+          !service_vrp[:vrp].schedule_range_indices &&
           service_vrp[:vrp].shipments.empty? && # TODO: check dicho with a P&D instance to remove this condition
           service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } # TODO: Remove and use matrix/matrix_index in clustering
         )

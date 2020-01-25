@@ -2174,4 +2174,132 @@ class InterpreterTest < Minitest::Test
     assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_1' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
     assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_0' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
   end
+
+  def test_overall_duration_several_vehicles
+    problem = VRP.basic
+    problem[:vehicles] << { id: 'vehicle_1' }
+    problem[:relations] = [{
+      type: 'vehicle_group_duration_on_weeks',
+      linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
+      lapse: 10,
+      periodicity: 1
+    }]
+    problem[:configuration][:schedule] = {
+      range_indices: { start: 6, end: 7 }
+    }
+    vrp = TestHelper.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp, nil)
+    assert_equal 2, expanded_vrp.relations.size
+
+    problem[:relations].first[:type] = 'vehicle_group_duration'
+    vrp = TestHelper.create(problem)
+    expanded_vrp = periodic.send(:expand, vrp, nil)
+    assert_equal 1,  expanded_vrp.relations.size
+    assert_equal 4,  expanded_vrp.relations.first[:linked_vehicle_ids].size
+
+    problem[:relations].first[:type] = 'vehicle_group_duration_on_months'
+    problem[:configuration][:schedule] = {
+      range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
+    }
+    vrp = TestHelper.create(problem)
+    assert !vrp.schedule_months_indices.empty?
+    expanded_vrp = periodic.send(:expand, vrp, nil)
+    assert_equal 2, expanded_vrp.relations.size
+  end
+
+  def test_overall_duration_with_periodicity
+    problem = VRP.basic
+    problem[:vehicles] << { id: 'vehicle_1' }
+    problem[:relations] = [{
+      type: 'vehicle_group_duration_on_weeks',
+      linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
+      lapse: 10,
+      periodicity: 2
+    }]
+    problem[:configuration][:schedule] = {
+      range_indices: { start: 6, end: 7 }
+    }
+    vrp = TestHelper.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp, nil)
+    assert_equal 1, expanded_vrp.relations.size
+
+    problem[:relations].first[:type] = 'vehicle_group_duration_on_months'
+    problem[:configuration][:schedule] = {
+      range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
+    }
+    vrp = TestHelper.create(problem)
+    assert !vrp.schedule_months_indices.empty?
+    expanded_vrp = periodic.send(:expand, vrp, nil)
+    assert_equal 1, expanded_vrp.relations.size
+  end
+
+  def test_expand_relations_of_one_week_and_one_day
+    problem = VRP.basic
+    problem[:relations] = [{
+      type: 'vehicle_group_duration_on_weeks',
+      linked_vehicle_ids: ['vehicle_0'],
+      lapse: 10
+    }]
+    problem[:configuration][:schedule] = {
+      range_indices: { start: 0, end: 7 }
+    }
+    vrp = TestHelper.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp, nil)
+    assert_equal 2, expanded_vrp.relations.size
+
+    problem[:relations].first[:periodicity] = 2
+    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    assert_equal 1, expanded_vrp.relations.size
+
+    problem[:configuration][:schedule] = {
+      range_indices: { start: 0, end: 14 }
+    }
+    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    assert_equal 2, expanded_vrp.relations.size
+  end
+
+  def test_expand_relations_of_one_month_and_one_day
+    problem = VRP.basic
+    problem[:relations] = [{
+      type: 'vehicle_group_duration_on_months',
+      linked_vehicle_ids: ['vehicle_0'],
+      lapse: 10
+    }]
+    problem[:configuration][:schedule] = {
+      range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 2, 1) }
+    }
+    vrp = TestHelper.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vrp = periodic.send(:expand, vrp, nil)
+    assert_equal 2, expanded_vrp.relations.size
+
+    problem[:relations].first[:periodicity] = 2
+    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    assert_equal 1, expanded_vrp.relations.size
+
+    problem[:configuration][:schedule] = {
+      range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 3, 1) }
+    }
+    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    assert_equal 2, expanded_vrp.relations.size
+  end
+
+  def test_unavailable_work_day_date_transformed_into_indice
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
+    periodic = Interpreters::PeriodicVisits.new(TestHelper.create(vrp))
+    assert_equal 15, periodic.send(:expand, TestHelper.create(vrp), nil).vehicles.size
+
+    vrp = VRP.scheduling
+    vrp[:vehicles][0][:unavailable_work_date] = [Date.new(2020, 1, 6)]
+    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
+    assert_equal [7], TestHelper.create(vrp).vehicles.first.unavailable_work_day_indices
+    periodic = Interpreters::PeriodicVisits.new(TestHelper.create(vrp))
+    expanded_vehicles = periodic.send(:expand, TestHelper.create(vrp), nil).vehicles
+    assert_equal 14, expanded_vehicles.size
+    assert(expanded_vehicles.none?{ |v| v.id == 'vehicle_0_7' })
+  end
 end

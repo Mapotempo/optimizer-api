@@ -44,7 +44,7 @@ module Wrappers
     end
 
     def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size == 1 && !vrp.scheduling?
+      vrp.vehicles.size == 1 && !vrp.schedule_range_indices
     end
 
     def assert_vehicles_at_least_one(vrp)
@@ -314,10 +314,6 @@ module Wrappers
       vrp[:vehicles].none?{ |vehicle| vehicle[:distance] }
     end
 
-    def assert_range_date_if_month_duration(vrp)
-      !(vrp[:relations] && vrp[:relations].any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' }) || vrp.schedule_range_date
-    end
-
     def assert_vehicle_tw_if_schedule(vrp)
       vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' ||
       vrp[:vehicles].all?{ |vehicle|
@@ -327,11 +323,11 @@ module Wrappers
     end
 
     def assert_if_sequence_tw_then_schedule(vrp)
-      vrp.vehicles.find{ |vehicle| vehicle[:sequence_timewindows] }.nil? || vrp.scheduling?
+      vrp.vehicles.find{ |vehicle| vehicle[:sequence_timewindows] }.nil? || vrp.schedule_range_indices
     end
 
     def assert_if_periodic_heuristic_then_schedule(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.scheduling?
+      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.schedule_range_indices
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
@@ -361,7 +357,7 @@ module Wrappers
     end
 
     def assert_no_scheduling_if_evaluation(vrp)
-      !vrp.scheduling? || !vrp.resolution_evaluate_only
+      !vrp.schedule_range_indices || !vrp.resolution_evaluate_only
     end
 
     def assert_route_if_evaluation(vrp)
@@ -430,7 +426,7 @@ module Wrappers
 
     def assert_work_day_partitions_only_schedule(vrp)
       vrp.preprocessing_partitions.empty? || vrp.preprocessing_partitions.size < 2 ||
-      vrp.scheduling? &&
+      vrp.schedule_range_indices &&
       (vrp.services.none?{ |service| service[:minimum_lapse] } || vrp.services.collect{ |service| service[:minimum_lapse] }.compact.min >= 7)
     end
 
@@ -469,12 +465,8 @@ module Wrappers
       vrp.routes.empty? || vrp.preprocessing_partitions.empty?
     end
 
-    def assert_route_day_if_periodic(vrp)
-      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:day] }
-    end
-
-    def assert_routes_not_compatible_with_schedule_date(vrp)
-      vrp.routes.empty? || vrp.schedule_range_date.nil?
+    def assert_route_date_or_indice_if_periodic(vrp)
+      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:indice] }
     end
 
     def assert_missions_in_routes_do_exist(vrp)
@@ -493,7 +485,7 @@ module Wrappers
     end
 
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
-      vrp.routes.empty? || !vrp.scheduling? || vrp.preprocessing_first_solution_strategy.include?('periodic')
+      vrp.routes.empty? || !vrp.schedule_range_indices || vrp.preprocessing_first_solution_strategy.include?('periodic')
     end
 
     def solve_synchronous?(vrp)
@@ -512,45 +504,42 @@ module Wrappers
       first_day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:start] : vrp[:schedule][:range_date][:start]
       last_day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:end] : vrp[:schedule][:range_date][:end]
       (first_day..last_day).any?{ |day|
-        s_ok = !t_day.nil? ? t_day == day : (service[:unavailable_visit_day_indices] || service[:unavailable_visit_date]) && service[:unavailable_visit_day_indices].include?(day)
-        v_ok = vehicle[:unavailable_work_day_indices] && vehicle[:unavailable_work_day_indices].include?(day) || vehicle[:unavailable_work_date] && vehicle[:unavailable_work_date].include?(day)
+        s_ok = !t_day.nil? ? t_day == day : !service.unavailable_visit_day_indices&.include?(day)
+        v_ok = !vehicle.unavailable_work_day_indices&.include?(day)
         s_ok && v_ok
       }
     end
 
-    def find_vehicle(vrp, service, timewindow)
-      t_start = timewindow[:start]
-      t_end = timewindow[:end]
-      t_day = timewindow[:day_index]
-      t_late = service.activity&.late_multiplier&.positive?
+    def find_vehicle(vrp, service)
+      service_timewindows = service.activity ? service.activity.timewindows : service.activities.collect(&:timewindows).flatten
+      service_lateness = service.activity&.late_multiplier&.positive?
 
-      vrp[:vehicles].select{ |vehicle| vehicle[:timewindow] }.any?{ |vehicle|
-        v_start = vehicle[:timewindow][:start]
-        v_end = vehicle[:timewindow][:end]
-        v_day = vehicle[:timewindow][:day_index]
-        v_late = vehicle[:cost_late_multiplier] && vehicle.cost_late_multiplier.positive?
-        days_compatible = v_day.nil? || t_day.nil? || v_day == t_day
-        if service.unavailable_visit_day_indices&.include?(v_day)
-          days_compatible = false
-        end
-        if v_day && v_day >= 0 && service[:unavailable_visit_day_date] && service[:unavailable_visit_day_date].include?(vrp[:schedule][:range_date][:start] + v_day)
-          days_compatible = false
-        end
-        days_compatible = compatible_day?(vrp, service, t_day, vehicle) if v_day.nil? && vrp[:schedule] && days_compatible
-        days_compatible && !(v_end && t_start && !v_late && t_start > v_end) && # Incompatible if timewindow starts after vehicle end
-          !(t_end && v_start && !t_late && v_start > t_end) # Incompatible if timewindow ends before vehicle start
-      } || vrp[:vehicles].none?{ |vehicle| vehicle[:timewindow] || vehicle[:sequence_timewindows] } ||
-        vrp[:vehicles].select{ |vehicle| vehicle[:sequence_timewindows] }.any?{ |vehicle|
-          vehicle[:sequence_timewindows].any?{ |tw|
-            v_start = tw[:start]
-            v_end = tw[:end]
-            v_day = tw[:day_index]
-            v_late = vehicle[:cost_late_multiplier] && vehicle.cost_late_multiplier.positive?
-            days_compatible = v_day.nil? || t_day.nil? || v_day == t_day
-            days_compatible && !(v_end && t_start && !v_late && t_start > v_end) &&
-              !(t_end && v_start && !t_late && v_start > t_end)
-          }
-        } || vrp[:vehicles].any?{ |vehicle| vehicle[:cost_late_multiplier] && vehicle.cost_late_multiplier.positive? }
+      available_vehicle = vrp.vehicles.find{ |vehicle|
+        vehicle_timewindows = vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows
+        vehicle_work_days = vehicle_timewindows.collect(&:day_index).compact.flatten
+        vehicle_work_days = [0, 1, 2, 3, 4, 5] if vehicle_work_days.empty?
+        vehicle_lateness = vehicle.cost_late_multiplier&.positive?
+
+        days = vrp.schedule_range_indices ? (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |day| day } : [0]
+        days.any?{ |day|
+          vehicle_work_days.include?(day % 7) && !vehicle.unavailable_work_day_indices.include?(day) &&
+            !service.unavailable_visit_day_indices.include?(day) &&
+            (service_timewindows.empty? || vehicle_timewindows.empty? ||
+              service_timewindows.any?{ |tw|
+                (tw.day_index.nil? || tw.day_index == day % 7) &&
+                  vehicle_lateness ||
+                  service_lateness ||
+                  vehicle_timewindows.any?{ |v_tw|
+                    days_compatible = !v_tw.day_index || !tw.day_index || v_tw.day_index == tw.day_index
+                    days_compatible &&
+                      (v_tw.start.nil? || tw.end.nil? || v_tw.start < tw.end) &&
+                      (v_tw.end.nil? || tw.start.nil? || v_tw.end > tw.start)
+                  }
+              })
+        }
+      }
+
+      available_vehicle
     end
 
     def check(vrp, dimension, unfeasible)
@@ -598,7 +587,7 @@ module Wrappers
 
           {
             original_service_id: service.id,
-            service_id: vrp.scheduling? ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
+            service_id: vrp.schedule_range_indices ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
             point_id: service.activity ? service.activity.point_id : nil,
             detail: {
               lat: service.activity && service.activity.point.location ? service.activity.point.location.lat : nil,
@@ -677,11 +666,10 @@ module Wrappers
         duration = service.activity ? service.activity.duration : service.activities.collect(&:duration).min
         add_unassigned(unfeasible, vrp, service, 'Service duration greater than any vehicle timewindow') if vehicle_max_shift && duration > vehicle_max_shift
 
-        timewindows = service.activity ? service.activity.timewindows : service.activities.collect(&:timewindows).flatten
-        add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow') if !timewindows.empty? && timewindows.none?{ |tw| find_vehicle(vrp, service, tw) }
+        add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow') if !find_vehicle(vrp, service)
 
         # unconsistency for planning
-        next if !vrp.scheduling?
+        next if !vrp.schedule_range_indices
 
         add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse') unless vrp.can_affect_all_visits?(service)
       }

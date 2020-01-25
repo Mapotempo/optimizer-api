@@ -141,7 +141,7 @@ module TestHelper
 
   def self.easy_vehicle_expand(vehicles, schedule_range)
     vehicles.flat_map{ |vehicle|
-      (0..schedule_range.last).collect{ |day|
+      (schedule_range[:start]..schedule_range[:end]).collect{ |day|
         new_vehicle = Marshal.load(Marshal.dump(vehicle))
         new_vehicle.id += "_#{day}"
         new_vehicle.timewindow = { start: 0, end: 10, day_index: day % 7 }

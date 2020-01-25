@@ -43,18 +43,6 @@ class InstanceValidityTest < Minitest::Test
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include?(:assert_no_same_point_day_if_no_heuristic)
     end
 
-    def test_do_not_solve_if_range_index_and_month_duration
-      problem = VRP.scheduling
-      problem[:relations] = [{
-        type: 'vehicle_group_duration_on_months',
-        linked_vehicle_ids: %w[vehicle_1 vehicle_2],
-        lapse: 5,
-        periodicity: 1
-      }]
-
-      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include?(:assert_range_date_if_month_duration)
-    end
-
     def test_reject_if_relation
       problem = VRP.scheduling
       problem[:relations] = [{
@@ -141,34 +129,34 @@ class InstanceValidityTest < Minitest::Test
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_no_scheduling_if_evaluation
     end
 
-    def test_assert_route_day_if_periodic
+    def test_assert_route_date_or_indice_if_periodic
       problem = VRP.scheduling
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
         mission_ids: ['service_1', 'service_3']
       }]
-      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_route_day_if_periodic
+      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_route_date_or_indice_if_periodic
 
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
-        day: 0,
+        indice: 0,
         mission_ids: ['service_1', 'service_3']
       }]
-      assert !(OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_route_day_if_periodic)
+      assert !(OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_route_date_or_indice_if_periodic)
     end
 
     def test_assert_missions_in_route_exist
       problem = VRP.scheduling
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
-        day: 0,
+        indice: 0,
         mission_ids: ['service_1', 'service_3']
       }]
       assert !(OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_missions_in_routes_do_exist)
 
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
-        day: 0,
+        indice: 0,
         mission_ids: ['service_111', 'service_3']
       }]
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_missions_in_routes_do_exist
@@ -178,14 +166,14 @@ class InstanceValidityTest < Minitest::Test
       problem = VRP.scheduling
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
-        day: 0,
+        indice: 0,
         mission_ids: ['service_1']
       }]
       assert !(OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_not_too_many_visits_in_route)
 
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
-        day: 0,
+        indice: 0,
         mission_ids: ['service_1', 'service_1']
       }]
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_not_too_many_visits_in_route
@@ -195,30 +183,13 @@ class InstanceValidityTest < Minitest::Test
       problem = VRP.scheduling
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
-        day: 0,
+        indice: 0,
         mission_ids: ['service_1']
       }]
       assert !(OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_no_route_if_schedule_without_periodic_heuristic)
 
       problem[:configuration][:preprocessing][:first_solution_strategy] = []
       assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_no_route_if_schedule_without_periodic_heuristic
-    end
-
-    def test_reject_if_route_and_schedule_range_date
-      vrp = VRP.scheduling_seq_timewindows
-      assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(vrp))
-
-      vrp = VRP.scheduling_seq_timewindows
-      vrp[:routes] = [{
-        mission_ids: ['service_1']
-      }]
-      vrp[:configuration][:schedule][:range_indices] = nil
-      vrp[:configuration][:schedule][:range_date] = {
-        start: Date.new(2017, 1, 15),
-        end: Date.new(2017, 1, 27)
-      }
-      assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(vrp)).include? :assert_routes_not_compatible_with_schedule_date
-      puts 'done'
     end
   end
 end

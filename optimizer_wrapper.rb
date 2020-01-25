@@ -229,7 +229,7 @@ module OptimizerWrapper
           }
 
           # TODO: refactor with dedicated class
-          if vrp.scheduling?
+          if vrp.schedule_range_indices
             periodic = Interpreters::PeriodicVisits.new(vrp)
             vrp = periodic.expand(vrp, job) {
               block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
@@ -807,14 +807,14 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    if vrp.matrices.size.positive? && vrp.shipments.size.zero? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
+    if vrp.matrices.size.positive? && vrp.shipments.size.zero? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.schedule_range_indices
       raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.') if vrp.services.any?{ |s| s.activities.size.positive? }
 
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && !vrp.scheduling?
+    if vrp.matrices.size > 0 && vrp.shipments.size == 0 && (cluster_threshold.to_f > 0 || force_cluster) && !vrp.schedule_range_indices
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else

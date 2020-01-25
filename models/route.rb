@@ -20,7 +20,7 @@ require './models/base'
 module Models
   class Route < Base
     field :mission_ids, default: []
-    field :day
+    field :indice
     belongs_to :vehicle, class_name: 'Models::Vehicle'
   end
 end
