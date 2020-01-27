@@ -20,9 +20,6 @@ require './models/concerns/validate_timewindows'
 
 module Models
   class Activity < Base
-    @@id = 0
-    field :id, default: ->{ 'a' + (@@id += 1) }
-
     field :duration, default: 0
     field :setup_duration, default: 0
     field :additional_value, default: 0

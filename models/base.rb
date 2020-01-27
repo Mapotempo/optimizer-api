@@ -35,6 +35,19 @@ module Models
         memo[k.to_sym] = v
         memo
       })
+
+      # Make sure default values are not the same object for all
+      self.attributes.each{ |k, v|
+        # If the key doesn't exist in the hash and its relevant substructures then it must be a default value
+        next if hash.has_key?(k) ||
+                !v.duplicable? ||
+                ["#{k}_id", "#{k[0..-2]}_ids", "#{k[0..-4]}y_ids"].any?{ |key| hash.has_key?(key.to_sym) } ||
+                hash[:configuration] && [:preprocessing, :restitution, :schedule, :resolution].any?{ |symbol|
+                  hash[:configuration][symbol]&.has_key?(k[symbol.size + 1..-1]&.to_sym)
+                }
+
+        self[k] = v.dup # dup to make sure they are different objects
+      }
     end
 
     def self.has_many(name, options = {})
