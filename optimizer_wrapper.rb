@@ -493,7 +493,7 @@ module OptimizerWrapper
   end
 
   def self.find_type(activity)
-    if activity['service_id'] || activity['delivery_shipment_id'] || activity['delivery_shipment_id']
+    if activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['shipment_id']
       'visit'
     elsif activity['rest_id']
       'rest'
@@ -733,7 +733,6 @@ module OptimizerWrapper
         r[stat_symbol]
       }.reduce(:+)
     }
-
     log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.services.size}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.services.size + 2 * vrp.shipments.size) * 100).round(1)}%)"
     used_vehicles = result[:routes].map{ |r| r[:vehicle_id] if r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }.compact
     log "result - #{used_vehicles.size}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicles}"
