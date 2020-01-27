@@ -122,9 +122,11 @@ module Api
         this.optional(:late_multiplier, type: Float, desc: 'Overrides the late_multiplier defined at the vehicle level (ORtools only)')
         this.optional(:timewindow_start_day_shift_number, type: Integer, desc: '[ DEPRECATED ]')
         this.requires(:point_id, type: String, allow_blank: false, desc: 'Reference to the associated point')
+        this.optional(:timewindow_ids, type: String, documentation: { hidden: true }, desc: 'Timewindows to consider, CSV front only')
         this.optional(:timewindows, type: Array, desc: 'Time slot while the activity may start') do
           Vrp.vrp_request_timewindow(self)
         end
+        this.mutually_exclusive :timewindow_ids, :timewindows
       end
 
       def self.vrp_request_quantity(this)
@@ -227,7 +229,7 @@ module Api
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4. 0 is the highest priority level). Not available with same_point_day option.')
         this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost. Not available with periodic heuristic.')
 
-        this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.positive? && val }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
+        this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
         this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
 
@@ -261,7 +263,7 @@ module Api
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4)')
         this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost')
 
-        this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.positive? && val }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
+        this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
         this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
 
@@ -281,9 +283,11 @@ module Api
         this.requires(:delivery, type: Hash, allow_blank: false, desc: 'Activity of drop off') do
           Vrp.vrp_request_activity(self)
         end
+        this.optional(:quantity_ids, type: String, documentation: { hidden: true }, desc: 'Quantities to consider, CSV front only')
         this.optional(:quantities, type: Array, desc: 'Define the entities which are taken and dropped') do
           Vrp.vrp_request_quantity(self)
         end
+        this.mutually_exclusive :quantity_ids, :quantities
       end
 
       def self.vrp_request_subtour(this)
