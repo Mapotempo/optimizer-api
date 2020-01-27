@@ -17,7 +17,7 @@
 #
 require './test/test_helper'
 
-class FiltersTest < Minitest::Test
+class HelperTest < Minitest::Test
   def test_no_unassigned_merge_with_nil_result
     results = [{ unassigned: [{ service_id: 'service_1' }] }, nil]
     merged_result = Helper.merge_results(results, false)
