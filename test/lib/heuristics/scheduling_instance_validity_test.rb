@@ -148,7 +148,9 @@ class InstanceValidityTest < Minitest::Test
         indice: 0,
         mission_ids: ['service_111', 'service_3']
       }]
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_missions_in_routes_do_exist
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(problem)
+      end
     end
 
     def test_not_too_many_visits_provided_in_route

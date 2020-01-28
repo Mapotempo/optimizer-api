@@ -479,7 +479,7 @@ class HeuristicTest < Minitest::Test
       # providing uncomplete solution (compared to solution without initial routes)
       puts "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal(10, result[:unassigned].count{ |un| un[:reason] == 'Some visits assigned manually (1 visits preassigned in routes)' })
+      assert_equal 0, result[:unassigned].size
       assert_equal expected_nb_visits, result[:routes].collect{ |r| r[:activities].size - 2 }.flatten.sum + result[:unassigned].size
       assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == 'ANDALUCIA 1_2' }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
 
@@ -496,7 +496,7 @@ class HeuristicTest < Minitest::Test
       assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == "#{vehicle_id}_#{day}" }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
     end
 
-    def test_reject_unfeasible_initial_solution
+    def test_fix_unfeasible_initial_solution
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
 
@@ -506,10 +506,13 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.vehicle.id = vehicle_id
       vrp.routes.first.indice = day.to_i
 
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
-        periodic = Interpreters::PeriodicVisits.new(vrp)
-        Heuristics::Scheduling.new(vrp, periodic.generate_vehicles(vrp), start: 0, end: 10, shift: 0)
-      end
+      periodic = Interpreters::PeriodicVisits.new(vrp)
+      scheduling = Heuristics::Scheduling.new(vrp, periodic.generate_vehicles(vrp))
+      generated_starting_routes = scheduling.instance_variable_get(:@candidate_routes)
+
+      # scheduling initialization uses best order to initialize routes
+      assert(generated_starting_routes['BALEARES'][0][:current_route].find_index{ |stop| stop[:id] == '5482' } >
+             generated_starting_routes['BALEARES'][0][:current_route].find_index{ |stop| stop[:id] == '0833' })
     end
 
     def test_unassign_if_vehicle_not_available_at_provided_day
@@ -520,7 +523,6 @@ class HeuristicTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 36, result[:unassigned].size
-      assert_equal(9, result[:unassigned].count{ |un| un[:reason] == 'Unfeasible route (vehicle BALEARES not available at day 300)' })
     end
 
     def test_sticky_in_scheduling

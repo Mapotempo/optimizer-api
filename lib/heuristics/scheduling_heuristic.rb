@@ -189,70 +189,57 @@ module Heuristics
 
     private
 
-    def adjust_candidate_routes(vehicle, day_finished)
-      ### assigns all visits of services in [services] that where newly scheduled on [vehicle] at [day_finished] ###
+    def plan_next_visits(vehicle, service, this_service_days, first_unseen_visit)
       days_available = @candidate_routes[vehicle].keys
-      @candidate_routes[vehicle][day_finished][:current_route].reject{ |service| @used_to_adjust.include?(service[:id]) }.sort_by{ |service|
-        @services_data[service[:id]][:priority]
-      }.each{ |service|
-        @used_to_adjust << service[:id]
-        peri = @services_data[service[:id]][:heuristic_period]
+      next_day = this_service_days.max + @services_data[service][:heuristic_period]
+      day_to_insert = days_available.select{ |day| day >= next_day.round }.min
+      if day_to_insert
+        diff = day_to_insert - next_day.round
+        next_day += diff
+      end
 
-        next if peri.nil?
+      cleaned_service = false
+      need_to_add_visits = false
+      (first_unseen_visit..@services_data[service][:nb_visits]).each{ |visit_number|
+        inserted_day = nil
+        while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
+          inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number) if days_available.include?(day_to_insert)
+          this_service_days << inserted_day if inserted_day
 
-        next_day = day_finished + peri
-        day_to_insert = days_available.select{ |day| day >= next_day.round }.min
-        if day_to_insert
+          next_day += @services_data[service][:heuristic_period]
+          day_to_insert = days_available.select{ |day| day >= next_day.round }.min
+
+          next if day_to_insert.nil?
+
           diff = day_to_insert - next_day.round
           next_day += diff
         end
 
-        this_service_days = [day_finished]
-        cleaned_service = false
-        need_to_add_visits = false
-        (2..@services_data[service[:id]][:nb_visits]).each{ |visit_number|
-          inserted_day = nil
-          while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
-            inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number) if days_available.include?(day_to_insert)
-            this_service_days << inserted_day if inserted_day
+        next if inserted_day
 
-            next_day += peri
-            day_to_insert = days_available.select{ |day| day >= next_day.round }.min
-
-            next if day_to_insert.nil?
-
-            diff = day_to_insert - next_day.round
-            next_day += diff
-          end
-
-          next if inserted_day
-
-          if !@allow_partial_assignment
-            clean_routes(service[:id], vehicle)
-            cleaned_service = true
-          else
-            need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
-            @uninserted["#{service[:id]}_#{visit_number}_#{@services_data[service[:id]][:nb_visits]}"] = {
-              original_service: service[:id],
-              reason: "Visit not assignable by heuristic, first visit assigned at day #{day_finished}"
-            }
-          end
-        }
-
-        @missing_visits[vehicle] << { id: service[:id], used_days: this_service_days } if need_to_add_visits
+        if !@allow_partial_assignment
+          clean_routes(service, vehicle)
+          cleaned_service = true
+        else
+          need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
+          @uninserted["#{service}_#{visit_number}_#{@services_data[service][:nb_visits]}"] = {
+            original_service: service,
+            reason: "Visit not assignable by heuristic, first visit assigned at day #{this_service_days.min}"
+          }
+        end
       }
+
+      @missing_visits[vehicle] << { id: service, used_days: this_service_days } if need_to_add_visits
     end
 
-    def check_missing_visits(inserted_ids)
-      inserted_ids.group_by{ |id| id }.each{ |id, set|
-        next if set.size == @services_data[id][:nb_visits]
+    def adjust_candidate_routes(vehicle, day_finished)
+      ### assigns all visits of services in [services] that where newly scheduled on [vehicle] at [day_finished] ###
+      @candidate_routes[vehicle][day_finished][:current_route].reject{ |service| @used_to_adjust.include?(service[:id]) || @services_data[service[:id]][:nb_visits] == 1 }.sort_by{ |service|
+        @services_data[service[:id]][:priority]
+      }.each{ |service|
+        @used_to_adjust << service[:id]
 
-        (set.size + 1..@services_data[id][:nb_visits]).each{ |missing_visit|
-          @uninserted["#{id}_#{missing_visit}_#{@services_data[id][:nb_visits]}"] = {
-            original_service: id,
-            reason: "Some visits assigned manually (#{set.size} visits preassigned in routes)"
-          }
-        }
+        plan_next_visits(vehicle, service[:id], [day_finished], 2)
       }
     end
 
@@ -1065,16 +1052,16 @@ module Heuristics
     def try_to_insert_at(vehicle, day, service, visit_number)
       # when adjusting routes, tries to insert [service] at [day] for [vehicle]
       if !@vehicle_day_completed[vehicle][day] &&
-         @services_data[service[:id]][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 } &&
-         @services_data[service[:id]][:sticky_vehicles_ids].empty? || @services_data[service[:id]][:sticky_vehicles_ids].include?(vehicle)
+         @services_data[service][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 } &&
+         @services_data[service][:sticky_vehicles_ids].empty? || @services_data[service][:sticky_vehicles_ids].include?(vehicle)
 
-        best_index = find_best_index(service[:id], @candidate_routes[vehicle][day], true)
+        best_index = find_best_index(service, @candidate_routes[vehicle][day], true)
 
         if best_index
           insert_point_in_route(@candidate_routes[vehicle][day], best_index, true)
-          @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:id] == service[:id] }[:number_in_sequence] = visit_number
+          @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:id] == service }[:number_in_sequence] = visit_number
 
-          @services_data[service[:id]][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
+          @services_data[service][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
           day
         end
       end

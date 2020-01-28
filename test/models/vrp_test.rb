@@ -134,5 +134,15 @@ module Models
       vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
       TestHelper.create(vrp) # no raise
     end
+
+    def test_reject_routes_with_activities
+      vrp = VRP.scheduling
+      vrp[:services].first[:activities] = [vrp[:services].first[:activity]]
+      vrp[:services].first.delete(:activity)
+      vrp[:routes] = [{ mission_ids: ['service_1'] }]
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        TestHelper.create(vrp)
+      end
+    end
   end
 end

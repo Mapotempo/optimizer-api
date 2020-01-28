@@ -137,10 +137,23 @@ module Models
     end
 
     def self.check_consistency(hash)
+      periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
+
       forbidden_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
       hash[:shipments].to_a.each{ |shipment|
         raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
       }
+
+      if periodic
+        hash[:routes]&.each{ |route|
+          route[:mission_ids].each{ |id|
+            corresponding_service = [hash[:services], hash[:shipments]].flatten.compact.find{ |s| s[:id] == id }
+
+            raise OptimizerWrapper::DiscordantProblemError, 'Each mission_ids should refer to an existant service or shipment' if corresponding_service.nil?
+            raise OptimizerWrapper::UnsupportedProblemError, 'Services in initialize routes should have only one activity' if corresponding_service[:activities]
+          }
+        }
+      end
 
       return unless hash[:configuration]
 

@@ -53,53 +53,60 @@ module SchedulingDataInitialization
   end
 
   def initialize_routes(routes)
-    inserted_ids = []
-    routes.sort_by{ |route| route.indice }.each{ |defined_route|
+    considered_ids = {}
+    routes.sort_by(&:indice).each{ |defined_route|
       associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.indice.to_i]
       defined_route.mission_ids.each{ |id|
         next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
 
-        inserted_ids << id
+        best_index = find_best_index(id, associated_route) if associated_route
+        if best_index
+          insert_point_in_route(associated_route, best_index)
+          if considered_ids[id]
+            considered_ids[id][:days] << defined_route.indice.to_i
+          else
+            considered_ids[id] = {
+              vehicle: defined_route.vehicle_id,
+              days: [defined_route.indice.to_i]
+            }
+          end
 
-        raise UnsupportedProblemError, 'Services in initialize routes should have only one activity' if @services_data[id][:nb_activities] > 1
-
-        if associated_route
-          associated_route[:current_route] << {
-            id: id,
-            point_id: @services_data[id][:points_ids].first,
-            arrival: 0,                                # needed to compute route data
-            end: @services_data[id][:durations].first, # needed to compute route data
-            number_in_sequence: inserted_ids.count(id),
-            activity: 0,
-          }
+          # unlock corresponding services
+          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
+          @to_plan_service_ids += services_to_add
+          @unlocked += services_to_add
         else
-          @uninserted["#{id}_#{inserted_ids.count(id)}_#{@services_data[id][:nb_visits]}"] = {
+          @uninserted["#{id}_#{considered_ids.count(id) + 1}_#{@services_data[id][:nb_visits]}"] = {
             original_service: id,
-            reason: "Unfeasible route (vehicle #{defined_route.vehicle_id} not available at day #{defined_route.indice})"
+            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.indice}) : already #{associated_route ? associated_route[:current_route].size : 0} elements in route"
           }
         end
 
         @candidate_services_ids.delete(id)
         @to_plan_service_ids.delete(id)
-        # all visits should be assigned manually, or not assigned at all
         @used_to_adjust << id
-
-        # unlock corresponding services
-        services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
-        @to_plan_service_ids += services_to_add
-        @unlocked += services_to_add
       }
-
-      next if associated_route.nil?
-
-      begin
-        update_route(associated_route, 0)
-      rescue
-        raise OptimizerWrapper::UnsupportedProblemError, 'Initial solution provided is not feasible.'
-      end
     }
 
-    check_missing_visits(inserted_ids)
+    @uninserted.group_by{ |_k, v| v[:original_service] }.each{ |id, set|
+      (set.size + 1..@services_data[id][:nb_visits]).each{ |visit|
+        @uninserted["#{id}_#{visit}_#{@services_data[id][:nb_visits]}"] = {
+          original_service: id,
+          reason: 'Routes provided do not allow to assign this visit because previous visit could not be planned in specified route'
+        }
+      }
+    }
+
+    check_missing_visits(considered_ids)
+  end
+
+  def check_missing_visits(inserted_ids)
+    max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
+    inserted_ids.keys.sort_by{ |id| @services_data[id][:priority].to_f + 1 / (max_priority * @services_data[id][:nb_visits]**2) }.each{ |id|
+      next if inserted_ids[id][:days].size == @services_data[id][:nb_visits]
+
+      plan_next_visits(inserted_ids[id][:vehicle], id, inserted_ids[id][:days], inserted_ids[id][:days].size + 1)
+    }
   end
 
   def collect_services_data(vrp)

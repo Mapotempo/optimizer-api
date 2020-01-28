@@ -454,10 +454,6 @@ module Wrappers
       !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:indice] }
     end
 
-    def assert_missions_in_routes_do_exist(vrp)
-      (vrp.routes.to_a.collect{ |r| r[:mission_ids] }.flatten.uniq - vrp.services.collect{ |s| s[:id] }).empty?
-    end
-
     def assert_not_too_many_visits_in_route(vrp)
       vrp.routes.to_a.collect{ |r| r[:mission_ids] }.flatten.group_by{ |id| id }.all?{ |id, set|
         corresponding_service = vrp.services.find{ |s| s[:id] == id }
