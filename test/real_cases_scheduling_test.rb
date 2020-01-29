@@ -219,7 +219,7 @@ class HeuristicTest < Minitest::Test
       vrps.each_with_index{ |vrp, vrp_i|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << result[:unassigned].size
       }
 
@@ -234,7 +234,7 @@ class HeuristicTest < Minitest::Test
       vrps.each_with_index{ |vrp, vrp_i|
         puts "solving problem #{vrp_i + 1}/#{vrps.size}"
         vrp.preprocessing_partitions = nil
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << result[:unassigned].size
       }
 

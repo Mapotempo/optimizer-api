@@ -57,18 +57,20 @@ class HeuristicTest < Minitest::Test
     def test_performance_12vl_with_solver
       vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
 
+      expected_visits_number = vrps.sum(&:visits) + vrps.collect{ |vrp| vrp.services.select{ |s| s[:visits_number].zero? }.size }.sum
+
       assigned_visits = []
       unassigned_visits = []
       vrps.each_with_index{ |vrp, vrp_i|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
         vrp.resolution_solver = true
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         assigned_visits << result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum
         unassigned_visits << result[:unassigned].size
       }
-      assert_equal vrps.collect(&:visits).sum + vrps.collect{ |vrp| vrp.services.select{ |s| s[:visits_number].zero? }.size }.sum, assigned_visits.sum + unassigned_visits.sum,
-                   "Expecting #{vrps.collect(&:visits).sum} visits, only have #{vrps.collect(&:visits).sum}"
+      assert_equal expected_visits_number, assigned_visits.sum + unassigned_visits.sum,
+                   "Expecting #{expected_visits_number} visits but have #{assigned_visits.sum + unassigned_visits.sum}"
       assert unassigned_visits.sum <= 441, "Expecting less than 441 unassigned visits, have #{unassigned_visits.sum}"
     end
   end
