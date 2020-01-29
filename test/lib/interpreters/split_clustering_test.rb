@@ -214,8 +214,9 @@ class SplitClusteringTest < Minitest::Test
 
       services_vrps_vehicles.each{ |services_vrps|
         durations = []
+        vehicle_dump = Marshal.dump(services_vrps[:vrp][:vehicles].first)
         vehicles = (0..4).collect{ |v_i|
-          vehicle = Marshal.load(Marshal.dump(services_vrps[:vrp][:vehicles].first))
+          vehicle = Marshal.load(vehicle_dump)
           vehicle[:sequence_timewindows] = [vehicle[:sequence_timewindows][v_i]]
           vehicle
         }
