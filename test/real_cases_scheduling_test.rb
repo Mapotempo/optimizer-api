@@ -229,7 +229,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 320, unassigned_visits.sum, "Expecting 320 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 335, unassigned_visits.sum, "Expecting 335 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_performance_13vl
@@ -248,7 +248,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 305, unassigned_visits.sum, "Expecting 305 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 302, unassigned_visits.sum, "Expecting 302 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_fill_days_and_post_processing
