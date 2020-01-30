@@ -6161,4 +6161,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
     rest = Models::Rest.new(duration: 1)
     assert OptimizerWrapper.config[:services][:ortools].send(:build_rest, rest, nil, {})
   end
+
+  def test_ortools_performance_when_duration_limit
+    # Test agains optim-ortools model regression wrt vehicle duration limit
+    vrp = TestHelper.load_vrp(self)
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+
+    assert_equal 0, result[:unassigned].size, 'There should be no unassigned.'
+  end
 end
