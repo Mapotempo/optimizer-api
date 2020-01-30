@@ -545,12 +545,13 @@ module Heuristics
     def compute_tw_for_next(inserted_final_time, route_next, dist_from_inserted, current_day)
       ### compute new start and end times for the service just after inserted point ###
       sooner_start = inserted_final_time
+      setup_duration = dist_from_inserted.zero? ? 0 : @services_data[route_next[:id]][:setup_durations][route_next[:activity]]
       if !route_next[:tw].empty?
         tw = find_corresponding_timewindow(current_day, route_next[:arrival], @services_data[route_next[:id]][:tws_sets][route_next[:activity]], route_next[:end] - route_next[:arrival])
-        sooner_start = tw[:start] - dist_from_inserted - route_next[:considered_setup_duration] if tw && tw[:start]
+        sooner_start = tw[:start] - dist_from_inserted - setup_duration if tw && tw[:start]
       end
       new_start = [sooner_start, inserted_final_time].max
-      new_arrival = new_start + dist_from_inserted + route_next[:considered_setup_duration]
+      new_arrival = new_start + dist_from_inserted + setup_duration
       new_end = new_arrival + route_next[:duration]
 
       new_end
@@ -643,6 +644,10 @@ module Heuristics
       }
 
       (0..service_data[:nb_activities] - 1).collect{ |activity|
+        next_point = position == route_data[:current_route].size ? route_data[:end_point_id] : route[position][:point_id]
+        next if position.positive? && position < route.size && # not first neither last position
+                previous[:point_id] == next_point && previous[:point_id] != @services_data[service][:points_ids][activity] # there is no point in testing a position that will imply useless route time
+
         duration = @same_point_day && !in_adjust ? service_data[:group_duration] : service_data[:durations][activity]
 
         next if route_data[:maximum_ride_time] &&
@@ -836,9 +841,6 @@ module Heuristics
       end
 
       positions_to_try.each{ |position|
-        previous_point = position.zero? ? route_data[:start_point_id] : route[position - 1][:point_id]
-        next if (@same_point_day || @relaxed_same_point_day) && !(position == route.size || route[position][:point_id] != previous_point)
-
         possibles << compute_value_at_position(route_data, service, position, in_adjust)
 
         next if !(route.empty? && possibles.last)
