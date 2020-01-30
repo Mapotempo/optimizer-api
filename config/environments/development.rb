@@ -30,13 +30,14 @@ module OptimizerWrapper
   TMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'tmp')
   @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
-  HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides]
+  HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides].freeze
   DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR)
   VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
-  ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple')
+  ORTOOLS_EXEC = 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
+  ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
-  PARAMS_LIMIT = { points: 100000, vehicles: 1000 }
+  PARAMS_LIMIT = { points: 100000, vehicles: 1000 }.freeze
 
   DUMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'dump')
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
