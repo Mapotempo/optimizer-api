@@ -18,7 +18,6 @@
 require './test/test_helper'
 
 class InstanceValidityTest < Minitest::Test
-
   def test_incorrect_matrix_indices
     problem = VRP.basic
     problem[:points] << { id: 'point_4', matrix_index: 4 }
@@ -53,7 +52,7 @@ class InstanceValidityTest < Minitest::Test
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'vehicle'
-    },{
+    }, {
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'work_day'
@@ -70,7 +69,7 @@ class InstanceValidityTest < Minitest::Test
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'vehicle'
-    },{
+    }, {
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'work_day'

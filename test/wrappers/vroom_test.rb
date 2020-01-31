@@ -17,7 +17,6 @@
 #
 require './test/test_helper'
 
-
 class Wrappers::VroomTest < Minitest::Test
   def test_minimal_problem
     vroom = OptimizerWrapper.config[:services][:vroom]

@@ -17,7 +17,6 @@
 #
 require './test/test_helper'
 
-
 class Wrappers::DemoTest < Minitest::Test
   def test_demo
     demo = OptimizerWrapper.config[:services][:demo]
