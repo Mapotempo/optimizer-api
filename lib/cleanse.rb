@@ -68,15 +68,18 @@ module Cleanse
       previous_point = nil
       current_service = nil
       current_point = nil
+
       route[:activities].delete_if{ |activity|
         current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
         current_point = current_service.activity.point if current_service
 
         if previous && current_service && same_position(vrp, previous_point, current_point) && same_empty_units(capacities_units, previous, current_service) &&
         !same_fill_units(capacities_units, previous, current_service)
+          add_unnassigned(result[:unassigned], current_service, 'Duplicate empty service.')
           true
         elsif previous && current_service && same_position(vrp, previous_point, current_point) && same_fill_units(capacities_units, previous, current_service) &&
         !same_empty_units(capacities_units, previous, current_service)
+          add_unnassigned(result[:unassigned], current_service, 'Duplicate fill service.')
           true
         else
           previous = current_service if previous.nil? || activity[:service_id]
@@ -84,6 +87,24 @@ module Cleanse
           false
         end
       }
+
+    }
+  end
+
+  def self.add_unnassigned(unassigned, service, reason)
+    unassigned << {
+      original_service_id: service.id,
+      service_id: service.id,
+      point_id: service.activity&.point_id,
+      detail: {
+        lat: service.activity&.point&.location&.lat,
+        lon: service.activity&.point&.location&.lon,
+        setup_duration: service.activity&.setup_duration,
+        duration: service.activity&.duration,
+        timewindows: service.activity&.timewindows ? service.activity.timewindows.collect{ |tw| { start: tw.start, end: tw.end }} : [],
+        quantities: service.quantities&.collect{ |qte| { unit: qte.unit.id, value: qte.value } }
+      },
+      reason: reason
     }
   end
 
