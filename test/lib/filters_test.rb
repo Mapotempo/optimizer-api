@@ -231,29 +231,35 @@ class FiltersTest < Minitest::Test
     vrp[:vehicles][0][:cost_late_multiplier] = 0
 
     vrp[:services][2][:activity][:duration] = 30
-
-    OptimizerWrapper.config[:services][:ortools].stub(
-      :solve, # (cluster_vrp, job, proc)
-      lambda { |cluster_vrp, _, _,|
-        assert_equal 0, cluster_vrp.services.size
-        'Job killed'
-      }
-    ) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    begin
+      OptimizerWrapper.config[:services][:ortools].stub(
+        :solve, # (cluster_vrp, job, proc)
+        lambda { |cluster_vrp, _, _,|
+          assert_equal 0, cluster_vrp.services.size
+          raise OptimizerWrapper::JobKilledError
+        }
+      ) do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      end
+    rescue OptimizerWrapper::JobKilledError
+      nil
     end
 
     vrp[:services][0][:activity][:late_multiplier] = 0.3
     vrp[:vehicles][0][:capacities] = [{ unit_id: 'kg', limit: 5, overload_multiplier: 1 }]
     vrp[:vehicles][0][:cost_late_multiplier] = 0.3
-
-    OptimizerWrapper.config[:services][:ortools].stub(
-      :solve, # (cluster_vrp, job, proc)
-      lambda { |cluster_vrp, _, _,|
-        assert_equal 3, cluster_vrp.services.size
-        'Job killed'
-      }
-    ) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    begin
+      OptimizerWrapper.config[:services][:ortools].stub(
+        :solve, # (cluster_vrp, job, proc)
+        lambda { |cluster_vrp, _, _,|
+          assert_equal 3, cluster_vrp.services.size
+          raise OptimizerWrapper::JobKilledError
+        }
+      ) do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      end
+    rescue OptimizerWrapper::JobKilledError
+      nil
     end
   end
 
@@ -274,14 +280,18 @@ class FiltersTest < Minitest::Test
     vrp[:services][1][:quantities] = [{ unit_id: 'kg2', value: 11 }, { unit_id: 'kg2', value: 11 }]
     vrp[:services][2][:quantities] = [{ unit_id: 'kg3', value: 11 }, { unit_id: 'kg5', value: 11 }]
 
-    OptimizerWrapper.config[:services][:ortools].stub(
-      :solve, # (cluster_vrp, job, proc)
-      lambda { |cluster_vrp, _, _,|
-        assert_equal 3, cluster_vrp.services.size
-        'Job killed'
-      }
-    ) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    begin
+      OptimizerWrapper.config[:services][:ortools].stub(
+        :solve, # (cluster_vrp, job, proc)
+        lambda { |cluster_vrp, _, _,|
+          assert_equal 3, cluster_vrp.services.size
+          raise OptimizerWrapper::JobKilledError
+        }
+      ) do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      end
+    rescue OptimizerWrapper::JobKilledError
+      nil
     end
   end
 

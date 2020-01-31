@@ -2989,7 +2989,7 @@ class WrapperTest < Minitest::Test
       solve_call += 1
       { routes: [], unassigned: vrp.services.collect{ |s| s }}
     }) do
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     end
     assert_equal 1, solve_call # 1 repetition if only periodic
 
@@ -3000,7 +3000,7 @@ class WrapperTest < Minitest::Test
       solve_call += 1
       { routes: [], unassigned: vrp.services.collect{ |s| s }}
     }) do
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     end
     assert_equal 3, solve_call # 3 repetitions if periodic + clustering
 
@@ -3013,7 +3013,7 @@ class WrapperTest < Minitest::Test
       solve_call += 1
       { routes: [], unassigned: vrp.services.collect{ |s| s }}
     }) do
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     end
     assert_equal 1, solve_call # 1 repetition if only clustering
 
@@ -3023,7 +3023,7 @@ class WrapperTest < Minitest::Test
       solve_call += 1
       { routes: [], unassigned: vrp.services.collect{ |s| s }}
     }) do
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     end
     assert_equal 1, solve_call # 1 repetition if basic instance
   end

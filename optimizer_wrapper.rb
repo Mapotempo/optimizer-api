@@ -160,7 +160,7 @@ module OptimizerWrapper
     }
 
     log "<-- define_process levels #{services_vrps.map{ |sv| sv[:dicho_level] }} elapsed: #{(Time.now - t).round(2)}sec", level: :debug
-    check_result_consistency(expecting, result_global[:result])
+    check_result_consistency(expecting, result_global[:result]) if services_vrps.collect{ |sv| sv[:service] } != [:demo] # demo solver returns a fixed solution
     result_global[:result].size > 1 ? result_global[:result] : result_global[:result].first
   end
 
@@ -587,7 +587,11 @@ module OptimizerWrapper
       nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
       nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:shipment_id] }
 
-      log 'Wrong number of visits returned in result', level: :warn if expected_value != nb_assigned + nb_unassigned
+      if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
+        log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
+        log 'Wrong number of visits returned in result', level: :warn
+        raise RuntimeError, 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
+      end
     }
   end
 
