@@ -155,10 +155,10 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
       expanded = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_indices)
       s = Heuristics::Scheduling.new(vrp, expanded, start: 0, end: 365, shift: 0)
-      s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.dump')))
-      s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.dump')))
-      s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.dump')))
-      s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.dump')))
+      s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.dump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.dump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.dump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.dump'))) # rubocop: disable Security/MarshalLoad
       starting_with = s.instance_variable_get(:@uninserted).size
       s.add_missing_visits
 

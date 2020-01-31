@@ -41,7 +41,7 @@ class SplitClusteringTest < Minitest::Test
         puts "Regularity trial: #{trial}/#{regularity_restart}"
         max_balance_deviation = 0
 
-        service_vrp = { vrp:  Marshal.load(vrp), service: :demo }
+        service_vrp = { vrp:  Marshal.load(vrp), service: :demo } # rubocop: disable Security/MarshalLoad
         service_vrp[:vrp].services.each{ |s| s.skills = [] }         # The instance has "Pas X" style day skills, we purposely ignore them otherwise balance is not possible
         service_vrp[:vrp].vehicles = [service_vrp[:vrp].vehicles[0]] # entity: `vehicle` settting only makes sense if the number of clusters is equal to the number of vehicles.
         service_vrp[:vrp].vehicles *= 2
@@ -216,7 +216,7 @@ class SplitClusteringTest < Minitest::Test
         durations = []
         vehicle_dump = Marshal.dump(services_vrps[:vrp][:vehicles].first)
         vehicles = (0..4).collect{ |v_i|
-          vehicle = Marshal.load(vehicle_dump)
+          vehicle = Marshal.load(vehicle_dump) # rubocop: disable Security/MarshalLoad
           vehicle[:sequence_timewindows] = [vehicle[:sequence_timewindows][v_i]]
           vehicle
         }
@@ -612,7 +612,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_poorly_populated_route_limit_result
       vrp = TestHelper.load_vrp(self, fixture_file: 'max_split_functionality')
-      result = Marshal.load(File.binread('test/fixtures/max_split_poorly_populated_route_limit_result.bindump'))
+      result = Marshal.load(File.binread('test/fixtures/max_split_poorly_populated_route_limit_result.bindump')) # rubocop: disable Security/MarshalLoad
       Interpreters::SplitClustering.remove_poor_routes(vrp, result)
 
       assert_equal 0, result[:unassigned].size, 'remove_poor_routes should not remove any services from this result'
@@ -650,7 +650,7 @@ class SplitClusteringTest < Minitest::Test
       vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
       (1..@regularity_restarts).each{ |trial|
         puts "Regularity trial: #{trial}/#{@regularity_restarts}"
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil)
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
         visits_unassigned << result[:unassigned].size
         services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
         reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
@@ -691,7 +691,7 @@ class SplitClusteringTest < Minitest::Test
       vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
       (1..@regularity_restarts).each{ |trial|
         puts "Regularity trial: #{trial}/#{@regularity_restarts}"
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil)
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
         visits_unassigned << result[:unassigned].size
         services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
         reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
