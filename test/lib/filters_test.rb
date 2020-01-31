@@ -185,7 +185,7 @@ class FiltersTest < Minitest::Test
 
           assert_in_delta integer_capacity, cap.unit.precision_coef * cap.limit, 1e-10
 
-          assert_equal integer_capacity, true_capacities[cap.unit_id]
+          assert_equal true_capacities[cap.unit_id], integer_capacity
         }
 
         Models::Quantity.all.each{ |qan|
@@ -193,7 +193,7 @@ class FiltersTest < Minitest::Test
 
           assert_in_delta integer_quantity, qan.unit.precision_coef * qan.value, 1e-10
 
-          assert_equal integer_quantity, true_quantities[qan.unit_id]
+          assert_equal true_quantities[qan.unit_id], integer_quantity
         }
 
         # FIXME: Currently we continue to multiply the quantity and capacity values with 1000
@@ -235,7 +235,7 @@ class FiltersTest < Minitest::Test
     OptimizerWrapper.config[:services][:ortools].stub(
       :solve, # (cluster_vrp, job, proc)
       lambda { |cluster_vrp, _, _,|
-        assert_equal cluster_vrp.services.size, 0
+        assert_equal 0, cluster_vrp.services.size
         'Job killed'
       }
     ) do
@@ -249,7 +249,7 @@ class FiltersTest < Minitest::Test
     OptimizerWrapper.config[:services][:ortools].stub(
       :solve, # (cluster_vrp, job, proc)
       lambda { |cluster_vrp, _, _,|
-        assert_equal cluster_vrp.services.size, 3
+        assert_equal 3, cluster_vrp.services.size
         'Job killed'
       }
     ) do
@@ -277,7 +277,7 @@ class FiltersTest < Minitest::Test
     OptimizerWrapper.config[:services][:ortools].stub(
       :solve, # (cluster_vrp, job, proc)
       lambda { |cluster_vrp, _, _,|
-        assert_equal cluster_vrp.services.size, 3
+        assert_equal 3, cluster_vrp.services.size
         'Job killed'
       }
     ) do

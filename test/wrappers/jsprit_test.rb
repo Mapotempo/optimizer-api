@@ -66,7 +66,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
-      assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       assert_equal problem[:services].size + 1, result[:routes][0][:activities].size
     end
 
@@ -192,7 +192,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
-      assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
     end
 
@@ -244,7 +244,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
-      assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       assert_equal problem[:services].size - 1 + 1, result[:routes][0][:activities].size
       assert_equal 1, result[:unassigned].size
     end
@@ -303,7 +303,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
-      assert_equal 0, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 0, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       assert_equal 2, result[:unassigned].size
     end
 
@@ -384,7 +384,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
-      assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       assert_equal problem[:services].size + 2, result[:routes][0][:activities].size
     end
 
@@ -470,7 +470,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
-      assert_equal 1, result[:routes].select{ |r| r[:activities].select{ |a| a[:pickup_shipment_id] }.size > 0 || r[:activities].select{ |a| a[:delivery_shipment_id] }.size > 0 }.size
+      assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:pickup_shipment_id] }.positive? || r[:activities].count{ |a| a[:delivery_shipment_id] }.positive? })
       assert_equal problem[:shipments].size * 2 + 2, result[:routes][0][:activities].size # activities for start/end and return to start for skills
     end
 
@@ -561,7 +561,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert rv1[:activities].collect{ |a| a[:service_id] }.include?('service_4')
     end
 
-      def test_vehicle_limit
+    def test_vehicle_limit
       jsprit = OptimizerWrapper.config[:services][:jsprit]
       problem = {
         matrices: [{
