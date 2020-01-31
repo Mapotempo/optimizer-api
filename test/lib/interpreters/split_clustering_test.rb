@@ -162,7 +162,7 @@ class SplitClusteringTest < Minitest::Test
         # assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
         duration < max_duration && duration > min_duration
       }
-      assert o.select{ |i| i }.size > 0.9 * o.size, "Cluster durations are not balanced: #{durations.inspect}" # TODO: All clusters should be balanced -- i.e., not just 90% of them
+      assert o.count{ |i| i } > 0.9 * o.size, "Cluster durations are not balanced: #{durations.inspect}" # TODO: All clusters should be balanced -- i.e., not just 90% of them
     end
 
     def test_cluster_one_phase_vehicle
@@ -547,12 +547,12 @@ class SplitClusteringTest < Minitest::Test
       kg_limit = services_vrps.collect{ |s_v| 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'kg' }[:limit] }
       qte_limit = services_vrps.collect{ |s_v| 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'qte' }[:limit] }
 
-      assert services_vrps.collect{ |s_v| s_v[:vrp].services.collect{ |service|
-        service.quantities.find{ |qty| qty[:unit_id] == 'kg' }[:value] * service[:visits_number] }.sum
+      assert services_vrps.collect{ |s_v|
+        s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'kg' }[:value] * service[:visits_number] }.sum
       }.select.with_index{ |value, i| value > kg_limit[i] }.size <= 1
 
-      assert services_vrps.collect{ |s_v| s_v[:vrp].services.collect{ |service|
-        service.quantities.find{ |qty| qty[:unit_id] == 'qte' }[:value] * service[:visits_number] }.sum
+      assert services_vrps.collect{ |s_v|
+        s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'qte' }[:value] * service[:visits_number] }.sum
       }.select.with_index{ |value, i| value > qte_limit[i] }.size <= 1
     end
 

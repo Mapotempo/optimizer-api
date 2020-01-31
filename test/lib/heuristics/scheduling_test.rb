@@ -249,9 +249,9 @@ class HeuristicTest < Minitest::Test
       }
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-      assert_equal 3, result[:routes].select{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_1' } }.size
-      assert_equal 4, result[:routes].select{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_3' } }.size
-      assert_equal 3, result[:routes].select{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_5' } }.size
+      assert_equal(3, result[:routes].count{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_1' } })
+      assert_equal(4, result[:routes].count{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_3' } })
+      assert_equal(3, result[:routes].count{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_5' } })
     end
 
     def test_two_stage_cluster
@@ -492,14 +492,14 @@ class HeuristicTest < Minitest::Test
 
     def test_same_point_day_relaxation
       vrp = TestHelper.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] } }, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
 
-      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
-                   "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
+      assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
+                   "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
-        days_used = result[:routes].collect{ |r| r[:activities].select{ |stop| stop[:point_id] == point_id }.size }.select(&:positive?).size
+        days_used = result[:routes].collect{ |r| r[:activities].count{ |stop| stop[:point_id] == point_id } }.count(&:positive?)
         assert days_used <= expected_number_of_days, "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
       }
     end
@@ -531,7 +531,7 @@ class HeuristicTest < Minitest::Test
       # providing uncomplete solution (compared to solution without initial routes)
       puts "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 10, result[:unassigned].select{ |un| un[:reason] == 'Some visits assigned manually (1 visits preassigned in routes)' }.size
+      assert_equal(10, result[:unassigned].count{ |un| un[:reason] == 'Some visits assigned manually (1 visits preassigned in routes)' })
       assert_equal expected_nb_visits, result[:routes].collect{ |r| r[:activities].size - 2 }.flatten.sum + result[:unassigned].size
       assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == 'ANDALUCIA 1_2' }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
 
@@ -578,7 +578,7 @@ class HeuristicTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 36, result[:unassigned].size
-      assert_equal 9, result[:unassigned].select{ |un| un[:reason] == 'Unfeasible route (vehicle BALEARES not available at day 300)' }.size
+      assert_equal(9, result[:unassigned].count{ |un| un[:reason] == 'Unfeasible route (vehicle BALEARES not available at day 300)' })
     end
 
     def test_sticky_in_scheduling

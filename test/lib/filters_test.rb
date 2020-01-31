@@ -296,7 +296,7 @@ class FiltersTest < Minitest::Test
 
     assert_equal 2, result[:unassigned].size
     result[:routes].each{ |route|
-      assert_equal 2, route[:activities].select{ |activity| activity[:service_id] }.size
+      assert_equal(2, route[:activities].count{ |activity| activity[:service_id] })
     }
   end
 end

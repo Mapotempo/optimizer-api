@@ -553,7 +553,7 @@ class Wrappers::JspritTest < Minitest::Test
       assert jsprit.inapplicable_solve?(vrp).empty?
       result = jsprit.solve(vrp, 'test')
       assert result
-      assert_equal 2, result[:routes].select{ |r| r[:activities].select{ |a| a[:service_id] }.size > 0 }.size
+      assert_equal(2, result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       rv0 = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0' }
       assert rv0[:activities].collect{ |a| a[:service_id] }.include?('service_1')
       assert rv0[:activities].collect{ |a| a[:service_id] }.include?('service_2')
