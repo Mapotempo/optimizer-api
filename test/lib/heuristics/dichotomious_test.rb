@@ -151,7 +151,7 @@ class DichotomiousTest < Minitest::Test
     end
 
     def test_split_matrix
-      vrp = TestHelper.load_vrp(self, fixture_file: "dichotomious_approach")
+      vrp = TestHelper.load_vrp(self, fixture_file: 'dichotomious_approach')
       vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
       service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
 

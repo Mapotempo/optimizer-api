@@ -2237,13 +2237,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        skills: [["frozen"]]
+        skills: [['frozen']]
       }, {
         id: 'vehicle_1',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        skills: [["cool"]]
+        skills: [['cool']]
       }],
       services: [{
         id: 'service_0',
@@ -2251,28 +2251,28 @@ class Wrappers::OrtoolsTest < Minitest::Test
           point_id: 'point_1',
           late_multiplier: 0,
         },
-        skills: ["frozen"]
+        skills: ['frozen']
       }, {
         id: 'service_1',
         activity: {
           point_id: 'point_2',
           late_multiplier: 0,
         },
-        skills: ["cool"]
+        skills: ['cool']
       }, {
         id: 'service_2',
         activity: {
           point_id: 'point_3',
           late_multiplier: 0,
         },
-        skills: ["frozen"]
+        skills: ['frozen']
       }, {
         id: 'service_3',
         activity: {
           point_id: 'point_3',
           late_multiplier: 0,
         },
-        skills: ["cool"]
+        skills: ['cool']
       }],
       configuration: {
         preprocessing: {
@@ -3277,7 +3277,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'minimum_lapse_1',
-        type: "minimum_day_lapse",
+        type: 'minimum_day_lapse',
         lapse: 2,
         linked_ids: ['service_1', 'service_2', 'service_3']
       }],
@@ -3645,7 +3645,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           late_multiplier: 0,
         },
         quantities: [{
-          unit_id: "unit_0",
+          unit_id: 'unit_0',
           value: 2
         }]
       }, {
@@ -3661,7 +3661,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           late_multiplier: 0,
         },
         quantities: [{
-          unit_id: "unit_0",
+          unit_id: 'unit_0',
           value: 2
         }]
       }],
@@ -4012,13 +4012,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }],
       relations: [{
-        type: "maximum_duration_lapse",
+        type: 'maximum_duration_lapse',
         lapse: 100,
-        linked_ids: ["shipment_0pickup", "shipment_0delivery"]
+        linked_ids: ['shipment_0pickup', 'shipment_0delivery']
       },{
-        type: "maximum_duration_lapse",
+        type: 'maximum_duration_lapse',
         lapse: 100,
-        linked_ids: ["shipment_1pickup", "shipment_1delivery"]
+        linked_ids: ['shipment_1pickup', 'shipment_1delivery']
       }],
       configuration: {
         preprocessing: {
@@ -4258,7 +4258,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'sequence_1',
-        type: "sequence",
+        type: 'sequence',
         linked_ids: ['service_1', 'service_3', 'service_2']
       }],
       configuration: {
@@ -4297,61 +4297,61 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       },
       points: [{
-          id: "point_0",
+          id: 'point_0',
           location: {
               lat: 43.8,
               lon: 5.8
           }
       }, {
-          id: "point_1",
+          id: 'point_1',
           location: {
               lat: -43.8,
               lon: 5.8
           }
       }, {
-          id: "point_2",
+          id: 'point_2',
           location: {
               lat: 44.8,
               lon: 4.8
           }
       }, {
-          id: "agent_home",
+          id: 'agent_home',
           location: {
               lat: 44.0,
               lon: 5.1
           }
       }],
       vehicles: [{
-          id: "vehicle_1",
+          id: 'vehicle_1',
           cost_time_multiplier: 1.0,
           cost_waiting_time_multiplier: 1.0,
           cost_distance_multiplier: 1.0,
-          router_mode: "car",
-          router_dimension: "time",
+          router_mode: 'car',
+          router_dimension: 'time',
           speed_multiplier: 1.0,
-          start_point_id: "agent_home",
-          end_point_id: "agent_home"
+          start_point_id: 'agent_home',
+          end_point_id: 'agent_home'
       }],
       services: [{
-          id: "service_0",
-          type: "service",
+          id: 'service_0',
+          type: 'service',
           activity: {
             duration: 100.0,
-            point_id: "point_0"
+            point_id: 'point_0'
           }
       }, {
-          id: "service_1",
-          type: "service",
+          id: 'service_1',
+          type: 'service',
           activity: {
               duration: 100.0,
-              point_id: "point_1"
+              point_id: 'point_1'
           }
       }, {
-          id: "service_2",
-          type: "service",
+          id: 'service_2',
+          type: 'service',
           activity: {
               duration: 100.0,
-              point_id: "point_2"
+              point_id: 'point_2'
           }
       }]
     }
@@ -4512,7 +4512,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'force_first',
-        type: "force_first",
+        type: 'force_first',
         linked_ids: ['service_1', 'service_3']
       }],
       configuration: {
@@ -4650,7 +4650,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'never_first',
-        type: "never_first",
+        type: 'never_first',
         linked_ids: ['service_1', 'service_3']
       }],
       configuration: {
@@ -4733,7 +4733,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'never_first',
-        type: "never_first",
+        type: 'never_first',
         linked_ids: ['service_1', 'service_3']
       }],
       configuration: {
