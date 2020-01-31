@@ -19,7 +19,6 @@
 require './test/test_helper'
 
 class OptimizerLoggerTest < Minitest::Test
-
   def setup
     File.delete './test.log' if File.exist? './test.log'
     OptimizerLogger.log_device = 'test.log'
@@ -52,5 +51,4 @@ class OptimizerLoggerTest < Minitest::Test
     OptimizerLogger.level = tmp_logger_level
     File.delete './test.log'
   end
-
 end

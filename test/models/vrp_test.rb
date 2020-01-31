@@ -57,7 +57,7 @@ module Models
       vrp = VRP.toy
       vrp = TestHelper.create(vrp)
       assert !vrp.scheduling?
-      
+
       vrp = VRP.scheduling_seq_timewindows
       vrp = TestHelper.create(vrp)
       assert vrp.scheduling?

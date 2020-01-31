@@ -564,7 +564,7 @@ class SplitClusteringTest < Minitest::Test
         entity: 'work_day'
       }]
       vrp[:services].first[:skills] = ['skill']
-      vrp[:vehicles][0][:skills] = [['skill'],['other_skill']]
+      vrp[:vehicles][0][:skills] = [['skill'], ['other_skill']]
       vrp[:preprocessing_kmeans_centroids] = [1, 2]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
 

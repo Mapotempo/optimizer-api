@@ -17,7 +17,6 @@
 #
 require './test/test_helper'
 
-
 class Wrappers::OrtoolsTest < Minitest::Test
   def test_minimal_problem
     ortools = OptimizerWrapper.config[:services][:ortools]
@@ -98,7 +97,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_1',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-      },{
+      }, {
         id: 'vehicle_2',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
@@ -118,7 +117,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration',
-        linked_vehicle_ids: ['vehicle_0','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_0', 'vehicle_2'],
         lapse: 2
       }],
       configuration: {
@@ -159,7 +158,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         timewindow: {
           start: 0
         }
-      },{
+      }, {
         id: 'voiture3',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
@@ -228,14 +227,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
         timewindow: {
           start: 0
         }
-      },{
+      }, {
         id: 'vehicle_2',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
         timewindow: {
           start: 0
         }
-      },{
+      }, {
         id: 'vehicle_3',
         start_point_id: 'depot',
         matrix_id: 'matrix_0',
@@ -258,7 +257,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 1
       }],
       configuration: {
@@ -344,8 +343,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         resolution: {
           duration: 10,
         },
-        schedule:{
-          range_indices:{
+        schedule: {
+          range_indices: {
             start: 0,
             end: 0
           }
@@ -544,7 +543,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -615,7 +614,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -625,8 +624,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         schedule: {
            range_date: {
-            start: Date.new(2018,3,30),
-            end: Date.new(2018,4,2)
+            start: Date.new(2018, 3, 30),
+            end: Date.new(2018, 4, 2)
           }
         }
       }
@@ -686,7 +685,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 5,
         periodicity: 2
       }],
@@ -757,7 +756,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_weeks',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -767,8 +766,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         schedule: {
           range_date: {
-            start: Date.new(2018,3,30),
-            end: Date.new(2018,4,9)
+            start: Date.new(2018, 3, 30),
+            end: Date.new(2018, 4, 9)
           }
         }
       }
@@ -828,7 +827,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_months',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 5,
         periodicity: 1
       }],
@@ -838,8 +837,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         schedule: {
           range_date: {
-            start: Date.new(2018,3,30),
-            end: Date.new(2018,4,1)
+            start: Date.new(2018, 3, 30),
+            end: Date.new(2018, 4, 1)
           }
         }
       }
@@ -899,7 +898,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         type: 'vehicle_group_duration_on_months',
-        linked_vehicle_ids: ['vehicle_1','vehicle_2'],
+        linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 5,
         periodicity: 2
       }],
@@ -909,8 +908,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         },
         schedule: {
           range_date: {
-            start: Date.new(2018,3,30),
-            end: Date.new(2018,4,1)
+            start: Date.new(2018, 3, 30),
+            end: Date.new(2018, 4, 1)
           }
         }
       }
@@ -1615,7 +1614,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           timewindows: [{
             start: 5,
             end: 6
-          },{
+          }, {
             start: 10,
             end: 11
           }],
@@ -1687,10 +1686,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
           timewindows: [{
             start: 5,
             end: 6
-          },{
+          }, {
             start: 10,
             end: 11
-          },{
+          }, {
             start: 15,
             end: 16
           }],
@@ -1759,7 +1758,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           timewindows: [{
             start: 5,
             end: 6
-          },{
+          }, {
             start: 10,
             end: 11
           }],
@@ -1779,7 +1778,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size , result[:routes][0][:activities].size
+    assert_equal problem[:services].size, result[:routes][0][:activities].size
   end
 
   def test_triple_hard_time_windows_problem
@@ -1831,10 +1830,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
           timewindows: [{
             start: 5,
             end: 6
-          },{
+          }, {
             start: 10,
             end: 11
-          },{
+          }, {
             start: 15,
             end: 16
           }],
@@ -1854,7 +1853,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:routes].size
-    assert_equal problem[:services].size , result[:routes][0][:activities].size
+    assert_equal problem[:services].size, result[:routes][0][:activities].size
   end
 
   def test_nearby_specific_ordder
@@ -3397,7 +3396,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         type: 'maximum_day_lapse',
         lapse: 1,
         linked_ids: ['service_1', 'service_2']
-      },{
+      }, {
         id: 'maximum_lapse_2',
         type: 'maximum_day_lapse',
         lapse: 1,
@@ -3591,8 +3590,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 6, result[:routes][0][:activities].size
   end
@@ -3848,7 +3847,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 5, result[:routes][0][:activities].size
   end
@@ -3929,8 +3928,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0'}
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 6, result[:routes][0][:activities].size
   end
@@ -4015,7 +4014,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         type: 'maximum_duration_lapse',
         lapse: 100,
         linked_ids: ['shipment_0pickup', 'shipment_0delivery']
-      },{
+      }, {
         type: 'maximum_duration_lapse',
         lapse: 100,
         linked_ids: ['shipment_1pickup', 'shipment_1delivery']
@@ -4036,7 +4035,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 4, result[:routes][0][:activities].size
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1'} < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1'}
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 2, result[:unassigned].size
   end
 
@@ -4837,7 +4836,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         matrix_id: 'matrix_0',
         cost_distance_multiplier: 1,
         distance: 10
-      },{
+      }, {
         id: 'vehicle_1',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
@@ -4848,7 +4847,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         activity: {
           point_id: 'point_1',
         }
-      },{
+      }, {
         id: 'service_2',
         activity: {
           point_id: 'point_2',
@@ -4895,14 +4894,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        cost_time_multiplier:0,
+        cost_time_multiplier: 0,
         cost_distance_multiplier: 1,
         distance: 11
-      },{
+      }, {
         id: 'vehicle_1',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        cost_time_multiplier:0,
+        cost_time_multiplier: 0,
         cost_distance_multiplier: 1,
         distance: 10
       }],
@@ -4911,7 +4910,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         activity: {
           point_id: 'point_1',
         }
-      },{
+      }, {
         id: 'service_2',
         activity: {
           point_id: 'point_2',
@@ -5107,7 +5106,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'service_1',
         activities: [{
           point_id: 'point_1'
-        },{
+        }, {
           point_id: 'point_2'
         }],
         skills: ['skill1']
@@ -5284,7 +5283,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }],
       routes: [{
-        mission_ids: ['service_1','service_2'],
+        mission_ids: ['service_1', 'service_2'],
         vehicle_id: 'vehicle_0'
       }],
       configuration: {
@@ -5384,7 +5383,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0'
-      },{
+      }, {
         id: 'vehicle_1',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0'
@@ -5401,7 +5400,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }],
       routes: [{
-        mission_ids: ['service_1','service_2'],
+        mission_ids: ['service_1', 'service_2'],
         vehicle_id: 'vehicle_0'
       }],
       configuration: {
@@ -5499,7 +5498,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     problem[:configuration][:resolution][:evaluate_only] = true
     problem[:routes] = [{
-      mission_ids: ['service_2','service_1'],
+      mission_ids: ['service_2', 'service_1'],
       vehicle_id: 'vehicle_1'
     }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
@@ -5870,7 +5869,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     previous_index = nil
     index_inserted = result[:routes][0][:activities].collect.with_index{ |activity, index| index if !vrp[:relations][0][:linked_ids].include?(activity[:service_id]) }.compact
     vrp[:relations][0][:linked_ids].each{ |service_id|
-      current_index = result[:routes][0][:activities].find_index{ |activity| activity[:service_id] == service_id}
+      current_index = result[:routes][0][:activities].find_index{ |activity| activity[:service_id] == service_id }
       assert (previous_index || -1) < current_index if current_index
       previous_index = current_index
     }

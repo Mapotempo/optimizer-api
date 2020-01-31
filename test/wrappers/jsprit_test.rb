@@ -17,7 +17,6 @@
 #
 require './test/test_helper'
 
-
 class Wrappers::JspritTest < Minitest::Test
   if !ENV['SKIP_JSPRIT']
     def test_minimal_problem

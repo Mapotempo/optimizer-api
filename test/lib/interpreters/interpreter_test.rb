@@ -1242,7 +1242,7 @@ class InterpreterTest < Minitest::Test
         preprocessing: {
           prefer_short_segment: true
         },
-        resolution:  {
+        resolution: {
           duration: 600
         },
         schedule: {
@@ -1440,7 +1440,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         timewindow: {
           start: 500
@@ -1452,7 +1452,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         timewindow: {
           start: 500
@@ -1557,7 +1557,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         capacities: [{
           unit_id: 'unit_0',
@@ -1603,7 +1603,7 @@ class InterpreterTest < Minitest::Test
           prefer_short_segment: true,
           max_split_size: 500
         },
-        resolution:  {
+        resolution: {
           duration: 1000
         }
       }
@@ -1662,7 +1662,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         capacities: [{
           unit_id: 'unit_0',
@@ -1771,7 +1771,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         capacities: [{
           unit_id: 'unit_0',
@@ -1855,7 +1855,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         skills: [['skill0']]
       }, {
@@ -1864,7 +1864,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         skills: [['skill1']]
       }],
@@ -1943,7 +1943,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         skills: [['skill0', 'skill1']]
       }, {
@@ -1952,7 +1952,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         skills: [['skill0']]
       }],
@@ -2037,7 +2037,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         capacities: [{
           unit_id: 'unit_0',
@@ -2131,7 +2131,7 @@ class InterpreterTest < Minitest::Test
         end_point_id: 'depot',
         router_mode: 'car',
         cost_late_multiplier: 0.0,
-        cost_time_multiplier:  1.0,
+        cost_time_multiplier: 1.0,
         speed_multiplier: 1.0,
         capacities: [{
           unit_id: 'unit_0',

@@ -105,3 +105,6 @@ Style/PreferredHashMethods:
 
 Style/RedundantException:
   Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
