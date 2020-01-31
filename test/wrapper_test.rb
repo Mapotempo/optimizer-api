@@ -908,13 +908,13 @@ class WrapperTest < Minitest::Test
     problem = {
       points: [
         {
-          id: "point_0",
+          id: 'point_0',
           location: {
             lat: 47,
             lon: 0
           }
         }, {
-          id: "point_1",
+          id: 'point_1',
           location: {
             lat: 48,
             lon: 0
@@ -930,14 +930,14 @@ class WrapperTest < Minitest::Test
       }],
       services: [
         {
-          id: "service_0",
+          id: 'service_0',
           activity: {
-            point_id: "point_0"
+            point_id: 'point_0'
           }
         }, {
-          id: "service_1",
+          id: 'service_1',
           activity: {
-            point_id: "point_1"
+            point_id: 'point_1'
           }
         }
       ],
