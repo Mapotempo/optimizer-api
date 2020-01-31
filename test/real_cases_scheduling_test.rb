@@ -21,7 +21,7 @@ class HeuristicTest < Minitest::Test
   if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
     def test_instance_baleares2
       vrp = TestHelper.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       assert result[:unassigned].size <= 3
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
@@ -32,7 +32,7 @@ class HeuristicTest < Minitest::Test
 
     def test_instance_baleares2_with_priority
       vrp = TestHelper.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       assert(result[:unassigned].none?{ |service| service[:service_id].include?('3359') })
       assert(result[:unassigned].none?{ |service| service[:service_id].include?('0110') })
@@ -55,7 +55,7 @@ class HeuristicTest < Minitest::Test
 
     def test_instance_andalucia1_two_vehicles
       vrp = TestHelper.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       assert_equal 0, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
@@ -173,7 +173,7 @@ class HeuristicTest < Minitest::Test
 
     def test_vrp_allow_partial_assigment_false
       vrp = TestHelper.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
       unassigned = result[:unassigned].collect{ |un| un[:service_id] }
       original_ids = unassigned.collect{ |id| id.split('_').slice(0, 4).join('_') }
@@ -195,7 +195,7 @@ class HeuristicTest < Minitest::Test
     def test_two_phases_clustering_sched_with_freq_and_same_point_day_5veh
       # about 3 minutes
       vrp = TestHelper.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
       assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,

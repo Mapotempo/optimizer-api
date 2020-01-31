@@ -21,7 +21,7 @@ class InstanceValidityTest < Minitest::Test
 
   def test_incorrect_matrix_indices
     problem = VRP.basic
-    problem[:points] << {id: 'point_4', matrix_index: 4}
+    problem[:points] << { id: 'point_4', matrix_index: 4 }
 
     vrp = TestHelper.create(problem)
     assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_correctness_provided_matrix_indices)

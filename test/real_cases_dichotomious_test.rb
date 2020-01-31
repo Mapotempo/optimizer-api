@@ -23,7 +23,7 @@ class RealCasesTest < Minitest::Test
     def test_dichotomious_first_instance
       vrp = TestHelper.load_vrp(self)
       t1 = Time.now
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       t2 = Time.now
       assert result
 
@@ -56,7 +56,7 @@ class RealCasesTest < Minitest::Test
     def test_dichotomious_second_instance
       vrp = TestHelper.load_vrp(self)
       t1 = Time.now
-      result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       t2 = Time.now
       assert result
 

@@ -151,7 +151,7 @@ class MultiTripsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 2, result[:routes].size
     route_0 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_0' }
     route_1 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_1' }

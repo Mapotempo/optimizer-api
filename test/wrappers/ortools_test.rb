@@ -127,7 +127,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 3, result[:routes][1][:activities].size
   end
@@ -195,7 +195,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             },
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
     assert_equal result[:routes][0][:activities].size, result[:routes][1][:activities].size
@@ -275,7 +275,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             },
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
     assert_equal 3, result[:routes][2][:activities].size
@@ -489,7 +489,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 3, result[:routes][0][:activities].size
   end
@@ -560,7 +560,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -631,7 +631,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -702,7 +702,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 1, result[:unassigned].size
   end
@@ -773,7 +773,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -844,7 +844,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 0, result[:unassigned].size
   end
@@ -915,7 +915,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 1, result[:unassigned].size
   end
@@ -4356,7 +4356,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }]
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', {services: {vrp: [:ortools]}}, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result
     assert_equal 4, result[:routes][0][:activities].size
     assert result[:cost] < 2**32
@@ -5493,7 +5493,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 2310, result[:cost]
 
@@ -5502,7 +5502,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       mission_ids: ['service_2','service_1'],
       vehicle_id: 'vehicle_1'
     }]
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 2310, result[:cost]
     assert_equal 1, result[:iterations]
   end
@@ -5583,7 +5583,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
     assert result[:heuristic_synthesis].min_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[:used]
@@ -5667,7 +5667,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
     assert result[:heuristic_synthesis].min_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[:used]
@@ -5793,7 +5793,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }
     }
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert result.has_key?(:cost)
   end
@@ -5865,7 +5865,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_insert_with_order
     vrp = TestHelper.load_vrp(self, fixture_file: 'instance_order')
-    result = OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:ortools] }}, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result
     previous_index = nil
     index_inserted = result[:routes][0][:activities].collect.with_index{ |activity, index| index if !vrp[:relations][0][:linked_ids].include?(activity[:service_id]) }.compact
