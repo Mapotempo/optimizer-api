@@ -112,7 +112,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
   def test_first_solution_strategie_param
     vrp = VRP.toy
-    vrp[:configuration].merge!(preprocessing: { first_solution_strategy: 'a, b ' })
+    vrp[:configuration][:preprocessing] = { first_solution_strategy: 'a, b ' }
     OptimizerWrapper.stub(:wrapper_vrp,
       lambda { |_api_key, _services, vrp, _checksum|
         assert_equal ['a', 'b'], vrp.preprocessing_first_solution_strategy

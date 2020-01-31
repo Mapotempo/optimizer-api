@@ -45,7 +45,7 @@ class HeuristicTest < Minitest::Test
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
-        days_used = result[:routes].collect{ |r| r[:activities].select{ |stop| stop[:point_id] == point_id }.size }.select(&:positive?).size
+        days_used = result[:routes].collect{ |r| r[:activities].count{ |stop| stop[:point_id] == point_id } }.count(&:positive?)
         assert days_used <= expected_number_of_days, "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
       }
 
