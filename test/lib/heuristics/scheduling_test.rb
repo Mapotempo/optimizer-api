@@ -513,7 +513,7 @@ class HeuristicTest < Minitest::Test
 
     def test_provide_initial_solution
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
-      routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump'))
+      routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
       routes.first.vehicle.id = 'ANDALUCIA 1'
       routes.first.mission_ids = ['1810', '1623', '2434', '8508']
       routes.first.day = 2
@@ -550,7 +550,7 @@ class HeuristicTest < Minitest::Test
 
     def test_reject_unfeasible_initial_solution
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
-      vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump'))
+      vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
 
       vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] = [{ start: 43500, end: 55500 }]
       vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [{ start: 31500, end: 43500 }]
@@ -572,7 +572,7 @@ class HeuristicTest < Minitest::Test
 
     def test_unassign_if_vehicle_not_available_at_provided_day
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
-      vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump'))
+      vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
       vrp.routes.first.vehicle.id = 'BALEARES'
       vrp.routes.first.day = 300
 

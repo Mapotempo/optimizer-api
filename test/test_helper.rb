@@ -92,7 +92,7 @@ module TestHelper
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = 'test/fixtures/' + filename + '.dump'
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrp = Marshal.load(File.binread(dump_file))
+      vrp = Marshal.load(File.binread(dump_file)) # rubocop: disable Security/MarshalLoad
       coerce(vrp)
     else
       vrp = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
@@ -111,7 +111,7 @@ module TestHelper
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = 'test/fixtures/' + filename + '.dump'
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrps = Marshal.load(File.binread(dump_file))
+      vrps = Marshal.load(File.binread(dump_file)) # rubocop: disable Security/MarshalLoad
       vrps.map!{ |vrp| coerce(vrp) }
     else
       vrps = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
