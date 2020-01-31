@@ -1318,7 +1318,7 @@ class WrapperTest < Minitest::Test
     }
     Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
-      assert_equal result[:routes][0][:activities].size, 5
+      assert_equal 5, result[:routes][0][:activities].size
       assert !result[:routes][0][:geometry].nil?
     end
   end
@@ -1396,8 +1396,8 @@ class WrapperTest < Minitest::Test
     }
 
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
-    assert_equal result[:routes][0][:activities].size, 2
-    assert_equal result[:routes][1][:activities].size, 2
+    assert_equal 2, result[:routes][0][:activities].size
+    assert_equal 2, result[:routes][1][:activities].size
   end
 
   def test_input_zones_shipment
@@ -1617,8 +1617,8 @@ class WrapperTest < Minitest::Test
     }
 
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom, :ortools] }}, TestHelper.create(problem), nil)
-    assert_equal result[:solvers][0], 'vroom'
-    assert_equal result[:solvers][1], 'ortools'
+    assert_equal 'vroom', result[:solvers][0]
+    assert_equal 'ortools', result[:solvers][1]
   end
 
   def test_possible_no_service_too_far_time
@@ -2963,7 +2963,7 @@ class WrapperTest < Minitest::Test
 
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-    assert_equal result.size, vrp.resolution_several_solutions
+    assert_equal vrp.resolution_several_solutions, result.size
   end
 
   def test_add_unassigned

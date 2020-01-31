@@ -66,8 +66,8 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
 
       @job_id = submit_vrp api_key: 'solvers', vrp: problem
       result = wait_status @job_id, 'completed', api_key: 'solvers'
-      assert_equal result['solutions'][0]['solvers'][0], 'vroom'
-      assert_equal result['solutions'][0]['solvers'][1], 'ortools'
+      assert_equal 'vroom', result['solutions'][0]['solvers'][0], "result['solutions'][0]['solvers'][0]"
+      assert_equal 'ortools', result['solutions'][0]['solvers'][1], "result['solutions'][0]['solvers'][1]"
     end
   ensure
     delete_completed_job @job_id, api_key: 'solvers'

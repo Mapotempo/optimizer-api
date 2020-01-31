@@ -607,10 +607,10 @@ class InterpreterTest < Minitest::Test
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 2, expanded_vrp[:vehicles].size
-    assert_equal expanded_vrp[:vehicles][0].timewindow[:start], 1
-    assert_equal expanded_vrp[:vehicles][0].timewindow[:end], 11
-    assert_equal expanded_vrp[:vehicles][1].timewindow[:start], 86404
-    assert_equal expanded_vrp[:vehicles][1].timewindow[:end], 86414
+    assert_equal 1, expanded_vrp[:vehicles][0].timewindow[:start]
+    assert_equal 11, expanded_vrp[:vehicles][0].timewindow[:end]
+    assert_equal 86404, expanded_vrp[:vehicles][1].timewindow[:start]
+    assert_equal 86414, expanded_vrp[:vehicles][1].timewindow[:end]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
     assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 }
   end

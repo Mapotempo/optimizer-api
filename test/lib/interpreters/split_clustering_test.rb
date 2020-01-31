@@ -247,7 +247,7 @@ class SplitClusteringTest < Minitest::Test
 
       services_vrps = Interpreters::SplitClustering.generate_split_vrps({ vrp: vrp, service: :demo }, nil, nil)
       assert services_vrps
-      assert_equal services_vrps.size, 2
+      assert_equal 2, services_vrps.size
     end
 
     def test_work_day_without_vehicle_entity_small
@@ -294,7 +294,7 @@ class SplitClusteringTest < Minitest::Test
       }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
-      assert_equal generated_services_vrps.size, 2
+      assert_equal 2, generated_services_vrps.size
     end
 
     def test_work_day_without_vehicle_entity
@@ -440,7 +440,7 @@ class SplitClusteringTest < Minitest::Test
 
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
-      assert_equal generated_services_vrps.collect{ |service| [service[:vrp][:vehicles].first[:id], service[:vrp][:vehicles].first[:global_day_index]] }.uniq.size, generated_services_vrps.size
+      assert_equal generated_services_vrps.size, generated_services_vrps.collect{ |service| [service[:vrp][:vehicles].first[:id], service[:vrp][:vehicles].first[:global_day_index]] }.uniq.size
     end
 
     def test_good_vehicle_assignment_skills
@@ -463,7 +463,7 @@ class SplitClusteringTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
 
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([{ vrp: vrp, service: :demo }]).flatten.compact
-      assert_equal generated_services_vrps.size, 15
+      assert_equal 15, generated_services_vrps.size
       generated_services_vrps.each{ |service|
         vehicle_day = service[:vrp][:vehicles].first[:sequence_timewindows].first[:day_index]
         assert(service[:vrp][:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(vehicle_day) })
@@ -502,9 +502,9 @@ class SplitClusteringTest < Minitest::Test
       }
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      assert_equal result[:solvers].size, 2
-      assert_equal result[:routes][0][:activities].collect{ |activity| activity[:service_id] }.compact, ['service_1', 'service_2']
-      assert_equal result[:routes][1][:activities].collect{ |activity| activity[:service_id] }.compact, ['service_3', 'service_4']
+      assert_equal 2, result[:solvers].size
+      assert_equal ['service_1', 'service_2'], result[:routes][0][:activities].collect{ |activity| activity[:service_id] }.compact
+      assert_equal ['service_3', 'service_4'], result[:routes][1][:activities].collect{ |activity| activity[:service_id] }.compact
     end
 
     def test_max_split_size
@@ -606,8 +606,8 @@ class SplitClusteringTest < Minitest::Test
       problem = TestHelper.create(vrp)
       check_vrp_services_size = problem.services.size
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
+      assert_equal check_vrp_services_size, problem.services.size
       assert_equal problem.services.size, result[:unassigned].map{ |s| s[:service_id] }.compact.size + result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size
-      assert_equal problem.services.size, check_vrp_services_size
     end
 
     def test_max_split_poorly_populated_route_limit_result
