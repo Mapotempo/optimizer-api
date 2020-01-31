@@ -953,7 +953,7 @@ class WrapperTest < Minitest::Test
 
     begin
       Routers::RouterWrapper.stub_any_instance(:matrix, lambda{ |*a| raise RouterError.new('STUB: Internal Server Error - OSRM request fails with: InvalidValue Exclude flag combination is not supported.') }) do
-        OptimizerWrapper.wrapper_vrp('demo', {services: {vrp: [:demo]}}, TestHelper.create(problem), nil)
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
       end
     rescue StandardError => error
       assert error.class.name.match 'RouterError'

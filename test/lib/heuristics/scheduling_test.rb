@@ -543,7 +543,7 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.vehicle.id = vehicle_id
       vrp.routes.first.day = day
 
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: {vrp: [:ortools] }}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expected_nb_visits, result[:routes].collect{ |r| r[:activities].size - 2 }.flatten.sum + result[:unassigned].size
       assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == "#{vehicle_id}_#{day}" }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
     end
