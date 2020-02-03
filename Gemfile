@@ -55,6 +55,7 @@ end
 
 group :test do
   gem 'minitest'
+  gem 'minitest-around' # to create a block around unit tests for initialisation and cleanup
   gem 'minitest-bisect' # to identify randomly failing order-depoendent tests
   gem 'minitest-focus'
   gem 'minitest-reporters'

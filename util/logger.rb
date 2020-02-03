@@ -19,6 +19,7 @@
 require 'logger'
 
 class OptimizerLogger
+  @@log_device = ENV['LOG_DEVICE'] || STDOUT
   @@level = :info
   @@level_map = {
     debug: Logger::DEBUG,
@@ -35,7 +36,7 @@ class OptimizerLogger
   # nil => Do not display any caller location information
   @@caller_location = nil
 
-  @@logger = Logger.new(ENV['LOG_DEVICE'] || STDOUT)
+  @@logger = Logger.new(@@log_device)
   @@logger.level = @@level_map[@@level]
 
   @@logger.formatter = proc do |severity, datetime, progname, msg|
@@ -94,8 +95,13 @@ class OptimizerLogger
     @@logger.level = @@level_map[level]
   end
 
-  def self.log_device=(file)
-    @@logger.reopen file
+  def self.log_device
+    @@log_device
+  end
+
+  def self.log_device=(logdev)
+    @@log_device = logdev
+    @@logger.reopen logdev
   end
 
   def self.formatter=(formatter)
