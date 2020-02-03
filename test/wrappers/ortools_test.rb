@@ -5866,13 +5866,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.load_vrp(self, fixture_file: 'instance_order')
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result
-    previous_index = nil
-    index_inserted = result[:routes][0][:activities].collect.with_index{ |activity, index| index if !vrp[:relations][0][:linked_ids].include?(activity[:service_id]) }.compact
-    vrp[:relations][0][:linked_ids].each{ |service_id|
-      current_index = result[:routes][0][:activities].find_index{ |activity| activity[:service_id] == service_id }
-      assert (previous_index || -1) < current_index if current_index
-      previous_index = current_index
+    assert_equal 0, result[:unassigned].size, 'All services should be planned.'
+
+    order_in_route = vrp[:relations][0][:linked_ids].collect{ |service_id|
+      result[:routes][0][:activities].find_index{ |activity| activity[:service_id] == service_id }
     }
+    assert_equal order_in_route.sort, order_in_route, 'Services with order relation should appear in correct order in route.'
   end
 
   def test_ordre_with_2_vehicles
