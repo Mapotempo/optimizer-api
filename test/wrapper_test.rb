@@ -2670,20 +2670,19 @@ class WrapperTest < Minitest::Test
           }]
         }
       }],
-      schedule: {
-        range_indices: {
-          start: 0,
-          end: 2
-        }
-      },
       configuration: {
         resolution: {
           duration: 10,
+        },
+        schedule: {
+          range_indices: {
+            start: 0,
+            end: 2
+          }
         }
       }
     }
-    job = nil
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, _job, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
@@ -2742,20 +2741,19 @@ class WrapperTest < Minitest::Test
           point_id: 'point_2'
         }
       }],
-      schedule: {
-        range_indices: {
-          start: 0,
-          end: 2
-        }
-      },
       configuration: {
         resolution: {
           duration: 10,
+        },
+        schedule: {
+          range_indices: {
+            start: 0,
+            end: 2
+          }
         }
       }
     }
-    job = nil
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, _job, &_block| vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
       assert_equal 6, result[:unassigned].size
     end
