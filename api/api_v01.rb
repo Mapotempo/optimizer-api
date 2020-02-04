@@ -34,6 +34,13 @@ module Api
 
     documentation_class = add_swagger_documentation(
       hide_documentation_path: true,
+      security_definitions: {
+        api_key_query_param: {
+          type: 'apiKey',
+          name: 'api_key',
+          in: 'query'
+        }
+      },
       consumes: [
         'application/json; charset=UTF-8',
         'application/xml',
@@ -42,7 +49,7 @@ module Api
         'application/json; charset=UTF-8',
         'application/xml',
       ],
-      doc_version: nil,
+      doc_version: '0.1.0',
       info: {
         title: ::OptimizerWrapper::config[:product_title],
         contact_email: ::OptimizerWrapper::config[:product_contact_email],
