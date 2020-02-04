@@ -357,7 +357,21 @@ module Ai4r
 
       private
 
-      def compute_vehicle_work_time_with(coef)
+      def compute_vehicle_work_time_with
+        coef = @centroids.map.with_index{ |centroid, index|
+          @cut_limit[index][:total_work_time] / ([centroid[3][:duration_from_and_to_depot], 1].max * @cut_limit[index][:total_work_days])
+        }.min
+
+        # TODO: The following filter is there to not to affect the existing functionality.
+        # However, we should improve the functioanlity and make it less arbitrary.
+        coef = if coef > 1.5
+                 1.5
+               elsif coef > 1.0
+                 1.0
+               else
+                 coef * 0.9 # To make sure the limit will not become 0.
+               end
+
         @centroids.map.with_index{ |centroid, index|
           @cut_limit[index][:total_work_time] - coef * centroid[3][:duration_from_and_to_depot] * @cut_limit[index][:total_work_days]
         }
@@ -365,9 +379,9 @@ module Ai4r
 
       def update_cut_limit
         return if @rate_balance == 0.0 || @cut_symbol.nil? || @cut_symbol != :duration || !@cut_limit.is_a?(Array)
+
         # TODO: This functionality is implemented only for duration cut_symbol. Make sure it doesn't interfere with other cut_symbols
-        vehicle_work_time = compute_vehicle_work_time_with(1.5)
-        vehicle_work_time = compute_vehicle_work_time_with(1) if vehicle_work_time.any?{ |value| value.negative? }
+        vehicle_work_time = compute_vehicle_work_time_with
         total_vehicle_work_times = vehicle_work_time.sum.to_f
         @centroids.size.times{ |index|
           @cut_limit[index][:limit] = @total_cut_load * vehicle_work_time[index] / total_vehicle_work_times
