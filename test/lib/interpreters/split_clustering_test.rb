@@ -632,15 +632,13 @@ class SplitClusteringTest < Minitest::Test
 
     def test_ignore_debug_parameter_if_no_coordinates
       vrp = TestHelper.load_vrp(self)
+      tmp_output_clusters = OptimizerWrapper.config[:debug][:output_clusters]
+      OptimizerWrapper.config[:debug][:output_clusters] = true
 
-      begin
-        OptimizerWrapper.config[:debug][:output_clusters] = true
-
-        # barely checks that function does not produce an error
-        Interpreters::SplitClustering.split_clusters([{ vrp: vrp }])
-      ensure
-        OptimizerWrapper.config[:debug][:output_clusters] == false
-      end
+      # just checks that function does not produce an error
+      Interpreters::SplitClustering.split_clusters([{ vrp: vrp }])
+    ensure
+      OptimizerWrapper.config[:debug][:output_clusters] = tmp_output_clusters
     end
 
     def test_results_regularity
