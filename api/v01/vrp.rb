@@ -86,7 +86,7 @@ module Api
       def self.vrp_request_point(this)
         this.requires(:id, type: String, allow_blank: false)
         this.optional(:matrix_index, type: Integer, allow_blank: false, desc: 'Index within the matrices, required if the matrices are already given')
-        this.optional(:location, type: Hash, allow_blank: false, desc: 'Location of the point if matrices are not given') do
+        this.optional(:location, type: Hash, allow_blank: false, documentation: { desc: 'Location of the point if matrices are not given'}) do
           self.requires(:lat, type: Float, allow_blank: false, desc: 'Latitude coordinate')
           self.requires(:lon, type: Float, allow_blank: false, desc: 'Longitude coordinate')
         end
@@ -410,7 +410,7 @@ module Api
       namespace :vrp do
         resource :submit do
           desc 'Submit VRP problem', {
-            nickname: 'vrp',
+            nickname: 'submit_vrp',
             success: VrpResult,
             failure: [
               {code: 400, message: 'Bad Request', model: ::Api::V01::Status}
@@ -423,19 +423,19 @@ module Api
           params {
             optional(:vrp, type: Hash, documentation: { param_type: 'body' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
               optional(:name, type: String, desc: 'Name of the problem, used as tag for all element in order to name plan when importing returned .csv file')
-              optional(:matrices, type: Array, desc: 'Define all the distances between each point of problem') do
+              optional(:matrices, type: Array, documentation: { desc: 'Define all the distances between each point of problem' }) do
                 Vrp.vrp_request_matrices(self)
               end
 
-              optional(:points, type: Array, desc: 'Particular place in the map') do
+              optional(:points, type: Array, documentation: { desc: 'Particular place in the map' }) do
                 Vrp.vrp_request_point(self)
               end
 
-              optional(:units, type: Array, desc: 'The name of a Capacity/Quantity') do
+              optional(:units, type: Array, documentation: { desc: 'The name of a Capacity/Quantity' }) do
                 Vrp.vrp_request_unit(self)
               end
 
-              optional(:rests, type: Array, desc: 'Break within a vehicle tour') do
+              optional(:rests, type: Array, documentation: { desc: 'Break within a vehicle tour' }) do
                 Vrp.vrp_request_rest(self)
               end
 
@@ -443,14 +443,14 @@ module Api
                 Vrp.vrp_request_zone(self)
               end
 
-              requires(:vehicles, type: Array, desc: 'Usually represent a work day of a particular driver/vehicle') do
+              requires(:vehicles, type: Array, documentation: { desc: 'Usually represent a work day of a particular driver/vehicle' }) do
                 Vrp.vrp_request_vehicle(self)
               end
 
-              optional(:services, type: Array, allow_blank: false, desc: 'Independent activity, which does not require a context') do
+              optional(:services, type: Array, allow_blank: false, documentation: { desc: 'Independent activity, which does not require a context' }) do
                 Vrp.vrp_request_service(self)
               end
-              optional(:shipments, type: Array, allow_blank: false, desc: 'Link directly one activity of collection to another of drop off') do
+              optional(:shipments, type: Array, allow_blank: false, documentation: { desc: 'Link directly one activity of collection to another of drop off' }) do
                 Vrp.vrp_request_shipment(self)
               end
               at_least_one_of :services, :shipments
@@ -467,7 +467,7 @@ module Api
                 Vrp.vrp_request_route(self)
               end
 
-              optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation') do
+              optional(:configuration, type: Hash, documentation: { desc: 'Describe the limitations of the solve in term of computation' }) do
                 Vrp.vrp_request_configuration(self)
               end
             end
@@ -504,7 +504,7 @@ module Api
               Vrp.vrp_request_vehicle(self)
             end
 
-            optional(:configuration, type: Hash, desc: 'Describe the limitations of the solve in term of computation', coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
+            optional(:configuration, type: Hash, documentation: { hidden: true, desc: 'Describe the limitations of the solve in term of computation' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
                 Vrp.vrp_request_configuration(self)
               end
           }
@@ -559,7 +559,7 @@ module Api
 
         resource :jobs do
           desc 'Fetch vrp job status', {
-            nickname: 'job',
+            nickname: 'get_job',
             success: VrpResult,
             failure: [
               {code: 404, message: 'Not Found', model: ::Api::V01::Status}
@@ -651,7 +651,7 @@ module Api
           end
 
           desc 'List vrp jobs', {
-            nickname: 'listJobs',
+            nickname: 'get_job_list',
             success: VrpJobsList,
             detail: 'List running or queued jobs.'
           }
