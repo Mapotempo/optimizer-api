@@ -68,7 +68,6 @@ module Wrappers
         :assert_first_solution_strategy_is_valid,
         :assert_clustering_compatible_with_scheduling_heuristic,
         :assert_lat_lon_for_partition,
-        :assert_work_day_partitions_only_schedule,
         :assert_vehicle_entity_only_before_work_day,
         :assert_deprecated_partitions,
         :assert_partitions_entity,

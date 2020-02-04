@@ -142,7 +142,17 @@ module Models
         raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
       }
 
-      periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
+      return unless hash[:configuration]
+
+      if hash[:configuration][:preprocessing]
+        if hash[:configuration][:preprocessing][:partitions]&.any?{ |partition| partition[:entity].to_sym == :work_day }
+          if hash[:services].any?{ |s| (s[:visits_number] || 1) > 1 && (s[:minimum_lapse] || 1) < 7 && s[:maximum_lapse] && s[:maximum_lapse] < 7 }
+            raise OptimizerWrapper::DiscordantProblemError, 'Work day partition implies that lapses of all services can be a multiple of 7. There are services whose minimum and maximum lapse do not permit such lapse'
+          end
+        end
+      end
+
+      periodic = hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
       return unless periodic
 
       if hash[:relations]

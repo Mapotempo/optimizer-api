@@ -419,12 +419,6 @@ module Wrappers
       vrp.preprocessing_partition_method.nil? || vrp.points.all?{ |pt| pt[:location] && pt[:location][:lat] && pt[:location][:lon] }
     end
 
-    def assert_work_day_partitions_only_schedule(vrp)
-      vrp.preprocessing_partitions.empty? || vrp.preprocessing_partitions.size < 2 ||
-      vrp.schedule_range_indices &&
-      (vrp.services.none?{ |service| service[:minimum_lapse] } || vrp.services.collect{ |service| service[:minimum_lapse] }.compact.min >= 7)
-    end
-
     def assert_vehicle_entity_only_before_work_day(vrp)
       vehicle_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == 'vehicle' }
       work_day_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == 'work_day' }

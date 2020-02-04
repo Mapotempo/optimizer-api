@@ -46,22 +46,6 @@ class InstanceValidityTest < Minitest::Test
     assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_solver_if_not_periodic
   end
 
-  def test_second_stage_allowed
-    problem = VRP.basic
-    problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-
-    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_work_day_partitions_only_schedule
-  end
-
-  def test_second_stage_allowed_small_lapses
-    problem = VRP.basic
-    problem[:services].first[:visits_number] = 3
-    problem[:services].first[:minimum_lapse] = 1
-    problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-
-    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_work_day_partitions_only_schedule
-  end
-
   def test_assert_inapplicable_relations_with_vroom
     problem = VRP.basic
     problem[:relations] = [{

@@ -95,5 +95,44 @@ module Models
       assert_equal [2], created_vrp.services[0].unavailable_visit_day_indices
       assert_equal [3], created_vrp.services[1].unavailable_visit_day_indices
     end
+
+    def test_reject_work_day_partition
+      vrp = VRP.scheduling
+      vrp[:services].each{ |s|
+        s[:visits_number] = 1
+        s[:minimum_lapse] = 2
+        s[:maximum_lapse] = 3
+      }
+      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
+      TestHelper.create(vrp) # no raise
+
+      vrp = VRP.scheduling
+      vrp[:services].each{ |s|
+        s[:visits_number] = 2
+        s[:minimum_lapse] = 2
+      }
+      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
+      TestHelper.create(vrp) # no raise
+
+      vrp = VRP.scheduling
+      vrp[:services].each{ |s|
+        s[:visits_number] = 2
+        s[:minimum_lapse] = 2
+        s[:maximum_lapse] = 3
+      }
+      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.scheduling
+      vrp[:services].each{ |s|
+        s[:visits_number] = 2
+        s[:minimum_lapse] = 2
+        s[:maximum_lapse] = 7
+      }
+      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
+      TestHelper.create(vrp) # no raise
+    end
   end
 end
