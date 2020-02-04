@@ -42,6 +42,9 @@ Style/TrailingCommaInArguments:
 Style/MultilineBlockChain:
   Enabled: false
 
+Style/TernaryParentheses:
+  EnforcedStyle: require_parentheses_when_complex
+
 Layout/SpaceInsideHashLiteralBraces:
   Enabled: true
   EnforcedStyle: compact
