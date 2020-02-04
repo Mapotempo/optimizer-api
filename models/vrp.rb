@@ -120,7 +120,15 @@ module Models
 
     def self.create(hash, delete = true)
       Models.delete_all if delete
-      super(hash)
+
+      vrp = super({})
+
+      [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
+       :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
+        vrp.send("#{key}=", hash[key]) if hash[key]
+      }
+
+      vrp
     end
 
     def configuration=(configuration)

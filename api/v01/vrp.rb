@@ -516,20 +516,15 @@ module Api
               d_params = declared(params, include_missing: false)
               vrp_params = d_params[:points] ? d_params : d_params[:vrp]
               APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), { vrp: vrp_params }.to_json) if OptimizerWrapper.config[:dump][:vrp]
-              vrp = ::Models::Vrp.create({})
-              params_limit = APIBase.services(api_key)[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
-              [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
-               :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
-                value = vrp_params[key]
-                if params_limit[key] && value && value.size > params_limit[key]
-                  error!({
-                    status: 'Exceeded params limit',
-                    message: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."
-                  }, 400)
-                end
-                vrp.send("#{key}=", vrp_params[key]) if vrp_params[key]
-              }
+              APIBase.services(api_key)[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {}).each{ |key, value|
+                next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value
 
+                error!({
+                  status: 'Exceeded params limit',
+                  message: "Exceeded #{key} limit authorized for your account: #{value}. Please contact support or sales to increase limits."
+                }, 400)
+              }
+              vrp = ::Models::Vrp.create(vrp_params)
               if !vrp.valid? || vrp_params.nil? || vrp_params.keys.empty?
                 vrp.errors.add(:empty_file, message: 'JSON file is empty') if vrp_params.nil?
                 vrp.errors.add(:empty_vrp, message: 'VRP structure is empty') if vrp_params&.keys&.empty?
