@@ -16,12 +16,39 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './test/api/v01/request_helper'
+require 'minitest/around/unit'
 
 class Api::V01::OutputTest < Api::V01::RequestHelper
   include Rack::Test::Methods
 
   def app
     Api::Root
+  end
+
+  # This function wraps around each test in this class.
+  # And the actual test is called in 'yield' so that
+  # we can uniformise the clean-up process
+  def around
+    # Save current settings to reset it after the test
+    current = {
+      dump_vrp_dir: OptimizerWrapper.dump_vrp_dir,
+      output_clusters: OptimizerWrapper.config[:debug][:output_clusters],
+      output_schedule: OptimizerWrapper.config[:debug][:output_schedule]
+    }
+
+    Dir.mktmpdir('temp_', 'test/') { |tmpdir|
+      # A tmpdir is created with a uniq name and
+      # deleted at the end of the block automatically
+      OptimizerWrapper.dump_vrp_dir = CacheManager.new(tmpdir)
+
+      yield
+    }
+  ensure
+    # Reset settings back to current
+    OptimizerWrapper.dump_vrp_dir = current[:dump_vrp_dir]
+    OptimizerWrapper.config[:debug][:output_clusters] = current[:output_clusters]
+    OptimizerWrapper.config[:debug][:output_schedule] = current[:output_schedule]
+    # tmpdir and generated files are already deleted
   end
 
   def test_day_week_num
@@ -59,11 +86,9 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
   end
 
   def test_clustering_generated_files
-    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
-
     all_services_vrps = Marshal.load(File.binread('test/fixtures/cluster_to_output.bindump')) # rubocop: disable Security/MarshalLoad
     file = OutputHelper::Clustering.generate_files(all_services_vrps, true)
-    generated_file = Api::V01::APIBase.dump_vrp_dir.cache + '/' + file
+    generated_file = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
     assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
@@ -74,18 +99,12 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
     assert csv.all?{ |line| line[4].count(',').zero? }, 'There should be only one vehicle in vehicles_ids column'
     assert csv.none?{ |line| line[5].nil? }, 'All timewindows of this vehicle should be shown'
-  ensure
-    File.delete(generated_file + '_csv')
-    File.delete(generated_file + '_geojson')
-    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
   end
 
   def test_clustering_generated_files_from_dicho
-    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
-
     all_services_vrps = Marshal.load(File.binread('test/fixtures/dicho_cluster_to_output.bindump')) # rubocop: disable Security/MarshalLoad
     file = OutputHelper::Clustering.generate_files(all_services_vrps)
-    generated_file = Api::V01::APIBase.dump_vrp_dir.cache + '/' + file
+    generated_file = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
     assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
@@ -95,21 +114,15 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq.size
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
     assert_equal [nil], csv.collect(&:last).uniq - ['vehicle_tw_if_only_one']
-  ensure
-    File.delete(generated_file + '_csv')
-    File.delete(generated_file + '_geojson')
-    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
   end
 
   def test_scheduling_generated_file
-    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
-
     name = 'test'
     job = 'fake_job'
     schedule_end = 5
 
     output_tool = OutputHelper::Scheduling.new(name, 'fake_vehicles', job, schedule_end)
-    file_name = Api::V01::APIBase.dump_vrp_dir.cache + '/scheduling_construction_test_fake_job'
+    file_name = File.join(Api::V01::APIBase.dump_vrp_dir.cache, 'scheduling_construction_test_fake_job')
 
     assert !File.exist?(file_name), 'File created before end of generation'
 
@@ -128,14 +141,10 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
         line[2] == 'X' && line[4] == 'X' && line[6] == 'X' &&
         line.count('X') == days.size
     })
-  ensure
-    File.delete(file_name)
-    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
   end
 
   def test_files_generated
     name = 'test_files_generated'
-    OptimizerWrapper.dump_vrp_dir = CacheManager.new('test/temp/')
     OptimizerWrapper.config[:debug][:output_clusters] = true
     OptimizerWrapper.config[:debug][:output_schedule] = true
 
@@ -154,21 +163,13 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     end
 
-    files = Find.find('test/temp/').select { |path|
+    files = Find.find(OptimizerWrapper.dump_vrp_dir.cache).select { |path|
       path.include?(name)
     }
 
     assert_equal 3, files.size
-    assert files.include?("test/temp/scheduling_construction_#{name}")
+    assert files.include?(File.join(OptimizerWrapper.dump_vrp_dir.cache, "scheduling_construction_#{name}"))
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('csv') }, 'Geojson file not found')
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('json') }, 'Csv file not found')
-  ensure
-    files.each{ |f|
-      File.delete(f)
-    }
-
-    OptimizerWrapper.dump_vrp_dir = ActiveSupport::Cache::NullStore.new
-    OptimizerWrapper.config[:debug][:output_clusters] = false
-    OptimizerWrapper.config[:debug][:output_schedule] = false
   end
 end
