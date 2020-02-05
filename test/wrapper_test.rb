@@ -895,12 +895,10 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    begin
-      Routers::RouterWrapper.stub_any_instance(:matrix, lambda{ |*a| raise RouterError.new('STUB: Expectation Failed - RouterWrapper::OutOfSupportedAreaOrNotSupportedDimensionError') }) do
+    assert_raises RouterError do
+      Routers::RouterWrapper.stub_any_instance(:matrix, proc{ raise RouterError, 'STUB: Expectation Failed - RouterWrapper::OutOfSupportedAreaOrNotSupportedDimensionError' }) do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
       end
-    rescue StandardError => error
-      assert error.class.name.match 'RouterError'
     end
   end
 
@@ -951,12 +949,10 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    begin
-      Routers::RouterWrapper.stub_any_instance(:matrix, lambda{ |*a| raise RouterError.new('STUB: Internal Server Error - OSRM request fails with: InvalidValue Exclude flag combination is not supported.') }) do
+    assert_raises RouterError do
+      Routers::RouterWrapper.stub_any_instance(:matrix, proc{ raise RouterError, 'STUB: Internal Server Error - OSRM request fails with: InvalidValue Exclude flag combination is not supported.' }) do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
       end
-    rescue StandardError => error
-      assert error.class.name.match 'RouterError'
     end
   end
 
@@ -1001,80 +997,10 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    begin
+    exception = assert_raises ActiveHash::RecordNotFound do
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-    rescue StandardError => error
-      assert error.is_a?(ActiveHash::RecordNotFound)
-      assert error.message.match 'Couldn\'t find Models::Point with ID=point_2'
     end
-  end
-
-  def test_trace_location_not_defined
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 10, 20, 30,  0],
-          [10,  0, 30, 40, 10],
-          [20, 30,  0, 50, 20],
-          [30, 40, 50,  0, 30],
-          [0,  10, 20, 30,  0]
-        ],
-        distance: [
-          [0,  10, 20, 30,  0],
-          [10,  0, 30, 40, 10],
-          [20, 30,  0, 50, 20],
-          [30, 40, 50,  0, 30],
-          [0,  10, 20, 30,  0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0,
-        location: {
-          lat: 1000,
-          lon: 1000
-        }
-      }, {
-        id: 'point_1',
-        matrix_index: 2,
-    }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0',
-        start_point_id: 'point_0',
-        speed_multiplier: 1,
-      }],
-      services: [{
-        id: 'service_0',
-        activity: {
-          point_id: 'point_0'
-        }
-      }, {
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }],
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        restitution: {
-          trace: true
-        },
-        resolution: {
-          duration: 10
-        }
-      }
-    }
-
-    begin
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-    rescue StandardError => error
-      assert error.is_a?(OptimizerWrapper::DiscordantProblemError)
-      assert error.data.match 'Trace is not available if locations are not defined'
-    end
+    assert_equal('Couldn\'t find Models::Point with ID=point_2', exception.message)
   end
 
   def test_geometry_polyline_encoded
