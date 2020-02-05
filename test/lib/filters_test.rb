@@ -268,11 +268,15 @@ class FiltersTest < Minitest::Test
     vrp[:units] = [{ id: 'kg' }, { id: 'kg1' }, { id: 'kg2' }, { id: 'kg3' }, { id: 'kg4' }, { id: 'kg5' }]
     vrp[:vehicles] << { id: 'vehicle_1', matrix_id: 'matrix_0', start_point_id: 'point_0' }
     vrp[:vehicles][0][:capacities] = [
-      { unit_id: 'kg1', limit: 10 }, { unit_id: 'kg2', limit: 10 }, { unit_id: 'kg3', limit: nil },
+      { unit_id: 'kg1', limit: 10 },
+      { unit_id: 'kg2', limit: 10 },
+      { unit_id: 'kg3', limit: nil },
       { unit_id: 'kg5', limit: 10, overload_multiplier: 1 }
     ]
     vrp[:vehicles][1][:capacities] = [
-      { unit_id: 'kg2', limit: nil }, { unit_id: 'kg3', limit: 10 }, { unit_id: 'kg4', limit: 10 },
+      { unit_id: 'kg2', limit: nil },
+      { unit_id: 'kg3', limit: 10 },
+      { unit_id: 'kg4', limit: 10 },
       { unit_id: 'kg5', limit: 10, overload_multiplier: 1 }
     ]
 

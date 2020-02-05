@@ -568,10 +568,8 @@ class SplitClusteringTest < Minitest::Test
       vrp[:preprocessing_kmeans_centroids] = [1, 2]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
 
-      begin
-        Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
-      rescue StandardError => e
-        assert e.is_a?(OptimizerWrapper::UnsupportedProblemError)
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        Interpreters::SplitClustering.split_clusters([service_vrp])
       end
     end
 

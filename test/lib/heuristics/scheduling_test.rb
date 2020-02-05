@@ -558,16 +558,10 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.vehicle.id = vehicle_id
       vrp.routes.first.day = day
 
-      errored = false
-      begin
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
         periodic = Interpreters::PeriodicVisits.new(vrp)
         Heuristics::Scheduling.new(vrp, periodic.generate_vehicles(vrp), start: 0, end: 10, shift: 0)
-      rescue StandardError => e
-        errored = true
-        assert e.is_a?(OptimizerWrapper::UnsupportedProblemError)
       end
-
-      assert errored, 'Expecting this to fail : solution is not feasible'
     end
 
     def test_unassign_if_vehicle_not_available_at_provided_day

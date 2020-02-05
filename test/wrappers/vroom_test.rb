@@ -541,15 +541,26 @@ class Wrappers::VroomTest < Minitest::Test
     vrp[:configuration][:preprocessing][:first_solution_strategy] = ['self_selection']
 
     vroom_counter = 0
-    OptimizerWrapper.config[:services][:vroom].stub(:solve,
-                                                    lambda { |_vrp, _job, _thread_prod|
-                                                      vroom_counter += 1
-                                                    }) do
-      begin
-        OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }}, TestHelper.create(vrp), nil)
-      rescue => e
-        puts e
-      end
+    OptimizerWrapper.config[:services][:vroom].stub(
+      :solve,
+      lambda { |vrp_in, _job, _thread_prod|
+        vroom_counter += 1
+        # Return empty result to make sure the code continues regularly
+        {
+          cost: 0,
+          solvers: ['vroom'],
+          routes: [],
+          unassigned: (vrp_in.services.collect{ |service|
+            {
+              service_id: service.id,
+              type: service.type.to_s,
+              point_id: service.activity.point_id
+            }
+          })
+        }
+      }
+    ) do
+      OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }}, TestHelper.create(vrp), nil)
     end
 
     assert_equal 1, vroom_counter
