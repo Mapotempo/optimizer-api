@@ -70,16 +70,25 @@ module Api
       expose :initial_loads, using: VrpResultDetailQuantities, documentation: { is_array: true, desc: 'Give the actual initial loads of the route' }
     end
 
+    class VrpResultSolutionUnassigneds < Grape::Entity
+      expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
+      expose :service_id, documentation: { type: String, desc: '' }
+      expose :pickup_shipment_id, documentation: { type: String, desc: '' }
+      expose :delivery_shipment_id, documentation: { type: String, desc: '' }
+      expose :detail, using: VrpResultSolutionRouteActivityDetails, documentation: { desc: '' }
+    end
+
     class VrpResultSolution < Grape::Entity
       expose :heuristics_synthesis, documentation: { type: Hash, desc: 'When first_solution_strategies are provided, sum up of tryied heuristics and their performance.' }
       expose :solvers, documentation: { type: Array[String], desc: 'Solvers used to perform the optimization' }
       expose :cost, documentation: { type: Float, desc: 'The actual cost of the solution considering all costs' }
+      expose :iterations, documentation: { type: Integer, desc: 'Total number of iteration performed to obtain the current result'}
       expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }
       expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route' }
       expose :start_time, documentation: { type: Integer, desc: '' }
       expose :end_time, documentation: { type: Integer, desc: '' }
       expose :routes, using: VrpResultSolutionRoute, documentation: { is_array: true, desc: 'All the route calculated' }
-      expose :unassigned, documentation: { type: String, is_array: true, desc: 'Jobs which are not part of the solution' }
+      expose :unassigned, using: VrpResultSolutionUnassigneds, documentation: { is_array: true, desc: 'Jobs which are not part of the solution' }
     end
 
     class VrpResultJobGraphItem < Grape::Entity
