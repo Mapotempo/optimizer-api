@@ -99,7 +99,7 @@ module OptimizerWrapper
     }
 
     if services_vrps.any?{ |sv| !sv[:service] }
-      raise UnsupportedProblemError.new(inapplicable_services)
+      raise UnsupportedProblemError.new('Cannot apply any of the solver services', inapplicable_services)
     elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
       raise DiscordantProblemError.new("Geometry is not available if locations are not defined")
     else

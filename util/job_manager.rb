@@ -84,18 +84,19 @@ module OptimizerWrapper
     end
   end
 
-  class ProblemError < StandardError
+  class StandardErrorWithData < StandardError
     attr_reader :data
 
-    def initialize(data = [])
+    def initialize(msg, data = [])
       @data = data
+      super(msg)
     end
   end
 
-  class DiscordantProblemError      < ProblemError;  end
-  class UnsupportedProblemError     < ProblemError;  end
+  class UnsupportedProblemError     < StandardErrorWithData; end
 
   class ClusteringError             < StandardError; end
+  class DiscordantProblemError      < StandardError; end
   class JobKilledError              < StandardError; end
   class SchedulingHeuristicError    < StandardError; end
   class UnsupportedRouterModeError  < StandardError; end

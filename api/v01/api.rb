@@ -35,7 +35,7 @@ module Api
           STDERR.puts "\n\n#{e.class} (#{e.message}):\n    " + e.backtrace.join("\n    ") + "\n\n"
         end
 
-        response = { message: e.message }
+        response = { error: e.class, message: e.message }
         if e.is_a?(RangeError) || e.is_a?(Grape::Exceptions::ValidationErrors) ||
            e.is_a?(Grape::Exceptions::InvalidMessageBody) || e.is_a?(ActiveHash::RecordNotFound)
           rack_response(format_message(response, e.backtrace), 400)
@@ -44,19 +44,15 @@ module Api
         elsif e.is_a?(OptimizerWrapper::UnsupportedRouterModeError)
           rack_response(format_message(response, nil), 400)
         elsif e.is_a?(OptimizerWrapper::UnsupportedProblemError)
-          response = "#{e.class} : #{e.data.map { |service| service.join(', ') }.join(' | ')}"
+          response[:message] += ' ' + e.data.map { |service| service.join(', ') }.join(' | ')
           rack_response(format_message(response, nil), 417)
         elsif e.is_a?(OptimizerWrapper::DiscordantProblemError)
-          response = "#{e.class} : #{e.data}"
           rack_response(format_message(response, nil), 417)
         elsif e.is_a?(OptimizerWrapper::SchedulingHeuristicError)
-          response = "#{e.class} : #{e.data}"
           rack_response(format_message(response, nil), 417)
         elsif e.is_a?(RouterError)
-          response = "#{e.class} : #{e.data}"
           rack_response(format_message(response, nil), 400)
         elsif e.is_a?(CacheError)
-          response = "#{e.class} : #{e.data}"
           rack_response(format_message(response, nil), 500)
         else
           rack_response(format_message(response, e.backtrace), 500)
