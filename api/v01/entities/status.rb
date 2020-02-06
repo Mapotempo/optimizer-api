@@ -23,7 +23,7 @@ module Api
       end
 
       expose(:status, documentation: { type: String, desc: 'Status title.' })
-      expose(:detail, documentation: { type: String, desc: 'Status detail.' })
+      expose(:message, documentation: { type: String, desc: 'Status message.' })
     end
   end
 end
