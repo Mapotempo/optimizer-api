@@ -1621,7 +1621,5 @@ module Wrappers
       end
       simplification_active
     end
-
-    def kill; end
   end
 end

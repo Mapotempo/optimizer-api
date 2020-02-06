@@ -96,10 +96,6 @@ module OptimizerWrapper
               (cost ? " cost: #{cost}" : '')
           )
 
-          # Stops the worker if the job is killed
-          @killed && wrapper.kill && return # rubocop:disable Lint/NonLocalExitFromIterator
-
-          @wrapper = wrapper
           log "avancement: #{message} #{avancement}"
           if avancement && cost
             p = Result.get(self.uuid) || { graph: [] }
@@ -146,20 +142,17 @@ module OptimizerWrapper
         sleep 120 # Try setting the result one last time without rescue since this is the last result
         Result.set(self.uuid, p)
       end
-    rescue Resque::Plugins::Status::Killed, JobKilledError => e
-      log 'Job Killed'
-      tick('Job Killed')
-      Raven.capture_exception(e, level: :info)
-      nil
-    rescue StandardError => e
+    end
+
+    def on_failure(e)
       log "#{e.class.name}: #{e}\n\t#{e.backtrace.join("\n\t")}", level: :fatal
       Raven.capture_exception(e)
-      raise
+      raise e
     end
 
     def on_killed
-      @wrapper&.kill
-      @killed = true
+      # Process is already killed nothing to do
+      log 'Job killed'
     end
   end
 
