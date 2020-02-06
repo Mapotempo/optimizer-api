@@ -144,16 +144,14 @@ module Models
         raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
       }
 
-      if periodic
-        hash[:routes]&.each{ |route|
-          route[:mission_ids].each{ |id|
-            corresponding_service = [hash[:services], hash[:shipments]].flatten.compact.find{ |s| s[:id] == id }
+      hash[:routes]&.each{ |route|
+        route[:mission_ids].each{ |id|
+          corresponding_service = [hash[:services], hash[:shipments]].flatten.compact.find{ |s| s[:id] == id }
 
-            raise OptimizerWrapper::DiscordantProblemError, 'Each mission_ids should refer to an existant service or shipment' if corresponding_service.nil?
-            raise OptimizerWrapper::UnsupportedProblemError, 'Services in initialize routes should have only one activity' if corresponding_service[:activities]
-          }
+          raise OptimizerWrapper::DiscordantProblemError, 'Each mission_ids should refer to an existant service or shipment' if corresponding_service.nil?
+          raise OptimizerWrapper::UnsupportedProblemError, 'Services in initialize routes should have only one activity' if corresponding_service[:activities] && periodic
         }
-      end
+      }
 
       return unless hash[:configuration]
 
@@ -254,8 +252,18 @@ module Models
     end
 
     def self.generate_schedule_indices_from_date(hash)
-      return hash if !hash[:configuration] ||
-                     !hash[:configuration][:schedule] ||
+      return hash if !hash[:configuration]
+
+      if hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:partitions].to_a.size.positive?
+        hash[:routes]&.each{ |route|
+          route[:mission_ids].each{ |id|
+            corresponding = [hash[:services], hash[:shipments]].compact.flatten.find{ |s| s[:id] == id }
+            corresponding[:sticky_vehicle_ids] = [route[:vehicle_id]]
+          }
+        }
+      end
+
+      return hash if !hash[:configuration][:schedule] ||
                      hash[:configuration][:schedule][:range_indices]
 
       start_indice = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1

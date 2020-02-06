@@ -144,5 +144,15 @@ module Models
         TestHelper.create(vrp)
       end
     end
+
+    def test_deduce_sticky_vehicles_if_route_and_clustering
+      vrp = VRP.basic
+      vrp[:routes] = [{ mission_ids: ['service_1', 'service_3'], vehicle_id: 'vehicle_0' }]
+      vrp[:configuration][:preprocessing] = { partitions: [{ entity: :vehicle }] }
+      generated_vrp = TestHelper.create(vrp)
+      assert !generated_vrp.services[0].sticky_vehicles.empty?
+      assert_empty generated_vrp.services[1].sticky_vehicles
+      assert !generated_vrp.services[2].sticky_vehicles.empty?
+    end
   end
 end

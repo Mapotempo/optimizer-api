@@ -4686,7 +4686,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       routes: [{
         vehicle_id: 'vehicle_0',
-        mission_ids: ['service_1', 'service_3', 'service_2']
+        mission_ids: ['service_1']
       }],
       configuration: {
         resolution: {

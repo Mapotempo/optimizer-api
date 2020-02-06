@@ -446,10 +446,6 @@ module Wrappers
         (vrp.preprocessing_partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.preprocessing_partitions.size)
     end
 
-    def assert_no_route_if_clustering(vrp)
-      vrp.routes.empty? || vrp.preprocessing_partitions.empty?
-    end
-
     def assert_route_date_or_indice_if_periodic(vrp)
       !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:indice] }
     end
