@@ -38,6 +38,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   def test_cannot_submit_vrp
     post '/0.1/vrp/submit', api_key: '!', vrp: VRP.toy
     assert_equal 401, last_response.status, last_response.body
+    assert JSON.parse(last_response.body)['error'].include?('Unauthorized')
   end
 
   def test_dont_ignore_legitimate_skills
@@ -65,6 +66,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     vrp[:points] *= 151
     post '/0.1/vrp/submit', api_key: 'vroom', vrp: vrp
     assert_equal 400, last_response.status, last_response.body
+    assert JSON.parse(last_response.body)['message'].include?('Exceeded points limit authorized')
   end
 
   def test_ignore_unknown_parameters
@@ -105,6 +107,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
     post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
     assert_equal 400, last_response.status, last_response.body
+    assert JSON.parse(last_response.body)['message'].include?('is empty')
   end
 
   def test_first_solution_strategie_param
@@ -151,6 +154,8 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
     get "/0.1/vrp/jobs/#{@job_id}", api_key: 'vroom'
     assert_equal 404, last_response.status, last_response.body
+    assert_equal JSON.parse(last_response.body)['status'], 'Not Found'
+    assert JSON.parse(last_response.body)['message'].include?('not found')
   ensure
     delete_job @job_id, api_key: 'demo'
   end
@@ -164,7 +169,6 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_equal 202, last_response.status, last_response.body
     get "0.1/vrp/jobs/#{@job_id}.json", api_key: 'demo'
     assert_equal 404, last_response.status, last_response.body
-    assert_equal JSON.parse(last_response.body)['status'], 'Not Found'
   end
 
   def test_cannot_delete_vrp
@@ -174,6 +178,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
     delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'vroom'
     assert_equal 404, last_response.status, last_response.body
+    assert JSON.parse(last_response.body)['message'].include?('not found')
   ensure
     delete_job @job_id, api_key: 'demo'
   end

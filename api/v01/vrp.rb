@@ -413,7 +413,7 @@ module Api
             nickname: 'vrp',
             success: VrpResult,
             failure: [
-              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
+              {code: 400, message: 'Bad Request', model: ::Api::V01::Status}
             ],
             detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
           }
@@ -521,7 +521,7 @@ module Api
                 if params_limit[key] && value && value.size > params_limit[key]
                   error!({
                     status: 'Exceeded params limit',
-                    detail: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."
+                    message: "Exceeded #{key} limit authorized for your account: #{params_limit[key]}. Please contact support or sales to increase limits."
                   }, 400)
                 end
                 vrp.send("#{key}=", vrp_params[key]) if vrp_params[key]
@@ -530,7 +530,7 @@ module Api
               if !vrp.valid? || vrp_params.nil? || vrp_params.keys.empty?
                 vrp.errors.add(:empty_file, message: 'JSON file is empty') if vrp_params.nil?
                 vrp.errors.add(:empty_vrp, message: 'VRP structure is empty') if vrp_params&.keys&.empty?
-                error!({ status: 'Model Validation Error', detail: vrp.errors }, 400)
+                error!({ status: 'Model Validation Error', message: vrp.errors }, 400)
               else
                 ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.services(api_key), vrp, checksum)
                 if ret.is_a?(String)
@@ -574,7 +574,7 @@ module Api
             output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
-            error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404) unless job && !job.killed? && job['options']['api_key'] == params[:api_key] || solution
+            error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404) unless job && !job.killed? && job['options']['api_key'] == params[:api_key] || solution
 
             solution ||= {}
 
@@ -592,7 +592,7 @@ module Api
 
             if job&.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
               status 404
-              error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
+              error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404)
             elsif job&.failed?
               status 202
               if output_format == :csv
@@ -671,7 +671,7 @@ module Api
 
             if !job || job&.killed? || job['options']['api_key'] != params[:api_key]
               status 404
-              error!({status: 'Not Found', detail: "Job with id='#{id}' not found"}, 404)
+              error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
               job.status = 'killed'
