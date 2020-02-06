@@ -485,7 +485,7 @@ module Wrappers
     end
 
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
-      vrp.routes.empty? || !vrp.schedule_range_indices || vrp.preprocessing_first_solution_strategy.include?('periodic')
+      vrp.routes.empty? || !vrp.schedule_range_indices || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
     end
 
     def solve_synchronous?(vrp)
