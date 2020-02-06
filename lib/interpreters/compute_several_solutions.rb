@@ -156,12 +156,12 @@ module Interpreters
       if custom_heuristics.size > 1
         batched_service_vrps = batch_heuristic(service_vrp, custom_heuristics)
         times = []
-        total_time_allocated_for_heuristic_selection = service_vrp[:vrp][:resolution_duration].to_f * 0.30 # spend at most 30% of the time for heuristic selection
+        total_time_allocated_for_heuristic_selection = service_vrp[:vrp].resolution_duration.to_f * 0.30 # spend at most 30% of the time for heuristic selection
         first_results = batched_service_vrps.collect{ |s_vrp|
-          s_vrp[:vrp][:resolution_batch_heuristic] = true
-          s_vrp[:vrp][:resolution_initial_time_out] = nil
-          s_vrp[:vrp][:resolution_min_duration] = nil
-          s_vrp[:vrp][:resolution_duration] = [(total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i, 300000].min # do not spend more than 5 min for a single heuristic
+          s_vrp[:vrp].resolution_batch_heuristic = true
+          s_vrp[:vrp].resolution_initial_time_out = nil
+          s_vrp[:vrp].resolution_minimum_duration = nil
+          s_vrp[:vrp].resolution_duration = [(total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i, 300000].min # do not spend more than 5 min for a single heuristic
           heuristic_solution = OptimizerWrapper.solve([s_vrp])
           times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
@@ -170,7 +170,7 @@ module Interpreters
         synthesis = []
         first_results.each_with_index{ |result, i|
           synthesis << {
-            heuristic: batched_service_vrps[i][:vrp][:preprocessing_first_solution_strategy].first,
+            heuristic: batched_service_vrps[i][:vrp].preprocessing_first_solution_strategy.first,
             quality: result.nil? ? nil : result[:cost].to_i + (times[i] / 1000).to_i,
             used: false,
             cost: result ? result[:cost] : nil,
@@ -191,7 +191,7 @@ module Interpreters
         synthesis.each{ |synth| synth.delete(:solution) }
         vrp.resolution_batch_heuristic = nil
         vrp.preprocessing_first_solution_strategy = [best_heuristic]
-        vrp[:preprocessing_heuristic_synthesis] = synthesis
+        vrp.preprocessing_heuristic_synthesis = synthesis
         vrp.resolution_duration = vrp.resolution_duration ? (vrp.resolution_duration - times.sum).floor : nil
       else
         vrp.preprocessing_first_solution_strategy = custom_heuristics
