@@ -10,10 +10,8 @@ function buildDownloadLink(jobId, state) {
 
   var url = "/0.1/vrp/jobs/" + jobId + extension + '?api_key=' + getParams()['api_key'];
 
-  return ' <a download="result'
-    + (extension !== '.json' ? '.csv' : extension) + '"'
-    + ' href="' + url + '">' + msg
-    + '</a>';
+  return ' <a download="result_' + jobId + ((extension !== '.json' ? '.csv' : extension))
+    + '" href="' + url + '">' + msg + '</a>';
 }
 
 var jobsManager = {
@@ -157,7 +155,7 @@ var jobsManager = {
 
           nbError = 0;
           cb(null, job, xhr);
-      },
+        },
         error: function (xhr, status) {
           ++nbError
           if (nbError > 2) {
@@ -172,7 +170,7 @@ var jobsManager = {
 
             // interval max: 1mins
             options.interval *= 2;
-            if (options.interval > 60000)  {
+            if (options.interval > 60000) {
               options.interval = 60000
             }
 
@@ -180,11 +178,25 @@ var jobsManager = {
           }
         }
       });
-  }
-},
+    }
+  },
   stopJobChecking: function () {
     requestPendingJobTimeout = false;
     clearTimeout(jobStatusTimeout);
+  },
+  submit: function (options) {
+    const params = buildParams({
+      type: "POST",
+      url: "/0.1/vrp/submit.json?api_key=" + getParams()['api_key']
+    }, options);
+    return $.ajax(params);
+  },
+  delete: function (jobId) {
+    return $.ajax({
+      type: 'delete',
+      url: '/0.1/vrp/jobs/' + jobId + '.json?api_key=' + getParams()["api_key"]
+    }).done(function () { jobsManager.stopJobChecking(); })
+      .fail(function (jqXHR, textStatus) { alert(textStatus); });
   }
 };
 
@@ -196,4 +208,13 @@ function checkCSVJob(xhr) {
 function checkJSONJob(job) {
   if (debug) console.log("JOB: ", job, (job.job && job.job.status !== 'completed'));
   return ((job.job && job.job.status !== 'completed') && typeof job !== 'string')
+}
+
+function buildParams(base, params) {
+  return Object
+    .keys(params)
+    .reduce(function (acc, key) {
+      acc[key] = params[key]
+      return acc
+    }, base);
 }

@@ -29,9 +29,7 @@ $(document).ready(function() {
 
       var problem_data = new FormData(this);
 
-      $.ajax({
-        url: '/0.1/vrp/submit.json?api_key=' + getParams()["api_key"],
-        type: 'POST',
+      jobManager.submit({
         contentType: false,
         cache: false,
         processData: false,
@@ -46,7 +44,7 @@ $(document).ready(function() {
           }, function (err, job, xhr) {
             if (err) {
               $('#infos').html(i18n.failureCallOptim(err));
-              console.log(err.status);
+              if (debug) console.log(err.status);
               return;
             }
 
@@ -71,7 +69,7 @@ $(document).ready(function() {
         }
       }).fail(function (error) {
         $('#infos').html(i18n.failureCallOptim('Vérification des fichiers requise'));
-        console.log(error.responseText);
+        if (debug) console.log(error.responseText);
       });
 
     } else {

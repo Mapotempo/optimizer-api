@@ -367,90 +367,80 @@ $(document).ready(function() {
   };
 
   var lastSolution = null;
-  var callOptimization = function(vrp, callback) {
-    var delay = 3000;
+  var callOptimization = function (vrp, callback) {
     lastSolution = null;
-    $.ajax({
-      type: 'post',
+    jobsManager.submit({
       contentType: 'application/json',
-      data: JSON.stringify({vrp: vrp}),
-      url: '/0.1/vrp/submit.json?api_key=' + getParams()["api_key"],
-      success: function(result) {
+      data: JSON.stringify({ vrp: vrp }),
+    }).done(function (result) {
 
-        if (debug) console.log("Calling optimization... ", result);
+      if (debug) console.log("Calling optimization... ", result);
 
-        $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
-        $('#optim-kill').click(function (e) {
-          $.ajax({
-            type: 'delete',
-            url: '/0.1/vrp/jobs/' + $('#optim-job-uid').val() + '.json?api_key=' + getParams()["api_key"]
-          }).done(function (result) {
-            jobsManager.stopJobChecking();
-            clearInterval(timer);
-            $('#optim-infos').html('');
-            displaySolution(lastSolution, { initForm: true });
-          }).fail(function (jqXHR, textStatus) {
-            alert(textStatus);
-          });
-          e.preventDefault();
-          return false;
-        });
-
-        var delay = 5000;
-        jobsManager.checkJobStatus({
-          job: result.job,
-          format: '.json',
-          interval: delay
-        }, function (err, job) {
-
-          // on job error
-          if (err) {
-            if (debug) console.log("Error: ", err);
-            alert("An error occured");
-            initForm();
-            return;
-          }
-
-          $('#avancement').html(job.job.avancement);
-          if (job.job.status == 'queued') {
-            if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
-          }
-          else if (job.job.status == 'working') {
-            if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
-            if (job.solutions && job.solutions[0]) {
-              if (!lastSolution)
-                $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
-              lastSolution = job.solutions[0];
-              $('#display-solution').click(function(e) {
-                displaySolution(lastSolution);
-                e.preventDefault();
-                return false;
-              });
-            }
-            if (job.job.graph) {
-              displayGraph(job.job.graph);
-            }
-            return true;
-          }
-          else if (job.job.status == 'completed') {
-            if (debug) console.log('Job completed: ' + JSON.stringify(job));
-            if (job.job.graph) {
-              displayGraph(job.job.graph);
-            }
-            callback(job.solutions[0]);
-          }
-          else if (job.job.status == 'failed' || job.job.status == 'killed') {
-            if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
-            alert(i18n.failureCallOptim(job.job.avancement));
-            initForm();
-          }
+      $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
+      $('#optim-kill').click(function (e) {
+        jobsManager.delete($('#optim-job-uid').val())
+        .done(function () {
+          clearInterval(timer);
+          $('#optim-infos').html('');
+          displaySolution(lastSolution, { initForm: true });
         })
-      },
-      error: function(xhr, status, message) {
-        alert(i18n.failureCallOptim(status + " " + message + " " + xhr.responseText));
-        initForm();
-      }
-    });
+        e.preventDefault();
+        return false;
+      });
+
+      var delay = 5000;
+      jobsManager.checkJobStatus({
+        job: result.job,
+        format: '.json',
+        interval: delay,
+      }, function (err, job) {
+
+        // on job error
+        if (err) {
+          if (debug) console.log("Error: ", err);
+          alert("An error occured");
+          initForm();
+          return;
+        }
+
+        $('#avancement').html(job.job.avancement);
+        if (job.job.status == 'queued') {
+          if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
+        }
+        else if (job.job.status == 'working') {
+          if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
+          if (job.solutions && job.solutions[0]) {
+            if (!lastSolution)
+              $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
+            lastSolution = job.solutions[0];
+            $('#display-solution').click(function (e) {
+              displaySolution(lastSolution);
+              e.preventDefault();
+              return false;
+            });
+          }
+          if (job.job.graph) {
+            displayGraph(job.job.graph);
+          }
+          return true;
+        }
+        else if (job.job.status == 'completed') {
+          if (debug) console.log('Job completed: ' + JSON.stringify(job));
+          if (job.job.graph) {
+            displayGraph(job.job.graph);
+          }
+          callback(job.solutions[0]);
+        }
+        else if (job.job.status == 'failed' || job.job.status == 'killed') {
+          if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
+          alert(i18n.failureCallOptim(job.job.avancement));
+          initForm();
+        }
+      })
+    }).fail(function (xhr, status, message) {
+      alert(i18n.failureCallOptim(status + " " + message + " " + xhr.responseText));
+      initForm();
+    })
   };
 
   var createCSV = function(solution) {
