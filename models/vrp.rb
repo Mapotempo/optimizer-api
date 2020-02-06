@@ -34,7 +34,8 @@ module Models
     field :preprocessing_force_cluster, default: false
     field :preprocessing_prefer_short_segment, default: false
     field :preprocessing_neighbourhood_size, default: nil
-    field :preprocessing_heuristic_result, defaul: {}
+    field :preprocessing_heuristic_result, default: {}
+    field :preprocessing_heuristic_synthesis, default: nil
     field :preprocessing_first_solution_strategy, default: nil
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 

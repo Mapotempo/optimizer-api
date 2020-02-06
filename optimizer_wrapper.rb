@@ -316,7 +316,7 @@ module OptimizerWrapper
     real_result[:unassigned] = (real_result[:unassigned] || []) + unfeasible_services if real_result
     real_result[:name] = services_vrps[0][:vrp][:name] if real_result
     if real_result && services_vrps.any?{ |service| service[:vrp][:preprocessing_first_solution_strategy] }
-      real_result[:heuristic_synthesis] = services_vrps.collect{ |service| service[:vrp][:preprocessing_heuristic_synthesis] }
+      real_result[:heuristic_synthesis] = services_vrps.collect{ |service| service[:vrp].preprocessing_heuristic_synthesis }
       real_result[:heuristic_synthesis].flatten! if services_vrps.size == 1
     end
 
