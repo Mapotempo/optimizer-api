@@ -576,13 +576,13 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             stored_result = APIBase.dump_vrp_dir.read([id, params[:api_key], 'solution'].join('_'))
-            solution = stored_result && Marshal.load(stored_result) || OptimizerWrapper::Result.get(id)
+            solution = stored_result && Marshal.load(stored_result)
             output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
-            error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404) unless job && !job.killed? && job['options']['api_key'] == params[:api_key] || solution
+            error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404) unless solution || (job && !job.killed? && job['options']['api_key'] == params[:api_key])
 
-            solution ||= {}
+            solution ||= OptimizerWrapper::Result.get(id) || {}
 
             # If job has been killed by restarting queues, need to update job status to 'killed'
             if job&.working?
