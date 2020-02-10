@@ -26,7 +26,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
 
       s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
-      assert s.instance_variable_get(:@uninserted).empty?
+      assert_empty s.instance_variable_get(:@uninserted)
     end
 
     def test_compute_best_common_tw_when_conflict_tw
@@ -102,7 +102,8 @@ class HeuristicTest < Minitest::Test
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 7, data_services['service_1'][:heuristic_period]
 
-      s.instance_variable_set(:@candidate_routes,
+      s.instance_variable_set(
+        :@candidate_routes,
         'vehicle_0' => {
           0 => {
             current_route: [{ id: 'service_1' }], vehicle_id: vrp.vehicles.first.id
@@ -110,7 +111,8 @@ class HeuristicTest < Minitest::Test
           7 => {
             current_route: [{ id: 'service_1' }], vehicle_id: vrp.vehicles.first.id
           }
-      })
+        }
+      )
       s.clean_routes(s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first, 'vehicle_0')
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:current_route].size
@@ -155,17 +157,17 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
       expanded = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
       s = Heuristics::Scheduling.new(vrp, expanded, start: 0, end: 365, shift: 0)
-      s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.dump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.dump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.dump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.dump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.bindump'))) # rubocop: disable Security/MarshalLoad
       starting_with = s.instance_variable_get(:@uninserted).size
       s.add_missing_visits
 
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       uninserted = s.instance_variable_get(:@uninserted)
       candidate_services_ids = s.instance_variable_get(:@candidate_services_ids)
-      assert_equal vrp.visits, candidate_routes.collect{ |v, d| d.collect{ |_day, route| route[:current_route].size } }.flatten.sum +
+      assert_equal vrp.visits, candidate_routes.collect{ |_v, d| d.collect{ |_day, route| route[:current_route].size } }.flatten.sum +
                                uninserted.size +
                                candidate_services_ids.collect{ |id| s.instance_variable_get(:@services_data)[id][:nb_visits] }.sum
       assert starting_with >= s.instance_variable_get(:@uninserted).size
@@ -230,9 +232,9 @@ class HeuristicTest < Minitest::Test
       route_data = { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 },
                                      { id: 'service_with_activities', point_id: 'point_1', start: 47517.6, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 }],
                      tw_end: 100000, router_dimension: :time, matrix_id: 'm1' }
-      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_services_data.dump')))
-      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_matrices.dump')))
-      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_indices.dump')))
+      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_indices.bindump'))) # rubocop: disable Security/MarshalLoad
 
       s.send(:insertion_cost_with_tw, timewindow, route_data, service, 1)
 

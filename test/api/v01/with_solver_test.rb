@@ -28,10 +28,10 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
     TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
-      assert !JSON.parse(last_response.body)['solutions'].nil? && !JSON.parse(last_response.body)['solutions'].empty?
+      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
       delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'ortools'
       assert_equal 202, last_response.status, last_response.body
-      assert !JSON.parse(last_response.body)['solutions'].nil? && !JSON.parse(last_response.body)['solutions'].empty?
+      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
     end
   ensure
     delete_completed_job @job_id, api_key: 'ortools'

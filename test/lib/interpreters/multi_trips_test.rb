@@ -78,14 +78,14 @@ class MultiTripsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     periodic = Interpreters::MultiTrips.new
-    res_vrp = periodic.send(:expand, vrp)
+    periodic.send(:expand, vrp)
 
     assert_equal 2, vrp.vehicles.size
-    assert vrp.relations.size == 1
+    assert_equal 1, vrp.relations.size
     vrp.relations.each{ |relation|
-      assert relation.type == 'vehicle_trips'
-      assert relation.linked_vehicle_ids.include?('vehicle_0_trip_0')
-      assert relation.linked_vehicle_ids.include?('vehicle_0_trip_1')
+      assert_equal 'vehicle_trips', relation.type
+      assert_includes relation.linked_vehicle_ids, 'vehicle_0_trip_0'
+      assert_includes relation.linked_vehicle_ids, 'vehicle_0_trip_1'
     }
   end
 
@@ -152,10 +152,10 @@ class MultiTripsTest < Minitest::Test
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 2, result[:routes].size
-    route_0 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_0' }
-    route_1 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_1' }
-    assert route_0
-    assert route_1
-    assert route_0[:activities].last[:departure_time] <= route_1[:activities].first[:begin_time]
+    route0 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_0' }
+    route1 = result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_0_trip_1' }
+    assert route0
+    assert route1
+    assert route0[:activities].last[:departure_time] <= route1[:activities].first[:begin_time]
   end
 end

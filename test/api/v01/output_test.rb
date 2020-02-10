@@ -57,8 +57,8 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
 
     csv_data = submit_csv api_key: 'demo', vrp: vrp
     assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
-    assert csv_data.first.include?('day_week')
-    assert csv_data.first.include?('day_week_num')
+    assert_includes csv_data.first, 'day_week'
+    assert_includes csv_data.first, 'day_week_num'
   end
 
   def test_no_day_week_num
@@ -67,8 +67,8 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
 
     csv_data = submit_csv api_key: 'demo', vrp: vrp
     assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
-    assert !csv_data.first.include?('day_week')
-    assert !csv_data.first.include?('day_week_num')
+    refute_includes csv_data.first, 'day_week'
+    refute_includes csv_data.first, 'day_week_num'
   end
 
   def test_skill_when_partitions
@@ -124,7 +124,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     output_tool = OutputHelper::Scheduling.new(name, 'fake_vehicles', job, schedule_end)
     file_name = File.join(Api::V01::APIBase.dump_vrp_dir.cache, 'scheduling_construction_test_fake_job')
 
-    assert !File.exist?(file_name), 'File created before end of generation'
+    refute File.exist?(file_name), 'File created before end of generation'
 
     output_tool.add_comment('my comment')
     days = [0, 2, 4]
@@ -153,13 +153,16 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     vrp[:name] = name
     vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
 
-    Heuristics::Scheduling.stub_any_instance(:compute_initial_solution, lambda { |vrp|
-      check_solution_validity
+    Heuristics::Scheduling.stub_any_instance(
+      :compute_initial_solution,
+      lambda { |vrp_in|
+        check_solution_validity
 
-      @output_tool&.close_file
+        @output_tool&.close_file
 
-      prepare_output_and_collect_routes(vrp)
-    }) do
+        prepare_output_and_collect_routes(vrp_in)
+      }
+    ) do
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     end
 
@@ -168,7 +171,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     }
 
     assert_equal 3, files.size
-    assert files.include?(File.join(OptimizerWrapper.dump_vrp_dir.cache, "scheduling_construction_#{name}"))
+    assert_includes files, File.join(OptimizerWrapper.dump_vrp_dir.cache, "scheduling_construction_#{name}")
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('csv') }, 'Geojson file not found')
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('json') }, 'Csv file not found')
   end

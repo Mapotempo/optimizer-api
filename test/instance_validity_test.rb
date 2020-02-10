@@ -23,9 +23,9 @@ class InstanceValidityTest < Minitest::Test
     problem[:points] << { id: 'point_4', matrix_index: 4 }
 
     vrp = TestHelper.create(problem)
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_correctness_provided_matrix_indices)
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_correctness_provided_matrix_indices)
-    assert OptimizerWrapper.config[:services][:jsprit].inapplicable_solve?(vrp).include?(:assert_correctness_provided_matrix_indices)
+    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_correctness_provided_matrix_indices
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_correctness_provided_matrix_indices
+    assert_includes OptimizerWrapper.config[:services][:jsprit].inapplicable_solve?(vrp), :assert_correctness_provided_matrix_indices
   end
 
   def test_first_solution_acceptance_with_solvers
@@ -33,8 +33,8 @@ class InstanceValidityTest < Minitest::Test
     problem[:configuration][:preprocessing][:first_solution_strategy] = [1]
 
     vrp = TestHelper.create(problem)
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_no_first_solution_strategy)
-    assert !OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_no_first_solution_strategy)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
   end
 
   def test_solver_needed
@@ -42,8 +42,8 @@ class InstanceValidityTest < Minitest::Test
     problem[:configuration][:resolution][:solver] = false
 
     vrp = TestHelper.create(problem)
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)).include? :assert_solver
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_solver_if_not_periodic
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_solver
+    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_solver_if_not_periodic
   end
 
   def test_second_stage_allowed
@@ -58,7 +58,7 @@ class InstanceValidityTest < Minitest::Test
       entity: 'work_day'
     }]
 
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_work_day_partitions_only_schedule
+    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_work_day_partitions_only_schedule
   end
 
   def test_second_stage_allowed_small_lapses
@@ -75,7 +75,7 @@ class InstanceValidityTest < Minitest::Test
       entity: 'work_day'
     }]
 
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include? :assert_work_day_partitions_only_schedule
+    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_work_day_partitions_only_schedule
   end
 
   def test_assert_inapplicable_relations_with_vroom
@@ -88,8 +88,8 @@ class InstanceValidityTest < Minitest::Test
     }]
 
     vrp = TestHelper.create(problem)
-    assert !OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_no_relations)
-    assert !OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_no_relations)
+    refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_relations
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_relations
 
     problem[:relations] = [{
       type: 'vehicle_group_duration',
@@ -99,14 +99,14 @@ class InstanceValidityTest < Minitest::Test
     }]
 
     vrp = TestHelper.create(problem)
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_no_relations)
-    assert !OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_no_relations)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_relations
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_relations
   end
 
   def test_assert_inapplicable_vroom_with_periodic_heuristic
     problem = VRP.scheduling
 
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)).include? :assert_no_planning_heuristic
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)), :assert_no_planning_heuristic
   end
 
   def test_assert_inapplicable_routes_whith_vroom
@@ -116,15 +116,15 @@ class InstanceValidityTest < Minitest::Test
     }]
 
     vrp = TestHelper.create(problem)
-    assert !OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_no_routes)
-    assert !OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_no_routes)
+    refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_routes
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_routes
 
     problem[:routes] = [{
       mission_ids: ['service_1']
     }]
     vrp = TestHelper.create(problem)
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_no_routes)
-    assert !OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_no_routes)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_routes
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_routes
   end
 
   def test_assert_inapplicable_for_vroom_if_vehicle_distance
@@ -132,7 +132,7 @@ class InstanceValidityTest < Minitest::Test
     problem[:vehicles].first[:distance] = 10
 
     vrp = TestHelper.create(problem)
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_no_distance_limitation)
-    assert !OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_no_distance_limitation)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_distance_limitation
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_distance_limitation
   end
 end

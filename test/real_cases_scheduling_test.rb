@@ -186,9 +186,15 @@ class HeuristicTest < Minitest::Test
 
       result[:routes].each{ |route|
         route[:activities].each_with_index{ |activity, index|
-          next if index == 0 || index > route[:activities].size - 3
-          assert route[:activities][index + 1][:begin_time] == route[:activities][index + 1][:detail][:timewindows].first[:start] + route[:activities][index + 1][:detail][:setup_duration] ? true :
-            (assert_equal route[:activities][index + 1][:begin_time], activity[:departure_time] + route[:activities][index + 1][:travel_time] + route[:activities][index + 1][:detail][:setup_duration])
+          next if index.zero? || index > route[:activities].size - 3
+
+          next if route[:activities][index + 1][:begin_time] == route[:activities][index + 1][:detail][:timewindows].first[:start] + route[:activities][index + 1][:detail][:setup_duration] # the same location
+
+          assert_operator(
+            route[:activities][index + 1][:begin_time],
+            :>=,
+            activity[:departure_time] + route[:activities][index + 1][:travel_time] + route[:activities][index + 1][:detail][:setup_duration],
+          )
         }
       }
     end
@@ -199,8 +205,11 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
-      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
+      assert_equal(
+        vrp.visits,
+        result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
         "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
+      )
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max

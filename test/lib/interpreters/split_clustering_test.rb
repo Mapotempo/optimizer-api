@@ -270,27 +270,13 @@ class SplitClusteringTest < Minitest::Test
         end_point_id: 'point_0',
         router_mode: 'car',
         router_dimension: 'distance',
-        sequence_timewindows: [{
-          start: 0,
-          end: 20,
-          day_index: 0
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 1
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 3
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 0, end: 20, day_index: 0 },
+          { start: 0, end: 20, day_index: 1 },
+          { start: 0, end: 20, day_index: 2 },
+          { start: 0, end: 20, day_index: 3 },
+          { start: 0, end: 20, day_index: 4 }
+        ]
       }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
@@ -337,14 +323,14 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
-      assert only_monday_cluster != only_tuesday_cluster
+      refute_equal only_monday_cluster, only_tuesday_cluster
 
       vrp[:preprocessing_kmeans_centroids] = [9, 10]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
-      assert only_monday_cluster != only_tuesday_cluster
+      refute_equal only_monday_cluster, only_tuesday_cluster
     end
 
     def test_unavailable_days_taken_into_account_vehicle_work_day
@@ -366,7 +352,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
-      assert only_monday_cluster != only_tuesday_cluster
+      refute_equal only_monday_cluster, only_tuesday_cluster
 
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
@@ -375,7 +361,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
-      assert only_monday_cluster != only_tuesday_cluster
+      refute_equal only_monday_cluster, only_tuesday_cluster
     end
 
     def test_skills_taken_into_account
@@ -397,7 +383,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
       cold_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
-      assert cold_cluster != hot_cluster
+      refute_equal cold_cluster, hot_cluster
 
       vrp[:services][0][:skills] = ['cold']
       vrp[:services][3][:skills] = ['hot']
@@ -406,7 +392,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.split_clusters([service_vrp]).flatten.compact
       cold_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
-      assert cold_cluster != hot_cluster
+      refute_equal cold_cluster, hot_cluster
     end
 
     def test_good_vehicle_assignment

@@ -100,10 +100,10 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 2, expanded_vrp[:vehicles].size
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2 }
-    assert expanded_vrp[:services][0].activity.timewindows[0][:start] == expanded_vrp[:services][1].activity.timewindows[0][:start]
-    assert expanded_vrp[:services][0].skills == ['1_f_2']
-    assert expanded_vrp[:services][1].skills == ['2_f_2']
+    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2 })
+    assert_equal expanded_vrp[:services][0].activity.timewindows[0][:start], expanded_vrp[:services][1].activity.timewindows[0][:start]
+    assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
+    assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
   end
 
   def test_expand_vrp_schedule_range_date
@@ -186,12 +186,12 @@ class InterpreterTest < Minitest::Test
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 2, expanded_vrp[:vehicles].size
-    assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
+    assert_equal expanded_vrp[:vehicles][0].timewindow[:start] + 86400, expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2 }
-    assert expanded_vrp[:services][0].activity.timewindows[0][:start] == expanded_vrp[:services][1].activity.timewindows[0][:start]
-    assert expanded_vrp[:services][0].skills == ['1_f_2']
-    assert expanded_vrp[:services][1].skills == ['2_f_2']
+    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2 })
+    assert_equal expanded_vrp[:services][0].activity.timewindows[0][:start], expanded_vrp[:services][1].activity.timewindows[0][:start]
+    assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
+    assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
   end
 
   def test_expand_vrp_unavailable_visits
@@ -299,12 +299,12 @@ class InterpreterTest < Minitest::Test
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 10, expanded_vrp[:vehicles].size
-    assert expanded_vrp[:vehicles][0].timewindow[:start] == 1
-    assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
+    assert_equal 1, expanded_vrp[:vehicles][0].timewindow[:start]
+    assert_equal expanded_vrp[:vehicles][0].timewindow[:start] + 86400, expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
     assert_equal 2 * problem[:rests].size, expanded_vrp[:rests].size
-    assert expanded_vrp[:services][0].activity.timewindows.size == 3
-    assert expanded_vrp[:services][1].activity.timewindows.size == 3
+    assert_equal 3, expanded_vrp[:services][0].activity.timewindows.size
+    assert_equal 3, expanded_vrp[:services][1].activity.timewindows.size
   end
 
   def test_expand_vrp_with_date
@@ -400,9 +400,9 @@ class InterpreterTest < Minitest::Test
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 4, expanded_vrp[:vehicles].size
-    assert expanded_vrp[:vehicles][0].timewindow[:start] + 86400 == expanded_vrp[:vehicles][1].timewindow[:start]
+    assert_equal expanded_vrp[:vehicles][0].timewindow[:start] + 86400, expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 }
+    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 })
   end
 
   def test_expand_vrp_service_over_a_week
@@ -459,31 +459,14 @@ class InterpreterTest < Minitest::Test
           id: "service_#{i}",
           activity: {
             point_id: "point_#{i}",
-            timewindows: [{
-              day_index: 0,
-              start: 1,
-              end: 2
-            }, {
-              day_index: 0,
-              start: 5,
-              end: 7
-            }, {
-              day_index: 1,
-              start: 402,
-              end: 408
-            }, {
-              day_index: 3,
-              start: 803,
-              end: 809
-            }, {
-              day_index: 4,
-              start: 204,
-              end: 210
-            }, {
-              day_index: 5,
-              start: 605,
-              end: 611
-            }]
+            timewindows: [
+              { day_index: 0, start: 1, end: 2 },
+              { day_index: 0, start: 5, end: 7 },
+              { day_index: 1, start: 402, end: 408 },
+              { day_index: 3, start: 803, end: 809 },
+              { day_index: 4, start: 204, end: 210 },
+              { day_index: 5, start: 605, end: 611 }
+            ]
           },
           visits_number: 2
         }
@@ -508,10 +491,10 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 4, expanded_vrp[:vehicles].size
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 }
+    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 })
     ## The timewindows cover multiple services
-    assert expanded_vrp[:services][0].skills == ['1_f_2']
-    assert expanded_vrp[:services][1].skills == ['2_f_2']
+    assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
+    assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
   end
 
   def test_expand_vrp_with_date_and_indices
@@ -612,7 +595,7 @@ class InterpreterTest < Minitest::Test
     assert_equal 86404, expanded_vrp[:vehicles][1].timewindow[:start]
     assert_equal 86414, expanded_vrp[:vehicles][1].timewindow[:end]
     assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 }
+    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 })
   end
 
   def test_date_and_unavailable_date
@@ -828,27 +811,13 @@ class InterpreterTest < Minitest::Test
       rests: [{
         id: 'break-1',
         duration: 3600.0,
-        timewindows: [{
-          start: 45000,
-          end: 48600,
-          day_index: 0
-        }, {
-          start: 45000,
-          end: 48600,
-          day_index: 1
-        }, {
-          start: 45000,
-          end: 48600,
-          day_index: 2
-        }, {
-          start: 45000,
-          end: 48600,
-          day_index: 3
-        }, {
-          start: 45000,
-          end: 48600,
-          day_index: 4
-        }]
+        timewindows: [
+          { start: 45000, end: 48600, day_index: 0 },
+          { start: 45000, end: 48600, day_index: 1 },
+          { start: 45000, end: 48600, day_index: 2 },
+          { start: 45000, end: 48600, day_index: 3 },
+          { start: 45000, end: 48600, day_index: 4 }
+        ]
       }],
       vehicles: [{
         id: 'car_1',
@@ -861,27 +830,13 @@ class InterpreterTest < Minitest::Test
         rest_ids: [
           'break-1'
         ],
-        sequence_timewindows: [{
-          start: 28800,
-          end: 61200,
-          day_index: 0
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 1
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 2
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 3
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 28800, end: 61200, day_index: 0 },
+          { start: 28800, end: 61200, day_index: 1 },
+          { start: 28800, end: 61200, day_index: 2 },
+          { start: 28800, end: 61200, day_index: 3 },
+          { start: 28800, end: 61200, day_index: 4 }
+        ]
       }, {
         id: 'car_2',
         matrix_id: 'm1',
@@ -893,27 +848,13 @@ class InterpreterTest < Minitest::Test
         rest_ids: [
           'break-1'
         ],
-        sequence_timewindows: [{
-          start: 28800,
-          end: 61200,
-          day_index: 0
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 1
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 2
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 3
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 28800, end: 61200, day_index: 0 },
+          { start: 28800, end: 61200, day_index: 1 },
+          { start: 28800, end: 61200, day_index: 2 },
+          { start: 28800, end: 61200, day_index: 3 },
+          { start: 28800, end: 61200, day_index: 4 }
+        ]
       }, {
         id: 'car_3',
         matrix_id: 'm1',
@@ -925,27 +866,13 @@ class InterpreterTest < Minitest::Test
         rest_ids: [
           'break-1'
         ],
-        sequence_timewindows: [{
-          start: 28800,
-          end: 61200,
-          day_index: 0
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 1
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 2
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 3
-        }, {
-          start: 28800,
-          end: 61200,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 28800, end: 61200, day_index: 0 },
+          { start: 28800, end: 61200, day_index: 1 },
+          { start: 28800, end: 61200, day_index: 2 },
+          { start: 28800, end: 61200, day_index: 3 },
+          { start: 28800, end: 61200, day_index: 4 }
+        ]
       }],
       services: [{
         id: 'point_1',
@@ -956,19 +883,11 @@ class InterpreterTest < Minitest::Test
         activity: {
           duration: 5400.0,
           point_id: 'point_1',
-          timewindows: [{
-            start: 30600,
-            end: 41400,
-            day_index: 1
-          }, {
-            start: 30600,
-            end: 41400,
-            day_index: 2
-          }, {
-            start: 30600,
-            end: 41400,
-            day_index: 3
-          }]
+          timewindows: [
+            { start: 30600, end: 41400, day_index: 1 },
+            { start: 30600, end: 41400, day_index: 2 },
+            { start: 30600, end: 41400, day_index: 3 }
+          ]
         }
       }, {
         id: 'point_2',
@@ -979,19 +898,11 @@ class InterpreterTest < Minitest::Test
         activity: {
           duration: 5400.0,
           point_id: 'point_2',
-          timewindows: [{
-            start: 30600,
-            end: 41400,
-            day_index: 1
-          }, {
-            start: 30600,
-            end: 41400,
-            day_index: 2
-          }, {
-            start: 30600,
-            end: 41400,
-            day_index: 3
-          }]
+          timewindows: [
+            { start: 30600, end: 41400, day_index: 1 },
+            { start: 30600, end: 41400, day_index: 2 },
+            { start: 30600, end: 41400, day_index: 3 }
+          ]
         }
       }, {
         id: 'point_3',
@@ -1002,27 +913,13 @@ class InterpreterTest < Minitest::Test
         activity: {
           duration: 2700.0,
           point_id: 'point_3',
-          timewindows: [{
-            start: 30600,
-            end: 42300,
-            day_index: 0
-          }, {
-            start: 30600,
-            end: 42300,
-            day_index: 1
-          }, {
-            start: 30600,
-            end: 42300,
-            day_index: 2
-          }, {
-            start: 30600,
-            end: 42300,
-            day_index: 3
-          }, {
-            start: 30600,
-            end: 42300,
-            day_index: 4
-          }]
+          timewindows: [
+            { start: 30600, end: 42300, day_index: 0 },
+            { start: 30600, end: 42300, day_index: 1 },
+            { start: 30600, end: 42300, day_index: 2 },
+            { start: 30600, end: 42300, day_index: 3 },
+            { start: 30600, end: 42300, day_index: 4 }
+          ]
         }
       }, {
         id: 'point_4',
@@ -1033,47 +930,18 @@ class InterpreterTest < Minitest::Test
         activity: {
           duration: 1200.0,
           point_id: 'point_4',
-          timewindows: [{
-            start: 28800,
-            end: 45000,
-            day_index: 0
-          }, {
-            start: 54000,
-            end: 63000,
-            day_index: 0
-          }, {
-            start: 28800,
-            end: 45000,
-            day_index: 1
-          }, {
-            start: 54000,
-            end: 63000,
-            day_index: 1
-          }, {
-            start: 28800,
-            end: 45000,
-            day_index: 2
-          }, {
-            start: 54000,
-            end: 63000,
-            day_index: 2
-          }, {
-            start: 28800,
-            end: 45000,
-            day_index: 3
-          }, {
-            start: 54000,
-            end: 63000,
-            day_index: 3
-          }, {
-            start: 28800,
-            end: 45000,
-            day_index: 4
-          }, {
-            start: 54000,
-            end: 63000,
-            day_index: 4
-          }]
+          timewindows: [
+            { start: 28800, end: 45000, day_index: 0 },
+            { start: 54000, end: 63000, day_index: 0 },
+            { start: 28800, end: 45000, day_index: 1 },
+            { start: 54000, end: 63000, day_index: 1 },
+            { start: 28800, end: 45000, day_index: 2 },
+            { start: 54000, end: 63000, day_index: 2 },
+            { start: 28800, end: 45000, day_index: 3 },
+            { start: 54000, end: 63000, day_index: 3 },
+            { start: 28800, end: 45000, day_index: 4 },
+            { start: 54000, end: 63000, day_index: 4 }
+          ]
         }
       }, {
         id: 'point5',
@@ -1084,47 +952,18 @@ class InterpreterTest < Minitest::Test
         activity: {
           duration: 1800.0,
           point_id: 'point5',
-          timewindows: [{
-            start: 30600,
-            end: 45000,
-            day_index: 0
-          }, {
-            start: 50400,
-            end: 57600,
-            day_index: 0
-          }, {
-            start: 30600,
-            end: 45000,
-            day_index: 1
-          }, {
-            start: 50400,
-            end: 57600,
-            day_index: 1
-          }, {
-            start: 30600,
-            end: 45000,
-            day_index: 2
-          }, {
-            start: 50400,
-            end: 57600,
-            day_index: 2
-          }, {
-            start: 30600,
-            end: 45000,
-            day_index: 3
-          }, {
-            start: 50400,
-            end: 57600,
-            day_index: 3
-          }, {
-            start: 30600,
-            end: 45000,
-            day_index: 4
-          }, {
-            start: 50400,
-            end: 57600,
-            day_index: 4
-          }]
+          timewindows: [
+            { start: 30600, end: 45000, day_index: 0 },
+            { start: 50400, end: 57600, day_index: 0 },
+            { start: 30600, end: 45000, day_index: 1 },
+            { start: 50400, end: 57600, day_index: 1 },
+            { start: 30600, end: 45000, day_index: 2 },
+            { start: 50400, end: 57600, day_index: 2 },
+            { start: 30600, end: 45000, day_index: 3 },
+            { start: 50400, end: 57600, day_index: 3 },
+            { start: 30600, end: 45000, day_index: 4 },
+            { start: 50400, end: 57600, day_index: 4 }
+          ]
         }
       }],
       configuration: {
@@ -1305,27 +1144,13 @@ class InterpreterTest < Minitest::Test
         speed_multiplier: 1.0,
         start_point_id: 'agent_home',
         end_point_id: 'agent_home',
-        sequence_timewindows: [{
-          start: 0,
-          end: 30000,
-          day_index: 0
-        }, {
-          start: 0,
-          end: 30000,
-          day_index: 1
-        }, {
-          start: 0,
-          end: 30000,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 30000,
-          day_index: 3
-        }, {
-          start: 0,
-          end: 30000,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 0, end: 30000, day_index: 0 },
+          { start: 0, end: 30000, day_index: 1 },
+          { start: 0, end: 30000, day_index: 2 },
+          { start: 0, end: 30000, day_index: 3 },
+          { start: 0, end: 30000, day_index: 4 }
+        ]
       }],
       services: [{
         id: 'service_0',
@@ -1337,19 +1162,11 @@ class InterpreterTest < Minitest::Test
         activity: {
           duration: 5400.0,
           point_id: 'point_0',
-          timewindows: [{
-            start: 0,
-            end: 5400,
-            day_index: 1
-          }, {
-            start: 0,
-            end: 5400,
-            day_index: 2
-          }, {
-            start: 0,
-            end: 5400,
-            day_index: 3
-          }]
+          timewindows: [
+            { start: 0, end: 5400, day_index: 1 },
+            { start: 0, end: 5400, day_index: 2 },
+            { start: 0, end: 5400, day_index: 3 }
+          ]
         }
       }, {
         id: 'service_1',
@@ -1361,19 +1178,11 @@ class InterpreterTest < Minitest::Test
         activity: {
           duration: 5400.0,
           point_id: 'point_1',
-          timewindows: [{
-            start: 0,
-            end: 5400,
-            day_index: 1
-          }, {
-            start: 0,
-            end: 5400,
-            day_index: 2
-          }, {
-            start: 0,
-            end: 5400,
-            day_index: 3
-          }]
+          timewindows: [
+            { start: 0, end: 5400, day_index: 1 },
+            { start: 0, end: 5400, day_index: 2 },
+            { start: 0, end: 5400, day_index: 3 }
+          ]
         }
       }]
     }
@@ -2077,8 +1886,8 @@ class InterpreterTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 11, result[:routes][0][:activities].size
-    assert_equal 9.9, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_1' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
-    assert_equal 10, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_0' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
+    assert_equal 9.9, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
+    assert_equal 10, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
   end
 
   def test_multi_modal_route_with_complementary_partial_quantities
@@ -2171,8 +1980,8 @@ class InterpreterTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 10, result[:routes][0][:activities].size
-    assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_1' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
-    assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| activity[:service_id] == 'service_0' ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
+    assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
+    assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
   end
 
   def test_overall_duration_several_vehicles

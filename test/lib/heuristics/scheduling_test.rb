@@ -21,19 +21,11 @@ class HeuristicTest < Minitest::Test
   if !ENV['SKIP_SCHEDULING']
     def test_not_allowing_partial_affectation
       vrp = VRP.scheduling_seq_timewindows
-      vrp[:vehicles].first[:sequence_timewindows] = [{
-        start: 28800,
-        end: 54000,
-        day_index: 0
-      }, {
-        start: 28800,
-        end: 54000,
-        day_index: 1
-      }, {
-        start: 28800,
-        end: 54000,
-        day_index: 3
-      }]
+      vrp[:vehicles].first[:sequence_timewindows] = [
+        { start: 28800, end: 54000, day_index: 0 },
+        { start: 28800, end: 54000, day_index: 1 },
+        { start: 28800, end: 54000, day_index: 3 }
+      ]
       vrp[:services] = [vrp[:services].first]
       vrp[:services].first[:visits_number] = 4
       vrp[:configuration][:resolution][:allow_partial_assignment] = false
@@ -103,7 +95,7 @@ class HeuristicTest < Minitest::Test
     def test_heuristic_called_with_first_sol_param
       vrp = VRP.scheduling
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
-      assert result[:solvers].include?('heuristic')
+      assert_includes result[:solvers], 'heuristic'
     end
 
     def test_visit_every_day
@@ -145,7 +137,7 @@ class HeuristicTest < Minitest::Test
       }
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-      assert result[:unassigned].first[:service_id] == 'service_1_1_1'
+      assert_equal 'service_1_1_1', result[:unassigned].first[:service_id]
     end
 
     def test_same_cycle
@@ -196,9 +188,9 @@ class HeuristicTest < Minitest::Test
       }
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
-      assert result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_3_1_3' } }[:activities].collect{ |activity| activity[:service_id] }.include?('service_4_1_1')
-      assert result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_5_1_3' } }[:activities].collect{ |activity| activity[:service_id] }.include?('service_6_1_1')
-      assert result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_1_1_3' } }[:activities].collect{ |activity| activity[:service_id] }.include?('service_2_1_1')
+      assert_includes result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_3_1_3' } }[:activities].collect{ |activity| activity[:service_id] }, 'service_4_1_1'
+      assert_includes result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_5_1_3' } }[:activities].collect{ |activity| activity[:service_id] }, 'service_6_1_1'
+      assert_includes result[:routes].find{ |route| route[:activities].find{ |activity| activity[:service_id] == 'service_1_1_3' } }[:activities].collect{ |activity| activity[:service_id] }, 'service_2_1_1'
     end
 
     def test_same_cycle_more_difficult
@@ -313,9 +305,11 @@ class HeuristicTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
       assert result
-      assert result[:routes].collect{ |route| route[:vehicle_id] }.uniq.include?('vehicle_0_0')
-      assert result[:routes].collect{ |route| route[:vehicle_id] }.uniq.include?('vehicle_1_0')
-      assert result[:routes].collect{ |route| route[:vehicle_id] }.size == result[:routes].collect{ |route| route[:vehicle_id] }.uniq.size
+      route_vehicle_ids = result[:routes].collect{ |route| route[:vehicle_id] }
+      route_uniq_vehicle_ids = route_vehicle_ids.uniq
+      assert_includes route_uniq_vehicle_ids, 'vehicle_0_0'
+      assert_includes route_uniq_vehicle_ids, 'vehicle_1_0'
+      assert_equal route_uniq_vehicle_ids.size, route_vehicle_ids.size
     end
 
     def test_multiple_reason
@@ -374,8 +368,10 @@ class HeuristicTest < Minitest::Test
       }
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
-      assert result[:unassigned].collect{ |una| una[:original_service_id] }.compact.size == result[:unassigned].collect{ |una| una[:original_service_id] }.compact.uniq.size
-      assert result[:unassigned].collect{ |una| una[:service_id] }.compact.size == result[:unassigned].collect{ |una| una[:service_id] }.compact.uniq.size
+      unassigned_original_service_ids = result[:unassigned].collect{ |una| una[:original_service_id] }.compact
+      assert_equal unassigned_original_service_ids.uniq.size, unassigned_original_service_ids.size
+      unassigned_service_ids = result[:unassigned].collect{ |una| una[:service_id] }.compact
+      assert_equal unassigned_service_ids.uniq.size, unassigned_service_ids.size
     end
 
     def test_day_closed_on_work_day
@@ -440,7 +436,7 @@ class HeuristicTest < Minitest::Test
       }
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
-      assert !result[:unassigned].collect{ |una| una[:reason] }.uniq.include?('No vehicle with compatible timewindow')
+      refute_includes result[:unassigned].collect{ |una| una[:reason] }.uniq, 'No vehicle with compatible timewindow'
     end
 
     def test_no_duplicated_skills
@@ -486,8 +482,8 @@ class HeuristicTest < Minitest::Test
     def test_callage_freq
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-      assert result[:routes].collect{ |r| r[:activities].size }.uniq.size == 1
-      assert result[:unassigned].empty?
+      assert_equal 1, result[:routes].collect{ |r| r[:activities].size }.uniq.size
+      assert_empty result[:unassigned]
     end
 
     def test_same_point_day_relaxation
@@ -578,12 +574,12 @@ class HeuristicTest < Minitest::Test
     def test_sticky_in_scheduling
       vrp = VRP.lat_lon_scheduling_two_vehicles
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id].include?('vehicle_0_') # default result
+      assert_includes result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id], 'vehicle_0_' # default result
 
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:services].find{ |s| s[:id] == 'service_6' }[:sticky_vehicle_ids] = ['vehicle_1']
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      assert !result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id].include?('vehicle_0_')
+      refute_includes result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id], 'vehicle_0_'
     end
 
     def test_with_activities

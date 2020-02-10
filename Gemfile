@@ -1,4 +1,5 @@
 source 'https://rubygems.org'
+ruby '~> 2.3'
 
 gem 'require_all'
 
@@ -39,7 +40,8 @@ group :development, :test do
 
   # For linting and offline code analysis
   gem 'rubocop'
-  gem 'rubocop-performance'
+  gem 'rubocop-minitest', require: false
+  gem 'rubocop-performance', require: false
   gem 'solargraph'
 
   # For creating dependency graphs

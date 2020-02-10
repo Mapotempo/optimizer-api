@@ -38,7 +38,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   def test_cannot_submit_vrp
     post '/0.1/vrp/submit', api_key: '!', vrp: VRP.toy
     assert_equal 401, last_response.status, last_response.body
-    assert JSON.parse(last_response.body)['error'].include?('Unauthorized')
+    assert_includes JSON.parse(last_response.body)['error'], 'Unauthorized'
   end
 
   def test_dont_ignore_legitimate_skills
@@ -66,7 +66,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     vrp[:points] *= 151
     post '/0.1/vrp/submit', api_key: 'vroom', vrp: vrp
     assert_equal 400, last_response.status, last_response.body
-    assert JSON.parse(last_response.body)['message'].include?('Exceeded points limit authorized')
+    assert_includes JSON.parse(last_response.body)['message'], 'Exceeded points limit authorized'
   end
 
   def test_ignore_unknown_parameters
@@ -88,12 +88,13 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
         end: 800.0
       }]
     }
-    OptimizerWrapper.stub(:wrapper_vrp,
-      lambda { |_api_key, _services, vrp, _checksum|
-        assert_equal 12 * 3600, vrp.vehicles.first.duration
-        assert_equal 20 * 60, vrp.services.first.activity.duration
-        assert_equal 80, vrp.services.first.activity.timewindows.first.start
-        assert_equal 800, vrp.services.first.activity.timewindows.first.end
+    OptimizerWrapper.stub(
+      :wrapper_vrp,
+      lambda { |_api_key, _services, vrp_in, _checksum|
+        assert_equal 12 * 3600, vrp_in.vehicles.first.duration
+        assert_equal 20 * 60, vrp_in.services.first.activity.duration
+        assert_equal 80, vrp_in.services.first.activity.timewindows.first.start
+        assert_equal 800, vrp_in.services.first.activity.timewindows.first.end
         'job_id'
       }
     ) do
@@ -107,15 +108,16 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
     post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
     assert_equal 400, last_response.status, last_response.body
-    assert JSON.parse(last_response.body)['message'].include?('is empty')
+    assert_includes JSON.parse(last_response.body)['message'], 'is empty'
   end
 
   def test_first_solution_strategie_param
     vrp = VRP.toy
     vrp[:configuration][:preprocessing] = { first_solution_strategy: 'a, b ' }
-    OptimizerWrapper.stub(:wrapper_vrp,
-      lambda { |_api_key, _services, vrp, _checksum|
-        assert_equal ['a', 'b'], vrp.preprocessing_first_solution_strategy
+    OptimizerWrapper.stub(
+      :wrapper_vrp,
+      lambda { |_api_key, _services, vrp_in, _checksum|
+        assert_equal ['a', 'b'], vrp_in.preprocessing_first_solution_strategy
         'job_id'
       }
     ) do
@@ -155,7 +157,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     get "/0.1/vrp/jobs/#{@job_id}", api_key: 'vroom'
     assert_equal 404, last_response.status, last_response.body
     assert_equal JSON.parse(last_response.body)['status'], 'Not Found'
-    assert JSON.parse(last_response.body)['message'].include?('not found')
+    assert_includes JSON.parse(last_response.body)['message'], 'not found'
   ensure
     delete_job @job_id, api_key: 'demo'
   end
@@ -178,7 +180,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
     delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'vroom'
     assert_equal 404, last_response.status, last_response.body
-    assert JSON.parse(last_response.body)['message'].include?('not found')
+    assert_includes JSON.parse(last_response.body)['message'], 'not found'
   ensure
     delete_job @job_id, api_key: 'demo'
   end

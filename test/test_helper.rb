@@ -77,14 +77,14 @@ module TestHelper
   def self.matrix_required(vrp)
     if ENV['TEST_DUMP_VRP'].to_s == 'true' && vrp.name
       vrp.compute_matrix
-      File.binwrite('test/fixtures/' + vrp.name + '.dump', Marshal::dump(vrp))
+      File.binwrite('test/fixtures/' + vrp.name + '.dump', Marshal.dump(vrp))
     end
   end
 
   def self.multipe_matrices_required(vrps, test)
     if ENV['TEST_DUMP_VRP'].to_s == 'true'
       vrps.each(&:compute_matrix)
-      File.binwrite('test/fixtures/' + test.name[5..-1] + '.dump', Marshal::dump(vrps))
+      File.binwrite('test/fixtures/' + test.name[5..-1] + '.dump', Marshal.dump(vrps))
     end
   end
 
@@ -152,7 +152,7 @@ module TestHelper
   end
 end
 
-module VRP
+module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
   def self.toy
     {
       points: [{
@@ -631,54 +631,26 @@ module VRP
         end_point_id: 'point_0',
         router_mode: 'car',
         router_dimension: 'distance',
-        sequence_timewindows: [{
-          start: 0,
-          end: 100000,
-          day_index: 0
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 1
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 3
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 0, end: 100000, day_index: 0 },
+          { start: 0, end: 100000, day_index: 1 },
+          { start: 0, end: 100000, day_index: 2 },
+          { start: 0, end: 100000, day_index: 3 },
+          { start: 0, end: 100000, day_index: 4 }
+        ]
       }, {
         id: 'vehicle_1',
         matrix_id: 'm1',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         router_dimension: 'distance',
-        sequence_timewindows: [{
-          start: 0,
-          end: 100000,
-          day_index: 0
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 1
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 3
-        }, {
-          start: 0,
-          end: 100000,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 0, end: 100000, day_index: 0 },
+          { start: 0, end: 100000, day_index: 1 },
+          { start: 0, end: 100000, day_index: 2 },
+          { start: 0, end: 100000, day_index: 3 },
+          { start: 0, end: 100000, day_index: 4 }
+        ]
       }],
       services: [{
         id: 'service_1',
@@ -817,27 +789,13 @@ module VRP
         id: 'vehicle_0',
         matrix_id: 'matrix_0',
         start_point_id: 'point_0',
-        sequence_timewindows: [{
-          start: 0,
-          end: 20,
-          day_index: 0
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 1
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 3
-        }, {
-          start: 0,
-          end: 20,
-          day_index: 4
-        }]
+        sequence_timewindows: [
+          { start: 0, end: 20, day_index: 0 },
+          { start: 0, end: 20, day_index: 1 },
+          { start: 0, end: 20, day_index: 2 },
+          { start: 0, end: 20, day_index: 3 },
+          { start: 0, end: 20, day_index: 4 }
+        ]
       }],
       services: [{
         id: 'service_1',

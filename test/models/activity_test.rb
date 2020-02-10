@@ -51,7 +51,7 @@ module Models
         end: nil
       }]).validate
 
-      assert !Activity.create(timewindows: [{
+      refute Activity.create(timewindows: [{
         start: 0,
         end: nil
       }, {
@@ -59,7 +59,7 @@ module Models
         end: 3
       }]).validate
 
-      assert !Activity.create(timewindows: [{
+      refute Activity.create(timewindows: [{
         start: 0,
         end: 1
       }, {

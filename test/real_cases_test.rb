@@ -335,7 +335,7 @@ class RealCasesTest < Minitest::Test
       assert result
       # Check activities
       assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      assert result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_eugene_leroy' }.size }.reduce(&:+) => 2
+      assert result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_eugene_leroy' }.size }.reduce(&:+) >= 2
 
       # Check total cost
       assert result[:cost] < 6800, "Cost is to high: #{result[:cost]}"
@@ -355,7 +355,7 @@ class RealCasesTest < Minitest::Test
       assert result
       # Check activities
       assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      assert result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_thiers' }.size }.reduce(&:+) => 2
+      assert result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_thiers' }.size }.reduce(&:+) >= 2
 
       # Check total cost
       assert result[:cost] < 7850, "Cost is to high: #{result[:cost]}"
