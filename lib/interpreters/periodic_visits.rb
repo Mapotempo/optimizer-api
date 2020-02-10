@@ -38,36 +38,23 @@ module Interpreters
     def expand(vrp, job, &block)
       return vrp unless vrp.schedule_range_indices
 
-      if vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
-        if vrp.services.empty?
-          vrp[:preprocessing_heuristic_result] = {
-            cost: nil,
-            solvers: ['scheduling_heuristic'],
-            iterations: nil,
-            routes: [],
-            unassigned: [],
-            elapsed: 0,
-            total_distance: nil
-          }
-        else
-          scheduling_heuristic = Heuristics::Scheduling.new(vrp, generate_vehicles(vrp), job)
-          vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
-        end
+      vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
+      vrp.relations = generate_relations(vrp)
+      vrp.rests = []
+      vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
+        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+      }
+
+      if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+        scheduling_heuristic = Heuristics::Scheduling.new(vrp, job)
+        vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
       end
 
-      vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
-
-      vrp.relations = generate_relations(vrp)
       vrp.services = generate_services(vrp)
       compute_days_interval(vrp)
       vrp.shipments = generate_shipments(vrp)
 
       @periods.uniq!
-
-      vrp.rests = []
-      vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
-        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
-      }
       vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
       generate_relations_on_periodic_vehicles(vrp, vehicles_linked_by_duration)
 

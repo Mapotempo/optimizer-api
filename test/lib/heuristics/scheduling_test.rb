@@ -19,6 +19,16 @@ require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
   if !ENV['SKIP_SCHEDULING']
+    def test_empty_services
+      vrp = VRP.scheduling_seq_timewindows
+      vrp = TestHelper.create(vrp)
+      vrp.services = []
+
+      periodic = Interpreters::PeriodicVisits.new(vrp)
+      periodic.expand(vrp, nil)
+      assert vrp.preprocessing_heuristic_result
+    end
+
     def test_not_allowing_partial_affectation
       vrp = VRP.scheduling_seq_timewindows
       vrp[:vehicles].first[:sequence_timewindows] = [
@@ -471,8 +481,8 @@ class HeuristicTest < Minitest::Test
       expected_nb_visits = vrp.visits
 
       # check generated routes
-      periodic = Interpreters::PeriodicVisits.new(vrp)
-      s = Heuristics::Scheduling.new(vrp, periodic.generate_vehicles(vrp), start: 0, end: 10, shift: 0)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:current_route].size == expecting.size } })
 
@@ -506,8 +516,8 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.vehicle.id = vehicle_id
       vrp.routes.first.indice = day.to_i
 
-      periodic = Interpreters::PeriodicVisits.new(vrp)
-      scheduling = Heuristics::Scheduling.new(vrp, periodic.generate_vehicles(vrp))
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      scheduling = Heuristics::Scheduling.new(vrp)
       generated_starting_routes = scheduling.instance_variable_get(:@candidate_routes)
 
       # scheduling initialization uses best order to initialize routes
@@ -630,12 +640,11 @@ class HeuristicTest < Minitest::Test
 
       vrp = TestHelper.create(problem)
 
-      periodic = Interpreters::PeriodicVisits.new(vrp)
-      generated_vehicles = periodic.generate_vehicles(vrp)
-      assert_equal(['vehicle_1', 'vehicle_2', 'vehicle_3'], generated_vehicles.collect{ |v| v[:id] })
-      assert_equal([1, 2, 3], generated_vehicles.collect{ |v| v[:global_day_index] })
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      assert_equal(['vehicle_1', 'vehicle_2', 'vehicle_3'], vrp.vehicles.collect{ |v| v[:id] })
+      assert_equal([1, 2, 3], vrp.vehicles.collect{ |v| v[:global_day_index] })
 
-      s = Heuristics::Scheduling.new(vrp, generated_vehicles)
+      s = Heuristics::Scheduling.new(vrp)
       generated_starting_routes = s.instance_variable_get(:@candidate_routes)
       assert_equal([1, 2, 3], generated_starting_routes['vehicle'].keys)
       assert_equal([200, 300, 400], generated_starting_routes['vehicle'].collect{ |_day, route_data| route_data[:tw_end] }) # correct timewindow was provided

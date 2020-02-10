@@ -22,14 +22,14 @@ module SchedulingDataInitialization
   extend ActiveSupport::Concern
 
   def generate_route_structure(vrp)
-    @expanded_vehicles.each{ |vehicle|
+    vrp.vehicles.each{ |vehicle|
       @indices[vehicle[:start_point_id]] = vrp[:points].find{ |pt| pt[:id] == vehicle[:start_point_id] }[:matrix_index] if vehicle[:start_point_id]
       @indices[vehicle[:end_point_id]] = vrp[:points].find{ |pt| pt[:id] == vehicle[:end_point_id] }[:matrix_index] if vehicle[:end_point_id]
 
       original_vehicle_id = vehicle[:id].split('_').slice(0, vehicle[:id].split('_').size - 1).join('_')
       capacity = compute_capacities(vehicle[:capacities], true)
-      vrp.units.reject{ |unit| capacity.keys.include?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
-      @candidate_routes[original_vehicle_id][vehicle[:global_day_index]] = {
+      vrp.units.reject{ |unit| capacity.has_key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
+      @candidate_routes[original_vehicle_id][vehicle.global_day_index] = {
         vehicle_id: vehicle[:id],
         global_day_index: vehicle[:global_day_index],
         tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - (vehicle.global_day_index % 7) * 86400,

@@ -25,7 +25,8 @@ class HeuristicTest < Minitest::Test
       vrp[:services][1][:activity][:point_id] = 'point_1'
       vrp = TestHelper.create(vrp)
 
-      s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
+      vrp.vehicles = []
+      s = Heuristics::Scheduling.new(vrp)
       assert_empty s.instance_variable_get(:@uninserted)
     end
 
@@ -43,7 +44,8 @@ class HeuristicTest < Minitest::Test
       }]
       vrp = TestHelper.create(vrp)
 
-      s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
+      vrp.vehicles = []
+      s = Heuristics::Scheduling.new(vrp)
       assert_equal 2, s.instance_variable_get(:@uninserted).size
     end
 
@@ -61,7 +63,8 @@ class HeuristicTest < Minitest::Test
       }]
       vrp = TestHelper.create(vrp)
 
-      s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 10, shift: 0)
+      vrp.vehicles = []
+      s = Heuristics::Scheduling.new(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert(data_services['service_1'][:tws_sets].first.all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
       assert_equal 0, s.instance_variable_get(:@uninserted).size
@@ -81,8 +84,8 @@ class HeuristicTest < Minitest::Test
       vrp[:services][3][:visits_number] = 2
       vrp[:services][3][:minimum_lapse] = 6
       vrp = TestHelper.create(vrp)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
-      s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 10, shift: 0)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 6, data_services.size
       assert_nil data_services['service_1'][:heuristic_period]
@@ -97,8 +100,8 @@ class HeuristicTest < Minitest::Test
       vrp[:services][0][:minimum_lapse] = 7
 
       vrp = TestHelper.create(vrp)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
-      s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 10, shift: 0)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 7, data_services['service_1'][:heuristic_period]
 
@@ -130,8 +133,8 @@ class HeuristicTest < Minitest::Test
       }
 
       vrp = TestHelper.create(vrp)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
-      s = Heuristics::Scheduling.new(vrp, expanded_vehicles, start: 0, end: 14, shift: 0)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
@@ -155,8 +158,8 @@ class HeuristicTest < Minitest::Test
 
     def test_add_missing_visits
       vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
-      expanded = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
-      s = Heuristics::Scheduling.new(vrp, expanded, start: 0, end: 365, shift: 0)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.bindump'))) # rubocop: disable Security/MarshalLoad
@@ -175,8 +178,8 @@ class HeuristicTest < Minitest::Test
 
     def test_clean_routes_with_position_requirement_never_first
       vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
-      s = Heuristics::Scheduling.new(vrp, expanded_vehicles)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
 
       vehicule = { matrix_id: vrp.vehicles.first.start_point.matrix_index }
       s.instance_variable_set(:@candidate_routes,
@@ -197,8 +200,8 @@ class HeuristicTest < Minitest::Test
 
     def test_clean_routes_with_position_requirement_never_last
       vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
-      s = Heuristics::Scheduling.new(vrp, expanded_vehicles)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
 
       vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
       s.instance_variable_set(:@candidate_routes,
@@ -218,7 +221,8 @@ class HeuristicTest < Minitest::Test
       vrp = VRP.scheduling_seq_timewindows
       vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300 }]
       vrp = TestHelper.create(vrp)
-      s = Heuristics::Scheduling.new(vrp, [], start: 0, end: 14, shift: 0)
+      vrp.vehicles = []
+      s = Heuristics::Scheduling.new(vrp)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
@@ -230,7 +234,6 @@ class HeuristicTest < Minitest::Test
                                     considered_setup_duration: 0,
                                     activity: 0
                                   }],
-                                  vehicle_id: vrp.vehicles.first.id,
                                   tw_start: 0,
                                   tw_end: 400
                                 }
@@ -253,7 +256,6 @@ class HeuristicTest < Minitest::Test
                                     considered_setup_duration: 0,
                                     activity: 0
                                   }],
-                                  vehicle_id: vrp.vehicles.first.id,
                                   tw_start: 0,
                                   tw_end: 400
                                 }
@@ -266,7 +268,8 @@ class HeuristicTest < Minitest::Test
     def test_compute_next_insertion_cost_when_activities
       vrp = TestHelper.create(VRP.basic)
       vrp.schedule_range_indices = { start: 0, end: 365 }
-      s = Heuristics::Scheduling.new(vrp, [])
+      vrp.vehicles = []
+      s = Heuristics::Scheduling.new(vrp)
 
       service = { id: 'service_2', point_id: 'point_2', duration: 0 }
       timewindow = { start_time: 47517.6, arrival_time: 48559.4, final_time: 48559.4, setup_duration: 0 }
@@ -285,7 +288,7 @@ class HeuristicTest < Minitest::Test
 
     def test_compute_shift_two_potential_tws
       vrp = VRP.scheduling
-      s = Heuristics::Scheduling.new(TestHelper.create(vrp), [])
+      s = Heuristics::Scheduling.new(TestHelper.create(vrp))
       s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_shift_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_shift_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@indices, '1028167' => 0, 'endvehicule8' => 270)
@@ -309,8 +312,8 @@ class HeuristicTest < Minitest::Test
     def test_positions_provided
       vrp = VRP.scheduling_seq_timewindows
       vrp = TestHelper.create(vrp)
-      expanded_vehicles = TestHelper.easy_vehicle_expand(vrp.vehicles, vrp.schedule_range_indices)
-      s = Heuristics::Scheduling.new(vrp, expanded_vehicles)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
 
       assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [])
       assert_equal [0, 1], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },

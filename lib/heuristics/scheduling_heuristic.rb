@@ -27,7 +27,7 @@ module Heuristics
     include SchedulingDataInitialization
     include SchedulingEndPhase
 
-    def initialize(vrp, expanded_vehicles, job = nil)
+    def initialize(vrp, job = nil)
       # heuristic data
       @candidate_vehicles = []
       @vehicle_day_completed = {}
@@ -62,11 +62,10 @@ module Heuristics
 
       # global data
       @schedule_end = vrp.schedule_range_indices[:end]
-      @expanded_vehicles = expanded_vehicles
-      vrp.vehicles.each{ |vehicle|
-        @candidate_vehicles << vehicle.id
-        @candidate_routes[vehicle.id] = {}
-        @vehicle_day_completed[vehicle.id] = {}
+      vrp.vehicles.group_by{ |vehicle| vehicle.id.split('_')[0..-2].join('_') }.each{ |vehicle_id, _set|
+        @candidate_vehicles << vehicle_id
+        @candidate_routes[vehicle_id] = {}
+        @vehicle_day_completed[vehicle_id] = {}
       }
 
       collect_services_data(vrp)
@@ -75,8 +74,7 @@ module Heuristics
       compute_latest_authorized
       @cost = 0
 
-      vehicle_names = expanded_vehicles.collect{ |v| v.id.split('_').slice(0, 2).join('_') }.uniq
-      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, vehicle_names, job, @schedule_end) : nil
+      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
     end
 
     def compute_initial_solution(vrp, &block)
@@ -333,16 +331,16 @@ module Heuristics
     end
 
     def reorder_routes(vrp)
-      vrp.vehicles.each{ |vehicle|
-        @candidate_routes[vehicle.id].each{ |day, route|
+      @candidate_vehicles.each{ |vehicle|
+        @candidate_routes[vehicle].each{ |day, route|
           next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size <= 1
 
-          corresponding_vehicle = @expanded_vehicles.select{ |v| v[:original_id] == vehicle.id }.find{ |v| v[:global_day_index] == day }
+          corresponding_vehicle = vrp.vehicles.find{ |v| v.id == "#{vehicle}_#{day}" }
           corresponding_vehicle.timewindow.start = route[:tw_start]
           corresponding_vehicle.timewindow.end = route[:tw_end]
           route_vrp = construct_sub_vrp(vrp, corresponding_vehicle, route[:current_route])
 
-          log "Re-ordering route for #{vehicle.id} at day #{day} : #{route[:current_route].size}"
+          log "Re-ordering route for #{vehicle} at day #{day} : #{route[:current_route].size}"
 
           # TODO : test with and without providing initial solution ?
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:current_route])
@@ -359,10 +357,8 @@ module Heuristics
           next if scheduling_route_time - solver_route_time < @candidate_services_ids.collect{ |s| @services_data[s][:durations] }.flatten.min ||
                   result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == route[:current_route].collect{ |s| @indices[s[:id]] } # we did not change our points order
 
-          # we are going to try to optimize this route reoptimized by OR-tools
           begin
-            # this will change @candidate_routes, but it should not be a problem since OR-tools returns a valid solution
-            route[:current_route] = compute_route_from(route, result[:routes].first[:activities])
+            route[:current_route] = compute_route_from(route, result[:routes].first[:activities]) # this will change @candidate_routes, but it should not be a problem since OR-tools returns a valid solution
           rescue OptimizerWrapper::SchedulingHeuristicError
             log 'Failing to construct route from OR-tools solution'
           end
