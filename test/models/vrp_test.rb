@@ -62,7 +62,7 @@ module Models
     def test_vrp_scheduling
       vrp = VRP.toy
       vrp = TestHelper.create(vrp)
-      assert !vrp.schedule_range_indices
+      refute vrp.schedule_range_indices
 
       vrp = VRP.scheduling_seq_timewindows
       vrp = TestHelper.create(vrp)

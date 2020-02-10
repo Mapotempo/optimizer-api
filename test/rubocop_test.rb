@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2020
 #
 # This file is part of Mapotempo.
 #
@@ -17,11 +17,11 @@
 #
 require './test/test_helper'
 
-class Wrappers::DemoTest < Minitest::Test
-  def test_demo
-    demo = OptimizerWrapper.config[:services][:demo]
-    vrp = TestHelper.create({})
-    assert_empty demo.inapplicable_solve?(vrp)
-    assert demo.solve(vrp)
+class RubocopTest < Minitest::Test
+  def test_no_offenses_in_tests
+    output = `rubocop -f c -S --parallel ./test/*`
+    /[0-9]* files inspected,\ (.*)\ offenses\ detected/ =~ output
+    n_offeses = Regexp.last_match(1)
+    assert_equal('no', n_offeses, "Following new Rubocop offenses added to the tests:\n\n#{output}")
   end
 end

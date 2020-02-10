@@ -51,7 +51,7 @@ class Api::V01::RequestHelper < Minitest::Test
 
   def submit_vrp(params)
     post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json'
-    assert [200, 201].include? last_response.status
+    assert_includes [200, 201], last_response.status
     assert last_response.body
     if last_response.status == 201
       job_id = JSON.parse(last_response.body)['job']['id']
@@ -65,7 +65,7 @@ class Api::V01::RequestHelper < Minitest::Test
 
   def submit_csv(params)
     post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json'
-    assert [200, 201].include? last_response.status
+    assert_includes [200, 201], last_response.status
     assert last_response.body
     if last_response.status == 201
       job_id = JSON.parse(last_response.body)['job']['id']

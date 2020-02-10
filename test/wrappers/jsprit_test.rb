@@ -62,7 +62,7 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
@@ -114,7 +114,7 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       assert_raises do
         jsprit.solve(vrp, 'test')
       end
@@ -188,7 +188,7 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
@@ -240,7 +240,7 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
@@ -299,14 +299,11 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal 0, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       assert_equal 2, result[:unassigned].size
-    end
-
-    def test_service_with_rest
     end
 
     def test_service_with_skills
@@ -380,7 +377,7 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
@@ -466,7 +463,7 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal 1, (result[:routes].count{ |r| r[:activities].count{ |a| a[:pickup_shipment_id] }.positive? || r[:activities].count{ |a| a[:delivery_shipment_id] }.positive? })
@@ -549,15 +546,15 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal(2, result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
       rv0 = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0' }
-      assert rv0[:activities].collect{ |a| a[:service_id] }.include?('service_1')
-      assert rv0[:activities].collect{ |a| a[:service_id] }.include?('service_2')
+      assert_includes rv0[:activities].collect{ |a| a[:service_id] }, 'service_1'
+      assert_includes rv0[:activities].collect{ |a| a[:service_id] }, 'service_2'
       rv1 = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_1' }
-      assert rv1[:activities].collect{ |a| a[:service_id] }.include?('service_4')
+      assert_includes rv1[:activities].collect{ |a| a[:service_id] }, 'service_4'
     end
 
     def test_vehicle_limit
@@ -615,7 +612,7 @@ class Wrappers::JspritTest < Minitest::Test
         }
       }
       vrp = TestHelper.create(problem)
-      assert jsprit.inapplicable_solve?(vrp).empty?
+      assert_empty jsprit.inapplicable_solve?(vrp)
       result = jsprit.solve(vrp, 'test')
       assert result
       assert_equal 2, result[:routes].size

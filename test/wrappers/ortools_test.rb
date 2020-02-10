@@ -3075,11 +3075,20 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result
     assert_equal 5, result[:routes].size
     assert_equal 1, result[:unassigned].size
-    assert problem[:vehicles].find{ |vehicle| result[:routes].find{ |route|
-      route[:activities].one?{ |activity| activity[:service_id] == ('service_2' || 'service_3') }
-    }[:vehicle_id] == vehicle[:id] }[:global_day_index] - problem[:vehicles].find{ |vehicle| result[:routes].find{ |route|
-      route[:activities].one?{ |activity| activity[:service_id] == 'service_1' }
-    }[:vehicle_id] == vehicle[:id] }[:global_day_index] == 1
+
+    global_day_index_v23 = problem[:vehicles].find{ |vehicle|
+      result[:routes].find{ |route|
+        route[:activities].one?{ |activity| activity[:service_id] == 'service_2' || activity[:service_id] == 'service_3' }
+      }[:vehicle_id] == vehicle[:id]
+    }[:global_day_index]
+
+    global_day_index_v1 = problem[:vehicles].find{ |vehicle|
+      result[:routes].find{ |route|
+        route[:activities].one?{ |activity| activity[:service_id] == 'service_1' }
+      }[:vehicle_id] == vehicle[:id]
+    }[:global_day_index]
+
+    assert_equal 1, global_day_index_v23 - global_day_index_v1
   end
 
   def test_counting_quantities
@@ -3338,8 +3347,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1 == result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1 == result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1, result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
+    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1, result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
     assert_equal 0, result[:unassigned].size
     assert_equal 6, result[:routes][0][:activities].size
   end
@@ -3425,10 +3434,24 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert_equal(result[:routes][0][:activities].find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1, result[:routes][0][:activities].find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
-    assert_equal(result[:routes][0][:activities].find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1, result[:routes][0][:activities].find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal(
+      result[:routes][0][:activities].find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
+      result[:routes][0][:activities].find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    )
+    assert_equal(
+      result[:routes][0][:activities].find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1,
+      result[:routes][0][:activities].find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    )
+    assert_operator(
+      result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' },
+      :<,
+      result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    )
+    assert_operator(
+      result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' },
+      :<,
+      result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    )
     assert_equal 0, result[:unassigned].size
     assert_equal 6, result[:routes][0][:activities].size
   end
@@ -3764,7 +3787,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    assert !ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
+    refute ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
     vrp[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
     assert ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
   end
@@ -3944,7 +3967,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
           real point is too much, we should raise a flag (or depending on the distance,
           mark point unreachable and replace the data of the point with 'nil').
           That is, until we filter the router distance restuls this test will keep failing."
-    ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       configuration: {
         resolution: {
@@ -5358,7 +5380,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp.vehicles.first.end_point_id = 'point_1'
     list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
 
-    assert !list.include?('savings')
+    refute_includes list, 'savings'
 
     vrp.rests = [{
       id: 'rest_0',
@@ -5372,7 +5394,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp.vehicles.first.rest_ids = ['rest_0']
 
     list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
-    assert list.include?('savings')
+    assert_includes list, 'savings'
   end
 
   def test_no_solver_with_ortools_single_heuristic
@@ -5667,7 +5689,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       previous_index = nil
       relation[:linked_ids].each{ |service_id|
         current_index = result[:routes][index][:activities].find_index{ |activity| activity[:service_id] == service_id }
-        assert (previous_index || -1) < current_index if current_index
+        assert((previous_index || -1) < current_index) if current_index
         previous_index = current_index
       }
     }
@@ -5707,30 +5729,20 @@ class Wrappers::OrtoolsTest < Minitest::Test
         activity: {
           point_id: 'point_1',
           late_multiplier: 0,
-          timewindows: [{
-            start: 0,
-            end: 2,
-            day_index: 0
-          }, {
-            start: 2,
-            end: 5,
-            day_index: 0
-          }]
+          timewindows: [
+            { start: 0, end: 2, day_index: 0 },
+            { start: 2, end: 5, day_index: 0 }
+          ]
         }
       }, {
         id: 'service_2',
         activity: {
           point_id: 'point_2',
           late_multiplier: 0,
-          timewindows: [{
-            start: 0,
-            end: 2,
-            day_index: 0
-          }, {
-            start: 4,
-            end: 5,
-            day_index: 0
-          }]
+          timewindows: [
+            { start: 0, end: 2, day_index: 0 },
+            { start: 4, end: 5, day_index: 0 }
+          ]
         }
       }],
       configuration: {
@@ -5747,7 +5759,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert result[:routes][0][:activities].find{ |activity| activity[:service_id] == 'service_1_1_1' }[:detail][:timewindows].size == 1
+    assert_equal 1, result[:routes][0][:activities].find{ |activity| activity[:service_id] == 'service_1_1_1' }[:detail][:timewindows].size
   end
 
   def test_subproblem_with_one_vehicle_and_service

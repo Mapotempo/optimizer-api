@@ -21,8 +21,8 @@ class HelperTest < Minitest::Test
   def test_no_unassigned_merge_with_nil_result
     results = [{ unassigned: [{ service_id: 'service_1' }] }, nil]
     merged_result = Helper.merge_results(results, false)
-    assert merged_result[:unassigned].size == 1
-    assert merged_result[:unassigned].one?{ |unassigned| unassigned[:service_id] == 'service_1' }
+    assert_equal merged_result[:unassigned].size, 1
+    assert(merged_result[:unassigned].one?{ |unassigned| unassigned[:service_id] == 'service_1' })
   end
 
   def test_merge_results_with_only_nil_results

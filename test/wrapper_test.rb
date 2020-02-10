@@ -733,7 +733,7 @@ class WrapperTest < Minitest::Test
     traces = $stdout.string
     $stdout = original_stdout
     puts traces
-    assert_match /> iter /, traces, "Missing /> iter / in:\n " + traces
+    assert_match(/> iter /, traces, "Missing /> iter / in:\n " + traces)
     assert_equal size + 1, result[:routes][0][:activities].size # always return activities for start/end
     points = result[:routes][0][:activities].collect{ |a| a[:service_id] || a[:point_id] || a[:rest_id] }
     services_size = problem[:services].size
@@ -851,7 +851,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
+    assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
   end
 
   def test_router_matrix_error
@@ -1049,8 +1049,8 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{ (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
       assert result[:routes][0][:geometry]
     end
   end
@@ -1100,8 +1100,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{ (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
       assert result[:routes][0][:geometry]
     end
   end
@@ -1155,8 +1155,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{ (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
       assert result[:routes][0][:geometry]
     end
   end
@@ -1242,10 +1242,10 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, lambda{ |*a| (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{ (0..problem[:vehicles].size - 1).collect{ |_| [0, 0, 'trace'] } }) do
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
       assert_equal 5, result[:routes][0][:activities].size
-      assert !result[:routes][0][:geometry].nil?
+      refute_nil result[:routes][0][:geometry]
     end
   end
 
@@ -1321,7 +1321,7 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
     assert_equal 2, result[:routes][0][:activities].size
     assert_equal 2, result[:routes][1][:activities].size
   end
@@ -1406,7 +1406,7 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, { problem: problem }), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
     assert_equal 2, result[:routes][0][:activities].size
     assert_equal 3, result[:routes][1][:activities].size
     assert_equal 0, result[:unassigned].size
@@ -1468,15 +1468,17 @@ class WrapperTest < Minitest::Test
 
     result = OptimizerWrapper.solve([service: :ortools, vrp: TestHelper.create(problem)])
     assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
-    assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
-    assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
+    refute result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
+
+    refute result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
     assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
 
     if !ENV['SKIP_JSPRIT']
       result = OptimizerWrapper.solve([service: :jsprit, vrp: TestHelper.create(problem)])
       assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
-      assert !result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
-      assert !result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
+      refute result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
+
+      refute result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
       assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
     end
   end
@@ -2108,7 +2110,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert result[:unassigned].empty?
+    assert_empty result[:unassigned]
   end
 
   def test_impossible_service_tw_periodic
@@ -2135,25 +2137,18 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        sequence_timewindows: [{
-          start: 6,
-          end: 10,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 5,
-          day_index: 0
-        }]
+        sequence_timewindows: [
+          { start: 6, end: 10, day_index: 2 },
+          { start: 0, end: 5, day_index: 0 }
+        ]
       }],
       services: [{
         id: 'service_1',
         activity: {
           point_id: 'point_1',
-          timewindows: [{
-              start: 0,
-              end: 5,
-              day_index: 1
-          }]
+          timewindows: [
+            { start: 0, end: 5, day_index: 1 }
+          ]
         },
       }, {
         id: 'service_2',
@@ -2346,8 +2341,8 @@ class WrapperTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
-    assert OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp).include?(:assert_correctness_matrices_vehicles_and_points_definition)
+    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_correctness_matrices_vehicles_and_points_definition
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_correctness_matrices_vehicles_and_points_definition
   end
 
   def test_unassigned_presence
@@ -2532,8 +2527,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    job = nil
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
@@ -2604,8 +2598,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    job = nil
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, job, &_block| vrp }) do
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
       assert_equal 3, result[:unassigned].size
     end
@@ -2639,35 +2632,26 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        sequence_timewindows: [{
-          start: 6,
-          end: 10,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 5,
-          day_index: 0
-        }]
+        sequence_timewindows: [
+          { start: 6, end: 10, day_index: 2 },
+          { start: 0, end: 5, day_index: 0 }
+        ]
       }],
       services: [{
         id: 'service_1',
         activity: {
           point_id: 'point_1',
-          timewindows: [{
-              start: 3,
-              end: 4,
-              day_index: 1
-          }]
+          timewindows: [
+            { start: 3, end: 4, day_index: 1 }
+          ]
         }
       }, {
         id: 'service_2',
         activity: {
           point_id: 'point_2',
-          timewindows: [{
-              start: 4,
-              end: 5,
-              day_index: 2
-          }]
+          timewindows: [
+            { start: 4, end: 5, day_index: 2 }
+          ]
         }
       }],
       configuration: {
@@ -2682,7 +2666,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, _job, &_block| vrp }) do
+
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
       assert_equal 2, result[:unassigned].size
     end
@@ -2716,15 +2701,10 @@ class WrapperTest < Minitest::Test
         id: 'vehicle_0',
         start_point_id: 'point_0',
         matrix_id: 'matrix_0',
-        sequence_timewindows: [{
-          start: 6,
-          end: 10,
-          day_index: 2
-        }, {
-          start: 0,
-          end: 5,
-          day_index: 0
-        }]
+        sequence_timewindows: [
+          { start: 6, end: 10, day_index: 2 },
+          { start: 0, end: 5, day_index: 0 }
+        ]
       }],
       services: [{
         id: 'service_1',
@@ -2753,7 +2733,8 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    Interpreters::PeriodicVisits.stub_any_instance(:expand, lambda{ |vrp, _job, &_block| vrp }) do
+
+    Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
       assert_equal 6, result[:unassigned].size
     end
@@ -2836,14 +2817,14 @@ class WrapperTest < Minitest::Test
       metric: 'duration',
       entity: 'work_day'
     }]
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).empty?
+    assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem))
 
     problem[:configuration][:preprocessing][:partitions] << {
       method: 'balanced_kmeans',
       metric: 'duration',
       entity: 'vehicle'
     }
-    assert OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)).include?(:assert_vehicle_entity_only_before_work_day)
+    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_vehicle_entity_only_before_work_day
   end
 
   def test_unfeasible_services

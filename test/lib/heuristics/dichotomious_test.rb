@@ -147,7 +147,7 @@ class DichotomiousTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
       service_vrp = { vrp: vrp, service: :demo }
 
-      assert !Interpreters::Dichotomious.dichotomious_candidate?(service_vrp)
+      refute Interpreters::Dichotomious.dichotomious_candidate?(service_vrp)
     end
 
     def test_split_matrix
@@ -156,9 +156,9 @@ class DichotomiousTest < Minitest::Test
       service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
 
       services_vrps = Interpreters::Dichotomious.split(service_vrp)
-      services_vrps.each{ |service_vrp|
-        assert_equal service_vrp[:vrp].points.size, service_vrp[:vrp].matrices.first.time.size
-        assert_equal service_vrp[:vrp].points.size, service_vrp[:vrp].matrices.first.distance.size
+      services_vrps.each{ |service_vrp_in|
+        assert_equal service_vrp_in[:vrp].points.size, service_vrp_in[:vrp].matrices.first.time.size
+        assert_equal service_vrp_in[:vrp].points.size, service_vrp_in[:vrp].matrices.first.distance.size
       }
     end
   end

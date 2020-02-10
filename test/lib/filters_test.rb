@@ -201,12 +201,20 @@ class FiltersTest < Minitest::Test
         # that we fix this test when we start using the correct precision_coef by replacing
         # the assert with the commented-out one.
         problem.vehicles[0].capacities.each_with_index{ |cap, index|
-          assert_equal (true_capacities[vrp.units[index].id].nil? ? -2147483648 : (true_capacities[vrp.units[index].id] / vrp.units[index].precision_coef * (vrp.units[index].counting ? 1 : 1000.0)).round), cap.limit
-          # assert_equal (true_capacities[vrp.units[index].id].nil? ? -2147483648 : true_capacities[vrp.units[index].id]), cap.limit
+          if true_capacities[vrp.units[index].id].nil?
+            assert_equal(-2147483648, cap.limit)
+          else
+            assert_equal((true_capacities[vrp.units[index].id] / vrp.units[index].precision_coef * (vrp.units[index].counting ? 1 : 1000.0)).round, cap.limit)
+            # assert_equal(true_capacities[vrp.units[index].id], cap.limit)
+          end
         }
         services[0].quantities.each_with_index{ |qan_value, index|
-          assert_equal (true_quantities[vrp.units[index].id].nil? ? 0 : (true_quantities[vrp.units[index].id] / vrp.units[index].precision_coef * (vrp.units[index].counting ? 1 : 1000.0)).round), qan_value
-          # assert_equal (true_quantities[vrp.units[index].id].nil? ? 0 : true_quantities[vrp.units[index].id]), qan_value
+          if true_quantities[vrp.units[index].id].nil?
+            assert_equal(0, qan_value)
+          else
+            assert_equal((true_quantities[vrp.units[index].id] / vrp.units[index].precision_coef * (vrp.units[index].counting ? 1 : 1000.0)).round, qan_value)
+            # assert_equal(true_quantities[vrp.units[index].id], qan_value)
+          end
         }
 
         'Job killed' # Return "Job killed" to stop gracefully
