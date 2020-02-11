@@ -880,8 +880,6 @@ module Interpreters
             point[3][:duration_from_and_to_depot] = time_matrix_from_depot[0][index] + time_matrix_to_depot[index][0]
           }
 
-          vrp.vehicles.sort_by!{ |vehicle| vehicle.sequence_timewindows.size }
-
           r_start = vrp.schedule_range_indices[:start]
           r_end = vrp.schedule_range_indices[:end]
 
