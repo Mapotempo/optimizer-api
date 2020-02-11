@@ -121,9 +121,9 @@ module SchedulingEndPhase
 
     available_days = @candidate_routes[vehicle].keys - used_days
     available_days.delete_if{ |day|
-      lapse_with_other_days = used_days.collect{ |used_day| (used_day - day).abs }
-      min_lapse && lapse_with_other_days.max < min_lapse ||
-        max_lapse && lapse_with_other_days.min > max_lapse
+      smaller_lapse_with_other_days = used_days.collect{ |used_day| (used_day - day).abs }.min
+      min_lapse && smaller_lapse_with_other_days < min_lapse ||
+        max_lapse && smaller_lapse_with_other_days > max_lapse
     }.sort_by{ |day| used_days.collect{ |used_day| (used_day - day).abs }.min } # we minimize lapse generated
   end
 
