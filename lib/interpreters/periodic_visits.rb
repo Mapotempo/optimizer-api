@@ -49,7 +49,7 @@ module Interpreters
             iterations: nil,
             routes: [],
             unassigned: [],
-            elapsed: nil,
+            elapsed: 0,
             total_distance: nil
           }
         else

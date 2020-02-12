@@ -90,7 +90,9 @@ module Wrappers
         matrix_indices +
         (!vehicle_loop && vehicle_have_end ? [points[vehicle.end_point_id].matrix_index] : [])
 
+      tic = Time.now
       result = run_vroom(vrp.vehicles, vrp.services, points, vrp.matrices, [:time, :distance], vrp.preprocessing_prefer_short_segment, job)
+      elapsed_time = (Time.now - tic) * 1000 # ms
 
       return if !result
       tour = result['routes'][0]['steps'].collect{ |step| step['job'] }.compact
@@ -159,6 +161,7 @@ module Wrappers
       {
         cost: cost,
         solvers: ['vroom'],
+        elapsed: elapsed_time, # ms
 #        total_travel_distance: 0,
 #        total_travel_time: 0,
 #        total_waiting_time: 0,

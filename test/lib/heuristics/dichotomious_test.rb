@@ -62,7 +62,7 @@ class DichotomiousTest < Minitest::Test
       max_dur = vrp[:configuration][:resolution][:duration] / 1000.0
 
       assert result[:elapsed] / 1000 < max_dur, "Time spent in optimization (#{result[:elapsed] / 1000}) is greater than the maximum duration asked (#{max_dur})." # Should never be violated!
-      assert result[:elapsed] / 1000 > min_dur, "Time spent in optimization (#{result[:elapsed] / 1000}) is less than the minimum duration asked (#{min_dur})." # Due to "no remaining jobs" in end_stage, it can be violated (randomly).
+      assert result[:elapsed] / 1000 > min_dur * 0.95, "Time spent in optimization (#{result[:elapsed] / 1000}) is less than the minimum duration asked (#{min_dur})." # Due to "no remaining jobs" in end_stage, it can be violated (randomly).
       assert t2 - t1 > min_dur, "Too short elapsed time: #{t2 - t1}"
       assert t2 - t1 < max_dur * 1.35, "Time spend in the API (#{t2 - t1}) is too big compared to maximum optimization duration asked (#{max_dur})." # Due to API overhead, it can be violated (randomly) .
     end

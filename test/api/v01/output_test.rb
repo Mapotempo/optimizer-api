@@ -156,6 +156,8 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     Heuristics::Scheduling.stub_any_instance(
       :compute_initial_solution,
       lambda { |vrp_in|
+        @starting_time = Time.now
+
         check_solution_validity
 
         @output_tool&.close_file

@@ -52,7 +52,7 @@ module Interpreters
         log message, level: :info
 
         set_config(service_vrp)
-        t1 = Time.now
+
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
         if service_vrp[:dicho_level].zero?
           service_vrp[:vrp].compute_matrix
@@ -68,7 +68,6 @@ module Interpreters
           update_exlusion_cost(service_vrp)
         end
 
-        t2 = Time.now
         if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && feasible_vrp(result, service_vrp) &&
            service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit && service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit
           sub_service_vrps = []
@@ -99,7 +98,6 @@ module Interpreters
           service_vrp[:vrp].resolution_split_number = sub_service_vrps[1][:vrp].resolution_split_number
           service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[1][:vrp].resolution_total_split_number
           result = Helper.merge_results(results)
-          result[:elapsed] += (t2 - t1) * 1000
           log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate #{result[:unassigned].size}/#{service_vrp[:vrp].services.size}: #{(result[:unassigned].size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
 
           remove_bad_skills(service_vrp, result)
