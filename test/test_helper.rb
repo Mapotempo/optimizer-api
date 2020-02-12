@@ -128,14 +128,14 @@ module TestHelper
 
   def self.solve_asynchronously
     pid_worker = Process.spawn('COUNT=1 QUEUE=DEFAULT bundle exec rake resque:workers', pgroup: true)
-
+    config_solve_synchronously = OptimizerWrapper.config[:solve][:synchronously]
     OptimizerWrapper.config[:solve][:synchronously] = false
+    resque_inline = Resque.inline
     Resque.inline = false
     yield
   ensure
-    Resque.inline = true
-    OptimizerWrapper.config[:solve][:synchronously] = true
-
+    Resque.inline = resque_inline
+    OptimizerWrapper.config[:solve][:synchronously] = config_solve_synchronously
     Process.kill('KILL', -Process.getpgid(pid_worker)) if pid_worker # Kill the process and all of its children
   end
 
