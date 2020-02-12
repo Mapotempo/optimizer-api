@@ -493,6 +493,27 @@ class SplitClusteringTest < Minitest::Test
       assert_equal ['service_3', 'service_4'], result[:routes][1][:activities].collect{ |activity| activity[:service_id] }.compact
     end
 
+    def test_concurrent_split_independent_and_max_split
+      vrp = VRP.independent_skills
+      vrp[:points] = VRP.lat_lon_scheduling[:points]
+      vrp[:services].first[:skills] = ['D']
+      vrp[:configuration][:preprocessing] = {
+        max_split_size: 4
+      }
+
+      exception = assert_raises RuntimeError do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+
+        raise RuntimeError, 'This test should not raise an error. However, due to a bug ' \
+          'in define_process logic, the solutions are not accumulated correctly when vrp is split_independent ' \
+          '(either by skills or by sticky) and plus there is clustering (either due to dicho or due to max_split). ' \
+          'If this test fails -- i.e. this messsage -- this means the logic bug is corrected and ' \
+          'this test can be corrected by removing the assert_raises and assert_equal parts leaving the wrapper_vrp.'
+      end
+
+      assert_equal('Wrong number of visits returned in result', exception.message)
+    end
+
     def test_max_split_size
       vrp = VRP.lat_lon
       vrp[:vehicles][0][:router_dimension] = 'time'
