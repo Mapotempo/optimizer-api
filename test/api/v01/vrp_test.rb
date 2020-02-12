@@ -184,4 +184,35 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   ensure
     delete_job @job_id, api_key: 'demo'
   end
+
+  def test_block_call_under_clustering
+    @job_ids = []
+    TestHelper.solve_asynchronously do
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:preprocessing][:partitions] = [
+        { method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' },
+        { method: 'balanced_kmeans', metric: 'duration', entity: 'work_day' }
+      ]
+      @job_ids << submit_vrp(api_key: 'ortools', vrp: vrp)
+      wait_status @job_ids.last, 'completed', api_key: 'ortools'
+      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+
+      vrp = VRP.independent_skills
+      vrp[:points] = VRP.lat_lon_scheduling[:points]
+      vrp[:services].first[:skills] = ['D']
+      vrp[:configuration][:preprocessing] = {
+        max_split_size: 4,
+        partitions: [
+          { method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' }
+        ]
+      }
+      @job_ids << submit_vrp(api_key: 'ortools', vrp: vrp)
+      wait_status @job_ids.last, 'completed', api_key: 'ortools'
+      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+    end
+  ensure
+    @job_ids.each{ |job_id|
+      delete_completed_job job_id, api_key: 'ortools'
+    }
+  end
 end
