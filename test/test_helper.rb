@@ -629,7 +629,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         matrix_id: 'm1',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
-        router_mode: 'car',
+        # router_mode: 'car',
         router_dimension: 'distance',
         sequence_timewindows: [
           { start: 0, end: 100000, day_index: 0 },
