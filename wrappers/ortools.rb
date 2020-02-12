@@ -591,6 +591,7 @@ module Wrappers
         cost: content['cost'] || 0,
         solvers: ['ortools'],
         iterations: content['iterations'] || 0,
+        elapsed: content['duration'] * 1000, # ms
         routes: content['routes'].each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
           vehicle_matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }

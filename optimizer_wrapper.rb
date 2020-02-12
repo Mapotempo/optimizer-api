@@ -202,7 +202,7 @@ module OptimizerWrapper
                 reason: "No vehicle available for this service (split)"
               }
             },
-            elapsed: nil,
+            elapsed: 0,
             total_distance: nil
           }
         else
@@ -265,7 +265,7 @@ module OptimizerWrapper
               }
 
               if result.class.name == 'Hash' # result.is_a?(Hash) not working
-                result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+                # result[:elapsed] = (Time.now - time_start) * 1000 # Calculated inside the solvers
                 block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
                 parse_result(cluster_vrp, result)
               elsif result.class.name == 'String' # result.is_a?(String) not working

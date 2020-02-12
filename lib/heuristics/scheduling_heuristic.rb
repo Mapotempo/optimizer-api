@@ -73,7 +73,6 @@ module Heuristics
       collect_indices(vrp)
       generate_route_structure(vrp)
       compute_latest_authorized
-      @starting_time = Time.now
       @cost = 0
 
       vehicle_names = expanded_vehicles.collect{ |v| v.id.split('_').slice(0, 2).join('_') }.uniq
@@ -82,6 +81,7 @@ module Heuristics
 
     def compute_initial_solution(vrp, &block)
       block&.call()
+      @starting_time = Time.now
 
       fill_days
 
@@ -981,7 +981,7 @@ module Heuristics
         iterations: 0,
         routes: solution,
         unassigned: unassigned,
-        elapsed: Time.now - @starting_time
+        elapsed: (Time.now - @starting_time) * 1000 # ms
       }
 
       routes
