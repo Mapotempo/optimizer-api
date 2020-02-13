@@ -48,10 +48,10 @@ module Helper
     lat_distance = deg2rad_lat_b - deg2rad_lat_a
     lon_distance = deg2rad_lon_b - deg2rad_lon_a
 
-    intermediate = Math.sin(lat_distance / 2) * Math.sin(lat_distance / 2) + Math.cos(deg2rad_lat_a) * Math.cos(deg2rad_lat_b) *
-                    Math.sin(lon_distance / 2) * Math.sin(lon_distance / 2)
+    intermediate = Math.sin(lat_distance / 2) * Math.sin(lat_distance / 2) +
+                   Math.sin(lon_distance / 2) * Math.sin(lon_distance / 2) * Math.cos(deg2rad_lat_a) * Math.cos(deg2rad_lat_b)
 
-    return r * 2 * Math.atan2(Math.sqrt(intermediate), Math.sqrt(1 - intermediate))
+    r * 2 * Math.atan2(Math.sqrt(intermediate), Math.sqrt(1 - intermediate))
   end
 
   def self.euclidean_distance(loc_a, loc_b)
@@ -60,7 +60,7 @@ module Helper
     delta_lat = loc_a[0] - loc_b[0]
     delta_lon = (loc_a[1] - loc_b[1]) * Math.cos((loc_a[0] + loc_b[0]) * Math::PI / 360.0) # Correct the length of a lon difference with cosine of avereage latitude
 
-    return 111321 * Math.sqrt(delta_lat**2 + delta_lon**2) # 111321 is the length of a degree (of lon and lat) in meters
+    111321 * Math.sqrt(delta_lat**2 + delta_lon**2) # 111321 is the length of a degree (of lon and lat) in meters
   end
 
   def self.merge_results(results, merge_unassigned = true)
@@ -68,7 +68,7 @@ module Helper
     {
       solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
       cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
-      iterations: results.size != 1 ? nil : results[0] && results[0][:iterations],
+      iterations: (results.size != 1) ? nil : results[0] && results[0][:iterations],
       routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,
       unassigned: merge_unassigned ? results.flat_map{ |r| r && r[:unassigned] }.compact.uniq : results.map{ |r| r && r[:unassigned] }.compact.last,
       elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
@@ -162,7 +162,7 @@ module Enumerable
       modes << item if find_all && !modes.nil? && times == modes[0]
       modes = [times, item] if (modes && times > modes[0]) || (modes.nil? && times > 1)
     end
-    !modes.nil? ? modes[1...modes.size] : nil
+    modes.nil? ? nil : modes[1...modes.size]
   end
 
   # group_by like counting routine for convenience
