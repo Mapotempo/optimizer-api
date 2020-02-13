@@ -241,5 +241,28 @@ class HeuristicTest < Minitest::Test
       assert_equal 0, route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:activity]
       assert_equal 'point_1', route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:point_id]
     end
+
+    def test_compute_shift_two_potential_tws
+      vrp = VRP.scheduling
+      s = Heuristics::Scheduling.new(TestHelper.create(vrp), [])
+      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_shift_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_shift_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@indices, '1028167' => 0, 'endvehicule8' => 270)
+      s.instance_variable_set(:@same_point_day, true)
+      route_data = Marshal.load(File.binread('test/fixtures/compute_shift_route_data.bindump')) # rubocop: disable Security/MarshalLoad
+      potential_tws = Marshal.load(File.binread('test/fixtures/compute_shift_potential_tws.bindump')) # rubocop: disable Security/MarshalLoad
+
+      service_to_plan = '1028167_CLI_84_1AB'
+      service_data = s.instance_variable_get(:@services_data)[service_to_plan]
+      route_data[:current_route] = [
+        { id: '1028167_INI_84_1AB', point_id: '1028167', start: 21600, arrival: 21700, end: 22000, considered_setup_duration: 120, activity: 0 }
+      ]
+      route_data[:current_route][0][:point_id] = service_data[:points_ids][0]
+      times_back_to_depot = potential_tws.collect{ |tw|
+        _next_a, _accepted, _shift, back_depot = s.send(:insertion_cost_with_tw, tw, route_data, { id: service_to_plan, point_id: service_data[:points_ids][0], duration: 876 }, 0)
+        back_depot
+      }
+      assert_operator times_back_to_depot[0], :!=, times_back_to_depot[1]
+    end
   end
 end

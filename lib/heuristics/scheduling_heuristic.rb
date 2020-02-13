@@ -474,7 +474,8 @@ module Heuristics
         time_to_next = matrix(route_data, service_inserted[:point_id], next_service[:point_id])
         shift = 0
         if can_ignore_tw(service_inserted[:id], next_service[:id])
-          shift += service_inserted[:duration]
+          prospective_next_end = inserted_final_time + @services_data[next_service[:id]][:durations][next_service[:activity]]
+          shift += prospective_next_end - next_service[:end]
         else
           next_service[:tw] = @services_data[next_service[:id]][:tws_sets][next_service[:activity]]
           next_service[:duration] = @services_data[next_service[:id]][:durations][next_service[:activity]]

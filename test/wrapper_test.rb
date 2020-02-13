@@ -2237,8 +2237,8 @@ class WrapperTest < Minitest::Test
     vrp[:matrices][1][:time].each{ |line| line[2] = 2**32 }
     vrp[:matrices][1][:time][2] = (1..vrp[:matrices].first[:time][2].size).collect{ |_i| 2**32 }
     unassigned_services = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)[:unassigned]
-    assert_equal 1, unassigned_services.select{ |un| un[:reason] == 'Unreachable' }.size
-    assert_equal 'service_2', unassigned_services.select{ |un| un[:reason] == 'Unreachable' }.first[:service_id]
+    assert_equal 1, (unassigned_services.count{ |un| un[:reason] == 'Unreachable' })
+    assert_equal 'service_2', unassigned_services.find{ |un| un[:reason] == 'Unreachable' }[:service_id]
   end
 
   def test_impossible_service_unconsistent_minimum_lapse
