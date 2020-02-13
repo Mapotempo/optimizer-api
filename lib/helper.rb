@@ -164,6 +164,13 @@ module Enumerable
     end
     !modes.nil? ? modes[1...modes.size] : nil
   end
+
+  # group_by like counting routine for convenience
+  def count_by(&block)
+    self.group_by(&block)
+        .map{ |key, items| [key, items&.count] }
+        .to_h
+  end
 end
 
 class Numeric
