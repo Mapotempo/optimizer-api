@@ -130,7 +130,7 @@ module OptimizerWrapper
     unduplicated_services, duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services)
     duplicated_results = duplicated_services.compact.collect.with_index{ |service_vrp, repetition|
       define_process([service_vrp], job) { |wrapper, avancement, total, message, cost, time, solution|
-        message = "repetition #{repetition + 1}/#{duplicated_services.size} - #{message}" if message.nil?
+        message = "repetition #{repetition + 1}/#{duplicated_services.size} - #{message}" unless message.nil?
         block&.call(wrapper, avancement, total, message, cost, time, solution)
       }
     }
@@ -447,7 +447,7 @@ module OptimizerWrapper
               else
                 unless callback.nil? # do not create the proc if callback is nil
                   proc{ |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-                    message = "process #{i + 1}/#{services_vrps.size} - #{message}" if message.nil?
+                    message = "process #{i + 1}/#{services_vrps.size} - #{message}" unless message.nil?
                     callback.call(wrapper, avancement, total, message, cost, time, solution)
                   }
                 end
