@@ -172,6 +172,7 @@ module Interpreters
     end
 
     def self.remove_poorly_populated_routes(vrp, result, limit)
+      emptied_routes = false
       result[:routes].delete_if{ |route|
         vehicle = vrp.vehicles.find{ |current_vehicle| current_vehicle.id == route[:vehicle_id] }
         loads = route[:activities].last[:detail][:quantities]
@@ -187,14 +188,18 @@ module Interpreters
         time_flag = vehicle_worktime && route_duration < limit * vehicle_worktime
 
         if load_flag && time_flag
+          emptied_routes = true
+
           number_of_services_in_the_route = route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact.size
 
-          log "route #{route[:vehicle_id]} is emptied: #{number_of_services_in_the_route} services are now unassigned.", level: :warn
+          log "route #{route[:vehicle_id]} is emptied: #{number_of_services_in_the_route} services are now unassigned.", level: :info
 
           result[:unassigned] += route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact
           true
         end
       }
+
+      log 'Some routes are emptied due to poor workload -- time or quantity.', level: :warn if emptied_routes
     end
 
     def self.update_matrix(original_matrices, sub_vrp, matrix_indices)
@@ -535,6 +540,7 @@ module Interpreters
       end
 
       def collect_data_items_metrics(vrp, cumulated_metrics)
+        infeasible_data_items = false
         data_items = []
         linked_objects = {}
 
@@ -582,7 +588,8 @@ module Interpreters
 
             if vehicles_characteristics.none?{ |v_characteristics| compatible_characteristics?(s_characteristics, v_characteristics) }
               # TODO: These cases need to be eliminted during preprocessing phases.
-              log "There are no vehicles that can serve service #{s.id}.", level: :warn
+              log "There are no vehicles that can serve service #{s.id} in clustering.", level: :info
+              infeasible_data_items = true
             end
 
             s_characteristics
@@ -616,6 +623,8 @@ module Interpreters
             data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, characteristics, nil, 0]
           }
         }
+
+        log 'There are services in clustering which cannot be served by any vehicles.', level: :warn if infeasible_data_items
 
         zip_dataitems(vrp, data_items, linked_objects) if !vrp.matrices.empty? && !vrp.matrices[0][:distance].empty?
 
