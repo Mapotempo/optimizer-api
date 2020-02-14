@@ -100,8 +100,8 @@ module OptimizerWrapper
       },
     },
     solve: {
-      synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] ? !(ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'false') : true,
-      repetition: ENV['OPTIM_CLUST_SCHED_REPETITION'] || 3
+      synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] ? ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'true' : true,
+      repetition: ENV['OPTIM_CLUST_SCHED_REPETITION']&.to_i || 3
     },
     router: {
       api_key: ENV['ROUTER_API_KEY'] || 'demo',

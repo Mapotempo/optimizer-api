@@ -72,7 +72,7 @@ module OptimizerWrapper
     },
     solve: {
       synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'true',
-      repetition: ENV['OPTIM_CLUST_SCHED_REPETITION'] || 6
+      repetition: ENV['OPTIM_CLUST_SCHED_REPETITION']&.to_i || 6
     },
     router: {
       api_key: ENV['ROUTER_API_KEY'] || 'demo',
