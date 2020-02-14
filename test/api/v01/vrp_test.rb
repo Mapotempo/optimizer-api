@@ -215,4 +215,58 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       delete_completed_job job_id, api_key: 'ortools'
     }
   end
+
+  def test_unfounded_avancement_message_change
+    lines_with_avancement = ''
+    Dir.mktmpdir('temp_', 'test/') { |tmpdir|
+      begin
+        previous = { log_level: ENV['LOG_LEVEL'], log_device: ENV['LOG_DEVICE'], repetition: OptimizerWrapper.config[:solve][:repetition] }
+        output = Tempfile.new('avencement-output', tmpdir)
+        ENV['LOG_LEVEL'] = 'info'
+        ENV['LOG_DEVICE'] = output.path
+        OptimizerWrapper.config[:solve][:repetition] = 2
+
+        TestHelper.solve_asynchronously do
+          vrp = VRP.lat_lon_scheduling_two_vehicles
+          vrp[:configuration][:preprocessing][:partitions] = [
+            { method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' },
+            { method: 'balanced_kmeans', metric: 'duration', entity: 'work_day' }
+          ]
+          @job_id = submit_vrp(api_key: 'ortools', vrp: vrp)
+          wait_status @job_id, 'completed', api_key: 'ortools'
+        end
+
+        lines_with_avancement = output.grep(/avancement/)
+      ensure
+        ENV['LOG_LEVEL'] = previous[:log_level]
+        ENV['LOG_DEVICE'] = previous[:log_device]
+        OptimizerWrapper.config[:solve][:repetition] = previous[:repetition]
+        output&.unlink
+        delete_completed_job @job_id, api_key: 'ortools' if @job_id
+      end
+    }
+
+    assert_msg = "\nThe structure of avancement message has changed! If the modification is on purpose " \
+                 "fix this test \n(#{self.class.name}::#{self.name}) to represent the actual functionality."
+    # Currently the expected output is in the following form
+    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - clustering phase (y: 1..2)/2 - step (1..y)/(y)
+    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving scheduling heuristic
+
+    lines_with_avancement.each{ |line|
+      date_time_jobid = '\[(?<date>[0-9-]*) (?<hour>[0-9: +]*)\] (?<job_id>[0-9a-z]*)'
+      # There needs to be avancement and repetition
+      %r{#{date_time_jobid} - INFO: avancement: repetition [1-2]/2 - (?<rest>.*)\n} =~ line
+
+      refute_nil Regexp.last_match, assert_msg
+      refute_nil Regexp.last_match(:date)&.to_date, assert_msg
+      refute_nil Regexp.last_match(:hour)&.to_time, assert_msg
+
+      rest = Regexp.last_match(:rest)
+
+      # The rest needs to be either clustering or heuristic solution
+      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/10 - solving scheduling heuristic } =~ rest
+
+      refute_nil Regexp.last_match, assert_msg
+    }
+  end
 end
