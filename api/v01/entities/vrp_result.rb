@@ -17,10 +17,8 @@
 #
 # require './api/v01/entities/vrp_result_*'
 
-
 module Api
   module V01
-
     class VrpResultSolutionRouteActivityDetailTimewindows < Grape::Entity
       expose :start, documentation: { type: Integer, desc: '' }
       expose :end, documentation: { type: Integer, desc: '' }
@@ -66,7 +64,7 @@ module Api
       expose :total_time, documentation: { type: Integer, desc: 'Sum of every travel time and activity duration of the route' }
       expose :start_time, documentation: { type: Integer, desc: 'Give the actual start time of the current route if provided by the solve' }
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
-      expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place'}
+      expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place' }
       expose :initial_loads, using: VrpResultDetailQuantities, documentation: { is_array: true, desc: 'Give the actual initial loads of the route' }
     end
 
@@ -82,7 +80,7 @@ module Api
       expose :heuristics_synthesis, documentation: { type: Hash, desc: 'When first_solution_strategies are provided, sum up of tryied heuristics and their performance.' }
       expose :solvers, documentation: { is_array: true, type: String, desc: 'Solvers used to perform the optimization' }
       expose :cost, documentation: { type: Float, desc: 'The actual cost of the solution considering all costs' }
-      expose :iterations, documentation: { type: Integer, desc: 'Total number of iteration performed to obtain the current result'}
+      expose :iterations, documentation: { type: Integer, desc: 'Total number of iteration performed to obtain the current result' }
       expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }
       expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route' }
       expose :start_time, documentation: { type: Integer, desc: '' }

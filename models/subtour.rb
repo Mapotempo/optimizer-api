@@ -17,10 +17,8 @@
 #
 require './models/base'
 
-
 module Models
   class Subtour < Base
-
     field :time_bounds, default: nil
     field :distance_bounds, default: nil
     field :router_mode, default: :pedestrian
@@ -31,6 +29,5 @@ module Models
 
     has_many :transmodal_stops, class_name: 'Models::Point'
     has_many :capacities, class_name: 'Models::Capacity'
-
   end
 end

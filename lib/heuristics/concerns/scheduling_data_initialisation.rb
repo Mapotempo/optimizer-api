@@ -32,8 +32,8 @@ module SchedulingDataInitialization
       @candidate_routes[original_vehicle_id][vehicle[:global_day_index]] = {
         vehicle_id: vehicle[:id],
         global_day_index: vehicle[:global_day_index],
-        tw_start: vehicle.timewindow.start < 84600 ? vehicle.timewindow.start : vehicle.timewindow.start - (vehicle.global_day_index % 7) * 86400,
-        tw_end: vehicle.timewindow.end < 84600 ? vehicle.timewindow.end : vehicle.timewindow.end - (vehicle.global_day_index % 7) * 86400,
+        tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - (vehicle.global_day_index % 7) * 86400,
+        tw_end: (vehicle.timewindow.end < 84600) ? vehicle.timewindow.end : vehicle.timewindow.end - (vehicle.global_day_index % 7) * 86400,
         start_point_id: vehicle[:start_point_id],
         end_point_id: vehicle[:end_point_id],
         duration: vehicle[:duration] || (vehicle.timewindow.end - vehicle.timewindow.start),
@@ -111,7 +111,7 @@ module SchedulingDataInitialization
                 elsif has_only_one_day
                   service[:minimum_lapse] ? (service[:minimum_lapse].to_f / 7).ceil * 7 : 7
                 else
-                  service[:minimum_lapse] ? service[:minimum_lapse] : 1
+                  service[:minimum_lapse] || 1
                 end
       @services_data[service.id] = {
         capacity: compute_capacities(service[:quantities], false, available_units),
@@ -196,7 +196,7 @@ module SchedulingDataInitialization
   def compute_latest_authorized
     all_days = @candidate_routes.collect{ |_vehicle, data| data.keys }.flatten.uniq.sort
 
-    @services_data.group_by{ |_id, data| [data[:nb_visits], data[:heuristic_period]] }.each{ |parameters, set|
+    @services_data.group_by{ |_id, data| [data[:nb_visits], data[:heuristic_period]] }.each{ |parameters, _set|
       nb_visits, lapse = parameters
       @max_day[nb_visits][lapse] = compute_last_authorized_day(all_days, nb_visits, lapse)
     }
@@ -260,7 +260,6 @@ module SchedulingDataInitialization
             tw2[:end] = [tw2[:end], tw1[:end]].min
           }
         }
-
       }
 
       group_tw.delete_if{ |tw| tw[:start] && tw[:end] && tw[:start] == tw[:end] }

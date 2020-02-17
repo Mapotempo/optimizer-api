@@ -20,26 +20,25 @@ require 'rgeo/geo_json'
 
 module Interpreters
   class MultiModal
-
     def initialize(vrp, selected_service)
-      @original_vrp = Marshal::load(Marshal.dump(vrp))
+      @original_vrp = Marshal.load(Marshal.dump(vrp))
       @selected_service = selected_service
-      @sub_service_ids = Array.new
-      @associated_table = Hash.new
-      @convert_table = Hash.new
+      @sub_service_ids = []
+      @associated_table = {}
+      @convert_table = {}
     end
 
-    def generate_isolines()
+    def generate_isolines
       @original_vrp.subtours.collect{ |tour|
         tour.transmodal_stops.collect{ |stop|
           isoline = JSON.parse(OptimizerWrapper.router.isoline(OptimizerWrapper.config[:router][:url], tour.router_mode, (tour.time_bounds ? :time : :distance), stop.location.lat, stop.location.lon, (tour.time_bounds || tour.distance_bounds)))
-          if isoline
-            {
-              id: tour[:id],
-              stop_id: stop.id,
-              polygon: isoline['features'].first['geometry']
-            }
-          end
+          next unless isoline
+
+          {
+            id: tour[:id],
+            stop_id: stop.id,
+            polygon: isoline['features'].first['geometry']
+          }
         }
       }.flatten
     end
@@ -51,7 +50,7 @@ module Interpreters
           current_geom.contains?(RGeo::Cartesian.factory.point(current_point.location.lon, current_point.location.lat))
         }
         isoline[:inside_points].each{ |current_point|
-          if (!@associated_table.nil? && @associated_table.has_key?(current_point.id))
+          if !@associated_table.nil? && @associated_table.has_key?(current_point.id)
             @associated_table[current_point.id] += [isoline[:stop_id]]
             @original_vrp.points.find{ |local_point| local_point.id == current_point.id }[:associated_stops] += [isoline[:stop_id]]
           else
@@ -74,16 +73,17 @@ module Interpreters
         isolines.each{ |iso_second|
           next if iso_second[:id] == isoline[:id]
 
-          if !(isoline[:inside_points] & iso_second[:inside_points]).empty?
-            pattern_first = patterns.find{ |pattern| pattern.include? isoline[:id] }
-            pattern_second = patterns.find{ |pattern| pattern.include? iso_second[:id] }
-            intersect_pattern = pattern_first & pattern_second
-            next if (pattern_first & pattern_second).size == pattern_first.size
-            patterns.delete(pattern_first)
-            pattern_first |= pattern_second
-            patterns << pattern_first
-            patterns.delete(pattern_second)
-          end
+          next if (isoline[:inside_points] & iso_second[:inside_points]).empty?
+
+          pattern_first = patterns.find{ |pattern| pattern.include? isoline[:id] }
+          pattern_second = patterns.find{ |pattern| pattern.include? iso_second[:id] }
+
+          next if (pattern_first & pattern_second).size == pattern_first.size
+
+          patterns.delete(pattern_first)
+          pattern_first |= pattern_second
+          patterns << pattern_first
+          patterns.delete(pattern_second)
         }
       }
       patterns.collect{ |pattern|
@@ -97,7 +97,7 @@ module Interpreters
       problem_size = @original_vrp.services.size
 
       patterns.collect{ |pattern|
-        sub_vrp = Marshal::load(Marshal.dump(@original_vrp))
+        sub_vrp = Marshal.load(Marshal.dump(@original_vrp))
         sub_vrp.id = pattern
         sub_vrp.relations = @original_vrp.relations
         sub_vrp.points = []
@@ -105,7 +105,7 @@ module Interpreters
           (pattern & @associated_table[service.activity.point.id]).size == @associated_table[service.activity.point.id].size if @associated_table.has_key?(service.activity.point.id)
         }
         sub_vrp.points += pattern.collect{ |transmodal_id|
-          Marshal::load(Marshal.dump(@original_vrp.points.select{ |point| point.id == transmodal_id }))
+          Marshal.load(Marshal.dump(@original_vrp.points.select{ |point| point.id == transmodal_id }))
         }.flatten
         quantities = {}
         sub_vrp.units.each{ |unit|
@@ -120,32 +120,32 @@ module Interpreters
         sub_vrp.configuration = {
           preprocessing: {
             prefer_short_segment: true
-            },
-            resolution: {
-              duration: @original_vrp.resolution_duration ? @original_vrp.resolution_duration / problem_size * sub_vrp.services.size : nil,
-              minimum_duration: @original_vrp.resolution_minimum_duration ? @original_vrp.resolution_minimum_duration / problem_size * sub_vrp.services.size : (@original_vrp.resolution_initial_time_out ? @original_vrp.resolution_initial_time_out / problem_size * sub_vrp.services.size : nil)
-            }.delete_if{ |k, v| v.nil? }
+          },
+          resolution: {
+            duration: @original_vrp.resolution_duration ? @original_vrp.resolution_duration / problem_size * sub_vrp.services.size : nil,
+            minimum_duration: @original_vrp.resolution_minimum_duration ? @original_vrp.resolution_minimum_duration / problem_size * sub_vrp.services.size : (@original_vrp.resolution_initial_time_out ? @original_vrp.resolution_initial_time_out / problem_size * sub_vrp.services.size : nil)
+          }.delete_if{ |_k, v| v.nil? }
         }
 
         sub_vrp.vehicles = []
         sub_vrp.subtours = []
 
-        vehicle_skills = @original_vrp.vehicles.collect{ |vehicle|
+        vehicle_skills = @original_vrp.vehicles.flat_map{ |vehicle|
           vehicle.skills.collect{ |alternative| alternative }
-        }.flatten(1).compact.uniq
+        }.compact.uniq
 
-        max_capacities = Hash.new
+        max_capacities = {}
         sub_vrp.units.each{ |unit|
           max_capacities[unit.id] = 0
         }
         @original_vrp.subtours.select{ |sub_tour| !sub_tour[:transmodal_stops].empty? && !pattern.empty? && !(sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).empty? }.each{ |sub_tour|
-          duplicate_vehicles = sub_tour.capacities.collect{ |capacity| capacity.limit > 0 ? (quantities[capacity.unit.id].to_f/capacity.limit).ceil : 1 }.max || 1
+          duplicate_vehicles = sub_tour.capacities.collect{ |capacity| (capacity.limit > 0) ? (quantities[capacity.unit.id].to_f / capacity.limit).ceil : 1 }.max || 1
           (sub_tour[:transmodal_stops].collect{ |stop| stop.id } & pattern).each{ |transmodal_id|
             transmodal_point = sub_vrp.points.find{ |point| point.id == transmodal_id }
             sub_vrp.vehicles += (1..duplicate_vehicles).collect{ |index|
               if vehicle_skills && !vehicle_skills.empty?
                 vehicle_skills.collect{ |alternative|
-                  Models::Vehicle.new({
+                  Models::Vehicle.new(
                     id: "subtour_#{alternative.join('-')}_#{transmodal_id}_#{index}",
                     router_mode: sub_tour.router_mode,
                     router_dimension: sub_tour.router_dimension,
@@ -155,10 +155,10 @@ module Interpreters
                     skills: [sub_vrp[:points].collect{ |point| point[:associated_stops].include?(transmodal_id) ? point[:associated_stops].join('_') : nil }.compact.uniq + alternative],
                     capacities: sub_tour.capacities,
                     duration: sub_tour.duration
-                  })
+                  )
                 }
               else
-                Models::Vehicle.new({
+                Models::Vehicle.new(
                   id: "subtour_#{transmodal_id}_#{index}",
                   router_mode: sub_tour.router_mode,
                   router_dimension: sub_tour.router_dimension,
@@ -168,7 +168,7 @@ module Interpreters
                   skills: [sub_vrp[:points].collect{ |point| point[:associated_stops].include?(transmodal_id) ? point[:associated_stops].join('_') : nil }.compact.uniq],
                   capacities: sub_tour.capacities,
                   duration: sub_tour.duration
-                })
+                )
               end
             }.flatten
           }
@@ -182,15 +182,15 @@ module Interpreters
           service[:initial_id] = service.id
           @sub_service_ids << service.id
           service.skills += [service.activity.point.associated_stops.join('_')] if !service.activity.point.associated_stops.empty?
-          round = service.quantities.select{ |quantity| max_capacities[quantity.unit.id] > 0 }.collect{ |quantity| ((quantity.value || 0)/max_capacities[quantity.unit.id]) }.max || 1
+          round = service.quantities.select{ |quantity| max_capacities[quantity.unit.id]&.positive? }.collect{ |quantity| ((quantity.value || 0) / max_capacities[quantity.unit.id]) }.max || 1
           services = (1..round.ceil).collect{ |index|
-            duplicated_service = Marshal::load(Marshal.dump(service))
+            duplicated_service = Marshal.load(Marshal.dump(service))
             duplicated_service.id = "#{duplicated_service.id}_#{index}"
-            duplicated_service.quantities.select{ |quantity| max_capacities[quantity.unit.id] > 0 }.each{ |quantity|
+            duplicated_service.quantities.select{ |quantity| max_capacities[quantity.unit.id]&.positive? }.each{ |quantity|
               if round.ceil == 1 || index != round.ceil
                 quantity.value /= [round, 1].max
               else
-                quantity.value -= (index-1)*quantity.value/round
+                quantity.value -= (index - 1) * quantity.value / round
               end
             }
             duplicated_service
@@ -225,29 +225,29 @@ module Interpreters
     def override_original_vrp(subresults)
       replacement_services = subresults.collect{ |subresult|
         subresult[:routes].collect{ |route|
-          if route[:activities].size > 2
-            service = Models::Service.new({
-              id: route[:vehicle_id],
-              activity: {
-                point: @original_vrp.points.find{ |point| point.id == route[:activities].first[:point_id] },
-                duration: (route[:activities][-2][:departure_time] + route[:activities].last[:travel_time]) - (route[:activities][1][:begin_time] - route[:activities][1][:travel_time])
-                # Timewindows ?
-              },
-              skills: route[:activities][1..-2].collect{ |activity|
-                @original_vrp.services.find{ |original_service| original_service.id == activity[:service_id] }.skills
-              }.flatten.compact.uniq,
-              quantities: route[:activities][-2][:detail][:quantities].collect{ |quantity|
-                {
-                  unit: @original_vrp.units.find{ |unit| unit.id == quantity[:unit] },
-                  value: quantity[:current_load]
-                }
+          next unless route[:activities].size > 2
+
+          service = Models::Service.new(
+            id: route[:vehicle_id],
+            activity: {
+              point: @original_vrp.points.find{ |point| point.id == route[:activities].first[:point_id] },
+              duration: (route[:activities][-2][:departure_time] + route[:activities].last[:travel_time]) - (route[:activities][1][:begin_time] - route[:activities][1][:travel_time])
+              # Timewindows ?
+            },
+            skills: route[:activities][1..-2].collect{ |activity|
+              @original_vrp.services.find{ |original_service| original_service.id == activity[:service_id] }.skills
+            }.flatten.compact.uniq,
+            quantities: route[:activities][-2][:detail][:quantities].collect{ |quantity|
+              {
+                unit: @original_vrp.units.find{ |unit| unit.id == quantity[:unit] },
+                value: quantity[:current_load]
               }
-            })
-            service
-          end
+            }
+          )
+          service
         }
       }.flatten.compact
-      new_vrp = Marshal::load(Marshal.dump(@original_vrp))
+      new_vrp = Marshal.load(Marshal.dump(@original_vrp))
       new_vrp.services.delete_if{ |service| @sub_service_ids.include?(service.id) } if @sub_service_ids
       new_vrp.services += replacement_services
       new_vrp.subtours = []
@@ -259,17 +259,17 @@ module Interpreters
       OptimizerWrapper.solve([vrp_service])
     end
 
-    def rebuild_entire_route(subresults, result)
+    def rebuild_entire_route(_subresults, result)
       result[:routes] = result[:routes].each{ |route|
         last_id = nil
         route[:activities] = route[:activities].collect{ |activity|
           sub_activities = [activity]
           if activity[:service_id] && @convert_table && @convert_table[activity[:service_id]]
-            if @convert_table[activity[:service_id]].first[:point_id] == last_id
-              sub_activities = @convert_table[activity[:service_id]][1..-1]
-            else
-              sub_activities = @convert_table[activity[:service_id]]
-            end
+            sub_activities = if @convert_table[activity[:service_id]].first[:point_id] == last_id
+                               @convert_table[activity[:service_id]][1..-1]
+                             else
+                               @convert_table[activity[:service_id]]
+                             end
             last_id = @convert_table[activity[:service_id]].last[:point_id]
             activity
           end
@@ -281,9 +281,9 @@ module Interpreters
 
     def multimodal_routes
       if @original_vrp.points.none?{ |point| point.location.nil? }
-        isolines = generate_isolines()
+        isolines = generate_isolines
         select_services_from_isolines(isolines)
-        propagate_associated_stops()
+        propagate_associated_stops
         skills_patterns = generate_skills_patterns(isolines)
         subvrps = generate_subproblems(skills_patterns)
         subresults = solve_subproblems(subvrps)
@@ -291,6 +291,5 @@ module Interpreters
         rebuild_entire_route(subresults, result)
       end
     end
-
   end
 end

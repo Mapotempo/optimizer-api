@@ -17,12 +17,12 @@
 #
 
 module TSPHelper
-
   def self.create_tsp(vrp, vehicle)
     services = []
     vrp.points.each{ |pt|
       service = vrp.services.find{ |service_| service_.activity.point_id == pt.id }
       next if !service
+
       services << {
         id: service[:id],
         activity: {
@@ -58,5 +58,4 @@ module TSPHelper
       progress += 1
     }
   end
-
 end

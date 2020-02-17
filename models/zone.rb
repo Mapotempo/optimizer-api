@@ -35,6 +35,5 @@ module Models
         end
       end
     end
-
   end
 end

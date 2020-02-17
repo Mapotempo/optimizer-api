@@ -18,12 +18,11 @@
 
 require './lib/hull.rb'
 module OutputHelper
-
   # To output clusters generated
   class Clustering
     def self.generate_files(all_service_vrps, two_stages = false, job = nil)
       vrp_name = all_service_vrps.first[:vrp].name
-      file_name = ('generated_clusters' + '_' + ([vrp_name, job, Time.now.strftime('%H:%M:%S')].compact.join('_'))).parameterize
+      file_name = ('generated_clusters' + '_' + [vrp_name, job, Time.now.strftime('%H:%M:%S')].compact.join('_')).parameterize
 
       polygons = []
       csv_lines = [['id', 'lat', 'lon', 'cluster', 'vehicles_ids', 'vehicle_tw_if_only_one']]
@@ -71,7 +70,7 @@ module OutputHelper
       }.sum
       {
         type: 'Feature',
-        properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } + [[:duration, duration]] + [[:vehicle, service_vrp[:vrp].vehicles.size == 1 ? service_vrp[:vrp].vehicles.first&.id : nil]]],
+        properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } + [[:duration, duration]] + [[:vehicle, (service_vrp[:vrp].vehicles.size == 1) ? service_vrp[:vrp].vehicles.first&.id : nil]]],
         geometry: {
           type: 'Polygon',
           coordinates: [hull + [hull.first]]

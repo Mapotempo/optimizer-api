@@ -162,28 +162,26 @@ module Interpreters
     def self.set_config(service_vrp)
       # service_vrp[:vrp].resolution_batch_heuristic = true
       service_vrp[:vrp].restitution_allow_empty_result = true
-      if service_vrp[:dicho_level] && service_vrp[:dicho_level] > 0
+      if service_vrp[:dicho_level]&.positive?
         service_vrp[:vrp].resolution_duration = service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.66).to_i : 80000 # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
         service_vrp[:vrp].resolution_minimum_duration = service_vrp[:vrp].resolution_minimum_duration ? (service_vrp[:vrp].resolution_minimum_duration / 2.66).to_i : 70000
       end
 
-      if service_vrp[:dicho_level] && service_vrp[:dicho_level] == 0
+      if service_vrp[:dicho_level]&.zero?
         dicho_level_coeff(service_vrp)
         service_vrp[:vrp].vehicles.each{ |vehicle|
-          vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
+          vehicle[:cost_fixed] = (vehicle[:cost_fixed] && vehicle[:cost_fixed]&.positive?) ? vehicle[:cost_fixed] : 1e6
           vehicle[:cost_distance_multiplier] = 0.05 if vehicle[:cost_distance_multiplier].zero?
         }
       end
 
       service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
       service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit &&
-         service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit &&
-         service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_division_vehicle_limit
-        service_vrp[:vrp].resolution_init_duration = 1000
-      else
-        service_vrp[:vrp].resolution_init_duration = nil
-      end
+      service_vrp[:vrp].resolution_init_duration = if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit &&
+                                                      service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit &&
+                                                      service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_division_vehicle_limit
+                                                     1000
+                                                   end
       service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion'] # A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
 
       service_vrp
@@ -191,7 +189,7 @@ module Interpreters
 
     def self.update_exlusion_cost(service_vrp)
       if !service_vrp[:dicho_level].zero?
-        average_exclusion_cost = service_vrp[:vrp].services.collect{ |service| service.exclusion_cost }.sum / service_vrp[:vrp].services.size
+        average_exclusion_cost = service_vrp[:vrp].services.sum(&:exclusion_cost) / service_vrp[:vrp].services.size
         service_vrp[:vrp].services.each{ |service|
           service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].resolution_dicho_level_coeff**service_vrp[:dicho_level] - 1)
         }
@@ -201,10 +199,13 @@ module Interpreters
     def self.build_initial_routes(results)
       results.flat_map{ |result|
         next if result.nil?
+
         result[:routes].map{ |route|
           next if route.nil?
+
           mission_ids = route[:activities].map{ |activity| activity[:service_id] || activity[:rest_id] }.compact
           next if mission_ids.empty?
+
           Models::Route.new(
             vehicle: {
               id: route[:vehicle_id]
@@ -219,18 +220,18 @@ module Interpreters
       log '---> remove_bad_skills', level: :debug
       result[:routes].each{ |r|
         r[:activities].each{ |a|
-          if a[:service_id]
-            service = service_vrp[:vrp].services.find{ |s| s.id == a[:service_id] }
-            vehicle = service_vrp[:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
-            if service && !service.skills.empty?
-              if vehicle.skills.all?{ |xor_skills| (service.skills & xor_skills).size != service.skills.size }
-                log "dicho - removed service #{a[:service_id]} from vehicle #{r[:vehicle_id]}"
-                result[:unassigned] << a
-                r[:activities].delete(a)
-              end
-            end
-            # TODO: remove bad sticky?
-          end
+          next unless a[:service_id]
+
+          service = service_vrp[:vrp].services.find{ |s| s.id == a[:service_id] }
+          vehicle = service_vrp[:vrp].vehicles.find{ |v| v.id == r[:vehicle_id] }
+          next unless service && !service.skills.empty?
+
+          next unless vehicle.skills.all?{ |xor_skills| (service.skills & xor_skills).size != service.skills.size }
+
+          log "dicho - removed service #{a[:service_id]} from vehicle #{r[:vehicle_id]}"
+          result[:unassigned] << a
+          r[:activities].delete(a)
+          # TODO: remove bad sticky?
         }
       }
       log '<--- remove_bad_skills', level: :debug
@@ -277,7 +278,7 @@ module Interpreters
           # However, it is not very easy to find a generic and effective way.
 
           sub_results = []
-          vehicle_count = skills.empty? && !vrp.routes.empty? ? [vrp.routes.size, 6].min : 3
+          vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
           vehicles_with_skills.each_slice(vehicle_count) do |vehicles|
             remaining_service_ids = result[:unassigned].map{ |u| u[:service_id] } & services.map(&:id)
             next if remaining_service_ids.empty?
@@ -303,7 +304,7 @@ module Interpreters
             sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles.map(&:id))
             sub_vrp = sub_service_vrp[:vrp]
             sub_vrp.vehicles.each{ |vehicle|
-              vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
+              vehicle[:cost_fixed] = (vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0) ? vehicle[:cost_fixed] : 1e6
               vehicle[:cost_distance_multiplier] = 0.05 if vehicle[:cost_distance_multiplier].zero?
             }
 
@@ -320,17 +321,17 @@ module Interpreters
             transfer_unused_time_limit = sub_vrp.resolution_duration - result_loop[:elapsed].to_f
 
             # Initial routes can be refused... check unassigned size before take into account solution
-            if result_loop && remaining_service_ids.size >= result_loop[:unassigned].size
-              if vrp.resolution_vehicle_limit # correct the lefover vehicle limit count
-                leftover_vehicle_limit -= result_loop[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } } - used_vehicle_count
-              end
+            next unless result_loop && remaining_service_ids.size >= result_loop[:unassigned].size
 
-              remove_bad_skills(sub_service_vrp, result_loop)
-
-              Helper.replace_routes_in_result(result, result_loop)
-
-              sub_results << result_loop
+            if vrp.resolution_vehicle_limit # correct the lefover vehicle limit count
+              leftover_vehicle_limit -= result_loop[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } } - used_vehicle_count
             end
+
+            remove_bad_skills(sub_service_vrp, result_loop)
+
+            Helper.replace_routes_in_result(result, result_loop)
+
+            sub_results << result_loop
           end
           new_routes = build_initial_routes(sub_results)
           vehicle_ids = sub_results.flat_map{ |r| r[:routes].map{ |route| route[:vehicle_id] } }
@@ -367,11 +368,11 @@ module Interpreters
            (vehicles_by_clusters[1].size + 1) / services_by_cluster[1].size < (vehicles_by_clusters[0].size - 1) / services_by_cluster[0].size)
            cluster_index = nil
         end
-        if vehicles_by_clusters[0].empty? || vehicles_by_clusters[1].empty?
-          cluster_index ||= vehicles_by_clusters[0].size <= vehicles_by_clusters[1].size ? 0 : 1
-        else
-          cluster_index ||= services_by_cluster[0].size / vehicles_by_clusters[0].size >= services_by_cluster[1].size / vehicles_by_clusters[1].size ? 0 : 1
-        end
+        cluster_index ||= if vehicles_by_clusters[0].empty? || vehicles_by_clusters[1].empty?
+                            (vehicles_by_clusters[0].size <= vehicles_by_clusters[1].size) ? 0 : 1
+                          else
+                            (services_by_cluster[0].size / vehicles_by_clusters[0].size >= services_by_cluster[1].size / vehicles_by_clusters[1].size) ? 0 : 1
+                          end
         vehicles_by_clusters[cluster_index] << v
       }
 
@@ -398,10 +399,10 @@ module Interpreters
       smaller_side = [1, (vehicle_shares.min.to_f / vehicle_shares.sum * vrp.resolution_vehicle_limit).round].max
       bigger_side  = vrp.resolution_vehicle_limit - smaller_side
 
-      vehicle_shares[0] < vehicle_shares[1] ? [smaller_side, bigger_side] : [bigger_side, smaller_side]
+      (vehicle_shares[0] < vehicle_shares[1]) ? [smaller_side, bigger_side] : [bigger_side, smaller_side]
     end
 
-    def self.split(service_vrp, job = nil)
+    def self.split(service_vrp, _job = nil)
       log "---> dicho::split - level(#{service_vrp[:dicho_level]})", level: :debug
       vrp = service_vrp[:vrp]
       vrp.resolution_vehicle_limit ||= vrp.vehicles.size
@@ -428,12 +429,13 @@ module Interpreters
         }
       else
         raise 'Incorrect split size with kmeans' if services_by_cluster.size > 2
+
         # Kmeans return 1 vrp
-        sub_vrp = SplitClustering::build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp]
+        sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp]
         sub_vrp.points = vrp.points
         sub_vrp.vehicles = vrp.vehicles
         sub_vrp.vehicles.each{ |vehicle|
-          vehicle[:cost_fixed] = vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0 ? vehicle[:cost_fixed] : 1e6
+          vehicle[:cost_fixed] = vehicle[:cost_fixed]&.positive? ? vehicle[:cost_fixed] : 1e6
         }
         split_service_vrps << {
           service: service_vrp[:service],
@@ -472,7 +474,8 @@ module Interpreters
           }
 
           next if related_services.empty?
-          related_services.each{ |related_service|
+
+          related_services.each{ |_related_service|
             data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], [], 0]
           }
         }

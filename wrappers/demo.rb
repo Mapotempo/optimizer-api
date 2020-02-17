@@ -78,13 +78,13 @@ module Wrappers
               vrp.shipments.collect{ |shipment|
                 [:pickup, :delivery].collect{ |a|
                   mission_hash = build_route_activity(shipment, shipment.send(a))
-                  mission_hash.merge!(a.to_s + '_shipment_id' => shipment.id) if shipment.send(a)
+                  mission_hash[a.to_s + '_shipment_id'] = shipment.id if shipment.send(a)
                   mission_hash
                 }.compact
               }.flatten +
               vrp.services.collect{ |service|
                 mission_hash = build_route_activity(service, service.activity || service.activities.first)
-                mission_hash.merge!(service_id: service.id)
+                mission_hash[:service_id] = service.id
                 mission_hash
               } +
               [build_route_depot(vehicle.end_point)]

@@ -34,6 +34,6 @@ run Api::Root
 
 # Serve files from the public directory
 use Rack::TryStatic,
-  root: 'public',
-  urls: %w[/],
-  try: ['.html', 'index.html', '/index.html']
+    root: 'public',
+    urls: %w[/],
+    try: ['.html', 'index.html', '/index.html']

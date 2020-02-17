@@ -29,7 +29,7 @@ module DistanceMatrix
   def compute_vrp_need_matrix
     [
       need_matrix_time? ? :time : nil,
-      need_matrix_time? || need_matrix_distance? ? :distance : nil,
+      (need_matrix_time? || need_matrix_distance?) ? :distance : nil,
       need_matrix_value? ? :value : nil
     ].compact
   end

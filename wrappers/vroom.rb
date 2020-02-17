@@ -20,7 +20,6 @@ require './wrappers/wrapper'
 require 'json'
 require 'tempfile'
 
-
 module Wrappers
   class Vroom < Wrapper
     def initialize(cache, hash = {})
@@ -59,11 +58,11 @@ module Wrappers
       ]
     end
 
-    def solve_synchronous?(vrp)
+    def solve_synchronous?(_vrp)
       true
     end
 
-    def solve(vrp, job = nil, thread_proc = nil, &block)
+    def solve(vrp, job = nil, _thread_proc = nil)
       if vrp.points.empty? || vrp.services.empty?
         return {
           cost: 0,
@@ -76,26 +75,16 @@ module Wrappers
 
       points = Hash[vrp.points.collect{ |point| [point.id, point] }]
 
-      matrix_indices = vrp.services.collect{ |service|
-        points[service.activity.point_id].matrix_index
-      }
-
       vehicle = vrp.vehicles.first
       vehicle_have_start = !vehicle.start_point_id.nil?
       vehicle_have_end = !vehicle.end_point_id.nil?
-      vehicle_loop = vehicle.start_point_id == vehicle.end_point_id ||
-        (vehicle.start_point && vehicle.end_point && vehicle.start_point.location && vehicle.end_point.location && vehicle.start_point.location.lat == vehicle.end_point.location.lat && vehicle.start_point.location.lon == vehicle.end_point.location.lon)
-
-      matrix_indices =
-        (vehicle_have_start ? [points[vehicle.start_point_id].matrix_index] : []) +
-        matrix_indices +
-        (!vehicle_loop && vehicle_have_end ? [points[vehicle.end_point_id].matrix_index] : [])
 
       tic = Time.now
       result = run_vroom(vrp.vehicles, vrp.services, points, vrp.matrices, [:time, :distance], vrp.preprocessing_prefer_short_segment, job)
       elapsed_time = (Time.now - tic) * 1000 # ms
 
       return if !result
+
       tour = result['routes'][0]['steps'].collect{ |step| step['job'] }.compact
       log tour.inspect
 
@@ -107,7 +96,7 @@ module Wrappers
           lat: vehicle.start_point.location.lat,
           lon: vehicle.start_point.location.lon
         } : nil
-      }.delete_if{ |k,v| !v } : nil] +
+      }.delete_if{ |_k, v| !v } : nil] +
       tour.collect{ |i|
         point_index = vrp.services[i].activity.point[:matrix_index]
         point = vrp.points.select{ |point| point[:id] == vrp.services[i].activity.point[:id] }[0]
@@ -115,8 +104,8 @@ module Wrappers
         current_activity = {
           service_id: service.id,
           point_id: point.id,
-          travel_time: (previous && point_index && vrp.matrices[0][:time] ? vrp.matrices[0][:time][previous][point_index] : 0),
-          travel_distance: (previous && point_index && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][previous][point_index] : 0),
+          travel_time: ((previous && point_index && vrp.matrices[0][:time]) ? vrp.matrices[0][:time][previous][point_index] : 0),
+          travel_distance: ((previous && point_index && vrp.matrices[0][:distance]) ? vrp.matrices[0][:distance][previous][point_index] : 0),
           detail: build_detail(service, service.activity, point, nil, vehicle)
 #          travel_distance 0,
 #          travel_start_time 0,
@@ -135,10 +124,10 @@ module Wrappers
           lat: vehicle.end_point.location.lat,
           lon: vehicle.end_point.location.lon
         } : nil
-      }.delete_if{ |k,v| !v } : nil]).compact
+      }.delete_if{ |_k, v| !v } : nil]).compact
 
       rests = vehicle.rests
-      if vehicle.timewindow && vehicle.timewindow.start
+      if vehicle.timewindow&.start
         rests.sort_by!{ |rest| rest.timewindows[0].end ? -rest.timewindows[0].end : -2**31 }.each{ |rest|
           time = vehicle.timewindow.start + vrp.services[tour[0]].activity.duration
           i = pos_rest = 0
@@ -148,15 +137,15 @@ module Wrappers
           end
           if !rest.timewindows[0].end || time < rest.timewindows[0].end
             pos_rest += 1
-            while i < tour.size - 1 && (!rest.timewindows[0].end || (time += vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.time[vrp.services[tour[i]].activity.point.matrix_index][vrp.services[tour[i+1]].activity.point.matrix_index] + vrp.services[tour[i+1]].activity.duration) < rest.timewindows[0].end) do
+            while i < tour.size - 1 && (!rest.timewindows[0].end || (time += vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.time[vrp.services[tour[i]].activity.point.matrix_index][vrp.services[tour[i + 1]].activity.point.matrix_index] + vrp.services[tour[i + 1]].activity.duration) < rest.timewindows[0].end)
               i += 1
             end
             pos_rest += i
           end
-          activities.insert(pos_rest, {rest_id: rest.id})
+          activities.insert(pos_rest, rest_id: rest.id)
         }
       else
-        rests.each{ |rest| activities.insert(vehicle_have_end ? -2 : -1, {rest_id: rest.id}) }
+        rests.each{ |rest| activities.insert(vehicle_have_end ? -2 : -1, rest_id: rest.id) }
       end
 
       {
@@ -178,18 +167,18 @@ module Wrappers
 
     private
 
-    def build_detail(job, activity, point, day_index, vehicle)
+    def build_detail(_job, activity, point, _day_index, vehicle)
       {
-        lat: point && point.location && point.location.lat,
-        lon: point && point.location && point.location.lon,
+        lat: point&.location&.lat,
+        lon: point&.location&.lon,
         duration: activity.duration,
         router_mode: vehicle ? vehicle.router_mode : nil,
         speed_multiplier: vehicle ? vehicle.speed_multiplier : nil
-      }.delete_if{ |k, v| v.nil? }
+      }.delete_if{ |_k, v| v.nil? }
     end
 
     def run_vroom(vehicles, services, points, matrices, dimensions, prefer_short, job)
-      input = Tempfile.new('optimize-vroom-input', tmpdir=@tmp_dir)
+      input = Tempfile.new('optimize-vroom-input', @tmp_dir)
       problem = { vehicles: [], jobs: [], matrix: [] }
       vehicle = vehicles.first
       problem[:vehicles] << {
@@ -247,11 +236,11 @@ module Wrappers
       input.write(problem.to_json)
       input.close
 
-      output = Tempfile.new('optimize-vroom-output', tmpdir=@tmp_dir)
+      output = Tempfile.new('optimize-vroom-output', @tmp_dir)
       output.close
 
       cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}'"
-      log (job ? job + ' - ' : '') + cmd
+      log cmd
       system(cmd)
 
       unless $CHILD_STATUS.nil?
@@ -260,8 +249,8 @@ module Wrappers
         end
       end
     ensure
-      input && input.unlink
-      output && output.unlink
+      input&.unlink
+      output&.unlink
     end
   end
 end

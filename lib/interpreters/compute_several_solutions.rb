@@ -19,7 +19,6 @@ require './optimizer_wrapper.rb'
 
 module Interpreters
   class SeveralSolutions
-
     def self.check_triangle_inequality(matrix)
       (0..matrix.size - 1).each{ |i|
         (0..matrix.size - 1).each{ |j|
@@ -28,7 +27,7 @@ module Interpreters
           }
         }
       }
-      return matrix
+      matrix
     end
 
     def self.generate_matrix(vrp)
@@ -136,14 +135,14 @@ module Interpreters
 
     def self.batch_heuristic(service_vrp, custom_heuristics = nil)
       (custom_heuristics || OptimizerWrapper::HEURISTICS).collect{ |heuristic|
-        edit_service_vrp(Marshal::load(Marshal.dump(service_vrp)), heuristic)
+        edit_service_vrp(Marshal.load(Marshal.dump(service_vrp)), heuristic)
       }
     end
 
     def self.several_solutions(service_vrps)
       service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }.collect{ |service_vrp|
         (0..service_vrp[:vrp][:resolution_several_solutions] - 1).collect{ |i|
-          variate_service_vrp(Marshal::load(Marshal.dump(service_vrp)), i)
+          variate_service_vrp(Marshal.load(Marshal.dump(service_vrp)), i)
         }
       }.flatten.compact
     end
@@ -166,7 +165,8 @@ module Interpreters
           times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
         }
-        raise RuntimeError.new('No solution found') if first_results.all?{ |res| res.nil? }
+        raise RuntimeError, 'No solution found' if first_results.all?(&:nil?)
+
         synthesis = []
         first_results.each_with_index{ |result, i|
           synthesis << {
@@ -213,8 +213,8 @@ module Interpreters
           end_point = vehicle.end_point
 
           vehicle.start_point_id == vehicle.end_point_id ||
-          start_point[:location] && end_point[:location] && start_point[:location][:lat] == end_point[:location][:lat] && start_point[:location][:lon] == end_point[:location][:lon] ||
-          vrp[:matrices] && start_point[:matrix_index] && end_point[:matrix_index] && vrp[:matrices].all?{ |matrix| matrix[:time] && matrix[:time][start_point[:matrix_index]][end_point[:matrix_index]] == 0 }
+            start_point[:location] && end_point[:location] && start_point[:location][:lat] == end_point[:location][:lat] && start_point[:location][:lon] == end_point[:location][:lon] ||
+            vrp[:matrices] && start_point[:matrix_index] && end_point[:matrix_index] && vrp[:matrices].all?{ |matrix| matrix[:time] && matrix[:time][start_point[:matrix_index]][end_point[:matrix_index]] == 0 }
         end
       }
       size_mtws = services.select{ |service| service[:timewindows].to_a.size > 1 }.size
@@ -244,7 +244,7 @@ module Interpreters
       if OptimizerWrapper::HEURISTICS.include?(heuristic)
         heuristic
       else
-        raise StandardError.new('Unconsistent first solution strategy used internally')
+        raise StandardError, 'Unconsistent first solution strategy used internally'
       end
     end
   end

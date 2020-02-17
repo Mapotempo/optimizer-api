@@ -17,7 +17,6 @@
 #
 require './models/base'
 
-
 module Models
   class Matrix < Base
     fields :time, :distance, :value

@@ -20,7 +20,6 @@ require './models/relation'
 
 module Interpreters
   class MultiTrips
-
     def expand(vrp)
       vrp.vehicles = vrp.vehicles.collect{ |vehicle|
         if vehicle.trips && vehicle.trips >= 1
@@ -32,7 +31,7 @@ module Interpreters
           vrp.relations += [Models::Relation.new(type: 'vehicle_trips', linked_vehicle_ids: new_ids)]
 
           (0..vehicle.trips - 1).collect{ |index|
-            new_vehicle = Marshal::load(Marshal.dump(vehicle))
+            new_vehicle = Marshal.load(Marshal.dump(vehicle))
             new_vehicle.id += "_trip_#{index}"
             new_vehicle
           }

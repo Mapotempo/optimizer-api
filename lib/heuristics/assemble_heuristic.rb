@@ -22,20 +22,20 @@ require './lib/tsp_helper.rb'
 
 module Interpreters
   class Assemble
-
     def self.build_incompatibility_set(vrp)
       skills = vrp.vehicles.collect{ |vehicle| vehicle[:skills] }
       skills.each{ |skill_1|
         skills.each{ |skill_2|
-          if skill_1 != skill_2 && !(skill_1 & skill_2).empty?
-            skill_first = skill_1
-            skill_second = skill_2
-            next if (skill_first & skill_second).size == skill_first.size
-            skills.delete(skill_first)
-            skill_first |= skill_second
-            skills << skill_first
-            skills.delete(skill_second)
-          end
+          next unless skill_1 != skill_2 && !(skill_1 & skill_2).empty?
+
+          skill_first = skill_1
+          skill_second = skill_2
+          next if (skill_first & skill_second).size == skill_first.size
+
+          skills.delete(skill_first)
+          skill_first |= skill_second
+          skills << skill_first
+          skills.delete(skill_second)
         }
       }
       skills
@@ -69,16 +69,17 @@ module Interpreters
             }
 
             next if related_services.empty?
+
             related_services.each{ |related_service|
-              if related_service[:sticky_vehicle_ids] && related_service[:skills] && !related_service[:skills].empty?
-                data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], related_service[:skills]]
-              elsif related_service[:sticky_vehicle_ids] && related_service[:skills] && related_service[:skills].empty?
-                  data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], nil]
-              elsif related_service[:skills] && !related_service[:skills].empty? && !related_service[:sticky_vehicle_ids]
-                data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, related_service[:skills]]
-              else
-                data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, nil, nil]
-              end
+              data_items << if related_service[:sticky_vehicle_ids] && related_service[:skills] && !related_service[:skills].empty?
+                              [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], related_service[:skills]]
+                            elsif related_service[:sticky_vehicle_ids] && related_service[:skills] && related_service[:skills].empty?
+                                [point.location.lat, point.location.lon, point.id, unit_quantities, related_service[:sticky_vehicle_ids], nil]
+                            elsif related_service[:skills] && !related_service[:skills].empty? && !related_service[:sticky_vehicle_ids]
+                              [point.location.lat, point.location.lon, point.id, unit_quantities, nil, related_service[:skills]]
+                            else
+                              [point.location.lat, point.location.lon, point.id, unit_quantities, nil, nil]
+                            end
             }
           }
 
@@ -92,30 +93,30 @@ module Interpreters
             skills.each{ |skill|
               data = data_for.find{ |data| skill.include?(data[5]) }
               centroid_indices << data_items.index(data)
-              data_for = data_for - [data]
+              data_for -= [data]
             }
           else
             centroid_indices = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] # really ?
           end
 
-          clusters, centroid_indices = SplitClustering::kmeans_process(centroid_indices, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
+          clusters, centroid_indices = SplitClustering.kmeans_process(centroid_indices, 200, 30, nb_clusters, data_items, unit_symbols, cut_symbol, cumulated_metrics[cut_symbol] / nb_clusters, vrp)
           end_timer = Time.now
 
           vehicle_list = []
           vrp.vehicles.each{ |vehicle|
-            tw = Marshal::load(Marshal.dump(vehicle[:timewindow]))
-            new_vehicle = Marshal::load(Marshal.dump(vehicle))
+            tw = Marshal.load(Marshal.dump(vehicle[:timewindow]))
+            new_vehicle = Marshal.load(Marshal.dump(vehicle))
             new_vehicle[:timewindow] = tw
             vehicle_list << new_vehicle
           }
-          sub_problem = SplitClustering::create_sub_pbs(service_vrp, vrp, clusters)
+          sub_problem = SplitClustering.create_sub_pbs(service_vrp, vrp, clusters)
           clusters.each_with_index{ |cluster, index|
             data_sticky = cluster.data_items.collect{ |data| data[4] }.compact
             data_skills = cluster.data_items.collect{ |data| data[5] }.compact
             sub_problem[index][:vrp][:vehicles] = if !data_sticky.empty?
               [vehicle_list.find{ |vehicle| vehicle[:id] == data_sticky.flatten.first }].compact
             elsif data_sticky.empty? && !data_skills.empty? && vehicle_list.any?{ |vehicle| vehicle[:skills] && !vehicle[:skills].first.empty? }
-              [vehicle_list.find{ |vehicle| vehicle[:skills] && !vehicle[:skills].first.empty? && ([data_skills.flatten.first] & (vehicle[:skills].first)).size > 0 }]
+              [vehicle_list.find{ |vehicle| vehicle[:skills] && !vehicle[:skills].first.empty? && ([data_skills.flatten.first] & vehicle[:skills].first).size > 0 }]
             else
               [vehicle_list.last] # TODO : function that return the best vehicle for this cluster
             end
@@ -141,12 +142,14 @@ module Interpreters
       }
 
       results = all_vrps.collect.with_index{ |service_vrp, indice|
-        block.call(:ortools, indice + 1, nil, "process #{indice + 1}/#{all_vrps.size} - " + 'run optimization', nil, nil, nil) if block
+        block&.call(:ortools, indice + 1, nil, "process #{indice + 1}/#{all_vrps.size} - " + 'run optimization', nil, nil, nil)
         OptimizerWrapper.solve([service_vrp])
       }
 
       services_vrps = services_vrps.collect{ |service_vrp|
         routes = results.collect{ |result|
+          next unless result
+
           result[:routes].collect{ |route|
             {
               vehicle: {
@@ -156,7 +159,7 @@ module Interpreters
                 activity[:service_id] || activity[:rest_id]
               }
             }
-          } if result
+          }
         }.flatten.compact
         service_vrp[:vrp].routes = routes
         service_vrp[:vrp].relations = routes.collect.with_index{ |route, ind|
@@ -189,7 +192,7 @@ module Interpreters
             }.compact
           }
         }
-        service_vrp[:vrp].relations = service_vrp[:vrp].vehicles.collect.with_index{ |vehicle, index|
+        service_vrp[:vrp].relations = service_vrp[:vrp].vehicles.collect.with_index{ |_vehicle, index|
           {
             id: 'order_' + index.to_s,
             type: 'order',
@@ -203,8 +206,8 @@ module Interpreters
     end
 
     def self.assemble_heuristic(true_services_vrps, block = nil)
-      if true_services_vrps.all?{ |service_vrp| service_vrp[:vrp].services.all?{ |service| service[:sticky_vehicle_ids] }}
-      elsif true_services_vrps.any?{ |service_vrp| service_vrp[:vrp].services.any?{ |service| service[:sticky_vehicle_ids] }}
+      if true_services_vrps.all?{ |service_vrp| service_vrp[:vrp].services.all?{ |service| service[:sticky_vehicle_ids] } }
+      elsif true_services_vrps.any?{ |service_vrp| service_vrp[:vrp].services.any?{ |service| service[:sticky_vehicle_ids] } }
         single_solve(true_services_vrps)
       else
         assemble_routes(true_services_vrps, block)
@@ -216,12 +219,11 @@ module Interpreters
     def self.assemble_candidate(services_vrps)
       services_vrps.any?{ |service_vrp|
         service_vrp[:vrp].vehicles.size > 1 &&
-        (service_vrp[:vrp].vehicles.all?(&:force_start) || service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle[:shift_preference] == 'force_start' }) &&
-        service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier == 0 } &&
-        service_vrp[:vrp].services.all?{ |service| service.activity.late_multiplier.nil? || service.activity.late_multiplier == 0 } &&
-        service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? }
+          (service_vrp[:vrp].vehicles.all?(&:force_start) || service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle[:shift_preference] == 'force_start' }) &&
+          service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier == 0 } &&
+          service_vrp[:vrp].services.all?{ |service| service.activity.late_multiplier.nil? || service.activity.late_multiplier == 0 } &&
+          service_vrp[:vrp].services.any?{ |service| service.activity.timewindows && !service.activity.timewindows.empty? }
       }
     end
-
   end
 end

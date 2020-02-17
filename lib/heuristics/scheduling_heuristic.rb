@@ -109,7 +109,7 @@ module Heuristics
 
       begin
         check_solution_validity
-      rescue
+      rescue StandardError
         log 'Solution after calling solver to reorder routes is unfeasible.', level: :warn
         restore
       end
@@ -354,7 +354,7 @@ module Heuristics
 
           begin
             result = OptimizerWrapper.solve([service: :ortools, vrp: route_vrp])
-          rescue
+          rescue StandardError
             log 'ORtools could not find a solution for this problem.', level: :warn
           end
 
@@ -387,7 +387,7 @@ module Heuristics
     def possible_for_point(point, nb_visits)
       # since @same_point_day is or has been activated, we know each service has exactly one point_id
 
-      routes_with_point = @candidate_routes.collect{ |vehicule, route| [vehicule, route.collect{ |day, data| data[:current_route].any?{ |stop| stop[:point_id] == point } ? day : nil }.compact] }
+      routes_with_point = @candidate_routes.collect{ |vehicule, route| [vehicule, route.collect{ |day, data| (data[:current_route].any?{ |stop| stop[:point_id] == point }) ? day : nil }.compact] }
       routes_with_point.delete_if{ |_vehicule, days| days.empty? }
 
       raise OptimizerWrapper::SchedulingHeuristicError, "Several vehicules affected to point #{point}" if (@same_point_day || @relaxed_same_point_day) && routes_with_point.size > 1
@@ -509,7 +509,7 @@ module Heuristics
 
     def acceptable?(shift, route_data, position)
       computed_shift = shift
-      acceptable = route_data[:current_route][position] && route_data[:current_route][position][:max_shift] ? route_data[:current_route][position][:max_shift] >= shift : true
+      acceptable = (route_data[:current_route][position] && route_data[:current_route][position][:max_shift]) ? route_data[:current_route][position][:max_shift] >= shift : true
 
       if acceptable && route_data[:current_route][position + 1]
         (position + 1..route_data[:current_route].size - 1).each{ |pos|
@@ -594,11 +594,11 @@ module Heuristics
       }
 
       (0..service_data[:nb_activities] - 1).collect{ |activity|
-        next_point = position == route_data[:current_route].size ? route_data[:end_point_id] : route[position][:point_id]
+        next_point = (position == route_data[:current_route].size) ? route_data[:end_point_id] : route[position][:point_id]
         next if position.positive? && position < route.size && # not first neither last position
                 previous[:point_id] == next_point && previous[:point_id] != @services_data[service][:points_ids][activity] # there is no point in testing a position that will imply useless route time
 
-        duration = @same_point_day && !in_adjust ? service_data[:group_duration] : service_data[:durations][activity]
+        duration = (@same_point_day && !in_adjust) ? service_data[:group_duration] : service_data[:durations][activity]
 
         next if route_data[:maximum_ride_time] &&
                 (position.positive? && matrix(route_data, previous[:point_id], service_data[:points_ids][activity], :time) > route_data[:maximum_ride_time] ||
@@ -760,7 +760,7 @@ module Heuristics
             adjust_candidate_routes(current_vehicle, best_day)
 
             if @services_unlocked_by[inserted_id] && !@services_unlocked_by[inserted_id].empty? && !@relaxed_same_point_day
-              services_to_add = @services_unlocked_by[inserted_id] - @uninserted.collect{ |un, data| data[:original_service] }
+              services_to_add = @services_unlocked_by[inserted_id] - @uninserted.collect{ |_un, data| data[:original_service] }
               @to_plan_service_ids += services_to_add
               @unlocked += services_to_add
               forbidden_days = [] unless services_to_add.empty? # new services are available so we may need these days
@@ -861,7 +861,7 @@ module Heuristics
           lon: vrp.points.find{ |point| service_in_vrp.activity && point[:id] == service_in_vrp.activity.point_id }&.location&.lon,
           setup_duration: service_in_vrp.activity&.setup_duration,
           duration: service_in_vrp.activity&.duration,
-          timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| {start: tw[:start], end: tw[:end] } }.sort_by{ |t| t[:start] } : [],
+          timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| { start: tw[:start], end: tw[:end] } }.sort_by{ |t| t[:start] } : [],
           quantities: service_in_vrp.quantities.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } }
         },
         reason: reason
@@ -935,8 +935,8 @@ module Heuristics
           begin_time: point[:arrival],
           departure_time: route_activities[point_index + 1] ? route_activities[point_index + 1][:start] : point[:end],
           detail: {
-            lat: (associated_point.location.lat if associated_point.location),
-            lon: (associated_point.location.lon if associated_point.location),
+            lat: associated_point.location&.lat,
+            lon: associated_point.location&.lon,
             skills: @services_data[point[:id]][:skills].to_a,
             setup_duration: point[:considered_setup_duration],
             duration: point[:end] - point[:arrival],

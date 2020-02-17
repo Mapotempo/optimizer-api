@@ -45,8 +45,9 @@ module Api
 
           r.keys.each{ |key|
             next unless key.include?('.')
+
             part = key.split('.', 2)
-            r.deep_merge!(part[0] => {part[1] => r[key]})
+            r.deep_merge!(part[0] => { part[1] => r[key] })
             r.delete(key)
           }
 
@@ -96,7 +97,7 @@ module Api
       def self.vrp_request_point(this)
         this.requires(:id, type: String, allow_blank: false)
         this.optional(:matrix_index, type: Integer, allow_blank: false, desc: 'Index within the matrices, required if the matrices are already given')
-        this.optional(:location, type: Hash, allow_blank: false, documentation: { desc: 'Location of the point if matrices are not given'}) do
+        this.optional(:location, type: Hash, allow_blank: false, documentation: { desc: 'Location of the point if matrices are not given' }) do
           self.requires(:lat, type: Float, allow_blank: false, desc: 'Latitude coordinate')
           self.requires(:lon, type: Float, allow_blank: false, desc: 'Longitude coordinate')
         end
@@ -180,7 +181,7 @@ module Api
         this.exactly_one_of :matrix_id, :router_mode
         this.optional :router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance'
         this.optional :speed_multiplier, type: Float, default: 1.0, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.'
-        this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) }} : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (only available for truck mode at this time).'
+        this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) } } : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :traffic, type: Boolean, desc: 'Take into account traffic or not.'
         this.optional :departure, type: DateTime, desc: 'Departure date time (only used if router supports traffic).'
@@ -421,11 +422,11 @@ module Api
 
       namespace :vrp do
         resource :submit do
-          desc 'Submit VRP problem', {
+          desc 'Submit VRP problem', { # rubocop: disable Style/BracesAroundHashParameters
             nickname: 'submit_vrp',
             success: VrpResult,
             failure: [
-              {code: 400, message: 'Bad Request', model: ::Api::V01::Status}
+              { code: 400, message: 'Bad Request', model: ::Api::V01::Status }
             ],
             security: [{
               api_key_query_param: []
@@ -518,7 +519,7 @@ module Api
 
             optional(:configuration, type: Hash, documentation: { hidden: true, desc: 'Describe the limitations of the solve in term of computation' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
                 Vrp.vrp_request_configuration(self)
-              end
+            end
           }
           post do
             begin
@@ -528,6 +529,7 @@ module Api
               d_params = declared(params, include_missing: false)
               vrp_params = d_params[:points] ? d_params : d_params[:vrp]
               APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), { vrp: vrp_params }.to_json) if OptimizerWrapper.config[:dump][:vrp]
+
               APIBase.services(api_key)[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {}).each{ |key, value|
                 next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value
 
@@ -536,6 +538,7 @@ module Api
                   message: "Exceeded #{key} limit authorized for your account: #{value}. Please contact support or sales to increase limits."
                 }, 400)
               }
+
               vrp = ::Models::Vrp.create(vrp_params)
               if !vrp.valid? || vrp_params.nil? || vrp_params.keys.empty?
                 vrp.errors.add(:empty_file, message: 'JSON file is empty') if vrp_params.nil?
@@ -565,11 +568,11 @@ module Api
         end
 
         resource :jobs do
-          desc 'Fetch vrp job status', {
+          desc 'Fetch vrp job status', { # rubocop: disable Style/BracesAroundHashParameters
             nickname: 'get_job',
             success: VrpResult,
             failure: [
-              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
+              { code: 404, message: 'Not Found', model: ::Api::V01::Status }
             ],
             security: [{
               api_key_query_param: []
@@ -588,7 +591,7 @@ module Api
             error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404) unless solution || (job && !job.killed? && job['options']['api_key'] == params[:api_key])
 
             solution ||= OptimizerWrapper::Result.get(id) || {}
-            output_format = params[:format]&.to_sym || (solution && solution['csv'] ? :csv : env['api.format'])
+            output_format = params[:format]&.to_sym || ((solution && solution['csv']) ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
             # If job has been killed by restarting queues, need to update job status to 'killed'
@@ -605,7 +608,7 @@ module Api
 
             if job&.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
               status 404
-              error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404)
+              error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
             elsif job&.failed?
               status 202
               if output_format == :csv
@@ -657,7 +660,7 @@ module Api
             end
           end
 
-          desc 'List vrp jobs', {
+          desc 'List vrp jobs', { # rubocop: disable Style/BracesAroundHashParameters
             nickname: 'get_job_list',
             success: VrpJobsList,
             detail: 'List running or queued jobs.'
@@ -667,11 +670,11 @@ module Api
             present OptimizerWrapper.job_list(params[:api_key]), with: Grape::Presenters::Presenter
           end
 
-          desc 'Delete vrp job', {
+          desc 'Delete vrp job', { # rubocop: disable Style/BracesAroundHashParameters
             nickname: 'deleteJob',
-            success: {code: 204},
+            success: { code: 204 },
             failure: [
-              {code: 404, message: 'Not Found', model: ::Api::V01::Status}
+              { code: 404, message: 'Not Found', model: ::Api::V01::Status }
             ],
             detail: 'Kill the job. This operation may have delay, since if the job is working it will be killed during the next iteration.'
           }
@@ -684,7 +687,7 @@ module Api
 
             if !job || job&.killed? || job['options']['api_key'] != params[:api_key]
               status 404
-              error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404)
+              error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
               job.status = 'killed'

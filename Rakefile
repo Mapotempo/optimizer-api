@@ -13,7 +13,7 @@ end
 require 'rake/testtask'
 Rake::TestTask.new do |t|
   ENV['APP_ENV'] ||= 'test'
-  t.pattern = "test/**/*_test.rb"
+  t.pattern = 'test/**/*_test.rb'
 end
 
 task clean_tmp_dir: :environment do

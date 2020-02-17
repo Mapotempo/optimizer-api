@@ -21,7 +21,6 @@ require './lib/helper.rb'
 module Ai4r
   module Clusterers
     class BalancedKmeans < KMeans
-
       attr_reader :cluster_metrics
       attr_reader :iterations
 
@@ -77,6 +76,7 @@ module Ai4r
 
         raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
         raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
+
         @iterations = 0
 
         if @cut_symbol
@@ -121,18 +121,18 @@ module Ai4r
           centroid[0] = Statistics.mean(@clusters[index], 0)
           centroid[1] = Statistics.mean(@clusters[index], 1)
 
-          point_closest_to_centroid_center = clusters[index].data_items.min_by{ |data_point| Helper::flying_distance(centroid, data_point) }
+          point_closest_to_centroid_center = clusters[index].data_items.min_by{ |data_point| Helper.flying_distance(centroid, data_point) }
 
           # correct the matrix_index of the centroid with the index of the point_closest_to_centroid_center
           centroid[3][:matrix_index] = point_closest_to_centroid_center[3][:matrix_index] if centroid[3][:matrix_index]
 
-          if @cut_symbol
-            # move the data_points closest to the centroid centers to the top of the data_items list so that balancing can start early
-            @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center)) # move it to the top
+          next unless @cut_symbol
 
-            # correct the distance_from_and_to_depot info of the new cluster with the average of the points
-            centroid[3][:duration_from_and_to_depot] = @clusters[index].data_items.map { |d| d[3][:duration_from_and_to_depot] }.sum / @clusters[index].data_items.size.to_f
-          end
+          # move the data_points closest to the centroid centers to the top of the data_items list so that balancing can start early
+          @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center)) # move it to the top
+
+          # correct the distance_from_and_to_depot info of the new cluster with the average of the points
+          centroid[3][:duration_from_and_to_depot] = @clusters[index].data_items.map { |d| d[3][:duration_from_and_to_depot] }.sum / @clusters[index].data_items.size.to_f
         }
 
         @centroids.each_with_index{ |centroid, index|
@@ -201,9 +201,9 @@ module Ai4r
       def calculate_membership_clusters
         @cluster_metrics = Array.new(@number_of_clusters) { Hash.new(0) }
         @clusters = Array.new(@number_of_clusters) do
-          Ai4r::Data::DataSet.new :data_labels => @data_set.data_labels
+          Ai4r::Data::DataSet.new data_labels: @data_set.data_labels
         end
-        @cluster_indices = Array.new(@number_of_clusters) {[]}
+        @cluster_indices = Array.new(@number_of_clusters) { [] }
 
         @total_assigned_cut_load = 0
         @percent_assigned_cut_load = 0
@@ -228,7 +228,7 @@ module Ai4r
         end
       end
 
-      def populate_centroids(populate_method, number_of_clusters=@number_of_clusters)
+      def populate_centroids(populate_method, number_of_clusters = @number_of_clusters)
         tried_indexes = []
         case populate_method
         when 'random' # for initial assignment (without the :centroid_indices option) and for reassignment of empty cluster centroids (with :on_empty option 'random')
@@ -278,15 +278,16 @@ module Ai4r
           @centroid_indices.each do |index|
             raise ArgumentError, "Invalid centroid index #{index}" unless (index.is_a? Integer) && index >= 0 && index < @data_set.data_items.length
             raise ArgumentError, "Index used twice #{index}" if tried_indexes.include?(index)
+
             tried_indexes << index
             item = @data_set.data_items[index]
-            unless @clusters.collect{ |cluster| cluster.data_items.collect{ |item| item[2] }}.flatten.include?(item[2])
-              # TODO : is this possible ? if we did not try this index, can we have two centroids with same ID ..? throw error if yess
-              skills = @remaining_skills ? @remaining_skills.first : [] # order of @centroid_indices is important, should correspond to expected_characteristics_order!
-              @centroids << [item[0], item[1], item[2], item[3].dup, skills, nil, 0]
-              # TODO : give different ID
-              @remaining_skills.delete_at(0) if @remaining_skills
-            end
+            next if @clusters.collect{ |cluster| cluster.data_items.collect{ |item| item[2] } }.flatten.include?(item[2])
+
+            # TODO : is this possible ? if we did not try this index, can we have two centroids with same ID ..? throw error if yess
+            skills = @remaining_skills ? @remaining_skills.first : [] # order of @centroid_indices is important, should correspond to expected_characteristics_order!
+            @centroids << [item[0], item[1], item[2], item[3].dup, skills, nil, 0]
+            # TODO : give different ID
+            @remaining_skills&.delete_at(0)
           end
         end
         @number_of_clusters = @centroids.length
@@ -306,6 +307,7 @@ module Ai4r
           @number_of_clusters = @centroids.length
         end
         return if self.on_empty == 'eliminate'
+
         populate_centroids(self.on_empty, initial_number_of_clusters) # Add initial_number_of_clusters - @number_of_clusters
         calculate_membership_clusters
         @manage_empty_clusters_iterations = 0
@@ -418,7 +420,7 @@ module Ai4r
         # Clean old stats
         @last_n_average_diffs.shift if @last_n_average_diffs.size > (2 * last_n_iterations + 1)
 
-        return false
+        false
       end
 
       def update_metrics(data_item, cluster_index)

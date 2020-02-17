@@ -19,9 +19,6 @@ require './wrappers/wrapper'
 
 require 'nokogiri'
 require 'open3'
-require 'thread'
-
-
 module Wrappers
   class Jsprit < Wrapper
     def initialize(cache, hash = {})
@@ -60,18 +57,17 @@ module Wrappers
     def solve(vrp, job, thread_proc = nil, &block)
       @job = job
       result = run_jsprit(vrp, @threads, thread_proc, &block)
-      if result && result.is_a?(Hash)
-        vehicles = Hash[vrp.vehicles.collect{ |vehicle| [vehicle.id, vehicle] }]
+      if result&.is_a?(Hash)
         result
       else
         m = /Exception: (.+)\n/.match(result) if result
-        raise RuntimeError.new((m && m[1]) || 'Unexpected exception')
+        raise RuntimeError, (m && m[1]) || 'Unexpected exception'
       end
     end
 
     def kill
       @semaphore.synchronize {
-        Process.kill("KILL", @thread.pid)
+        Process.kill('KILL', @thread.pid)
         @killed = true
       }
     end
@@ -79,7 +75,7 @@ module Wrappers
     private
 
     def build_timewindows(activity, day_index)
-      activity.timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index}.collect{ |timewindow|
+      activity.timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index }.collect{ |timewindow|
         {
           start: timewindow.start,
           end: timewindow.end
@@ -108,7 +104,7 @@ module Wrappers
         additional_value: activity.additional_value,
         timewindows: build_timewindows(activity, day_index),
         quantities: build_quantities(job)
-      }.delete_if{ |k,v| !v }.compact
+      }.delete_if{ |_k, v| !v }.compact
     end
 
     def assert_end_optimization(vrp)
@@ -148,10 +144,10 @@ module Wrappers
                   end
                 end
                 xml.timeSchedule {
-                  xml.start (vehicle.timewindow && vehicle.timewindow.start) || 0
-                  xml.end (vehicle.timewindow && vehicle.timewindow.end) || 2**31
+                  xml.start vehicle.timewindow&.start || 0
+                  xml.end vehicle.timewindow&.end || 2**31
                 }
-                if vehicle.rests.size > 0
+                if !vehicle.rests.empty?
                   vehicle.rests.each do |rest|
                     xml.breaks {
                       xml.timeWindows {
@@ -169,9 +165,9 @@ module Wrappers
                 end
                 xml.alternativeSkills {
                   sticky = "__internal_sticky_vehicle_#{vehicle.id}"
-                  if vehicle.skills.size > 0
+                  if !vehicle.skills.empty?
                     vehicle.skills.each do |skills|
-                      xml.skillList ([sticky] + skills).join(",") if skills.size > 0
+                      xml.skillList(([sticky] + skills).join(',')) if !skills.empty?
                     end
                   else
                     xml.skillList sticky
@@ -179,14 +175,14 @@ module Wrappers
                 }
                 initial = false
                 vehicle.capacities.each do |capacity|
-                  if(capacity[:initial])
+                  if capacity[:initial]
                     initial = true
                   end
                 end
-                if(vehicle.capacities.size > 0 && initial)
+                if !vehicle.capacities.empty? && initial
                   xml.method_missing('initial-capacity') {
                     vehicle.capacities.each_with_index do |capacity, index|
-                      if(capacity[:initial])
+                      if capacity[:initial]
                         xml.dimension (capacity[:initial] * 1000).to_i, index: index
                       end
                     end
@@ -200,7 +196,7 @@ module Wrappers
             vrp.vehicles.each do |vehicle|
               xml.type {
                 xml.id_ vehicle.id
-                if vehicle.capacities.size > 0
+                if !vehicle.capacities.empty?
                   xml.method_missing('capacity-dimensions') {
                     # Jsprit accepts only integers
                     vehicle.capacities.each_with_index do |capacity, index|
@@ -223,14 +219,14 @@ module Wrappers
               }
             end
           }
-          if vrp.services.size > 0
+          if !vrp.services.empty?
             xml.services {
               vrp.services.each do |service|
                 xml.service(id: service.id, type: service.type) {
                   xml.location {
                     xml.index service.activity.point.matrix_index
                   }
-                  if service.activity.timewindows.size > 0
+                  if !service.activity.timewindows.empty?
                     xml.timeWindows {
                       service.activity.timewindows.each do |activity_timewindow|
                         xml.timeWindow {
@@ -240,13 +236,13 @@ module Wrappers
                       end
                     }
                   end
-                  (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration > 0
-                  (xml.duration service.activity.duration) if service.activity.duration > 0
-                  if service.sticky_vehicles.size > 0 || service.skills.size > 0
-                    xml.requiredSkills ((service.sticky_vehicles.size > 0 ? ["__internal_sticky_vehicle_#{service.sticky_vehicles[0].id}"]: []) + service.skills).join(",")
+                  (xml.setupDuration service.activity.setup_duration) if service.activity.setup_duration&.positive?
+                  (xml.duration service.activity.duration) if service.activity.duration&.positive?
+                  if !service.sticky_vehicles.empty? || !service.skills.empty?
+                    xml.requiredSkills((((!service.sticky_vehicles.empty?) ? ["__internal_sticky_vehicle_#{service.sticky_vehicles[0].id}"] : []) + service.skills).join(',')) # rubocop: disable Style/RedundantParentheses
                   end
 
-                  if service.quantities.size > 0
+                  if !service.quantities.empty?
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
                       service.quantities.each_with_index do |quantity, index|
@@ -263,7 +259,7 @@ module Wrappers
               end
             }
           end
-          if vrp.shipments.size > 0
+          if !vrp.shipments.empty?
             xml.shipments {
               vrp.shipments.each do |shipment|
                 xml.shipment(id: shipment.id) {
@@ -271,7 +267,7 @@ module Wrappers
                     xml.location {
                       xml.index shipment.pickup.point.matrix_index
                     }
-                    if shipment.pickup.timewindows.size > 0
+                    if !shipment.pickup.timewindows.empty?
                       xml.timeWindows {
                         shipment.pickup.timewindows.each do |activity_timewindow|
                           xml.timeWindow {
@@ -281,31 +277,31 @@ module Wrappers
                         end
                       }
                     end
-                    (xml.setupDuration shipment.pickup.setup_duration) if shipment.pickup.setup_duration > 0
-                    (xml.duration shipment.pickup.duration) if shipment.pickup.duration > 0
+                    (xml.setupDuration shipment.pickup.setup_duration) if shipment.pickup.setup_duration&.positive?
+                    (xml.duration shipment.pickup.duration) if shipment.pickup.duration&.positive?
                   }
                   xml.delivery {
                      xml.location {
                       xml.index shipment.delivery.point.matrix_index
-                    }
-                    if shipment.delivery.timewindows.size > 0
-                      xml.timeWindows {
-                        shipment.delivery.timewindows.each do |activity_timewindow|
-                          xml.timeWindow {
-                            xml.start activity_timewindow.start || 0
-                            xml.end activity_timewindow.end || 2**31
-                          }
-                        end
-                      }
-                    end
-                    (xml.setupDuration shipment.delivery.setup_duration) if shipment.delivery.setup_duration > 0
-                    (xml.duration shipment.delivery.duration) if shipment.delivery.duration > 0
+                     }
+                     if !shipment.delivery.timewindows.empty?
+                       xml.timeWindows {
+                         shipment.delivery.timewindows.each do |activity_timewindow|
+                           xml.timeWindow {
+                             xml.start activity_timewindow.start || 0
+                             xml.end activity_timewindow.end || 2**31
+                           }
+                         end
+                       }
+                     end
+                     (xml.setupDuration shipment.delivery.setup_duration) if shipment.delivery.setup_duration&.positive?
+                     (xml.duration shipment.delivery.duration) if shipment.delivery.duration&.positive?
                   }
-                  if shipment.sticky_vehicles.size > 0 || shipment.skills.size > 0
-                    xml.requiredSkills ((shipment.sticky_vehicles.size > 0 ? ["__internal_sticky_vehicle_#{service.sticky_vehicles[0].id}"]: []) + shipment.skills).join(",")
+                  if !shipment.sticky_vehicles.empty? || !shipment.skills.empty?
+                    xml.requiredSkills((((!shipment.sticky_vehicles.empty?) ? ["__internal_sticky_vehicle_#{service.sticky_vehicles[0].id}"] : []) + shipment.skills).join(',')) # rubocop: disable Style/RedundantParentheses
                   end
 
-                  if shipment.quantities.size > 0
+                  if !shipment.quantities.empty?
                     xml.method_missing('capacity-dimensions') {
                       # Jsprit accepts only integers
                       shipment.quantities.each_with_index do |quantity, index|
@@ -325,43 +321,42 @@ module Wrappers
         }
       end
 
-      input_problem = Tempfile.new('optimize-jsprit-input_problem', tmpdir=@tmp_dir)
+      input_problem = Tempfile.new('optimize-jsprit-input_problem', @tmp_dir)
       input_problem.write(builder.to_xml)
       input_problem.close
 
-      input_algorithm = Tempfile.new('optimize-jsprit-input_algorithm', tmpdir=@tmp_dir)
+      input_algorithm = Tempfile.new('optimize-jsprit-input_algorithm', @tmp_dir)
       input_algorithm.write(algorithm_config(vrp.resolution_iterations))
       input_algorithm.close
 
       if vrp.matrices[0].time
-        input_time_matrix = Tempfile.new('optimize-jsprit-input_time_matrix', tmpdir=@tmp_dir)
-        input_time_matrix.write(vrp.matrices[0].time.collect{ |a| a.join(" ") }.join("\n"))
+        input_time_matrix = Tempfile.new('optimize-jsprit-input_time_matrix', @tmp_dir)
+        input_time_matrix.write(vrp.matrices[0].time.collect{ |a| a.join(' ') }.join("\n"))
         input_time_matrix.close
       end
 
       if vrp.matrices[0].distance
-        input_distance_matrix = Tempfile.new('optimize-jsprit-input_distance_matrix', tmpdir=@tmp_dir)
-        input_distance_matrix.write(vrp.matrices[0].distance.collect{ |a| a.join(" ") }.join("\n"))
+        input_distance_matrix = Tempfile.new('optimize-jsprit-input_distance_matrix', @tmp_dir)
+        input_distance_matrix.write(vrp.matrices[0].distance.collect{ |a| a.join(' ') }.join("\n"))
         input_distance_matrix.close
       end
 
-      output = Tempfile.new(['optimize-jsprit-output', '.xml'], tmpdir=@tmp_dir)
+      output = Tempfile.new(['optimize-jsprit-output', '.xml'], @tmp_dir)
       output.close
 
-
       cmd = ["#{@exec_jsprit} ",
-        "--algorithm '#{input_algorithm.path}'",
-        input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '',
-        input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '',
-        vrp.resolution_duration ? "--ms '#{vrp.resolution_duration}'" : '',
-        vrp.preprocessing_prefer_short_segment ? "--nearby" : '',
-        vrp.resolution_iterations_without_improvment ? "--no_improvment_iterations '#{vrp.resolution_iterations_without_improvment}'" : '',
-        vrp.resolution_stable_iterations && resolution_stable_coefficient ? "--stable_iterations '#{vrp.resolution_stable_iterations}' --stable_coef '#{vrp.resolution_stable_coefficient}'" : '',
-        vrp.resolution_vehicle_limit ? "--vehicle_limit #{vrp.resolution_vehicle_limit}" : '',
-        "--threads '#{threads}'",
-        "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
+             "--algorithm '#{input_algorithm.path}'",
+             input_time_matrix ? "--time_matrix '#{input_time_matrix.path}'" : '',
+             input_distance_matrix ? "--distance_matrix '#{input_distance_matrix.path}'" : '',
+             vrp.resolution_duration ? "--ms '#{vrp.resolution_duration}'" : '',
+             vrp.preprocessing_prefer_short_segment ? '--nearby' : '',
+             vrp.resolution_iterations_without_improvment ? "--no_improvment_iterations '#{vrp.resolution_iterations_without_improvment}'" : '',
+             (vrp.resolution_stable_iterations && resolution_stable_coefficient) ? "--stable_iterations '#{vrp.resolution_stable_iterations}' --stable_coef '#{vrp.resolution_stable_coefficient}'" : '',
+             vrp.resolution_vehicle_limit ? "--vehicle_limit #{vrp.resolution_vehicle_limit}" : '',
+             "--threads '#{threads}'",
+             "--instance '#{input_problem.path}' --solution '#{output.path}'"].join(' ')
       log cmd
-      stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
+      _stdin, stdout_and_stderr, @thread = @semaphore.synchronize {
         Open3.popen2e(cmd) if !@killed
       }
       return if !@thread
@@ -376,9 +371,7 @@ module Wrappers
       end.compact || []
       childs << @thread.pid
 
-      if thread_proc
-        thread_proc.call(childs)
-      end
+      thread_proc&.call(childs)
 
       out = nil
       iterations = 0
@@ -387,9 +380,9 @@ module Wrappers
       fresh_output = nil
       # read of stdout_and_stderr stops at the end of process
       stdout_and_stderr.each_line { |line|
-        log (@job ? @job + ' - ' : '') + line
+        log line
         out = out ? out + "\n" + line : line
-        iterations_start += 1 if /\- iterations start/.match(line)
+        iterations_start += 1 if /\- iterations start/ =~ line
         if iterations_start == 1
           r = /- iterations ([0-9]+)/.match(line)
           r && (iterations = Integer(r[1]))
@@ -401,7 +394,7 @@ module Wrappers
           r && (cost = Float(r[1]))
           r && (fresh_output = true)
         end
-        block.call(self, iterations, vrp.resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, fleet, vrp)) if block
+        block&.call(self, iterations, vrp.resolution_iterations, cost, fresh_output && parse_output(output.path, iterations, fleet, vrp))
         fresh_output = nil
       }
 
@@ -409,18 +402,18 @@ module Wrappers
         parse_output(output.path, iterations, fleet, vrp)
       else
         if @thread.value == 9
-          out = "Job killed"
+          out = 'Job killed'
           log out # Keep trace in worker
           out = parse_output(output.path, iterations, fleet, vrp) if cost
         end
         out
       end
     ensure
-      input_problem && input_problem.unlink
-      input_algorithm && input_algorithm.unlink
-      input_time_matrix && input_time_matrix.unlink
-      input_distance_matrix && input_distance_matrix.unlink
-      output && output.unlink
+      input_problem&.unlink
+      input_algorithm&.unlink
+      input_time_matrix&.unlink
+      input_distance_matrix&.unlink
+      output&.unlink
     end
 
     def parse_output(path, iterations, fleet, vrp)
@@ -447,7 +440,7 @@ module Wrappers
                     lat: vehicle.start_point.location.lat,
                     lon: vehicle.start_point.location.lon
                   } : nil
-                }.delete_if{ |k,v| !v }] : []) +
+                }.delete_if{ |_k, v| !v }] : []) +
                 route.xpath('act').collect{ |act|
                   job = nil
                   activity = nil
@@ -465,8 +458,8 @@ module Wrappers
                     job = vrp.rests.find{ |rest| rest[:id] == act.at_xpath('breakId').content }
                     activity = job
                   end
-                  point = act['type'] == 'break' ? nil : activity.point
-                  point_index = act['type'] == 'break' ? previous_index : activity.point[:matrix_index]
+                  point = (act['type'] == 'break') ? nil : activity.point
+                  point_index = (act['type'] == 'break') ? previous_index : activity.point[:matrix_index]
                   duration = activity[:duration]
 
                   current_activity = {
@@ -476,12 +469,12 @@ module Wrappers
                     service_id: (a = act.at_xpath('serviceId')) && a && a.content,
                     point_id: point ? point.id : nil,
                     rest_id: (a = act.at_xpath('breakId')) && a && a.content,
-                    travel_time: (previous_index && point_index && vrp.matrices[0].time ? vrp.matrices[0].time[previous_index][point_index] : 0),
-                    travel_distance: (previous_index && point_index && vrp.matrices[0].distance ? vrp.matrices[0].distance[previous_index][point_index] : 0),
+                    travel_time: ((previous_index && point_index && vrp.matrices[0].time) ? vrp.matrices[0].time[previous_index][point_index] : 0),
+                    travel_distance: ((previous_index && point_index && vrp.matrices[0].distance) ? vrp.matrices[0].distance[previous_index][point_index] : 0),
                     begin_time: (a = act.at_xpath('endTime')) && a && Float(a.content) - duration,
                     departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
-                    detail: build_detail(job, activity, act['type'] == 'break' ? nil : point, nil)
-                  }.delete_if { |k, v| !v }
+                    detail: build_detail(job, activity, (act['type'] == 'break') ? nil : point, nil)
+                  }.delete_if { |_k, v| !v }
                   previous_index = point_index
                   current_activity
                 } + (fleet[route.at_xpath('vehicleId').content].end_point ? [{
@@ -490,7 +483,7 @@ module Wrappers
                     lat: vehicle.end_point.location.lat,
                     lon: vehicle.end_point.location.lon
                   } : nil
-                }.delete_if{ |k,v| !v }] : [])).compact
+                }.delete_if{ |_k, v| !v }] : [])).compact
               }
             else
               {
@@ -502,7 +495,7 @@ module Wrappers
                       lat: vehicle.start_point.location.lat,
                       lon: vehicle.start_point.location.lon
                     } : nil
-                  }.delete_if{ |k,v| !v }] +
+                  }.delete_if{ |_k, v| !v }] +
                   (vehicle.rests.empty? ? [nil] : [{
                     rest_id: vehicle.rests[0].id,
                     detail: build_detail(rest, rest, nil, nil)
@@ -513,13 +506,15 @@ module Wrappers
                       lat: vehicle.end_point.location.lat,
                       lon: vehicle.end_point.location.lon
                     } : nil
-                  }.delete_if{ |k,v| !v }]).compact
+                  }.delete_if{ |_k, v| !v }]).compact
               }
             end
           },
-          unassigned: solution.xpath('unassignedJobs/job').collect{ |job| {
-            (vrp.services.find{ |s| s.id == job.attr('id')} ? :service_id : vrp.shipments.find{ |s| s.id == job.attr('id')} ? :shipment_id : nil) => job.attr('id')
-          }}
+          unassigned: solution.xpath('unassignedJobs/job').collect{ |job|
+            {
+              ((vrp.services.find{ |s| s.id == job.attr('id') }) ? :service_id : (vrp.shipments.find{ |s| s.id == job.attr('id') }) ? :shipment_id : nil) => job.attr('id')
+            }
+          }
         }
       end
     end
@@ -624,6 +619,5 @@ module Wrappers
 </algorithm>
 }
     end
-
   end
 end

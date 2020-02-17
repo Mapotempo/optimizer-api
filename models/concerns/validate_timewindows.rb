@@ -17,7 +17,6 @@
 #
 require 'active_support/concern'
 
-
 module ValidateTimewindows
   extend ActiveSupport::Concern
 
@@ -32,7 +31,7 @@ module ValidateTimewindows
       [timewindow.start, timewindow.end]
     }
 
-  t.flatten!
+    t.flatten!
     if t.size > 2 && !t[1..-2].all?
       errors.add(:timewindows, 'only start of first or end of last timewindow can be left blank')
     end

@@ -25,7 +25,7 @@ module Ai4r
 
       def build(data_set, unit_symbols, number_of_clusters = 1, **options)
         @data_set = data_set
-        distance = options[:distance] || (1.0/0)
+        distance = options[:distance] || (1.0 / 0)
         @graph = {}
         @cluster_node_index = {}
         @data_set.data_items.each.with_index{ |data, index|
@@ -47,6 +47,7 @@ module Ai4r
         while @index_clusters.length > number_of_clusters
           ci, cj = get_closest_clusters(@index_clusters)
           break if read_distance_matrix(ci, cj) > distance
+
           update_distance_matrix(ci, cj)
           @graph[@node_clusters[ci]][:parent] = node_counter
           @graph[@node_clusters[cj]][:parent] = node_counter
@@ -68,7 +69,7 @@ module Ai4r
         @number_of_clusters = @index_clusters.length
         @distance_matrix = nil
         @clusters = build_clusters_from_index_clusters @index_clusters
-        return self
+        self
       end
 
       def merge_metrics(index_a, index_b, unit_symbols, graph, node_clusters)
@@ -81,7 +82,7 @@ module Ai4r
 
       def create_initial_index_clusters_additional
         level_clusters = []
-        data_set.data_items.length.times { |i| level_clusters << 0 }
+        data_set.data_items.length.times { |_i| level_clusters << 0 }
         node_clusters = []
         data_set.data_items.length.times { |i| node_clusters << i }
         [level_clusters, node_clusters]
@@ -102,11 +103,11 @@ module Ai4r
       def merge_clusters(index_a, index_b, index_clusters)
         index_a, index_b = index_b, index_a if index_b > index_a
         new_index_cluster = index_clusters[index_a] +
-          index_clusters[index_b]
+                            index_clusters[index_b]
         index_clusters.delete_at index_a
         index_clusters.delete_at index_b
         index_clusters << new_index_cluster
-        return index_clusters
+        index_clusters
       end
     end
   end

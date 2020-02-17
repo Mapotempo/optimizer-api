@@ -18,7 +18,6 @@
 require 'active_hash'
 require 'active_model/validations/numericality'
 
-
 module Models
   def self.delete_all
     Base.descendants.each(&:delete_all)
@@ -31,9 +30,8 @@ module Models
     include ActiveHash::Associations
 
     def initialize(hash)
-      super(hash.inject({}){ |memo, (k, v)|
+      super(hash.each_with_object({}){ |(k, v), memo|
         memo[k.to_sym] = v
-        memo
       })
 
       # Make sure default values are not the same object for all
@@ -58,26 +56,26 @@ module Models
       end
 
       define_method("#{name}=") do |vals|
-        self[name] = (vals && vals.collect{ |val|
+        self[name] = vals&.collect{ |val|
           c = class_from_string(options[:class_name])
           if val.is_a?(c)
             val
           else
             c.create(val) if !val.empty?
           end
-        }.compact) || []
+        }&.compact || []
       end
 
       define_method("#{name}+=") do |vals|
         self[name] = [] if !self[name]
-        self[name] += (vals && vals.collect{ |val|
+        self[name] += vals&.collect{ |val|
           c = class_from_string(options[:class_name])
           if val.is_a?(c)
             val
           else
             c.create(val) if !val.empty?
           end
-        }.compact) || []
+        }&.compact || []
       end
 
       define_method("#{name[0..-2]}_ids=") do |vals|
@@ -126,7 +124,7 @@ module Models
       end
 
       define_method("#{name}_id") do
-        self[name] && self[name].id
+        self[name]&.id
       end
 
       define_method("#{name}_id=") do |val_id|

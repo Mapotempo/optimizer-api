@@ -40,7 +40,7 @@ class OptimizerLogger
   @@logger.level = @@level_map[@@level]
 
   @@logger.formatter = proc do |severity, datetime, progname, msg|
-    datetime = OptimizerLogger::with_datetime ? "[#{datetime}]" : nil
+    datetime = OptimizerLogger.with_datetime ? "[#{datetime}]" : nil
     job_id = OptimizerWrapper::Job.current_job_id ? "#{OptimizerWrapper::Job.current_job_id} -" : nil
     progname = progname.empty? ? nil : "- #{progname}"
 
@@ -50,7 +50,7 @@ class OptimizerLogger
   def self.define_progname(progname)
     location = nil
     if @@caller_location
-      call_obj = caller_locations.second.base_label == 'log' ? caller_locations.third : caller_locations.second
+      call_obj = (caller_locations.second.base_label == 'log') ? caller_locations.third : caller_locations.second
 
       file =  case @@caller_location
               when :filename

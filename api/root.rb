@@ -27,7 +27,7 @@ module Api
     mount ApiV01
 
     logger.formatter = GrapeLogging::Formatters::Default.new
-    use GrapeLogging::Middleware::RequestLogger, { logger: logger }
+    use GrapeLogging::Middleware::RequestLogger, logger: logger
 
     desc 'Ping hook. Responds by "pong".'
     get '/ping' do

@@ -57,7 +57,7 @@ module Hull
       i = -1
       while its && i < c_points.size - 1 # select the first candidate that does not intersects any of the polygon edges
         i += 1
-        last_point = c_points[i] == first_point ? 1 : 0
+        last_point = (c_points[i] == first_point) ? 1 : 0
         j = 1
         its = false
         while !its && j < hull.size - last_point
@@ -69,6 +69,7 @@ module Hull
       if its
         return concave_hull_(vector, kk + 1)
       end
+
       previous_angle = angle(c_points[i], current_point)
       current_point = c_points[i]
       hull << current_point # a valid candidate was found
@@ -130,6 +131,7 @@ module Hull
     if denom.zero?
       return false
     end
+
     denom_positive = denom > 0
 
     s02_x = p0_x - p2_x
@@ -165,6 +167,7 @@ module Hull
     size.times.each{ |i|
       min, max = [polygon[i][0], polygon[(i + 1) % size][0]].minmax
       next if min >= point[0] || point[0] > max
+
       # vertical ray, could return non homogenous result with a point on a vertical edge
       p = (polygon[i][1] - polygon[(i + 1) % size][1])
       q = (polygon[i][0] - polygon[(i + 1) % size][0])

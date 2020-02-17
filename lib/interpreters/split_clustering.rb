@@ -61,13 +61,13 @@ module Interpreters
       [all_service_vrps, split_results]
     end
 
-    def self.generate_split_vrps(service_vrp, job = nil, block)
+    def self.generate_split_vrps(service_vrp, _job = nil, block)
       log '--> generate_split_vrps', level: :debug
       vrp = service_vrp[:vrp]
       if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
         current_service_vrps = [service_vrp]
         vrp.preprocessing_partitions.each_with_index{ |partition, partition_index|
-          cut_symbol = partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] } ? partition[:metric] : :duration
+          cut_symbol = (partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] }) ? partition[:metric] : :duration
 
           case partition[:method]
           when 'balanced_kmeans'
@@ -89,20 +89,20 @@ module Interpreters
             }
             current_service_vrps = generated_service_vrps.flatten
           else
-            raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
+            raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.preprocessing_partition_method}"
           end
         }
         current_service_vrps
       elsif vrp.preprocessing_partition_method
-        cut_symbol = vrp.preprocessing_partition_metric == :duration || vrp.preprocessing_partition_metric == :visits ||
-          vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric } ? vrp.preprocessing_partition_metric : :duration
+        cut_symbol = (vrp.preprocessing_partition_metric == :duration || vrp.preprocessing_partition_metric == :visits ||
+          vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric }) ? vrp.preprocessing_partition_metric : :duration
         case vrp.preprocessing_partition_method
         when 'balanced_kmeans'
           split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
         when 'hierarchical_tree'
           split_hierarchical(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
         else
-          raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition method #{vrp.preprocessing_partition_method}")
+          raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.preprocessing_partition_method}"
         end
       end
     end
@@ -134,7 +134,7 @@ module Interpreters
           service: service_vrp[:service]
         }
         sub_vrp.services += empties_or_fills
-        sub_vrp.points += empties_or_fills.map{ |empti_of_fill| vrp.points.find{ |point| empti_of_fill.activity.point.id == point.id }}
+        sub_vrp.points += empties_or_fills.map{ |empti_of_fill| vrp.points.find{ |point| empti_of_fill.activity.point.id == point.id } }
         sub_vrp.vehicles.select!{ |vehicle| available_vehicle_ids.include?(vehicle.id) }
 
         sub_result = OptimizerWrapper.define_process([sub_problem], job, &block)
@@ -163,12 +163,12 @@ module Interpreters
     def self.remove_poor_routes(vrp, result)
       if result
         remove_empty_routes(result)
-        remove_poorly_populated_routes(vrp, result, 0.2) if !Interpreters::Dichotomious.dichotomious_candidate?({vrp: vrp, service: :ortools})
+        remove_poorly_populated_routes(vrp, result, 0.2) if !Interpreters::Dichotomious.dichotomious_candidate?(vrp: vrp, service: :ortools)
       end
     end
 
     def self.remove_empty_routes(result)
-      result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] }}
+      result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] } }
     end
 
     def self.remove_poorly_populated_routes(vrp, result, limit)
@@ -225,7 +225,7 @@ module Interpreters
       # TOD0: Here we do Marshal.load/dump but we continue to use the original objects (and there is no bugs related to that)
       # That means we don't need hard copy of obejcts we just need to cut the connection between arrays (like services points etc) that we want to modify.
       vrp = service_vrp[:vrp]
-      sub_vrp = Marshal::load(Marshal.dump(vrp))
+      sub_vrp = Marshal.load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
       # TODO: Within Scheduling Vehicles require to have unduplicated ids
       if available_vehicle_ids
@@ -568,7 +568,7 @@ module Interpreters
                     elsif s.pickup.point && depot_ids.include?(s.delivery.point.id)
                       s.pickup.point.location
                     elsif s.activities.size.positive?
-                      raise UnsupportedProblemError.new('Clustering is not supported yet if one service has serveral activies.')
+                      raise UnsupportedProblemError, 'Clustering is not supported yet if one service has serveral activies.'
                     end
 
           [location.lat, location.lon].collect{ |coor| coor.round_with_steps(decimal[:digits], decimal[:steps]) } # group_by rounded lat/lon rounding
@@ -745,18 +745,18 @@ module Interpreters
           next if cluster == original_cluster
 
           cluster.data_items.each{ |data|
-            if dist > Helper.flying_distance(data, data_to_insert) && cluster.data_items.collect{ |data_item| data_item[3][cut_symbol] }.sum < limit &&
-               cluster.data_items.all?{ |d| data_to_insert[5].nil? || d[5] && (data_to_insert[5] & d[5]).size >= d[5].size }
-              dist = Helper.flying_distance(data, data_to_insert)
-              c = cluster
-            end
+            next unless dist > Helper.flying_distance(data, data_to_insert) && cluster.data_items.collect{ |data_item| data_item[3][cut_symbol] }.sum < limit &&
+                        cluster.data_items.all?{ |d| data_to_insert[5].nil? || d[5] && (data_to_insert[5] & d[5]).size >= d[5].size }
+
+            dist = Helper.flying_distance(data, data_to_insert)
+            c = cluster
           }
         }
 
         c
       end
 
-      def find_compatible_vehicles(cluster_to_affect, vehicles, available_clusters, vehicles_cluster_distance, entity, available_ids)
+      def find_compatible_vehicles(cluster_to_affect, vehicles, available_clusters, vehicles_cluster_distance, _entity, available_ids)
         compatible_vehicles = []
         violating = []
         all_days = [0, 1, 2, 3, 4, 5, 6]
@@ -767,7 +767,7 @@ module Interpreters
           conflict_with_clusters -= (available_clusters[cluster_to_affect][:skills] - vehicle.skills).size * available_clusters[cluster_to_affect][:number_items]
           violating << v_i if !(available_clusters[cluster_to_affect][:skills] - vehicle.skills).empty?
 
-          days = [vehicle[:timewindow] ? (vehicle[:timewindow][:day_index] || all_days) : (vehicle[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days }) ].flatten.uniq
+          days = [vehicle[:timewindow] ? (vehicle[:timewindow][:day_index] || all_days) : (vehicle[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days })].flatten.uniq
           conflict_with_clusters = days.collect{ |day| available_ids[:cluster].collect{ |i| available_clusters[i][:days_conflict][day] } }.flatten.sum
           conflict_with_clusters -= available_clusters[cluster_to_affect][:days_conflict][days.first] if days.size == 1 # 0 if no conflict between service and vehicle day
           violating << v_i if days.none?{ |day| available_clusters[cluster_to_affect][:day_skills].none?{ |skill| skill.include?(day.to_s) } }
@@ -882,7 +882,7 @@ module Interpreters
           total_duration = schedule_indices ? vrp.total_work_times[v_i] : vehicle.work_duration
           s_l = { duration: total_duration }
           units.each{ |unit|
-            s_l[unit.to_sym] = (vehicle[:capacities].any?{ |u| u[:unit_id] == unit } ? vehicle[:capacities].find{ |u| u[:unit_id] == unit }[:limit] : 0) * vehicle_working_days
+            s_l[unit.to_sym] = ((vehicle[:capacities].any?{ |u| u[:unit_id] == unit }) ? vehicle[:capacities].find{ |u| u[:unit_id] == unit }[:limit] : 0) * vehicle_working_days
           }
           s_l[:visits] = s_l[:visits] || vrp.visits
           s_l

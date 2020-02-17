@@ -131,15 +131,15 @@ module Models
     end
 
     def matrix_time
-      matrix && matrix.time
+      matrix&.time
     end
 
     def matrix_distance
-      matrix && matrix.distance
+      matrix&.distance
     end
 
     def matrix_value
-      matrix && matrix.value
+      matrix&.value
     end
 
     def matrix_blend(matrix, matrix_indices, dimensions, options = {})
@@ -155,9 +155,9 @@ module Models
         matrix_indices.each_with_index{ |j, ind_j|
           next if i == j
 
-          blend_matrix[ind_i][ind_j] = (matrix.time && dimensions.include?(:time) ? matrix.time[i][j] * coeff_time : 0) +
-                                       (matrix.distance && dimensions.include?(:distance) ? matrix.distance[i][j] * coeff_dist : 0) +
-                                       (matrix.value && dimensions.include?(:value) ? matrix.value[i][j] * coeff_value : 0)
+          blend_matrix[ind_i][ind_j] = ((matrix.time && dimensions.include?(:time)) ? matrix.time[i][j] * coeff_time : 0) +
+                                       ((matrix.distance && dimensions.include?(:distance)) ? matrix.distance[i][j] * coeff_dist : 0) +
+                                       ((matrix.value && dimensions.include?(:value)) ? matrix.value[i][j] * coeff_value : 0)
         }
       }
       blend_matrix
@@ -222,7 +222,7 @@ module Models
       return nil if !self.sequence_timewindows.empty? ||
                     self.timewindow[:start].nil? || self.timewindow[:end].nil?
 
-      return self.timewindow[:end] - self.timewindow[:start]
+      self.timewindow[:end] - self.timewindow[:start]
     end
 
     def ignore_computed_data

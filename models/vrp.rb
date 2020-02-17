@@ -79,7 +79,7 @@ module Models
     field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil # extends schedule_range_date
-    field :schedule_unavailable_indices, default: nil  # extends unavailable_date
+    field :schedule_unavailable_indices, default: nil # extends unavailable_date
     field :schedule_months_indices, default: []
 
     # ActiveHash doesn't validate the validator of the associated objects
@@ -341,14 +341,14 @@ module Models
 
       max_fixed_cost = vehicles.max_by(&:cost_fixed).cost_fixed
 
-      if max_fixed_cost <= 0 || (!force_recalc && services.any?{ |service| service.exclusion_cost && service.exclusion_cost > 0 })
+      if max_fixed_cost <= 0 || (!force_recalc && services.any?{ |service| service.exclusion_cost&.positive? })
         return
       end
 
       case type
       when :time
-        tsp = TSPHelper::create_tsp(self, vehicles.first)
-        result = TSPHelper::solve(tsp)
+        tsp = TSPHelper.create_tsp(self, vehicles.first)
+        result = TSPHelper.solve(tsp)
         total_travel_time = result[:cost]
 
         total_vehicle_work_time = vehicles.map{ |vehicle| vehicle[:duration] || vehicle[:timewindow][:end] - vehicle[:timewindow][:start] }.reduce(:+)
@@ -360,7 +360,7 @@ module Models
         approx_depot_time_correction = if depot.nil?
                                          0
                                        else
-                                         average_loc = points.inject([0, 0]) { |sum, point| sum = [sum[0] + point.location.lat, sum[1] + point.location.lon] }
+                                         average_loc = points.inject([0, 0]) { |sum, point| [sum[0] + point.location.lat, sum[1] + point.location.lon] }
                                          average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
 
                                          approximate_number_of_vehicles_used = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil
@@ -399,7 +399,7 @@ module Models
         raise 'Capacity based exclusion cost calculation is not ready'
       end
 
-      return
+      nil
     end
   end
 end

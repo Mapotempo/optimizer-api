@@ -19,7 +19,6 @@ require './lib/heuristics/scheduling_heuristic.rb'
 
 module Interpreters
   class PeriodicVisits
-
     def initialize(vrp)
       @periods = []
       @equivalent_vehicles = {}
@@ -28,13 +27,11 @@ module Interpreters
       if vrp.schedule_range_indices
         @have_services_day_index = !vrp.services.empty? && vrp.services.none?{ |service| (service.activity ? [service.activity] : service.activities).all?{ |activity| activity.timewindows.none?{ |timewindow| timewindow[:day_index] } } }
         @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] } }
-        @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] }}
+        @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] } }
 
-        @unavailable_indices = if vrp.schedule_unavailable_indices
-          vrp.schedule_unavailable_indices.collect{ |unavailable_index|
-            unavailable_index if unavailable_index >= vrp.schedule_range_indices[:start] && unavailable_index <= vrp.schedule_range_indices[:end]
-          }.compact
-        end
+        @unavailable_indices = vrp.schedule_unavailable_indices&.collect{ |unavailable_index|
+          unavailable_index if unavailable_index >= vrp.schedule_range_indices[:start] && unavailable_index <= vrp.schedule_range_indices[:end]
+        }&.compact
       end
     end
 
@@ -69,7 +66,7 @@ module Interpreters
 
       vrp.rests = []
       vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
-        a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
       }
       vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
       generate_relations_on_periodic_vehicles(vrp, vehicles_linked_by_duration)
@@ -82,39 +79,39 @@ module Interpreters
     end
 
     def generate_relations(vrp)
-      new_relations = vrp.relations.collect{ |relation|
+      vrp.relations.collect{ |relation|
         first_service = vrp.services.find{ |service| service.id == relation.linked_ids.first } ||
-        vrp.shipments.find{ |shipment| "#{shipment.id}pickup" == relation.linked_ids.first || "#{shipment.id}delivery" == relation.linked_ids.first }
+                        vrp.shipments.find{ |shipment| ["#{shipment.id}pickup", "#{shipment.id}delivery"].include?(relation.linked_ids.first) }
         relation_linked_ids = relation.linked_ids.select{ |mission_id|
           vrp.services.one? { |service| service.id == mission_id } ||
-          vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == relation.linked_ids.first || "#{shipment.id}delivery" == relation.linked_ids.first }
+            vrp.shipments.one? { |shipment| ["#{shipment.id}pickup", "#{shipment.id}delivery"].include?(relation.linked_ids.first) }
         }
         related_missions = relation_linked_ids.collect{ |mission_id|
           vrp.services.find{ |service| service.id == mission_id } ||
-          vrp.shipments.find{ |shipment| "#{shipment.id}pickup" == mission_id || "#{shipment.id}delivery" == mission_id }
+            vrp.shipments.find{ |shipment|  ["#{shipment.id}pickup", "#{shipment.id}delivery"].include?(mission_id) }
         }
-        if first_service && first_service.visits_number &&
-        related_missions.all?{ |mission| mission.visits_number == first_service.visits_number }
-          (1..(first_service.visits_number || 1)).collect{ |relation_index|
-            new_relation = Marshal::load(Marshal.dump(relation))
-            new_relation.linked_ids = relation_linked_ids.collect.with_index{ |mission_id, index|
-              additional_tag = if mission_id == "#{related_missions[index].id}pickup"
-                'pickup'
-              elsif  mission_id == "#{related_missions[index].id}delivery"
-                'delivery'
-              else
-                ''
-              end
-              "#{related_missions[index].id}_#{relation_index}_#{first_service.visits_number || 1}#{additional_tag}"
-            }
-            new_relation
+        next unless first_service && first_service.visits_number &&
+                    related_missions.all?{ |mission| mission.visits_number == first_service.visits_number }
+
+        (1..(first_service.visits_number || 1)).collect{ |relation_index|
+          new_relation = Marshal.load(Marshal.dump(relation))
+          new_relation.linked_ids = relation_linked_ids.collect.with_index{ |mission_id, index|
+            additional_tag = if mission_id == "#{related_missions[index].id}pickup"
+              'pickup'
+            elsif mission_id == "#{related_missions[index].id}delivery"
+              'delivery'
+            else
+              ''
+            end
+            "#{related_missions[index].id}_#{relation_index}_#{first_service.visits_number || 1}#{additional_tag}"
           }
-        end
+          new_relation
+        }
       }.compact.flatten
     end
 
     def generate_services(vrp)
-      new_services = vrp.services.collect{ |service|
+      vrp.services.collect{ |service|
         if !service.unavailable_visit_day_indices.empty?
           service.unavailable_visit_day_indices.delete_if{ |unavailable_index|
             unavailable_index.negative? || unavailable_index > vrp.schedule_range_indices[:end]
@@ -130,72 +127,70 @@ module Interpreters
         if service.visits_number
           if service.minimum_lapse && service.maximum_lapse && service.visits_number > 1
             (2..service.visits_number).each{ |index|
-              current_lapse = (index -1) * service.minimum_lapse.to_i
-              vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-              :linked_ids => ["#{service.id}_1_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
-              :lapse => current_lapse)
+              current_lapse = (index - 1) * service.minimum_lapse.to_i
+              vrp.relations << Models::Relation.new(type: 'minimum_day_lapse',
+                                                    linked_ids: ["#{service.id}_1_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
+                                                    lapse: current_lapse)
             }
             (2..service.visits_number).each{ |index|
-              current_lapse = (index -1) * service.maximum_lapse.to_i
-              vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-              :linked_ids => ["#{service.id}_1_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
-              :lapse => current_lapse)
+              current_lapse = (index - 1) * service.maximum_lapse.to_i
+              vrp.relations << Models::Relation.new(type: 'maximum_day_lapse',
+                                                    linked_ids: ["#{service.id}_1_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
+                                                    lapse: current_lapse)
             }
           else
             if service.minimum_lapse && service.visits_number > 1
               (2..service.visits_number).each{ |index|
                 current_lapse = service.minimum_lapse.to_i
-                vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-                :linked_ids => ["#{service.id}_#{index-1}_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
-                :lapse => current_lapse)
+                vrp.relations << Models::Relation.new(type: 'minimum_day_lapse',
+                                                      linked_ids: ["#{service.id}_#{index - 1}_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
+                                                      lapse: current_lapse)
               }
             end
             if service.maximum_lapse && service.visits_number > 1
               (2..service.visits_number).each{ |index|
                 current_lapse = service.maximum_lapse.to_i
-                vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-                :linked_ids => ["#{service.id}_#{index-1}_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
-                :lapse => current_lapse)
+                vrp.relations << Models::Relation.new(type: 'maximum_day_lapse',
+                                                      linked_ids: ["#{service.id}_#{index - 1}_#{service.visits_number}", "#{service.id}_#{index}_#{service.visits_number}"],
+                                                      lapse: current_lapse)
               }
             end
           end
           @periods << service.visits_number
           visit_period = (vrp.schedule_range_indices[:end] + 1).to_f / service.visits_number
-          timewindows_iterations = (visit_period /(6 || 1)).ceil
+          # timewindows_iterations = (visit_period / (6 || 1)).ceil
           ## Create as much service as needed
           (0..service.visits_number - 1).collect{ |visit_index|
             new_service = nil
             if !service.unavailable_visit_indices || service.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
-              new_service = Marshal::load(Marshal.dump(service))
-              new_service.id = "#{new_service.id}_#{visit_index+1}_#{service.visits_number}"
+              new_service = Marshal.load(Marshal.dump(service))
+              new_service.id = "#{new_service.id}_#{visit_index + 1}_#{service.visits_number}"
               new_service.visits_number = 1
               (new_service.activity ? [new_service.activity] : new_service.activities).each{ |activity|
                 activity.timewindows = if !activity.timewindows.empty?
                   new_timewindows = activity.timewindows.collect{ |timewindow|
                     if timewindow.day_index
                       Models::Timewindow.new(start: (timewindow.start || 0) + timewindow.day_index * 86400,
-                                            end: (timewindow.end || 86399) + timewindow.day_index * 86400)
+                                             end: (timewindow.end || 86399) + timewindow.day_index * 86400)
                     elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
                       (0..[6, vrp.schedule_range_indices[:end]].min).collect{ |day_index|
-                        Models::Timewindow.new(start: (timewindow.start || 0) + (day_index).to_i * 86400,
-                                              end: (timewindow.end || 86399) + (day_index).to_i * 86400)
+                        Models::Timewindow.new(start: (timewindow.start || 0) + day_index.to_i * 86400,
+                                               end: (timewindow.end || 86399) + day_index.to_i * 86400)
                       }
                     else
                       Models::Timewindow.new(start: timewindow.start, end: timewindow.end)
                     end
-                  }.flatten.sort_by{ |timewindow| timewindow.start }.compact.uniq
-                  if new_timewindows.size > 0
+                  }.flatten.sort_by(&:start).compact.uniq
+                  if !new_timewindows.empty?
                     new_timewindows
                   end
                 end
                 if !service.minimum_lapse && !service.maximum_lapse
-                  new_service.skills += ["#{visit_index+1}_f_#{service.visits_number}"]
+                  new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}"]
                 end
               }
 
               new_service
-            else
-              nil
             end
             new_service
           }.compact
@@ -206,7 +201,7 @@ module Interpreters
     end
 
     def generate_shipments(vrp)
-      new_shipments = vrp.shipments.collect{ |shipment|
+      vrp.shipments.collect{ |shipment|
         if !shipment.unavailable_visit_day_indices.empty?
           shipment.unavailable_visit_day_indices.delete_if{ |unavailable_index|
             unavailable_index.negative? || unavailable_index > vrp.schedule_range_indices[:end]
@@ -222,43 +217,43 @@ module Interpreters
         if shipment.visits_number
           if shipment.minimum_lapse && shipment.maximum_lapse && shipment.visits_number > 1
             (2..shipment.visits_number).each{ |index|
-              current_lapse = (index -1) * shipment.minimum_lapse.to_i
-              vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-              :linked_ids => ["#{shipment.id}_1_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
-              :lapse => current_lapse)
+              current_lapse = (index - 1) * shipment.minimum_lapse.to_i
+              vrp.relations << Models::Relation.new(type: 'minimum_day_lapse',
+                                                    linked_ids: ["#{shipment.id}_1_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
+                                                    lapse: current_lapse)
             }
             (2..shipment.visits_number).each{ |index|
-              current_lapse = (index -1) * shipment.maximum_lapse.to_i
-              vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-              :linked_ids => ["#{shipment.id}_1_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
-              :lapse => current_lapse)
+              current_lapse = (index - 1) * shipment.maximum_lapse.to_i
+              vrp.relations << Models::Relation.new(type: 'maximum_day_lapse',
+                                                    linked_ids: ["#{shipment.id}_1_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
+                                                    lapse: current_lapse)
             }
           else
             if shipment.minimum_lapse && shipment.visits_number > 1
               (2..shipment.visits_number).each{ |index|
                 current_lapse = shipment.minimum_lapse.to_i
-                vrp.relations << Models::Relation.new(:type => "minimum_day_lapse",
-                :linked_ids => ["#{shipment.id}_#{index - 1}_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
-                :lapse => current_lapse)
+                vrp.relations << Models::Relation.new(type: 'minimum_day_lapse',
+                                                      linked_ids: ["#{shipment.id}_#{index - 1}_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
+                                                      lapse: current_lapse)
               }
             end
             if shipment.maximum_lapse && shipment.visits_number > 1
               (2..shipment.visits_number).each{ |index|
                 current_lapse = shipment.maximum_lapse.to_i
-                vrp.relations << Models::Relation.new(:type => "maximum_day_lapse",
-                :linked_ids => ["#{shipment.id}_#{index - 1}_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
-                :lapse => current_lapse)
+                vrp.relations << Models::Relation.new(type: 'maximum_day_lapse',
+                                                      linked_ids: ["#{shipment.id}_#{index - 1}_#{shipment.visits_number}", "#{shipment.id}_#{index}_#{shipment.visits_number}"],
+                                                      lapse: current_lapse)
               }
             end
           end
           @periods << shipment.visits_number
           visit_period = (vrp.schedule_range_indices[:end] + 1).to_f / shipment.visits_number
-          timewindows_iterations = (visit_period /(6 || 1)).ceil
+          # timewindows_iterations = (visit_period / (6 || 1)).ceil
           ## Create as much shipment as needed
-          (0..shipment.visits_number-1).collect{ |visit_index|
+          (0..shipment.visits_number - 1).collect{ |visit_index|
             new_shipment = nil
             if !shipment.unavailable_visit_indices || shipment.unavailable_visit_indices.none?{ |unavailable_index| unavailable_index == visit_index }
-              new_shipment = Marshal::load(Marshal.dump(shipment))
+              new_shipment = Marshal.load(Marshal.dump(shipment))
               new_shipment.id = "#{new_shipment.id}_#{visit_index + 1}_#{new_shipment.visits_number}"
 
               new_shipment.pickup.timewindows = if !shipment.pickup.timewindows.empty?
@@ -271,8 +266,8 @@ module Interpreters
                   elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
                     (0..[6, vrp.schedule_range_indices[:end]].min).collect{ |day_index|
                       Models::Timewindow.new(
-                        start: timewindow[:start] + (day_index).to_i * 86400,
-                        end: timewindow[:end] + (day_index).to_i * 86400
+                        start: timewindow[:start] + day_index.to_i * 86400,
+                        end: timewindow[:end] + day_index.to_i * 86400
                       )
                     }
                   else
@@ -281,8 +276,8 @@ module Interpreters
                       end: timewindow[:end]
                     )
                   end
-                }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
-                if new_timewindows.size > 0
+                }.flatten.sort_by(&:start).compact.uniq
+                if !new_timewindows.empty?
                   new_timewindows
                 end
               end
@@ -294,8 +289,8 @@ module Interpreters
                                            end: timewindow.end + timewindow.day_index * 86400)
                   elsif @have_services_day_index || @have_vehicles_day_index || @have_shipments_day_index
                     (0..[6, vrp.schedule_range_indices[:end]].min).collect{ |day_index|
-                      Models::Timewindow.new(start: timewindow.start + (day_index).to_i * 86400,
-                                             end: timewindow.end + (day_index).to_i * 86400)
+                      Models::Timewindow.new(start: timewindow.start + day_index.to_i * 86400,
+                                             end: timewindow.end + day_index.to_i * 86400)
                     }
                   else
                     Models::Timewindow.new(start: timewindow.start, end: timewindow.end)
@@ -307,11 +302,9 @@ module Interpreters
               end
 
               if !shipment.minimum_lapse && !shipment.maximum_lapse
-                new_shipment.skills += ["#{visit_index+1}_f_#{shipment.visits_number}"]
+                new_shipment.skills += ["#{visit_index + 1}_f_#{shipment.visits_number}"]
               end
               new_shipment
-            else
-              nil
             end
             new_shipment
           }.compact
@@ -331,7 +324,7 @@ module Interpreters
     end
 
     def build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations, same_vehicle_list, lapses_list)
-      new_vehicle = Marshal::load(Marshal.dump(vehicle))
+      new_vehicle = Marshal.load(Marshal.dump(vehicle))
       new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
       @equivalent_vehicles[vehicle.id] << new_vehicle.id
       if vehicle.overall_duration
@@ -434,14 +427,14 @@ module Interpreters
       }
       problem[:services] << {
         id: service.id,
-          activity: {
+        activity: {
             point_id: service[:activity][:point_id],
             duration: service[:activity][:duration]
           }
       }
       vrp = Models::Vrp.create(problem)
       progress = 0
-      result = vroom.solve(vrp){ |avancement, total|
+      result = vroom.solve(vrp){ |_avancement, _total|
         progress += 1
       }
       travel_time = 0
@@ -451,8 +444,8 @@ module Interpreters
       }
 
       time_back_to_depot = 0
-      if route[:vehicle][:end_point_id] != nil
-        this_service_index = vrp.services.find{|s| s.id == service.id}[:activity][:point][:matrix_index]
+      if !route[:vehicle][:end_point_id].nil?
+        this_service_index = vrp.services.find{ |s| s.id == service.id }[:activity][:point][:matrix_index]
         time_back_to_depot = vrp[:matrices][0][:time][this_service_index][route[:vehicle][:end_point][:matrix_index]]
       end
 
@@ -475,7 +468,7 @@ module Interpreters
       residual_time = []
       idx = 0
       residual_time_for_vehicle = {}
-      vrp.relations.select{ |r| r.type == 'vehicle_group_duration'}.each{ |r|
+      vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.each{ |r|
         r.linked_vehicle_ids.each{ |v|
           residual_time_for_vehicle[v] = {
             idx: idx,
@@ -513,11 +506,11 @@ module Interpreters
           # looking for the first vehicle possible
           # days are compatible
           (service.unavailable_visit_day_indices.nil? || !service.unavailable_visit_day_indices.include?(route[:vehicle].global_day_index)) &&
-          (current_index == 1 || current_index > 1 && service.minimum_lapse &&
-          previous_service_index && previous_service_route && route[:vehicle].global_day_index >= previous_service_route[:vehicle].global_day_index + (gap_with_previous * service.minimum_lapse).truncate ||
-          !service.minimum_lapse && (route[:vehicle].skills & service.skills).size == service.skills.size) &&
+            (current_index == 1 || current_index > 1 && service.minimum_lapse &&
+            previous_service_index && previous_service_route && route[:vehicle].global_day_index >= previous_service_route[:vehicle].global_day_index + (gap_with_previous * service.minimum_lapse).truncate ||
+            !service.minimum_lapse && (route[:vehicle].skills & service.skills).size == service.skills.size) &&
           # we do not exceed vehicles max duration
-          (!residual_time_for_vehicle[route[:vehicle][:id]] || check_with_vroom(vrp, route, service, residual_time, residual_time_for_vehicle))
+            (!residual_time_for_vehicle[route[:vehicle][:id]] || check_with_vroom(vrp, route, service, residual_time, residual_time_for_vehicle))
           # Verify timewindows too
         }
         if candidate_route
@@ -533,8 +526,8 @@ module Interpreters
       new_rests = vehicle.rests.collect{ |rest|
         new_rest = nil
         if rest.timewindows.empty? || rest.timewindows.any?{ |timewindow| timewindow[:day_index] == day_index }
-          new_rest = Marshal::load(Marshal.dump(rest))
-          new_rest.id = "#{new_rest.id}_#{day_index+1}"
+          new_rest = Marshal.load(Marshal.dump(rest))
+          new_rest.id = "#{new_rest.id}_#{day_index + 1}"
           rests_durations[-1] += new_rest.duration
           new_rest.timewindows = rest.timewindows.select{ |timewindow| timewindow[:day_index] == day_index }.collect{ |timewindow|
             if timewindow.day_index && timewindow.day_index == day_index
@@ -542,13 +535,13 @@ module Interpreters
                 id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
                 start: timewindow[:start] ? timewindow[:start] + timewindow[:day_index] * 86400 : nil,
                 end: timewindow[:end] ? timewindow[:end] + timewindow[:day_index] * 86400 : nil
-              }.delete_if { |k, v| !v }
+              }.delete_if { |_k, v| !v }
             else
                 {
                   id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
-                  start: timewindow[:start] ? timewindow[:start] + (day_index).to_i * 86400 : nil,
-                  end: timewindow[:end] ? timewindow[:end] + (day_index).to_i * 86400 : nil
-                }.delete_if { |k, v| !v }
+                  start: timewindow[:start] ? timewindow[:start] + day_index.to_i * 86400 : nil,
+                  end: timewindow[:end] ? timewindow[:end] + day_index.to_i * 86400 : nil
+                }.delete_if { |_k, v| !v }
             end
           }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
         end
@@ -581,7 +574,7 @@ module Interpreters
         while day <= last_day && service_first_possible_day == -1
           if !service.unavailable_visit_day_indices.include?(day)
             nb_services_seen += 1
-            service_first_possible_day = nb_services_seen == service_index ? day : -1
+            service_first_possible_day = (nb_services_seen == service_index) ? day : -1
             day += service.minimum_lapse || 1
           end
 
@@ -591,7 +584,7 @@ module Interpreters
         day = last_day
         nb_services_seen = service_total_quantity
         while day >= first_day && service_last_possible_day == -1
-          service_last_possible_day = nb_services_seen == service_index ? day : -1
+          service_last_possible_day = (nb_services_seen == service_index) ? day : -1
 
           if !service.unavailable_visit_day_indices.include?(day)
             nb_services_seen -= 1
@@ -606,7 +599,7 @@ module Interpreters
     end
 
     def save_relations(vrp, relation_type)
-      relations_to_save = vrp.relations.select{ |r| r.type == relation_type }.collect{ |r|
+      vrp.relations.select{ |r| r.type == relation_type }.collect{ |r|
         {
           type: r.type,
           linked_vehicle_ids: r.linked_vehicle_ids,

@@ -17,7 +17,6 @@
 #
 require './models/base'
 
-
 module Models
   class Partition < Base
     field :method

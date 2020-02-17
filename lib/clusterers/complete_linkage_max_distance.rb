@@ -141,7 +141,7 @@ module Ai4r
           end
         end
 
-        return closest_clusters[0], closest_clusters[1], min_distance
+        [closest_clusters[0], closest_clusters[1], min_distance]
       end
     end
   end

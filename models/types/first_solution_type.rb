@@ -24,7 +24,7 @@ class FirstSolType
       elsif value.is_a?(Array)
         value
       else
-        raise ArgumentError.new('Invalid first_solution_value value')
+        raise ArgumentError, 'Invalid first_solution_value value'
       end
     end
   end

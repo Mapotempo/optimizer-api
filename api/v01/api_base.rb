@@ -24,20 +24,20 @@ require_all 'models'
 module Api
   module V01
     class APIBase < Grape::API
-
       private
 
       def self.tmp_vrp_dir
-        ::OptimizerWrapper::tmp_vrp_dir
+        ::OptimizerWrapper.tmp_vrp_dir
       end
 
       def self.dump_vrp_dir
-        ::OptimizerWrapper::dump_vrp_dir
+        ::OptimizerWrapper.dump_vrp_dir
       end
 
       def self.services(api_key)
-        raise 'Profile missing in configuration' unless ::OptimizerWrapper::config[:profiles].has_key? ::OptimizerWrapper::access[api_key][:profile]
-        ::OptimizerWrapper::config[:profiles][::OptimizerWrapper::access[api_key][:profile]]
+        raise 'Profile missing in configuration' unless ::OptimizerWrapper.config[:profiles].has_key? ::OptimizerWrapper.access[api_key][:profile]
+
+        ::OptimizerWrapper.config[:profiles][::OptimizerWrapper.access[api_key][:profile]]
       end
     end
   end

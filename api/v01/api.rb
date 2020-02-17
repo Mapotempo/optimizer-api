@@ -33,7 +33,7 @@ module Api
       end
 
       before do
-        if !params || !::OptimizerWrapper::access(true).keys.include?(params[:api_key])
+        if !params || !::OptimizerWrapper.access(true).keys.include?(params[:api_key])
           error!('401 Unauthorized', 401)
         end
         set_locale
@@ -41,9 +41,8 @@ module Api
 
       rescue_from StandardError, backtrace: ENV['APP_ENV'] != 'production' do |e|
         @error = e
-        if ENV['APP_ENV'] != 'test'
-          STDERR.puts "\n\n#{e.class} (#{e.message}):\n    " + e.backtrace.join("\n    ") + "\n\n"
-        end
+
+        STDERR.puts "\n\n#{e.class} (#{e.message}):\n    " + e.backtrace.join("\n    ") + "\n\n" if ENV['APP_ENV'] != 'test'
 
         response = { error: e.class, message: e.message }
         if e.is_a?(RangeError) || e.is_a?(Grape::Exceptions::ValidationErrors) ||

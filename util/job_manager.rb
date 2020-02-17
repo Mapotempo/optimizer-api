@@ -20,8 +20,6 @@ require 'resque'
 require 'resque-status'
 require 'redis'
 require 'json'
-require 'thread'
-
 module OptimizerWrapper
   class Job
     include Resque::Plugins::Status
@@ -50,7 +48,7 @@ module OptimizerWrapper
           tick # call tick in case job is killed
           next # if not go back to optimization
         end
-        at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + (avancement && total ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
+        at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + ((avancement && total) ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
         @killed && wrapper.kill && return # Stops the worker if the job is killed
         @wrapper = wrapper
         log "avancement: #{message} #{avancement}"
@@ -67,7 +65,7 @@ module OptimizerWrapper
       # Add values related to the current solve status
       p = Result.get(self.uuid) || {}
       p['csv'] = true if ask_restitution_csv
-      p['result'] = [result].flatten.compact # TODO define process must only return an array (Need tests edit)
+      p['result'] = [result].flatten.compact # TODO: define process must only return an array (Need tests edit)
       if services_vrps.size == 1 && p && !p['result'].empty? && p['graph'] && !p['graph'].empty?
         p['result'].first['iterations'] = p['graph'].last['iteration']
         p['result'].first['elapsed'] = p['graph'].last['time']
@@ -83,7 +81,7 @@ module OptimizerWrapper
     end
 
     def on_killed
-      @wrapper && @wrapper.kill
+      @wrapper&.kill
       @killed = true
     end
   end
@@ -106,7 +104,6 @@ module OptimizerWrapper
   class UnsupportedRouterModeError  < StandardError; end
 
   class Result
-
     def self.time_spent(value)
       @time_spent += value if @time_spent
       @time_spent = value if !@time_spent
