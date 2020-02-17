@@ -739,12 +739,12 @@ module Heuristics
           inserted_id = try_to_add_new_point(current_vehicle, best_day, @candidate_routes[current_vehicle][best_day])
 
           if inserted_id
+            adjust_candidate_routes(current_vehicle, best_day)
+
             if @output_tool
               days = @candidate_routes[current_vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == inserted_id } }.keys
               @output_tool.output_scheduling_insert(days, inserted_id, @services_data[inserted_id][:nb_visits])
             end
-
-            adjust_candidate_routes(current_vehicle, best_day)
 
             if @services_unlocked_by[inserted_id] && !@services_unlocked_by[inserted_id].empty? && !@relaxed_same_point_day
               services_to_add = @services_unlocked_by[inserted_id] - @uninserted.collect{ |_un, data| data[:original_service] }
