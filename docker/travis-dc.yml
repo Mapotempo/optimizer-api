@@ -2,6 +2,7 @@ version: '3.3'
 services:
   api:
     image: registry.mapotempo.com/mapotempo-ce/optimizer-api:latest
+    hostname: travis-api
     environment:
       REDIS_RESQUE_HOST: redis
       REDIS_HOST: redis-cache
@@ -14,7 +15,7 @@ services:
   resque-default:
     image: registry.mapotempo.com/mapotempo-ce/optimizer-api:latest
     working_dir: /srv/app
-    hostname: resque-default
+    hostname: travis-resque-default
     environment:
       APP_ENV: test
       COUNT: 5
@@ -30,6 +31,7 @@ services:
 
   redis:
     image: redis:${REDIS_VERSION:-3.2-alpine}
+    hostname: travis-redis
     volumes:
       - ../redis:/data
     command: redis-server --appendonly yes
@@ -38,6 +40,7 @@ services:
 
   redis-cache:
     image: redis:${REDIS_VERSION:-3.2-alpine}
+    hostname: travis-redis-cache
     volumes:
       - ../redis:/data
     command: redis-server --save ""
