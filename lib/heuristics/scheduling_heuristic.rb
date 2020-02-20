@@ -28,11 +28,14 @@ module Heuristics
     include SchedulingEndPhase
 
     def initialize(vrp, job = nil)
+      @services_data = {}
+
+      return if vrp.services.empty?
+
       # heuristic data
       @candidate_vehicles = []
       @vehicle_day_completed = {}
       @to_plan_service_ids = []
-      @services_data = {}
       @previous_candidate_service_ids = nil
       @candidate_services_ids = []
 
@@ -69,6 +72,7 @@ module Heuristics
       }
 
       collect_services_data(vrp)
+      @max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
       collect_indices(vrp)
       generate_route_structure(vrp)
       compute_latest_authorized
@@ -78,6 +82,11 @@ module Heuristics
     end
 
     def compute_initial_solution(vrp, &block)
+      if @services_data.empty?
+        empty_result(vrp)
+        return []
+      end
+
       block&.call()
       @starting_time = Time.now
 
@@ -517,11 +526,9 @@ module Heuristics
     def compute_shift(route_data, service_inserted, inserted_final_time, next_service)
       route = route_data[:current_route]
 
-      if route.empty?
-        matrix(route_data, route_data[:start_point_id], service_inserted[:point_id]) + matrix(route_data, service_inserted[:point_id], route_data[:end_point_id])
-      elsif next_service
-        time_to_next = matrix(route_data, service_inserted[:point_id], next_service[:point_id])
+      if next_service
         shift = 0
+        time_to_next = matrix(route_data, service_inserted[:point_id], next_service[:point_id])
         if can_ignore_tw(service_inserted[:id], next_service[:id])
           prospective_next_end = inserted_final_time + @services_data[next_service[:id]][:durations][next_service[:activity]]
           shift += prospective_next_end - next_service[:end]
@@ -533,7 +540,7 @@ module Heuristics
         end
 
         shift
-      else
+      elsif !route.empty?
         inserted_final_time - route.last[:end]
       end
     end
@@ -554,6 +561,8 @@ module Heuristics
     end
 
     def acceptable?(shift, route_data, position)
+      return [true, nil] if route_data[:current_route].empty?
+
       computed_shift = shift
       acceptable = (route_data[:current_route][position] && route_data[:current_route][position][:max_shift]) ? route_data[:current_route][position][:max_shift] >= shift : true
 
@@ -627,7 +636,7 @@ module Heuristics
     def fill_basic
       ### fill planning without same_point_day option ###
       all_days = @candidate_routes.collect{ |_vehicle, data| data.keys }.flatten.uniq
-
+      
       all_days.each{ |day|
         @candidate_vehicles.each{ |vehicle|
           next if @candidate_routes[vehicle][day].nil?
@@ -797,7 +806,11 @@ module Heuristics
           considered_setup_duration: tw[:setup_duration],
           next_activity: next_activity,
           potential_shift: tw[:max_shift],
-          additional_route_time: [0, shift - duration - tw[:setup_duration]].max, # TODO : why using max ??min_by in select_point will chose the one that reduces work duration if we keep negative value possible
+          additional_route_time: if route_data[:current_route].empty?
+            matrix(route_data, route_data[:start_point_id], service_data[:points_ids][activity]) + matrix(route_data, service_data[:points_ids][activity], route_data[:end_point_id])
+          else
+            [0, shift - duration - tw[:setup_duration]].max
+          end,
           back_to_depot: back_depot,
           activity: activity,
         }
@@ -809,7 +822,7 @@ module Heuristics
       route = route_data[:current_route]
       service_data = @services_data[service]
 
-      best_index = (0..service_data[:nb_activities] - 1).collect{ |activity|
+      (0..service_data[:nb_activities] - 1).collect{ |activity|
         positions_to_try = compute_consistent_positions_to_insert(@services_data[service][:positions_in_route][activity], @services_data[service][:points_ids], route)
         positions_to_try.collect{ |position|
           ### compute cost of inserting service activity [activity] at [position] in [route_data]
@@ -830,11 +843,6 @@ module Heuristics
           best_cost_according_to_tws(route_data, service, service_data, previous, position: position, activity: activity, in_adjust: in_adjust)
         }
       }.flatten.compact.min_by{ |cost| cost[:back_to_depot] }
-
-      return best_index if !route.empty? || best_index.nil?
-
-      best_index[:additional_route_time] = matrix(route_data, route_data[:start_point_id], best_index[:point]) + matrix(route_data, best_index[:point], route_data[:end_point_id])
-      best_index
     end
 
     def can_ignore_tw(previous_service, service)
@@ -984,6 +992,17 @@ module Heuristics
       }.flatten
     end
 
+    def empty_result(vrp)
+      vrp[:preprocessing_heuristic_result] = {
+        cost: 0,
+        solvers: ['heuristic'],
+        iterations: 0,
+        routes: [],
+        unassigned: [],
+        elapsed: 0.0 # ms
+      }
+    end
+
     def prepare_output_and_collect_routes(vrp)
       routes = []
       solution = []
@@ -1026,10 +1045,9 @@ module Heuristics
 
     def select_point(insertion_costs)
       ### chose the most interesting point to insert according to [insertion_costs] ###
-      max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
       costs = insertion_costs.collect{ |s| s[:additional_route_time] }
       if costs.min != 0
-        insertion_costs.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }
+        insertion_costs.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }
       else
         freq = insertion_costs.collect{ |s| @services_data[s[:id]][:nb_visits] }
         zero_idx = (0..(costs.size - 1)).select{ |i| costs[i].zero? }
@@ -1040,7 +1058,7 @@ module Heuristics
         else
           # TODO : more tests to improve.
           # we can consider having a limit such that if additional route is > limit then we keep service with additional_route = 0 (and freq max among those)
-          insertion_costs.reject{ |s| s[:additional_route_time].zero? }.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }
+          insertion_costs.reject{ |s| s[:additional_route_time].zero? }.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:nb_visits]**2) }
         end
       end
     end

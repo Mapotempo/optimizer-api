@@ -419,8 +419,7 @@ class HeuristicTest < Minitest::Test
         end_point_id: 'point_0',
         matrix_id: 'm1',
         router_dimension: 'time',
-        sequence_timewindows: [{ start: 0, end: 7000, day_index: 0 }, { start: 0, end: 7000, day_index: 1 }],
-        duration: 50000,
+        sequence_timewindows: [{ start: 0, end: 70000, day_index: 0 }, { start: 0, end: 70000, day_index: 1 }],
         capacities: [{ unit_id: 'kg', limit: 1100 }],
       }]
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
@@ -437,7 +436,8 @@ class HeuristicTest < Minitest::Test
         }
       }
 
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
+      assert_empty result[:unassigned]
       assert(result[:routes].all?{ |route| route[:activities].all?{ |activity| activity[:detail][:skills].nil? || activity[:detail][:skills].size == 2 } })
     end
 
