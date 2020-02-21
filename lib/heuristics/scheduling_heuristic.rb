@@ -616,7 +616,7 @@ module Heuristics
         tw_accepted = acceptable_shift && acceptable_shift_for_itself && time_back_to_depot <= route_data[:tw_end]
 
         [shift, activity, time_back_to_depot, tw_accepted]
-      }.min_by{ |next_info| next_info[5] }
+      }.min_by{ |next_info| next_info[2] }
 
       route_data[:current_route][position][:activity] = original_next_activity if route_data[:current_route][position]
       route_data[:current_route][position][:point_id] = @services_data[route_data[:current_route][position][:id]][:points_ids][original_next_activity] if route_data[:current_route][position]
@@ -897,7 +897,7 @@ module Heuristics
           lon: vrp.points.find{ |point| service_in_vrp.activity && point[:id] == service_in_vrp.activity.point_id }&.location&.lon,
           setup_duration: service_in_vrp.activity&.setup_duration,
           duration: service_in_vrp.activity&.duration,
-          timewindows: service_in_vrp[:activity][:timewindows] ? service_in_vrp[:activity][:timewindows].collect{ |tw| { start: tw[:start], end: tw[:end] } }.sort_by{ |t| t[:start] } : [],
+          timewindows: service_in_vrp.activity&.timewindows ? service_in_vrp.activity.timewindows.collect{ |tw| { start: tw.start, end: tw.end } }.sort_by{ |t| t[:start] } : [],
           quantities: service_in_vrp.quantities.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } }
         },
         reason: reason

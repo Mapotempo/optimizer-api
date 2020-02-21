@@ -370,5 +370,29 @@ class HeuristicTest < Minitest::Test
                                                                                                      { requirement: :neutral, point_id: 'same_point' },
                                                                                                      { requirement: :neutral, point_id: 'point' }])
     end
+
+    def test_insertion_cost_with_tw_choses_best_value
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = []
+      s = Heuristics::Scheduling.new(vrp)
+
+      s.instance_variable_set(:@services_data, 'service_with_activities' => { nb_activities: 2,
+                                                                              setup_durations: [0, 0],
+                                                                              durations: [0, 0],
+                                                                              points_ids: ['point_2', 'point_10'],
+                                                                              tws_sets: [[], []] })
+
+      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/chose_best_value_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/chose_best_value_indices.bindump'))) # rubocop: disable Security/MarshalLoad
+
+      timewindow = { start_time: 0, arrival_time: 3807, final_time: 3807, setup_duration: 0 }
+      route_data = { tw_end: 10000, start_point_id: 'point_0', end_point_id: 'point_0', matrix_id: 'm1',
+                     current_route: [{ id: 'service_with_activities', point_id: 'point_10', start: 0, arrival: 1990, end: 1990, considered_setup_duration: 0, activity: 1 }] }
+      service = { id: 'service_3', point_id: 'point_3', duration: 0 }
+
+      set = s.send(:insertion_cost_with_tw, timewindow, route_data, service, 0)
+      assert set.last < 10086, "#{set.last} should be the best value among all activities' value"
+    end
   end
 end
