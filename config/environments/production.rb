@@ -27,7 +27,8 @@ require './util/logger'
 
 module OptimizerWrapper
   ActiveSupport::Cache.lookup_store :redis_store
-  TMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'tmp')
+  TMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'tmp')
+  FileUtils.mkdir_p(TMP_DIR) unless File.directory?(TMP_DIR)
   @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides].freeze
@@ -39,7 +40,8 @@ module OptimizerWrapper
 
   PARAMS_LIMIT = { points: 100000, vehicles: 1000 }.freeze
 
-  DUMP_DIR = File.join(File.join(Dir.tmpdir, 'optimizer-api'), 'dump')
+  DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'dump')
+  FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
   # OptimizerLogger.level = :info

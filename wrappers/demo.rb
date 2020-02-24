@@ -19,8 +19,8 @@ require './wrappers/wrapper'
 
 module Wrappers
   class Demo < Wrapper
-    def initialize(cache, hash = {})
-      super(cache, hash)
+    def initialize(hash = {})
+      super(hash)
     end
 
     def build_route_activity(mission, activity)

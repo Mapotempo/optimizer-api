@@ -21,8 +21,8 @@ require 'nokogiri'
 require 'open3'
 module Wrappers
   class Jsprit < Wrapper
-    def initialize(cache, hash = {})
-      super(cache, hash)
+    def initialize(hash = {})
+      super(hash)
       @exec_jsprit = hash[:exec_jsprit] || 'java -jar ../optimizer-jsprit/target/optimizer-jsprit-0.0.1-SNAPSHOT-jar-with-dependencies.jar'
 
       @semaphore = Mutex.new

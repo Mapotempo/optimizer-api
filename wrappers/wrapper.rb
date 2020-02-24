@@ -17,8 +17,7 @@
 #
 module Wrappers
   class Wrapper
-    def initialize(cache, hash = {})
-      @cache = cache
+    def initialize(hash = {})
       @tmp_dir = hash[:tmp_dir] || Dir.tmpdir
       @threads = hash[:threads] || 1
     end

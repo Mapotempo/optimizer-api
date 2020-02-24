@@ -22,8 +22,8 @@ require 'tempfile'
 
 module Wrappers
   class Vroom < Wrapper
-    def initialize(cache, hash = {})
-      super(cache, hash)
+    def initialize(hash = {})
+      super(hash)
       @exec_vroom = hash[:exec_vroom] || '../vroom/bin/vroom'
     end
 
