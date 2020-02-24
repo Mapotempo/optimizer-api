@@ -22,5 +22,3 @@ Dir[File.dirname(__FILE__) + '/config/initializers/*.rb'].sort.each { |file| req
 Dir[File.dirname(__FILE__) + '/../models/*.rb'].sort.each { |file| require file }
 require './optimizer_wrapper'
 require './api/root'
-
-require 'byebug' if ['development', 'test'].include? ENV['APP_ENV']

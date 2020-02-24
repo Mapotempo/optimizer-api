@@ -26,6 +26,9 @@ require './wrappers/ortools'
 require './lib/cache_manager'
 require './util/logger'
 
+require 'byebug'
+require 'pp'
+
 module OptimizerWrapper
   TMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'test', 'tmp')
   FileUtils.mkdir_p(TMP_DIR) unless File.directory?(TMP_DIR)
