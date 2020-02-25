@@ -125,9 +125,10 @@ module Interpreters
         sub_vrp = sub_service_vrp[:vrp]
         sub_problem_size_ratio = (sub_vrp.services.size + sub_vrp.shipments.size).to_f / problem_size
 
-        sub_vrp.resolution_duration = vrp.resolution_duration * sub_problem_size_ratio + transfer_unused_time_limit
-        sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) &.* sub_problem_size_ratio
-        sub_vrp.resolution_vehicle_limit = [1, ((vrp.resolution_vehicle_limit || vrp.vehicles.size) * sub_problem_size_ratio).round(0) + transfer_unused_vehicle_limit].max
+        sub_vrp.resolution_duration = vrp.resolution_duration&.*(sub_problem_size_ratio)&.+(transfer_unused_time_limit)&.ceil
+        sub_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(sub_problem_size_ratio)&.ceil
+        sub_vrp.resolution_iterations_without_improvment = vrp.resolution_iterations_without_improvment&.*(sub_problem_size_ratio)&.ceil
+        sub_vrp.resolution_vehicle_limit = [(vrp.resolution_vehicle_limit || vrp.vehicles.size)&.*(sub_problem_size_ratio)&.round(0)&.+(transfer_unused_vehicle_limit), 1].max
 
         sub_problem = {
           vrp: sub_vrp,
@@ -142,7 +143,7 @@ module Interpreters
         remove_poor_routes(sub_vrp, sub_result)
 
         transfer_unused_vehicle_limit = sub_vrp.resolution_vehicle_limit - sub_result[:routes].size
-        transfer_unused_time_limit = sub_vrp.resolution_duration - sub_result[:elapsed].to_f
+        transfer_unused_time_limit = [sub_vrp.resolution_duration - sub_result[:elapsed].to_f, 0].max
 
         log "sub vrp (size: #{sub_problem[:vrp][:services].size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
         raise 'Incorrect activities count' if sub_vrp.visits != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.compact.size
