@@ -824,7 +824,7 @@ module Wrappers
         s && (cost = Float(s[1]))
         t = /Time : ([0-9.eE+]+)/.match(line)
         t && (time = t[1].to_f)
-        log line.strip, level: (/Final Iteration :/.match(line) || /First solution strategy :/.match(line) || /Using initial solution provided./.match(line)) ? :info : (r || s || t) ? :debug : :error
+        log line.strip, level: (/Final Iteration :/.match(line) || /First solution strategy :/.match(line) || /Using initial solution provided./.match(line) || /OR-Tools v[0-9]+\.[0-9]+\.[0-9]+\n/.match(line)) ? :info : (r || s || t) ? :debug : :error
         out += line
 
         next unless r && t # if there is no iteration and time then there is nothing to do
