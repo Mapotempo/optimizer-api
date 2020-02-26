@@ -30,9 +30,9 @@ module PeriodicService
     while current_visit < service.visits_number && current_day <= self.schedule_range_indices[:end]
       potential_vehicle = self.vehicles.find{ |v|
         !v.unavailable_work_day_indices.include?(current_day) &&
-          v.timewindow.nil? && v.sequence_timewindows.empty? ||
+          (v.timewindow.nil? && v.sequence_timewindows.empty? ||
           v.timewindow && (v.timewindow.day_index.nil? || current_day % 7 == v.timewindow.day_index) ||
-          v.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index }
+          v.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index })
       }
 
       if potential_vehicle

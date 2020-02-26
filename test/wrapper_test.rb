@@ -2966,4 +2966,10 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
     assert_equal 12, result.select{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }.collect{ |un| un[:original_service_id] }.uniq.size
   end
+
+  def test_lapse_with_unavailable_work_days
+    vrp = Marshal.load(File.binread('test/fixtures/check_lapse_with_unav_days_vrp.bindump')) # rubocop: disable Security/MarshalLoad
+
+    refute vrp.can_affect_all_visits?(vrp.services.find{ |s| s.visits_number == 12 })
+  end
 end
