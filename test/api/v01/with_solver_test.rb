@@ -25,6 +25,7 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
   end
 
   def test_deleted_job
+    # using ORtools to make sure that optimization takes enough time to be cut before ending
     TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
@@ -32,18 +33,6 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
       delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'ortools'
       assert_equal 202, last_response.status, last_response.body
       refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-    end
-  ensure
-    delete_completed_job @job_id, api_key: 'ortools'
-  end
-
-  def test_csv_configuration
-    TestHelper.solve_asynchronously do
-      vrp = VRP.lat_lon
-      vrp[:configuration][:restitution] = { csv: true }
-      @job_id = submit_csv api_key: 'ortools', vrp: vrp
-      wait_status_csv @job_id, 200, api_key: 'ortools'
-      assert_equal 9, last_response.body.count("\n")
     end
   ensure
     delete_completed_job @job_id, api_key: 'ortools'

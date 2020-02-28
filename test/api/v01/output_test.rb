@@ -166,7 +166,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
         prepare_output_and_collect_routes(vrp_in)
       }
     ) do
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     end
 
     files = Find.find(OptimizerWrapper.dump_vrp_dir.cache).select { |path|
@@ -209,5 +209,24 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     ) do
       post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => 'bad_value'
     end
+  end
+
+  def test_csv_configuration
+    vrp = VRP.lat_lon
+    vrp[:configuration][:restitution] = { csv: true }
+    result = submit_csv api_key: 'demo', vrp: vrp
+    assert_equal 10, result.size
+  end
+
+  def test_csv_configuration_asynchronously
+    TestHelper.solve_asynchronously do
+      vrp = VRP.lat_lon
+      vrp[:configuration][:restitution] = { csv: true }
+      @job_id = submit_csv api_key: 'demo', vrp: vrp
+      wait_status_csv @job_id, 200, api_key: 'demo'
+      assert_equal 9, last_response.body.count("\n")
+    end
+  ensure
+    delete_completed_job @job_id, api_key: 'demo'
   end
 end

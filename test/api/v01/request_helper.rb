@@ -38,11 +38,11 @@ class Api::V01::RequestHelper < Minitest::Test
   end
 
   def wait_status_csv(job_id, status, options)
-    get "0.1/vrp/jobs/#{job_id}.csv", options
+    get "0.1/vrp/jobs/#{job_id}", options
     while last_response.body
-      sleep(1)
+      sleep 1
       assert_equal 206, last_response.status, last_response.body
-      get "0.1/vrp/jobs/#{job_id}.csv", options
+      get "0.1/vrp/jobs/#{job_id}", options
       if last_response.status == status
         break
       end
