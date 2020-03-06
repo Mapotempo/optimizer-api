@@ -17,7 +17,7 @@ cache: bundle
 
 before_install:
   - export REGISTRY=registry.mapotempo.com/
-  - docker build -t ${REGISTRY}mapotempo-ce/optimizer-api:latest -f docker/Dockerfile --build-arg ORTOOLS_VERSION=v7.0 --build-arg VROOM_VERSION=v1.2.0 --build-arg OPTIMIZER_ORTOOLS_VERSION=latest .
+  - docker build -t ${REGISTRY}mapotempo-ce/optimizer-api:latest -f docker/Dockerfile --build-arg ORTOOLS_VERSION=v7.0 --build-arg VROOM_VERSION=v1.2.0 --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-latest} .
   - docker swarm init
   - mkdir -p ./redis
 
