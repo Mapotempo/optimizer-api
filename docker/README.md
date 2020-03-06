@@ -10,6 +10,9 @@ Optimizer requires the two following images that must be manually built.
 ### Ortools
 
 ```
+apt-get -y install git wget pkg-config build-essential cmake autoconf libtool zlib1g-dev lsb-release > /dev/null
+git clone https://github.com/mapotempo/optimizer-ortools.git --branch ${OPTIMIZER_ORTOOLS_VERSION} /srv/ortools
+cd /srv/ortools
 export ORTOOLS_VERSION=v7.0
 docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
   -f ./docker/ortools/Dockerfile -t ${REGISTRY}mapotempo/ortools:${ORTOOLS_VERSION} .
@@ -19,13 +22,16 @@ docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
 *OPTIMIZER_ORTOOLS_VERSION* can either be *master*, *v7.0* or *dev*
 
 ```
+apt-get -y install git wget pkg-config build-essential cmake autoconf libtool zlib1g-dev lsb-release > /dev/null
+git clone https://github.com/mapotempo/optimizer-ortools.git --branch ${OPTIMIZER_ORTOOLS_VERSION} /srv/optimizer-ortools
+cd /srv/optimizer-ortools
+
 export ORTOOLS_VERSION=v7.0
-export OPTIMIZER_ORTOOLS_VERSION=dev
+
 export BRANCH=${BRANCH:-beta}
-docker build --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION} \
-  --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
+docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION}
   --build-arg BRANCH=${BRANCH} \
-  -f ./docker/optimizer-ortools/Dockerfile -t ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:latest .
+  -f ./Dockerfile -t ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:latest .
 ```
 
 #### Vroom

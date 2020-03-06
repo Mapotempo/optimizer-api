@@ -104,3 +104,6 @@ If you don't want to run some long real cases tests you can deactive them:
 ```
 SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
 ```
+
+# Travis
+To test on travis with a optimizer-ortools different than the latest version, specify in your travis configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you travis owner nick.
