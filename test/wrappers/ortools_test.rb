@@ -4134,10 +4134,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     if result[:routes][0][:activities][1][:service_id] == 'service_1'
       assert_equal 5, result[:routes][0][:initial_loads][0][:value]
-      assert_equal 1, result[:routes][0][:initial_loads][1][:value]
     elsif result[:routes][0][:activities][1][:service_id] == 'service_2'
       assert_equal 1, result[:routes][0][:initial_loads][0][:value]
-      assert_equal 1, result[:routes][0][:initial_loads][1][:value]
     else
       flunk 'This is not possible!'
     end
