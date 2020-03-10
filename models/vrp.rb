@@ -122,7 +122,7 @@ module Models
 
       vrp = super({})
       self.check_consistency(hash)
-      self.generate_schedule_indices_from_date(hash) unless hash.empty? || hash[:configuration].nil?
+      self.filter(hash) # TODO : add filters.rb here
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
         vrp.send("#{key}=", hash[key]) if hash[key]
@@ -134,6 +134,27 @@ module Models
     def self.check_consistency(hash)
       raise DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
                                                                                                                               (!hash[:configuration][:schedule] || hash[:configuration][:schedule][:range_indice])
+    end
+
+    def self.filter(hash)
+      return hash if hash.empty?
+
+      self.remove_unecessary_units(hash)
+      self.generate_schedule_indices_from_date(hash)
+    end
+
+    def self.remove_unecessary_units(hash)
+      return hash if !hash[:units] || !hash[:vehicles] || (!hash[:services] && !hash[:shipments])
+
+      vehicle_units = hash[:vehicles].collect{ |v| (v[:capacities] || []).collect{ |capacity| capacity[:unit_id] } }.flatten.uniq
+      services_units = hash[:services] ? hash[:services].collect{ |s| (s[:quantities] || []).collect{ |quantity| quantity[:unit_id] } }.flatten.uniq : []
+      shipments_units = hash[:shipments] ? hash[:shipments].collect{ |s| (s[:quantities] || []).collect{ |quantity| quantity[:unit_id] } }.flatten.uniq : []
+      needed_units = vehicle_units & (services_units + shipments_units).uniq
+
+      hash[:units].delete_if{ |u| !needed_units.include? u[:id] }
+      hash[:vehicles].collect{ |v| (v[:capacities] || []).delete_if{ |capacity| !needed_units.include? capacity[:unit_id] } }
+      hash[:services]&.collect{ |v| (v[:quantities] || []).delete_if{ |quantity| !needed_units.include? quantity[:unit_id] } }
+      hash[:shipments]&.collect{ |s| (s[:quantities] || []).delete_if{ |quantity| !needed_units.include? quantity[:unit_id] } }
     end
 
     def self.generate_schedule_indices_from_date(hash)

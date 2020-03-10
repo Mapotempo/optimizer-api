@@ -269,4 +269,19 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       refute_nil Regexp.last_match, assert_msg
     }
   end
+
+  def test_remove_unecessary_units
+    vrp = TestHelper.load_vrp(self)
+    assert_empty vrp.units
+    vrp.vehicles.all?{ |v| v.capacities.empty? }
+    vrp.services.all?{ |s| s.quantities.empty? }
+  end
+
+  def test_remove_unecessary_units_one_needed
+    vrp = TestHelper.load_vrp(self)
+    assert_equal 1, vrp.units.size
+    assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten.uniq,
+                    :==,
+                    vrp.services.collect{ |s| s.quantities.collect(&:unit_id) }.flatten.uniq
+  end
 end
