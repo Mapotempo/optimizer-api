@@ -29,7 +29,7 @@ $(document).ready(function() {
 
       var problem_data = new FormData(this);
 
-      jobManager.submit({
+      jobsManager.submit({
         contentType: false,
         cache: false,
         processData: false,
