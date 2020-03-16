@@ -794,7 +794,6 @@ module Wrappers
               (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
               vrp.resolution_init_duration ? "-init_duration #{vrp.resolution_init_duration.round}" : nil,
               (vrp.resolution_vehicle_limit && vrp.resolution_vehicle_limit < problem.vehicles.size) ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
-              vrp.resolution_solver_parameter ? "-solver_parameter #{vrp.resolution_solver_parameter}" : nil,
               vrp.preprocessing_first_solution_strategy ? "-solver_parameter #{correspondant[vrp.preprocessing_first_solution_strategy.first]}" : nil,
               (vrp.resolution_evaluate_only || vrp.resolution_batch_heuristic) ? '-only_first_solution' : nil,
               vrp.restitution_intermediate_solutions ? '-intermediate_solutions' : nil,

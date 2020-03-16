@@ -154,5 +154,60 @@ module Models
       assert_empty generated_vrp.services[1].sticky_vehicles
       assert !generated_vrp.services[2].sticky_vehicles.empty?
     end
+
+    def test_solver_parameter_retrocompatibility
+      vrp = VRP.basic
+      generated_vrp = TestHelper.create(vrp)
+      assert generated_vrp.resolution_solver
+      assert_nil generated_vrp.preprocessing_first_solution_strategy
+
+      vrp[:configuration][:resolution][:solver_parameter] = -1
+      generated_vrp = TestHelper.create(vrp)
+      assert !generated_vrp.resolution_solver
+      assert_nil generated_vrp.preprocessing_first_solution_strategy
+
+      ['path_cheapest_arc', 'global_cheapest_arc', 'local_cheapest_insertion', 'savings', 'parallel_cheapest_insertion', 'first_unbound', 'christofides'].each_with_index{ |heuristic, heuristic_reference|
+        vrp = VRP.basic
+        vrp[:configuration][:resolution][:solver_parameter] = heuristic_reference
+        generated_vrp = TestHelper.create(vrp)
+        assert generated_vrp.resolution_solver
+        assert_equal [heuristic], generated_vrp.preprocessing_first_solution_strategy
+      }
+    end
+
+    def test_compatible_solver_parameters
+      vrp = VRP.basic
+      vrp[:configuration][:resolution][:solver] = true
+      vrp[:configuration][:resolution][:solver_parameter] = -1
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp[:configuration][:resolution][:solver] = false
+      vrp[:configuration][:resolution][:solver_parameter] = 0
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp[:configuration][:resolution][:solver] = true
+      vrp[:configuration][:resolution][:solver_parameter] = 0
+      TestHelper.create(vrp) # checks nothing is raised if parameters are consistent
+
+      vrp[:configuration][:resolution][:solver] = false
+      vrp[:configuration][:resolution][:solver_parameter] = -1
+      TestHelper.create(vrp) # checks nothing is raised if parameters are consistent
+
+      # good deduction of resolution_solver value
+      vrp[:configuration][:resolution][:solver] = nil
+      vrp[:configuration][:resolution][:solver_parameter] = 0
+      generated_vrp = TestHelper.create(vrp)
+      assert generated_vrp.resolution_solver
+
+      vrp[:configuration][:resolution][:solver] = nil
+      vrp[:configuration][:resolution][:solver_parameter] = -1
+      generated_vrp = TestHelper.create(vrp)
+      assert !generated_vrp.resolution_solver
+    end
   end
 end

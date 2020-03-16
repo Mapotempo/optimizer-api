@@ -408,7 +408,7 @@ module Wrappers
     end
 
     def assert_solver_if_not_periodic(vrp)
-      (vrp.resolution_solver && vrp.resolution_solver_parameter != -1) || vrp.preprocessing_first_solution_strategy && (vrp.preprocessing_first_solution_strategy.first == 'periodic')
+      vrp.resolution_solver || vrp.preprocessing_first_solution_strategy && (vrp.preprocessing_first_solution_strategy.first == 'periodic')
     end
 
     def assert_clustering_compatible_with_scheduling_heuristic(vrp)

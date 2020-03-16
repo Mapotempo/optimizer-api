@@ -5079,7 +5079,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:iterations]
   end
 
-  def test_try_several_heuristics_to_fix_solver_parameter
+  def test_try_several_heuristics_to_fix_ortools_solver_parameter
     problem = {
       matrices: [{
         id: 'matrix_0',

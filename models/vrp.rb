@@ -62,7 +62,6 @@ module Models
     field :resolution_init_duration, default: nil
     field :resolution_time_out_multiplier, default: nil
     field :resolution_vehicle_limit, default: nil
-    field :resolution_solver_parameter, default: nil
     field :resolution_solver, default: true
     field :resolution_same_point_day, default: false
     field :resolution_allow_partial_assignment, default: true
@@ -98,7 +97,6 @@ module Models
     # validates_numericality_of :resolution_minimum_duration, allow_nil: true
     # validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
     # validates_numericality_of :resolution_vehicle_limit, allow_nil: true
-    # validates_numericality_of :resolution_solver_parameter, allow_nil: true
     # validates_numericality_of :resolution_several_solutions, allow_nil: true
     # validates_numericality_of :resolution_variation_ratio, allow_nil: true
     #
@@ -144,6 +142,7 @@ module Models
         raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
       }
 
+      # routes consistency
       hash[:routes]&.each{ |route|
         route[:mission_ids].each{ |id|
           corresponding_service = [hash[:services], hash[:shipments]].flatten.compact.find{ |s| s[:id] == id }
@@ -153,16 +152,26 @@ module Models
         }
       }
 
-      return unless hash[:configuration]
+      configuration = hash[:configuration]
+      return unless configuration
 
-      if hash[:configuration][:preprocessing]
-        if hash[:configuration][:preprocessing][:partitions]&.any?{ |partition| partition[:entity].to_sym == :work_day }
+      # configuration consistency
+      if configuration[:preprocessing]
+        if configuration[:preprocessing][:partitions]&.any?{ |partition| partition[:entity].to_sym == :work_day }
           if hash[:services].any?{ |s| (s[:visits_number] || 1) > 1 && (s[:minimum_lapse] || 1) < 7 && s[:maximum_lapse] && s[:maximum_lapse] < 7 }
             raise OptimizerWrapper::DiscordantProblemError, 'Work day partition implies that lapses of all services can be a multiple of 7. There are services whose minimum and maximum lapse do not permit such lapse'
           end
         end
       end
 
+      if configuration[:resolution]
+        if configuration[:resolution][:solver] && configuration[:resolution][:solver_parameter].to_i == -1 ||
+           !configuration[:resolution][:solver].nil? && configuration[:resolution][:solver] == false && configuration[:resolution][:solver_parameter] && configuration[:resolution][:solver_parameter] != -1
+          raise OptimizerWrapper::DiscordantProblemError, 'Deprecated and new solver parameter used at the same time with uncompatible values'
+        end
+      end
+
+      # periodic consistency
       periodic = hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
       return unless periodic
 
@@ -170,6 +179,9 @@ module Models
         incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - ['force_first', 'never_first', 'force_end']
         raise OptimizerWrapper::DiscordantProblemError, "#{incompatible_relation_types} relations not available with specified first_solution_strategy" unless incompatible_relation_types.empty?
       end
+
+      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
+                                                                                                                                                (!hash[:configuration][:schedule] || hash[:configuration][:schedule][:range_indice])
     end
 
     def self.expand_data(vrp)
@@ -210,8 +222,21 @@ module Models
       relations_to_remove.reverse_each{ |index| hash[:relations].delete_at(index) }
     end
 
+    def self.deduce_solver_parameter(hash)
+      if hash[:configuration] && hash[:configuration][:resolution] && hash[:configuration][:resolution][:solver_parameter]
+        if hash[:configuration][:resolution][:solver_parameter] == -1
+          hash[:configuration][:resolution][:solver] = false
+        else
+          correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
+          hash[:configuration][:resolution][:solver] = true
+          hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
+        end
+      end
+    end
+
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
+      self.deduce_solver_parameter(hash)
     end
 
     def self.filter(hash)
@@ -363,7 +388,6 @@ module Models
       self.resolution_init_duration = resolution[:init_duration]
       self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
-      self.resolution_solver_parameter = resolution[:solver_parameter]
       self.resolution_solver = resolution[:solver]
       self.resolution_same_point_day = resolution[:same_point_day]
       self.resolution_allow_partial_assignment = resolution[:allow_partial_assignment]
