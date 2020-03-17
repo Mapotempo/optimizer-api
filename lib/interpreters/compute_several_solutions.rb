@@ -236,7 +236,7 @@ module Interpreters
       elsif size_rest.positive? || unique_configuration || loop_route
         verified('parallel_cheapest_insertion')
       else
-        verified('first_unbound')
+        verified('parallel_cheapest_insertion')
       end
     end
 
