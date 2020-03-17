@@ -564,6 +564,20 @@ module Wrappers
       }
     end
 
+    def build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
+      if previous_matrix_index && current_matrix_index
+        travel_distance = vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0
+        travel_time = vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0
+        travel_value = vehicle_matrix[:value] ? vehicle_matrix[:value][previous_matrix_index][current_matrix_index] : 0
+        return {
+          travel_distance: travel_distance,
+          travel_time: travel_time,
+          travel_value: travel_value
+        }
+      end
+      {}
+    end
+
     def parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
       if vrp.vehicles.empty? || (vrp.services.nil? || vrp.services.empty?) && (vrp.shipments.nil? || vrp.shipments.empty?)
         return empty_result(vrp)
@@ -638,6 +652,8 @@ module Wrappers
                   }.delete_if{ |_k, v| !v }
                 end
               elsif activity['type'] == 'end'
+                current_matrix_index = vehicle.end_point&.matrix_index
+                route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                 route_end_time = earliest_start
                 if vehicle.end_point
                   current_activity = {
@@ -653,7 +669,7 @@ module Wrappers
                         }
                       }
                     }
-                  }.delete_if{ |_k, v| !v }
+                  }.merge(route_data).delete_if{ |_k, v| !v }
                 end
               elsif activity['type'] == 'service'
                 collected_indices << current_index
@@ -661,22 +677,15 @@ module Wrappers
                   service = vrp.services[current_index]
                   point = service.activity&.point || !service.activities.empty? && service.activities[activity['alternative']].point
                   current_matrix_index = point.matrix_index
-                  # puts previous_matrix_index.to_s + ' ' + current_matrix_index.to_s + ' = ' + vehicle_matrix[:time][previous_matrix_index][current_matrix_index].to_s
-                  travel_time = (previous_matrix_index && current_matrix_index && vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0)
-                  travel_value = (previous_matrix_index && current_matrix_index && vehicle_matrix[:value] ? vehicle_matrix[:value][previous_matrix_index][current_matrix_index] : 0)
-                  travel_distance = (previous_matrix_index && current_matrix_index && vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0)
-                  # puts 'start ' + activity['start_time'].to_s
+                  route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                   current_activity = {
                     service_id: service.id,
                     point_id: point ? point.id : nil,
-                    travel_time: travel_time,
-                    travel_value: travel_value,
-                    travel_distance: travel_distance,
                     begin_time: earliest_start,
                     departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity['alternative']][:duration].to_i),
                     detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
                     alternative: service.activities ? activity['alternative'] : nil
-                  }.delete_if{ |_k, v| !v }
+                  }.merge(route_data).delete_if{ |_k, v| !v }
                 else
                   shipment_index = ((current_index - vrp.services.size) / 2).to_i
                   shipment_activity = (current_index - vrp.services.size) % 2
@@ -684,20 +693,15 @@ module Wrappers
                   point = shipment_activity.zero? ? shipment.pickup.point : shipment.delivery.point # TODO: consider alternatives
                   current_matrix_index = point.matrix_index
                   earliest_start = activity['start_time'] || 0
-                  travel_time = (previous_matrix_index && current_matrix_index && vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0)
-                  travel_value = (previous_matrix_index && current_matrix_index && vehicle_matrix[:value] ? vehicle_matrix[:value][previous_matrix_index][current_matrix_index] : 0)
-                  travel_distance = (previous_matrix_index && current_matrix_index && vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0)
+                  route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                   current_activity = {
                     pickup_shipment_id: shipment_activity.zero? && shipment.id,
                     delivery_shipment_id: shipment_activity == 1 && shipment.id,
                     point_id: point.id,
-                    travel_time: travel_time,
-                    travel_value: travel_value,
-                    travel_distance: travel_distance,
                     begin_time: earliest_start,
                     departure_time: earliest_start + (shipment_activity.zero? ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i),
                     detail: build_detail(shipment, shipment_activity.zero? ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle, shipment_activity.zero? ? nil : true)
-                  }.delete_if{ |_k, v| !v }
+                  }.merge(route_data).delete_if{ |_k, v| !v }
                   earliest_start += shipment_activity.zero? ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i
                 end
                 previous_matrix_index = current_matrix_index
