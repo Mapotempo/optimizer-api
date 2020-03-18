@@ -146,15 +146,31 @@ module Models
     def self.remove_unecessary_units(hash)
       return hash if !hash[:units] || !hash[:vehicles] || (!hash[:services] && !hash[:shipments])
 
-      vehicle_units = hash[:vehicles].collect{ |v| (v[:capacities] || []).collect{ |capacity| capacity[:unit_id] } }.flatten.uniq
-      services_units = hash[:services] ? hash[:services].collect{ |s| (s[:quantities] || []).collect{ |quantity| quantity[:unit_id] } }.flatten.uniq : []
-      shipments_units = hash[:shipments] ? hash[:shipments].collect{ |s| (s[:quantities] || []).collect{ |quantity| quantity[:unit_id] } }.flatten.uniq : []
-      needed_units = vehicle_units & (services_units + shipments_units).uniq
+      vehicle_capacities = hash[:vehicles]&.map{ |v| v[:capacities] || [] }&.flatten&.uniq
+      service_quantities = hash[:services]&.map{ |s| s[:quantities] || [] }&.flatten&.uniq
+      shipment_quantities = hash[:shipments]&.map{ |s| s[:quantities] || [] }&.flatten&.uniq
 
-      hash[:units].delete_if{ |u| !needed_units.include? u[:id] }
-      hash[:vehicles].collect{ |v| (v[:capacities] || []).delete_if{ |capacity| !needed_units.include? capacity[:unit_id] } }
-      hash[:services]&.collect{ |v| (v[:quantities] || []).delete_if{ |quantity| !needed_units.include? quantity[:unit_id] } }
-      hash[:shipments]&.collect{ |s| (s[:quantities] || []).delete_if{ |quantity| !needed_units.include? quantity[:unit_id] } }
+      capacities_units = hash[:capacities]&.map{ |c| c[:unit_id] } || vehicle_capacities&.map{ |c| c[:unit_id] }
+      quantities_units = (hash[:quantities]&.map{ |q| q[:unit_id] } || []) +
+                         (service_quantities&.map{ |q| q[:unit_id] } || []) +
+                         (shipment_quantities&.map{ |q| q[:unit_id] } || [])
+
+      needed_units = capacities_units & quantities_units.uniq
+      hash[:units].delete_if{ |u| needed_units.exclude? u[:id] }
+
+      rejected_capacities = hash[:capacities]&.select{ |capacity| needed_units.exclude? capacity[:unit_id] }&.map{ |capacity| capacity[:id] } || []
+      rejected_quantities = hash[:quantities]&.select{ |quantity| needed_units.exclude? quantity[:unit_id] }&.map{ |quantity| quantity[:id] } || []
+
+      hash[:vehicles]&.map{ |v| rejected_capacities.each { |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
+      hash[:services]&.map{ |s| rejected_quantities.each { |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
+      hash[:shipments]&.map{ |s| rejected_quantities.each { |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
+
+      hash[:capacities]&.delete_if{ |capacity| rejected_capacities.include? capacity[:id] }
+      hash[:quantities]&.delete_if{ |quantity| rejected_quantities.include? quantity[:id] }
+
+      hash[:vehicles]&.map{ |v| (v[:capacities] || []).delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
+      hash[:services]&.map{ |v| (v[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
+      hash[:shipments]&.map{ |s| (s[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
     end
 
     def self.generate_schedule_indices_from_date(hash)
