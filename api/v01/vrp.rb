@@ -15,11 +15,12 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'grape'
-require 'grape-swagger'
+require 'csv'
 require 'date'
 require 'digest/md5'
-require 'csv'
+require 'grape'
+require 'grape-swagger'
+require 'charlock_holmes'
 
 require './api/v01/api_base'
 require './api/v01/entities/status'
@@ -29,8 +30,17 @@ module Api
   module V01
     module CSVParser
       def self.call(object, _env)
-        # TODO: use encoding from Content-Type or detect it.
-        CSV.parse(object.force_encoding('utf-8'), headers: true).collect{ |row|
+        unless object.valid_encoding?
+          detection = CharlockHolmes::EncodingDetector.detect(object)
+          return false if !detection[:encoding]
+
+          object = CharlockHolmes::Converter.convert(object, detection[:encoding], 'UTF-8')
+        end
+
+        line = object.lines.first
+        split_comma, split_semicolon, split_tab = line.split(','), line.split(';'), line.split("\t")
+        _split, separator = [[split_comma, ',', split_comma.size], [split_semicolon, ';', split_semicolon.size], [split_tab, "\t", split_tab.size]].max_by{ |a| a[2] }
+        CSV.parse(object.force_encoding('utf-8'), col_sep: separator, headers: true).collect{ |row|
           r = row.to_h
 
           r.keys.each{ |key|
