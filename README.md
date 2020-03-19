@@ -21,6 +21,11 @@ sudo apt install redis-server
 sudo apt install libgeos-dev
 ```
 
+* libicu-dev
+```
+sudo apt install libicu-dev
+```
+
 #### On Mac OS
 
 ```

@@ -21,7 +21,7 @@ FROM ruby:2.3-slim as rake
 ENV LANG C.UTF-8
 
 RUN apt-get update > /dev/null && \
-  apt-get install -y git build-essential libgeos-dev zlib1g-dev zlib1g nano > /dev/null
+  apt-get install -y git build-essential libgeos-dev libicu-dev zlib1g-dev zlib1g nano > /dev/null
 
 ADD . /srv/app
 RUN cd /srv/app && \
@@ -44,6 +44,8 @@ COPY --from=vroom /usr/lib/x86_64-linux-gnu/libboost* /usr/lib/x86_64-linux-gnu/
 COPY --from=rake /srv/app /srv/app
 COPY --from=rake /usr/local/ /usr/local/
 COPY --from=rake /usr/lib/x86_64-linux-gnu/libgeos* /usr/lib/x86_64-linux-gnu/
+COPY --from=rake /usr/lib/x86_64-linux-gnu/icu* /usr/lib/x86_64-linux-gnu/
+COPY --from=rake /usr/lib/x86_64-linux-gnu/libicu* /usr/lib/x86_64-linux-gnu/
 
 WORKDIR /srv/app
 
