@@ -177,4 +177,36 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('csv') }, 'Geojson file not found')
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('json') }, 'Csv file not found')
   end
+
+  def test_provided_language
+    vrp = VRP.basic
+    vrp[:configuration][:restitution] = { csv: true }
+
+    OptimizerWrapper.stub(
+      :build_csv,
+      lambda { |_solutions|
+        assert_equal :en, I18n.locale
+      }
+    ) do
+      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    end
+
+    OptimizerWrapper.stub(
+      :build_csv,
+      lambda { |_solutions|
+        assert_equal :fr, I18n.locale
+      }
+    ) do
+      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => 'fr'
+    end
+
+    OptimizerWrapper.stub(
+      :build_csv,
+      lambda { |_solutions|
+        assert_equal :en, I18n.locale
+      }
+    ) do
+      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => 'bad_value'
+    end
+  end
 end
