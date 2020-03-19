@@ -17,16 +17,26 @@
 #
 require 'grape'
 require 'grape-swagger'
+require 'http_accept_language'
 
 require './api/v01/vrp'
 
 module Api
   module V01
     class Api < Grape::API
+      use HttpAcceptLanguage::Middleware
+
+      helpers do
+        def set_locale
+          I18n.locale = env.http_accept_language.compatible_language_from(I18n.available_locales.map(&:to_s)) || I18n.default_locale
+        end
+      end
+
       before do
         if !params || !::OptimizerWrapper::access(true).keys.include?(params[:api_key])
           error!('401 Unauthorized', 401)
         end
+        set_locale
       end
 
       rescue_from StandardError, backtrace: ENV['APP_ENV'] != 'production' do |e|

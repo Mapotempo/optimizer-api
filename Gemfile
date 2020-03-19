@@ -17,6 +17,7 @@ gem 'grape_logging'
 
 gem 'active_hash', github: 'Mapotempo/active_hash'
 gem 'activemodel'
+gem 'http_accept_language'
 gem 'i18n'
 gem 'nokogiri'
 gem 'rack-contrib'
