@@ -461,10 +461,13 @@ module Heuristics
       [allowed_vehicules, allowed_days]
     end
 
-    def compute_insertion_costs(vehicle, day, route_data)
+    def compute_insertion_costs(route_data, set = nil)
+      vehicle = route_data[:vehicle_id].split('_')[0..-2].join('_')
+      day = route_data[:vehicle_id].split('_').last.to_i
+
       ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
       insertion_costs = []
-      set = @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:nb_visits] == 1 } : @to_plan_service_ids
+      set ||= @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:nb_visits] == 1 } : @to_plan_service_ids
       # we will assign services with one vehicle in relaxed_same_point_day part
       set.select{ |service|
         # quantities are respected
@@ -664,7 +667,7 @@ module Heuristics
       service_to_insert = true
 
       while service_to_insert
-        insertion_costs = compute_insertion_costs(vehicle, day, route_data)
+        insertion_costs = compute_insertion_costs(route_data)
         if !insertion_costs.empty?
           # there are services we can add
           best_index = select_point(insertion_costs)
@@ -715,8 +718,8 @@ module Heuristics
       end
     end
 
-    def try_to_add_new_point(vehicle, day, route_data)
-      insertion_costs = compute_insertion_costs(vehicle, day, route_data)
+    def try_to_add_new_point(route_data)
+      insertion_costs = compute_insertion_costs(route_data)
 
       return nil if insertion_costs.empty?
 
@@ -745,7 +748,7 @@ module Heuristics
             route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] }
           }[0]
 
-          inserted_id = try_to_add_new_point(current_vehicle, best_day, @candidate_routes[current_vehicle][best_day])
+          inserted_id = try_to_add_new_point(@candidate_routes[current_vehicle][best_day])
 
           if inserted_id
             adjust_candidate_routes(current_vehicle, best_day)
