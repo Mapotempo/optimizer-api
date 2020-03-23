@@ -28,7 +28,7 @@ module SchedulingEndPhase
     until costs.empty?
       # select best visit to insert
       max_priority = costs.keys.collect{ |id| @services_data[id][:priority] + 1 }.max
-      best_cost = costs.min_by{ |id, info| ((@services_data[id][:priority].to_f + 1) / max_priority) * (info[:cost][:additional_route_time] / @services_data[id][:nb_visits]**2) }
+      best_cost = costs.min_by{ |id, info| ((@services_data[id][:priority].to_f + 1) / max_priority) * (info[:cost][:additional_route_time] / @services_data[id][:visits_number]**2) }
 
       id = best_cost[0]
       day = best_cost[1][:day]

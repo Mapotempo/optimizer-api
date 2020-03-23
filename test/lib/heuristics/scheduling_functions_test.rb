@@ -172,7 +172,7 @@ class HeuristicTest < Minitest::Test
       candidate_services_ids = s.instance_variable_get(:@candidate_services_ids)
       assert_equal vrp.visits, candidate_routes.collect{ |_v, d| d.collect{ |_day, route| route[:current_route].size } }.flatten.sum +
                                uninserted.size +
-                               candidate_services_ids.collect{ |id| s.instance_variable_get(:@services_data)[id][:nb_visits] }.sum
+                               candidate_services_ids.collect{ |id| s.instance_variable_get(:@services_data)[id][:visits_number] }.sum
       assert starting_with >= s.instance_variable_get(:@uninserted).size
     end
 
