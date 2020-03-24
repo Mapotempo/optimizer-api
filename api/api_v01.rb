@@ -49,7 +49,7 @@ module Api
         'application/json; charset=UTF-8',
         'application/xml',
       ],
-      doc_version: '0.1.0',
+      doc_version: '0.1.5',
       info: {
         title: ::OptimizerWrapper.config[:product_title],
         contact_email: ::OptimizerWrapper.config[:product_contact_email],
