@@ -747,7 +747,7 @@ module Wrappers
         add_unassigned(unfeasible, vrp, service, 'Service cannot be reached within its timewindows') if service_unreachable_within_its_tw
       }
 
-      log "Following services marked as infeasible:\n#{unfeasible.group_by{ |u| u[:reason] }.collect{ |g, set| "#{set.collect{ |s| s[:service_id] }.join(', ')}\n with reason '#{g}'" }.join("\n")}", level: :debug unless unfeasible.empty?
+      log "Following services marked as infeasible:\n#{unfeasible.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug unless unfeasible.empty?
 
       unfeasible
     end
