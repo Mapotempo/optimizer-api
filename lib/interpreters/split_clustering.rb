@@ -549,7 +549,7 @@ module Interpreters
         vehicle_units = vrp.vehicles.collect{ |v| v.capacities.to_a.collect{ |capacity| capacity.unit.id } }.flatten.uniq
         depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
 
-        decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance].empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
+        decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
                     {
                       digits: 4, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
                       steps: 5   # digits.steps 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
@@ -627,7 +627,7 @@ module Interpreters
 
         log 'There are services in clustering which cannot be served by any vehicles.', level: :warn if infeasible_data_items
 
-        zip_dataitems(vrp, data_items, linked_objects) if !vrp.matrices.empty? && !vrp.matrices[0][:distance].empty?
+        zip_dataitems(vrp, data_items, linked_objects) if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty?
 
         [data_items, cumulated_metrics, linked_objects]
       end
