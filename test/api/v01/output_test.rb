@@ -72,12 +72,13 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
   end
 
   def test_skill_when_partitions
-    vrp = VRP.basic
+    vrp = VRP.lat_lon
+    vrp[:vehicles] << vrp[:vehicles][0].dup
     vrp[:configuration][:restitution] = { csv: true }
     vrp[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
-      metric: 'duration', # generates warning in output
-      entity: 'vehicle' # generates warning in output
+      metric: 'duration',
+      entity: 'vehicle'
     }]
 
     csv_data = submit_csv api_key: 'demo', vrp: vrp
