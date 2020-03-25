@@ -27,4 +27,4 @@ before_install:
 install:
 
 script:
-  - travis_wait 60 bash ci-utils/travis.sh ${TEST_SUITE}
+  - travis_wait 50 bash ci-utils/travis.sh ${TEST_SUITE}
