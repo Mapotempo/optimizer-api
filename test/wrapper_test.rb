@@ -2515,15 +2515,15 @@ class WrapperTest < Minitest::Test
           value: 3
         }]
       }],
-      schedule: {
-        range_indices: {
-          start: 0,
-          end: 2
-        }
-      },
       configuration: {
         resolution: {
           duration: 10,
+        },
+        schedule: {
+          range_indices: {
+            start: 0,
+            end: 2
+          }
         }
       }
     }
@@ -2586,15 +2586,15 @@ class WrapperTest < Minitest::Test
           }]
         }
       }],
-      schedule: {
-        range_indices: {
-          start: 0,
-          end: 2
-        }
-      },
       configuration: {
         resolution: {
           duration: 10,
+        },
+        schedule: {
+          range_indices: {
+            start: 0,
+            end: 2
+          }
         }
       }
     }
