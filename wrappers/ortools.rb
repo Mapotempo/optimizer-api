@@ -640,6 +640,7 @@ module Wrappers
                   current_activity = {
                     point_id: vehicle.start_point.id,
                     begin_time: earliest_start,
+                    current_distance: activity['current_distance'],
                     detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
                   }.delete_if{ |_k, v| !v }
                 end
@@ -650,6 +651,7 @@ module Wrappers
                 if vehicle.end_point
                   current_activity = {
                     point_id: vehicle.end_point.id,
+                    current_distance: activity['current_distance'],
                     begin_time: earliest_start,
                     detail: {
                       lat: vehicle.end_point.location&.lat,
@@ -673,6 +675,7 @@ module Wrappers
                   current_activity = {
                     service_id: service.id,
                     point_id: point ? point.id : nil,
+                    current_distance: activity['current_distance'],
                     begin_time: earliest_start,
                     departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity['alternative']][:duration].to_i),
                     detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
