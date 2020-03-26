@@ -326,7 +326,7 @@ module Wrappers
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
-      vrp.preprocessing_first_solution_strategy.nil? || !vrp.resolution_evaluate_only && vrp.resolution_several_solutions.nil? && !vrp.resolution_batch_heuristic
+      vrp.preprocessing_first_solution_strategy.nil? || (!vrp.resolution_evaluate_only && !vrp.resolution_batch_heuristic)
     end
 
     def assert_first_solution_strategy_is_valid(vrp)
