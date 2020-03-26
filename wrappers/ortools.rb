@@ -834,8 +834,9 @@ module Wrappers
                                parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
                              end
           block&.call(self, iterations, nil, nil, cost, time, @previous_result) # if @previous_result=nil, it will not override the existing solution
-        rescue StandardError => e
-          log "Error: #{e.message} in run_ortools during parse_output", level: :error
+        rescue Google::Protobuf::ParseError => e
+          # log and ignore protobuf parsing errors
+          log "#{e.class}: #{e.message} (in run_ortools during parse_output)", level: :error
         end
       }
 
