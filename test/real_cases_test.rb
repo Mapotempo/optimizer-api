@@ -220,10 +220,12 @@ class RealCasesTest < Minitest::Test
       assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service35' })
       assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service83' })
       assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service84' })
-      assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'service88' || unassigned[:service_id] == 'service89' })
       assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1169' })
       assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183' })
-      assert_equal check_vrp_services_size - 6, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+
+      assert_operator(check_vrp_services_size - 6, :<=, result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
+
+      assert_equal check_vrp_services_size, result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } } + result[:unassigned].size
 
       # Check routes
       assert_equal 29, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
