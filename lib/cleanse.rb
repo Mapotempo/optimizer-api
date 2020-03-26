@@ -81,7 +81,8 @@ module Cleanse
 
       route[:activities].delete_if{ |activity|
         current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
-        current_point = current_service.activity.point if current_service
+
+        current_point = current_service.activity&.point || current_service.activities.find{ |a| a.point_id == activity[:point_id] }.point if current_service
 
         if previous && current_service && same_position(vrp, previous_point, current_point) && same_empty_units(capacities_units, previous, current_service) &&
            !same_fill_units(capacities_units, previous, current_service)
