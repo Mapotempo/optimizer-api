@@ -43,7 +43,7 @@ module OptimizerWrapper
       Resque::Plugins::Status::Hash.set(self.uuid, self.instance_values) # Re-set the job
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
-      result = OptimizerWrapper.define_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+      result = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
           tick # call tick in case job is killed
           next # if not go back to optimization
@@ -65,7 +65,7 @@ module OptimizerWrapper
       # Add values related to the current solve status
       p = Result.get(self.uuid) || {}
       p['csv'] = true if ask_restitution_csv
-      p['result'] = [result].flatten.compact # TODO: define process must only return an array (Need tests edit)
+      p['result'] = result
       if services_vrps.size == 1 && p && !p['result'].empty? && p['graph'] && !p['graph'].empty?
         p['result'].first['iterations'] = p['graph'].last['iteration']
         p['result'].first['elapsed'] = p['graph'].last['time']
@@ -76,7 +76,7 @@ module OptimizerWrapper
       tick('Job Killed')
       nil
     rescue StandardError => e
-      log "#{e}\n\t\t#{e.backtrace.join("\n\t\t")}", level: :fatal
+      log "\n\n#{e}\n\t#{e.backtrace.join("\n\t")}", level: :fatal
       raise
     end
 

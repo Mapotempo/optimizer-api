@@ -72,7 +72,7 @@ class DichotomiousTest < Minitest::Test
       # That is, one needs to manually set max_split_size to a higher value to use dicho.
       # If the dicho limits are changed the test needs to be corrected with new values.
 
-      limits = { service: 500, vehicle: 3 } # Do not replace with class values, correct manually.
+      limits = { service: 500, vehicle: 10 } # Do not replace with class values, correct manually.
 
       limit_vrp = VRP.toy
 

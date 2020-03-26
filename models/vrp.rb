@@ -43,7 +43,7 @@ module Models
     # TODO: Wait for the dev to finish to expose the dicho parameters
     field :resolution_dicho_level_coeff, default: 1.1 # This variable is calculated inside dicho by default (TODO: check if it is really necessary)
     field :resolution_dicho_algorithm_service_limit, default: 500
-    field :resolution_dicho_algorithm_vehicle_limit, default: 3
+    field :resolution_dicho_algorithm_vehicle_limit, default: 10
     field :resolution_dicho_division_service_limit, default: 100 # This variable needs to corrected using the average number of services per vehicle.
     field :resolution_dicho_division_vehicle_limit, default: 3
     field :resolution_dicho_exclusion_scaling_angle, default: 38
@@ -67,7 +67,7 @@ module Models
     field :resolution_evaluate_only, default: false
     field :resolution_split_number, default: 1
     field :resolution_total_split_number, default: 2
-    field :resolution_several_solutions, default: nil
+    field :resolution_several_solutions, default: 1
     field :resolution_variation_ratio, default: nil
     field :resolution_batch_heuristic, default: false
     field :resolution_repetition, default: nil
@@ -314,6 +314,10 @@ module Models
 
     def visits
       Helper.visits(self.services)
+    end
+
+    def activity_count
+      visits + self.shipments.size * 2
     end
 
     def total_work_times

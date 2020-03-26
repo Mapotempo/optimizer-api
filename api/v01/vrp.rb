@@ -391,7 +391,7 @@ module Api
         this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
-        this.optional(:several_solutions, type: Integer, desc: 'Return several solution computed with different matrices')
+        this.optional(:several_solutions, type: Integer, allow_blank: false, default: 1, desc: 'Return several solution computed with different matrices')
         this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration

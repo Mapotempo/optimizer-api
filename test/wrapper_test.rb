@@ -643,7 +643,7 @@ class WrapperTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     [:ortools, ENV['SKIP_JSPRIT'] ? nil : :jsprit, :vroom].compact.each{ |o|
-      result = OptimizerWrapper.solve([service: o, vrp: vrp])
+      result = OptimizerWrapper.solve(service: o, vrp: vrp)
       assert_equal size - 1 + 1, result[:routes][0][:activities].size, "[#{o}] "
       services = result[:routes][0][:activities].collect{ |a| a[:service_id] }
       1.upto(size - 1).each{ |i|
@@ -729,7 +729,7 @@ class WrapperTest < Minitest::Test
     }
     original_stdout = $stdout
     $stdout = StringIO.new('', 'w')
-    result = OptimizerWrapper.solve([service: :ortools, vrp: TestHelper.create(problem)])
+    result = OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem))
     traces = $stdout.string
     $stdout = original_stdout
     puts traces
@@ -1466,7 +1466,7 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    result = OptimizerWrapper.solve([service: :ortools, vrp: TestHelper.create(problem)])
+    result = OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem))
     assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
     refute result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
 
@@ -1474,7 +1474,7 @@ class WrapperTest < Minitest::Test
     assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
 
     if !ENV['SKIP_JSPRIT']
-      result = OptimizerWrapper.solve([service: :jsprit, vrp: TestHelper.create(problem)])
+      result = OptimizerWrapper.solve(service: :jsprit, vrp: TestHelper.create(problem))
       assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
       refute result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
 
@@ -2789,7 +2789,7 @@ class WrapperTest < Minitest::Test
     vrp = VRP.basic
     vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
     vrp[:vehicles].first[:end_point_id] = vrp[:vehicles].first[:start_point_id]
-    assert OptimizerWrapper.solve([service: :vroom, vrp: TestHelper.create(vrp)])
+    assert OptimizerWrapper.solve(service: :vroom, vrp: TestHelper.create(vrp))
   end
 
   def test_eliminate_even_if_no_start_or_end
@@ -2935,7 +2935,7 @@ class WrapperTest < Minitest::Test
 
   def test_skills_independent
     vrp = TestHelper.create(VRP.independent_skills)
-    OptimizerWrapper.stub(:define_process, lambda { |services_vrps, _job_id|
+    OptimizerWrapper.stub(:define_main_process, lambda { |services_vrps, _job_id|
       assert_equal 3, services_vrps.size
       services_vrps.each{ |service_vrp|
         assert_equal 2, service_vrp[:vrp].services.size

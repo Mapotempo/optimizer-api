@@ -66,7 +66,7 @@ module Interpreters
       }
       service_vrp[:vrp][:name] << '_' << i.to_s if service_vrp[:vrp][:name]
       service_vrp[:vrp][:restitution_allow_empty_result] = true
-      service_vrp[:vrp][:resolution_several_solutions] = nil
+      service_vrp[:vrp].resolution_several_solutions = 1
 
       service_vrp
     end
@@ -99,27 +99,29 @@ module Interpreters
       end
     end
 
-    def self.expand(service_vrps)
-      if service_vrps.any?{ |service| service[:vrp].resolution_repetition > 1 }
-        raise OptimizerWrapper::DiscordantProblemError, 'Can only repeat one single vrp.' if service_vrps.size > 1
+    def self.expand_several_solutions(service_vrps)
+      several_solutions(service_vrps).flat_map{ |each_service_vrps|
+        if service_vrps[0][:vrp].resolution_batch_heuristic
+          batch_heuristic(each_service_vrps)
+        else
+          [each_service_vrps]
+        end
+      }
+    end
 
-        duplicated_service_vrps = (0..service_vrps.first[:vrp][:resolution_repetition] - 1).collect{ |_i|
-          sub_vrp = Marshal.load(Marshal.dump(service_vrps.first))
-          sub_vrp[:vrp].resolution_repetition = 1
-          sub_vrp[:vrp].preprocessing_partitions.each{ |partition| partition[:restarts] = [partition[:restarts], 5].compact.min } # change restarts ?
-          sub_vrp
-        }.flatten
+    def self.expand_repeat(service_vrp)
+      return [service_vrp] if service_vrp[:vrp].resolution_repetition < 1
 
-        [[], duplicated_service_vrps]
-      else
-        several_service_vrps = several_solutions(service_vrps)
-        reduced_service_vrps = service_vrps - service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }.compact
-        batched_service_vrps = reduced_service_vrps.collect{ |service_vrp| batch_heuristic(service_vrp) if service_vrp[:vrp][:resolution_batch_heuristic] }.compact
-        untouched_service_vrps = service_vrps -
-                                 service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] } -
-                                 service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_batch_heuristic] }
-        [untouched_service_vrps, (several_service_vrps + batched_service_vrps) || []]
-      end
+      repeated_service_vrp = [service_vrp]
+
+      (service_vrp[:vrp].resolution_repetition - 1).times{
+        sub_vrp = Marshal.load(Marshal.dump(service_vrp))
+        sub_vrp[:vrp].resolution_repetition = 1
+        sub_vrp[:vrp].preprocessing_partitions.each{ |partition| partition[:restarts] = [partition[:restarts], 5].compact.min } # change restarts ?
+        repeated_service_vrp << sub_vrp
+      }
+
+      repeated_service_vrp
     end
 
     def self.custom_heuristics(service, vrp)
@@ -133,39 +135,47 @@ module Interpreters
       end
     end
 
-    def self.batch_heuristic(service_vrp, custom_heuristics = nil)
+    def self.batch_heuristic(service_vrps, custom_heuristics = nil)
       (custom_heuristics || OptimizerWrapper::HEURISTICS).collect{ |heuristic|
-        edit_service_vrp(Marshal.load(Marshal.dump(service_vrp)), heuristic)
+        service_vrps.collect{ |service_vrp|
+          edit_service_vrp(Marshal.load(Marshal.dump(service_vrp)), heuristic)
+        }
       }
     end
 
     def self.several_solutions(service_vrps)
-      service_vrps.select{ |service_vrp| service_vrp[:vrp][:resolution_several_solutions] }.collect{ |service_vrp|
-        (0..service_vrp[:vrp][:resolution_several_solutions] - 1).collect{ |i|
+      several_service_vrps = [service_vrps] # First one is the original vrp
+
+      (service_vrps[0][:vrp].resolution_several_solutions - 1).times{ |i|
+        several_service_vrps << service_vrps.collect{ |service_vrp|
           variate_service_vrp(Marshal.load(Marshal.dump(service_vrp)), i)
         }
-      }.flatten.compact
+      }
+
+      several_service_vrps
     end
 
     def self.find_best_heuristic(service_vrp)
-      tic = Time.now
       vrp = service_vrp[:vrp]
       strategies = vrp.preprocessing_first_solution_strategy
       custom_heuristics = collect_heuristics(vrp, strategies)
       if custom_heuristics.size > 1
-        batched_service_vrps = batch_heuristic(service_vrp, custom_heuristics)
+        log '---> find_best_heuristic'
+        tic = Time.now
+        total_time_allocated_for_heuristic_selection = service_vrp[:vrp].resolution_duration.to_f * 0.30 # spend at most 30% of the total time for heuristic selection
+        batched_service_vrps = batch_heuristic([service_vrp], custom_heuristics).flatten(1)
         times = []
-        total_time_allocated_for_heuristic_selection = service_vrp[:vrp].resolution_duration.to_f * 0.30 # spend at most 30% of the time for heuristic selection
         first_results = batched_service_vrps.collect{ |s_vrp|
           s_vrp[:vrp].resolution_batch_heuristic = true
           s_vrp[:vrp].resolution_initial_time_out = nil
           s_vrp[:vrp].resolution_minimum_duration = nil
           s_vrp[:vrp].resolution_duration = [(total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i, 300000].min # do not spend more than 5 min for a single heuristic
-          heuristic_solution = OptimizerWrapper.solve([s_vrp])
+          heuristic_solution = OptimizerWrapper.solve(s_vrp)
           times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
         }
-        raise RuntimeError, 'No solution found' if first_results.all?(&:nil?)
+
+        raise RuntimeError, 'No solution found during heuristic selection' if first_results.all?(&:nil?)
 
         synthesis = []
         first_results.each_with_index{ |result, i|
@@ -193,10 +203,11 @@ module Interpreters
         vrp.preprocessing_first_solution_strategy = [best_heuristic]
         vrp.preprocessing_heuristic_synthesis = synthesis
         vrp.resolution_duration = vrp.resolution_duration ? (vrp.resolution_duration - times.sum).floor : nil
+        log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec selected heuristic: #{best_heuristic}"
       else
         vrp.preprocessing_first_solution_strategy = custom_heuristics
       end
-      log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec"
+
       service_vrp
     end
 
@@ -244,6 +255,7 @@ module Interpreters
       if OptimizerWrapper::HEURISTICS.include?(heuristic)
         heuristic
       else
+        log "Unknown heuristic #{heuristic}", level: :fatal
         raise StandardError, 'Unconsistent first solution strategy used internally'
       end
     end

@@ -28,51 +28,72 @@ require './lib/output_helper.rb'
 module Interpreters
   class SplitClustering
     # TODO: private method
-    def self.split_clusters(services_vrps, job = nil, &block)
-      split_results = []
-      all_service_vrps = services_vrps.collect{ |service_vrp|
-        vrp = service_vrp[:vrp]
-        empties_or_fills = (vrp.services.select{ |service| service.quantities.any?(&:fill) } +
-                            vrp.services.select{ |service| service.quantities.any?(&:empty) }).uniq
-        depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
-        ship_candidates = vrp.shipments.select{ |shipment|
-          depot_ids.include?(shipment.pickup.point_id) || depot_ids.include?(shipment.delivery.point_id)
-        }
-        if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
-          generate_split_vrps(service_vrp, job, block)
-        elsif !vrp.schedule_range_indices &&
-              vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 &&
-              vrp.shipments.size == ship_candidates.size &&
-              (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
-          split_results << split_solve(service_vrp, &block)
-          nil
-        else
-          {
-            service: service_vrp[:service],
-            vrp: vrp,
-            dicho_level: (service_vrp[:dicho_level] || 0)
+    def self.split_clusters(service_vrp, job = nil, &block)
+      vrp = service_vrp[:vrp]
+      empties_or_fills = (vrp.services.select{ |service| service.quantities.any?(&:fill) } +
+                          vrp.services.select{ |service| service.quantities.any?(&:empty) }).uniq
+      depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
+      ship_candidates = vrp.shipments.select{ |shipment|
+        depot_ids.include?(shipment.pickup.point_id) || depot_ids.include?(shipment.delivery.point_id)
+      }
+
+      if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
+        splited_service_vrps = generate_split_vrps(service_vrp, job, block)
+
+        OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.preprocessing_partitions.size == 2, job) if OptimizerWrapper.config[:debug][:output_clusters] && service_vrp.size < splited_service_vrps.size
+
+        split_results = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
+          cluster_ref = i + 1
+          result = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
+            msg = "process #{cluster_ref}/#{splited_service_vrps.size} - #{message}" unless message.nil?
+            block&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
-        end
-      }.flatten.compact
-      two_stages = services_vrps[0][:vrp].preprocessing_partitions.size == 2
 
-      OutputHelper::Clustering.generate_files(all_service_vrps, two_stages, job) if OptimizerWrapper.config[:debug][:output_clusters] && services_vrps.size < all_service_vrps.size
+          # add associated cluster as skill
+          [result].each{ |solution|
+            next if solution.nil? || solution.empty?
 
-      [all_service_vrps, split_results]
+            solution[:routes].each{ |route|
+              route[:activities].each do |stop|
+                next if stop[:service_id].nil?
+
+                stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_ref}"]
+              end
+            }
+            solution[:unassigned].each do |stop|
+              next if stop[:service_id].nil?
+
+              stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_ref}"]
+            end
+          }
+        }
+
+        return Helper.merge_results(split_results)
+      elsif !vrp.schedule_range_indices &&
+            vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 &&
+            vrp.shipments.size == ship_candidates.size &&
+            (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
+        return split_solve(service_vrp, &block)
+      else
+        service_vrp[:dicho_level] ||= 0
+        return nil
+      end
     end
 
-    def self.generate_split_vrps(service_vrp, _job = nil, block)
-      log '--> generate_split_vrps', level: :debug
+    def self.generate_split_vrps(service_vrp, _job = nil, block = nil)
+      log '--> generate_split_vrps (clustering by partition)'
       vrp = service_vrp[:vrp]
       if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
         current_service_vrps = [service_vrp]
-        vrp.preprocessing_partitions.each_with_index{ |partition, partition_index|
+        partitions = vrp.preprocessing_partitions
+        vrp.preprocessing_partitions = []
+        partitions.each_with_index{ |partition, partition_index|
           cut_symbol = (partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] }) ? partition[:metric] : :duration
 
           case partition[:method]
           when 'balanced_kmeans'
             generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
-              block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{vrp.preprocessing_partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
+              block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
 
               # TODO : global variable to know if work_day entity
               s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == 'work_day'
@@ -108,6 +129,7 @@ module Interpreters
     end
 
     def self.split_solve(service_vrp, job = nil, &block)
+      log '--> split_solve (clustering by max_split)'
       vrp = service_vrp[:vrp]
       available_vehicle_ids = vrp.vehicles.collect(&:id)
       transfer_unused_vehicle_limit = 0
@@ -138,7 +160,7 @@ module Interpreters
         sub_vrp.points += empties_or_fills.map{ |empti_of_fill| vrp.points.find{ |point| empti_of_fill.activity.point.id == point.id } }
         sub_vrp.vehicles.select!{ |vehicle| available_vehicle_ids.include?(vehicle.id) }
 
-        sub_result = OptimizerWrapper.define_process([sub_problem], job, &block)
+        sub_result = OptimizerWrapper.define_process(sub_problem, job, &block)
 
         remove_poor_routes(sub_vrp, sub_result)
 
@@ -157,6 +179,8 @@ module Interpreters
         result = Helper.merge_results([result, sub_result])
       }
       vrp.services += empties_or_fills
+
+      log "vrp (size: #{vrp.services.size}) uses #{result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{result[:unassigned].size}"
 
       result
     end
@@ -184,7 +208,7 @@ module Interpreters
         vehicle_worktime = vehicle.duration || vehicle.timewindow&.start && vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start) # can be nil!
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
 
-        log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime} percent: #{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :debug
+        log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime} percent: #{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :info
 
         time_flag = vehicle_worktime && route_duration < limit * vehicle_worktime
 
@@ -347,7 +371,7 @@ module Interpreters
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
-      if vrp.services.all?{ |service| service[:activity] } && nb_clusters > 1
+      if vrp.services.all?{ |service| service[:activity] && service[:activity][:point][:location] } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
@@ -391,7 +415,8 @@ module Interpreters
           build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
-        log 'Split not available when services have no activity or cluster size is less than 2', level: :error
+        log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
+
         # TODO : remove marshal dump
         # ensure test_instance_800unaffected_clustered and test_instance_800unaffected_clustered_same_point work
         [Marshal.load(Marshal.dump(service_vrp))]

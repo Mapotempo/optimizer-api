@@ -43,7 +43,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
   def test_dont_ignore_legitimate_skills
     OptimizerWrapper.stub(
-      :define_process,
+      :define_main_process,
       lambda { |services_vrps, _job|
         assert_equal [['skill']], services_vrps[0][:vrp][:vehicles][0][:skills]
         assert_equal ['skill'], services_vrps[0][:vrp][:services][0][:skills]

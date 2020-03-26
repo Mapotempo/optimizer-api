@@ -143,7 +143,7 @@ module Interpreters
 
       results = all_vrps.collect.with_index{ |service_vrp, indice|
         block&.call(:ortools, indice + 1, nil, "process #{indice + 1}/#{all_vrps.size} - " + 'run optimization', nil, nil, nil)
-        OptimizerWrapper.solve([service_vrp])
+        OptimizerWrapper.solve(service_vrp)
       }
 
       services_vrps = services_vrps.collect{ |service_vrp|

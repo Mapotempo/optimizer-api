@@ -62,7 +62,7 @@ module Interpreters
         elsif service_vrp[:vrp].resolution_init_duration.nil?
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exlusion_cost(service_vrp)
-          result = OptimizerWrapper.solve([service_vrp], job, block)
+          result = OptimizerWrapper.solve(service_vrp, job, block)
         else
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exlusion_cost(service_vrp)
@@ -84,7 +84,7 @@ module Interpreters
             if sub_service_vrp[:vrp].resolution_minimum_duration
               sub_service_vrp[:vrp].resolution_minimum_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             end
-            result = OptimizerWrapper.define_process([sub_service_vrp], job, &block)
+            result = OptimizerWrapper.define_process(sub_service_vrp, job, &block)
             if index.zero? && result
               transfer_unused_vehicles(result, sub_service_vrps)
               matrix_indices = sub_service_vrps[1][:vrp].points.map{ |point|
@@ -170,7 +170,7 @@ module Interpreters
       if service_vrp[:dicho_level]&.zero?
         dicho_level_coeff(service_vrp)
         service_vrp[:vrp].vehicles.each{ |vehicle|
-          vehicle[:cost_fixed] = (vehicle[:cost_fixed] && vehicle[:cost_fixed]&.positive?) ? vehicle[:cost_fixed] : 1e6
+          vehicle[:cost_fixed] = vehicle[:cost_fixed]&.positive? ? vehicle[:cost_fixed] : 1e6
           vehicle[:cost_distance_multiplier] = 0.05 if vehicle[:cost_distance_multiplier].zero?
         }
       end
@@ -239,108 +239,114 @@ module Interpreters
 
     def self.end_stage_insert_unassigned(service_vrp, result, job = nil)
       log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
-      if !result[:unassigned].empty?
-        vrp = service_vrp[:vrp]
-        log "try to insert #{result[:unassigned].size} unassigned from #{vrp.services.size} services"
-        transfer_unused_time_limit = 0
-        vrp.routes = build_initial_routes([result])
-        vrp.resolution_init_duration = nil
-        unassigned_services = vrp.services.select{ |s| result[:unassigned].map{ |a| a[:service_id] }.include?(s.id) }
-        unassigned_services_by_skills = unassigned_services.group_by(&:skills)
+      return result if result[:unassigned].empty?
 
-        leftover_vehicle_limit = vrp.resolution_vehicle_limit - result[:routes].size
+      vrp = service_vrp[:vrp]
+      log "try to insert #{result[:unassigned].size} unassigned from #{vrp.services.size} services"
+      transfer_unused_time_limit = 0
+      vrp.routes = build_initial_routes([result])
+      vrp.resolution_init_duration = nil
+      unassigned_services = vrp.services.select{ |s| result[:unassigned].map{ |a| a[:service_id] }.include?(s.id) }
+      unassigned_services_by_skills = unassigned_services.group_by(&:skills)
 
-        # TODO: sort unassigned_services with no skill / sticky at the end
-        unassigned_services_by_skills.each{ |skills, services|
-          next if result[:unassigned].empty?
+      leftover_vehicle_limit = vrp.resolution_vehicle_limit - result[:routes].size
 
-          vehicles_with_skills = skills.empty? ? vrp.vehicles : vrp.vehicles.select{ |v|
-            v.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
-          }
-          sticky_vehicle_ids = unassigned_services.flat_map(&:sticky_vehicles).compact.map(&:id)
-          # In case services has incoherent sticky and skills, sticky is the winner
-          unless sticky_vehicle_ids.empty?
-            vehicles_with_skills = vrp.vehicles.select{ |v| sticky_vehicle_ids.include?(v.id) }
-          end
+      # TODO: sort unassigned_services with no skill / sticky at the end
+      unassigned_services_by_skills[[]] = [] if unassigned_services_by_skills.empty?
 
-          # Shuffle so that existing routes will be distributed randomly
-          # Otherwise we might have a sub_vrp with 6 existing routes (no empty routes) and
-          # hundreds of services which makes it very hard to insert a point
-          # With shuffle we distribute the existing routes accross all sub-vrps we create
-          vehicles_with_skills.shuffle!
+      unassigned_services_by_skills.each{ |skills, services|
+        next if result[:unassigned].empty?
 
-          # TODO: Here we launch the optim of a single skill however, it make sense to include the vehicles without skills
-          # (especially the ones with existing routes) in the sub_vrp because that way optim can move poits between vehicles
-          # and serve an unserviced point with skills.
-
-          # TODO: We do not consider the geographic closeness/distance of routes and points.
-          # This might be the reason why sometimes we have solutions with long detours.
-          # However, it is not very easy to find a generic and effective way.
-
-          sub_results = []
-          vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
-          vehicles_with_skills.each_slice(vehicle_count) do |vehicles|
-            remaining_service_ids = result[:unassigned].map{ |u| u[:service_id] } & services.map(&:id)
-            next if remaining_service_ids.empty?
-
-            rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
-            rate_services = services.size / unassigned_services.size.to_f
-
-            sub_vrp_resolution_duration = [(vrp.resolution_duration.to_f / 3.99 * rate_vehicles * rate_services + transfer_unused_time_limit).to_i, 150].max
-            sub_vrp_resolution_minimum_duration = [(vrp.resolution_minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
-
-            used_vehicle_count = result[:routes].count{ |r| vehicles.map(&:id).include?(r[:vehicle_id]) }
-
-            if vrp.resolution_vehicle_limit
-              sub_vrp_vehicle_limit = leftover_vehicle_limit + used_vehicle_count
-              if sub_vrp_vehicle_limit&.zero? # The vehicle limit is hit cannot use more new vehicles...
-                transfer_unused_time_limit = sub_vrp_resolution_duration
-                next
-              end
-            end
-
-            assigned_service_ids = result[:routes].select{ |r| vehicles.map(&:id).include?(r[:vehicle_id]) }.flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact
-
-            sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles.map(&:id))
-            sub_vrp = sub_service_vrp[:vrp]
-            sub_vrp.vehicles.each{ |vehicle|
-              vehicle[:cost_fixed] = (vehicle[:cost_fixed] && vehicle[:cost_fixed] > 0) ? vehicle[:cost_fixed] : 1e6
-              vehicle[:cost_distance_multiplier] = 0.05 if vehicle[:cost_distance_multiplier].zero?
-            }
-
-            sub_vrp.resolution_duration = sub_vrp_resolution_duration                 if sub_vrp.resolution_duration
-            sub_vrp.resolution_minimum_duration = sub_vrp_resolution_minimum_duration if sub_vrp.resolution_minimum_duration
-
-            sub_vrp.resolution_vehicle_limit = sub_vrp_vehicle_limit                  if vrp.resolution_vehicle_limit
-
-            sub_vrp.restitution_allow_empty_result = true
-            result_loop = OptimizerWrapper.solve([sub_service_vrp], job)
-            result[:elapsed] += result_loop[:elapsed] if result_loop && result_loop[:elapsed]
-
-            # TODO: Remove unnecessary if conditions and .nil? checks
-            transfer_unused_time_limit = sub_vrp.resolution_duration - result_loop[:elapsed].to_f
-
-            # Initial routes can be refused... check unassigned size before take into account solution
-            next unless result_loop && remaining_service_ids.size >= result_loop[:unassigned].size
-
-            if vrp.resolution_vehicle_limit # correct the lefover vehicle limit count
-              leftover_vehicle_limit -= result_loop[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } } - used_vehicle_count
-            end
-
-            remove_bad_skills(sub_service_vrp, result_loop)
-
-            Helper.replace_routes_in_result(result, result_loop)
-
-            sub_results << result_loop
-          end
-          new_routes = build_initial_routes(sub_results)
-          vehicle_ids = sub_results.flat_map{ |r| r[:routes].map{ |route| route[:vehicle_id] } }
-          vrp.routes.delete_if{ |r| vehicle_ids.include?(r.vehicle.id) }
-          vrp.routes += new_routes
+        vehicles_with_skills = skills.empty? ? vrp.vehicles : vrp.vehicles.select{ |v|
+          v.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
         }
-      end
-      log "<--- dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
+        sticky_vehicle_ids = unassigned_services.flat_map(&:sticky_vehicles).compact.map(&:id)
+        # In case services has incoherent sticky and skills, sticky is the winner
+        unless sticky_vehicle_ids.empty?
+          vehicles_with_skills = vrp.vehicles.select{ |v| sticky_vehicle_ids.include?(v.id) }
+        end
+
+        # Shuffle so that existing routes will be distributed randomly
+        # Otherwise we might have a sub_vrp with 6 existing routes (no empty routes) and
+        # hundreds of services which makes it very hard to insert a point
+        # With shuffle we distribute the existing routes accross all sub-vrps we create
+        vehicles_with_skills.shuffle!
+
+        # TODO: Here we launch the optim of a single skill however, it make sense to include the vehicles without skills
+        # (especially the ones with existing routes) in the sub_vrp because that way optim can move poits between vehicles
+        # and serve an unserviced point with skills.
+
+        # TODO: We do not consider the geographic closeness/distance of routes and points.
+        # This might be the reason why sometimes we have solutions with long detours.
+        # However, it is not very easy to find a generic and effective way.
+
+        sub_results = []
+        vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
+        vehicles_with_skills.each_slice(vehicle_count) do |vehicles|
+          remaining_service_ids = result[:unassigned].map{ |u| u[:service_id] } & services.map(&:id)
+          next if remaining_service_ids.empty?
+
+          rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
+          rate_services = unassigned_services.empty? ? 1 : services.size / unassigned_services.size.to_f
+
+          sub_vrp_resolution_duration = [(vrp.resolution_duration.to_f / 3.99 * rate_vehicles * rate_services + transfer_unused_time_limit).to_i, 150].max
+          sub_vrp_resolution_minimum_duration = [(vrp.resolution_minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
+
+          used_vehicle_count = result[:routes].count{ |r| vehicles.map(&:id).include?(r[:vehicle_id]) }
+
+          if vrp.resolution_vehicle_limit
+            sub_vrp_vehicle_limit = leftover_vehicle_limit + used_vehicle_count
+            if sub_vrp_vehicle_limit&.zero? # The vehicle limit is hit cannot use more new vehicles...
+              transfer_unused_time_limit = sub_vrp_resolution_duration
+              next
+            end
+          end
+
+          assigned_service_ids = result[:routes].select{ |r| vehicles.map(&:id).include?(r[:vehicle_id]) }.flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact
+
+          sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles.map(&:id))
+          sub_vrp = sub_service_vrp[:vrp]
+          sub_vrp.vehicles.each{ |vehicle|
+            vehicle[:cost_fixed] = vehicle[:cost_fixed]&.positive? ? vehicle[:cost_fixed] : 1e6
+            vehicle[:cost_distance_multiplier] = 0.05 if vehicle[:cost_distance_multiplier].zero?
+          }
+
+          sub_vrp.resolution_duration = sub_vrp_resolution_duration                 if sub_vrp.resolution_duration
+          sub_vrp.resolution_minimum_duration = sub_vrp_resolution_minimum_duration if sub_vrp.resolution_minimum_duration
+
+          sub_vrp.resolution_vehicle_limit = sub_vrp_vehicle_limit                  if vrp.resolution_vehicle_limit
+
+          sub_vrp.restitution_allow_empty_result = true
+
+          result_loop = OptimizerWrapper.solve(sub_service_vrp, job)
+
+          next unless result_loop
+
+          result[:elapsed] += result_loop[:elapsed].to_f
+          transfer_unused_time_limit = sub_vrp.resolution_duration - result_loop[:elapsed].to_f
+
+          # TODO: Remove unnecessary if conditions and .nil? checks
+
+          next if remaining_service_ids.size < result_loop[:unassigned].size # Initial routes can be refused... check unassigned size before take into account solution
+
+          if vrp.resolution_vehicle_limit # correct the lefover vehicle limit count
+            leftover_vehicle_limit -= result_loop[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } } - used_vehicle_count
+          end
+
+          remove_bad_skills(sub_service_vrp, result_loop)
+
+          Helper.replace_routes_in_result(result, result_loop)
+
+          sub_results << result_loop
+        end
+        new_routes = build_initial_routes(sub_results)
+        vehicle_ids = sub_results.flat_map{ |r| r[:routes].map{ |route| route[:vehicle_id] } }
+        vrp.routes.delete_if{ |r| vehicle_ids.include?(r.vehicle.id) }
+        vrp.routes += new_routes
+      }
       result
+    ensure
+      log "<--- dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
     end
 
     def self.split_vehicles(vrp, services_by_cluster)

@@ -69,6 +69,7 @@ module Helper
       solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
       cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
       iterations: (results.size != 1) ? nil : results[0] && results[0][:iterations],
+      heuristic_synthesis: (results.size != 1) ? nil : results[0] && results[0][:heuristic_synthesis],
       routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,
       unassigned: merge_unassigned ? results.flat_map{ |r| r && r[:unassigned] }.compact.uniq : results.map{ |r| r && r[:unassigned] }.compact.last,
       elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),

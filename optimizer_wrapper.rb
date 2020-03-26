@@ -103,7 +103,8 @@ module OptimizerWrapper
     else
       if config[:solve][:synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
         # The job seems easy enough to perform it with the server
-        define_process(services_vrps, job_id)
+        result = define_main_process(services_vrps, job_id)
+        (result.size == 1) ? result.first : result
       else
         # Delegate the job to a worker
         job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
@@ -116,218 +117,209 @@ module OptimizerWrapper
     end
   end
 
-  # Recursive method
-  def self.define_process(services_vrps, job = nil, &block)
-    log "--> define_process #{services_vrps.size} VRPs with levels #{services_vrps.map{ |sv| sv[:dicho_level] }}", level: :debug
-    t = Time.now
-    expecting = services_vrps.collect{ |service| service[:vrp].visits + service[:vrp].shipments.size * 2 }.sum
-    log "min_durations #{services_vrps.map{ |sv| sv[:vrp].resolution_minimum_duration }} max_durations #{services_vrps.map{ |sv| sv[:vrp].resolution_duration }}", level: :debug
-    log "resolution_vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].resolution_vehicle_limit }}", level: :debug
+  def self.define_main_process(services_vrps, job = nil, &block)
+    log "--> define_main_process #{services_vrps.size} VRPs", level: :info
+    log "activities: #{services_vrps.map{ |sv| sv[:vrp].services.size + sv[:vrp].shipments.size * 2 }}", level: :info
+    log "vehicles: #{services_vrps.map{ |sv| sv[:vrp].vehicles.size }}", level: :info
+    log "resolution_vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].resolution_vehicle_limit }}", level: :info
+    log "min_durations: #{services_vrps.map{ |sv| sv[:vrp].resolution_minimum_duration&.round }}", level: :info
+    log "max_durations: #{services_vrps.map{ |sv| sv[:vrp].resolution_duration&.round }}", level: :info
+    tic = Time.now
 
-    filtered_services = services_vrps.delete_if{ |service_vrp| # TODO: remove ?
-      service_vrp[:vrp].services.empty? && service_vrp[:vrp].shipments.empty?
-    }
-    unduplicated_services, duplicated_services = Interpreters::SeveralSolutions.expand(filtered_services)
-    duplicated_results = duplicated_services.compact.collect.with_index{ |service_vrp, repetition|
-      define_process([service_vrp], job) { |wrapper, avancement, total, message, cost, time, solution|
-        message = "repetition #{repetition + 1}/#{duplicated_services.size} - #{message}" unless message.nil?
-        block&.call(wrapper, avancement, total, message, cost, time, solution)
+    expected_activity_count = services_vrps.collect{ |sv| sv[:vrp].activity_count }.sum
+
+    several_service_vrps = Interpreters::SeveralSolutions.expand_several_solutions(services_vrps)
+
+    several_results = several_service_vrps.collect.with_index{ |current_service_vrps, solution_index|
+      callback_main = lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
+        msg = "#{"solution: #{solution_index + 1}/#{several_service_vrps.size} - " if several_service_vrps.size > 1}#{message}" unless message.nil?
+        block&.call(wrapper, avancement, total, msg, cost, time, solution)
+      }
+
+      join_independent_vrps(current_service_vrps, callback_main) { |service_vrp, callback_join|
+        repeated_results = []
+
+        service_vrp_repeats = Interpreters::SeveralSolutions.expand_repeat(service_vrp)
+
+        service_vrp_repeats.each_with_index{ |repeated_service_vrp, repetition_index|
+          repeated_results << define_process(repeated_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
+            msg = "#{"repetition #{repetition_index + 1}/#{service_vrp_repeats.size} - " if service_vrp_repeats.size > 1}#{message}" unless message.nil?
+            callback_join&.call(wrapper, avancement, total, msg, cost, time, solution)
+          }
+        }
+
+        (result, position) = repeated_results.each.with_index(1).min_by { |result, _| result[:unassigned].size } # find the best result and its index
+        log "#{job}_repetition - #{repeated_results.collect{ |r| r[:unassigned].size }} : chose to keep the #{position.ordinalize} solution"
+        result
       }
     }
-    split_results = []
-    definitive_service_vrps = unduplicated_services.collect{ |service_vrp|
-      # Split/Clusterize the problem if too large
-      unsplit_vrps, split_results = Interpreters::SplitClustering.split_clusters([service_vrp], job, &block) # Call recursively define_process
-      unsplit_vrps
-    }.flatten.compact
-    dicho_results = []
-    definitive_service_vrps.delete_if{ |service_vrp|
-      dicho_result = Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job, &block) # Call recursively define_process
-      dicho_results << dicho_result
-      dicho_result
-    }
-    definitive_service_vrps.each{ |service_vrp| # TODO: avant dicho ou dans solve ?
-      multi = Interpreters::MultiTrips.new
-      multi.expand(service_vrp[:vrp])
-    }
-    result = solve(definitive_service_vrps, job, block) if !definitive_service_vrps.empty? && dicho_results.compact.empty?
-    if duplicated_results.size == services_vrps.first[:vrp][:resolution_repetition]
-      result = duplicated_results.compact.min_by{ |r| r[:unassigned].size }
-      log "#{job}_repetition - #{duplicated_results.collect{ |r| r[:unassigned].size }} : chose to keep #{duplicated_results.find_index(result)}"
-      duplicated_results = [] # keep those results?
-    end
-    result_global = {
-      result: ([result] + duplicated_results + split_results + dicho_results).compact
-    }
 
-    log "<-- define_process levels #{services_vrps.map{ |sv| sv[:dicho_level] }} elapsed: #{(Time.now - t).round(2)}sec", level: :debug
-    check_result_consistency(expecting, result_global[:result]) if services_vrps.collect{ |sv| sv[:service] } != [:demo] # demo solver returns a fixed solution
-    (result_global[:result].size > 1) ? result_global[:result] : result_global[:result].first
+    check_result_consistency(expected_activity_count, several_results) if services_vrps.collect{ |sv| sv[:service] } != [:demo] # demo solver returns a fixed solution
+
+    several_results
+  ensure
+    log "<-- define_main_process elapsed: #{(Time.now - tic).round(2)} sec", level: :info
   end
 
-  def self.solve(services_vrps, job = nil, block = nil)
-    log "--> optim_wrap::solve #{services_vrps.size} VRPs with levels #{services_vrps.map{ |sv| sv[:dicho_level] }}", level: :debug
-    t = Time.now
-    log "resolution_vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].resolution_vehicle_limit }}", level: :debug
+  # Mutually recursive method
+  def self.define_process(service_vrp, job = nil, &block)
+    vrp = service_vrp[:vrp]
+    log "--> define_process VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size} vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with level #{service_vrp[:dicho_level]}", level: :info
+    log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}", level: :info
+
+    tic = Time.now
+    expected_activity_count = vrp.activity_count
+
+    result ||= Interpreters::SplitClustering.split_clusters(service_vrp, job, &block)        # Calls recursively define_process
+
+    result ||= Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job, &block)   # Calls recursively define_process
+
+    result ||= solve(service_vrp, job, block)
+
+    check_result_consistency(expected_activity_count, result) if service_vrp[:service] != :demo # demo solver returns a fixed solution
+
+    log "<-- define_process level #{service_vrp[:dicho_level]} elapsed: #{(Time.now - tic).round(2)} sec", level: :info
+    result
+  end
+
+  def self.solve(service_vrp, job = nil, block = nil)
+    vrp = service_vrp[:vrp]
+    service = service_vrp[:service]
+    dicho_level = service_vrp[:dicho_level]
+    log "--> optim_wrap::solve VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size} vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with level #{dicho_level}", level: :debug
+
+    tic = Time.now
+
+    Interpreters::MultiTrips.new.expand(vrp)
+
+    optim_result = nil
 
     unfeasible_services = []
 
-    cluster_reference = 0
-    real_result = join_independent_vrps(services_vrps, block) { |service, dicho_level, vrp, block|
-      cluster_result = nil
-      if !vrp.subtours.empty?
-        multi_modal = Interpreters::MultiModal.new(vrp, service)
-        cluster_result = multi_modal.multimodal_routes
-      else
-        if vrp.vehicles.empty? # TODO: remove ?
-          cluster_result = {
-            cost: nil,
-            solvers: [service.to_s],
-            iterations: nil,
-            routes: [],
-            unassigned: vrp.services.collect{ |service_|
-              {
-                service_id: service_[:id],
-                point_id: service_[:activity] ? service_[:activity][:point_id] : nil,
-                detail: {
-                  lat: service_[:activity] ? service_[:activity][:point][:lat] : nil,
-                  lon: service_[:activity] ? service_[:activity][:point][:lon] : nil,
-                  setup_duration: service_[:activity] ? service_[:activity][:setup_duration] : nil,
-                  duration: service_[:activity] ? service_[:activity][:duration] : nil,
-                  timewindows: (service_[:activity][:timewindows] && !service_[:activity][:timewindows].empty?) ? [{
-                    start: service_[:activity][:timewindows][0][:start],
-                    end: service_[:activity][:timewindows][0][:start],
-                  }] : [],
-                  quantities: service_[:activity] ? service_[:quantities] : nil,
-                },
-                reason: 'No vehicle available for this service (split)'
-              }
+    if !vrp.subtours.empty?
+      multi_modal = Interpreters::MultiModal.new(vrp, service)
+      optim_result = multi_modal.multimodal_routes
+    elsif vrp.vehicles.empty? # TODO: remove ?
+      optim_result = {
+        cost: nil,
+        solvers: [service.to_s],
+        iterations: nil,
+        routes: [],
+        unassigned: vrp.services.collect{ |service_|
+          {
+            service_id: service_[:id],
+            point_id: service_[:activity] ? service_[:activity][:point_id] : nil,
+            detail: {
+              lat: service_[:activity] ? service_[:activity][:point][:lat] : nil,
+              lon: service_[:activity] ? service_[:activity][:point][:lon] : nil,
+              setup_duration: service_[:activity] ? service_[:activity][:setup_duration] : nil,
+              duration: service_[:activity] ? service_[:activity][:duration] : nil,
+              timewindows: (service_[:activity][:timewindows] && !service_[:activity][:timewindows].empty?) ? [{
+                start: service_[:activity][:timewindows][0][:start],
+                end: service_[:activity][:timewindows][0][:start],
+              }] : [],
+              quantities: service_[:activity] ? service_[:quantities] : nil,
             },
-            elapsed: 0,
-            total_distance: nil
+            reason: 'No vehicle available for this service (split)'
           }
-        else
-          services_to_reinject = []
-          log "Solving #{cluster_reference + 1}/#{services_vrps.size}" unless services_vrps.size == 1
-          sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
+        },
+        elapsed: 0,
+        total_distance: nil
+      }
+    else
+      services_to_reinject = []
+      sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
-          vrp.compute_matrix(&block)
+      vrp.compute_matrix(&block)
 
-          sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
+      sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
 
-          vrp = config[:services][service].simplify_constraints(vrp)
+      vrp = config[:services][service].simplify_constraints(vrp)
 
-          # Remove infeasible services
-          sub_unfeasible_services.each{ |una_service|
-            index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
-            if index
-              services_to_reinject << vrp.services.slice!(index)
-            end
-
-            next if una_service[:detail][:skills]&.any?{ |skill| skill.include?('cluster') } || services_vrps.size == 1
-
-            una_service[:detail][:skills] = una_service[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-          }
-
-          # TODO: refactor with dedicated class
-          if vrp.schedule_range_indices
-            periodic = Interpreters::PeriodicVisits.new(vrp)
-            vrp = periodic.expand(vrp, job) {
-              block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
-            }
-            if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
-              add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, sub_unfeasible_services)
-            end
-          end
-
-          unfeasible_services += sub_unfeasible_services
-
-          if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
-            # TODO: Move select best heuristic in each solver
-            block.call(nil, nil, nil, 'process heuristic choice', nil, nil, nil) if block && vrp.preprocessing_first_solution_strategy
-            Interpreters::SeveralSolutions.custom_heuristics(service, vrp)
-
-            block.call(nil, nil, nil, 'process clique clustering', nil, nil, nil) if block && vrp.preprocessing_cluster_threshold
-            cluster_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) do |cluster_vrp|
-              time_start = Time.now
-
-              block&.call(nil, 0, nil, 'run optimization', nil, nil, nil) if dicho_level.nil? || dicho_level.zero?
-              result = OptimizerWrapper.config[:services][service].solve(cluster_vrp, job, proc{ |pids|
-                  if job
-                    actual_result = Result.get(job) || { 'pids' => nil }
-                    if cluster_vrp[:restitution_csv]
-                      actual_result[:csv] = true
-                    end
-                    actual_result['pids'] = pids
-                    Result.set(job, actual_result)
-                  end
-                }) { |wrapper, avancement, total, _message, cost, _time, solution|
-                block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if dicho_level.nil? || dicho_level.zero?
-              }
-
-              if result.class.name == 'Hash' # result.is_a?(Hash) not working
-                # result[:elapsed] = (Time.now - time_start) * 1000 # Calculated inside the solvers
-                block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
-                parse_result(cluster_vrp, result)
-              elsif result.class.name == 'String' # result.is_a?(String) not working
-                raise RuntimeError, result unless result == 'Job killed'
-              elsif !vrp.preprocessing_heuristic_result || vrp.preprocessing_heuristic_result.empty?
-                raise RuntimeError, 'No solution provided' unless vrp.restitution_allow_empty_result
-              end
-            end
-          end
-
-          # Reintegrate unfeasible services deleted from vrp.services to help ortools
-          vrp.services += services_to_reinject
+      # Remove infeasible services
+      sub_unfeasible_services.each{ |una_service|
+        index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+        if index
+          services_to_reinject << vrp.services.slice!(index)
         end
+      }
+
+      # TODO: refactor with dedicated class
+      if vrp.schedule_range_indices
+        periodic = Interpreters::PeriodicVisits.new(vrp)
+        vrp = periodic.expand(vrp, job) {
+          block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
+        }
+        if vrp.preprocessing_partitions.any?{ |partition| partition[:entity] == 'work_day' }
+          add_day_skill(vrp.vehicles.first, vrp.preprocessing_heuristic_result, sub_unfeasible_services)
+        end
+        optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
       end
 
-      if vrp.preprocessing_partition_method || !vrp.preprocessing_partitions.empty?
-        # add associated cluster as skill
-        [cluster_result, vrp.preprocessing_heuristic_result].each{ |solution|
-          next if solution.nil? || solution.empty?
+      unfeasible_services += sub_unfeasible_services
+      if vrp.resolution_solver_parameter != -1 && vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+        # TODO: Move select best heuristic in each solver
+        block&.call(nil, nil, nil, "process heuristic choice : #{vrp.preprocessing_first_solution_strategy}", nil, nil, nil) if vrp.preprocessing_first_solution_strategy&.include?('self_selection') || vrp.preprocessing_first_solution_strategy&.size.to_f > 1
+        Interpreters::SeveralSolutions.custom_heuristics(service, vrp)
 
-          solution[:routes].each{ |route|
-            route[:activities].each do |stop|
-              next if stop[:service_id].nil?
+        block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.preprocessing_cluster_threshold.to_f}) ", nil, nil, nil) if vrp.preprocessing_cluster_threshold.to_f.positive?
+        optim_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
+          time_start = Time.now
 
-              stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
-            end
+          block&.call(nil, 0, nil, 'run optimization', nil, nil, nil) if dicho_level.nil? || dicho_level.zero?
+
+          cliqued_result = OptimizerWrapper.config[:services][service].solve(
+            cliqued_vrp,
+            job,
+            proc{ |pids|
+              next unless job
+
+              current_result = Result.get(job) || { 'pids' => nil }
+
+              current_result[:csv] = true if cliqued_vrp[:restitution_csv]
+
+              current_result['pids'] = pids
+
+              Result.set(job, current_result)
+            }
+          ) { |wrapper, avancement, total, _message, cost, _time, solution|
+            block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if dicho_level.nil? || dicho_level.zero?
           }
-          solution[:unassigned].each do |stop|
-            next if stop[:service_id].nil?
 
-            stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_reference}"]
+          if cliqued_result.is_a?(Hash)
+            # cliqued_result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+            block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
+            parse_result(cliqued_vrp, cliqued_result)
+          elsif cliqued_result == 'Job killed'
+            next
+          elsif cliqued_result.is_a?(String)
+            raise RuntimeError, cliqued_result
+          elsif (vrp.preprocessing_heuristic_result.nil? || vrp.preprocessing_heuristic_result.empty?) && !vrp.restitution_allow_empty_result
+            puts cliqued_result
+            raise RuntimeError, 'No solution provided'
           end
         }
       end
-      cluster_reference += 1
-      if vrp.preprocessing_heuristic_result && !vrp.preprocessing_heuristic_result.empty?
-        if [cluster_result, vrp.preprocessing_heuristic_result].all?{ |result| result.nil? || result[:routes].empty? }
-          cluster_result || parse_result(vrp, vrp[:preprocessing_heuristic_result])
-        else
-          [cluster_result || parse_result(vrp, vrp[:preprocessing_heuristic_result]), parse_result(vrp, vrp[:preprocessing_heuristic_result])].select{ |result| !result[:routes].empty? }.min_by{ |sol| sol[:cost] }
-        end
-      else
-        Cleanse.cleanse(vrp, cluster_result)
-        cluster_result
+
+      # Reintegrate unfeasible services deleted from vrp.services to help ortools
+      vrp.services += services_to_reinject
+    end
+
+    if optim_result #Job might have been killed
+      Cleanse.cleanse(vrp, optim_result)
+
+      optim_result[:name] = vrp.name
+      optim_result[:csv] = true if vrp.restitution_csv
+      optim_result[:unassigned] = (optim_result[:unassigned] || []) + unfeasible_services
+
+      if vrp.preprocessing_first_solution_strategy
+        optim_result[:heuristic_synthesis] = vrp.preprocessing_heuristic_synthesis
       end
-    }
-
-    real_result[:unassigned] = (real_result[:unassigned] || []) + unfeasible_services if real_result
-    real_result[:name] = services_vrps[0][:vrp][:name] if real_result
-    if real_result && services_vrps.any?{ |service| service[:vrp][:preprocessing_first_solution_strategy] }
-      real_result[:heuristic_synthesis] = services_vrps.collect{ |service| service[:vrp].preprocessing_heuristic_synthesis }
-      real_result[:heuristic_synthesis].flatten! if services_vrps.size == 1
     end
 
-    if real_result && services_vrps.any?{ |service_vrp| service_vrp[:vrp][:restitution_csv] }
-      real_result[:csv] = true
-    end
+    log "<-- optim_wrap::solve elapsed: #{(Time.now - tic).round(2)}sec", level: :debug
 
-    log "<-- optim_wrap::solve elapsed: #{(Time.now - t).round(2)}sec", level: :debug
-
-    real_result
+    optim_result
   end
 
   def self.split_independent_vrp_by_skills(vrp)
@@ -442,18 +434,16 @@ module OptimizerWrapper
   end
 
   def self.join_independent_vrps(services_vrps, callback)
-    results = services_vrps.each_with_index.map{ |sv, i|
-      block = if services_vrps.size == 1
-                callback
+    results = services_vrps.each_with_index.map{ |service_vrp, i|
+      block = if services_vrps.size > 1 && !callback.nil?
+                proc { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
+                  msg = "process #{i + 1}/#{services_vrps.size} - #{message}" unless message.nil?
+                  callback&.call(wrapper, avancement, total, msg, cost, time, solution)
+                }
               else
-                unless callback.nil? # do not create the proc if callback is nil
-                  proc{ |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-                    message = "process #{i + 1}/#{services_vrps.size} - #{message}" unless message.nil?
-                    callback.call(wrapper, avancement, total, message, cost, time, solution)
-                  }
-                end
+                callback
               end
-      yield(sv[:service], sv[:dicho_level], sv[:vrp], block)
+      yield(service_vrp, block)
     }
 
     Helper.merge_results(results, true)
@@ -591,7 +581,8 @@ module OptimizerWrapper
   private
 
   def self.check_result_consistency(expected_value, results)
-    results.each{ |result|
+    #byebug ######  check next line
+    [results].flatten(1).each{ |result|
       nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
       nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:shipment_id] }
 
