@@ -352,11 +352,7 @@ module Heuristics
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route[:current_route])
           route_vrp.services = provide_group_tws(route_vrp.services, day) if @same_point_day || @relaxed_same_point_day # to have same data in ORtools and scheduling. Customers should ensure all timewindows are the same for same points
 
-          begin
-            result = OptimizerWrapper.solve([service: :ortools, vrp: route_vrp])
-          rescue StandardError
-            log 'ORtools could not find a solution for this problem.', level: :warn
-          end
+          result = OptimizerWrapper.solve([service: :ortools, vrp: route_vrp])
 
           next if result.nil? || !result[:unassigned].empty?
 
