@@ -108,7 +108,7 @@ module Hull
 
   def self.nearestpoints(dataset, current_point, kk)
     dataset.sort_by { |d|
-      Math.sqrt((d[0] - current_point[0])**2 + (d[1] - current_point[1])**2)
+      (d[0] - current_point[0])**2 + (d[1] - current_point[1])**2
     }[0..kk]
   end
 
