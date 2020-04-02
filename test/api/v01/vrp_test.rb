@@ -102,6 +102,22 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     end
   end
 
+  def test_nil_duration
+    vrp = VRP.toy
+    vrp[:vehicles][0][:duration] = nil
+    vrp[:vehicles][0][:overall_duration] = nil
+    OptimizerWrapper.stub(
+      :wrapper_vrp,
+      lambda { |_api_key, _services, vrp_in, _checksum|
+        assert_nil vrp_in.vehicles.first.duration
+        assert_nil vrp_in.vehicles.first.overall_duration
+        'job_id'
+      }
+    ) do
+      submit_vrp api_key: 'demo', vrp: vrp
+    end
+  end
+
   def test_null_value_matrix
     vrp = VRP.basic
     vrp[:matrices].first[:value] = nil
