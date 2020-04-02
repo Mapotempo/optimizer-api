@@ -189,8 +189,8 @@ module Api
         this.optional :snap, type: Float, desc: 'Snap waypoint to junction close by snap distance.'
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
-        this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
-        this.optional(:overall_duration, types: [String, Float, Integer], desc: '[planning] If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
+        this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
+        this.optional(:overall_duration, types: [String, Float, Integer], desc: '[planning] If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
         this.optional(:distance, types: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')

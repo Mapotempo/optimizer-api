@@ -38,7 +38,6 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_objective,
-        :assert_vehicles_at_least_one,
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
         :assert_zones_only_size_one_alternative,

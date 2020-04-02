@@ -47,10 +47,6 @@ module Wrappers
       vrp.vehicles.size == 1 && !vrp.schedule_range_indices
     end
 
-    def assert_vehicles_at_least_one(vrp)
-      vrp.vehicles.size >= 1 && (vrp.vehicles.none?(&:duration) || vrp.vehicles.any?{ |vehicle| vehicle.duration && vehicle.duration > 0 })
-    end
-
     def assert_vehicles_start(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.start_point.nil?

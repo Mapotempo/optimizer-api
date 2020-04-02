@@ -17,24 +17,29 @@
 #
 
 class ScheduleType
-  def type_cast(value, mandatory = true)
-    if !value.nil?
-      if /[0-9]+:[0-9]+:[0-9]+/.match(value.to_s)
+  def type_cast(value, mandatory = true, allow_zero = true)
+    return_value = if !value.nil?
+      if /[0-9]+:[0-9]+:[0-9]+/ =~ value.to_s
         pattern = /([0-9]+):([0-9]+):([0-9]+)/.match(value)
         3600 * pattern[1].to_i + 60 * pattern[2].to_i + pattern[3].to_i
-      elsif /[0-9]+:[0-9]+/.match(value.to_s)
+      elsif /[0-9]+:[0-9]+/ =~ value.to_s
         pattern = /([0-9]+):([0-9]+)/.match(value)
         3600 * pattern[1].to_i + 60 * pattern[2].to_i
-      elsif /\A[0-9]+\.{0,1}[0-9]*\z/.match(value.to_s)
+      elsif /\A[0-9]+\.{0,1}[0-9]*\z/ =~ value.to_s
         value.to_i
-      elsif (value.kind_of?(Integer) || value.kind_of?(Float))
+      elsif value.is_a?(Integer) || value.is_a?(Float)
         value.to_i
       else
         log 'error', level: :error
-        raise ArgumentError.new("Invalid Time value")
+        raise ArgumentError.new('Invalid Time value')
       end
     elsif mandatory
       0
     end
+    if return_value&.negative? || (!allow_zero && return_value&.zero?)
+      log 'error', level: :error
+      raise ArgumentError.new('Invalid Time value')
+    end
+    return_value
   end
 end
