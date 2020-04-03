@@ -6,7 +6,7 @@ gem 'require_all'
 gem 'puma'
 gem 'rack'
 gem 'rack-cors'
-gem 'rakeup'
+gem 'rake'
 gem 'thin'
 
 gem 'grape', '<0.19.0' # TODO: Grape 1.2.4 reduces performances
