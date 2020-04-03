@@ -512,6 +512,8 @@ module Api
           }
           post do
             begin
+              count :submit_vrp
+
               # Api key is not declared as part of the VRP and must be handled carefully and separatly from other parameters
               api_key = params[:api_key]
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
@@ -533,12 +535,17 @@ module Api
                 error!({ status: 'Model Validation Error', message: vrp.errors }, 400)
               else
                 ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.services(api_key), vrp, checksum)
+
                 if ret.is_a?(String)
                   # present result, with: VrpResult
                   status 201
+                  count_incr :submit_vrp, transactions: 1
+
                   present({ job: { id: ret, status: :queued }}, with: Grape::Presenters::Presenter)
                 elsif ret.is_a?(Hash)
                   status 200
+                  count_incr :submit_vrp, transactions: 1
+
                   if vrp.restitution_csv
                     present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
                   else
@@ -570,6 +577,8 @@ module Api
             requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
           }
           get ':id' do
+            count :get_job
+
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             stored_result = APIBase.dump_vrp_dir.read([id, params[:api_key], 'solution'].join('_'))
@@ -598,6 +607,8 @@ module Api
               error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404)
             elsif job&.failed?
               status 202
+              count_incr :get_job, transactions: 1
+
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
               else
@@ -613,6 +624,8 @@ module Api
               end
             elsif job && !job.completed?
               status 206
+              count_incr :get_job, transactions: 1
+
               # TODO: why try to return a csv for queued job?
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
@@ -630,6 +643,8 @@ module Api
             else
               APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if job && OptimizerWrapper.config[:dump][:solution]
               status 200
+              count_incr :get_job, transactions: 1
+
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
               else
@@ -653,7 +668,10 @@ module Api
             detail: 'List running or queued jobs.'
           }
           get do
+            count :get_job_list
+
             status 200
+            count_incr :get_job_list, transactions: 1
             present OptimizerWrapper.job_list(params[:api_key]), with: Grape::Presenters::Presenter
           end
 
@@ -669,11 +687,14 @@ module Api
             requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
           }
           delete ':id' do
+            count :delete_job
+
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
 
             if !job || job&.killed? || job['options']['api_key'] != params[:api_key]
               status 404
+              count_incr :delete_job, transactions: 0
               error!({status: 'Not Found', message: "Job with id='#{id}' not found"}, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
@@ -703,6 +724,7 @@ module Api
                   }
                 }, with: Grape::Presenters::Presenter)
               end
+              count_incr :delete_job, transactions: 1
               OptimizerWrapper.job_remove(params[:api_key], id)
             end
           end
