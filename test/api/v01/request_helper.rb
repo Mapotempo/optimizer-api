@@ -19,6 +19,7 @@ require './test/test_helper'
 
 class Api::V01::RequestHelper < Minitest::Test
   include Rack::Test::Methods
+  include FakeRedis
 
   def app
     Api::Root

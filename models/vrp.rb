@@ -566,5 +566,9 @@ module Models
 
       nil
     end
+
+    def transactions
+      self.vehicles.count * self.points.count
+    end
   end
 end

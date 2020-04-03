@@ -67,6 +67,7 @@ group :test do
   gem 'minitest-stub_any_instance'
   gem 'rack-test'
   gem 'simplecov', require: false
+  gem 'fakeredis'
 end
 
 group :production do

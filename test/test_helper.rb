@@ -41,9 +41,16 @@ require 'grape-entity'
 require 'minitest/autorun'
 require 'minitest/stub_any_instance'
 require 'minitest/focus'
+require 'fakeredis/minitest'
 require 'byebug'
 require 'rack/test'
 require 'find'
+
+module FakeRedis
+  def teardown
+    OptimizerWrapper.config[:redis_count].flushall
+  end
+end
 
 module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDisableDirective, Metrics/ModuleLength
   def self.coerce(vrp)

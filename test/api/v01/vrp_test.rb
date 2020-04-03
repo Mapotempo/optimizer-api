@@ -428,4 +428,37 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     Interpreters::MultiTrips.new.expand(vrp) # consecutive MultiTrips.expand should not produce any error
     assert_equal 3, vrp.vehicles.size
   end
+
+  def test_count_optimizations
+    # Create one to be abble to get or delete
+    TestHelper.solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy # /!\ Counter is now 1 for submit_vrp
+    end
+
+    transactions = VRP.toy[:vehicles].count * VRP.toy[:points].count
+
+    [
+      { method: 'post', uri: 'submit', operation: :submit_vrp, options: { vrp: VRP.toy }},
+      { method: 'get', uri: "jobs/#{@job_id}.json", operation: :get_job, options: {}},
+      { method: 'get', uri: 'jobs', operation: :get_job_list, options: {}},
+      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one !
+    ].each do |obj|
+      (1..2).each do |cpt|
+        send(obj[:method], "/0.1/vrp/#{obj[:uri]}", { api_key: 'demo' }.merge(obj[:options]))
+
+        keys = OptimizerWrapper.config[:redis_count].keys("optimizer:#{obj[:operation]}:#{Time.now.utc.to_s[0..9]}_key:demo_ip*")
+
+        case obj[:operation]
+        when :submit_vrp
+          submit_cpt = cpt + 1 # /!\ 1 submit_vrp already done
+          assert_equal 1, keys.count
+          assert_equal({ 'hits' => submit_cpt.to_s, 'transactions' => (transactions * submit_cpt).to_s }, OptimizerWrapper.config[:redis_count].hgetall(keys.first)) # only one key
+        when :get_job
+          assert_equal 0, keys.count
+        when :delete_job
+          assert_equal 0, keys.count
+        end
+      end
+    end
+  end
 end
