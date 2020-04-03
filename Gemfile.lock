@@ -141,9 +141,6 @@ GEM
       rack (>= 1.0, < 3)
     rainbow (3.0.0)
     rake (10.3.2)
-    rakeup (1.2.0)
-      rack (~> 1.5.0)
-      rake (~> 10.3.0)
     redis (3.3.5)
     redis-activesupport (5.0.7)
       activesupport (>= 3, < 6)
@@ -266,7 +263,7 @@ DEPENDENCIES
   rack-contrib
   rack-cors
   rack-test
-  rakeup
+  rake
   redis (< 4)
   redis-activesupport
   require_all

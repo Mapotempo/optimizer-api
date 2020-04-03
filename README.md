@@ -52,12 +52,12 @@ Adjust config/environments files.
 ## Running
 
 ```
-bundle exec rake server
+bundle exec rackup -p 1791
 ```
 
 And in production mode:
 ```
-APP_ENV=production bundle exec rake server
+APP_ENV=production bundle exec rackup -p 1791
 ```
 
 Start Redis and then start the worker

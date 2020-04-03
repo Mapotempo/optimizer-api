@@ -50,4 +50,4 @@ COPY --from=rake /usr/lib/x86_64-linux-gnu/libicu* /usr/lib/x86_64-linux-gnu/
 WORKDIR /srv/app
 
 EXPOSE 1791
-CMD ["bundle", "exec", "rake", "server"]
+CMD ["bundle", "exec", "rackup", "-p", "1791"]
