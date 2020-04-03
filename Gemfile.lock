@@ -38,6 +38,8 @@ GEM
       unf (>= 0.0.5, < 1.0.0)
     equalizer (0.0.11)
     eventmachine (1.2.7)
+    fakeredis (0.7.0)
+      redis (>= 3.2, < 5.0)
     google-protobuf (3.9.1)
     grape (0.18.0)
       activesupport
@@ -220,6 +222,7 @@ DEPENDENCIES
   ai4r
   benchmark-ips
   byebug
+  fakeredis
   google-protobuf (>= 3)
   grape (< 0.19.0)
   grape-entity

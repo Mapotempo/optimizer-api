@@ -42,9 +42,10 @@ do
   sleep 1
 done
 
-docker exec -i ${CONTAINER} bash -c 'ls -l test/'
 docker exec -i ${CONTAINER} apt update -y > /dev/null
-docker exec -i ${CONTAINER} apt install git -y > /dev/null
-docker exec -i ${CONTAINER} rm /srv/app/.bundle/config
-docker exec -i ${CONTAINER} bundle install
+docker exec -i ${CONTAINER} apt install git redis-server -y > /dev/null
+
+docker exec -i ${CONTAINER} sed -i 's/127.0.0.1/0.0.0.0/' /etc/redis/redis.conf # required for fakeredis
+docker exec -i ${CONTAINER} service redis-server restart
+
 docker exec -i ${CONTAINER} bundle exec rake test ${TEST_ENV}
