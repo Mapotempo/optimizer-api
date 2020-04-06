@@ -933,7 +933,7 @@ module Heuristics
           detail: {
             lat: associated_point.location&.lat,
             lon: associated_point.location&.lon,
-            skills: @services_data[point[:id]][:skills].to_a,
+            skills: @services_data[point[:id]][:skills].to_a << day_name,
             setup_duration: point[:considered_setup_duration],
             duration: point[:end] - point[:arrival],
             timewindows: (service_in_vrp.activity&.timewindows || service_in_vrp.activities[point[:activity]].timewindows).select{ |t| t.day_index == day % 7 }.collect{ |tw| { start: tw.start, end: tw.end } },
