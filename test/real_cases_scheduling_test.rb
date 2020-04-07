@@ -46,7 +46,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal 34, result[:unassigned].size
+      assert_equal 30, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].select{ |activity| activity[:service_id] }.sum{ |activity| activity[:detail][:quantities][0][:value] } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
       assert(result[:routes].none?{ |route| route[:activities].reject{ |stop| stop[:detail][:quantities].empty? }.sum{ |stop| stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
@@ -71,7 +71,7 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expecting, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
       unassigned = result[:unassigned].size
-      assert_equal 35, unassigned
+      assert_equal 46, unassigned
 
       vrp = TestHelper.load_vrp(self)
       vrp[:configuration][:resolution][:solver] = true
@@ -238,7 +238,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 255, unassigned_visits.sum, "Expecting 255 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 246, unassigned_visits.sum, "Expecting 246 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_performance_13vl
@@ -257,7 +257,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 267, unassigned_visits.sum, "Expecting 267 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 282, unassigned_visits.sum, "Expecting 282 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_fill_days_and_post_processing
@@ -265,7 +265,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
-      assert_equal 26, result[:unassigned].size
+      assert_equal 37, result[:unassigned].size
       assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
                    "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
     end
@@ -288,6 +288,15 @@ class HeuristicTest < Minitest::Test
           assert days_used[index] - days_used[index - 1] >= s[:minimum_lapse]
         }
       }
+    end
+
+    def test_route_initialisation
+      vrp = TestHelper.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+      assert_empty result[:unassigned]
+      assert(result[:routes].select{ |r| r[:activities].any?{ |a| a[:point_id] == '1000023' } }.all?{ |r| r[:activities].any?{ |a| a[:point_id] == '1000007' } })
+      assert(result[:routes].select{ |r| r[:activities].any?{ |a| a[:point_id] == '1000023' } }.all?{ |r| r[:activities].any?{ |a| a[:point_id] == '1000008' } })
     end
   end
 end

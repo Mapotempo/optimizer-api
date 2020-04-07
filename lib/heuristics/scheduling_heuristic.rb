@@ -56,6 +56,7 @@ module Heuristics
 
       @previous_candidate_routes = nil
       @candidate_routes = {}
+      @routes_referents = []
 
       # heuristic options
       @allow_partial_assignment = vrp.resolution_allow_partial_assignment
@@ -670,7 +671,7 @@ module Heuristics
         insertion_costs = compute_insertion_costs(route_data)
         if !insertion_costs.empty?
           # there are services we can add
-          best_index = select_point(insertion_costs)
+          best_index = select_point(insertion_costs, route_data)
           insert_point_in_route(route_data, best_index)
 
           if @output_tool
@@ -721,7 +722,7 @@ module Heuristics
 
       return nil if insertion_costs.empty?
 
-      best_index = select_point(insertion_costs)
+      best_index = select_point(insertion_costs, route_data)
 
       return nil if best_index.nil?
 
@@ -920,6 +921,7 @@ module Heuristics
 
       @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:visits_number]].max
 
+      @routes_referents << point_to_add[:point] if current_route.empty?
       current_route.insert(point_to_add[:position],
                            id: point_to_add[:id],
                            point_id: point_to_add[:point],
@@ -1044,8 +1046,20 @@ module Heuristics
       routes
     end
 
-    def select_point(insertion_costs)
+    def select_point(insertion_costs, route_data)
       ### chose the most interesting point to insert according to [insertion_costs] ###
+      if route_data[:current_route].empty?
+        if @routes_referents.empty?
+          # chose closest with highest frequency
+          to_consider_set = insertion_costs.group_by{ |s| @services_data[s[:id]][:visits_number] }.sort_by{ |nb, _set| nb}.reverse.first[1]
+          return to_consider_set.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * s[:additional_route_time] }
+        else
+          # chose distant service with highest frequency
+          # max_priority + 1 so that priority never equal to max_priority and no multiplication by 0
+          return insertion_costs.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * @routes_referents.collect{ |ref| matrix(route_data, ref, s[:point]) }.min * @services_data[s[:id]][:visits_number]**2 }
+        end
+      end
+
       costs = insertion_costs.collect{ |s| s[:additional_route_time] }
       if costs.min != 0
         insertion_costs.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:visits_number]**2) }
