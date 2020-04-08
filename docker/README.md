@@ -7,32 +7,8 @@ export REGISTRY='registry.mapotempo.com/'
 ## Required images
 Optimizer requires the two following images that must be manually built.
 
-### Ortools
-
-```
-apt-get -y install git wget pkg-config build-essential cmake autoconf libtool zlib1g-dev lsb-release > /dev/null
-git clone https://github.com/mapotempo/optimizer-ortools.git --branch ${OPTIMIZER_ORTOOLS_VERSION} /srv/ortools
-cd /srv/ortools
-export ORTOOLS_VERSION=v7.0
-docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \
-  -f ./docker/ortools/Dockerfile -t ${REGISTRY}mapotempo/ortools:${ORTOOLS_VERSION} .
-```
-
 ### Optimizer Ortools (wrapper)
-*OPTIMIZER_ORTOOLS_VERSION* can either be *master*, *v7.0* or *dev*
-
-```
-apt-get -y install git wget pkg-config build-essential cmake autoconf libtool zlib1g-dev lsb-release > /dev/null
-git clone https://github.com/mapotempo/optimizer-ortools.git --branch ${OPTIMIZER_ORTOOLS_VERSION} /srv/optimizer-ortools
-cd /srv/optimizer-ortools
-
-export ORTOOLS_VERSION=v7.0
-
-export BRANCH=${BRANCH:-beta}
-docker build --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION}
-  --build-arg BRANCH=${BRANCH} \
-  -f ./Dockerfile -t ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:latest .
-```
+see https://github.com/mapotempo/optimizer-ortools.git
 
 #### Vroom
 ```
@@ -45,8 +21,7 @@ docker build --build-arg VROOM_VERSION=${VROOM_VERSION} \
 
 ```
 export CI_COMMIT_REF_NAME=latest
-export OPTIMIZER_ORTOOLS_VERSION=latest
-export ORTOOLS_VERSION=v7.0
+export OPTIMIZER_ORTOOLS_VERSION=v1.1.0
 export VROOM_VERSION=v1.2.0
 export BRANCH=${BRANCH:-beta}
 docker build \

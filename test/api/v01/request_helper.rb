@@ -65,6 +65,7 @@ class Api::V01::RequestHelper < Minitest::Test
 
   def submit_csv(params)
     post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json'
+    puts last_response.body
     assert_includes [200, 201], last_response.status
     assert last_response.body
     if last_response.status == 201
