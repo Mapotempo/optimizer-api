@@ -41,7 +41,7 @@ module OptimizerWrapper
   ORTOOLS = Wrappers::Ortools.new(TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
   PARAMS_LIMIT = { points: 150, vehicles: 10 }.freeze
-  REDIS_COUNT = ::Redis.new # Fake redis
+  REDIS_COUNT = ::Redis.new(host: '0.0.0.0') # Fake redis
 
   @@dump_vrp_dir = CacheManager.new(TMP_DIR)
 

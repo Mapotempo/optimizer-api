@@ -57,6 +57,7 @@ group :development, :test do
 end
 
 group :test do
+  gem 'fakeredis', require: 'fakeredis/minitest'
   gem 'minitest'
   gem 'minitest-around' # to create a block around unit tests for initialisation and cleanup
   gem 'minitest-bisect' # to identify randomly failing order-depoendent tests
@@ -65,7 +66,6 @@ group :test do
   gem 'minitest-stub_any_instance'
   gem 'rack-test'
   gem 'simplecov', require: false
-  gem 'fakeredis'
 end
 
 group :production do

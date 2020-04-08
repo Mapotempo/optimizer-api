@@ -2,35 +2,41 @@ version: '3.3'
 
 services:
   api:
-    image: ${REGISTRY}mapotempo/optimizer-api:latest
+    image: ${REGISTRY}mapotempo-${EDT-ce}/optimizer-api:latest
     ports:
       - mode: host
         target: 80
         published: 8083
     environment:
-      APP_ENV: production
+      APP_ENV: test
+      REDIS_COUNT_HOST: redis-count
       REDIS_HOST: redis-cache
-      RESQUE_REDIS_HOST: redis
-      SKIP_JSPRIT: 'true'
+    deploy:
+      restart_policy:
+        condition: any
     networks:
       - redis_cache
+      - redis_count
       - resque
 
   resque-default:
-    image: ${REGISTRY}mapotempo/optimizer-api:latest
+    image: ${REGISTRY}mapotempo-${EDT-ce}/optimizer-api:latest
     working_dir: /srv/app
     command: bundle exec rake resque:workers
     hostname: resque-default
     environment:
-      APP_ENV: production
+      APP_ENV: test
       COUNT: 5
       QUEUES: DEFAULT
-      REDIS_HOST: redis-cache
       RESQUE_REDIS_HOST: redis
       ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
       ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
+    deploy:
+      restart_policy:
+        condition: any
     networks:
       - redis_cache
+      - redis_count
       - resque
 
   redis:
@@ -38,22 +44,38 @@ services:
     volumes:
       - ./redis:/data
     command: redis-server --appendonly yes
+    hostname: redis
+    deploy:
+      restart_policy:
+        condition: any
     networks:
-      - resque
-      - ./production.rb:/srv/app/config/environments/production.rb
-    restart: always
-    links:
-      - redis-cache
-    command: /bin/bash -c "cd /srv/app && APP_ENV=production COUNT=5 QUEUE=DEFAULT /usr/bin/bundle exec rake resque:workers"
+      - redis_cache
 
   redis-cache:
     image: redis:${REDIS_VERSION:-3.2-alpine}
     volumes:
       - ./redis:/data
+    hostname: redis-cache
     command: redis-server --save ""
+    deploy:
+      restart_policy:
+        condition: any
     networks:
       - redis_cache
+
+  redis-count:
+    image: redis:${REDIS_VERSION:-3.2-alpine}
+    volumes:
+      - ./data-count:/data
+    hostname: redis-count
+    command: redis-server --appendonly yes
+    deploy:
+      restart_policy:
+        condition: any
+    networks:
+      - redis_count
 
 networks:
   resque:
   redis_cache:
+  redis_count:
