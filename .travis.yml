@@ -1,6 +1,5 @@
-language: ruby
-rvm:
-  - 2.3.3
+services:
+  - docker
 
 env: # Tests are ordered so that they finish faster when run on three parallel threads by Travis
   - TEST_SUITE='basis'
@@ -12,19 +11,22 @@ env: # Tests are ordered so that they finish faster when run on three parallel t
   - TEST_SUITE='real'
   # - TEST_SUITE='real_dicho' -> should be runned locally because test are too big to dump matrices
 
-services:
-  - docker
-
-cache: bundler
-
 before_install:
-  - gem install bundler --version 1.17.3
   - export REGISTRY=registry.mapotempo.com/
-  - docker build -t ${REGISTRY}mapotempo-ce/optimizer-api:latest -f docker/Dockerfile --build-arg ORTOOLS_VERSION=v7.0 --build-arg VROOM_VERSION=v1.2.0 --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-latest} .
+  - docker build --build-arg VROOM_VERSION=${VROOM_VERSION:-v1.2.0} --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-v1.0.0} -f docker/Dockerfile -t registry.test.com/mapotempo/optimizer-api:latest .
   - docker swarm init
   - mkdir -p ./redis
 
-install:
+install: skip
 
 script:
   - travis_wait 50 bash ci-utils/travis.sh ${TEST_SUITE}
+
+deploy:
+  skip_cleanup: true
+  if: tag ~= /^v.*/
+  script:
+    - echo "> pushing tag ${TRAVIS_TAG}"
+    - IMAGE_NAME=${REGISTRY}/mapotempo-ce/optimizer-api:${TRAVIS_TAG}
+    - docker tag registry.test.com/mapotempo/optimizer-api:latest ${IMAGE_NAME}
+    - docker push ${IMAGE_NAME}
