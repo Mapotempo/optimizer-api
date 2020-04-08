@@ -1,55 +1,48 @@
 version: '3.3'
-
 services:
   api:
-    image: ${REGISTRY}mapotempo/optimizer-api:latest
-    ports:
-      - mode: host
-        target: 80
-        published: 8083
+    image: registry.test.com/mapotempo/optimizer-api:latest
+    hostname: travis-api
     environment:
-      APP_ENV: production
+      REDIS_RESQUE_HOST: redis
       REDIS_HOST: redis-cache
-      RESQUE_REDIS_HOST: redis
-      SKIP_JSPRIT: 'true'
+      APP_ENV: test
     networks:
+      - base
       - redis_cache
       - resque
 
   resque-default:
-    image: ${REGISTRY}mapotempo/optimizer-api:latest
+    image: registry.test.com/mapotempo/optimizer-api:latest
     working_dir: /srv/app
-    command: bundle exec rake resque:workers
-    hostname: resque-default
+    hostname: travis-resque-default
     environment:
-      APP_ENV: production
+      APP_ENV: test
       COUNT: 5
       QUEUES: DEFAULT
       REDIS_HOST: redis-cache
-      RESQUE_REDIS_HOST: redis
+      REDIS_RESQUE_HOST: redis
       ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
       ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
+    command: bundle exec rake resque:workers
     networks:
       - redis_cache
       - resque
 
   redis:
     image: redis:${REDIS_VERSION:-3.2-alpine}
+    hostname: travis-redis
     volumes:
-      - ./redis:/data
+      - ../redis:/data
     command: redis-server --appendonly yes
     networks:
       - resque
-      - ./production.rb:/srv/app/config/environments/production.rb
-    restart: always
-    links:
-      - redis-cache
-    command: /bin/bash -c "cd /srv/app && APP_ENV=production COUNT=5 QUEUE=DEFAULT /usr/bin/bundle exec rake resque:workers"
 
   redis-cache:
     image: redis:${REDIS_VERSION:-3.2-alpine}
+    hostname: travis-redis-cache
     volumes:
-      - ./redis:/data
+      - ../redis:/data
     command: redis-server --save ""
     networks:
       - redis_cache
@@ -57,3 +50,4 @@ services:
 networks:
   resque:
   redis_cache:
+  base:

@@ -39,3 +39,4 @@ build/
 .ruby-gemset
 .ruby-version
 .byebug_history
+*.aof
