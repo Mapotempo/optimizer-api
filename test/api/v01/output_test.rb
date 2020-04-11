@@ -229,4 +229,35 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
   ensure
     delete_completed_job @job_id, api_key: 'demo'
   end
+
+  def test_returned_ids
+    TestHelper.solve_asynchronously do
+      vrp = VRP.lat_lon
+      vrp[:shipments] = [{
+        id: 'shipment_0',
+        pickup: {
+          point_id: 'point_0',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_1',
+          duration: 3,
+          late_multiplier: 0,
+        }
+      }]
+      vrp[:configuration][:restitution] = { csv: true }
+      @job_id = submit_csv api_key: 'demo', vrp: vrp
+      wait_status_csv @job_id, 200, api_key: 'demo'
+      csv = last_response.body.split("\n")
+      ids = csv.collect{ |line| line.split(',')[1] }
+      assert_includes ids, 'shipment_0_pickup'
+      assert_includes ids, 'shipment_0_delivery'
+      vrp[:services].each{ |s|
+        assert_includes ids, s[:id]
+      }
+    end
+  ensure
+    delete_completed_job @job_id, api_key: 'demo'
+  end
 end

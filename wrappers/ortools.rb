@@ -420,11 +420,7 @@ module Wrappers
 
         OrtoolsVrp::Route.new(
           vehicle_id: route.vehicle.id,
-          service_ids: route.mission_ids.select{ |mission_id|
-            vrp.services.one? { |service| service.id == mission_id } ||
-            vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
-            vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
-          }.uniq
+          service_ids: corresponding_mission_ids(services.collect(&:id), route.mission_ids)
         )
       }
 
@@ -453,11 +449,6 @@ module Wrappers
       end
 
       result
-    end
-
-    def closest_rest_start(timewindows, current_start)
-      (timewindows.size == 0 || timewindows.one?{ |tw| tw[:start].nil? || current_start >= tw[:start] && (current_start <= tw[:end] || tw[:end].nil?) }) ? current_start :
-        (timewindows.sort_by { |tw0, tw1| tw1 ? tw0[:start] < tw1[:start] : tw0 }.find{ |tw| tw[:start] > current_start } || timewindows.first)[:start]
     end
 
     def kill
@@ -895,6 +886,21 @@ module Wrappers
         copy_s = s.dup
         copy_s.id += '_alternative'
         copy_s
+      }
+    end
+
+    def corresponding_mission_ids(available_ids, mission_ids)
+      mission_ids.collect{ |mission_id|
+        correct_id = if available_ids.include?(mission_id)
+          mission_id
+        elsif available_ids.include?("#{mission_id}pickup")
+          "#{mission_id}pickup"
+        elsif available_ids.include?("#{mission_id}delivery")
+          "#{mission_id}delivery"
+        end
+
+        available_ids.delete(correct_id)
+        correct_id
       }
     end
   end

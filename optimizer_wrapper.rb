@@ -634,7 +634,7 @@ module OptimizerWrapper
     type = find_type(activity)
     [
       route && route['vehicle_id'],
-      activity['service_id'] || activity['pickup_shipment_id'] || activity['delivery_shipment_id'] || activity['rest_id'] || activity['point_id'],
+      build_complete_id(activity),
       activity['point_id'],
       activity['detail']['lat'],
       activity['detail']['lon'],
@@ -647,6 +647,18 @@ module OptimizerWrapper
       route && formatted_duration(route['total_travel_time']),
       route && route['total_distance']
     ]
+  end
+
+  def self.build_complete_id(activity)
+    return activity['service_id'] if activity['service_id']
+
+    return "#{activity['pickup_shipment_id']}_pickup" if activity['pickup_shipment_id']
+
+    return "#{activity['delivery_shipment_id']}_delivery" if activity['delivery_shipment_id']
+
+    return "#{activity['shipment_id']}_#{activity['type']}" if activity['shipment_id']
+
+    activity['rest_id'] || activity['point_id']
   end
 
   def self.build_csv_timewindows(activity, max_timewindows_size)

@@ -4647,6 +4647,24 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 5, result[:routes][1][:activities].size
   end
 
+  def test_pud_initial_routes
+    ortools = OptimizerWrapper.config[:services][:ortools]
+    vrp = TestHelper.load_vrp(self)
+    expecting = vrp[:routes].collect{ |route| route[:mission_ids].size }
+
+    OptimizerWrapper.config[:services][:ortools].stub(
+      :run_ortools,
+      lambda { |problem, _, _, _, _, _|
+        # check no service has been filtered :
+        assert_equal expecting, (problem.routes.collect{ |r| r.service_ids.size })
+
+        'Job killed' # Return "Job killed" to stop gracefully
+      }
+    ) do
+      ortools.solve(vrp, 'test')
+    end
+  end
+
   def test_alternative_service
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
@@ -4683,10 +4701,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
           point_id: 'point_2'
         }],
         skills: ['skill1']
-      }],
-      routes: [{
-        vehicle_id: 'vehicle_0',
-        mission_ids: ['service_1']
       }],
       configuration: {
         resolution: {

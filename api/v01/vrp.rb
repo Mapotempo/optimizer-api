@@ -321,7 +321,7 @@ module Api
       end
 
       def self.vrp_request_relation(this)
-        this.requires(:id, type: String, allow_blank: false, desc: '')
+        this.optional(:id, type: String, allow_blank: false, desc: '')
         this.requires(:type, type: String, allow_blank: false, values: %w[same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse force_first never_first force_end vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months],
                              desc: 'Relations allow to define constraints explicitly between activities and/or vehicles. It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse, shipment, meetup, maximum_duration_lapse, vehicle_group_duration, vehicle_group_duration_on_weeks or vehicle_group_duration_on_months')
         this.optional(:lapse, type: Integer, desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
