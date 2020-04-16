@@ -68,6 +68,7 @@ module Wrappers
         return {
           cost: 0,
           solvers: ['vroom'],
+          elapsed: 0, # ms
           routes: [],
           unassigned: []
         }
