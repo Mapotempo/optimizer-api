@@ -534,6 +534,7 @@ module Wrappers
         solvers: ['ortools'],
         cost: 0,
         iterations: 0,
+        elapsed: 0, # ms
         routes: [],
         unassigned: (vrp.services.collect{ |service|
           {
