@@ -3329,10 +3329,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_shipments_inroute_duration
-    skip "This test fails with ortools-v7 due to a modelling issue.
-          In fact it doens't fail with v6 but v6 stops making iterations
-          mid-optim and returns an inferior solutoion (%50 optimality gap).
-          That is, both the optim-ortools modelling and this test needs fixing."
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = VRP.pud
     problem[:vehicles].each{ |v| v[:timewindow] = { start: 10, end: 10000 } }
@@ -5597,5 +5593,21 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, result[:costs].value
     assert_equal 0.021, result[:costs].lateness.round(3)
     assert_equal 0.3, result[:costs].overload.round(3)
+  end
+
+  def test_direct_shipment
+    vrp = VRP.pud
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    route = result[:routes].first[:activities]
+    first_shipment_index = route.find_index{ |stop| stop[:pickup_shipment_id] }
+    corresponding_delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == route[first_shipment_index][:pickup_shipment_id] }
+    assert_operator first_shipment_index + 1, :<, corresponding_delivery_index, 'If this is case, we should edit the services to make sure we are testing direct shipment properly'
+
+    vrp[:shipments].find{ |s| s[:id] == route[first_shipment_index][:pickup_shipment_id] }[:direct] = true
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    route = result[:routes].first[:activities]
+    shipment_index = route.find_index{ |stop| stop[:pickup_shipment_id] == route[first_shipment_index][:pickup_shipment_id] }
+    delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == route[first_shipment_index][:pickup_shipment_id] }
+    assert_equal shipment_index + 1, delivery_index
   end
 end
