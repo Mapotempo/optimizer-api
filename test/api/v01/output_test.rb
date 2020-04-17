@@ -75,11 +75,13 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     vrp = VRP.lat_lon
     vrp[:vehicles] << vrp[:vehicles][0].dup
     vrp[:configuration][:restitution] = { csv: true }
-    vrp[:configuration][:preprocessing][:partitions] = [{
-      method: 'balanced_kmeans',
-      metric: 'duration',
-      entity: 'vehicle'
-    }]
+    vrp[:configuration][:preprocessing] = {
+      partitions: [{
+        method: 'balanced_kmeans',
+        metric: 'duration',
+        entity: 'vehicle'
+      }]
+    }
 
     csv_data = submit_csv api_key: 'demo', vrp: vrp
     assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
