@@ -37,7 +37,6 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
     delete_completed_job @job_id, api_key: 'ortools'
   end
 
-  focus
   def test_csv_configuration
     TestHelper.solve_asynchronously do
       vrp = VRP.lat_lon
