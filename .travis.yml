@@ -1,32 +1,45 @@
 services:
   - docker
 
-env: # Tests are ordered so that they finish faster when run on three parallel threads by Travis
-  - TEST_SUITE='basis'
-  - TEST_SUITE='dicho'
-  - TEST_SUITE='scheduling'
-  - TEST_SUITE='real_scheduling'
-  - TEST_SUITE='real_scheduling_solver'
-  - TEST_SUITE='split_clustering'
-  - TEST_SUITE='real'
-  # - TEST_SUITE='real_dicho' -> should be runned locally because test are too big to dump matrices
-
 before_install:
-  - export REGISTRY=registry.mapotempo.com/
+  - export REGISTRY=${REGISTRY:-registry.mapotempo.com/}
   - docker build --build-arg VROOM_VERSION=${VROOM_VERSION:-v1.2.0} --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-v1.0.0} -f docker/Dockerfile -t registry.test.com/mapotempo/optimizer-api:latest .
   - docker swarm init
   - mkdir -p ./redis
+  - docker stack deploy -c ./docker/docker-compose.yml optimizer
 
-install: skip
-
-script:
-  - travis_wait 50 bash ci-utils/travis.sh ${TEST_SUITE}
-
-deploy:
-  skip_cleanup: true
-  if: tag ~= /^v.*/
-  script:
-    - echo "> pushing tag ${TRAVIS_TAG}"
-    - IMAGE_NAME=${REGISTRY}/mapotempo-ce/optimizer-api:${TRAVIS_TAG}
-    - docker tag registry.test.com/mapotempo/optimizer-api:latest ${IMAGE_NAME}
-    - docker push ${IMAGE_NAME}
+jobs:
+  include:
+    - stage: "Tests"
+      install: skip
+      env: TEST_SUITE='basis'
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
+    - env: TEST_SUITE='dicho'
+      install: skip
+      script: travis_wait 60 bash ci-utils/tests.sh ${TEST_SUITE}
+    - env: TEST_SUITE='scheduling'
+      install: skip
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
+    - env: TEST_SUITE='real_scheduling'
+      install: skip
+      script: travis_wait 60 bash ci-utils/tests.sh ${TEST_SUITE}
+    - env: TEST_SUITE='real_scheduling_solver'
+      install: skip
+      script: travis_wait 60 bash ci-utils/tests.sh ${TEST_SUITE}
+    - env: TEST_SUITE='split_clustering'
+      install: skip
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
+    - env: TEST_SUITE='real'
+      install: skip
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
+    - stage: deploy
+      name: "Deploy"
+      install: skip
+      skip_cleanup: true
+      if: tag ~= /^[mweb_v|v].*/
+      script:
+        - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USERNAME" --password-stdin ${REGISTRY}
+        - echo "> pushing tag ${TRAVIS_TAG}"
+        - IMAGE_NAME=${REGISTRY}mapotempo-ce/optimizer-api:${TRAVIS_TAG}
+        - docker tag registry.test.com/mapotempo/optimizer-api:latest ${IMAGE_NAME}
+        - docker push ${IMAGE_NAME}
