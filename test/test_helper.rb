@@ -419,6 +419,141 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
+  def self.lat_lon_capacitated
+    {
+      units: [{
+        id: 'kg'
+      }],
+      matrices: [{
+        id: 'm1',
+        time: [
+          [0, 4032, 4032, 1142, 3194, 3194, 2177],
+          [4391, 0, 0, 3003, 660, 660, 3806],
+          [4391, 0, 0, 3003, 660, 660, 3806],
+          [1226, 3079, 3079, 0, 2412, 2412, 1282],
+          [3619, 668, 668, 2437, 0, 0, 3424],
+          [3619, 668, 668, 2437, 0, 0, 3424],
+          [2192, 3802, 3802, 1302, 3443, 3443, 0]
+        ],
+        distance: [
+          [0, 47421.3, 47421.3, 15006.4, 42202.1, 42202.1, 25276.8],
+          [47800.9, 0, 0, 36467.2, 5566.7, 5566.7, 51131.4],
+          [47800.9, 0, 0, 36467.2, 5566.7, 5566.7, 51131.4],
+          [15659.2, 36787.3, 36787.3, 0, 31151.1, 31151.1, 17579.1],
+          [43286.1, 5636.2, 5636.2, 31545.7, 0, 0, 46706.8],
+          [43286.1, 5636.2, 5636.2, 31545.7, 0, 0, 46706.8],
+          [25669.7, 51202.7, 51202.7, 17574.4, 46538.9, 46538.9, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0,
+        location: { lat: 45.288798, lon: 4.951565 }
+      }, {
+        id: 'point_1',
+        matrix_index: 1,
+        location: { lat: 45.6047844887, lon: 4.7589656711 }
+      }, {
+        id: 'point_2',
+        matrix_index: 2,
+        location: { lat: 45.6047844887, lon: 4.7589656711 }
+      }, {
+        id: 'point_3',
+        matrix_index: 3,
+        location: { lat: 45.344334, lon: 4.817731 }
+      }, {
+        id: 'point_4',
+        matrix_index: 4,
+        location: { lat: 45.5764120817, lon: 4.8056146502 }
+      }, {
+        id: 'point_5',
+        matrix_index: 5,
+        location: { lat: 45.5764120817, lon: 4.8056146502 }
+      }, {
+        id: 'point_6',
+        matrix_index: 6,
+        location: { lat: 45.2583248913, lon: 4.6873225272 }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'm1',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        router_dimension: 'distance',
+        capacities: [{
+          unit_id: 'kg',
+          limit: 5
+        }]
+      }],
+      services: [{
+        id: 'service_1',
+        type: 'service',
+        activity: {
+          point_id: 'point_1'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: 2
+        }]
+      }, {
+        id: 'service_2',
+        type: 'service',
+        activity: {
+          point_id: 'point_2'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: 2
+        }]
+      }, {
+        id: 'service_3',
+        type: 'service',
+        activity: {
+          point_id: 'point_3'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: 2
+        }]
+      }, {
+        id: 'service_4',
+        type: 'service',
+        activity: {
+          point_id: 'point_4'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: 2
+        }]
+      }, {
+        id: 'service_5',
+        type: 'service',
+        activity: {
+          point_id: 'point_5'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: 2
+        }]
+      }, {
+        id: 'service_6',
+        type: 'service',
+        activity: {
+          point_id: 'point_6'
+        },
+        quantities: [{
+          unit_id: 'kg',
+          value: 2
+        }]
+      }],
+      configuration: {
+        resolution: {
+          duration: 100
+        }
+      }
+    }
+  end
+
   def self.lat_lon_scheduling
     {
       units: [{

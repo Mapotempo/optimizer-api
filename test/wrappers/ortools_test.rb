@@ -131,6 +131,41 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 3, result[:routes][1][:activities].size
   end
 
+  def test_group_number
+    problem = VRP.lat_lon_capacitated
+    problem[:vehicles] += [{
+      id: 'vehicle_1',
+      matrix_id: 'm1',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      router_dimension: 'distance',
+      capacities: [{
+        unit_id: 'kg',
+        limit: 2
+      }]
+    }, {
+      id: 'vehicle_2',
+      matrix_id: 'm1',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      router_dimension: 'distance',
+      capacities: [{
+        unit_id: 'kg',
+        limit: 5
+      }]
+    }]
+    problem[:relations] = [{
+        type: 'vehicle_group_number',
+        linked_vehicle_ids: ['vehicle_0', 'vehicle_1', 'vehicle_2'],
+        lapse: 2
+      }]
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert result
+    assert_equal 2, result[:unassigned].size
+    assert_equal 2, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_1' }[:activities].size
+    assert_equal 2, (result[:routes].count{ |route| route[:activities].size > 2 })
+  end
+
   def test_periodic_overall_duration
     problem = {
       matrices: [{
