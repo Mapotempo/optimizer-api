@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-docker stack deploy -c ./docker/docker-compose.yml optimizer
-
 TEST_ENV=''
 TEST_LOG_LEVEL='info'
 TEST_COVERAGE='false'
