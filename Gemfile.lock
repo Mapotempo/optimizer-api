@@ -124,7 +124,7 @@ GEM
     rack-test (1.1.0)
       rack (>= 1.0, < 3)
     rainbow (3.0.0)
-    rake (10.3.2)
+    rake (13.0.1)
     redis (3.3.5)
     redis-activesupport (5.0.7)
       activesupport (>= 3, < 6)
