@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'active_support'
+require 'active_support/core_ext'
 require 'tmpdir'
 
 require './wrappers/demo'
@@ -25,6 +26,7 @@ require './wrappers/ortools'
 
 require './lib/cache_manager'
 require './util/logger'
+require 'redis'
 
 module OptimizerWrapper
   TMP_DIR = ActiveSupport::Cache::NullStore.new
@@ -39,6 +41,7 @@ module OptimizerWrapper
   ORTOOLS = Wrappers::Ortools.new(TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
   PARAMS_LIMIT = { points: 150, vehicles: 10 }.freeze
+  REDIS_COUNT = ::Redis.new(host: '0.0.0.0') # Fake redis
 
   @@dump_vrp_dir = CacheManager.new(TMP_DIR)
 
@@ -115,6 +118,7 @@ module OptimizerWrapper
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
       output_schedule: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
-    }
+    },
+    redis_count: REDIS_COUNT,
   }
 end

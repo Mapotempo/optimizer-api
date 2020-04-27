@@ -38,6 +38,8 @@ GEM
       unf (>= 0.0.5, < 1.0.0)
     equalizer (0.0.11)
     eventmachine (1.2.7)
+    fakeredis (0.7.0)
+      redis (>= 3.2, < 5.0)
     google-protobuf (3.9.1)
     grape (0.18.0)
       activesupport
@@ -123,9 +125,6 @@ GEM
       rack (>= 1.0, < 3)
     rainbow (3.0.0)
     rake (10.3.2)
-    rakeup (1.2.0)
-      rack (~> 1.5.0)
-      rake (~> 10.3.0)
     redis (3.3.5)
     redis-activesupport (5.0.7)
       activesupport (>= 3, < 6)
@@ -223,6 +222,7 @@ DEPENDENCIES
   ai4r
   benchmark-ips
   byebug
+  fakeredis
   google-protobuf (>= 3)
   grape (< 0.19.0)
   grape-entity
@@ -244,7 +244,7 @@ DEPENDENCIES
   rack-contrib
   rack-cors
   rack-test
-  rakeup
+  rake
   redis (< 4)
   redis-activesupport
   require_all
