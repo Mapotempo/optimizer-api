@@ -113,7 +113,7 @@ GEM
     polylines (0.3.0)
     puma (4.1.0)
       nio4r (~> 2.0)
-    rack (1.5.5)
+    rack (1.6.13)
     rack-accept (0.4.5)
       rack (>= 0.4)
     rack-contrib (1.8.0)
