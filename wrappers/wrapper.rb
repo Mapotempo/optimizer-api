@@ -543,14 +543,12 @@ module Wrappers
       matrix_indices = vrp.points.map(&:matrix_index).uniq
       line_cpt = Array.new(matrix_indices.size){ 0 }
       column_cpt = Array.new(matrix_indices.size){ 0 }
-      vrp.matrices.each{ |matrix|
-        matrix_indices.each_with_index{ |index_a, line|
-          matrix_indices.each_with_index{ |index_b, col|
-            if matrix[dimension][index_a][index_b] >= 2**31 - 1
-              line_cpt[line] += 1
-              column_cpt[col] += 1
-            end
-          }
+      matrix_indices.each_with_index{ |index_a, line|
+        matrix_indices.each_with_index{ |index_b, col|
+          next if vrp.matrices.any?{ |matrix| matrix[dimension][index_a][index_b] < 2**31 - 1 }
+
+          line_cpt[line] += 1
+          column_cpt[col] += 1
         }
       }
 

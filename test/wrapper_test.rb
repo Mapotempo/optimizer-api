@@ -2218,6 +2218,29 @@ class WrapperTest < Minitest::Test
     assert_equal(1, result[:unassigned].count{ |un| un[:reason] == 'Unreachable' })
   end
 
+  def test_service_unreachable_two_matrices
+    vrp = VRP.basic
+    vrp[:matrices] << {
+      id: 'matrix_1',
+      time: vrp[:matrices].first[:time].collect(&:dup)
+    }
+    vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:matrix_id] = 'matrix_1'
+    unassigned_services = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)[:unassigned]
+    assert_empty(unassigned_services.select{ |un| un[:reason] == 'Unreachable' })
+
+    vrp[:matrices][0][:time].each{ |line| line[2] = 2**32 }
+    vrp[:matrices][0][:time][2] = (1..vrp[:matrices].first[:time][2].size).collect{ |_i| 2**32 }
+    unassigned_services = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)[:unassigned]
+    assert_empty(unassigned_services.select{ |un| un[:reason] == 'Unreachable' })
+
+    vrp[:matrices][1][:time].each{ |line| line[2] = 2**32 }
+    vrp[:matrices][1][:time][2] = (1..vrp[:matrices].first[:time][2].size).collect{ |_i| 2**32 }
+    unassigned_services = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)[:unassigned]
+    assert_equal 1, unassigned_services.select{ |un| un[:reason] == 'Unreachable' }.size
+    assert_equal 'service_2', unassigned_services.select{ |un| un[:reason] == 'Unreachable' }.first[:service_id]
+  end
+
   def test_impossible_service_unconsistent_minimum_lapse
     problem = {
       matrices: [{
