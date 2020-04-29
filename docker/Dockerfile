@@ -36,6 +36,7 @@ ENV LANG C.UTF-8
 
 COPY --from=optimizer-ortools /srv/or-tools srv/or-tools
 COPY --from=optimizer-ortools /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
+COPY --from=optimizer-ortools /lib/x86_64-linux-gnu/libm* /lib/x86_64-linux-gnu/
 COPY --from=optimizer-ortools /srv/optimizer-ortools /srv/optimizer-ortools
 COPY --from=vroom /srv/vroom/bin /srv/vroom/bin
 COPY --from=vroom /usr/lib/x86_64-linux-gnu/libboost* /usr/lib/x86_64-linux-gnu/
