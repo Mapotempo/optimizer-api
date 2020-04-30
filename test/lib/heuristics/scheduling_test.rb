@@ -165,15 +165,7 @@ class HeuristicTest < Minitest::Test
       problem[:services][5][:activity][:point_id] = problem[:services][4][:activity][:point_id]
       problem[:vehicles].first[:timewindow] = nil
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
-      problem[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
         duration: 10,
         solver: false,
@@ -218,15 +210,7 @@ class HeuristicTest < Minitest::Test
       problem[:services][5][:activity][:point_id] = problem[:services][4][:activity][:point_id]
       problem[:vehicles].first[:timewindow] = nil
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
-      problem[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
         duration: 10,
         solver: false,
@@ -281,15 +265,7 @@ class HeuristicTest < Minitest::Test
         router_dimension: 'distance',
         sequence_timewindows: [{ start: 0, end: 500000, day_index: 0 }, { start: 0, end: 500000, day_index: 1 }]
       }]
-      problem[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
         duration: 10,
         solver: false,
@@ -345,15 +321,7 @@ class HeuristicTest < Minitest::Test
         duration: 24500,
         capacities: [{ unit_id: 'kg', limit: 1100 }],
       }]
-      problem[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
         duration: 10,
         solver: false,
@@ -413,15 +381,7 @@ class HeuristicTest < Minitest::Test
         duration: 50000,
         capacities: [{ unit_id: 'kg', limit: 1100 }],
       }]
-      problem[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
         duration: 10,
         solver: false,
@@ -453,15 +413,7 @@ class HeuristicTest < Minitest::Test
         duration: 50000,
         capacities: [{ unit_id: 'kg', limit: 1100 }],
       }]
-      problem[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
         duration: 10,
         solver: false,

@@ -48,15 +48,7 @@ class InstanceValidityTest < Minitest::Test
 
   def test_second_stage_allowed
     problem = VRP.basic
-    problem[:configuration][:preprocessing][:partitions] = [{
-      method: 'balanced_kmeans',
-      metric: 'duration',
-      entity: 'vehicle'
-    }, {
-      method: 'balanced_kmeans',
-      metric: 'duration',
-      entity: 'work_day'
-    }]
+    problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
     assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_work_day_partitions_only_schedule
   end
@@ -65,15 +57,7 @@ class InstanceValidityTest < Minitest::Test
     problem = VRP.basic
     problem[:services].first[:visits_number] = 3
     problem[:services].first[:minimum_lapse] = 1
-    problem[:configuration][:preprocessing][:partitions] = [{
-      method: 'balanced_kmeans',
-      metric: 'duration',
-      entity: 'vehicle'
-    }, {
-      method: 'balanced_kmeans',
-      metric: 'duration',
-      entity: 'work_day'
-    }]
+    problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
     assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_work_day_partitions_only_schedule
   end

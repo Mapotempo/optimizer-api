@@ -285,15 +285,10 @@ class SplitClusteringTest < Minitest::Test
 
     def test_work_day_without_vehicle_entity
       vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: :visits,
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: :visits,
-        entity: 'work_day'
-      }]
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
+      vrp[:configuration][:preprocessing][:partitions].each{ |partition|
+        partition[:metric] = :visits
+      }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
       assert_equal 10, generated_services_vrps.size
@@ -335,15 +330,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_unavailable_days_taken_into_account_vehicle_work_day
       vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
@@ -366,15 +353,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_skills_taken_into_account
       vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       vrp[:services][0][:skills] = ['cold']
       vrp[:services][3][:skills] = ['hot']
@@ -413,15 +392,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_good_vehicle_assignment_two_phases
       vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'vehicle'
-      }, {
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: 'work_day'
-      }]
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]

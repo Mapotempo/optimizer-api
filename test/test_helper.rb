@@ -155,6 +155,11 @@ module TestHelper
       }
     }
   end
+
+  def self.vehicle_and_days_partitions
+    [{ method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' },
+     { method: 'balanced_kmeans', metric: 'duration', entity: 'work_day' }]
+  end
 end
 
 module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword

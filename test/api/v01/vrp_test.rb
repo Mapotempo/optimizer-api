@@ -205,10 +205,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     @job_ids = []
     TestHelper.solve_asynchronously do
       vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = [
-        { method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' },
-        { method: 'balanced_kmeans', metric: 'duration', entity: 'work_day' }
-      ]
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       @job_ids << submit_vrp(api_key: 'ortools', vrp: vrp)
       wait_status @job_ids.last, 'completed', api_key: 'ortools'
       refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
@@ -244,10 +241,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
         TestHelper.solve_asynchronously do
           vrp = VRP.lat_lon_scheduling_two_vehicles
-          vrp[:configuration][:preprocessing][:partitions] = [
-            { method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' },
-            { method: 'balanced_kmeans', metric: 'duration', entity: 'work_day' }
-          ]
+          vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
           @job_id = submit_vrp(api_key: 'ortools', vrp: vrp)
           wait_status @job_id, 'completed', api_key: 'ortools'
         end
@@ -299,5 +293,24 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten.uniq,
                     :==,
                     vrp.services.collect{ |s| s.quantities.collect(&:unit_id) }.flatten.uniq
+  end
+
+  def test_vrp_creation_if_route_and_partitions
+    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp[:routes] = [{
+      vehicle_id: 'vehicle_0',
+      mission_ids: ['service_1']
+    }, {
+      vehicle_id: 'vehicle_1',
+      mission_ids: ['service_7']
+    }]
+    vrp[:configuration][:preprocessing] = {
+      partitions: TestHelper.vehicle_and_days_partitions
+    }
+
+    vrp = TestHelper.create(vrp)
+    assert_equal 2, (vrp.services.count{ |s| !s.sticky_vehicles.empty? })
+    assert_equal 'vehicle_0', vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicles.first.id
+    assert_equal 'vehicle_1', vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicles.first.id
   end
 end

@@ -18,11 +18,13 @@
 require './lib/tsp_helper.rb'
 require './models/base'
 require './models/concerns/distance_matrix'
+require './models/concerns/expand_data'
 require './models/concerns/periodic_service'
 
 module Models
   class Vrp < Base
     include DistanceMatrix
+    include ExpandData
     include PeriodicService
 
     field :name, default: nil
@@ -128,12 +130,18 @@ module Models
         vrp.send("#{key}=", hash[key]) if hash[key]
       }
 
+      self.expand_data(vrp)
+
       vrp
     end
 
     def self.check_consistency(hash)
       raise DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
                                                                                                                               (!hash[:configuration][:schedule] || hash[:configuration][:schedule][:range_indice])
+    end
+
+    def self.expand_data(vrp)
+      vrp.add_sticky_vehicle_if_routes_and_partitions
     end
 
     def self.filter(hash)
