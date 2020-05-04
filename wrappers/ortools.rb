@@ -491,6 +491,15 @@ module Wrappers
       build_detail(nil, rest, nil, day_index, job_load, nil, nil)
     end
 
+    def build_costs(costs)
+      {
+         fixed: costs&.fixed || 0,
+         time: costs && (costs.time + costs.time_fake + costs.time_without_wait) || 0,
+         distance: costs && (costs.distance + costs.distance_fake) || 0,
+         value: costs&.value || 0
+      }
+    end
+
     def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
       {
         lat: point && point.location && point.location.lat,
@@ -606,6 +615,7 @@ module Wrappers
           earliest_start = route_start
           {
             vehicle_id: vehicle.id,
+            costs: build_costs(route.costs),
             activities: route['activities'].collect.with_index{ |activity, activity_index|
               current_activity = nil
               current_index = activity['index'] || 0
