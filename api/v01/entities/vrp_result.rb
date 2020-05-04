@@ -44,6 +44,13 @@ module Api
       expose :timewindows, using: VrpResultSolutionRouteActivityDetailTimewindows, documentation: { is_array: true, desc: '' }
     end
 
+    class VRPResultSolutionRouteCosts < Grape::Entity
+      expose :fixed, documentation: { type: String, desc: 'Cost associated to the use of the vehicle' }
+      expose :time, documentation: { type: String, desc: 'Cost associated to the time dimension' }
+      expose :distance, documentation: { type: String, desc: 'Cost associated to the distance dimension' }
+      expose :value, documentation: { type: String, desc: 'Cost associated to the value dimension' }
+    end
+
     class VrpResultSolutionRouteActivities < Grape::Entity
       expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
       expose :travel_distance, documentation: { type: Integer, desc: 'travel distance from the previous point' }
@@ -66,6 +73,7 @@ module Api
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
       expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place' }
       expose :initial_loads, using: VrpResultDetailQuantities, documentation: { is_array: true, desc: 'Give the actual initial loads of the route' }
+      expose :costs, using: VRPResultSolutionRouteCosts, documentation: { desc: 'The impact of the current route within the solution cost' }
     end
 
     class VrpResultSolutionUnassigneds < Grape::Entity
