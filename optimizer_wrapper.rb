@@ -500,16 +500,41 @@ module OptimizerWrapper
 
   def self.find_type(activity)
     if activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] || activity[:shipment_id]
-      'visit'
+      I18n.t('export_file.stop.type_visit')
     elsif activity[:rest_id]
-      'rest'
+      I18n.t('export_file.stop.type_rest')
     elsif activity[:point_id]
-      'store'
+      I18n.t('export_file.stop.type_store')
     end
   end
 
+  def self.basic_header
+    [I18n.t('export_file.route.id'),
+     I18n.t('export_file.stop.reference'),
+     I18n.t('export_file.stop.point_id'),
+     I18n.t('export_file.stop.lat'),
+     I18n.t('export_file.stop.lon'),
+     I18n.t('export_file.stop.type'),
+     I18n.t('export_file.stop.wait_time'),
+     I18n.t('export_file.stop.start_time'),
+     I18n.t('export_file.stop.end_time'),
+     I18n.t('export_file.stop.setup'),
+     I18n.t('export_file.stop.duration'),
+     I18n.t('export_file.stop.additional_value'),
+     I18n.t('export_file.stop.skills'),
+     I18n.t('export_file.tags'),
+     I18n.t('export_file.route.total_travel_time'),
+     I18n.t('export_file.route.total_travel_distance'),
+     I18n.t('export_file.route.total_wait_time')]
+  end
+
+  def self.non_importable_data_header
+    [I18n.t('export_file.stop.name'),
+     I18n.t('export_file.route.original_id')]
+  end
+
   def self.build_csv(solutions)
-    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'waiting_time', 'begin_time', 'end_time', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance', 'total_waiting_time']
+    header = basic_header
     quantities_header = []
     unit_ids = []
     optim_planning_output = nil
@@ -522,7 +547,7 @@ module OptimizerWrapper
 
           activity[:detail][:quantities].each{ |quantity|
             unit_ids << quantity[:unit]
-            quantities_header << "quantity_#{quantity['label'] || quantity[:unit]}"
+            quantities_header << I18n.t('export_file.stop.quantity', unit: (quantity[:label] || quantity[:unit]))
           }
         }
       }
@@ -542,7 +567,8 @@ module OptimizerWrapper
         activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
       }.compact).max
       timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
-        ["timewindow_start_#{index}", "timewindow_end_#{index}"]
+        tw_index = index + (I18n.locale == :legacy ? 0 : 1)
+        [I18n.t('export_file.stop.tw_start', index: tw_index), I18n.t('export_file.stop.tw_end', index: tw_index)]
       }.flatten
       header += quantities_header + timewindows_header
       reasons = true if solution[:unassigned].size.positive?
@@ -550,34 +576,31 @@ module OptimizerWrapper
       optim_planning_output = solution[:routes].any?{ |route| route[:activities].any?{ |stop| stop[:day_week] } }
     }
     CSV.generate{ |out_csv|
-      if optim_planning_output
-        header = ['day_week_num', 'day_week'] + header
-      end
-      if reasons
-        header << 'unassigned_reason'
-      end
+      header = [I18n.t('export_file.plan.name'), I18n.t('export_file.plan.ref')] + header if optim_planning_output
+      header << I18n.t('export_file.stop.comment') if reasons
+      header << non_importable_data_header
       out_csv << header
       (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
         solution[:routes].each{ |route|
           route[:activities].each{ |activity|
             days_info = optim_planning_output ? [activity[:day_week_num], activity[:day_week]] : []
-            common = build_csv_activity(solution[:name], route, activity)
+            common, non_importable = build_csv_activity(solution[:name], route, activity)
             timewindows = build_csv_timewindows(activity, max_timewindows_size)
             quantities = unit_ids.collect{ |unit_id|
               quantity = activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }
               quantity[:value] if quantity
             }
-            out_csv << (days_info + common + quantities + timewindows + [nil])
+            out_csv << (days_info + common + quantities + timewindows + [nil] + non_importable)
           }
         }
         solution[:unassigned].each{ |activity|
           days_info = optim_planning_output ? [activity[:day_week_num], activity[:day_week]] : []
-          common = build_csv_activity(solution[:name], nil, activity)
+          common, non_importable = build_csv_activity(solution[:name], nil, activity)
           timewindows = build_csv_timewindows(activity, max_timewindows_size)
           quantities = unit_ids.collect{ |unit_id|
             activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id } && activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }[:value]
           }
-          out_csv << (days_info + common + quantities + timewindows + [activity[:reason]])
+          out_csv << (days_info + common + quantities + timewindows + [activity[:reason]] + non_importable)
         }
       }
     }
@@ -709,7 +732,7 @@ module OptimizerWrapper
 
   def self.build_csv_activity(name, route, activity)
     type = find_type(activity)
-    [
+    [[
       route && route[:vehicle_id],
       build_complete_id(activity),
       activity[:point_id],
@@ -727,7 +750,7 @@ module OptimizerWrapper
       route && formatted_duration(route[:total_travel_time]),
       route && route[:total_distance],
       route && formatted_duration(route[:total_waiting_time]),
-    ].flatten
+    ].flatten, [activity['original_id'], route['original_vehicle_id']]]
   end
 
   def self.build_complete_id(activity)

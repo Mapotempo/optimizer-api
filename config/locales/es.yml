@@ -1,0 +1,51 @@
+# Copyright © Mapotempo, 2021
+#
+# This file is part of Mapotempo.
+#
+# Mapotempo is free software. You can redistribute it and/or
+# modify since you respect the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# Mapotempo is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the Licenses for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Mapotempo. If not, see:
+# <http://www.gnu.org/licenses/agpl.html>
+#
+
+es:
+  export_file:
+    plan:
+      name: plan
+      ref: referencia del plan
+    route:
+      id: gira
+      original_id: vehículo
+      total_travel_distance: recorrido total
+      total_travel_time: duración total
+      total_wait_time: tiempo de espera total
+    stop:
+      additional_value: valor adicional
+      comment: comentario
+      duration: duración visita
+      end_time: fin
+      lat: lat
+      lon: lng
+      name: nombre
+      point_id: referencia
+      quantity: "cantidad[%{unit}]"
+      reference: referencia visita
+      setup: duración de preparación
+      skills: etiquetas visita
+      start_time: hora
+      tw_end: "horario fin %{index}"
+      tw_start: "horario inicio %{index}"
+      type: tipo parada
+      type_rest: descanso
+      type_store: depósito
+      type_visit: visita
+      wait_time: tiempo de espera
+    tags: etiquetas

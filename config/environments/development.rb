@@ -56,9 +56,6 @@ module OptimizerWrapper
   OptimizerLogger.with_datetime = true
   OptimizerLogger.caller_location = :relative
 
-  I18n.available_locales = [:en, :fr]
-  I18n.default_locale = :en
-
   @@c = {
     product_title: 'Optimizers API',
     product_contact_email: 'tech@mapotempo.com',

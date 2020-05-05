@@ -226,32 +226,53 @@ class Api::V01::OutputTest < Minitest::Test
     vrp = VRP.basic
     vrp[:configuration][:restitution] = { csv: true }
 
-    OptimizerWrapper.stub(
-      :build_csv,
-      lambda { |_solutions|
-        assert_equal :en, I18n.locale
-      }
-    ) do
-      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
-    end
+    [[nil, :legacy],
+     ['fr', :fr],
+     ['en', :en],
+     ['de', :en]].each{ |provided, expected|
+      OptimizerWrapper.stub(
+        :build_csv,
+        lambda { |_solutions|
+          assert_equal expected, I18n.locale
+        }
+      ) do
+        submit_csv api_key: 'demo', vrp: vrp, http_accept_language: provided
+      end
+    }
+  end
 
-    OptimizerWrapper.stub(
-      :build_csv,
-      lambda { |_solutions|
-        assert_equal :fr, I18n.locale
+  def test_returned_types
+    complete_vrp = VRP.pud
+    complete_vrp[:rests] = [{
+      id: 'rest_0',
+      duration: 1,
+      timewindows: [{
+        day_index: 0
+      }]
+    }]
+    complete_vrp[:vehicles].first[:rest_ids] = ['rest_0']
+    complete_vrp[:services] = [{
+      id: 'service_0',
+      activity: {
+        point_id: 'point_0',
+        timewindows: [{ start: 0, end: 1000 }]
       }
-    ) do
-      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => 'fr'
-    end
+    }]
+    complete_vrp[:configuration][:restitution] = { csv: true }
 
-    OptimizerWrapper.stub(
-      :build_csv,
-      lambda { |_solutions|
-        assert_equal :en, I18n.locale
-      }
-    ) do
-      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => 'bad_value'
-    end
+    type_index = nil
+
+    [['en', ['stop type', 'rest', 'store', 'visit']],
+     ['fr', ['type arrêt', 'pause', 'dépôt', 'visite']],
+     ['es', ['tipo parada', 'descanso', 'depósito', 'visita']]].each{ |provided, translations|
+      result = submit_csv api_key: 'ortools', vrp: complete_vrp, http_accept_language: provided
+      type_index = result.first.find_index(translations[0])
+      types = result.collect{ |line| line[type_index] }.compact - [translations[0]]
+      assert_equal 3, types.uniq.size
+      assert_equal 1, types.count(translations[1])
+      assert_equal 2, types.count(translations[2])
+      assert_equal 5, types.count(translations[3])
+    }
   end
 
   def test_csv_configuration
@@ -404,6 +425,40 @@ class Api::V01::OutputTest < Minitest::Test
       assert_equal ['vehicle', 'work_day'], result['geojsons'].first['partitions'].keys
       assert(result['geojsons'].first['partitions']['vehicle']['features'].all?{ |f| f['properties']['color'] })
       assert(result['geojsons'].first['partitions']['work_day']['features'].all?{ |f| f['properties']['color'] })
+    end
+  end
+
+  def test_csv_headers_compatible_with_import_according_to_language
+    vrp = VRP.lat_lon_capacitated
+    vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }]
+    vrp[:vehicles].each{ |v| v[:timewindow] = { start: 0, end: 10000 } }
+    vrp[:configuration][:preprocessing] = { first_solution_strategy: ['periodic'] }
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 2 }}
+    vrp[:configuration][:restitution] = { csv: true }
+
+    # checks columns headers when required for import
+    expected_headers = {
+      en: ['plan', 'reference plan', 'route', 'name', 'lat', 'lng', 'stop type', 'start time', 'end time',
+           'duration per destination', 'visit duration', 'tags visit', 'tags', 'quantity[kg]',
+           'time window start 1', 'time window end 1'],
+      es: [
+        'nombre del plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'inicio', 'fin',
+        'horario inicio 1', 'horario fin 1', 'duración de preparación', 'duración visita', 'cantidad[kg]',
+        'etiquetas visita', 'etiquetas'],
+      fr: ['plan', 'référence plan', 'tournée', 'nom', 'lat', 'lng', 'type arrêt', 'début de la mission',
+           'fin de la mission', 'durée client', 'durée visite', 'libellés visite', 'libellés',
+           'quantité[kg]', 'horaire début 1', 'horaire fin 1']
+    }
+
+    asynchronously start_worker: true do
+      expected_headers.each{ |languague, expected_list|
+        @job_id = submit_csv api_key: 'ortools', vrp: vrp
+        wait_status_csv @job_id, 200, api_key: 'ortools', http_accept_language: languague
+        current_headers = last_response.body.split("\n").first.split(',')
+        assert_empty expected_list - current_headers
+
+        delete_completed_job @job_id, api_key: 'ortools'
+      }
     end
   end
 end

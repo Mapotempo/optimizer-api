@@ -39,7 +39,13 @@ module Api
 
       helpers do
         def set_locale
-          I18n.locale = env.http_accept_language.compatible_language_from(I18n.available_locales.map(&:to_s)) || I18n.default_locale
+          I18n.locale =
+            if env.http_accept_language.header.nil? || env.http_accept_language.header == :unspecified
+              # we keep previous behaviour
+              :legacy
+            else
+              env.http_accept_language.compatible_language_from(I18n.available_locales.map(&:to_s)) || I18n.default_locale
+            end
         end
 
         def redis_count
