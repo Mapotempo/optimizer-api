@@ -39,9 +39,11 @@ module TestHelper
   end
 
   def wait_status_csv(job_id, status, options)
+    language = options[:http_accept_language] || :legacy
+    options.delete(:http_accept_language)
     puts "#{job_id} #{Time.now} waiting #{status} status_csv"
     loop do
-      get "0.1/vrp/jobs/#{job_id}", options
+      get "0.1/vrp/jobs/#{job_id}", options, 'HTTP_ACCEPT_LANGUAGE' => language
 
       assert_equal 200, last_response.status, last_response.body
 
@@ -78,9 +80,11 @@ module TestHelper
   end
 
   def submit_csv(params)
+    language = params[:http_accept_language] || :legacy
+    params.delete(:http_accept_language)
     hex = Digest::MD5.hexdigest params.to_s
     puts "#{hex} #{Time.now} submiting_csv #{hex}"
-    post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json'
+    post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => language
     assert_includes [200, 201], last_response.status
     assert last_response.body
     if last_response.status == 201
