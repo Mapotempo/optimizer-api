@@ -100,9 +100,6 @@ class RealCasesTest < Minitest::Test
 
       # Check total travel time
       assert result[:routes][0][:total_travel_time] < 23000, "Too long travel time: #{result[:routes][0][:total_travel_time]}"
-
-      # Check elapsed time
-      assert result[:elapsed] < 60000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Lyon - 65 services (without tw) + rest - dimension time car_urban - late for services & vehicles
