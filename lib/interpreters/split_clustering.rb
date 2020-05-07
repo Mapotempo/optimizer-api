@@ -380,7 +380,7 @@ module Interpreters
         raise OptimizerWrapper::ClusteringError, 'Usage of options[:entity] requires that number of clusters (nb_clusters) is equal to number of vehicles in the vrp.'
       end
 
-      default_options = { max_iterations: 300, restarts: 50, cut_symbol: :duration }
+      default_options = { max_iterations: 300, restarts: 10, cut_symbol: :duration }
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
