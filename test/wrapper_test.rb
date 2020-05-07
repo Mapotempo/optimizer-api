@@ -2241,6 +2241,26 @@ class WrapperTest < Minitest::Test
     assert_equal 'service_2', unassigned_services.find{ |un| un[:reason] == 'Unreachable' }[:service_id]
   end
 
+  def test_service_reachable_tricky_case
+    vrp = VRP.basic
+    vrp[:matrices] << {
+      id: 'matrix_1',
+      time: vrp[:matrices].first[:time].collect(&:dup)
+    }
+    vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:matrix_id] = 'matrix_1'
+    # filling both half of matrix line 1 with big value :
+    vrp[:matrices].each{ |matrice|
+      max_indice = matrice[:time].size - 1
+      half_indice = (max_indice / 2.0).ceil
+      (half_indice..max_indice).each{ |index| matrice[:time][1][index] = 2**32 }
+    }
+    # at total, matrix size ( <=> one line) elements are equal to 2**32
+    # but not on the same matrix so service should not be rejected (it used to be)
+    unassigned_services = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)[:unassigned]
+    assert_empty(unassigned_services.select{ |un| un[:reason] == 'Unreachable' })
+  end
+
   def test_impossible_service_unconsistent_minimum_lapse
     problem = {
       matrices: [{
@@ -2994,5 +3014,36 @@ class WrapperTest < Minitest::Test
     vrp = Marshal.load(File.binread('test/fixtures/check_lapse_with_unav_days_vrp.bindump')) # rubocop: disable Security/MarshalLoad
 
     refute vrp.can_affect_all_visits?(vrp.services.find{ |s| s.visits_number == 12 })
+  end
+
+  def test_detecting_unfeasible_services_can_not_take_too_long
+    vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
+
+    total_time = 0.0
+    OptimizerWrapper.stub(
+      :solve,
+      lambda { |vrp_in, _job, block|
+        vrp = vrp_in[:vrp]
+        vrp.compute_matrix(&block)
+        start = Time.now
+        OptimizerWrapper.config[:services][:demo].check_distances(vrp, [])
+        total_time += Time.now - start
+
+        {
+          routes: [],
+          unassigned: (vrp.services.collect{ |service|
+            (1..service.visits_number).collect{ |visit|
+              { service_id: "#{service.id}_#{visit}", detail: {}}
+            }
+          }).flatten
+        }
+      }
+    ) do
+      vrps.each{ |vrp|
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      }
+    end
+
+    assert_operator total_time, :<=, 14.0
   end
 end

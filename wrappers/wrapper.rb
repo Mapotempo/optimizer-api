@@ -523,19 +523,24 @@ module Wrappers
       return unfeasible if vrp.matrices.any?{ |matrix| matrix[dimension].nil? || matrix[dimension].size == 1 }
 
       matrix_indices = vrp.points.map(&:matrix_index).uniq
+
+      return unfeasible if matrix_indices.size <= 1
+
       line_cpt = Array.new(matrix_indices.size){ 0 }
       column_cpt = Array.new(matrix_indices.size){ 0 }
-      matrix_indices.each_with_index{ |index_a, line|
-        matrix_indices.each_with_index{ |index_b, col|
-          next if vrp.matrices.any?{ |matrix| matrix[dimension][index_a][index_b] < 2**31 - 1 }
-
-          line_cpt[line] += 1
-          column_cpt[col] += 1
+      vrp.matrices.each{ |matrix|
+        matrix_indices.each_with_index{ |index_a, line|
+          matrix_indices.each_with_index{ |index_b, col|
+            if matrix[dimension][index_a][index_b] >= 2**31 - 1
+              line_cpt[line] += 1
+              column_cpt[col] += 1
+            end
+          }
         }
       }
 
       matrix_indices.each.with_index{ |matrix_index, index|
-        next if (column_cpt[index] < vrp.matrices.first[dimension].size - 1) && (line_cpt[index] < vrp.matrices.first[dimension].size - 1)
+        next if (column_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1)) && (line_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1))
 
         vrp.services.select{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.point.matrix_index == matrix_index } }.each{ |service|
           if unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
