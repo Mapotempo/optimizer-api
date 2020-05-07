@@ -124,15 +124,15 @@ module Interpreters
       repeated_service_vrp
     end
 
-    def self.custom_heuristics(service, vrp)
-      return { vrp: vrp, service: service } if service == :vroom
-
+    def self.custom_heuristics(service, vrp, block = nil)
       service_vrp = { vrp: vrp, service: service }
-      if vrp.preprocessing_first_solution_strategy && !vrp.preprocessing_first_solution_strategy.include?('periodic')
-        find_best_heuristic(service_vrp)
-      else
-        service_vrp
-      end
+
+      return service_vrp if service == :vroom || vrp.preprocessing_first_solution_strategy.nil? || vrp.preprocessing_first_solution_strategy.include?('periodic') ||
+                            (!vrp.preprocessing_first_solution_strategy.include?('self_selection') && vrp.preprocessing_first_solution_strategy&.size.to_f <= 1)
+
+      block&.call(nil, nil, nil, "process heuristic choice : #{vrp.preprocessing_first_solution_strategy}", nil, nil, nil)
+
+      find_best_heuristic(service_vrp)
     end
 
     def self.batch_heuristic(service_vrps, custom_heuristics = nil)
