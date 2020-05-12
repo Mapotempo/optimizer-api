@@ -1126,6 +1126,7 @@ module Heuristics
 
       route_vrp.resolution_duration = 1000
       route_vrp.resolution_solver = true
+      route_vrp.restitution_intermediate_solutions = false
 
       route_vrp.preprocessing_first_solution_strategy = nil
       # NOT READY YET :
