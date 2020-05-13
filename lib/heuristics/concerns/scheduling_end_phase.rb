@@ -40,12 +40,12 @@ module SchedulingEndPhase
         found[id] << [vehicle, day]
       else
         found[id] = [[vehicle, day]]
-        @missing_visits[vehicle].find{ |missing| missing[:id] == best_cost[0] }[:used_days].each{ |assigned_day| found[id] << [vehicle, assigned_day] }
+        @services_data[best_cost[0]][:used_days].each{ |assigned_day| found[id] << [vehicle, assigned_day] }
       end
       insert_point_in_route(@candidate_routes[vehicle][day], best_cost[1][:cost])
       @output_tool&.output_scheduling_insert([day], id)
       @services_data[id][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
-      @missing_visits[vehicle].find{ |missing| missing[:id] == best_cost[0] }[:used_days] << day
+      @services_data[best_cost[0]][:used_days] << day
 
       costs = update_costs(costs, best_cost)
     end
@@ -58,7 +58,7 @@ module SchedulingEndPhase
     uninserted_set = @uninserted.keys.select{ |key| key.include?(best_cost[0] + '_') }
     @uninserted.delete(uninserted_set.first)
     if uninserted_set.size > 1
-      available_days = available_days(best_cost[0], best_cost[1][:vehicle], @missing_visits[best_cost[1][:vehicle]].find{ |missing| missing[:id] == best_cost[0] }[:used_days])
+      available_days = available_days(best_cost[0], best_cost[1][:vehicle], @services_data[best_cost[0]][:used_days])
 
       day, cost = find_best_day_cost(available_days, @candidate_routes[best_cost[1][:vehicle]], best_cost[0])
 
@@ -76,7 +76,7 @@ module SchedulingEndPhase
     costs.each{ |id, info|
       next if info[:day] != best_cost[1][:day] && info[:vehicle] != best_cost[1][:vehicle]
 
-      day, cost = find_best_cost(id, info[:vehicle], @missing_visits[info[:vehicle]].find{ |missing| missing[:id] == id }[:used_days])
+      day, cost = find_best_cost(id, info[:vehicle], @services_data[id][:used_days])
 
       if cost
         costs[id] = {
@@ -118,7 +118,6 @@ module SchedulingEndPhase
   def available_days(id, vehicle, used_days)
     min_lapse = @services_data[id][:minimum_lapse]
     max_lapse = @services_data[id][:maximum_lapse]
-
     available_days = @candidate_routes[vehicle].keys - used_days
     available_days.delete_if{ |day|
       smaller_lapse_with_other_days = used_days.collect{ |used_day| (used_day - day).abs }.min
@@ -136,12 +135,12 @@ module SchedulingEndPhase
     costs = {}
 
     @missing_visits.collect{ |vehicle, list|
-      list.collect{ |point|
-        day, cost = find_best_cost(point[:id], vehicle, point[:used_days])
+      list.collect{ |service_id|
+        day, cost = find_best_cost(service_id, vehicle, @services_data[service_id][:used_days])
 
         next if cost.nil?
 
-        costs[point[:id]] = {
+        costs[service_id] = {
           day: day,
           vehicle: vehicle,
           cost: cost

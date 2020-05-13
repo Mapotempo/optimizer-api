@@ -131,6 +131,7 @@ module SchedulingDataInitialization
         points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
         tws_sets: service.activity ? [service.activity.timewindows || []] : service.activities.collect(&:timewindows || []),
         unavailable_days: service.unavailable_visit_day_indices,
+        used_days: [],
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
         positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),

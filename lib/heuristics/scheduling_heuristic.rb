@@ -238,7 +238,7 @@ module Heuristics
         end
       }
 
-      @missing_visits[vehicle] << { id: service, used_days: this_service_days } if need_to_add_visits
+      @missing_visits[vehicle] << service if need_to_add_visits
     end
 
     def adjust_candidate_routes(vehicle, day_finished)
@@ -404,6 +404,7 @@ module Heuristics
         @points_vehicles_and_days[used_point][:days].delete(day_route[:global_day_index]) unless day_route[:current_route].find_index{ |stop| stop[:point_id] == used_point }
         clean_position_dependent_services(vehicle, day_route[:current_route], remove_index) unless day_route[:current_route].empty?
         day_route[:current_route] = update_route(day_route, remove_index)
+        @services_data[service][:used_days] = []
       }.compact.size
 
       if reaffect
@@ -679,6 +680,7 @@ module Heuristics
       max_shift = best_index[:potential_shift]
       additional_durations = @services_data[best_index[:id]][:durations].first + best_index[:considered_setup_duration]
       @same_located[best_index[:id]].each_with_index{ |service_id, i|
+        @services_data[service_id][:used_days] << route_data[:global_day_index]
         route_data[:current_route].insert(best_index[:position] + i + 1,
                                           id: service_id,
                                           point_id: best_index[:point],
@@ -899,6 +901,7 @@ module Heuristics
       current_route = route_data[:current_route]
       @candidate_services_ids.delete(point_to_add[:id])
 
+      @services_data[point_to_add[:id]][:used_days] << route_data[:global_day_index]
       @points_vehicles_and_days[point_to_add[:point]][:vehicles] = @points_vehicles_and_days[point_to_add[:point]][:vehicles] | [route_data[:vehicle_id].split('_')[0..-2].join('_')]
       @points_vehicles_and_days[point_to_add[:point]][:days] = @points_vehicles_and_days[point_to_add[:point]][:days] | [route_data[:global_day_index]]
       @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] = [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number], @services_data[point_to_add[:id]][:visits_number]].max
