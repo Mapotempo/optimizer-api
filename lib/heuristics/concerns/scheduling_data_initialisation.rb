@@ -187,6 +187,7 @@ module SchedulingDataInitialization
   def collect_indices(vrp)
     @services_data.collect{ |_id, data| data[:points_ids] }.flatten.uniq.sort.each{ |point_id|
       @indices[point_id] = vrp.points.find{ |pt| pt.id == point_id }&.matrix_index
+      @points_vehicles_and_days[point_id] = { vehicles: [], days: [], maximum_visits_number: 0 }
     }
   end
 

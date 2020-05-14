@@ -105,14 +105,17 @@ class HeuristicTest < Minitest::Test
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 7, data_services['service_1'][:heuristic_period]
 
+      p_v_d = {}
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(
         :@candidate_routes,
         'vehicle_0' => {
           0 => {
-            current_route: [{ id: 'service_1' }], vehicle_id: vrp.vehicles.first.id
+            current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
           },
           7 => {
-            current_route: [{ id: 'service_1' }], vehicle_id: vrp.vehicles.first.id
+            current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
           }
         }
       )
@@ -135,19 +138,22 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Heuristics::Scheduling.new(vrp)
+      p_v_d = {}
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
+                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 },
                                 3 => {
-                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
+                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 },
                                 7 => {
-                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
+                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 },
                                 10 => {
-                                  current_route: [{ id: 'service_1' }], vehicle: vrp.vehicles.first.id
+                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 }
                             })
       data_services = s.instance_variable_get(:@services_data)
@@ -182,10 +188,13 @@ class HeuristicTest < Minitest::Test
       s = Heuristics::Scheduling.new(vrp)
 
       vehicule = { matrix_id: vrp.vehicles.first.start_point.matrix_index }
+      p_v_d = {}
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{ id: 'service_1', requirement: :neutral }, { id: 'service_2', requirement: :never_first }], vehicle: vehicule
+                                  current_route: [{ id: 'service_1', point_id: 'point_0', requirement: :neutral }, { id: 'service_2', point_id: 'point_0', requirement: :never_first }], vehicle: vehicule
                                 }
                               })
       assert_equal vrp.services.size, s.instance_variable_get(:@candidate_services_ids).size
@@ -204,10 +213,13 @@ class HeuristicTest < Minitest::Test
       s = Heuristics::Scheduling.new(vrp)
 
       vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
+      p_v_d = {}
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{ id: 'service_1', requirement: :never_last }, { id: 'service_2', requirement: :neutral }], vehicle: vehicule
+                                  current_route: [{ id: 'service_1', point_id: 'point_0', requirement: :never_last }, { id: 'service_2', point_id: 'point_0', requirement: :neutral }], vehicle: vehicule
                                 }
                               })
       s.instance_variable_get(:@candidate_services_ids).delete('service_1')
