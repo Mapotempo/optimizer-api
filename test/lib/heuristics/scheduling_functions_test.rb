@@ -168,11 +168,13 @@ class HeuristicTest < Minitest::Test
       s = Heuristics::Scheduling.new(vrp)
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.bindump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/add_missing_visits_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
+      services_data = Marshal.load(File.binread('test/fixtures/add_missing_visits_services_data.bindump')) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@services_data, services_data)
       s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@ids_to_renumber, [])
       starting_with = s.instance_variable_get(:@uninserted).size
-      s.add_missing_visits
+      s.send(:add_missing_visits)
 
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       uninserted = s.instance_variable_get(:@uninserted)
@@ -181,6 +183,12 @@ class HeuristicTest < Minitest::Test
                                uninserted.size +
                                candidate_services_ids.collect{ |id| s.instance_variable_get(:@services_data)[id][:visits_number] }.sum
       assert starting_with >= s.instance_variable_get(:@uninserted).size
+
+      all_ids = (uninserted.keys +
+                 candidate_routes.collect{ |_v, d| d.collect{ |_day, route_day| route_day[:current_route].collect{ |stop| "#{stop[:id]}_#{stop[:number_in_sequence]}_#{services_data[stop[:id]][:visits_number]}" } } } +
+                 candidate_services_ids.collect{ |id| (1..services_data[id][:visits_number]).collect{ |visit_index| "#{id}_#{visit_index}_#{services_data[id][:visits_number]}" } }).flatten
+      assert_equal vrp.visits, all_ids.size
+      assert_equal vrp.visits, all_ids.uniq.size
     end
 
     def test_clean_routes_with_position_requirement_never_first
@@ -406,6 +414,106 @@ class HeuristicTest < Minitest::Test
 
       set = s.send(:insertion_cost_with_tw, timewindow, route_data, service, 0)
       assert set.last < 10086, "#{set.last} should be the best value among all activities' value"
+    end
+
+    def test_empty_underfilled_routes
+      vrp = VRP.lat_lon_scheduling
+      vrp[:vehicles].each{ |v| v[:cost_fixed] = 2 }
+      vrp[:services].each{ |s| s[:exclusion_cost] = 1 }
+      vrp_to_solve = TestHelper.create(vrp)
+      vrp_to_solve.vehicles = TestHelper.expand_vehicles(vrp_to_solve)
+      s = Heuristics::Scheduling.new(vrp_to_solve)
+
+      route_with_one = [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
+      route_with_two = route_with_one + [{ id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
+      route_with_three = route_with_two + [{ id: 'service_3', point_id: 'point_3', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
+      route_with_four = route_with_three + [{ id: 'service_4', point_id: 'point_4', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
+      candidate_route = {
+        'vehicle_0' => {
+          0 => { current_route: route_with_one, cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+          1 => { current_route: route_with_two, cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+          2 => { current_route: route_with_three, cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+          3 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1' }
+        }
+      }
+
+      # standard case :
+      s.instance_variable_set(:@candidate_routes, candidate_route.deep_dup)
+      s.send(:empty_underfilled)
+      assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route]
+      (1..3).each{ |day|
+        assert !s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route].empty?
+      }
+
+      # partial assignment is false
+      vrp[:configuration][:resolution][:allow_partial_assignment] = false
+      vrp_to_solve = TestHelper.create(vrp)
+      vrp_to_solve.vehicles = TestHelper.expand_vehicles(vrp_to_solve)
+      s = Heuristics::Scheduling.new(vrp_to_solve)
+      s.instance_variable_set(:@candidate_routes, candidate_route)
+      s.send(:empty_underfilled)
+      (0..3).each{ |day|
+        assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route]
+      }
+
+      # partial assignment is false with routes sorted differently
+      s.instance_variable_set(
+        :@candidate_routes,
+        'vehicle_0' => {
+          0 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+          1 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_3', point_id: 'point_3', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+          2 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+          3 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+        }
+      )
+
+      s.send(:empty_underfilled)
+      (0..3).each{ |day|
+        assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route]
+      }
+    end
+
+    def test_reaffecting_without_allow_partial_assignment
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:vehicles] = [vrp[:vehicles].first]
+      vrp[:vehicles].first[:sequence_timewindows] = nil
+      vrp[:vehicles].first[:timewindow] = { start: 28800, end: 54000 }
+      vrp[:vehicles].first[:cost_fixed] = 3
+      vrp[:services][0][:visits_number] = 7
+      vrp[:services][0][:minimum_lapse] = 1
+      vrp[:services][0][:maximum_lapse] = 1
+      vrp[:services][1][:visits_number] = 3
+      vrp[:services][1][:minimum_lapse] = 2
+      vrp[:services][1][:maximum_lapse] = 3
+      vrp[:services][1][:unavailable_visit_day_indices] = [3]
+      vrp[:services].each{ |s| s[:exclusion_cost] = 1 }
+      vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 6 }
+      vrp[:configuration][:resolution][:allow_partial_assignment] = false
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
+
+      s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/reaffecting_without_allow_partial_assignment_routes.bindump'))) # rubocop: disable Security/MarshalLoad
+
+      sequences = s.send(:deduce_sequences, 'service_2', 3, [0, 1, 2, 4, 5, 6])
+      assert_equal [[0, 2, 4], [0, 2, 5], [1, 4, 6], [2, 4, 6], []], sequences
+      s.send(:reaffect, [['service_2', 3]])
+      new_routes = s.instance_variable_get(:@candidate_routes)
+      # [1, 4, 6] is the only combination such that every day is available for service_2,
+      # and none of these day's route is empty
+      [1, 4, 6].each{ |day|
+        assert(new_routes['vehicle_0'][day][:current_route].any?{ |stop| stop[:id]&.include?('service_2') })
+      }
+
+      sequences = s.send(:deduce_sequences, 'service_1', 7, [0, 1, 2, 3, 4, 5, 6])
+      assert_equal [[0, 1, 2, 3, 4, 5, 6]], sequences
+      s.send(:reaffect, [['service_1', 7]])
+      assert((0..6).all?{ |day| new_routes['vehicle_0'][day][:current_route].any?{ |stop| stop[:id]&.include?('service_1') } })
+      s.send(:empty_underfilled)
+      new_routes = s.instance_variable_get(:@candidate_routes)
+      # this is room enough to assign every visit of service_1,
+      # but that would violate minimum stop per route expected
+      assert((0..6).none?{ |day| new_routes['vehicle_0'][day][:current_route].any?{ |stop| stop[:id]&.include?('service_1') } })
     end
   end
 end

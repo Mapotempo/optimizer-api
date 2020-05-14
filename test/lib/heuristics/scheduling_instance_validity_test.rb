@@ -79,13 +79,6 @@ class InstanceValidityTest < Minitest::Test
       assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_vehicle_free_approach_or_return_if_heuristic
     end
 
-    def test_reject_if_service_exclusion_cost
-      problem = VRP.scheduling
-      problem[:services].first[:exclusion_cost] = 1
-
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_service_exclusion_cost_if_heuristic
-    end
-
     def test_reject_if_vehicle_limit
       problem = VRP.scheduling
       problem[:configuration][:resolution][:vehicle_limit] = 1

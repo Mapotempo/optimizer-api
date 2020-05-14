@@ -383,10 +383,6 @@ module Wrappers
       vrp.vehicles.none?{ |vehicle| vehicle[:free_approach] || vehicle[:free_return] } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
 
-    def assert_no_service_exclusion_cost_if_heuristic(vrp)
-      vrp.services.collect{ |service| service[:exclusion_cost] }.compact.empty? || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
-    end
-
     def assert_no_vehicle_limit_if_heuristic(vrp)
       vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit >= vrp.vehicles.size || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end

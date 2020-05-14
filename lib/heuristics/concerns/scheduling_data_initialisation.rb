@@ -43,7 +43,8 @@ module SchedulingDataInitialization
         capacity_left: Marshal.load(Marshal.dump(capacity)),
         maximum_ride_time: vehicle[:maximum_ride_time],
         maximum_ride_distance: vehicle[:maximum_ride_distance],
-        router_dimension: vehicle[:router_dimension].to_sym
+        router_dimension: vehicle[:router_dimension].to_sym,
+        cost_fixed: vehicle.cost_fixed,
       }
       @vehicle_day_completed[original_vehicle_id][vehicle.global_day_index] = false
       @missing_visits[original_vehicle_id] = []
@@ -132,10 +133,12 @@ module SchedulingDataInitialization
         tws_sets: service.activity ? [service.activity.timewindows || []] : service.activities.collect(&:timewindows || []),
         unavailable_days: service.unavailable_visit_day_indices,
         used_days: [],
+        used_vehicles: [],
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
         positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),
         nb_activities: service.activity ? 1 : service.activities.size,
+        exclusion_cost: service.exclusion_cost || 0,
       }
 
       @candidate_services_ids << service.id
@@ -209,6 +212,7 @@ module SchedulingDataInitialization
 
     @services_data.group_by{ |_id, data| [data[:visits_number], data[:heuristic_period]] }.each{ |parameters, set|
       visits_number, lapse = parameters
+      @max_day[visits_number] = {} unless @max_day[visits_number]
       @max_day[visits_number][lapse] = compute_last_authorized_day(all_days, visits_number, lapse)
     }
   end
