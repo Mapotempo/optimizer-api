@@ -29,6 +29,7 @@ gem 'rest-client'
 
 gem 'ai4r'
 gem 'sim_annealing'
+gem 'balanced_vrp_clustering', git: 'https://github.com/fonsecadeline/balanced_vrp_clustering', branch: 'dev'
 
 gem 'polylines'
 gem 'rgeo'

@@ -485,20 +485,17 @@ class SplitClusteringTest < Minitest::Test
     def test_max_split_size
       vrp = VRP.lat_lon
       vrp[:vehicles][0][:router_dimension] = 'time'
-      vrp[:vehicles][0][:timewindow] = {}
       vrp[:vehicles][1] = {
         id: 'vehicle_1',
         matrix_id: 'm1',
         start_point_id: 'point_0',
-        router_dimension: 'time',
-        timewindow: {}
+        router_dimension: 'time'
       }
       vrp[:vehicles][2] = {
         id: 'vehicle_2',
         matrix_id: 'm1',
         start_point_id: 'point_0',
-        router_dimension: 'time',
-        timewindow: {}
+        router_dimension: 'time'
       }
       vrp[:configuration][:preprocessing][:max_split_size] = 2
 

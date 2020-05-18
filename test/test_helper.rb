@@ -82,6 +82,8 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       raise StandardError, "If there is a new model class add it above. If not, following fields should not be in vrp: #{unknown_model_fields}" unless unknown_model_fields.empty?
     end
 
+    vrp[:configuration][:preprocessing][:partitions].each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing] && vrp[:configuration][:preprocessing][:partitions]
+
     vrp
   end
 

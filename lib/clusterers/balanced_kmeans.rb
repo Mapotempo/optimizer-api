@@ -21,62 +21,90 @@ require './lib/helper.rb'
 module Ai4r
   module Clusterers
     class BalancedKmeans < KMeans
-      attr_reader :cluster_metrics
       attr_reader :iterations
+      attr_reader :cut_limit
 
-      parameters_info max_iterations: 'Maximum number of iterations to ' \
-                      'build the clusterer. By default it is uncapped.',
-                      centroid_function: 'Custom implementation to calculate the ' \
-                        'centroid of a cluster. It must be a closure receiving an array of ' \
-                        'data sets, and return an array of data items, representing the ' \
-                        'centroids of for each data set. ' \
-                        'By default, this algorithm returns a data items using the mode '\
-                        'or mean of each attribute on each data set.',
-                      centroid_indices: 'Indices of data items (indexed from 0) to be ' \
-                        'the initial centroids.  Otherwise, the initial centroids will be ' \
-                        'assigned randomly from the data set.',
-                      on_empty: 'Action to take if a cluster becomes empty, with values ' \
-                        "'eliminate' (the default action, eliminate the empty cluster), " \
-                        "'terminate' (terminate with error), 'random' (relocate the " \
-                        'empty cluster to a random point)',
-                      expected_characteristics: 'Expected sets of characteristics for generated clusters',
-                      strict_limitations: 'Values that can not be exceeded, for each cluster',
-                      incompatibility_function: 'Custom implementation of an incompatibility_function.'\
+      parameters_info vehicles_infos: 'Attributes of each cluster to generate. If centroid_indices are provided
+                      then vehicles_infos should be ordered according to centroid_indices order',
+                      distance_matrix: 'Distance matrix to use to compute distance between two data_items',
+                      compatibility_function: 'Custom implementation of a compatibility_function.'\
                         'It must be a closure receiving a data item and a centroid and return a '\
-                        'boolean (true: if incompatible and false: if compatible). '\
-                        'By default, this implementation uses a function which always returns false.'
+                        'boolean (true: if compatible and false: if incompatible). '\
+                        'By default, this implementation uses a function which always returns true.'
 
-      # Build a new clusterer, using data examples found in data_set.
-      # Items will be clustered in "number_of_clusters" different
-      # clusters.
+      def build(data_set, cut_symbol, cut_ratio = 1.0, options = {})
+        # Build a new clusterer, using data items found in data_set.
+        # Items will be clustered in "number_of_clusters" different
+        # clusters. Each item is defined by :
+        #    index 0 : latitude
+        #    index 1 : longitude
+        #    index 2 : item_id
+        #    index 3 : unit_quantities -> for each unit, quantity associated to this item
+        #    index 4 : characteristics -> { v_id: sticky_vehicle_ids, skills: skills, days: day_skills, matrix_index: matrix_index }
 
-      def build(data_set, unit_symbols, number_of_clusters, cut_symbol, cut_limit, options = {})
-        @data_set = data_set
-        reduced_number_of_clusters = [number_of_clusters, data_set.data_items.collect{ |data_item| [data_item[0], data_item[1]] }.uniq.size].min
-        unless reduced_number_of_clusters == number_of_clusters || @centroid_indices.empty?
-          @centroid_indices = @centroid_indices.collect{ |centroid_index|
-            [@data_set.data_items[centroid_index], centroid_index]
-          }.uniq{ |item| [item.first[0], item.first[1]] }.collect(&:last)
+        ### return clean errors if unconsistent data ###
+        if distance_matrix
+          if vehicles_infos.any?{ |v_i| v_i[:depot].size != 1 } ||
+             data_set.data_items.any?{ |item| !item[4][:matrix_index] }
+            raise ArgumentError, 'Matrix provided : matrix index should be provided for all vehicle_info and all item'
+          end
+        elsif vehicles_infos.any?{ |v_i| v_i[:depot].compact.size != 2 } ||
+              data_set.data_items.any?{ |item| !(item[0] && item[1]) }
+          raise ArgumentError, 'No matrix provided : lattitude and longitude should be provided for all vehicle_info and all item'
         end
-        @number_of_clusters = reduced_number_of_clusters
 
-        @cut_limit = cut_limit
+        if data_set.data_items.any?{ |item| item[3].nil? || !item[3].has_key?(cut_symbol) }
+          raise ArgumentError, 'Cut symbol corresponding unit should be provided for all item'
+        end
+
+        raise ArgumentError, 'Should provide max_iterations' if @max_iterations.nil?
+
+        ### default values ###
+        data_set.data_items.each{ |item|
+          item[4][:v_id] ||= []
+          item[4][:skills] ||= []
+          item[4][:days] ||= ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill']
+        }
+
+        vehicles_infos.each{ |vehicle_info|
+          vehicle_info[:total_work_days] ||= 1
+          vehicle_info[:skills] ||= []
+          vehicle_info[:days] ||= ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill']
+        }
+
+        ### values ###
+        @data_set = data_set
         @cut_symbol = cut_symbol
-        @unit_symbols = unit_symbols
-        @remaining_skills = @expected_characteristics.dup if @expected_characteristics
+        @unit_symbols = if @vehicles_infos.all?{ |c| c[:capacities] }
+          @vehicles_infos.collect{ |c| c[:capacities].keys }.flatten.uniq
+        else
+          [cut_symbol]
+        end
+        @number_of_clusters = [@vehicles_infos.size, data_set.data_items.collect{ |data_item| [data_item[0], data_item[1]] }.uniq.size].min
+
+        compute_distance_from_and_to_depot(@vehicles_infos, @data_set, distance_matrix)
+        @strict_limitations, @cut_limit = compute_limits(cut_symbol, cut_ratio, @vehicles_infos, @data_set.data_items, options[:entity])
+        @remaining_skills = @vehicles_infos.dup
+
         @manage_empty_clusters_iterations = 0
 
         @distance_function ||= lambda do |a, b|
-          Helper.flying_distance(a, b)
+          if @distance_matrix
+            @distance_matrix[a[4][:matrix_index]][b[4][:matrix_index]]
+          else
+            Helper.flying_distance(a, b)
+          end
         end
 
-        @incompatibility_function ||= lambda do |_data_item, _centroid| # By default all items are compatible.
-          false
+        @compatibility_function ||= lambda do |data_item, centroid|
+          if compatible_characteristics?(data_item[4], centroid[4])
+            true
+          else
+            false
+          end
         end
 
-        raise ArgumentError, 'Length of centroid indices array differs from the specified number of clusters' unless @centroid_indices.empty? || @centroid_indices.length == @number_of_clusters
-        raise ArgumentError, 'Invalid value for on_empty' unless @on_empty == 'eliminate' || @on_empty == 'terminate' || @on_empty == 'random' || @on_empty == 'outlier'
-
+        ### algo start ###
         @iterations = 0
 
         if @cut_symbol
@@ -99,7 +127,6 @@ module Ai4r
           update_cut_limit
 
           calculate_membership_clusters
-          # sort_clusters
           recompute_centroids
         end
 
@@ -110,8 +137,6 @@ module Ai4r
 
           calculate_membership_clusters
         end
-
-        self
       end
 
       def recompute_centroids
@@ -124,19 +149,15 @@ module Ai4r
           point_closest_to_centroid_center = clusters[index].data_items.min_by{ |data_point| Helper.flying_distance(centroid, data_point) }
 
           # correct the matrix_index of the centroid with the index of the point_closest_to_centroid_center
-          centroid[3][:matrix_index] = point_closest_to_centroid_center[3][:matrix_index] if centroid[3][:matrix_index]
+          centroid[4][:matrix_index] = point_closest_to_centroid_center[4][:matrix_index] if centroid[4][:matrix_index]
 
           next unless @cut_symbol
 
           # move the data_points closest to the centroid centers to the top of the data_items list so that balancing can start early
-          @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center)) # move it to the top
+          @data_set.data_items.insert(0, @data_set.data_items.delete(point_closest_to_centroid_center))
 
           # correct the distance_from_and_to_depot info of the new cluster with the average of the points
-          centroid[3][:duration_from_and_to_depot] = @clusters[index].data_items.map { |d| d[3][:duration_from_and_to_depot] }.sum / @clusters[index].data_items.size.to_f
-        }
-
-        @centroids.each_with_index{ |centroid, index|
-          @centroid_indices[index] = @data_set.data_items.find_index{ |data| data[2] == centroid[2] }
+          centroid[4][:duration_from_and_to_depot][index] = @clusters[index].data_items.map{ |d| d[4][:duration_from_and_to_depot][index] }.reduce(&:+) / @clusters[index].data_items.size.to_f
         }
 
         @iterations += 1
@@ -144,11 +165,11 @@ module Ai4r
 
       # Classifies the given data item, returning the cluster index it belongs
       # to (0-based).
-      def eval(data_item)
+      def evaluate(data_item)
         get_min_index(@centroids.collect.with_index{ |centroid, cluster_index|
           dist = distance(data_item, centroid, cluster_index)
 
-          if @incompatibility_function.call(data_item, centroid)
+          unless @compatibility_function.call(data_item, centroid)
             dist += 2**32
           end
 
@@ -167,7 +188,7 @@ module Ai4r
         # The user should be able to overload 'distance' function witoud losing any functionality
         distance = @distance_function.call(data_item, centroid)
 
-        cut_value = @cluster_metrics[cluster_index][@cut_symbol].to_f
+        cut_value = @centroids[cluster_index][3][@cut_symbol].to_f
         limit = if @cut_limit.is_a? Array
           @cut_limit[cluster_index][:limit]
         else
@@ -199,27 +220,25 @@ module Ai4r
       end
 
       def calculate_membership_clusters
-        @cluster_metrics = Array.new(@number_of_clusters) { Hash.new(0) }
+        @centroids.each{ |centroid| centroid[3] = Hash.new(0) }
         @clusters = Array.new(@number_of_clusters) do
           Ai4r::Data::DataSet.new data_labels: @data_set.data_labels
         end
-        @cluster_indices = Array.new(@number_of_clusters) { [] }
+        @cluster_indices = Array.new(@number_of_clusters){ [] }
 
         @total_assigned_cut_load = 0
         @percent_assigned_cut_load = 0
         @apply_balancing = false
-        @data_set.data_items.each_with_index do |data_item, data_index|
-          cluster_index = eval(data_item)
+        @data_set.data_items.each{ |data_item|
+          cluster_index = evaluate(data_item)
           @clusters[cluster_index] << data_item
-          @cluster_indices[cluster_index] << data_index if @on_empty == 'outlier'
           update_metrics(data_item, cluster_index)
-        end
+        }
 
         manage_empty_clusters if has_empty_cluster?
       end
 
       def calc_initial_centroids
-        @centroid_indices = [] # TODO : move or remove
         @centroids, @old_centroids_lat_lon = [], nil
         if @centroid_indices.empty?
           populate_centroids('random')
@@ -229,23 +248,26 @@ module Ai4r
       end
 
       def populate_centroids(populate_method, number_of_clusters = @number_of_clusters)
-        tried_indexes = []
-        case populate_method
-        when 'random' # for initial assignment (without the :centroid_indices option) and for reassignment of empty cluster centroids (with :on_empty option 'random')
-          while @centroids.length < number_of_clusters
-            skills = @remaining_skills ? @remaining_skills.first : []
+        # Generate centroids based on remaining_skills available
+        # Similarly with data_items, each centroid is defined by :
+        #    index 0 : latitude
+        #    index 1 : longitude
+        #    index 2 : item_id
+        #    index 3 : unit_fullfillment -> for each unit, quantity contained in corresponding cluster
+        #    index 4 : characterisits -> { v_id: sticky_vehicle_ids, skills: skills, days: day_skills, matrix_index: matrix_index }
+        raise ArgumentError, 'No vehicles_infos provided' if @remaining_skills.nil?
 
-            # TODO : balanced_kmeans needs to be cleaned from the vrp logic
-            # such as item[4], skills and other logic specific to the usage.
-            # How do clustering know what is in the fourth place in data_item?
-            # How the user will know that the fourth place is skills? etc.
+        case populate_method
+        when 'random'
+          while @centroids.length < number_of_clusters
+            skills = @remaining_skills.first.dup
 
             # Find the items which are not already used, and specifically need the skill set of this cluster
             compatible_items = @data_set.data_items.select{ |item|
               !@centroids.collect{ |centroid| centroid[2] }.flatten.include?(item[2]) &&
                 !item[4].empty? &&
                 !(item[4][:v_id].empty? && item[4][:skills].empty?) &&
-                !@incompatibility_function.call(item, [0, 0, 0, 0, skills, 0])
+                @compatibility_function.call(item, [0, 0, 0, 0, skills, 0])
             }
 
             if compatible_items.empty?
@@ -253,7 +275,7 @@ module Ai4r
               # then find all the items that can be assigned to this cluster
               compatible_items = @data_set.data_items.select{ |item|
                 !@centroids.collect{ |centroid| centroid[2] }.flatten.include?(item[2]) &&
-                  !@incompatibility_function.call(item, [0, 0, 0, 0, skills, 0])
+                  @compatibility_function.call(item, [0, 0, 0, 0, skills, 0])
               }
             end
 
@@ -267,28 +289,38 @@ module Ai4r
 
             item = compatible_items[rand(compatible_items.size)]
 
-            @centroids << [item[0], item[1], item[2], item[3].dup, skills, nil, 0]
+            skills[:matrix_index] = item[4][:matrix_index]
+            skills[:duration_from_and_to_depot] = item[4][:duration_from_and_to_depot].collect{ |value| value }
+            @centroids << [item[0], item[1], item[2], Hash.new(0), skills]
 
             @remaining_skills&.delete_at(0)
 
             @data_set.data_items.insert(0, @data_set.data_items.delete(item))
           end
-          log "kmeans_centroids: #{@centroids.collect{ |centroid| centroid[2] }.flatten}", level: :debug
         when 'indices' # for initial assignment only (with the :centroid_indices option)
+          raise ArgumentError, 'Same centroid_index provided several times' if @centroid_indices.size != @centroid_indices.uniq.size
+
+          raise ArgumentError, 'Wrong number of initial centroids provided' if @centroid_indices.size != @number_of_clusters
+
+          insert_at_begining = []
           @centroid_indices.each do |index|
-            raise ArgumentError, "Invalid centroid index #{index}" unless (index.is_a? Integer) && index >= 0 && index < @data_set.data_items.length
-            raise ArgumentError, "Index used twice #{index}" if tried_indexes.include?(index)
+            raise ArgumentError, 'Invalid centroid index' unless (index.is_a? Integer) && index >= 0 && index < @data_set.data_items.length
 
-            tried_indexes << index
+            skills = @remaining_skills.first.dup
             item = @data_set.data_items[index]
-            next if @clusters.collect{ |cluster| cluster.data_items.collect{ |item| item[2] } }.flatten.include?(item[2])
+            raise ArgumentError, 'Centroids indices and vehicles_infos do not match' unless @compatibility_function.call(item, [nil, nil, nil, nil, skills])
 
-            # TODO : is this possible ? if we did not try this index, can we have two centroids with same ID ..? throw error if yess
-            skills = @remaining_skills ? @remaining_skills.first : [] # order of @centroid_indices is important, should correspond to expected_characteristics_order!
-            @centroids << [item[0], item[1], item[2], item[3].dup, skills, nil, 0]
-            # TODO : give different ID
+            skills[:matrix_index] = item[4][:matrix_index]
+            skills[:duration_from_and_to_depot] = item[4][:duration_from_and_to_depot].collect{ |value| value }
+            @centroids << [item[0], item[1], item[2], Hash.new(0), skills]
+
             @remaining_skills&.delete_at(0)
+            insert_at_begining << item
           end
+
+          insert_at_begining.each{ |i|
+            @data_set.data_items.insert(0, @data_set.data_items.delete(i))
+          }
         end
         @number_of_clusters = @centroids.length
       end
@@ -303,7 +335,7 @@ module Ai4r
         else
           # try generating all clusters again
           @clusters, @centroids, @cluster_indices = [], [], []
-          @remaining_skills = @expected_characteristics.dup
+          @remaining_skills = @vehicles_infos.dup
           @number_of_clusters = @centroids.length
         end
         return if self.on_empty == 'eliminate'
@@ -335,33 +367,11 @@ module Ai4r
           (@max_iterations && (@max_iterations <= @iterations))
       end
 
-      def sort_clusters
-        if @cut_limit.is_a? Array
-          @limit_sorted_indices ||= @cut_limit.map.with_index{ |v, i| [i, v] }.sort_by{ |a| a[1] }.map{ |a| a[0] }
-          cluster_sorted_indices = @cluster_metrics.map.with_index{ |v, i| [i, v[@cut_symbol]] }.sort_by{ |a| a[1] }.map{ |a| a[0] }
-          if cluster_sorted_indices != @cluster_sorted_indices
-            @cluster_sorted_indices = cluster_sorted_indices
-            old_clusters = @clusters.dup
-            old_centroids = @centroids.dup
-            old_centroid_indices = @centroid_indices.dup
-            old_cluster_metrics = @cluster_metrics.dup
-            old_strict_limitations = @strict_limitations.dup
-            cluster_sorted_indices.each_with_index{ |i, j|
-              @clusters[@limit_sorted_indices[j]] = old_clusters[i]
-              @centroids[@limit_sorted_indices[j]] = old_centroids[i]
-              @centroid_indices[@limit_sorted_indices[j]] = old_centroid_indices[i]
-              @cluster_metrics[@limit_sorted_indices[j]] = old_cluster_metrics[i]
-              @strict_limitations[@limit_sorted_indices[j]] = old_strict_limitations[i]
-            }
-          end
-        end
-      end
-
       private
 
       def compute_vehicle_work_time_with
         coef = @centroids.map.with_index{ |centroid, index|
-          @cut_limit[index][:total_work_time] / ([centroid[3][:duration_from_and_to_depot], 1].max * @cut_limit[index][:total_work_days])
+          @vehicles_infos[index][:total_work_time] / ([centroid[4][:duration_from_and_to_depot][index], 1].max * @vehicles_infos[index][:total_work_days])
         }.min
 
         # TODO: The following filter is there to not to affect the existing functionality.
@@ -375,7 +385,7 @@ module Ai4r
                end
 
         @centroids.map.with_index{ |centroid, index|
-          @cut_limit[index][:total_work_time] - coef * centroid[3][:duration_from_and_to_depot] * @cut_limit[index][:total_work_days]
+          @vehicles_infos[index][:total_work_time] - coef * centroid[4][:duration_from_and_to_depot][index] * @vehicles_infos[index][:total_work_days]
         }
       end
 
@@ -384,7 +394,7 @@ module Ai4r
 
         # TODO: This functionality is implemented only for duration cut_symbol. Make sure it doesn't interfere with other cut_symbols
         vehicle_work_time = compute_vehicle_work_time_with
-        total_vehicle_work_times = vehicle_work_time.sum.to_f
+        total_vehicle_work_times = vehicle_work_time.reduce(&:+).to_f
         @centroids.size.times{ |index|
           @cut_limit[index][:limit] = @total_cut_load * vehicle_work_time[index] / total_vehicle_work_times
         }
@@ -425,14 +435,14 @@ module Ai4r
 
       def update_metrics(data_item, cluster_index)
         @unit_symbols.each{ |unit|
-          @cluster_metrics[cluster_index][unit] += data_item[3][unit]
+          @centroids[cluster_index][3][unit] += data_item[3][unit]
+
           next if unit != @cut_symbol
 
           @total_assigned_cut_load += data_item[3][unit]
           @percent_assigned_cut_load = @total_assigned_cut_load / @total_cut_load.to_f
-          if !@apply_balancing && @cluster_metrics.all?{ |cm| cm[@cut_symbol].positive? }
+          if !@apply_balancing && @centroids.all?{ |centroid| centroid[3][@cut_symbol].positive? }
             @apply_balancing = true
-            log "Balancing activated late at iteration #{@iterations} after #{(@percent_assigned_cut_load * 100).round(2)}% of the services", level: :debug if @percent_assigned_cut_load > 0.2 && @iterations.positive?
           end
         }
       end
@@ -440,10 +450,92 @@ module Ai4r
       def capactity_violation?(item, cluster_index)
         return false if @strict_limitations.empty?
 
-        @cluster_metrics[cluster_index].any?{ |unit, value|
+        @centroids[cluster_index][3].any?{ |unit, value|
           value + item[3][unit] > (@strict_limitations[cluster_index][unit] || 0)
         }
       end
+
+      def compatible_characteristics?(service_chars, vehicle_chars)
+        # Compatile service and vehicle
+        # if the vehicle cannot serve the service due to sticky_vehicle_id
+        return false if !service_chars[:v_id].empty? && (service_chars[:v_id] & vehicle_chars[:v_id]).empty?
+
+        # if the service needs a skill that the vehicle doesn't have
+        return false if !(service_chars[:skills] - vehicle_chars[:skills]).empty?
+
+        # if service and vehicle have no matching days
+        return false if (service_chars[:days] & vehicle_chars[:days]).empty?
+
+        true # if not, they are compatible
+      end
+    end
+
+    def compute_distance_from_and_to_depot(vehicles_infos, data_set, matrix)
+      return if data_set.data_items.all?{ |item| item[4][:duration_from_and_to_depot] }
+
+      data_set.data_items.each{ |point|
+        point[4][:duration_from_and_to_depot] = []
+      }
+
+      vehicles_infos.each{ |vehicle_info|
+        if matrix # matrix_index
+          single_index_array = vehicle_info[:depot]
+          point_indices = data_set.data_items.map{ |point| point[4][:matrix_index] }
+          time_matrix_from_depot = Helper.unsquared_matrix(matrix, single_index_array, point_indices)
+          time_matrix_to_depot = Helper.unsquared_matrix(matrix, point_indices, single_index_array)
+        else
+          items_locations = data_set.data_items.collect{ |point| [point[0], point[1]] }
+          time_matrix_from_depot = [items_locations.collect{ |item_location|
+            Helper.euclidean_distance(vehicle_info[:depot], item_location)
+          }]
+          time_matrix_to_depot = items_locations.collect{ |item_location|
+            [Helper.euclidean_distance(item_location, vehicle_info[:depot])]
+          }
+        end
+
+        data_set.data_items.each_with_index{ |point, index|
+          point[4][:duration_from_and_to_depot] << time_matrix_from_depot[0][index] + time_matrix_to_depot[index][0]
+        }
+      }
+    end
+
+    def unsquared_matrix(matrix, a_indices, b_indices)
+      a_indices.map{ |a|
+        b_indices.map { |b|
+          matrix[b][a]
+        }
+      }
+    end
+
+    def compute_limits(cut_symbol, cut_ratio, vehicles_infos, data_items, entity = :vehicle)
+      cumulated_metrics = Hash.new(0)
+
+      (@unit_symbols || [cut_symbol]).each{ |unit|
+        cumulated_metrics[unit.to_sym] = data_items.collect{ |item| item[3][unit] || 0 }.reduce(&:+)
+      }
+
+      strict_limits = if vehicles_infos.none?{ |v_i| v_i[:capacities] }
+        []
+      else
+        vehicles_infos.collect{ |cluster|
+          s_l = {}
+          cumulated_metrics.keys.each{ |unit|
+            s_l[unit] = (cluster[:capacities].has_key?(unit) ? cluster[:capacities][unit] : 0)
+          }
+          s_l
+        }
+      end
+
+      total_work_time = vehicles_infos.map{ |cluster| cluster[:total_work_time] }.reduce(&:+).to_f
+      metric_limits = if entity == :vehicle && total_work_time.positive?
+        vehicles_infos.collect{ |cluster|
+          { limit: cut_ratio * (cumulated_metrics[cut_symbol].to_f * (cluster[:total_work_time] / total_work_time)) }
+        }
+      else
+        { limit: cut_ratio * (cumulated_metrics[cut_symbol] / vehicles_infos.size) }
+      end
+
+      [strict_limits, metric_limits]
     end
   end
 end

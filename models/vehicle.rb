@@ -206,6 +206,7 @@ module Models
         working_day_indices_in_range(range_start, range_end).group_by{ |range_day| range_day.modulo(7) }.each{ |group|
           week_day_index = group[0]
           occurence = group[1].size
+          # TODO : fix case where serveral timewindows correspond to the same day
           tw_index = working_week_days.find_index(week_day_index)
           tw = self.sequence_timewindows[tw_index]
           total_work_time += (tw.end - tw.start) * occurence
@@ -234,6 +235,7 @@ module Models
     private
 
     def working_week_days
+      # TODO : fix case where vehicle has no sequence_timewindows but single timewindow for all days
       @working_week_days ||= self.sequence_timewindows.collect(&:day_index)
     end
 

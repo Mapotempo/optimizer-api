@@ -486,7 +486,7 @@ module Interpreters
           next if related_services.empty?
 
           related_services.each{ |_related_service|
-            data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], [], 0]
+            data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, { duration_from_and_to_depot: 0 }, [], 0]
           }
         }
 

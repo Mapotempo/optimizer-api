@@ -5,6 +5,13 @@ GIT
     active_hash (1.4.1)
       activesupport (>= 2.2.2)
 
+GIT
+  remote: https://github.com/fonsecadeline/balanced_vrp_clustering
+  revision: f1330b629dd57809909dd10cffe7903975cf03e0
+  branch: dev
+  specs:
+    balanced_vrp_clustering (0.1.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -222,6 +229,7 @@ DEPENDENCIES
   active_hash!
   activemodel
   ai4r
+  balanced_vrp_clustering!
   benchmark-ips
   byebug
   charlock_holmes
