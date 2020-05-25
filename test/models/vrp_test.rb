@@ -209,5 +209,37 @@ module Models
       generated_vrp = TestHelper.create(vrp)
       assert !generated_vrp.resolution_solver
     end
+
+    def test_reject_if_shipments_and_periodic_heuristic
+      vrp = VRP.scheduling
+      vrp[:shipments] = [{
+        id: 'shipment_0',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_1'
+        }
+      }]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+    end
+
+    def test_reject_if_rests_and_periodic_heuristic
+      vrp = VRP.scheduling
+      vrp[:rests] = [{
+        id: 'rest_0',
+        duration: 1,
+        timewindows: [{
+          day_index: 0
+        }]
+      }]
+      vrp[:vehicles].first[:rests] = ['rest_0']
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+    end
   end
 end

@@ -172,8 +172,8 @@ module Models
       end
 
       # periodic consistency
-      periodic = hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
-      return unless periodic
+      periodic_heuristic = hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
+      return unless periodic_heuristic
 
       if hash[:relations]
         incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - ['force_first', 'never_first', 'force_end']
@@ -182,6 +182,10 @@ module Models
 
       raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
                                                                                                                                                 (!hash[:configuration][:schedule] || hash[:configuration][:schedule][:range_indice])
+
+      raise OptimizerWrapper::DiscordantProblemError, 'Shipments are not available with periodic heuristic.' unless hash[:shipments].to_a.empty?
+
+      raise OptimizerWrapper::DiscordantProblemError, 'Rests are not available with periodic heuristic.' unless hash[:vehicles].all?{ |vehicle| vehicle[:rests].to_a.empty? }
     end
 
     def self.expand_data(vrp)
