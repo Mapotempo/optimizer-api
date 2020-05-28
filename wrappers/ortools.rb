@@ -88,7 +88,6 @@ module Wrappers
       if vrp.routes.empty? && order_relations.size == 1
         order_relations.select{ |relation| (relation.linked_ids[0..-2] & duplicated_begins).size == 0 && (relation.linked_ids[1..-1] & duplicated_ends).size == 0 }.each{ |relation|
           order_route = {
-            id: 'automatic_route_order' + ((vrp.vehicles.size == 1) ? vrp.vehicles.first.id : vrp.relations.find{ |relation| relation.type == 'order' }[:id]),
             vehicle: (vrp.vehicles.size == 1) ? vrp.vehicles.first : nil,
             mission_ids: relation.linked_ids
           }

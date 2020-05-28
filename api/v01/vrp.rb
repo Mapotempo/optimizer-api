@@ -321,7 +321,6 @@ module Api
       end
 
       def self.vrp_request_relation(this)
-        this.optional(:id, type: String, allow_blank: false, desc: '')
         this.requires(:type, type: String, allow_blank: false, values: %w[same_route sequence order minimum_day_lapse maximum_day_lapse
                                                                           shipment meetup maximum_duration_lapse
                                                                           force_first never_first force_end
