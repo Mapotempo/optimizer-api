@@ -3027,7 +3027,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'vehicle_1',
         matrix_id: 'matrix_0',
-        global_day_index: 4,
+        global_day_index: 1,
         capacities: [{
           unit_id: 'unit',
           limit: 1
@@ -3035,7 +3035,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'vehicle_2',
         matrix_id: 'matrix_0',
-        global_day_index: 3,
+        global_day_index: 2,
         capacities: [{
           unit_id: 'unit',
           limit: 1
@@ -3043,7 +3043,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'vehicle_3',
         matrix_id: 'matrix_0',
-        global_day_index: 2,
+        global_day_index: 3,
         capacities: [{
           unit_id: 'unit',
           limit: 1
@@ -3051,7 +3051,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }, {
         id: 'vehicle_4',
         matrix_id: 'matrix_0',
-        global_day_index: 1,
+        global_day_index: 4,
         capacities: [{
           unit_id: 'unit',
           limit: 1

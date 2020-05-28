@@ -95,10 +95,6 @@ module Wrappers
         }
       end
 
-      vrp.vehicles.sort!{ |a, b|
-        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
-      }
-
       problem_units = vrp.units.collect{ |unit|
         {
           unit_id: unit.id,
