@@ -326,6 +326,9 @@ module Interpreters
       vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |service|
         service.sticky_vehicles.insert(-1, new_vehicle)
       }
+      vrp.shipments.select{ |shipment| shipment.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |shipment|
+        shipment.sticky_vehicles.insert(-1, new_vehicle)
+      }
       new_vehicle
     end
 
