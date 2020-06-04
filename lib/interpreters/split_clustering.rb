@@ -565,6 +565,26 @@ module Interpreters
         true # if not, they are compatible
       end
 
+      def build_service_like(shipment, activity)
+        Models::Service.new(id: shipment.id,
+                            priority: shipment.priority,
+                            exclusion_cost: shipment.exclusion_cost,
+                            skills: shipment.skills,
+                            activity: activity,
+                            sticky_vehicles: shipment.sticky_vehicles,
+                            quantities: shipment.quantities)
+      end
+
+      def build_services_from_shipments(shipments)
+        shipments.map{ |shipment|
+          if depot_ids.include?(shipment.pickup.point.id)
+            build_service_like(shipment, shipment.delivery)
+          elsif depot_ids.include?(shipment.delivery.point.id)
+            build_service_like(shipment, shipment.pickup)
+          end
+        }.compact
+      end
+
       def collect_data_items_metrics(vrp, cumulated_metrics)
         infeasible_data_items = false
         data_items = []
@@ -586,13 +606,11 @@ module Interpreters
                     }
                   end
 
-        (vrp.services + vrp.shipments).group_by{ |s|
+        custom_shipments = build_services_from_shipments(vrp.shipments)
+
+        (vrp.services + custom_shipments).group_by{ |s|
           location = if s.activity
                       s.activity.point.location
-                    elsif s.delivery.point && depot_ids.include?(s.pickup.point.id) # if the delivery or pickup of a shipment is at the depot then this can be clustered like an ordinary service
-                      s.delivery.point.location
-                    elsif s.pickup.point && depot_ids.include?(s.delivery.point.id)
-                      s.pickup.point.location
                     elsif s.activities.size.positive?
                       raise UnsupportedProblemError, 'Clustering is not supported yet if one service has serveral activies.'
                     end
@@ -603,7 +621,7 @@ module Interpreters
 
           set_at_point.group_by{ |s|
             related_skills = s.skills.to_a.dup
-            timewindows = s.activity&.timewindows || (s.pickup ? s.pickup.timewindows : s.delivery.timewindows)
+            timewindows = s.activity&.timewindows
             day_skills = compute_day_skills(timewindows)
 
             s_characteristics = {
