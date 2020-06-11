@@ -113,10 +113,8 @@ Lint/StructNewOverride:
 Style/HashEachMethods:
   Enabled: true
 
-# Waiting ruby 2.4
-# Style/HashTransformValues:
-#   Enabled: true
+Style/HashTransformValues:
+  Enabled: true
 
-# Waiting ruby 2.5
-# Style/HashTransformKeys:
-#   Enabled: true
+Style/HashTransformKeys:
+  Enabled: true
