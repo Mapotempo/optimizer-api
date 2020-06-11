@@ -241,6 +241,28 @@ class HeuristicTest < Minitest::Test
       assert_equal 246, unassigned_visits.sum, "Expecting 246 unassigned visits, have #{unassigned_visits.sum}"
     end
 
+    def test_minimum_stop_in_route
+      vrp = TestHelper.load_vrps(self, fixture_file: 'performance_13vl')[25]
+      vrp.resolution_allow_partial_assignment = true
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert result[:routes].any?{ |r| r[:activities].size - 2 < 5 }, "Expecting any of #{result[:routes].collect{ |r| r[:activities].size - 2 }} to be less than 10, this test is useless otherwise"
+      should_remain_assigned = result[:routes].collect{ |r| r[:activities].size - 2 }.select{ |nb| nb >= 5 }.reduce(&:+)
+
+      # one vehicle should have at least 5 stops :
+      vrp.vehicles.each{ |v| v.cost_fixed = 5 }
+      vrp.services.each{ |s| s.exclusion_cost = 1 }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert result[:routes].all?{ |r| (r[:activities].size - 2).zero? || r[:activities].size - 2 >= 5 }, 'Expecting no route with less than 5 stops unless it is empty'
+      assert_operator should_remain_assigned, :<=, result[:routes].collect{ |r| r[:activities].size - 2 }.reduce(&:+)
+      assert_equal 19, result[:unassigned].size
+      assert_equal vrp.visits, result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].size
+
+      all_ids = (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] }.compact } +
+                 result[:unassigned].collect{ |un| un[:service_id] }).flatten
+      assert_equal vrp.visits, all_ids.size
+      assert_equal vrp.visits, all_ids.uniq.size
+    end
+
     def test_performance_13vl
       vrps = TestHelper.load_vrps(self)
 

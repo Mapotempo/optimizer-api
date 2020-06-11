@@ -656,5 +656,31 @@ class HeuristicTest < Minitest::Test
       }
       assert_equal(['tue_1', 'wed_1', 'thu_1'], result[:routes].collect{ |r| r[:activities][1][:day_week] })
     end
+
+    def test_authorized_lapse_with_work_day
+      vrp = VRP.scheduling
+      vrp[:services].first[:visits_number] = 2
+      vrp[:services].first[:minimum_lapse] = 1
+      vrp[:services].first[:maximum_lapse] = 2
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      correct_lapses = false
+      vrp[:services].first[:maximum_lapse] = 8
+      Heuristics::Scheduling.stub_any_instance(
+        :compute_initial_solution,
+        lambda { |vrp_in|
+          @starting_time = Time.now
+          correct_lapses = @services_data.collect{ |_id, data| data[:heuristic_period] }.all?{ |lapse| lapse.nil? || (lapse % 7).zero? }
+          prepare_output_and_collect_routes(vrp_in)
+        }
+      ) do
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      end
+
+      assert correct_lapses
+    end
   end
 end
