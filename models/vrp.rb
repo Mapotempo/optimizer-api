@@ -238,9 +238,20 @@ module Models
       end
     end
 
+    def self.convert_route_indice_into_index(hash)
+      hash[:routes].to_a.each{ |route|
+        next unless route[:indice]
+
+        log 'Route indice was used instead of route index', level: :warn
+        route[:index] = route[:indice]
+        route.delete(:indice)
+      }
+    end
+
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
       self.deduce_solver_parameter(hash)
+      self.convert_route_indice_into_index(hash)
     end
 
     def self.filter(hash)
@@ -281,18 +292,7 @@ module Models
     end
 
     def self.generate_schedule_indices_from_date(hash)
-      return hash if !hash[:configuration]
-
-      if hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:partitions].to_a.size.positive?
-        hash[:routes]&.each{ |route|
-          route[:mission_ids].each{ |id|
-            corresponding = [hash[:services], hash[:shipments]].compact.flatten.find{ |s| s[:id] == id }
-            corresponding[:sticky_vehicle_ids] = [route[:vehicle_id]]
-          }
-        }
-      end
-
-      return hash if !hash[:configuration][:schedule] ||
+      return hash if !hash[:configuration] || !hash[:configuration][:schedule] ||
                      hash[:configuration][:schedule][:range_indices]
 
       start_indice = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1
@@ -350,9 +350,9 @@ module Models
 
       # convert route dates into indices
       hash[:routes]&.each{ |route|
-        next if route[:indice]
+        next if route[:index]
 
-        route[:indice] = (route[:date].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
+        route[:index] = (route[:date].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
         route.delete(:date)
       }
 

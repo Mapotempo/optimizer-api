@@ -338,7 +338,8 @@ module Api
 
       def self.vrp_request_route(this)
         this.optional(:vehicle_id, type: String, desc: 'vehicle linked to the current described route')
-        this.optional(:indice, type: Integer, desc: 'Indice of the route. Must be provided if first_solution_strategy is \'periodic\'.')
+        this.optional(:indice, type: Integer, desc: '[ DEPRECATED : use index instead ]')
+        this.optional(:index, type: Integer, desc: 'Index of the route. Must be provided if first_solution_strategy is \'periodic\'.')
         this.optional(:date, type: Date, desc: 'Date of the route. Must be provided if first_solution_strategy is \'periodic\'.')
         this.requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route')
         this.mutually_exclusive :indice, :day

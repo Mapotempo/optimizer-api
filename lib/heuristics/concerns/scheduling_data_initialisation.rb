@@ -54,23 +54,15 @@ module SchedulingDataInitialization
   end
 
   def initialize_routes(routes)
-    considered_ids = {}
-    routes.sort_by(&:indice).each{ |defined_route|
-      associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.indice.to_i]
+    considered_ids = []
+    routes.sort_by(&:index).each{ |defined_route|
+      associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.index.to_i]
       defined_route.mission_ids.each{ |id|
         next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
 
         best_index = find_best_index(id, associated_route) if associated_route
         if best_index
-          insert_point_in_route(associated_route, best_index)
-          if considered_ids[id]
-            considered_ids[id][:days] << defined_route.indice.to_i
-          else
-            considered_ids[id] = {
-              vehicle: defined_route.vehicle_id,
-              days: [defined_route.indice.to_i]
-            }
-          end
+          insert_point_in_route(associated_route, best_index, false)
 
           # unlock corresponding services
           services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
@@ -79,7 +71,7 @@ module SchedulingDataInitialization
         else
           @uninserted["#{id}_#{considered_ids.count(id) + 1}_#{@services_data[id][:visits_number]}"] = {
             original_service: id,
-            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.indice}) : already #{associated_route ? associated_route[:current_route].size : 0} elements in route"
+            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.index}) : already #{associated_route ? associated_route[:current_route].size : 0} elements in route"
           }
         end
 
@@ -89,6 +81,12 @@ module SchedulingDataInitialization
       }
     }
 
+    routes.sort_by(&:index).each{ |defined_route|
+      plan_routes_missing_in_routes(defined_route.vehicle_id, defined_route.index.to_i)
+    }
+
+    # TODO : try to affect missing visits with add_missing visits functions
+
     @uninserted.group_by{ |_k, v| v[:original_service] }.each{ |id, set|
       (set.size + 1..@services_data[id][:visits_number]).each{ |visit|
         @uninserted["#{id}_#{visit}_#{@services_data[id][:visits_number]}"] = {
@@ -97,16 +95,21 @@ module SchedulingDataInitialization
         }
       }
     }
-
-    check_missing_visits(considered_ids)
   end
 
-  def check_missing_visits(inserted_ids)
+  def plan_routes_missing_in_routes(vehicle, day)
     max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
-    inserted_ids.keys.sort_by{ |id| @services_data[id][:priority].to_f + 1 / (max_priority * @services_data[id][:visits_number]**2) }.each{ |id|
-      next if inserted_ids[id][:days].size == @services_data[id][:visits_number]
+    return unless @candidate_routes[vehicle][day]
 
-      plan_next_visits(inserted_ids[id][:vehicle], id, inserted_ids[id][:days], inserted_ids[id][:days].size + 1)
+    @candidate_routes[vehicle][day][:current_route].sort_by{ |stop|
+      id = stop[:id]
+      @services_data[id][:priority].to_f + 1 / (max_priority * @services_data[id][:visits_number]**2)
+    }.each{ |stop|
+      id = stop[:id]
+
+      next if @services_data[id][:used_days].size == @services_data[id][:visits_number]
+
+      plan_next_visits(vehicle, id, @services_data[id][:used_days], @services_data[id][:used_days].size + 1)
     }
   end
 

@@ -474,7 +474,7 @@ class HeuristicTest < Minitest::Test
       routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
       routes.first.vehicle.id = 'ANDALUCIA 1'
       routes.first.mission_ids = ['1810', '1623', '2434', '8508']
-      routes.first.indice = 2
+      routes.first.index = 2
       vrp.routes = routes
 
       expecting = vrp.routes.first.mission_ids
@@ -499,7 +499,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
       vrp.routes.first.vehicle.id = vehicle_id
-      vrp.routes.first.indice = day
+      vrp.routes.first.index = day
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expected_nb_visits, result[:routes].collect{ |r| r[:activities].size - 2 }.flatten.sum + result[:unassigned].size
@@ -514,7 +514,7 @@ class HeuristicTest < Minitest::Test
       vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [{ start: 31500, end: 43500 }]
       vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
       vrp.routes.first.vehicle.id = vehicle_id
-      vrp.routes.first.indice = day.to_i
+      vrp.routes.first.index = day.to_i
 
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       scheduling = Heuristics::Scheduling.new(vrp)
@@ -529,7 +529,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
       vrp.routes.first.vehicle.id = 'BALEARES'
-      vrp.routes.first.indice = 300
+      vrp.routes.first.index = 300
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 36, result[:unassigned].size

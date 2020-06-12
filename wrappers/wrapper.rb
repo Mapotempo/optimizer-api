@@ -443,7 +443,7 @@ module Wrappers
     end
 
     def assert_route_date_or_indice_if_periodic(vrp)
-      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route[:indice] }
+      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?{ |route| route.index }
     end
 
     def assert_not_too_many_visits_in_route(vrp)
