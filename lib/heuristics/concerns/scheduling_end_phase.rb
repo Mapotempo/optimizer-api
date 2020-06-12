@@ -382,8 +382,9 @@ module SchedulingEndPhase
       if previous_vehicle_filled_info != vehicle_info || previous_was_filled
         route_data = @candidate_routes[vehicle][day]
         keep_inserting = true
+        inserted = []
         while keep_inserting
-          insertion_costs = compute_insertion_costs(route_data, still_removed.collect(&:first).uniq)
+          insertion_costs = compute_insertion_costs(route_data, still_removed.collect(&:first).uniq - inserted)
 
           if insertion_costs.flatten.empty?
             keep_inserting = false
@@ -400,6 +401,7 @@ module SchedulingEndPhase
             end
           else
             point_to_add = select_point(insertion_costs, route_data)
+            inserted << point_to_add[:id]
             insert_point_in_route(route_data, point_to_add, false)
           end
         end
