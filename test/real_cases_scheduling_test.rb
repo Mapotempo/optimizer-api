@@ -319,5 +319,11 @@ class HeuristicTest < Minitest::Test
       assert(result[:routes].select{ |r| r[:activities].any?{ |a| a[:point_id] == '1000023' } }.all?{ |r| r[:activities].any?{ |a| a[:point_id] == '1000007' } })
       assert(result[:routes].select{ |r| r[:activities].any?{ |a| a[:point_id] == '1000023' } }.all?{ |r| r[:activities].any?{ |a| a[:point_id] == '1000008' } })
     end
+
+    def test_quality_with_minimum_stops_in_route
+      vrp = TestHelper.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_operator result[:unassigned].size, :<=, 28
+    end
   end
 end

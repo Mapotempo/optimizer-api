@@ -216,13 +216,6 @@ module SchedulingEndPhase
       log 'Reaffection with allow_partial_assignment false was usefull', level: :warn
     end
 
-    still_removed.each{ |id, number_in_sequence|
-      @uninserted["#{id}_#{number_in_sequence}_#{@services_data[id][:visits_number]}"] = {
-        original_service: id,
-        reason: 'Rejected because corresponding route was underfilled'
-      }
-    }
-
     reaffect_visits_number
   end
 
@@ -241,21 +234,32 @@ module SchedulingEndPhase
           next if day_route[:current_route].map{ |stop| @services_data[stop[:id]][:exclusion_cost] }.reduce(&:+) >= day_route[:cost_fixed]
 
           smth_removed = true
-          removed_ids = day_route[:current_route].collect{ |stop|
-            removed << [stop[:id], stop[:number_in_sequence]]
+          locally_removed = day_route[:current_route].collect{ |stop|
             @services_data[stop[:id]][:used_days].delete(day)
-            stop[:id]
+            [stop[:id], stop[:number_in_sequence]]
           }
           day_route[:current_route] = []
+          removed += locally_removed
 
-          next if @allow_partial_assignment
-
-          removed_ids.each{ |removed_id|
-            clean_routes(removed_id, vehicle, false)
-            (2..@services_data[removed_id][:visits_number]).each{ |visit|
-              removed << [removed_id, visit]
+          if @allow_partial_assignment
+            locally_removed.each{ |removed_id, number_in_sequence|
+              @uninserted["#{removed_id}_#{number_in_sequence}_#{@services_data[removed_id][:visits_number]}"] = {
+                original_service: removed_id,
+                reason: 'Unaffected because route was underfilled'
+              }
             }
-          }
+          else
+            locally_removed.each{ |removed_id, _number_in_sequence|
+              clean_routes(removed_id, vehicle, false)
+              (1..@services_data[removed_id][:visits_number]).each{ |visit|
+                @uninserted["#{removed_id}_#{visit}_#{@services_data[removed_id][:visits_number]}"][:reason] = 'Unaffected because route was underfilled'
+
+                next if visit == 1
+
+                removed << [removed_id, visit]
+              }
+            }
+          end
         }
       }
 
@@ -312,6 +316,7 @@ module SchedulingEndPhase
         @ids_to_renumber |= [point_to_add[:id]]
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
         still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
+        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == to_plan[:service] }[0])
       end
     end
 
@@ -397,6 +402,7 @@ module SchedulingEndPhase
               route_data[:current_route].each{ |stop|
                 @ids_to_renumber |= [stop[:id]]
                 still_removed.delete(still_removed.find{ |removed| removed.first == stop[:id] })
+                @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == stop[:id] }[0])
               }
             end
           else
@@ -423,7 +429,8 @@ module SchedulingEndPhase
     }
 
     banned = []
-    most_prioritary = still_removed.group_by{ |removed| @services_data[removed.first][:priority] }.min_by{ |priority, _set| priority }[1]
+    adapted_still_removed = still_removed.collect(&:first).uniq.collect{ |id| [id, @services_data[id][:visits_number]] }
+    most_prioritary = adapted_still_removed.group_by{ |removed| @services_data[removed.first][:priority] }.min_by{ |priority, _set| priority }[1]
     most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
     until most_prio_and_frequent.empty?
       potential_costs = most_prio_and_frequent.collect{ |_| {} }
@@ -439,15 +446,9 @@ module SchedulingEndPhase
       }
 
       available_sequences = []
-
-      possible_days = most_prio_and_frequent.collect{ |_| {} }
       most_prio_and_frequent.collect.with_index{ |service_data, s_i|
         id, visits_number = service_data
-
-        possible_days[s_i] = {}
         potential_costs[s_i].each{ |vehicle_id, data|
-          possible_days[s_i] = {}
-
           available_days = data.reject{ |_key, cost| cost.nil? }.keys
           these_sequences = deduce_sequences(id, visits_number, available_days)
 
@@ -485,13 +486,15 @@ module SchedulingEndPhase
         }
 
         most_prio_and_frequent.delete_if{ |service| service.first == to_plan[:service] }
+        adapted_still_removed.delete_if{ |service| service.first == to_plan[:service] }
         still_removed.delete_if{ |service| service.first == to_plan[:service] }
+        @uninserted.delete_if{ |_id, data| data[:original_service] == to_plan[:service] }
       end
 
-      break if still_removed.empty? || (still_removed - banned).empty?
+      break if adapted_still_removed.empty? || (adapted_still_removed - banned).empty?
 
       while most_prio_and_frequent.empty?
-        most_prioritary = (still_removed - banned).group_by{ |removed| @services_data[removed.first][:priority] }.min_by{ |priority, _set| priority }[1]
+        most_prioritary = (adapted_still_removed - banned).group_by{ |removed| @services_data[removed.first][:priority] }.min_by{ |priority, _set| priority }[1]
         most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
       end
     end
