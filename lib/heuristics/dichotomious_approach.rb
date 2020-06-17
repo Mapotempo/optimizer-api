@@ -484,8 +484,8 @@ module Interpreters
           next if related_services.empty?
 
           related_services.each{ |_related_service|
-            characteristics = { duration_from_and_to_depot: 0 }
-            characteristics[:matrix_index] = point[:matrix_index] if !vrp.matrices.empty?
+            characteristics = { duration_from_and_to_depot: [0, 0] }            
+            characteristics[:matrix_index] = point[:matrix_index] unless vrp.matrices.empty?
             data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, characteristics, [], 0]
           }
         }

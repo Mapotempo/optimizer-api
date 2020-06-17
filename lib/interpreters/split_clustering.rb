@@ -307,7 +307,7 @@ module Interpreters
         c = Ai4r::Clusterers::BalancedVRPClustering.new
         c.max_iterations = options[:max_iterations]
         c.distance_matrix = options[:distance_matrix]
-        c.vehicles_infos = options[:clusters_infos]
+        c.vehicles = options[:clusters_infos]
         c.centroid_indices = options[:centroid_indices] || []
         c.on_empty = 'closest'
         c.logger = OptimizerLogger.logger
@@ -505,8 +505,12 @@ module Interpreters
         vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
         tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
         {
-          id: [vehicle.id],
-          depot: [vehicle.start_point.matrix_index || [vehicle.start_point.location.lat, vehicle.start_point.location.lon]].flatten,
+          v_id: [vehicle.id],
+          days: compute_day_skills(tw),
+          depot: {
+            coordinates: [vehicle.start_point.location.lat, vehicle.start_point.location.lon],
+            matrix_index: vehicle.start_point.matrix_index
+          },
           capacities: capacities,
           skills: vehicle.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
           day_skills: compute_day_skills(tw),
@@ -678,7 +682,7 @@ module Interpreters
             characteristics[:matrix_index] = point[:matrix_index] if !vrp.matrices.empty?
             linked_objects["#{point.id}_#{sub_set_index}"] = sub_set.collect{ |object| object[:id] }
             # TODO : group sticky and skills (in expected characteristics too)
-            characteristics[:duration_from_and_to_depot] = 0 if basic_split
+            characteristics[:duration_from_and_to_depot] = [0, 0] if basic_split
             data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, characteristics, nil]
           }
         }
