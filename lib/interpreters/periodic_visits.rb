@@ -58,7 +58,7 @@ module Interpreters
       vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
       generate_relations_on_periodic_vehicles(vrp, vehicles_linked_by_duration)
 
-      if vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+      if vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' && vrp.services.any?{ |service| service.visits_number > 1 }
         vrp.routes = generate_routes(vrp)
       end
 
@@ -172,7 +172,7 @@ module Interpreters
                     new_timewindows
                   end
                 end
-                if !service.minimum_lapse && !service.maximum_lapse
+                if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
                   new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}"]
                 end
               }
