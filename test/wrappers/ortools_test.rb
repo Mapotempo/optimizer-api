@@ -5521,6 +5521,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:unassigned].size
 
     vrp = VRP.basic
+    vrp[:configuration][:preprocessing][:first_solution_strategy] = ['local_cheapest_insertion']
     vrp[:services] = [vrp[:services].first]
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 1)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
@@ -5529,6 +5530,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     vrp = VRP.basic
     vrp[:services] = [vrp[:services].first]
+    vrp[:configuration][:preprocessing][:first_solution_strategy] = ['local_cheapest_insertion']
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 2)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
