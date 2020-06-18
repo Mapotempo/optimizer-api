@@ -55,6 +55,7 @@ module Wrappers
         :assert_no_first_solution_strategy,
         :assert_solver,
         :assert_no_partitions,
+        :assert_no_overall_duration,
       ]
     end
 
