@@ -2482,6 +2482,9 @@ class WrapperTest < Minitest::Test
         }
       }],
       configuration: {
+        preprocessing: {
+          first_solution_strategy: ['local_cheapest_insertion']
+        },
         resolution: {
           duration: 10
         },
