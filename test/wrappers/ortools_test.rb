@@ -69,6 +69,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_group_overall_duration_first_vehicle
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -167,6 +168,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_periodic_overall_duration
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -236,6 +238,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_periodic_with_group_duration
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -316,6 +319,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_with_rest_no_vehicle_tw
+    skip 'Requires an entire review of the :overall_duration feature'
     # conflict with rests
     problem = {
       matrices: [{
@@ -452,6 +456,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_with_rest
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -529,6 +534,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_on_months
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
       type: 'vehicle_group_duration_on_months',
@@ -558,6 +564,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_on_weeks
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
       type: 'vehicle_group_duration_on_weeks',
@@ -586,6 +593,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_on_weeks_date
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
       type: 'vehicle_group_duration_on_weeks',
@@ -4929,6 +4937,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_self_selection_first_solution_strategy
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',

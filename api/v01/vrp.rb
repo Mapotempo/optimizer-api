@@ -202,7 +202,7 @@ module Api
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
         this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
-        this.optional(:overall_duration, types: [String, Float, Integer], desc: '(Scheduling only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
+        this.optional(:overall_duration, types: [String, Float, Integer], documentation: { hidden: true }, desc: '(Scheduling only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
         this.optional(:distance, types: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
@@ -329,11 +329,11 @@ module Api
                                                                           vehicle_group_duration_on_months vehicle_group_number],
                              desc: 'Relations allow to define constraints explicitly between activities and/or vehicles.
                                     It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse,
-                                    shipment, meetup, minimum_duration_lapse, maximum_duration_lapse, vehicle_group_duration, vehicle_group_duration_on_weeks, vehicle_group_duration_on_months or vehicle_group_number')
+                                    shipment, meetup, minimum_duration_lapse, maximum_duration_lapse')
         this.optional(:lapse, type: Integer, desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
         this.optional(:linked_ids, type: Array[String], allow_blank: false, desc: 'List of activities involved in the relation')
         this.optional(:linked_vehicle_ids, type: Array[String], allow_blank: false, desc: 'List of vehicles involved in the relation')
-        this.optional(:periodicity, type: Integer, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')
+        this.optional(:periodicity, type: Integer, documentation: { hidden: true }, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')
         this.at_least_one_of :linked_ids, :linked_vehicle_ids
       end
 
