@@ -106,11 +106,41 @@ module OutputHelper
       @scheduling_file << "CLUSTER WITH VEHICLES #{vehicle_names} ------\n"
     end
 
-    def output_scheduling_insert(days, inserted_id, nb_visits = nil)
+    def insert_visits(days, inserted_id, nb_visits)
+      return if days.empty?
+
       line = "#{inserted_id},#{nb_visits}"
       (0..@nb_days).each{ |day|
         line << if days.include?(day)
           ',X'
+        else
+          ','
+        end
+      }
+      @scheduling_file << "#{line}\n"
+    end
+
+    def remove_visits(removed_days, all_inserted_days, inserted_id, nb_visits)
+      line = "#{inserted_id},#{nb_visits}"
+      (0..@nb_days).each{ |day|
+        line << if removed_days.include?(day)
+          ',-'
+        elsif all_inserted_days.include?(day)
+          ',~'
+        else
+          ','
+        end
+      }
+      @scheduling_file << "#{line}\n"
+    end
+
+    def add_single_visit(inserted_day, all_inserted_days, inserted_id, nb_visits)
+      line = "#{inserted_id},#{nb_visits}"
+      (0..@nb_days).each{ |day|
+        line << if day == inserted_day
+          ',X'
+        elsif all_inserted_days.include?(day)
+          ',~'
         else
           ','
         end

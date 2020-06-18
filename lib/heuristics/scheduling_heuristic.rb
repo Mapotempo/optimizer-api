@@ -631,8 +631,12 @@ module Heuristics
         @candidate_vehicles.each{ |vehicle|
           next if @candidate_routes[vehicle][day].nil?
 
-          fill_day_in_planning(vehicle, @candidate_routes[vehicle][day])
+          inserted_ids = fill_day_in_planning(vehicle, @candidate_routes[vehicle][day])
           adjust_candidate_routes(vehicle, day)
+
+          inserted_ids.each{ |id|
+            @output_tool&.insert_visits(@services_data[id][:used_days], id, @services_data[id][:visits_number])
+          }
         }
       }
     end
@@ -642,7 +646,6 @@ module Heuristics
       if @same_point_day || @relaxed_same_point_day
         fill_grouped
       else
-        @output_tool&.add_comment('You are not using same_point_day option, only first visits will be shown.')
         fill_basic
       end
     end
@@ -652,6 +655,7 @@ module Heuristics
       day = route_data[:global_day_index]
       current_route = route_data[:current_route]
       service_to_insert = true
+      inserted_ids = []
 
       while service_to_insert
         insertion_costs = compute_insertion_costs(route_data)
@@ -660,11 +664,7 @@ module Heuristics
           best_index = select_point(insertion_costs, current_route.empty?)
           insert_point_in_route(route_data, best_index)
 
-          if @output_tool
-            days = @candidate_routes[vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == best_index[:id] } }.keys
-            @output_tool.output_scheduling_insert(days, best_index[:id], @services_data[best_index[:id]][:visits_number])
-          end
-
+          inserted_ids << best_index[:id]
           @to_plan_service_ids.delete(best_index[:id])
           @services_data[best_index[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
         else
@@ -678,6 +678,8 @@ module Heuristics
           @cost += route_data[:end_point_id] ? matrix(route_data, current_route.last[:point_id], route_data[:start_point_id]) : 0
         end
       end
+
+      inserted_ids
     end
 
     def add_same_freq_located_points(best_index, route_data)
@@ -739,10 +741,7 @@ module Heuristics
           if inserted_id
             adjust_candidate_routes(current_vehicle, best_day)
 
-            if @output_tool
-              days = @candidate_routes[current_vehicle].select{ |_day, r_d| r_d[:current_route].any?{ |stop| stop[:id] == inserted_id } }.keys
-              @output_tool.output_scheduling_insert(days, inserted_id, @services_data[inserted_id][:visits_number])
-            end
+            @output_tool&.insert_visits(@services_data[inserted_id][:used_days], inserted_id, @services_data[inserted_id][:visits_number])
 
             if @services_unlocked_by[inserted_id] && !@services_unlocked_by[inserted_id].empty? && !@relaxed_same_point_day
               services_to_add = @services_unlocked_by[inserted_id] - @uninserted.collect{ |_un, data| data[:original_service] }
