@@ -331,7 +331,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
 
   def test_reject_if_periodic_with_any_relation
     vrp = VRP.scheduling
-    ['consecutive_shipments', 'shipment', 'meetup',
+    ['shipment', 'meetup',
      'same_route', 'sequence', 'order',
      'minimum_day_lapse', 'maximum_day_lapse', 'minimum_duration_lapse', 'maximum_duration_lapse',
      'vehicle_group_duration', 'vehicle_group_duration_on_weeks', 'vehicle_group_duration_on_months'].each{ |relation_type|

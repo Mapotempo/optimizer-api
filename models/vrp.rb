@@ -190,6 +190,7 @@ module Models
 
     def self.expand_data(vrp)
       vrp.add_sticky_vehicle_if_routes_and_partitions
+      vrp.adapt_relations_between_shipments
     end
 
     def self.convert_position_relations(hash)

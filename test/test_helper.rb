@@ -246,6 +246,79 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
+  def self.pud
+    {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 3, 3, 9],
+          [3, 0, 3, 8],
+          [3, 3, 0, 8],
+          [9, 9, 9, 0]
+        ]
+      }],
+      units: [{
+        id: 'unit_0',
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        cost_time_multiplier: 1,
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      shipments: [{
+        id: 'shipment_0',
+        pickup: {
+          point_id: 'point_3',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_2',
+          duration: 3,
+          late_multiplier: 0,
+        }
+      }, {
+        id: 'shipment_1',
+        pickup: {
+          point_id: 'point_1',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_3',
+          duration: 3,
+          late_multiplier: 0,
+        }
+      }],
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
+        },
+        resolution: {
+          duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+  end
+
   def self.lat_lon
     {
       matrices: [{

@@ -1,0 +1,897 @@
+{
+  "vrp": {
+    "points": [
+      {
+        "id": "point_0",
+        "location": {
+          "lat": 44.7394,
+          "lon": -1.0935
+        }
+      },
+      {
+        "id": "point_1",
+        "location": {
+          "lat": 44.654,
+          "lon": -1.1476
+        }
+      },
+      {
+        "id": "point_2",
+        "location": {
+          "lat": 44.7568,
+          "lon": -1.1198
+        }
+      },
+      {
+        "id": "point_3",
+        "location": {
+          "lat": 44.6841,
+          "lon": -1.0163
+        }
+      },
+      {
+        "id": "point_4",
+        "location": {
+          "lat": 44.8658,
+          "lon": -0.5524
+        }
+      },
+      {
+        "id": "point_5",
+        "location": {
+          "lat": 44.8553,
+          "lon": -0.5712
+        }
+      },
+      {
+        "id": "point_6",
+        "location": {
+          "lat": 44.6356,
+          "lon": -0.9744
+        }
+      },
+      {
+        "id": "point_7",
+        "location": {
+          "lat": 44.9093,
+          "lon": -0.639
+        }
+      },
+      {
+        "id": "point_8",
+        "location": {
+          "lat": 44.8509,
+          "lon": -0.6436
+        }
+      },
+      {
+        "id": "point_9",
+        "location": {
+          "lat": 45.0262,
+          "lon": -0.8017
+        }
+      },
+      {
+        "id": "point_10",
+        "location": {
+          "lat": 44.78,
+          "lon": -0.6089
+        }
+      },
+      {
+        "id": "point_11",
+        "location": {
+          "lat": 44.9782,
+          "lon": -1.0787
+        }
+      },
+      {
+        "id": "point_12",
+        "location": {
+          "lat": 44.9073,
+          "lon": -0.669
+        }
+      },
+      {
+        "id": "point_13",
+        "location": {
+          "lat": 44.8174,
+          "lon": -0.68
+        }
+      },
+      {
+        "id": "point_14",
+        "location": {
+          "lat": 44.9445,
+          "lon": -0.6066
+        }
+      },
+      {
+        "id": "point_15",
+        "location": {
+          "lat": 44.8462,
+          "lon": -0.6318
+        }
+      },
+      {
+        "id": "point_16",
+        "location": {
+          "lat": 44.7905,
+          "lon": -0.6325
+        }
+      },
+      {
+        "id": "point_17",
+        "location": {
+          "lat": 44.8098,
+          "lon": -0.6222
+        }
+      },
+      {
+        "id": "point_18",
+        "location": {
+          "lat": 44.8306,
+          "lon": -0.6034
+        }
+      },
+      {
+        "id": "point_19",
+        "location": {
+          "lat": 44.8404,
+          "lon": -0.5823
+        }
+      },
+      {
+        "id": "point_20",
+        "location": {
+          "lat": 44.9046,
+          "lon": -0.7448
+        }
+      },
+      {
+        "id": "point_21",
+        "location": {
+          "lat": 44.8132,
+          "lon": -0.5722
+        }
+      },
+      {
+        "id": "point_22",
+        "location": {
+          "lat": 44.7816,
+          "lon": -0.5675
+        }
+      },
+      {
+        "id": "point_23",
+        "location": {
+          "lat": 44.8173,
+          "lon": -0.5853
+        }
+      },
+      {
+        "id": "point_24",
+        "location": {
+          "lat": 44.7985,
+          "lon": -0.5822
+        }
+      },
+      {
+        "id": "point_25",
+        "location": {
+          "lat": 44.9564,
+          "lon": -0.6287
+        }
+      },
+      {
+        "id": "point_26",
+        "location": {
+          "lat": 45.0427,
+          "lon": -0.6776
+        }
+      },
+      {
+        "id": "point_27",
+        "location": {
+          "lat": 44.8397,
+          "lon": -0.6062
+        }
+      },
+      {
+        "id": "point_28",
+        "location": {
+          "lat": 44.9363,
+          "lon": -0.8307
+        }
+      },
+      {
+        "id": "point_29",
+        "location": {
+          "lat": 44.9698,
+          "lon": -0.89
+        }
+      },
+      {
+        "id": "point_30",
+        "location": {
+          "lat": 44.8682,
+          "lon": -1.0899
+        }
+      },
+      {
+        "id": "point_31",
+        "location": {
+          "lat": 44.6549,
+          "lon": -1.2408
+        }
+      },
+      {
+        "id": "point_32",
+        "location": {
+          "lat": 44.796,
+          "lon": -1.1466
+        }
+      },
+      {
+        "id": "point_33",
+        "location": {
+          "lat": 44.7189,
+          "lon": -1.071
+        }
+      },
+      {
+        "id": "point_34",
+        "location": {
+          "lat": 44.7495,
+          "lon": -1.0965
+        }
+      },
+      {
+        "id": "point_35",
+        "location": {
+          "lat": 44.8755,
+          "lon": -1.0803
+        }
+      },
+      {
+        "id": "point_36",
+        "location": {
+          "lat": 44.7459,
+          "lon": -1.0887
+        }
+      },
+      {
+        "id": "point_37",
+        "location": {
+          "lat": 44.7244,
+          "lon": -1.2029
+        }
+      },
+      {
+        "id": "point_38",
+        "location": {
+          "lat": 44.7015,
+          "lon": -1.2294
+        }
+      },
+      {
+        "id": "point_39",
+        "location": {
+          "lat": 44.6549,
+          "lon": -1.2408
+        }
+      },
+      {
+        "id": "point_40",
+        "location": {
+          "lat": 45.0085,
+          "lon": -0.6126
+        }
+      },
+      {
+        "id": "point_41",
+        "location": {
+          "lat": 45.096,
+          "lon": -0.7179
+        }
+      },
+      {
+        "id": "point_42",
+        "location": {
+          "lat": 45.0343,
+          "lon": -0.758
+        }
+      },
+      {
+        "id": "point_43",
+        "location": {
+          "lat": 45.0381,
+          "lon": -0.6948
+        }
+      },
+      {
+        "id": "point_44",
+        "location": {
+          "lat": 44.9971,
+          "lon": -0.6889
+        }
+      },
+      {
+        "id": "point_45",
+        "location": {
+          "lat": 44.9564,
+          "lon": -0.6698
+        }
+      },
+      {
+        "id": "point_46",
+        "location": {
+          "lat": 45.0784,
+          "lon": -1.0451
+        }
+      },
+      {
+        "id": "point_47",
+        "location": {
+          "lat": 44.9333,
+          "lon": -0.6209
+        }
+      },
+      {
+        "id": "point_48",
+        "location": {
+          "lat": 44.906,
+          "lon": -0.6369
+        }
+      },
+      {
+        "id": "point_49",
+        "location": {
+          "lat": 45.0786,
+          "lon": -1.0438
+        }
+      },
+      {
+        "id": "point_50",
+        "location": {
+          "lat": 44.9933,
+          "lon": -0.6956
+        }
+      },
+      {
+        "id": "point_51",
+        "location": {
+          "lat": 45.0964,
+          "lon": -0.7259
+        }
+      },
+      {
+        "id": "point_52",
+        "location": {
+          "lat": 44.8562,
+          "lon": -0.6501
+        }
+      },
+      {
+        "id": "point_53",
+        "location": {
+          "lat": 44.5068,
+          "lon": -0.797
+        }
+      },
+      {
+        "id": "point_54",
+        "location": {
+          "lat": 44.5068,
+          "lon": -0.7888
+        }
+      },
+      {
+        "id": "point_55",
+        "location": {
+          "lat": 44.6038,
+          "lon": -0.9371
+        }
+      },
+      {
+        "id": "point_56",
+        "location": {
+          "lat": 45.0409,
+          "lon": -0.6747
+        }
+      },
+      {
+        "id": "point_57",
+        "location": {
+          "lat": 44.9045,
+          "lon": -0.6715
+        }
+      },
+      {
+        "id": "point_58",
+        "location": {
+          "lat": 44.7394,
+          "lon": -1.0935
+        }
+      },
+      {
+        "id": "point_59",
+        "location": {
+          "lat": 44.9093,
+          "lon": -0.639
+        }
+      },
+      {
+        "id": "point_60",
+        "location": {
+          "lat": 44.6356,
+          "lon": -0.9744
+        }
+      },
+      {
+        "id": "point_61",
+        "location": {
+          "lat": 44.8174,
+          "lon": -0.68
+        }
+      },
+      {
+        "id": "point_62",
+        "location": {
+          "lat": 44.9046,
+          "lon": -0.7448
+        }
+      },
+      {
+        "id": "point_63",
+        "location": {
+          "lat": 44.8462,
+          "lon": -0.6318
+        }
+      },
+      {
+        "id": "point_64",
+        "location": {
+          "lat": 44.8132,
+          "lon": -0.5722
+        }
+      },
+      {
+        "id": "point_65",
+        "location": {
+          "lat": 44.7816,
+          "lon": -0.5675
+        }
+      },
+      {
+        "id": "point_66",
+        "location": {
+          "lat": 45.0262,
+          "lon": -0.8017
+        }
+      }
+    ],
+    "vehicles": [
+      {
+        "id": "vehicle_0",
+        "start_point_id": "point_65",
+        "end_point_id": "point_65",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "duration": 14400,
+        "speed_multiplier": 1.1
+      },
+      {
+        "id": "vehicle_1",
+        "start_point_id": "point_59",
+        "end_point_id": "point_59",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "duration": 14400,
+        "speed_multiplier": 1.1
+      },
+      {
+        "id": "vehicle_2",
+        "start_point_id": "point_61",
+        "end_point_id": "point_61",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "duration": 14400,
+        "speed_multiplier": 1.1
+      },
+      {
+        "id": "vehicle_3",
+        "start_point_id": "point_62",
+        "end_point_id": "point_62",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "duration": 14400,
+        "speed_multiplier": 1.1
+      }
+    ],
+    "shipments": [
+      {
+        "id": "shipment_0",
+        "pickup": {
+          "point_id": "point_26",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_1",
+        "pickup": {
+          "point_id": "point_7",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      },
+      {
+        "id": "shipment_2",
+        "pickup": {
+          "point_id": "point_27",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 31800,
+              "end": 33000
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 64800
+            }
+          ]
+        }
+      },
+      {
+        "id": "shipment_3",
+        "pickup": {
+          "point_id": "point_28",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 39000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_4",
+        "pickup": {
+          "point_id": "point_29",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 39000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_5",
+        "pickup": {
+          "point_id": "point_30",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 41400,
+              "end": 45900
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_6",
+        "pickup": {
+          "point_id": "point_31",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 35100,
+              "end": 36900
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_7",
+        "pickup": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      },
+      {
+        "id": "shipment_8",
+        "pickup": {
+          "point_id": "point_32",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_9",
+        "pickup": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      },
+      {
+        "id": "shipment_10",
+        "pickup": {
+          "point_id": "point_33",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_0",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_11",
+        "pickup": {
+          "point_id": "point_0",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      },
+      {
+        "id": "shipment_12",
+        "pickup": {
+          "point_id": "point_34",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 36600,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_0",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_13",
+        "pickup": {
+          "point_id": "point_0",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      },
+      {
+        "id": "shipment_14",
+        "pickup": {
+          "point_id": "point_35",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 41400,
+              "end": 45900
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_15",
+        "pickup": {
+          "point_id": "point_36",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_0",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_16",
+        "pickup": {
+          "point_id": "point_0",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      },
+      {
+        "id": "shipment_17",
+        "pickup": {
+          "point_id": "point_37",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 41400
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_18",
+        "pickup": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      },
+      {
+        "id": "shipment_19",
+        "pickup": {
+          "point_id": "point_38",
+          "setup_duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 41400
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "maximum_inroute_duration": 6300
+      },
+      {
+        "id": "shipment_20",
+        "pickup": {
+          "point_id": "point_2",
+          "setup_duration": 300
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 300,
+          "timewindows": [
+            {
+              "end": 52200
+            }
+          ]
+        },
+        "maximum_inroute_duration": 9000
+      }
+    ],
+    "configuration": {
+      "resolution": {
+        "vehicle_limit": 6,
+        "minimum_duration": null,
+        "duration": 6000
+      }
+    },
+    "name": null
+  }
+}

@@ -393,9 +393,9 @@ module Wrappers
 
       relations += vrp.relations.collect{ |relation|
         current_linked_ids = relation.linked_ids.select{ |mission_id|
-          vrp.services.one? { |service| service.id == mission_id } ||
-            vrp.shipments.one? { |shipment| "#{shipment.id}pickup" == mission_id } ||
-            vrp.shipments.one? { |shipment| "#{shipment.id}delivery" == mission_id }
+          services.one?{ |service| service.id == mission_id } ||
+            vrp.shipments.one? { |shipment| mission_id == "#{shipment.id}pickup" } ||
+            vrp.shipments.one? { |shipment| mission_id == "#{shipment.id}delivery" }
         }.uniq
         current_linked_vehicles = relation.linked_vehicle_ids.select{ |vehicle_id|
           vrp.vehicles.one? { |vehicle| vehicle.id == vehicle_id }
@@ -409,6 +409,7 @@ module Wrappers
           lapse: relation.lapse || -1
         )
       }.compact
+
       routes = vrp.routes.collect{ |route|
         next if route.vehicle.nil? || route.mission_ids.empty?
 

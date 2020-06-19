@@ -241,5 +241,60 @@ module Models
         TestHelper.create(vrp)
       end
     end
+
+    def test_deduce_consistent_relations
+      vrp = VRP.pud
+
+      ['minimum_duration_lapse', 'maximum_duration_lapse'].each{ |relation_type|
+        vrp[:relations] = [{
+          type: relation_type,
+          linked_ids: ['shipment_0', 'shipment_1'],
+          lapse: 3
+        }]
+
+        generated_vrp = TestHelper.create(vrp)
+        assert_equal 1, generated_vrp.relations.size
+        assert_equal 2, generated_vrp.relations.first.linked_ids.size
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0delivery'
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+      }
+
+      vrp[:services] = [{
+        id: 'service',
+        activity: { point_id: 'point_1' }
+      }]
+      vrp[:relations] = [{
+        type: 'minimum_duration_lapse',
+        linked_ids: ['service', 'shipment_1'],
+        lapse: 3
+      }]
+      generated_vrp = TestHelper.create(vrp)
+      assert_includes generated_vrp.relations.first.linked_ids, 'service'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+
+      vrp[:relations] = [{
+        type: 'same_route',
+        linked_ids: ['service', 'shipment_0', 'shipment_1'],
+        lapse: 3
+      }]
+      generated_vrp = TestHelper.create(vrp)
+      assert_includes generated_vrp.relations.first.linked_ids, 'service'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+
+      %w[sequence order].each{ |relation_type|
+        vrp[:relations].first[:type] = relation_type
+        vrp[:relations].first[:linked_ids] = ['service', 'shipment_1']
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          TestHelper.create(vrp)
+        end
+      }
+
+      vrp[:relations].first[:linked_ids] = ['service']
+      %w[sequence order].each{ |relation_type|
+        vrp[:relations].first[:type] = relation_type
+        TestHelper.create(vrp) # check no error provided
+      }
+    end
   end
 end
