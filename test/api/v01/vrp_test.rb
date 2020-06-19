@@ -364,4 +364,23 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       TestHelper.create(vrp)
     end
   end
+
+  def test_transform_route_indice_into_index
+    original_vrp = VRP.lat_lon_scheduling_two_vehicles
+    original_vrp[:routes] = [{
+      vehicle_id: 'vehicle_0',
+      mission_ids: ['service_1'],
+      indice: 10
+    }]
+    original_vrp[:configuration][:preprocessing] = {
+      partitions: TestHelper.vehicle_and_days_partitions
+    }
+
+    vrp = TestHelper.create(original_vrp)
+    assert_raises NoMethodError do
+      vrp.routes.first.indice
+    end
+    assert vrp.routes.first.index
+    assert_equal 10, vrp.routes.first.index
+  end
 end

@@ -233,6 +233,7 @@ module OptimizerWrapper
       vrp.compute_matrix(&block)
 
       sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
+      vrp.clean_according_to(sub_unfeasible_services)
 
       vrp = config[:services][service].simplify_constraints(vrp)
 
@@ -256,8 +257,7 @@ module OptimizerWrapper
       unfeasible_services += sub_unfeasible_services
       if vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
         # TODO: Move select best heuristic in each solver
-        block&.call(nil, nil, nil, "process heuristic choice : #{vrp.preprocessing_first_solution_strategy}", nil, nil, nil) if vrp.preprocessing_first_solution_strategy&.include?('self_selection') || vrp.preprocessing_first_solution_strategy&.size.to_f > 1
-        Interpreters::SeveralSolutions.custom_heuristics(service, vrp)
+        Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
 
         block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.preprocessing_cluster_threshold.to_f}) ", nil, nil, nil) if vrp.preprocessing_cluster_threshold.to_f.positive?
         optim_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
