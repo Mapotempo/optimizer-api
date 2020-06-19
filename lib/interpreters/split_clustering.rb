@@ -483,6 +483,57 @@ module Interpreters
       end
     end
 
+    def self.collect_cluster_data(vrp, nb_clusters)
+      # TODO: due to historical dev, this function is in two pieces but
+      # it is possbile to do the same task in one step. That is, instead of
+      # collecting vehicles then eliminating to have nb_clusters vehicles,
+      # we can create one with nb_clusters items directly.
+
+      r_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : 0
+      r_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : 0
+
+      vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
+        total_work_days = vehicle.total_work_days_in_range(r_start, r_end)
+        capacities = {
+          duration: vrp.schedule_range_indices ? vrp.total_work_times[v_i] : vehicle.work_duration,
+          visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
+        }
+        vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
+        tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
+        {
+          v_id: [vehicle.id],
+          days: compute_day_skills(tw),
+          depot: [vehicle.start_point.matrix_index || [vehicle.start_point.location.lat, vehicle.start_point.location.lon]].flatten,
+          capacities: capacities,
+          skills: vehicle.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
+          total_work_time: vehicle.total_work_time_in_range(r_start, r_end),
+          total_work_days: total_work_days
+        }
+      }
+
+      if nb_clusters != vehicles.size
+        # for max_split and dichotomious cases
+        depot_counts = vehicles.collect{ |i| i[:depot] }.count_by{ |i| i }.sort_by{ |_i, cnt| -cnt }.to_h
+        depots = depot_counts.keys
+        while depots.size < nb_clusters
+          depots += [depot_counts.max_by{ |_depot, count| count }[0]]
+          depot_counts[depots.last] /= 2
+        end
+        vehicles = Array.new(nb_clusters){ |simulated_vehicle|
+          {
+            v_id: "generated_vehicle_#{simulated_vehicle}",
+            days: ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill'],
+            depot: depots[simulated_vehicle],
+            capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value| [key, value * vehicles.size / nb_clusters.to_f] }.to_h, #TODO: capacities needs a better way like depots...
+            skills: [],
+            total_work_time: 0,
+            total_work_days: 1
+          }
+        }
+      end
+      vehicles
+    end
+
     def self.list_vehicles(vehicles)
       vehicle_list = []
       vehicles.each{ |vehicle|
@@ -553,57 +604,6 @@ module Interpreters
             build_service_like(shipment, shipment.pickup)
           end
         }.compact
-      end
-
-      def collect_cluster_data(vrp, nb_clusters)
-        # TODO: due to historical dev, this function is in two pieces but
-        # it is possbile to do the same task in one step. That is, instead of
-        # collecting vehicles then eliminating to have nb_clusters vehicles,
-        # we can create one with nb_clusters items directly.
-
-        r_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : 0
-        r_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : 0
-
-        vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
-          total_work_days = vehicle.total_work_days_in_range(r_start, r_end)
-          capacities = {
-            duration: vrp.schedule_range_indices ? vrp.total_work_times[v_i] : vehicle.work_duration,
-            visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
-          }
-          vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
-          tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
-          {
-            v_id: [vehicle.id],
-            days: compute_day_skills(tw),
-            depot: [vehicle.start_point.matrix_index || [vehicle.start_point.location.lat, vehicle.start_point.location.lon]],
-            capacities: capacities,
-            skills: vehicle.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
-            total_work_time: vehicle.total_work_time_in_range(r_start, r_end),
-            total_work_days: total_work_days
-          }
-        }
-
-        if nb_clusters != vehicles.size
-          # for max_split and dichotomious cases
-          depot_counts = vehicles.collect{ |i| i[:depot] }.count_by{ |i| i }.sort_by{ |_i, cnt| -cnt }.to_h
-          depots = depot_counts.keys
-          while depots.size < nb_clusters
-            depots += [depot_counts.max_by{ |_depot, count| count }[0]]
-            depot_counts[depots.last] /= 2
-          end
-          vehicles = Array.new(nb_clusters){ |simulated_vehicle|
-            {
-              v_id: "generated_vehicle_#{simulated_vehicle}",
-              days: ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill'],
-              depot: depots[simulated_vehicle],
-              capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value| [key, value * vehicles.size / nb_clusters.to_f] }.to_h, #TODO: capacities needs a better way like depots...
-              skills: [],
-              total_work_time: 0,
-              total_work_days: 1
-            }
-          }
-        end
-        vehicles
       end
 
       def collect_data_items_metrics(vrp, cumulated_metrics, basic_split)
