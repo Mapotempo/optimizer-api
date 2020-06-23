@@ -3046,4 +3046,28 @@ class WrapperTest < Minitest::Test
 
     assert_operator total_time, :<=, 14.0
   end
+
+  def test_initial_route_with_infeasible_service
+    # service_1 is eliminated due to
+    # "Incompatibility between service skills and sticky vehicles"
+    # but it is referenced inside an initial route which should not cause an issue
+    problem = VRP.basic
+
+    problem[:vehicles] += [{
+      id: 'vehicle_1',
+      matrix_id: 'matrix_0',
+      start_point_id: 'point_0',
+      skills: [['vehicle_1']]
+    }]
+
+    problem[:services][0][:skills] = ['vehicle_1']
+    problem[:services][0][:sticky_vehicle_ids] = ['vehicle_0']
+
+    problem[:routes] = [{
+      vehicle_id: 'vehicle_0',
+      mission_ids: ['service_1', 'service_2', 'service_3']
+    }]
+
+    assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+  end
 end
