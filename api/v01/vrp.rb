@@ -78,20 +78,20 @@ module Api
       end
 
       def self.vrp_request_indice_range(this)
-        this.optional(:start, type: Integer, desc: 'Beginning of the range.')
-        this.optional(:end, type: Integer, desc: 'End of the range.')
+        this.optional(:start, type: Integer, desc: 'Beginning of the range')
+        this.optional(:end, type: Integer, desc: 'End of the range')
       end
 
       def self.vrp_request_date_range(this)
-        this.optional(:start, type: Date, desc: 'Beginning of the range in date format : .') # date format n'est donnable que si on crée vrp au meme endroit que là oùu on résoud, non ?
-        this.optional(:end, type: Date, desc: 'End of the range in date format : .') # date format n'est donnable que si on crée vrp au meme endroit que là oùu on résoud, non ?
+        this.optional(:start, type: Date, desc: 'Beginning of the range in date format')
+        this.optional(:end, type: Date, desc: 'End of the range in date format')
       end
 
       def self.vrp_request_matrices(this)
         this.requires(:id, type: String, allow_blank: false)
-        this.optional(:time, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of time, travel duration between each pair of point in the problem. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix')
-        this.optional(:distance, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of distance, travel distance between each pair of point in the problem. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix')
-        this.optional(:value, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix')
+        this.optional(:time, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of time, travel duration between each pair of point in the problem. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix.')
+        this.optional(:distance, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of distance, travel distance between each pair of point in the problem. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix.')
+        this.optional(:value, type: Array[Array[Float]], allow_blank: false, desc: 'Matrix of values, travel value between each pair of point in the problem if not distance or time related. It must be send as an Array[Array[Float]] as it could potentially be non squared matrix.')
       end
 
       def self.vrp_request_point(this)
@@ -116,18 +116,18 @@ module Api
         this.optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
           Vrp.vrp_request_timewindow(self)
         end
-        this.optional(:late_multiplier, type: Float, desc: 'Late multiplier applied for this rest.')
-        this.optional(:exclusion_cost, type: Float, desc: 'Cost induced by non affectation of this rest.')
+        this.optional(:late_multiplier, type: Float, desc: 'Late multiplier applied for this rest')
+        this.optional(:exclusion_cost, type: Float, desc: 'Cost induced by non affectation of this rest')
       end
 
       def self.vrp_request_zone(this)
         this.requires(:id, type: String, allow_blank: false, desc: '')
         this.requires(:polygon, type: Hash, desc: 'Geometry which describes the area')
-        this.optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle or vehicles combination the zone could be served') # ----------- ???
+        this.optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle or vehicles combination the zone could be served')
       end
 
       def self.vrp_request_activity(this)
-        this.optional(:position, types: Symbol, default: :neutral, values: [:neutral, :always_first, :always_middle, :always_last, :never_first, :never_middle, :never_last], desc: 'Provides an indication on when to do this service among whole route.', coerce_with: ->(value) { value.to_sym })
+        this.optional(:position, types: Symbol, default: :neutral, values: [:neutral, :always_first, :always_middle, :always_last, :never_first, :never_middle, :never_last], desc: 'Provides an indication on when to do this service among whole route', coerce_with: ->(value) { value.to_sym })
         this.optional(:duration, types: [String, Float, Integer], desc: 'Time while the current activity stands until it\'s over (in seconds)', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
         this.optional(:setup_duration, types: [String, Float, Integer], desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
@@ -163,50 +163,52 @@ module Api
         this.requires(:id, type: String, allow_blank: false)
         this.optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
         this.optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
-        this.optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools)')
-        this.optional(:cost_value_multiplier, type: Float, desc: 'Multiplier applied to the value matrix and additional activity value')
-        this.optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route')
-        this.optional(:cost_late_multiplier, type: Float, desc: 'Cost applied if a point is delivered late (ORtools only)')
-        this.optional(:cost_setup_time_multiplier, type: Float, desc: '(Jsprit only) Cost applied on the setup duration')
-        this.optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour, for this vehicle')
-        this.optional(:additional_setup, type: Float, desc: 'Constant additional setup duration for all setup defined in the tour, for this vehicle')
-        this.optional(:coef_service, type: Float, desc: 'Coefficient applied to every service duration defined in the tour, for this vehicle')
-        this.optional(:additional_service, type: Float, desc: 'Constant additional service time for all travel defined in the tour, for this vehicle')
+
+        this.optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools). Not taken into account within periodic heuristic.')
+        this.optional(:cost_value_multiplier, type: Float, desc: 'Multiplier applied to the value matrix and additional activity value. Not taken into account within periodic heuristic.')
+        this.optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route. Not taken into account within periodic heuristic.')
+        this.optional(:cost_late_multiplier, type: Float, desc: 'Cost applied if a point is delivered late (ORtools only). Not taken into account within periodic heuristic.')
+        this.optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration (Jsprit only). Not taken into account within periodic heuristic.')
+        this.optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
+        this.optional(:additional_setup, type: Float, desc: 'Constant additional setup duration for all setup defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
+        this.optional(:coef_service, type: Float, desc: 'Coefficient applied to every service duration defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
+        this.optional(:additional_service, type: Float, desc: 'Constant additional service time for all travel defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
         this.optional(:force_start, type: Boolean, documentation: { hidden: true }, desc: '[ DEPRECATED ]')
-        this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open, as late as possible or let vehicule start at any time. Not available with periodic heuristic.')
-        this.optional(:trips, type: Integer, desc: 'Describe the number of return to the depot a vehicle is allowed to perform within its route')
+        this.optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open,
+          as late as possible or let vehicle start at any time. Not available with periodic heuristic, it will always leave as soon as possible.')
+        this.optional(:trips, type: Integer, desc: 'The number of times a vehicle is allowed to return to the depot within its route. Not available with periodic heuristic.')
 
         this.optional :matrix_id, type: String, desc: 'Related matrix, if already defined'
-        this.optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index.'
-        this.optional :router_mode, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc'
+        this.optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index'
+        this.optional :router_mode, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc.'
         this.exactly_one_of :matrix_id, :router_mode
         this.optional :router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance'
         this.optional :speed_multiplier, type: Float, default: 1.0, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.'
         this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) } } : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (only available for truck mode at this time).'
         this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (only available for truck mode at this time).'
-        this.optional :traffic, type: Boolean, desc: 'Take into account traffic or not.'
-        this.optional :departure, type: DateTime, desc: 'Departure date time (only used if router supports traffic).'
-        this.optional :track, type: Boolean, default: true, desc: 'Use track or not.'
-        this.optional :motorway, type: Boolean, default: true, desc: 'Use motorway or not.'
-        this.optional :toll, type: Boolean, default: true, desc: 'Use toll section or not.'
-        this.optional :trailers, type: Integer, desc: 'Number of trailers.'
-        this.optional :weight, type: Float, desc: 'Vehicle weight including trailers and shipped goods, in tons.'
-        this.optional :weight_per_axle, type: Float, desc: 'Weight per axle, in tons.'
-        this.optional :height, type: Float, desc: 'Height in meters.'
-        this.optional :width, type: Float, desc: 'Width in meters.'
-        this.optional :length, type: Float, desc: 'Length in meters.'
-        this.optional :hazardous_goods, type: Symbol, values: [:explosive, :gas, :flammable, :combustible, :organic, :poison, :radio_active, :corrosive, :poisonous_inhalation, :harmful_to_water, :other], desc: 'List of hazardous materials in the vehicle.'
-        this.optional :max_walk_distance, type: Float, default: 750, desc: 'Max distance by walk.'
-        this.optional :approach, type: Symbol, values: [:unrestricted, :curb], default: :unrestricted, desc: 'Arrive/Leave in the traffic direction.'
-        this.optional :snap, type: Float, desc: 'Snap waypoint to junction close by snap distance.'
-        this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
+        this.optional :traffic, type: Boolean, desc: 'Take into account traffic or not'
+        this.optional :departure, type: DateTime, desc: 'Departure date time (only used if router supports traffic)'
+        this.optional :track, type: Boolean, default: true, desc: 'Use track or not'
+        this.optional :motorway, type: Boolean, default: true, desc: 'Use motorway or not'
+        this.optional :toll, type: Boolean, default: true, desc: 'Use toll section or not'
+        this.optional :trailers, type: Integer, desc: 'Number of trailers'
+        this.optional :weight, type: Float, desc: 'Vehicle weight including trailers and shipped goods, in tons'
+        this.optional :weight_per_axle, type: Float, desc: 'Weight per axle, in tons'
+        this.optional :height, type: Float, desc: 'Height in meters'
+        this.optional :width, type: Float, desc: 'Width in meters'
+        this.optional :length, type: Float, desc: 'Length in meters'
+        this.optional :hazardous_goods, type: Symbol, values: [:explosive, :gas, :flammable, :combustible, :organic, :poison, :radio_active, :corrosive, :poisonous_inhalation, :harmful_to_water, :other], desc: 'List of hazardous materials in the vehicle'
+        this.optional :max_walk_distance, type: Float, default: 750, desc: 'Max distance by walk'
+        this.optional :approach, type: Symbol, values: [:unrestricted, :curb], default: :unrestricted, desc: 'Arrive/Leave in the traffic direction'
+        this.optional :snap, type: Float, desc: 'Snap waypoint to junction close by snap distance'
+        this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations'
 
         this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
         this.optional(:overall_duration, types: [String, Float, Integer], documentation: { hidden: true }, desc: '(Scheduling only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
         this.optional(:distance, types: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
-        this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. Not available with periodic heuristic. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]')
+        this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]. Not available with periodic heuristic.')
 
         this.optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals indices of unavailabilty')
         this.optional(:unavailable_work_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
@@ -233,15 +235,15 @@ module Api
         end
         this.mutually_exclusive :sequence_timewindows, :sequence_timewindow_ids, :timewindow
 
-        this.optional(:rest_ids, type: Array[String], desc: 'Breaks whithin the tour')
+        this.optional(:rest_ids, type: Array[String], desc: 'Rests within the route. Not available with periodic heuristic.')
       end
 
       def self.vrp_request_service(this)
         this.requires(:id, type: String, allow_blank: false)
         this.optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4. 0 is the highest priority level). Not available with same_point_day option.')
-        this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost. Not available with periodic heuristic.')
+        this.optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost')
 
-        this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
+        this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: '(Scheduling only) Total number of visits over the complete schedule (including the unavailable visit indices)')
 
         this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Scheduling only) unavailable indices of visit')
 
@@ -249,13 +251,13 @@ module Api
         this.optional(:unavailable_visit_day_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
         this.mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
-        this.optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
-        this.optional(:maximum_lapse, type: Float, desc: 'Maximum day lapse between two visits')
+        this.optional(:minimum_lapse, type: Float, desc: '(Scheduling only) Minimum day lapse between two visits')
+        this.optional(:maximum_lapse, type: Float, desc: '(Scheduling only) Maximum day lapse between two visits')
 
         this.optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
-        this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
+        this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service. Not available with periodic heuristic.')
 
-        this.optional(:type, type: Symbol, desc: '`service`, `pickup` or `delivery`')
+        this.optional(:type, type: Symbol, desc: '`service`, `pickup` or `delivery`. Only service type is available with periodic heuristic.')
         this.optional(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
           Vrp.vrp_request_activity(self)
         end
@@ -338,12 +340,12 @@ module Api
       end
 
       def self.vrp_request_route(this)
-        this.optional(:vehicle_id, type: String, desc: 'vehicle linked to the current described route')
+        this.optional(:vehicle_id, type: String, desc: 'Vehicle linked to the current described route')
         this.optional(:indice, type: Integer, desc: '[ DEPRECATED : use index instead ]')
-        this.optional(:index, type: Integer, desc: 'Index of the route. Must be provided if first_solution_strategy is \'periodic\'.')
-        this.optional(:date, type: Date, desc: 'Date of the route. Must be provided if first_solution_strategy is \'periodic\'.')
+        this.optional(:index, type: Integer, desc: 'Index of the route. Must be provided if first_solution_strategy is \'periodic\' and no route date is provided.')
+        this.optional(:date, type: Date, desc: 'Date of the route. Must be provided if first_solution_strategy is \'periodic\' and no route index is provided.')
         this.requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route')
-        this.mutually_exclusive :indice, :day
+        this.mutually_exclusive :indice, :index, :day
       end
 
       def self.vrp_request_configuration(this)
@@ -364,15 +366,15 @@ module Api
       def self.vrp_request_partition(this)
         this.requires(:method, type: String, values: %w[hierarchical_tree balanced_kmeans], desc: 'Method used to partition')
         this.optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
-        this.optional(:entity, type: String, values: %w[vehicle work_day], desc: 'Describes what the partition corresponds to. Only available if method in [balanced_kmeans hierarchical_tree]')
-        this.optional(:threshold, type: Integer, desc: 'Maximum size of partition. Only available if method in [iterative_kmean clique]')
+        this.optional(:entity, type: String, values: %w[vehicle work_day], desc: 'Describes what the partition corresponds to. Only available if method in [balanced_kmeans hierarchical_tree].')
+        this.optional(:threshold, type: Integer, desc: 'Maximum size of partition. Only available if method in [iterative_kmean clique].')
       end
 
       def self.vrp_request_preprocessing(this)
         this.optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
         this.optional(:partition_method, type: String, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
         this.optional(:partition_metric, type: Symbol, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
-        this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available with deprecated partition_method')
+        this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available with deprecated partition_method.')
         this.optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
         this.optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
         this.optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
@@ -380,7 +382,7 @@ module Api
         this.optional(:partitions, type: Array, desc: 'Describes partition process to perform before solving. Partitions will be performed in provided order') do
           Vrp.vrp_request_partition(self)
         end
-        this.optional(:first_solution_strategy, types: Array[String], desc: 'Forces first solution strategy. Either one value to force specific behavior, or a list in order to test several ones and select the best. If string is \'internal\', we will choose among pre-selected behaviors. There can not be more than three behaviors (ORtools only)', coerce_with: ->(value) { FirstSolType.new.type_cast(value) })
+        this.optional(:first_solution_strategy, types: Array[String], desc: 'Forces first solution strategy. Either one value to force specific behavior, or a list in order to test several ones and select the best. If string is \'internal\', we will choose among pre-selected behaviors. There can not be more than three behaviors (ORtools only).', coerce_with: ->(value) { FirstSolType.new.type_cast(value) })
       end
 
       def self.vrp_request_resolution(this)
@@ -394,8 +396,8 @@ module Api
         this.optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
         this.optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
-        this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called.')
-        this.optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is periodic is activated. Not available ORtools.')
+        this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called')
+        this.optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is \'periodic\'. Not available ORtools.')
         this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling only) Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
@@ -472,16 +474,16 @@ module Api
               optional(:services, type: Array, allow_blank: false, documentation: { desc: 'Independent activity, which does not require a context' }) do
                 Vrp.vrp_request_service(self)
               end
-              optional(:shipments, type: Array, allow_blank: false, documentation: { desc: 'Link directly one activity of collection to another of drop off' }) do
+              optional(:shipments, type: Array, allow_blank: false, documentation: { desc: 'Link directly one activity of collection to another of drop off. Not available with periodic heuristic.' }) do
                 Vrp.vrp_request_shipment(self)
               end
               at_least_one_of :services, :shipments
 
-              optional(:relations, type: Array, desc: '') do
+              optional(:relations, type: Array, desc: 'Not available with periodic heuristic') do
                 Vrp.vrp_request_relation(self)
               end
 
-              optional(:subtours, type: Array, desc: '') do
+              optional(:subtours, type: Array, desc: 'Not available with periodic heuristic') do
                 Vrp.vrp_request_subtour(self)
               end
 
