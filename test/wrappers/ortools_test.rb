@@ -5568,9 +5568,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     current_order = shipment_route[:activities].collect{ |stop| stop[:pickup_shipment_id] }.compact
 
     # add consecutivity :
-    vrp.relations = Marshal.load(File.binread('test/fixtures/relation_structure.bindump')) # rubocop: disable Security/MarshalLoad
-    vrp.relations.first.linked_ids = [current_order[1], current_order[0]]
-    vrp.relations.first.type = 'minimum_duration_lapse'
+    relation = Models::Relation.new(type: 'minimum_duration_lapse', linked_ids: [current_order[1], current_order[0]], lapse: 1800)
+    vrp.relations = [relation]
     vrp.adapt_relations_between_shipments
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     shipment_route = result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:pickup_shipment_id] == current_order[1] } }[:activities]
