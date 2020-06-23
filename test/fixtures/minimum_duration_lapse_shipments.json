@@ -889,7 +889,7 @@
       "resolution": {
         "vehicle_limit": 6,
         "minimum_duration": null,
-        "duration": 6000
+        "duration": 15000
       }
     },
     "name": null
