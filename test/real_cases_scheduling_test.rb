@@ -242,8 +242,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_minimum_stop_in_route
-      vrp = TestHelper.load_vrps(self, fixture_file: 'performance_13vl')[25]
-      vrp.resolution_allow_partial_assignment = true
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result[:routes].any?{ |r| r[:activities].size - 2 < 5 }, "Expecting any of #{result[:routes].collect{ |r| r[:activities].size - 2 }} to be less than 10, this test is useless otherwise"
       should_remain_assigned = result[:routes].collect{ |r| r[:activities].size - 2 }.select{ |nb| nb >= 5 }.reduce(&:+)
