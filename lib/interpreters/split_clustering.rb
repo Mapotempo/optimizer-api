@@ -293,7 +293,7 @@ module Interpreters
     end
 
     # TODO: private method, reduce params
-    def self.kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options = {}, &block)
+    def self.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options = {}, &block)
       biggest_cluster_size = 0
       clusters = []
       centroids_characteristics = []
@@ -308,11 +308,13 @@ module Interpreters
         c.max_iterations = options[:max_iterations]
         c.distance_matrix = options[:distance_matrix]
         c.vehicles_infos = options[:clusters_infos]
+        c.centroid_indices = options[:centroid_indices] || []
         c.logger = OptimizerLogger.logger
 
         ratio = 0.9 + 0.1 * (options[:restarts] - restart) / options[:restarts].to_f
 
-        c.build(DataSet.new(data_items: data_items), options[:cut_symbol], ratio, options)
+        # TODO: move the creation of data_set to the gem side GEM should create it if necessary
+        c.build(DataSet.new(data_items: c.centroid_indices.empty? ? data_items : data_items.dup), options[:cut_symbol], ratio, options)
 
         c.clusters.delete([])
         values = c.clusters.collect{ |cluster| cluster.data_items.collect{ |i| i[3][options[:cut_symbol]] }.sum.to_i }
@@ -382,9 +384,9 @@ module Interpreters
         end
 
         data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, cumulated_metrics, options[:basic_split])
-        limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here.
-                                                                                                                                            # TODO : remove cumulated_metrics at the same time
-        centroids = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids] && options[:entity] != :work_day
+        limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
+
+        options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
 
         raise OptimizerWrapper::UnsupportedProblemError, 'Cannot use balanced kmeans if there are vehicles with alternative skills' if vrp.vehicles.any?{ |v| v[:skills].any?{ |skill| skill.is_a?(Array) } && v[:skills].size > 1 }
 
@@ -392,7 +394,7 @@ module Interpreters
 
         options[:clusters_infos] = collect_cluster_data(vrp, nb_clusters)
 
-        clusters, centroid_characteristics = kmeans_process(centroids, nb_clusters, data_items, unit_symbols, limits, options, &block)
+        clusters, centroid_characteristics = kmeans_process(nb_clusters, data_items, unit_symbols, limits, options, &block)
 
         toc = Time.now
 

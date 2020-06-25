@@ -358,22 +358,27 @@ class SplitClusteringTest < Minitest::Test
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
-      vrp[:services][0][:skills] = ['cold']
-      vrp[:services][3][:skills] = ['hot']
-      service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [0, 2]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
-      cold_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
-      hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
-      refute_equal cold_cluster, hot_cluster
+      vrp[:vehicles][0][:skills] = [['hot']]
+      vrp[:vehicles][1][:skills] = [['cold']]
 
       vrp[:services][0][:skills] = ['cold']
-      vrp[:services][3][:skills] = ['hot']
-      service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      vrp[:services][1][:skills] = ['hot']
+
+      # even though they are at the same lat/lon, they should be in different clusters
+      vrp[:points][1][:location] = vrp[:points][0][:location]
+      vrp[:points][1][:matrix_index] = vrp[:points][0][:matrix_index]
+
+      assert_raises ArgumentError do # initialising centroids with incompatible services should raise an error
+        vrp[:configuration][:preprocessing][:kmeans_centroids] = [0, 1]
+        Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo).flatten.compact
+      end
+
+      vrp[:configuration][:preprocessing][:kmeans_centroids] = [2, 3] # initialising the with other services should be okay
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo).flatten.compact
+
+      # but service 1 and 0 should be served by different vehicles
       cold_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
-      hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
+      hot_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][1][:id] } }
       refute_equal cold_cluster, hot_cluster
     end
 

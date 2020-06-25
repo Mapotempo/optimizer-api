@@ -501,7 +501,7 @@ module Interpreters
 
         options[:clusters_infos] = SplitClustering.collect_cluster_data(vrp, nb_clusters)
 
-        clusters, _centroid_indices = SplitClustering.kmeans_process([], nb_clusters, data_items, unit_symbols, limits, options)
+        clusters, _centroid_indices = SplitClustering.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options)
 
         log "Dicho K-Means: split #{data_items.size} into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
 
