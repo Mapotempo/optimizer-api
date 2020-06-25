@@ -308,6 +308,7 @@ module Interpreters
         c.max_iterations = options[:max_iterations]
         c.distance_matrix = options[:distance_matrix]
         c.vehicles_infos = options[:clusters_infos]
+        c.logger = OptimizerLogger.logger
 
         ratio = 0.9 + 0.1 * (options[:restarts] - restart) / options[:restarts].to_f
 
