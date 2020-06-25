@@ -2861,14 +2861,14 @@ class WrapperTest < Minitest::Test
     problem[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
       metric: 'duration',
-      entity: 'work_day'
+      entity: :work_day
     }]
     assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem))
 
     problem[:configuration][:preprocessing][:partitions] << {
       method: 'balanced_kmeans',
       metric: 'duration',
-      entity: 'vehicle'
+      entity: :vehicle
     }
     assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_vehicle_entity_only_before_work_day
   end
@@ -2946,7 +2946,7 @@ class WrapperTest < Minitest::Test
 
     solve_call = 0
     vrp = TestHelper.create(VRP.scheduling)
-    vrp.preprocessing_partitions = [{ 'method': 'balanced_kmeans', 'metric': 'duration', 'entity': 'vehicle' }]
+    vrp.preprocessing_partitions = [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }]
     OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
       solve_call += 1
       { routes: [], unassigned: vrp.services.collect{ |s| s }}
@@ -2957,7 +2957,7 @@ class WrapperTest < Minitest::Test
 
     solve_call = 0
     vrp = TestHelper.create(VRP.scheduling)
-    vrp.preprocessing_partitions = [{ 'method': 'balanced_kmeans', 'metric': 'duration', 'entity': 'vehicle' }]
+    vrp.preprocessing_partitions = [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }]
     vrp.preprocessing_first_solution_strategy = nil
     vrp.resolution_solver = true
     OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|

@@ -216,7 +216,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       vrp[:configuration][:preprocessing] = {
         max_split_size: 4,
         partitions: [
-          { method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' }
+          { method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }
         ]
       }
       @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)

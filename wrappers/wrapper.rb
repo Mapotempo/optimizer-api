@@ -421,8 +421,8 @@ module Wrappers
     end
 
     def assert_vehicle_entity_only_before_work_day(vrp)
-      vehicle_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == 'vehicle' }
-      work_day_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == 'work_day' }
+      vehicle_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == :vehicle }
+      work_day_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == :work_day }
       vehicle_entity_index.nil? || work_day_entity_index.nil? || vehicle_entity_index < work_day_entity_index
     end
 

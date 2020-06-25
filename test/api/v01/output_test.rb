@@ -79,7 +79,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
       partitions: [{
         method: 'balanced_kmeans',
         metric: 'duration',
-        entity: 'vehicle'
+        entity: :vehicle
       }]
     }
 
