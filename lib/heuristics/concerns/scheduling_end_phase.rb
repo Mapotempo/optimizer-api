@@ -104,7 +104,6 @@ module SchedulingEndPhase
       @ids_to_renumber |= [id]
       insert_point_in_route(@candidate_routes[vehicle][day], best_cost[1][:cost])
       @output_tool&.add_single_visit(day, @services_data[id][:used_days], id, @services_data[id][:visits_number])
-      @services_data[id][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
 
       costs = update_costs(costs, best_cost)
     end
@@ -243,6 +242,9 @@ module SchedulingEndPhase
             [stop[:id], stop[:number_in_sequence]]
           }
           day_route[:current_route] = []
+          day_route[:capacity].each{ |unit, qty|
+            day_route[:capacity_left][unit] = qty
+          }
           removed += locally_removed
 
           if @allow_partial_assignment

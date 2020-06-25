@@ -19,7 +19,7 @@
 require './lib/helper.rb'
 require './lib/tsp_helper.rb'
 require './lib/output_helper.rb'
-require './lib/heuristics/concerns/scheduling_data_initialisation.rb'
+require './lib/heuristics/concerns/scheduling_data_initialisation'
 require './lib/heuristics/concerns/scheduling_end_phase'
 
 module Heuristics
@@ -396,14 +396,15 @@ module Heuristics
 
     def clean_routes(service, vehicle, reaffect = false)
       ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-      # TODO : use @services_data[service][:used_days] not to iterate over every route + use used_vehicles
       @candidate_routes[vehicle].collect{ |_day, day_route|
         remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service }
         next unless remove_index
 
         used_point = day_route[:current_route][remove_index][:point_id]
         day_route[:current_route].slice!(remove_index)
-        @points_vehicles_and_days[used_point][:days].delete(day_route[:global_day_index]) unless day_route[:current_route].find_index{ |stop| stop[:point_id] == used_point }
+        @services_data[service][:capacity].each{ |need, qty| day_route[:capacity_left][need] += qty }
+
+        update_point_vehicle_and_days(used_point)
         clean_position_dependent_services(vehicle, day_route[:current_route], remove_index) unless day_route[:current_route].empty?
         day_route[:current_route] = update_route(day_route, remove_index)
         @services_data[service][:used_days] = []
@@ -437,6 +438,18 @@ module Heuristics
         }
         @candidate_services_ids.delete(id)
         @to_plan_service_ids.delete(id)
+      }
+    end
+
+    def update_point_vehicle_and_days(point)
+      @points_vehicles_and_days[point][:vehicles].delete_if{ |vehicle|
+        @candidate_routes[vehicle].none?{ |_day, day_route| day_route[:current_route].any?{ |stop| stop[:point_id] == point } }
+      }
+
+      @points_vehicles_and_days[point][:days].delete_if{ |day|
+        @points_vehicles_and_days[point][:vehicles].none?{ |vehicle|
+          @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:point_id] == point }
+        }
       }
     end
 
@@ -666,7 +679,6 @@ module Heuristics
 
           inserted_ids << best_index[:id]
           @to_plan_service_ids.delete(best_index[:id])
-          @services_data[best_index[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
         else
           service_to_insert = false
           @vehicle_day_completed[vehicle][day] = true
@@ -717,7 +729,6 @@ module Heuristics
 
       best_index[:end] = best_index[:end] - @services_data[best_index[:id]][:group_duration] + @services_data[best_index[:id]][:durations].first if @same_point_day
       insert_point_in_route(route_data, best_index)
-      @services_data[best_index[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
       @to_plan_service_ids.delete(best_index[:id])
 
@@ -910,6 +921,7 @@ module Heuristics
       @points_vehicles_and_days[point_to_add[:point]][:vehicles] = @points_vehicles_and_days[point_to_add[:point]][:vehicles] | [route_data[:vehicle_id].split('_')[0..-2].join('_')]
       @points_vehicles_and_days[point_to_add[:point]][:days] = @points_vehicles_and_days[point_to_add[:point]][:days] | [route_data[:global_day_index]]
       @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] = [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number], @services_data[point_to_add[:id]][:visits_number]].max
+      @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
       @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:visits_number]].max
 
@@ -1082,7 +1094,6 @@ module Heuristics
           insert_point_in_route(@candidate_routes[vehicle][day], best_index, false)
           @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:id] == service }[:number_in_sequence] = visit_number
 
-          @services_data[service][:capacity].each{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] -= qty }
           day
         end
       end
