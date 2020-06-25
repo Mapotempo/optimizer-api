@@ -6,11 +6,11 @@ GIT
       activesupport (>= 2.2.2)
 
 GIT
-  remote: https://github.com/fonsecadeline/balanced_vrp_clustering
-  revision: f1330b629dd57809909dd10cffe7903975cf03e0
+  remote: git://github.com/Mapotempo/balanced_vrp_clustering.git
+  revision: bae92bf1979892de3ba704ce75bc2e2d8efa284e
   branch: dev
   specs:
-    balanced_vrp_clustering (0.1.1)
+    balanced_vrp_clustering (0.1.3)
 
 GEM
   remote: https://rubygems.org/
