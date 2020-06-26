@@ -730,6 +730,8 @@ module Wrappers
 
       log "Following services marked as infeasible:\n#{unfeasible.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug unless unfeasible.empty?
 
+      log "#{unfeasible.size} services marked as infeasible with the following reasons: #{unfeasible.collect{ |u| u[:reason] }.uniq.join(', ')}", level: :info unless unfeasible.empty?
+
       unfeasible
     end
 

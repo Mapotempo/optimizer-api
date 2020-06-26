@@ -528,6 +528,8 @@ module Api
             optional(:configuration, type: Hash, documentation: { hidden: true, desc: 'Describe the limitations of the solve in term of computation' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c.tempfile.read) : c }) do
                 Vrp.vrp_request_configuration(self)
             end
+
+            exactly_one_of :vrp, :vehicles # either it is a json (and :vrp is required) or it is a csv (and :vehicles is required)
           }
           post do
             begin

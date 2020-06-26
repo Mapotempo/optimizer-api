@@ -3,7 +3,8 @@ services:
 
 before_install:
   - export REGISTRY=${REGISTRY:-registry.mapotempo.com/}
-  - docker build --build-arg VROOM_VERSION=${VROOM_VERSION:-v1.2.0} --build-arg OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION:-v1.3.0} -f docker/Dockerfile -t registry.test.com/mapotempo/optimizer-api:latest .
+  - source ci-utils/version.sh
+  - docker build --build-arg VROOM_VERSION=${VROOM_VERSION:-v1.2.0} --build-arg OPTIMIZER_ORTOOLS_VERSION=$OPTIMIZER_ORTOOLS_VERSION -f docker/Dockerfile -t registry.test.com/mapotempo/optimizer-api:latest .
   - docker swarm init
   - mkdir -p ./redis
   - docker stack deploy -c ./docker/docker-compose.yml optimizer
@@ -13,25 +14,25 @@ jobs:
     - stage: "Tests"
       install: skip
       env: TEST_SUITE='basis'
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
+      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='dicho'
       install: skip
-      script: travis_wait 60 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='scheduling'
       install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
+      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='real_scheduling'
       install: skip
-      script: travis_wait 60 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='real_scheduling_solver'
       install: skip
-      script: travis_wait 60 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='split_clustering'
       install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
+      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='real'
       install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
+      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
     - stage: deploy
       name: "Deploy"
       install: skip

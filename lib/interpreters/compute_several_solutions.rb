@@ -162,7 +162,8 @@ module Interpreters
       if custom_heuristics.size > 1
         log '---> find_best_heuristic'
         tic = Time.now
-        total_time_allocated_for_heuristic_selection = service_vrp[:vrp].resolution_duration.to_f * 0.30 # spend at most 30% of the total time for heuristic selection
+        percent_allocated_to_heur_selection = 0.3 # spend at most 30% of the total time for heuristic selection
+        total_time_allocated_for_heuristic_selection = service_vrp[:vrp].resolution_duration.to_f * percent_allocated_to_heur_selection
         batched_service_vrps = batch_heuristic([service_vrp], custom_heuristics).flatten(1)
         times = []
         first_results = batched_service_vrps.collect{ |s_vrp|
@@ -202,7 +203,7 @@ module Interpreters
         vrp.resolution_batch_heuristic = nil
         vrp.preprocessing_first_solution_strategy = [best_heuristic]
         vrp.preprocessing_heuristic_synthesis = synthesis
-        vrp.resolution_duration = vrp.resolution_duration ? (vrp.resolution_duration - times.sum).floor : nil
+        vrp.resolution_duration = vrp.resolution_duration ? [(vrp.resolution_duration.to_f * (1 - percent_allocated_to_heur_selection)).round, 1000].max : nil
         log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec selected heuristic: #{best_heuristic}"
       else
         vrp.preprocessing_first_solution_strategy = custom_heuristics

@@ -42,7 +42,7 @@ class OptimizerLogger
   @@logger.formatter = proc do |severity, datetime, progname, msg|
     datetime = OptimizerLogger.with_datetime ? "[#{datetime}]" : nil
     job_id = OptimizerWrapper::Job.current_job_id ? "#{OptimizerWrapper::Job.current_job_id} -" : nil
-    progname = progname.empty? ? nil : "- #{progname}"
+    progname = progname&.empty? ? nil : "- #{progname}"
 
     [datetime, job_id, severity, progname].compact.join(' ') + ": #{msg}\n"
   end
@@ -102,6 +102,10 @@ class OptimizerLogger
   def self.log_device=(logdev)
     @@log_device = logdev
     @@logger.reopen logdev
+  end
+
+  def self.logger
+    @@logger
   end
 
   def self.formatter=(formatter)
