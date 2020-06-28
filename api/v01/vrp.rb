@@ -402,6 +402,7 @@ module Api
         this.optional(:several_solutions, type: Integer, allow_blank: false, default: 1, desc: 'Return several solution computed with different matrices')
         this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
+        this.optional(:repetition, type: Integer, documentation: { hidden: true }, desc: 'Number of times the optimization process is going to be repeated. Only the best solution is returned.')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
         this.mutually_exclusive :initial_time_out, :minimum_duration
       end
