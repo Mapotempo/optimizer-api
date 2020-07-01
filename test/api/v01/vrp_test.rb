@@ -401,4 +401,15 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert vrp.routes.first.day_index
     assert_equal 10, vrp.routes.first.day_index
   end
+
+  def test_multitrips
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:vehicles].first[:trips] = 2
+
+    vrp = TestHelper.create(vrp)
+    Interpreters::MultiTrips.new.expand(vrp)
+    assert_equal 3, vrp.vehicles.size
+    Interpreters::MultiTrips.new.expand(vrp) # consecutive MultiTrips.expand should not produce any error
+    assert_equal 3, vrp.vehicles.size
+  end
 end
