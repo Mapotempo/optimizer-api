@@ -8,7 +8,7 @@ For ruby, bundler and gems, rbenv or rvm are recommanded.
 
 ### On Ubuntu
 
-* Ruby 2.3.3 (if not using rbenv/rvm)
+* Ruby 2.5.5 (if not using rbenv/rvm)
 ```
 sudo apt install ruby-full
 ```

@@ -1,5 +1,5 @@
 source 'https://rubygems.org'
-ruby '2.3.3'
+ruby '~> 2.5.5'
 
 gem 'require_all'
 

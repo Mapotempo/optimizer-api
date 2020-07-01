@@ -603,7 +603,7 @@ class SplitClusteringTest < Minitest::Test
         unassigned_service_ids = result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }
         unassigned_service_ids.uniq!
         services_unassigned << unassigned_service_ids.size
-        reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
+        reason_unassigned << result[:unassigned].transform_values{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }
       }
 
       if services_unassigned.max - services_unassigned.min.to_f >= 2 || visits_unassigned.max >= 5
@@ -646,7 +646,7 @@ class SplitClusteringTest < Minitest::Test
         unassigned_service_ids = result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }
         unassigned_service_ids.uniq!
         services_unassigned << unassigned_service_ids.size
-        reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
+        reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.transform_values{ |k, v| [k, v.length] }
       }
 
       if services_unassigned.max - services_unassigned.min.to_f >= 10 || visits_unassigned.max >= 15
