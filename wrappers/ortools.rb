@@ -528,6 +528,7 @@ module Wrappers
       {
         solvers: ['ortools'],
         cost: 0,
+        costs: Helper.init_costs,
         iterations: 0,
         elapsed: 0, # ms
         routes: [],
@@ -593,6 +594,7 @@ module Wrappers
 
       route_start_time = 0
       route_end_time = 0
+      costs_array = []
 
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
@@ -604,6 +606,9 @@ module Wrappers
         routes: content['routes'].each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
           vehicle_matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }
+          route_costs = build_costs(route.costs)
+          costs_array << route_costs
+
           previous_matrix_index = nil
           load_status = vrp.units.collect{ |unit|
             {
@@ -616,7 +621,7 @@ module Wrappers
           earliest_start = route_start
           {
             vehicle_id: vehicle.id,
-            costs: build_costs(route.costs),
+            costs: route_costs,
             activities: route['activities'].collect.with_index{ |activity, activity_index|
               current_activity = nil
               current_index = activity['index'] || 0
@@ -761,7 +766,7 @@ module Wrappers
             }
           }
         }
-      }
+      }.merge(costs: Helper.merge_costs(costs_array))
     end
 
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)

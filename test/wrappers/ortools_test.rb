@@ -5579,4 +5579,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert other_shipment_index
     assert_operator shipment_route[shipment_index][:departure_time] + 1800, :<=, other_shipment_route[other_shipment_index][:begin_time]
   end
+
+  def test_costs
+    vrp = VRP.basic
+    vrp[:vehicles].first.merge!(cost_fixed: 1, cost_time_multiplier: 2)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert_equal 1, result[:costs][:fixed]
+    assert_equal 20, result[:costs][:time]
+    assert_equal 0, result[:costs][:distance]
+    assert_equal 0, result[:costs][:value]
+  end
 end
