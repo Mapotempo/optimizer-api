@@ -33,6 +33,7 @@ module Interpreters
           (0..vehicle.trips - 1).collect{ |index|
             new_vehicle = Marshal.load(Marshal.dump(vehicle))
             new_vehicle.id += "_trip_#{index}"
+            new_vehicle.trips = 1
             new_vehicle
           }
         else
