@@ -45,7 +45,7 @@ module OptimizerWrapper
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
   PARAMS_LIMIT = { points: 150, vehicles: 10 }.freeze
-  REDIS_COUNT = ::Redis.new # Fake redis
+  REDIS_COUNT = ::Redis.new(host: ENV['REDIS_COUNT_HOST'] || '0.0.0.0') # Fake redis
 
   DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'test', 'dump')
   FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)
