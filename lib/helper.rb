@@ -63,11 +63,32 @@ module Helper
     111321 * Math.sqrt(delta_lat**2 + delta_lon**2) # 111321 is the length of a degree (of lon and lat) in meters
   end
 
+  def self.init_costs
+    {
+      total: 0,
+      fixed: 0,
+      time: 0,
+      distance: 0,
+      value: 0,
+      lateness: 0,
+      overload: 0
+    }
+  end
+
+  def self.merge_costs(costs_array)
+    total_costs = {}
+    init_costs.each{ |key, _value|
+      total_costs[key] = costs_array.map{ |costs| costs[key] || 0 }.reduce(&:+)
+    }
+    total_costs
+  end
+
   def self.merge_results(results, merge_unassigned = true)
     results.flatten!
     {
       solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
       cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
+      costs: merge_costs(results.map{ |r| r && r[:costs] }.compact),
       iterations: (results.size != 1) ? nil : results[0] && results[0][:iterations],
       heuristic_synthesis: (results.size != 1) ? nil : results[0] && results[0][:heuristic_synthesis],
       routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,

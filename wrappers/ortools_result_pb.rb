@@ -12,6 +12,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :alternative, :int32, 5
     optional :current_distance, :int32, 6
     optional :id, :string, 7
+    optional :lateness, :int64, 8
   end
 
   add_message 'ortools_result.Costs' do
@@ -26,6 +27,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :time_order, :float, 9
     optional :time_without_wait, :float, 10
     optional :value, :float, 11
+    optional :lateness, :float, 12
+    optional :overload, :float, 13
   end
 
   add_message 'ortools_result.Route' do
