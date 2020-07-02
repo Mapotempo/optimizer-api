@@ -524,7 +524,7 @@ module Interpreters
         end
         vehicles = Array.new(nb_clusters){ |simulated_vehicle|
           {
-            v_id: "generated_vehicle_#{simulated_vehicle}",
+            v_id: ["generated_vehicle_#{simulated_vehicle}"],
             days: ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill'],
             depot: depots[simulated_vehicle],
             capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value| [key, value * vehicles.size / nb_clusters.to_f] }.to_h, #TODO: capacities needs a better way like depots...
