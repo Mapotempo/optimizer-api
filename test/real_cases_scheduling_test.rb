@@ -323,7 +323,7 @@ class HeuristicTest < Minitest::Test
     def test_quality_with_minimum_stops_in_route
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_operator result[:unassigned].size, :<=, 28
+      assert_operator result[:unassigned].size, :<=, 12
     end
   end
 end

@@ -459,7 +459,7 @@ module Heuristics
       update_route(new_route, 0, solver_route.first[:begin_time])
     end
 
-    def compute_insertion_costs(route_data, set = nil)
+    def compute_costs_for_route(route_data, set = nil)
       vehicle = route_data[:vehicle_id].split('_')[0..-2].join('_')
       day = route_data[:vehicle_id].split('_').last.to_i
 
@@ -655,12 +655,7 @@ module Heuristics
         @candidate_vehicles.each{ |vehicle|
           next if @candidate_routes[vehicle][day].nil?
 
-          inserted_ids = fill_day_in_planning(vehicle, @candidate_routes[vehicle][day])
-          adjust_candidate_routes(vehicle, day)
-
-          inserted_ids.each{ |id|
-            @output_tool&.insert_visits(@services_data[id][:used_days], id, @services_data[id][:visits_number])
-          }
+          fill_day_in_planning(vehicle, @candidate_routes[vehicle][day])
         }
       }
     end
@@ -679,17 +674,17 @@ module Heuristics
       day = route_data[:global_day_index]
       current_route = route_data[:current_route]
       service_to_insert = true
-      inserted_ids = []
 
       while service_to_insert
-        insertion_costs = compute_insertion_costs(route_data)
+        insertion_costs = compute_costs_for_route(route_data)
         if !insertion_costs.empty?
           # there are services we can add
-          best_index = select_point(insertion_costs, current_route.empty?)
-          insert_point_in_route(route_data, best_index)
+          best_point = select_point(insertion_costs, current_route.empty?)
 
-          inserted_ids << best_index[:id]
-          @to_plan_service_ids.delete(best_index[:id])
+          insert_point_in_route(route_data, best_point)
+          @output_tool&.insert_visits(@services_data[best_point[:id]][:used_days], best_point[:id], @services_data[best_point[:id]][:visits_number])
+
+          @to_plan_service_ids.delete(best_point[:id])
         else
           service_to_insert = false
           @vehicle_day_completed[vehicle][day] = true
@@ -702,7 +697,7 @@ module Heuristics
         end
       end
 
-      inserted_ids
+      adjust_candidate_routes(vehicle, day)
     end
 
     def add_same_freq_located_points(best_index, route_data)
@@ -730,7 +725,7 @@ module Heuristics
     end
 
     def try_to_add_new_point(route_data)
-      insertion_costs = compute_insertion_costs(route_data)
+      insertion_costs = compute_costs_for_route(route_data)
 
       return nil if insertion_costs.empty?
 
@@ -808,6 +803,8 @@ module Heuristics
 
         {
           id: service,
+          vehicle: route_data[:vehicle_id].split('_')[0..-2].join('_'),
+          day: route_data[:global_day_index],
           point: service_data[:points_ids][activity],
           start: tw[:start_time],
           arrival: tw[:arrival_time],
@@ -927,8 +924,8 @@ module Heuristics
       current_route = route_data[:current_route]
       @candidate_services_ids.delete(point_to_add[:id])
 
-      @services_data[point_to_add[:id]][:used_days] << route_data[:global_day_index]
-      @services_data[point_to_add[:id]][:used_vehicles] |= [route_data[:vehicle_id].split('_')[0..-2].join('_')]
+      @services_data[point_to_add[:id]][:used_days] << point_to_add[:day]
+      @services_data[point_to_add[:id]][:used_vehicles] |= [point_to_add[:vehicle]]
       @points_vehicles_and_days[point_to_add[:point]][:vehicles] = @points_vehicles_and_days[point_to_add[:point]][:vehicles] | [route_data[:vehicle_id].split('_')[0..-2].join('_')]
       @points_vehicles_and_days[point_to_add[:point]][:days] = @points_vehicles_and_days[point_to_add[:point]][:days] | [route_data[:global_day_index]]
       @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] = [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number], @services_data[point_to_add[:id]][:visits_number]].max
