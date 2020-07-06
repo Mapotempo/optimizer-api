@@ -491,11 +491,22 @@ module Heuristics
                 day <= latest_authorized_day && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil? &&
                 same_point_compatibility(service_id, vehicle, day))
 
+        next if two_visits_and_can_not_assign_second(vehicle, day, service_id)
+
         other_indices = find_best_index(service_id, route_data)
         insertion_costs << other_indices if other_indices
       }
 
       insertion_costs.compact
+    end
+
+    def two_visits_and_can_not_assign_second(vehicle, day, service_id)
+      return false unless @services_data[service_id][:visits_number] == 2 # || @end_phase ?
+
+      next_day = day + @services_data[service_id][:heuristic_period]
+      day_to_insert = @candidate_routes[vehicle].keys.select{ |potential_day| potential_day >= next_day.round }.min
+
+      !(day_to_insert && find_best_index(service_id, @candidate_routes[vehicle][day_to_insert], false))
     end
 
     def same_point_compatibility(service_id, vehicle, day)
