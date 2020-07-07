@@ -605,18 +605,6 @@ module Api
             output_format = params[:format]&.to_sym || ((solution && solution['csv']) ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
-            # If job has been killed by restarting queues, need to update job status to 'killed'
-            if job&.working?
-              job_ids = Resque.workers.map{ |w|
-                j = w.job(false)
-                j['payload'] && j['payload']['args'].first
-              }
-              unless job_ids.include? id
-                OptimizerWrapper.job_remove(params[:api_key], id)
-                job.status = 'killed'
-              end
-            end
-
             if job&.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
               status 404
               error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
