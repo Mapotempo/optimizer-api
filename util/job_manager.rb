@@ -38,9 +38,14 @@ module OptimizerWrapper
       Job.current_job_id = self.uuid
       tick('Starting job') # Important to kill job before any code
 
-      services_vrps = Marshal.load(Base64.decode64(options['services_vrps'])) # Get the vrp
-      self.options['services_vrps'] = nil # The worker is about to launch the optimization, we can delete the vrp
-      Resque::Plugins::Status::Hash.set(self.uuid, self.instance_values) # Re-set the job
+      services_vrps = Marshal.load(Base64.decode64(self.options['services_vrps'])) # Get the vrp
+      self.options['services_vrps'] = nil # The worker is about to launch the optimization, we can delete the vrp from the job
+
+      # Re-set the job on Redis
+      value = JSON.parse(OptimizerWrapper::REDIS.get(Resque::Plugins::Status::Hash.status_key(self.uuid)))
+      value['name'] = nil
+      value['options']['services_vrps'] = nil
+      OptimizerWrapper::REDIS.set(Resque::Plugins::Status::Hash.status_key(self.uuid), Resque::Plugins::Status::Hash.encode(value))
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       result = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
