@@ -640,7 +640,10 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             else
-              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if job && OptimizerWrapper.config[:dump][:solution]
+              if job
+                OptimizerWrapper.job_remove(params[:api_key], id)
+                APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if OptimizerWrapper.config[:dump][:solution]
+              end
               status 200
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
@@ -655,7 +658,6 @@ module Api
                   }
                 }, with: Grape::Presenters::Presenter)
               end
-              OptimizerWrapper.job_remove(params[:api_key], id) if job
             end
           end
 
