@@ -238,7 +238,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 246, unassigned_visits.sum, "Expecting 246 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 244, unassigned_visits.sum, "Expecting 244 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_minimum_stop_in_route
@@ -278,7 +278,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 282, unassigned_visits.sum, "Expecting 282 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 278, unassigned_visits.sum, "Expecting 278 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_fill_days_and_post_processing
@@ -323,7 +323,7 @@ class HeuristicTest < Minitest::Test
     def test_quality_with_minimum_stops_in_route
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_operator result[:unassigned].size, :<=, 12
+      assert_operator result[:unassigned].size, :<=, 10
     end
   end
 end

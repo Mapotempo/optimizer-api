@@ -203,6 +203,7 @@ module Heuristics
       days_available = @candidate_routes[vehicle].keys
       next_day = this_service_days.max + @services_data[service][:heuristic_period]
       day_to_insert = days_available.select{ |day| day >= next_day.round }.min
+      impacted_days = []
       if day_to_insert
         diff = day_to_insert - next_day.round
         next_day += diff
@@ -215,6 +216,7 @@ module Heuristics
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
           inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number) if days_available.include?(day_to_insert)
           this_service_days << inserted_day if inserted_day
+          impacted_days |= [inserted_day]
 
           next_day += @services_data[service][:heuristic_period]
           day_to_insert = days_available.select{ |day| day >= next_day.round }.min
@@ -240,17 +242,19 @@ module Heuristics
       }
 
       @missing_visits[vehicle] << service if need_to_add_visits
+
+      impacted_days.compact
     end
 
     def adjust_candidate_routes(vehicle, day_finished)
       ### assigns all visits of services in [services] that where newly scheduled on [vehicle] at [day_finished] ###
       @candidate_routes[vehicle][day_finished][:current_route].reject{ |service| @used_to_adjust.include?(service[:id]) || @services_data[service[:id]][:visits_number] == 1 }.sort_by{ |service|
         @services_data[service[:id]][:priority]
-      }.each{ |service|
+      }.collect{ |service|
         @used_to_adjust << service[:id]
 
         plan_next_visits(vehicle, service[:id], [day_finished], 2)
-      }
+      }.flatten
     end
 
     def update_route(full_route, first_index, first_start = nil)
@@ -674,6 +678,7 @@ module Heuristics
       day = route_data[:global_day_index]
       current_route = route_data[:current_route]
       service_to_insert = true
+      impacted_days = []
 
       while service_to_insert
         insertion_costs = compute_costs_for_route(route_data)
@@ -697,7 +702,21 @@ module Heuristics
         end
       end
 
-      adjust_candidate_routes(vehicle, day)
+      impacted_days |= adjust_candidate_routes(vehicle, day)
+
+      return if @candidate_services_ids.size < @services_data.size * 0.5
+
+      while impacted_days.size.positive?
+        started_day = impacted_days.first
+        can_not_insert_more = false
+        while @candidate_routes[vehicle][started_day][:current_route].map{ |stop| @services_data[stop[:id]][:exclusion_cost] }.reduce(&:+) < @candidate_routes[vehicle][started_day][:cost_fixed] || can_not_insert_more
+          inserted_id, new_impacted_days = try_to_add_new_point(vehicle, started_day)
+          impacted_days |= new_impacted_days
+          can_not_insert_more = true unless inserted_id
+        end
+
+        impacted_days.sort!.delete(started_day)
+      end
     end
 
     def add_same_freq_located_points(best_index, route_data)
@@ -724,21 +743,32 @@ module Heuristics
       }
     end
 
-    def try_to_add_new_point(route_data)
+    def try_to_add_new_point(vehicle, day)
+      route_data = @candidate_routes[vehicle][day]
+
       insertion_costs = compute_costs_for_route(route_data)
 
-      return nil if insertion_costs.empty?
+      return [nil, []] if insertion_costs.empty?
 
       best_index = select_point(insertion_costs, route_data[:current_route].empty?)
 
-      return nil if best_index.nil?
+      return [nil, []] if best_index.nil?
 
       best_index[:end] = best_index[:end] - @services_data[best_index[:id]][:group_duration] + @services_data[best_index[:id]][:durations].first if @same_point_day
       insert_point_in_route(route_data, best_index)
+      impacted_days = adjust_candidate_routes(vehicle, day)
+
+      @output_tool&.insert_visits(@services_data[best_index[:id]][:used_days], best_index[:id], @services_data[best_index[:id]][:visits_number])
 
       @to_plan_service_ids.delete(best_index[:id])
 
-      best_index[:id]
+      if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty? && !@relaxed_same_point_day
+        services_to_add = @services_unlocked_by[best_index[:id]] - @uninserted.collect{ |_un, data| data[:original_service] }
+        @to_plan_service_ids += services_to_add
+        @unlocked += services_to_add
+      end
+
+      [best_index[:id], impacted_days]
     end
 
     def fill_grouped
@@ -753,22 +783,8 @@ module Heuristics
             route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] }
           }[0]
 
-          inserted_id = try_to_add_new_point(@candidate_routes[current_vehicle][best_day])
-
-          if inserted_id
-            adjust_candidate_routes(current_vehicle, best_day)
-
-            @output_tool&.insert_visits(@services_data[inserted_id][:used_days], inserted_id, @services_data[inserted_id][:visits_number])
-
-            if @services_unlocked_by[inserted_id] && !@services_unlocked_by[inserted_id].empty? && !@relaxed_same_point_day
-              services_to_add = @services_unlocked_by[inserted_id] - @uninserted.collect{ |_un, data| data[:original_service] }
-              @to_plan_service_ids += services_to_add
-              @unlocked += services_to_add
-              forbidden_days = [] unless services_to_add.empty? # new services are available so we may need these days
-            end
-          else
-            forbidden_days << best_day
-          end
+          inserted_id, _impacted_days = try_to_add_new_point(current_vehicle, best_day)
+          forbidden_days = update_forbidden_days(inserted_id, best_day, forbidden_days)
 
           if @to_plan_service_ids.empty? || forbidden_days.size == nb_of_days
             possible_to_fill = false
@@ -1169,6 +1185,17 @@ module Heuristics
       @candidate_routes = @previous_candidate_routes
       @uninserted = @previous_uninserted
       @candidate_services_ids = @previous_candidate_service_ids
+    end
+
+    # TODO : move in helper
+    def update_forbidden_days(id, day, currently_forbidden)
+      return currently_forbidden + [day] unless id
+
+      unlocked_ids = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
+
+      return [] unless unlocked_ids.empty?
+
+      currently_forbidden
     end
   end
 end
