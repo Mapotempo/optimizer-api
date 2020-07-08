@@ -185,7 +185,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 1
+          duration: 100
         }
       }
     }
@@ -239,7 +239,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 100
         },
         preprocessing: {}
       }
@@ -476,7 +476,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 100,
           solver: false
         },
         preprocessing: {
@@ -636,7 +636,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp[:services].each{ |v| v.delete(:quantities) }
     vrp[:configuration] = {
       resolution: {
-        duration: 10,
+        duration: 100,
         solver: false
       },
       preprocessing: {
@@ -859,7 +859,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 100,
           solver: false
         },
         preprocessing: {
@@ -956,7 +956,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 100,
           solver: false
         },
         preprocessing: {
@@ -1076,7 +1076,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 100
         }
       }
     }
@@ -1173,7 +1173,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 100
         }
       }
     }
