@@ -73,7 +73,7 @@ module Api
         this.optional(:id, types: String)
         this.optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
         this.optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false) })
-        this.optional(:day_index, type: Integer, values: 0..6, desc: '[ Planning ] Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
+        this.optional(:day_index, type: Integer, values: 0..6, desc: '(Scheduling only) Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
         this.at_least_one_of :start, :end, :day_index
       end
 
@@ -131,7 +131,7 @@ module Api
         this.optional(:duration, types: [String, Float, Integer], desc: 'Time while the current activity stands until it\'s over (in seconds)', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
         this.optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
         this.optional(:setup_duration, types: [String, Float, Integer], desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.new.type_cast(value) })
-        this.optional(:late_multiplier, type: Float, desc: 'Overrides the late_multiplier defined at the vehicle level (ORtools only)')
+        this.optional(:late_multiplier, type: Float, desc: '(ORtools only) Overrides the late_multiplier defined at the vehicle level')
         this.optional(:timewindow_start_day_shift_number, documentation: { hidden: true }, type: Integer, desc: '[ DEPRECATED ]')
         this.requires(:point_id, type: String, allow_blank: false, desc: 'Reference to the associated point')
         this.optional(:timewindow_ids, type: String, documentation: { hidden: true }, desc: 'Timewindows to consider, CSV front only')
@@ -165,9 +165,9 @@ module Api
         this.optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
         this.optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools)')
         this.optional(:cost_value_multiplier, type: Float, desc: 'Multiplier applied to the value matrix and additional activity value')
-        this.optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route (Jsprit Only)')
+        this.optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route')
         this.optional(:cost_late_multiplier, type: Float, desc: 'Cost applied if a point is delivered late (ORtools only)')
-        this.optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration (Jsprit only)')
+        this.optional(:cost_setup_time_multiplier, type: Float, desc: '(Jsprit only) Cost applied on the setup duration')
         this.optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour, for this vehicle')
         this.optional(:additional_setup, type: Float, desc: 'Constant additional setup duration for all setup defined in the tour, for this vehicle')
         this.optional(:coef_service, type: Float, desc: 'Coefficient applied to every service duration defined in the tour, for this vehicle')
@@ -178,7 +178,7 @@ module Api
 
         this.optional :matrix_id, type: String, desc: 'Related matrix, if already defined'
         this.optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index.'
-        this.optional :router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc'
+        this.optional :router_mode, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc'
         this.exactly_one_of :matrix_id, :router_mode
         this.optional :router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance'
         this.optional :speed_multiplier, type: Float, default: 1.0, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.'
@@ -202,14 +202,14 @@ module Api
         this.optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations.'
 
         this.optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
-        this.optional(:overall_duration, types: [String, Float, Integer], desc: '[planning] If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
+        this.optional(:overall_duration, types: [String, Float, Integer], desc: '(Scheduling only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.new.type_cast(value, false, false) })
         this.optional(:distance, types: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
         this.optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
         this.optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
         this.optional(:skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. Not available with periodic heuristic. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]')
 
-        this.optional(:unavailable_work_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals indices of unavailabilty')
-        this.optional(:unavailable_work_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
+        this.optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals indices of unavailabilty')
+        this.optional(:unavailable_work_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
         this.mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
 
         this.optional(:free_approach, type: Boolean, desc: 'Do not take into account the route leaving the depot in the objective. Not available with periodic heuristic.')
@@ -224,7 +224,7 @@ module Api
         this.mutually_exclusive :capacity_ids, :capacities
 
         this.optional(:sequence_timewindow_ids, type: String, documentation: { hidden: true }, desc: 'Sequence timewindows to consider, CSV front only')
-        this.optional(:sequence_timewindows, type: Array, desc: '[planning] Define the vehicle work schedule over a period') do
+        this.optional(:sequence_timewindows, type: Array, desc: '(Scheduling only) Define the vehicle work schedule over a period') do
           Vrp.vrp_request_timewindow(self)
         end
         this.optional(:timewindow_id, type: String, desc: 'Sequence timewindows to consider')
@@ -243,10 +243,10 @@ module Api
 
         this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
-        this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
+        this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Scheduling only) unavailable indices of visit')
 
-        this.optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals days indices of unavailabilty')
-        this.optional(:unavailable_visit_day_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
+        this.optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals days indices of unavailabilty')
+        this.optional(:unavailable_visit_day_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
         this.mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
         this.optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
@@ -255,7 +255,7 @@ module Api
         this.optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service')
 
-        this.optional(:type, type: Symbol, desc: 'service, pickup or delivery')
+        this.optional(:type, type: Symbol, desc: '`service`, `pickup` or `delivery`')
         this.optional(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
           Vrp.vrp_request_activity(self)
         end
@@ -277,10 +277,10 @@ module Api
 
         this.optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
-        this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '[planning] unavailable indices of visit')
+        this.optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Scheduling only) unavailable indices of visit')
 
-        this.optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '[planning] Express the exceptionnals days indices of unavailabilty')
-        this.optional(:unavailable_visit_day_date, type: Array, desc: '[planning] Express the exceptionnals days of unavailability')
+        this.optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals days indices of unavailabilty')
+        this.optional(:unavailable_visit_day_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
         this.mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
         this.optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
@@ -306,7 +306,7 @@ module Api
         this.requires(:id, type: String, allow_blank: false, desc: '')
         this.optional(:time_bounds, type: Integer, desc: 'Time limit from the transmodal points (Isochrone)')
         this.optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistanche)')
-        this.optional(:router_mode, type: String, desc: 'car, truck, bicycle...etc. See the Router Wrapper API doc')
+        this.optional(:router_mode, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc')
         this.optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
         this.optional(:speed_multiplier, type: Float, default: 1.0, desc: 'multiply the current modality speed, default : 1.0')
         this.optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this subtour')
@@ -387,16 +387,16 @@ module Api
         this.optional(:duration, type: Integer, allow_blank: false, desc: 'Maximum duration of resolution')
         this.optional(:iterations, type: Integer, allow_blank: false, desc: 'Maximum number of iterations (Jsprit only)')
         this.optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvment from the best solution already found')
-        this.optional(:stable_iterations, type: Integer, allow_blank: false, desc: 'maximum number of iterations without variation in the solve bigger than the defined coefficient (Jsprit only)')
-        this.optional(:stable_coefficient, type: Float, allow_blank: false, desc: 'variation coefficient related to stable_iterations (Jsprit only)')
+        this.optional(:stable_iterations, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without variation in the solve bigger than the defined coefficient (Jsprit only)')
+        this.optional(:stable_coefficient, type: Float, allow_blank: false, desc: 'Variation coefficient related to stable_iterations (Jsprit only)')
         this.optional(:initial_time_out, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: '[ DEPRECATED : use minimum_duration instead]')
         this.optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
-        this.optional(:time_out_multiplier, type: Integer, desc: 'the solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
+        this.optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
         this.optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
         this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called.')
-        this.optional(:same_point_day, type: Boolean, desc: '[planning] Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is periodic is activated. Not available ORtools.')
-        this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '[planning] Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
+        this.optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is periodic is activated. Not available ORtools.')
+        this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling only) Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.optional(:several_solutions, type: Integer, allow_blank: false, default: 1, desc: 'Return several solution computed with different matrices')
@@ -416,16 +416,16 @@ module Api
       end
 
       def self.vrp_request_schedule(this)
-        this.optional(:range_indices, type: Hash, desc: '[planning] Day indices within the plan has to be build') do
+        this.optional(:range_indices, type: Hash, desc: '(Scheduling only) Day indices within the plan has to be build') do
           Vrp.vrp_request_indice_range(self)
         end
-        this.optional(:range_date, type: Hash, desc: '[planning] Define the total period to consider') do
+        this.optional(:range_date, type: Hash, desc: '(Scheduling only) Define the total period to consider') do
           Vrp.vrp_request_date_range(self)
         end
 
         this.mutually_exclusive :range_indices, :range_date
-        this.optional(:unavailable_indices, type: Array[Integer], desc: '[planning] Exclude some days indices from the resolution')
-        this.optional(:unavailable_date, type: Array[Date], desc: '[planning] Exclude some days from the resolution')
+        this.optional(:unavailable_indices, type: Array[Integer], desc: '(Scheduling only) Exclude some days indices from the resolution')
+        this.optional(:unavailable_date, type: Array[Date], desc: '(Scheduling only) Exclude some days from the resolution')
         this.mutually_exclusive :unavailable_indices, :unavailable_date
       end
 
