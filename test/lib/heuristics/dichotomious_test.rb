@@ -38,11 +38,13 @@ class DichotomiousTest < Minitest::Test
       # Check activities
       activity_assert_message = "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
       if result[:routes].size > 11
-        assert result[:unassigned].size <= 25, activity_assert_message
+        assert result[:unassigned].size <= 27, activity_assert_message
       elsif result[:routes].size == 11
-        assert result[:unassigned].size <= 35, activity_assert_message
+        assert result[:unassigned].size <= 37, activity_assert_message
+      elsif result[:routes].size == 10
+        assert result[:unassigned].size <= 57, activity_assert_message
       else
-        assert result[:unassigned].size <= 55, activity_assert_message
+        assert result[:unassigned].size <= 77, activity_assert_message
       end
 
       # Check routes

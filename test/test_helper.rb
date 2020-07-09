@@ -73,6 +73,10 @@ module TestHelper
       }
     }
 
+    if vrp[:configuration] && vrp[:configuration][:preprocessing] && vrp[:configuration][:preprocessing][:first_solution_strategy]
+      vrp[:configuration][:preprocessing][:first_solution_strategy] = [vrp[:configuration][:preprocessing][:first_solution_strategy]].flatten
+    end
+
     if vrp.is_a?(Hash) # TODO: make this work for the model as well. So that, it can detect model change and dump incompatibility.
       unknown_model_fields = vrp.keys - [:name, :matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration]
       raise StandardError, "If there is a new model class add it above. If not, following fields should not be in vrp: #{unknown_model_fields}" unless unknown_model_fields.empty?
@@ -185,7 +189,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 1
+          duration: 100
         }
       }
     }
@@ -239,7 +243,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 100
         },
         preprocessing: {}
       }
@@ -476,7 +480,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 100,
           solver: false
         },
         preprocessing: {
@@ -636,7 +640,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp[:services].each{ |v| v.delete(:quantities) }
     vrp[:configuration] = {
       resolution: {
-        duration: 10,
+        duration: 100,
         solver: false
       },
       preprocessing: {
@@ -859,7 +863,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 100,
           solver: false
         },
         preprocessing: {
@@ -956,7 +960,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 100,
           solver: false
         },
         preprocessing: {
@@ -1076,7 +1080,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 100
         }
       }
     }
@@ -1173,7 +1177,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 100
         }
       }
     }

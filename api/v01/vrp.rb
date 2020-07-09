@@ -605,18 +605,6 @@ module Api
             output_format = params[:format]&.to_sym || ((solution && solution['csv']) ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
-            # If job has been killed by restarting queues, need to update job status to 'killed'
-            if job&.working?
-              job_ids = Resque.workers.map{ |w|
-                j = w.job(false)
-                j['payload'] && j['payload']['args'].first
-              }
-              unless job_ids.include? id
-                OptimizerWrapper.job_remove(params[:api_key], id)
-                job.status = 'killed'
-              end
-            end
-
             if job&.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
               status 404
               error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
@@ -652,7 +640,10 @@ module Api
                 }, with: Grape::Presenters::Presenter)
               end
             else
-              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if job && OptimizerWrapper.config[:dump][:solution]
+              if job
+                OptimizerWrapper.job_remove(params[:api_key], id)
+                APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if OptimizerWrapper.config[:dump][:solution]
+              end
               status 200
               if output_format == :csv
                 present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
@@ -667,7 +658,6 @@ module Api
                   }
                 }, with: Grape::Presenters::Presenter)
               end
-              OptimizerWrapper.job_remove(params[:api_key], id) if job
             end
           end
 

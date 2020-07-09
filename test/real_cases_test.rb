@@ -226,8 +226,9 @@ class RealCasesTest < Minitest::Test
       # Check routes
       assert_equal 29, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
-      # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 178000, "Too long travel time:#{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      # Check total times
+      assert result[:routes].sum{ |r| r[:total_travel_time] } < 178200, "Too long travel time:#{result[:routes].sum{ |r| r[:total_travel_time] }}"
+      assert result[:routes].sum{ |r| r[:total_time] } < 423500, "Too long total time:#{result[:routes].sum{ |r| r[:total_time] }}"
 
       # Check elapsed time
       assert result[:elapsed] < 8000, "Too long elapsed time: #{result[:elapsed]}"

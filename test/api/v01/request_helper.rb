@@ -25,27 +25,25 @@ class Api::V01::RequestHelper < Minitest::Test
   end
 
   def wait_status(job_id, status, options)
-    get "0.1/vrp/jobs/#{job_id}.json", options
-    while last_response.body
-      sleep 1
-      assert_equal 206, last_response.status, last_response.body
+    loop do
       get "0.1/vrp/jobs/#{job_id}.json", options
-      if JSON.parse(last_response.body)['job']['status'] == status
-        break
-      end
+      sleep 1
+
+      break if JSON.parse(last_response.body)['job']['status'] == status
+
+      assert_equal 206, last_response.status, last_response.body
     end
     JSON.parse(last_response.body)
   end
 
   def wait_status_csv(job_id, status, options)
-    get "0.1/vrp/jobs/#{job_id}", options
-    while last_response.body
-      sleep 1
-      assert_equal 206, last_response.status, last_response.body
+    loop do
       get "0.1/vrp/jobs/#{job_id}", options
-      if last_response.status == status
-        break
-      end
+      sleep 1
+
+      break if last_response.status == status
+
+      assert_equal 206, last_response.status, last_response.body
     end
   end
 
