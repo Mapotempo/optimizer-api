@@ -223,7 +223,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       wait_status @job_ids.last, 'completed', api_key: 'demo'
       refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
     end
-  ensure
+
     @job_ids.each{ |job_id|
       delete_completed_job job_id, api_key: 'demo'
     }
@@ -245,6 +245,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
           @job_id = submit_vrp(api_key: 'ortools', vrp: vrp)
           wait_status @job_id, 'completed', api_key: 'ortools'
         end
+        delete_completed_job @job_id, api_key: 'ortools' if @job_id
 
         lines_with_avancement = output.grep(/avancement/)
       ensure
@@ -252,7 +253,6 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
         ENV['LOG_DEVICE'] = previous[:log_device]
         OptimizerWrapper.config[:solve][:repetition] = previous[:repetition]
         output&.unlink
-        delete_completed_job @job_id, api_key: 'ortools' if @job_id
       end
     }
 

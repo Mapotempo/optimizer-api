@@ -30,12 +30,10 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
       refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-      delete "0.1/vrp/jobs/#{@job_id}.json", api_key: 'ortools'
-      assert_equal 202, last_response.status, last_response.body
+      delete_job @job_id, api_key: 'ortools'
       refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
     end
-  ensure
-    delete_completed_job @job_id, api_key: 'ortools'
+    delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end
 
   def test_using_two_solver
@@ -58,7 +56,6 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
       assert_equal 'vroom', result['solutions'][0]['solvers'][0], "result['solutions'][0]['solvers'][0]"
       assert_equal 'ortools', result['solutions'][0]['solvers'][1], "result['solutions'][0]['solvers'][1]"
     end
-  ensure
-    delete_completed_job @job_id, api_key: 'solvers'
+    delete_completed_job @job_id, api_key: 'solvers' if @job_id
   end
 end
