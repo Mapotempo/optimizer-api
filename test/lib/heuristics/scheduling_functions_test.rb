@@ -106,7 +106,7 @@ class HeuristicTest < Minitest::Test
       assert_equal 7, data_services['service_1'][:heuristic_period]
 
       p_v_d = {}
-      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
       s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(
         :@candidate_routes,
@@ -139,7 +139,7 @@ class HeuristicTest < Minitest::Test
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Heuristics::Scheduling.new(vrp)
       p_v_d = {}
-      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
       s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
@@ -198,7 +198,7 @@ class HeuristicTest < Minitest::Test
 
       vehicule = { matrix_id: vrp.vehicles.first.start_point.matrix_index }
       p_v_d = {}
-      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
       s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
@@ -223,7 +223,7 @@ class HeuristicTest < Minitest::Test
 
       vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
       p_v_d = {}
-      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [] } }
+      vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
       s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
@@ -430,10 +430,10 @@ class HeuristicTest < Minitest::Test
       route_with_four = route_with_three + [{ id: 'service_4', point_id: 'point_4', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
       candidate_route = {
         'vehicle_0' => {
-          0 => { current_route: route_with_one, cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
-          1 => { current_route: route_with_two, cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
-          2 => { current_route: route_with_three, cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
-          3 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1' }
+          0 => { current_route: route_with_one, cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}},
+          1 => { current_route: route_with_two, cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}},
+          2 => { current_route: route_with_three, cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}},
+          3 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}}
         }
       }
 
@@ -460,10 +460,10 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(
         :@candidate_routes,
         'vehicle_0' => {
-          0 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
-          1 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_3', point_id: 'point_3', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
-          2 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
-          3 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1' },
+          0 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}},
+          1 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_3', point_id: 'point_3', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}},
+          2 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}},
+          3 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}},
         }
       )
 

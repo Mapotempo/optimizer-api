@@ -131,7 +131,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
 
     output_tool.add_comment('my comment')
     days = [0, 2, 4]
-    output_tool.output_scheduling_insert(days, 'service_id', 3)
+    output_tool.insert_visits(days, 'service_id', 3)
     output_tool.close_file
 
     assert File.exist?(file_name), 'File not found'

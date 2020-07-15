@@ -238,12 +238,11 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 246, unassigned_visits.sum, "Expecting 246 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 244, unassigned_visits.sum, "Expecting 244 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_minimum_stop_in_route
-      vrp = TestHelper.load_vrps(self, fixture_file: 'performance_13vl')[25]
-      vrp.resolution_allow_partial_assignment = true
+      vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result[:routes].any?{ |r| r[:activities].size - 2 < 5 }, "Expecting any of #{result[:routes].collect{ |r| r[:activities].size - 2 }} to be less than 10, this test is useless otherwise"
       should_remain_assigned = result[:routes].collect{ |r| r[:activities].size - 2 }.select{ |nb| nb >= 5 }.reduce(&:+)
@@ -279,7 +278,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 282, unassigned_visits.sum, "Expecting 282 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 278, unassigned_visits.sum, "Expecting 278 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_fill_days_and_post_processing
@@ -319,6 +318,12 @@ class HeuristicTest < Minitest::Test
       assert_empty result[:unassigned]
       assert(result[:routes].select{ |r| r[:activities].any?{ |a| a[:point_id] == '1000023' } }.all?{ |r| r[:activities].any?{ |a| a[:point_id] == '1000007' } })
       assert(result[:routes].select{ |r| r[:activities].any?{ |a| a[:point_id] == '1000023' } }.all?{ |r| r[:activities].any?{ |a| a[:point_id] == '1000008' } })
+    end
+
+    def test_quality_with_minimum_stops_in_route
+      vrp = TestHelper.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_operator result[:unassigned].size, :<=, 10
     end
   end
 end
