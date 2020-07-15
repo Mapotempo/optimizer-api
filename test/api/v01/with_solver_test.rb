@@ -29,8 +29,10 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
     TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
+      puts JSON.parse(last_response.body) if JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
       refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
       delete_job @job_id, api_key: 'ortools'
+      puts JSON.parse(last_response.body) if JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
       refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
     end
     delete_completed_job @job_id, api_key: 'ortools' if @job_id
