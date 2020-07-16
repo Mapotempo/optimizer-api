@@ -308,8 +308,9 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_compute_shift_two_potential_tws
-      vrp = VRP.scheduling
-      s = Heuristics::Scheduling.new(TestHelper.create(vrp))
+      vrp = TestHelper.create(VRP.scheduling)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
       s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_shift_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_shift_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@indices, '1028167' => 0, 'endvehicule8' => 270)

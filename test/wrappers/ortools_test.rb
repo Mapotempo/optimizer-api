@@ -5619,4 +5619,51 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_travel_time] }, 'At least one route total_travel_time was not provided'
     assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_distance] }, 'At least one route total_travel_distance was not provided'
   end
+
+  def test_optimization_over_more_than_a_week
+    # overall data
+    problem = VRP.basic
+    problem[:units] = [
+      { id: 'visit' }
+    ]
+    problem[:matrices].first[:time] = [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ]
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:unavailable_work_day_indices] = [5, 6]
+      vehicle[:capacities] = [{ unit_id: 'visit', limit: 1 }]
+    }
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'visit', value: 1.0 }]
+    }
+    problem[:configuration][:schedule] = { range_indices: { start: 0, end: 7 }}
+
+    # evolutive data
+    correspondance = ['without timewindow', 'with timewindows', 'with timewindows containing day index']
+    tws_sets = [
+      nil,
+      [{ start: 0, end: 1000 }],
+      [{ start: 0, end: 1000, day_index: 0 }, { start: 0, end: 1000, day_index: 1 }, { start: 0, end: 1000, day_index: 2 }, { start: 0, end: 1000, day_index: 3 }, { start: 0, end: 1000, day_index: 4 }]
+    ]
+
+    tws_sets.each_with_index{ |tw_set, v_tw_i|
+      problem[:vehicles].first[:sequence_timewindows] = tw_set
+
+      tws_sets.each_with_index{ |service_tw_set, s_tw_i|
+        problem[:services].each{ |s|
+          s[:activity][:timewindows] = service_tw_set
+        }
+
+        result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+        saturday_vehicle = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0_5' }
+        sunday_vehicle = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0_6' }
+        assert_nil saturday_vehicle, "Vehicle should not be generated if it is not available a given day (case vehicle #{correspondance[v_tw_i]} and service #{correspondance[s_tw_i]})"
+        assert_nil sunday_vehicle, "Vehicle should not be generated if it is not available a given day (case vehicle #{correspondance[v_tw_i]} and service #{correspondance[s_tw_i]})"
+        assert_empty result[:unassigned], "We expect no unassigned services (case vehicle #{correspondance[v_tw_i]} and service #{correspondance[s_tw_i]})"
+      }
+    }
+  end
 end

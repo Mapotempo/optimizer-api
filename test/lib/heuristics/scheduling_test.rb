@@ -515,8 +515,8 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.routes = Marshal.load(File.binread('test/fixtures/formatted_route.bindump')) # rubocop: disable Security/MarshalLoad
 
-      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] = [{ start: 43500, end: 55500 }]
-      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [{ start: 31500, end: 43500 }]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] = [Models::Timewindow.new(start: 43500, end: 55500)]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [Models::Timewindow.new(start: 31500, end: 43500)]
       vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
       vrp.routes.first.vehicle.id = vehicle_id
       vrp.routes.first.day_index = day.to_i
@@ -672,13 +672,16 @@ class HeuristicTest < Minitest::Test
         TestHelper.create(vrp)
       end
 
-      correct_lapses = false
+      correct_lapses = true
       vrp[:services].first[:maximum_lapse] = 8
+      vrp[:configuration][:preprocessing][:partitions] = nil
+      vrp[:vehicles].first[:timewindow] = { start: 0, end: 10000, day_index: 0 }
+      vrp[:configuration][:schedule][:range_indices][:end] = 8
       Heuristics::Scheduling.stub_any_instance(
         :compute_initial_solution,
         lambda { |vrp_in|
           @starting_time = Time.now
-          correct_lapses = @services_data.collect{ |_id, data| data[:heuristic_period] }.all?{ |lapse| lapse.nil? || (lapse % 7).zero? }
+          correct_lapses &&= @services_data.collect{ |_id, data| data[:heuristic_period] }.all?{ |lapse| lapse.nil? || (lapse % 7).zero? }
           prepare_output_and_collect_routes(vrp_in)
         }
       ) do
