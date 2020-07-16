@@ -1985,6 +1985,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_overall_duration_several_vehicles
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:vehicles] << { id: 'vehicle_1' }
     problem[:relations] = [{

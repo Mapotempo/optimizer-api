@@ -513,24 +513,24 @@ module Interpreters
     end
 
     def generate_rests(vehicle, day_index, rests_durations)
-      new_rests = vehicle.rests.collect{ |rest|
+      vehicle.rests.collect{ |rest|
         new_rest = nil
-        if rest.timewindows.empty? || rest.timewindows.any?{ |timewindow| timewindow[:day_index] == day_index }
+        if rest.timewindows.empty? || rest.timewindows.any?{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index }
           new_rest = Marshal.load(Marshal.dump(rest))
           new_rest.id = "#{new_rest.id}_#{day_index + 1}"
           rests_durations[-1] += new_rest.duration
-          new_rest.timewindows = rest.timewindows.select{ |timewindow| timewindow[:day_index] == day_index }.collect{ |timewindow|
+          new_rest.timewindows = rest.timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index }.collect{ |timewindow|
             if timewindow.day_index && timewindow.day_index == day_index
               {
-                id: ("#{timewindow[:id]} #{timewindow.day_index}" if timewindow[:id] && !timewindow[:id].nil?),
-                start: timewindow[:start] ? timewindow[:start] + timewindow[:day_index] * 86400 : nil,
-                end: timewindow[:end] ? timewindow[:end] + timewindow[:day_index] * 86400 : nil
+                id: ("#{timewindow.id} #{timewindow.day_index}" if timewindow.id),
+                start: timewindow.start ? timewindow.start + timewindow.day_index * 86400 : nil,
+                end: timewindow.end ? timewindow.end + timewindow.day_index * 86400 : nil
               }.delete_if { |_k, v| !v }
             else
                 {
-                  id: ("#{timewindow[:id]} #{day_index}" if timewindow[:id] && !timewindow[:id].nil?),
-                  start: timewindow[:start] ? timewindow[:start] + day_index.to_i * 86400 : nil,
-                  end: timewindow[:end] ? timewindow[:end] + day_index.to_i * 86400 : nil
+                  id: ("#{timewindow.id} #{day_index}" if timewindow.id),
+                  start: timewindow.start ? timewindow.start + day_index.to_i * 86400 : nil,
+                  end: timewindow.end ? timewindow.end + day_index.to_i * 86400 : nil
                 }.delete_if { |_k, v| !v }
             end
           }.flatten.sort_by{ |tw| tw[:start] }.compact.uniq
@@ -601,6 +601,8 @@ module Interpreters
 
     def get_all_vehicles_in_relation(relations)
       relations&.each{ |r|
+        next if r[:type] == 'vehicle_group_duration'
+
         new_list = []
         r[:linked_vehicle_ids].each{ |v|
             new_list.concat(@equivalent_vehicles[v])
