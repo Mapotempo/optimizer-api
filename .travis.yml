@@ -14,25 +14,25 @@ jobs:
     - stage: "Tests"
       install: skip
       env: TEST_SUITE='basis'
-      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='dicho'
       install: skip
-      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='scheduling'
       install: skip
-      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='real_scheduling'
       install: skip
-      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='real_scheduling_solver'
       install: skip
-      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='split_clustering'
       install: skip
-      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
     - env: TEST_SUITE='real'
       install: skip
-      script: travis_wait 50 bash ci-utils/tests.sh ${TEST_SUITE}
+      script: bash ci-utils/tests.sh ${TEST_SUITE}
     - stage: deploy
       name: "Deploy"
       install: skip

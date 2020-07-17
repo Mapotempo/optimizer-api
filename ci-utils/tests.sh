@@ -43,4 +43,15 @@ done
 docker exec -i ${CONTAINER} apt update -y > /dev/null
 docker exec -i ${CONTAINER} apt install git -y > /dev/null
 
-docker exec -i ${CONTAINER} bundle exec rake test ${TEST_ENV}
+# Output something regularly or Travis kills the job
+while sleep 60; do echo "=====[ $SECONDS seconds still running ]====="; done &
+
+# Run the tests without an output buffer and register the exit value
+stdbuf -o0 docker exec -it ${CONTAINER} bundle exec rake test ${TEST_ENV}
+test_exit_status=$?
+
+# Kill background sleep loop
+kill %1
+
+# Return the exit value of the tests
+exit $test_exit_status
