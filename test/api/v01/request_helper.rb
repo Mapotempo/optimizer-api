@@ -27,8 +27,8 @@ class Api::V01::RequestHelper < Minitest::Test
   def wait_status(job_id, status, options)
     puts "#{job_id} #{Time.now} waiting #{status} status"
     loop do
+      sleep 0.5
       get "0.1/vrp/jobs/#{job_id}.json", options
-      sleep 1
 
       puts "Empty resonse body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
 
@@ -37,20 +37,22 @@ class Api::V01::RequestHelper < Minitest::Test
       assert_equal 206, last_response.status, last_response.body
     end
     puts "#{job_id} #{Time.now} got #{status} status"
+    sleep 0.5
     JSON.parse(last_response.body)
   end
 
   def wait_status_csv(job_id, status, options)
     puts "#{job_id} #{Time.now} waiting #{status} status_csv"
     loop do
+      sleep 0.5
       get "0.1/vrp/jobs/#{job_id}", options
-      sleep 1
 
       break if last_response.status == status
 
       assert_equal 206, last_response.status, last_response.body
     end
     puts "#{job_id} #{Time.now} got #{status} status_csv"
+    sleep 0.5
   end
 
   def submit_vrp(params)
