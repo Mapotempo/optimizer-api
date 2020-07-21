@@ -241,7 +241,7 @@ module Interpreters
       }
     end
 
-    def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicle_ids = nil)
+    def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicles_indices = nil)
       log '---> build_partial_service_vrp', level: :debug
       tic = Time.now
       # WARNING: Below we do marshal dump load but we continue using original objects
@@ -253,9 +253,22 @@ module Interpreters
       sub_vrp = Marshal.load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
       # TODO: Within Scheduling Vehicles require to have unduplicated ids
-      if available_vehicle_ids
-        sub_vrp.vehicles.delete_if{ |vehicle| available_vehicle_ids.exclude?(vehicle[:id]) }
-        sub_vrp.routes.delete_if{ |r| available_vehicle_ids.exclude? r.vehicle_id }
+      if available_vehicles_indices
+        sub_vrp.vehicles.delete_if.with_index{ |_v, v_i| !available_vehicles_indices.include?(v_i) }
+        sub_vrp.routes.delete_if{ |r|
+          route_week_day = r.index ? r.index % 7 : nil
+          sub_vrp.vehicles.none?{ |vehicle|
+            vehicle_week_day_availability = if vehicle.timewindow
+              vehicle.timewindow.day_index || (0..6)
+            else
+              vehicle.sequence_timewindows.collect{ |tw|
+                tw.day_index || (0..6)
+              }.flatten.uniq
+            end
+
+            vehicle.id == r.vehicle_id && (route_week_day.nil? || vehicle_week_day_availability.include?(route_week_day))
+          }
+        }
       end
       sub_vrp.services = sub_vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
       sub_vrp.shipments = sub_vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
@@ -409,10 +422,10 @@ module Interpreters
           }
         }
         log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
-        cluster_vehicles = assign_vehicle_to_clusters(centroid_characteristics, nil, nil, clusters) if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
 
         result_items.collect.with_index{ |result_item, result_index|
-          build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
+          vehicles_indices = [result_index] if options[:entity] == 'work_day' || options[:entity] == 'vehicle'
+          build_partial_service_vrp(service_vrp, result_item, vehicles_indices)
         }
       else
         log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
@@ -486,10 +499,10 @@ module Interpreters
         }.flatten
 
         log "Hierarchical Tree (#{end_timer - start_timer}sec): split #{data_items.size} into #{clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')}"
-        cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size, vrp.vehicles, vrp.points, clusters)
+        # cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size, vrp.vehicles, vrp.points, clusters)
         adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == 'work_day'
-        result_items.collect.with_index{ |result_item, result_index|
-          build_partial_service_vrp(service_vrp, result_item, cluster_vehicles && cluster_vehicles[result_index])
+        result_items.collect.with_index{ |result_item, _result_index|
+          build_partial_service_vrp(service_vrp, result_item) #, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
         log 'Split hierarchical not available when services have no activity', level: :error
@@ -505,8 +518,6 @@ module Interpreters
             tw = Marshal.load(Marshal.dump(vehicle[:timewindow]))
             tw[:day_index] = day
             new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle.id = "#{vehicle.id}_#{day}"
-            new_vehicle.original_id =  vehicle.id
             new_vehicle[:timewindow] = tw
             vehicle_list << new_vehicle
           }
@@ -514,8 +525,6 @@ module Interpreters
           vehicle[:sequence_timewindows].each_with_index{ |tw, tw_i|
             new_vehicle = Marshal.load(Marshal.dump(vehicle))
             new_vehicle[:sequence_timewindows] = [tw]
-            new_vehicle.id = "#{vehicle.id}_#{tw_i}"
-            new_vehicle.original_id = vehicle.id
             vehicle_list << new_vehicle
           }
         end
@@ -723,22 +732,6 @@ module Interpreters
             days: compute_day_skills(tw)
           }
         }
-      end
-
-      def assign_vehicle_to_clusters(clusters_characteristics, vehicles, points, clusters)
-        if !vehicles.nil? || !points.nil?
-          # TODO: This function is only implemented for balanced_kmeans
-          # it needs to be implemented for hierarchical_tree split case
-          raise 'This function is not ready for hierarchical_tree split case'
-        end
-
-        cluster_vehicle_ids = Array.new(clusters.size){ [] }
-
-        (0..clusters.size - 1).each{ |cluster_index|
-          cluster_vehicle_ids[cluster_index] = clusters_characteristics[cluster_index][:v_id]
-        }
-
-        cluster_vehicle_ids
       end
 
       # Adjust cluster if they are disparate - only called when entity == 'work_day'

@@ -44,9 +44,11 @@ class SplitClusteringTest < Minitest::Test
         service_vrp = { vrp:  Marshal.load(vrp), service: :demo } # rubocop: disable Security/MarshalLoad
         service_vrp[:vrp].services.each{ |s| s.skills = [] }         # The instance has "Pas X" style day skills, we purposely ignore them otherwise balance is not possible
         service_vrp[:vrp].vehicles = [service_vrp[:vrp].vehicles[0]] # entity: `vehicle` settting only makes sense if the number of clusters is equal to the number of vehicles.
-        service_vrp[:vrp].vehicles *= 2
 
         while service_vrp[:vrp].services.size > 100
+          service_vrp[:vrp].vehicles << Marshal.load(Marshal.dump(service_vrp[:vrp].vehicles[0]))
+          service_vrp[:vrp].vehicles[1].id += '_duplicated'
+
           total_load_by_units = Hash.new(0)
           service_vrp[:vrp].services.each{ |s| s.quantities.each{ |q| total_load_by_units[q.unit.id] += q.value } }
 
@@ -59,6 +61,7 @@ class SplitClusteringTest < Minitest::Test
           }
 
           services_vrps_dicho = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 2, cut_symbol: :duration, entity: 'vehicle', restarts: 2) # Do not use @split_restarts it changes the stats
+          assert_equal services_vrps_dicho.sum{ |s_v| s_v[:vrp].vehicles.size }, service_vrp[:vrp].vehicles.size
           assert_equal 2, services_vrps_dicho.size, 'The number of clusters is not correct'
 
           durations = services_vrps_dicho.collect{ |s| s[:vrp].services_duration }
@@ -397,7 +400,8 @@ class SplitClusteringTest < Minitest::Test
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
-      assert_equal generated_services_vrps.size, generated_services_vrps.collect{ |service| [service[:vrp][:vehicles].first[:id], service[:vrp][:vehicles].first[:global_day_index]] }.uniq.size
+      # Each generated_services_vrps should have a different vehicle :
+      assert_equal generated_services_vrps.size, generated_services_vrps.collect{ |service| [service[:vrp].vehicles.first.id, service[:vrp].vehicles.first.sequence_timewindows] }.uniq.size
     end
 
     def test_good_vehicle_assignment_skills

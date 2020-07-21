@@ -257,13 +257,17 @@ module Interpreters
       unassigned_services_by_skills.each{ |skills, services|
         next if result[:unassigned].empty?
 
-        vehicles_with_skills = skills.empty? ? vrp.vehicles : vrp.vehicles.select{ |v|
-          v.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
-        }
+        vehicles_with_skills = if skills.empty?
+          (0..vrp.vehicles.size - 1).to_a
+        else
+          vrp.vehicles.collect.with_index{ |v, v_i|
+            v_i if v.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
+          }.compact
+        end
         sticky_vehicle_ids = unassigned_services.flat_map(&:sticky_vehicles).compact.map(&:id)
         # In case services has incoherent sticky and skills, sticky is the winner
         unless sticky_vehicle_ids.empty?
-          vehicles_with_skills = vrp.vehicles.select{ |v| sticky_vehicle_ids.include?(v.id) }
+          vehicles_with_skills = vrp.vehicles.collect.with_index{ |v, v_i| v_i if sticky_vehicle_ids.include?(v.id) }.compact
         end
 
         # Shuffle so that existing routes will be distributed randomly
@@ -282,17 +286,17 @@ module Interpreters
 
         sub_results = []
         vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
-        vehicles_with_skills.each_slice(vehicle_count) do |vehicles|
+        vehicles_with_skills.each_slice(vehicle_count) do |vehicles_indices|
           remaining_service_ids = result[:unassigned].map{ |u| u[:service_id] } & services.map(&:id)
           next if remaining_service_ids.empty?
 
-          rate_vehicles = vehicles.size / vehicles_with_skills.size.to_f
+          rate_vehicles = vehicles_indices.size / vehicles_with_skills.size.to_f
           rate_services = unassigned_services.empty? ? 1 : services.size / unassigned_services.size.to_f
 
           sub_vrp_resolution_duration = [(vrp.resolution_duration.to_f / 3.99 * rate_vehicles * rate_services + transfer_unused_time_limit).to_i, 150].max
           sub_vrp_resolution_minimum_duration = [(vrp.resolution_minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
 
-          used_vehicle_count = result[:routes].count{ |r| vehicles.map(&:id).include?(r[:vehicle_id]) }
+          used_vehicle_count = result[:routes].count{ |r| vehicles_indices.collect{ |index| vrp.vehicles[index] }.map(&:id).include?(r[:vehicle_id]) }
 
           if vrp.resolution_vehicle_limit
             sub_vrp_vehicle_limit = leftover_vehicle_limit + used_vehicle_count
@@ -302,9 +306,9 @@ module Interpreters
             end
           end
 
-          assigned_service_ids = result[:routes].select{ |r| vehicles.map(&:id).include?(r[:vehicle_id]) }.flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact
+          assigned_service_ids = result[:routes].select{ |r| vehicles_indices.collect{ |index| vrp.vehicles[index] }.map(&:id).include?(r[:vehicle_id]) }.flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact
 
-          sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles.map(&:id))
+          sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp, remaining_service_ids + assigned_service_ids, vehicles_indices)
           sub_vrp = sub_service_vrp[:vrp]
           sub_vrp.vehicles.each{ |vehicle|
             vehicle[:cost_fixed] = vehicle[:cost_fixed]&.positive? ? vehicle[:cost_fixed] : 1e6
@@ -356,7 +360,7 @@ module Interpreters
       }
       log "services_skills_by_clusters #{services_skills_by_clusters}", level: :debug
       vehicles_by_clusters = [[], []]
-      vrp.vehicles.each{ |v|
+      vrp.vehicles.each_with_index{ |v, v_i|
         cluster_index = nil
         # Vehicle skills is an array of array of strings
         unless v.skills.empty?
@@ -379,7 +383,7 @@ module Interpreters
                           else
                             (services_by_cluster[0].size / vehicles_by_clusters[0].size >= services_by_cluster[1].size / vehicles_by_clusters[1].size) ? 0 : 1
                           end
-        vehicles_by_clusters[cluster_index] << v
+        vehicles_by_clusters[cluster_index] << v_i
       }
 
       if vehicles_by_clusters.any?(&:empty?)
@@ -387,7 +391,7 @@ module Interpreters
         nonempty_side = vehicles_by_clusters.select(&:any?)[0]
 
         # Move a vehicle from the skill group with most vehicles (from nonempty side to empty side)
-        empty_side << nonempty_side.delete(nonempty_side.group_by{ |v| v.skills.uniq.sort }.to_a.max_by{ |vec_group| vec_group[1].size }.last.first)
+        empty_side << nonempty_side.delete(nonempty_side.group_by{ |v| vrp.vehicles[v].skills.uniq.sort }.to_a.max_by{ |vec_group| vec_group[1].size }.last.first)
       end
 
       if vehicles_by_clusters[1].size > vehicles_by_clusters[0].size
@@ -420,7 +424,7 @@ module Interpreters
         vehicle_limits_by_cluster = split_vehicle_limits(vrp, vehicles_by_cluster)
 
         [0, 1].each{ |i|
-          sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id), vehicles_by_cluster[i].map(&:id))[:vrp]
+          sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[i].map(&:id), vehicles_by_cluster[i])[:vrp]
 
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
           sub_vrp.resolution_vehicle_limit = vehicle_limits_by_cluster[i]
@@ -437,7 +441,7 @@ module Interpreters
         raise 'Incorrect split size with kmeans' if services_by_cluster.size > 2
 
         # Kmeans return 1 vrp
-        sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp]
+        sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp] # this part of the code is never reached
         sub_vrp.points = vrp.points
         sub_vrp.vehicles = vrp.vehicles
         sub_vrp.vehicles.each{ |vehicle|
