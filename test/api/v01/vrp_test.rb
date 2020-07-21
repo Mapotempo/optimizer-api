@@ -235,6 +235,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       begin
         previous = { log_level: ENV['LOG_LEVEL'], log_device: ENV['LOG_DEVICE'], repetition: OptimizerWrapper.config[:solve][:repetition] }
         output = Tempfile.new('avencement-output', tmpdir)
+        output.sync = true
         ENV['LOG_LEVEL'] = 'info'
         ENV['LOG_DEVICE'] = output.path
         OptimizerWrapper.config[:solve][:repetition] = 2
@@ -244,6 +245,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
           vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
           @job_id = submit_vrp(api_key: 'ortools', vrp: vrp)
           wait_status @job_id, 'completed', api_key: 'ortools'
+          output.flush
         end
         delete_completed_job @job_id, api_key: 'ortools' if @job_id
 
@@ -252,6 +254,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
         ENV['LOG_LEVEL'] = previous[:log_level]
         ENV['LOG_DEVICE'] = previous[:log_device]
         OptimizerWrapper.config[:solve][:repetition] = previous[:repetition]
+        output&.close
         output&.unlink
       end
     }

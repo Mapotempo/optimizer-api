@@ -186,7 +186,7 @@ class SplitClusteringTest < Minitest::Test
       # maximum_sequence_timewindows = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.max
       durations.each_with_index{ |duration, index|
         # assert duration < (maximum_sequence_timewindows + 1) * total_durations / cluster_weight_sum, "Duration ##{index} (#{duration}) should be less than #{(maximum_sequence_timewindows + 1) * total_durations / cluster_weight_sum}"
-        assert duration > (minimum_sequence_timewindows - 1) * total_durations / cluster_weight_sum, "Duration ##{index} (#{duration}) should be more than #{(minimum_sequence_timewindows - 1) * total_durations / cluster_weight_sum}"
+        assert duration > (minimum_sequence_timewindows - 1.1) * total_durations / cluster_weight_sum, "Duration ##{index} (#{duration}) should be more than #{((minimum_sequence_timewindows - 1.1) * total_durations / cluster_weight_sum).round(1)}"
       }
     end
 

@@ -121,8 +121,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
         lapse: 2
       }],
       configuration: {
+        restitution: {
+          intermediate_solutions: false,
+        },
         resolution: {
-          duration: 1000,
+          duration: 100,
         }
       }
     }

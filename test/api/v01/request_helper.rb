@@ -30,7 +30,7 @@ class Api::V01::RequestHelper < Minitest::Test
       sleep 0.5
       get "0.1/vrp/jobs/#{job_id}.json", options
 
-      puts "Empty resonse body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
+      puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
 
       break if JSON.parse(last_response.body)['job']['status'] == status
 
