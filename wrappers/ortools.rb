@@ -493,17 +493,16 @@ module Wrappers
     end
 
     def build_costs(costs)
-      cost_hash = {
-         fixed: costs&.fixed || 0,
-         time: costs && (costs.time + costs.time_fake + costs.time_without_wait) || 0,
-         distance: costs && (costs.distance + costs.distance_fake) || 0,
-         value: costs&.value || 0,
-         lateness: costs&.lateness || 0,
-         overload: costs&.overload || 0
-      }
-      total = cost_hash.values.reduce(&:+)
-      cost_hash[:total] = total
-      cost_hash
+      cost = Models::Costs.new(
+        fixed: costs&.fixed || 0,
+        time: costs && (costs.time + costs.time_fake + costs.time_without_wait) || 0,
+        distance: costs && (costs.distance + costs.distance_fake) || 0,
+        value: costs&.value || 0,
+        lateness: costs&.lateness || 0,
+        overload: costs&.overload || 0
+      )
+      cost.total = cost.attributes.values.sum
+      cost
     end
 
     def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
@@ -533,7 +532,7 @@ module Wrappers
       {
         solvers: ['ortools'],
         cost: 0,
-        costs: Helper.init_costs,
+        costs: Models::Costs.new({}),
         iterations: 0,
         elapsed: 0, # ms
         routes: [],
@@ -604,6 +603,7 @@ module Wrappers
 
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
+      solution_cost = Models::Costs.new({})
       {
         cost: content['cost'] || 0,
         solvers: ['ortools'],
@@ -772,7 +772,7 @@ module Wrappers
             }
           }
         }
-      }.merge(costs: Helper.merge_costs(costs_array))
+      }.merge(costs: costs_array.sum)
     end
 
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)

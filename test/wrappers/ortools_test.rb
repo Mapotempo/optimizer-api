@@ -5587,12 +5587,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:services].first[:quantities] = [{ unit_id: 'kg', value: 2 }]
     vrp[:services].first[:activity].merge!(timewindows: [{ start: 0, end: 1 }], late_multiplier: 0.007)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal 21.321, result[:costs][:total].round(3)
-    assert_equal 1, result[:costs][:fixed]
-    assert_equal 20, result[:costs][:time]
-    assert_equal 0, result[:costs][:distance]
-    assert_equal 0, result[:costs][:value]
-    assert_equal 0.021, result[:costs][:lateness].round(3)
-    assert_equal 0.3, result[:costs][:overload].round(3)
+    assert_equal 21.321, result[:costs].total.round(3)
+    assert_equal 1, result[:costs].fixed
+    assert_equal 20, result[:costs].time
+    assert_equal 0, result[:costs].distance
+    assert_equal 0, result[:costs].value
+    assert_equal 0.021, result[:costs].lateness.round(3)
+    assert_equal 0.3, result[:costs].overload.round(3)
   end
 end
