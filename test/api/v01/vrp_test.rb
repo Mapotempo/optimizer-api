@@ -41,6 +41,12 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_includes JSON.parse(last_response.body)['error'], 'Unauthorized'
   end
 
+  def test_cannot_not_access_if_expired
+    get '/0.1/vrp/submit', api_key: 'expired', vrp: VRP.toy
+    assert_equal 402, last_response.status, last_response.body
+    assert_equal '402 Subscription expired', JSON.parse(last_response.body)['error']
+  end
+
   def test_dont_ignore_legitimate_skills
     OptimizerWrapper.stub(
       :define_main_process,

@@ -21,6 +21,7 @@ require 'grape-swagger'
 require 'http_accept_language'
 
 require './api/v01/vrp'
+require 'active_support/core_ext/string/conversions'
 
 class QuotaExceeded < StandardError
   attr_reader :data
@@ -146,8 +147,10 @@ module Api
       end
 
       before do
-        if !params || !::OptimizerWrapper.access(true).has_key?(params[:api_key])
+        if !params || !OptimizerWrapper.access(true).has_key?(params[:api_key])
           error!('401 Unauthorized', 401)
+        elsif OptimizerWrapper.access[params[:api_key]][:expire_at]&.to_date&.send(:<, Date.today)
+          error!('402 Subscription expired', 402)
         end
         set_locale
       end

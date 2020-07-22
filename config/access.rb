@@ -20,6 +20,7 @@ module OptimizerWrapper
     # params_limit overload values from profile
     'demo' => { profile: :demo, params_limit: { points: nil, vehicles: nil }},
     'quota_test' => { profile: :demo, params_limit: { points: 1, vehicles: 1 }, quotas: [{ operation: :submit_vrp, daily: 1 }, { monthly: 2 }] },
+    'expired' => { profile: :demo, expire_at: '2000-01-01' },
     'solvers' => { profile: :solvers },
     'vroom' => { profile: :vroom },
     'ortools' => { profile: :ortools },
