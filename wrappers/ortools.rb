@@ -595,7 +595,7 @@ module Wrappers
         }
       }
 
-      return @previous_result if content['routes'].empty? && @previous_result
+      return @previous_result if content.routes.empty? && @previous_result
 
       route_start_time = 0
       route_end_time = 0
@@ -605,11 +605,11 @@ module Wrappers
       vehicle_rest_ids = Hash.new([])
       solution_cost = Models::Costs.new({})
       {
-        cost: content['cost'] || 0,
+        cost: content.cost || 0,
         solvers: ['ortools'],
-        iterations: content['iterations'] || 0,
-        elapsed: content['duration'] * 1000, # ms
-        routes: content['routes'].each_with_index.collect{ |route, index|
+        iterations: content.iterations || 0,
+        elapsed: content.duration * 1000, # ms
+        routes: content.routes.each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
           vehicle_matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }
           route_costs = build_costs(route.costs)
@@ -628,26 +628,26 @@ module Wrappers
           {
             vehicle_id: vehicle.id,
             costs: route_costs,
-            activities: route['activities'].collect.with_index{ |activity, activity_index|
+            activities: route.activities.collect.with_index{ |activity, activity_index|
               current_activity = nil
-              current_index = activity['index'] || 0
+              current_index = activity.index || 0
               activity_loads = load_status.collect.with_index{ |load_quantity, load_index|
                 unit = vrp.units.find{ |u| u.id == load_quantity[:unit] }
                 {
                   unit: unit.id,
                   label: unit.label,
-                  current_load: (if vehicle.end_point && activity['type'] == 'end'
-                                  route['activities'][-2]['quantities'][load_index]
-                                elsif activity['type'] == 'break' && activity_index.positive?
-                                  route['activities'][activity_index - 1]['quantities'][load_index]
+                  current_load: (if vehicle.end_point && activity.type == 'end'
+                                  route.activities[-2].quantities[load_index]
+                                elsif activity.type == 'break' && activity_index.positive?
+                                  route.activities[activity_index - 1].quantities[load_index]
                                 else
-                                  activity['quantities'][load_index]
+                                  activity.quantities[load_index]
                                 end || 0).round(2),
                   counting: unit.counting
                 }
               }
-              earliest_start = activity['start_time'] || 0
-              if activity['type'] == 'start'
+              earliest_start = activity.start_time || 0
+              if activity.type == 'start'
                 load_status = build_quantities(nil, activity_loads)
                 route_start_time = earliest_start
                 if vehicle.start_point
@@ -655,18 +655,18 @@ module Wrappers
                   current_activity = {
                     point_id: vehicle.start_point.id,
                     begin_time: earliest_start,
-                    current_distance: activity['current_distance'],
+                    current_distance: activity.current_distance,
                     detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
                   }.delete_if{ |_k, v| !v }
                 end
-              elsif activity['type'] == 'end'
+              elsif activity.type == 'end'
                 current_matrix_index = vehicle.end_point&.matrix_index
                 route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                 route_end_time = earliest_start
                 if vehicle.end_point
                   current_activity = {
                     point_id: vehicle.end_point.id,
-                    current_distance: activity['current_distance'],
+                    current_distance: activity.current_distance,
                     begin_time: earliest_start,
                     detail: {
                       lat: vehicle.end_point.location&.lat,
@@ -680,21 +680,21 @@ module Wrappers
                     }
                   }.merge(route_data).delete_if{ |_k, v| !v }
                 end
-              elsif activity['type'] == 'service'
+              elsif activity.type == 'service'
                 collected_indices << current_index
                 if current_index < vrp.services.size
                   service = vrp.services[current_index]
-                  point = service.activity&.point || !service.activities.empty? && service.activities[activity['alternative']].point
+                  point = service.activity&.point || !service.activities.empty? && service.activities[activity.alternative].point
                   current_matrix_index = point.matrix_index
                   route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                   current_activity = {
                     service_id: service.id,
                     point_id: point ? point.id : nil,
-                    current_distance: activity['current_distance'],
+                    current_distance: activity.current_distance,
                     begin_time: earliest_start,
-                    departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity['alternative']][:duration].to_i),
+                    departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
                     detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
-                    alternative: service.activities ? activity['alternative'] : nil
+                    alternative: service.activities ? activity.alternative : nil
                   }.merge(route_data).delete_if{ |_k, v| !v }
                 else
                   shipment_index = ((current_index - vrp.services.size) / 2).to_i
@@ -702,7 +702,7 @@ module Wrappers
                   shipment = vrp.shipments[shipment_index]
                   point = shipment_activity.zero? ? shipment.pickup.point : shipment.delivery.point # TODO: consider alternatives
                   current_matrix_index = point.matrix_index
-                  earliest_start = activity['start_time'] || 0
+                  earliest_start = activity.start_time || 0
                   route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                   current_activity = {
                     pickup_shipment_id: shipment_activity.zero? && shipment.id,
@@ -715,13 +715,13 @@ module Wrappers
                   earliest_start += shipment_activity.zero? ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i
                 end
                 previous_matrix_index = current_matrix_index
-              elsif activity['type'] == 'break'
-                activity['id']
-                vehicle_rest_ids[vehicle.id] << activity['id']
-                vehicle_rest = vehicle.rests.find{ |rest| rest.id == activity['id'] }
-                earliest_start = activity['start_time']
+              elsif activity.type == 'break'
+                activity.id
+                vehicle_rest_ids[vehicle.id] << activity.id
+                vehicle_rest = vehicle.rests.find{ |rest| rest.id == activity.id }
+                earliest_start = activity.start_time
                 current_activity = {
-                  rest_id: activity['id'],
+                  rest_id: activity.id,
                   begin_time: earliest_start,
                   departure_time: earliest_start + vehicle_rest[:duration],
                   detail: build_rest(vehicle_rest, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads)
