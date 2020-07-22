@@ -62,11 +62,13 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   end
 
   def test_exceed_params_limit
-    vrp = VRP.toy
-    vrp[:points] *= 151
-    post '/0.1/vrp/submit', api_key: 'vroom', vrp: vrp
-    assert_equal 400, last_response.status, last_response.body
-    assert_includes JSON.parse(last_response.body)['message'], 'Exceeded points limit authorized'
+    [{ key: :points, value: 151 }, { key: :vehicles, value: 11 }].each do |obj|
+      vrp = VRP.toy
+      vrp[obj[:key]] *= obj[:value]
+      post '/0.1/vrp/submit', api_key: 'vroom', vrp: vrp
+      assert_equal 413, last_response.status, last_response.body
+      assert_includes JSON.parse(last_response.body)['message'], "Exceeded \"#{obj[:key]}\" limit authorized for your account: #{obj[:value] - 1}. Please contact support or sales to increase limits."
+    end
   end
 
   def test_ignore_unknown_parameters
@@ -460,5 +462,19 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
         end
       end
     end
+  end
+
+  def test_use_quotas
+    post '/0.1/vrp/submit', api_key: 'quota_test', vrp: VRP.toy
+    assert last_response.ok?, last_response.body
+
+    post '/0.1/vrp/submit', api_key: 'quota_test', vrp: VRP.toy
+    assert_equal 429, last_response.status
+    assert_includes(JSON.parse(last_response.body)['message'], 'Too many daily requests')
+    assert_equal({ 'Content-Type' => 'application/json; charset=UTF-8',
+                   'X-RateLimit-Limit' => 1,
+                   'X-RateLimit-Remaining' => 0,
+                   'X-RateLimit-Reset' => Time.now.utc.to_date.next_day.to_time.to_i,
+                   'Content-Length' => '48' }, last_response.headers)
   end
 end

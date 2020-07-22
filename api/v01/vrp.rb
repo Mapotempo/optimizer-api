@@ -541,7 +541,6 @@ module Api
             begin
               # Api key is not declared as part of the VRP and must be handled carefully and separatly from other parameters
               api_key = params[:api_key]
-              checksum = Digest::MD5.hexdigest Marshal.dump(params)
               d_params = declared(params, include_missing: false)
               vrp_params = d_params[:points] ? d_params : d_params[:vrp]
               APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
@@ -555,6 +554,7 @@ module Api
                 }, 413)
               }
 
+              checksum = Digest::MD5.hexdigest Marshal.dump(params)
               APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), { vrp: vrp_params }.to_json) if OptimizerWrapper.config[:dump][:vrp]
 
               vrp = ::Models::Vrp.create(vrp_params)
