@@ -338,7 +338,7 @@ module OptimizerWrapper
     grouped_vehicles = vrp.vehicles.group_by{ |vehicle| vehicle.skills.flatten }
     vehicle_skills = vrp.vehicles.map{ |vehicle| vehicle.skills.flatten }.uniq
     skill_vehicle_ids = Hash.new{ [] }
-    grouped_vehicles.each{ |skills, vehicles| skill_vehicle_ids[skills] += vehicles.map(&:id) }
+    grouped_vehicles.each{ |skills, vehicles| skill_vehicle_ids[skills] += vehicles.map{ |vehicle| vrp.vehicles.find_index(vehicle) } }
 
     independent_skills = Array.new(mission_skills.size) { |i| [i] }
 
@@ -372,7 +372,7 @@ module OptimizerWrapper
 
     independent_vrps = independant_skill_sets.each_with_object([]) { |skills_set, sub_vrps|
       # Compatible problem ids are retrieved
-      vehicle_ids = skills_set.flat_map{ |skills| skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v } }.uniq
+      vehicles_indices = skills_set.flat_map{ |skills| skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v } }.uniq
       service_ids = skills_set.flat_map{ |skills| skill_service_ids[skills] }
       shipment_ids = skills_set.flat_map{ |skills| skill_shipment_ids[skills] }
       service_vrp = {
@@ -380,7 +380,7 @@ module OptimizerWrapper
         vrp: vrp,
       }
 
-      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, vehicle_ids)
+      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, vehicles_indices)
       split_ratio = (sub_service_vrp[:vrp].services.size + sub_service_vrp[:vrp].shipments.size) / (vrp.services.size + vrp.shipments.size).to_f
       sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
       sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
@@ -393,7 +393,8 @@ module OptimizerWrapper
   def self.split_independent_vrp_by_sticky_vehicle(vrp)
     # Intead of map{}.compact() or collect{}.compact() reduce([]){} or each_with_object([]){} is more efficient
     # when there are items to skip in the loop because it makes one pass of the array instead of two
-    vrp.vehicles.map(&:id).each_with_object([]) { |vehicle_id, sub_vrps|
+    vrp.vehicles.each_with_index.each_with_object([]) { |(vehicle, v_i), sub_vrps|
+      vehicle_id = vehicle.id
       service_ids = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
       shipment_ids = vrp.shipments.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
 
@@ -403,7 +404,7 @@ module OptimizerWrapper
         service: nil,
         vrp: vrp,
       }
-      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, [vehicle_id])
+      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, [v_i])
       split_ratio = 1.0 / vrp.vehicles.size
       sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
       sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
