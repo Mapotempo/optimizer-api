@@ -1,4 +1,4 @@
-# Mapotempo Optimizer API [![Build Status](https://travis-ci.org/Mapotempo/optimizer-api.svg?branch=master)](https://travis-ci.org/Mapotempo/optimizer-api)
+# Mapotempo Optimizer API [![Build Status](https://api.travis-ci.com/Mapotempo/optimizer-api.svg?branch=master)](https://travis-ci.com/Mapotempo/optimizer-api)
 
 Run an optimizer REST API depending of many contraints for a Vehicle Routing Problem (VRP).
 
@@ -42,7 +42,7 @@ bundle install
 This project requires some solver and interface projects in order to be fully functionnal!
 * [Vroom actual master](https://github.com/VROOM-Project/vroom)
 * [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v7.5](https://github.com/google/or-tools/releases/tag/v7.5)
-* (optional / not anymore supported) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
+* (optional / not supported anymore) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
 
 ## Configuration
 
