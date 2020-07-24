@@ -244,7 +244,7 @@ module Models
         next unless route[:indice]
 
         log 'Route indice was used instead of route index', level: :warn
-        route[:index] = route[:indice]
+        route[:day_index] = route[:indice]
         route.delete(:indice)
       }
     end
@@ -351,9 +351,9 @@ module Models
 
       # convert route dates into indices
       hash[:routes]&.each{ |route|
-        next if route[:index]
+        next if route[:day_index]
 
-        route[:index] = (route[:date].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
+        route[:day_index] = (route[:date].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
         route.delete(:date)
       }
 
@@ -403,6 +403,7 @@ module Models
       self.resolution_variation_ratio = resolution[:variation_ratio]
       self.resolution_batch_heuristic = resolution[:batch_heuristic]
       self.resolution_repetition = resolution[:repetition]
+      self.resolution_dicho_algorithm_service_limit = resolution[:dicho_algorithm_service_limit]
     end
 
     def preprocessing=(preprocessing)

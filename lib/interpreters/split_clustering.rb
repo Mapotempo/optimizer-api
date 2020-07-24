@@ -256,7 +256,7 @@ module Interpreters
       if available_vehicles_indices
         sub_vrp.vehicles.delete_if.with_index{ |_v, v_i| !available_vehicles_indices.include?(v_i) }
         sub_vrp.routes.delete_if{ |r|
-          route_week_day = r.index ? r.index % 7 : nil
+          route_week_day = r.day_index ? r.day_index % 7 : nil
           sub_vrp.vehicles.none?{ |vehicle|
             vehicle_week_day_availability = if vehicle.timewindow
               vehicle.timewindow.day_index || (0..6)
