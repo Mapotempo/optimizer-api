@@ -24,10 +24,8 @@ class DichotomiousTest < Minitest::Test
       vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
 
       if ENV['TRAVIS'] # Compansate for travis performance
-        vrp[:configuration][:resolution][:minimum_duration] *= 1.50
-        vrp[:configuration][:resolution][:duration] *= 1.50
-        vrp.resolution_duration *= 1.50
-        vrp.resolution_minimum_duration *= 1.50
+        vrp.resolution_duration *= 1.60
+        vrp.resolution_minimum_duration *= 1.60
       end
 
       t1 = Time.now
@@ -37,11 +35,11 @@ class DichotomiousTest < Minitest::Test
 
       # Check activities
       activity_assert_message = "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
-      if result[:routes].size > 11
+      if result[:routes].size > 12
         assert result[:unassigned].size <= 27, activity_assert_message
-      elsif result[:routes].size == 11
+      elsif result[:routes].size == 12
         assert result[:unassigned].size <= 37, activity_assert_message
-      elsif result[:routes].size == 10
+      elsif result[:routes].size == 11
         assert result[:unassigned].size <= 57, activity_assert_message
       else
         assert result[:unassigned].size <= 77, activity_assert_message
@@ -60,8 +58,8 @@ class DichotomiousTest < Minitest::Test
       end
 
       # Check elapsed time
-      min_dur = vrp[:configuration][:resolution][:minimum_duration] / 1000.0
-      max_dur = vrp[:configuration][:resolution][:duration] / 1000.0
+      min_dur = vrp.resolution_minimum_duration / 1000.0
+      max_dur = vrp.resolution_duration / 1000.0
 
       assert result[:elapsed] / 1000 < max_dur, "Time spent in optimization (#{result[:elapsed] / 1000}) is greater than the maximum duration asked (#{max_dur})." # Should never be violated!
       assert result[:elapsed] / 1000 > min_dur * 0.95, "Time spent in optimization (#{result[:elapsed] / 1000}) is less than the minimum duration asked (#{min_dur})." # Due to "no remaining jobs" in end_stage, it can be violated (randomly).
@@ -135,8 +133,9 @@ class DichotomiousTest < Minitest::Test
 
         average_duration = durations.inject(0, :+) / durations.size
         # Clusters should be balanced but the priority is the geometry
-        min_duration = average_duration - 0.5 * average_duration
-        max_duration = average_duration + 0.5 * average_duration
+        range = 0.6
+        min_duration = (1.0 - range) * average_duration
+        max_duration = (1.0 + range) * average_duration
         durations.each_with_index{ |duration, index|
           assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
         }

@@ -19,7 +19,7 @@ namespace :resque do
   end
 
   task :clean_working_job_ids => :prune_dead_workers do
-    puts "Cleaning existing jobs with #{Resque::Plugins::Status::STATUS_WORKING} status..."
+    puts "#{Time.now} Cleaning existing jobs with #{Resque::Plugins::Status::STATUS_WORKING} status..."
 
     Resque::Plugins::Status::Hash.statuses().each{ |job|
       next unless job.status == Resque::Plugins::Status::STATUS_WORKING
@@ -31,7 +31,7 @@ namespace :resque do
       }
       next if running_job_ids.include?(job.uuid)
 
-      puts "#{job.uuid} removed because it is interrupted by restarting queues"
+      puts "#{Time.now} #{job.uuid} removed because it is interrupted by restarting queues"
       Resque::Plugins::Status::Hash.remove(job.uuid)
     }
   end
@@ -41,6 +41,8 @@ end
 
 require 'rake/testtask'
 Rake::TestTask.new do |t|
+  $stdout.sync = true
+  $stderr.sync = true
   ENV['APP_ENV'] ||= 'test'
   t.pattern = 'test/**/*_test.rb'
 end

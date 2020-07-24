@@ -109,7 +109,7 @@ class HeuristicTest < Minitest::Test
         assert_in_delta problem_quantities, (route_quantities + unassigned_quantities).round(3), 1e-3
 
         # Route capacities
-        assert(result[:routes].none?{ |route|
+        result[:routes].each{ |route|
           route_quantity = route[:activities].collect{ |activity|
             activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte| qte[:unit] == unit_id }[:value]
           }.compact.sum
@@ -117,8 +117,8 @@ class HeuristicTest < Minitest::Test
             vehicle[:id] == route[:vehicle_id].split('_').first
           }.capacities.find{ |cap| cap.unit_id == unit_id }.limit
 
-          route_quantity > route_capacity
-        })
+          assert_operator route_quantity, :<=, route_capacity + 1e-5
+        }
       }
 
       service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact
@@ -155,7 +155,7 @@ class HeuristicTest < Minitest::Test
         assert_in_delta problem_quantities, (route_quantities + unassigned_quantities).round(3), 1e-3
 
         # Route capacities
-        assert(result[:routes].none?{ |route|
+        result[:routes].each{ |route|
           route_quantity = route[:activities].collect{ |activity|
             activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte| qte[:unit] == unit_id }[:value]
           }.compact.sum
@@ -163,8 +163,8 @@ class HeuristicTest < Minitest::Test
             vehicle[:id] == route[:vehicle_id].split('_').first
           }.capacities.find{ |cap| cap.unit_id == unit_id }.limit
 
-          route_quantity > route_capacity
-        })
+          assert_operator route_quantity, :<=, route_capacity + 1e-5
+        }
       }
 
       service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact

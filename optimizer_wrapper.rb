@@ -112,7 +112,7 @@ module OptimizerWrapper
                                                        checksum: checksum,
                                                        pids: [])
         JobList.add(api_key, job_id)
-        Result.get(job_id) || job_id
+        job_id
       end
     end
   end
