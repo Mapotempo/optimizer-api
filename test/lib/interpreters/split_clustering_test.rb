@@ -727,9 +727,10 @@ class SplitClusteringTest < Minitest::Test
         start: 0,
         end: 6
       }
-
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-      assert result
+      Interpreters::PeriodicVisits.stub_any_instance(:generate_routes, ->(_vrp){ raise 'Should not enter here' }) do
+        result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
+        assert result
+      end
     end
   end
 end
