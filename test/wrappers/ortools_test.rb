@@ -69,6 +69,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_group_overall_duration_first_vehicle
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -170,6 +171,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_periodic_overall_duration
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -239,6 +241,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_periodic_with_group_duration
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -319,6 +322,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_with_rest_no_vehicle_tw
+    skip 'Requires an entire review of the :overall_duration feature'
     # conflict with rests
     problem = {
       matrices: [{
@@ -455,6 +459,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_with_rest
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -532,6 +537,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_on_months
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
       type: 'vehicle_group_duration_on_months',
@@ -561,6 +567,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_on_weeks
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
       type: 'vehicle_group_duration_on_weeks',
@@ -589,6 +596,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_overall_duration_on_weeks_date
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
       type: 'vehicle_group_duration_on_weeks',
@@ -4932,6 +4940,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_self_selection_first_solution_strategy
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5515,6 +5524,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:unassigned].size
 
     vrp = VRP.basic
+    vrp[:configuration][:preprocessing][:first_solution_strategy] = ['local_cheapest_insertion']
     vrp[:services] = [vrp[:services].first]
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 1)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
@@ -5523,6 +5533,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     vrp = VRP.basic
     vrp[:services] = [vrp[:services].first]
+    vrp[:configuration][:preprocessing][:first_solution_strategy] = ['local_cheapest_insertion']
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 2)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
@@ -5560,9 +5571,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     current_order = shipment_route[:activities].collect{ |stop| stop[:pickup_shipment_id] }.compact
 
     # add consecutivity :
-    vrp.relations = Marshal.load(File.binread('test/fixtures/relation_structure.bindump')) # rubocop: disable Security/MarshalLoad
-    vrp.relations.first.linked_ids = [current_order[1], current_order[0]]
-    vrp.relations.first.type = 'minimum_duration_lapse'
+    relation = Models::Relation.new(type: 'minimum_duration_lapse', linked_ids: [current_order[1], current_order[0]], lapse: 1800)
+    vrp.relations = [relation]
     vrp.adapt_relations_between_shipments
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     shipment_route = result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:pickup_shipment_id] == current_order[1] } }[:activities]
@@ -5571,5 +5581,21 @@ class Wrappers::OrtoolsTest < Minitest::Test
     other_shipment_index = other_shipment_route.find_index{ |stop| stop[:delivery_shipment_id] == current_order[0] }
     assert other_shipment_index
     assert_operator shipment_route[shipment_index][:departure_time] + 1800, :<=, other_shipment_route[other_shipment_index][:begin_time]
+  end
+
+  def test_costs
+    vrp = VRP.basic
+    vrp[:units] = [{ id: 'kg' }]
+    vrp[:vehicles].first.merge!(cost_fixed: 1, cost_time_multiplier: 2, capacities: [{ unit_id: 'kg', limit: 1, overload_multiplier: 0.3 }])
+    vrp[:services].first[:quantities] = [{ unit_id: 'kg', value: 2 }]
+    vrp[:services].first[:activity].merge!(timewindows: [{ start: 0, end: 1 }], late_multiplier: 0.007)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert_equal 21.321, result[:costs].total.round(3)
+    assert_equal 1, result[:costs].fixed
+    assert_equal 20, result[:costs].time
+    assert_equal 0, result[:costs].distance
+    assert_equal 0, result[:costs].value
+    assert_equal 0.021, result[:costs].lateness.round(3)
+    assert_equal 0.3, result[:costs].overload.round(3)
   end
 end

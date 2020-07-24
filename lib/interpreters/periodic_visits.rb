@@ -58,7 +58,7 @@ module Interpreters
       vehicles_linked_by_duration = get_all_vehicles_in_relation(vehicles_linked_by_duration)
       generate_relations_on_periodic_vehicles(vrp, vehicles_linked_by_duration)
 
-      if vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+      if vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' && vrp.services.any?{ |service| service.visits_number > 1 }
         vrp.routes = generate_routes(vrp)
       end
 
@@ -172,7 +172,7 @@ module Interpreters
                     new_timewindows
                   end
                 end
-                if !service.minimum_lapse && !service.maximum_lapse
+                if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
                   new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}"]
                 end
               }
@@ -325,6 +325,9 @@ module Interpreters
       vrp.rests += new_vehicle.rests
       vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |service|
         service.sticky_vehicles.insert(-1, new_vehicle)
+      }
+      vrp.shipments.select{ |shipment| shipment.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |shipment|
+        shipment.sticky_vehicles.insert(-1, new_vehicle)
       }
       new_vehicle
     end

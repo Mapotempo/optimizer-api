@@ -702,5 +702,35 @@ class SplitClusteringTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
       assert result
     end
+
+    def test_scheduling_partitions_without_recurrence
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
+      vrp.preprocessing_first_solution_strategy = nil
+
+      vrp.preprocessing_partitions = [
+        {
+          method: 'balanced_kmeans',
+          metric: 'duration',
+          entity: 'work_day'
+        }
+      ]
+
+      vrp.resolution_solver = true
+
+      vrp.services.each{ |service|
+        service.visits_number = 1
+        service.minimum_lapse = nil
+        service.maximum_lapse = nil
+      }
+
+      vrp.schedule_range_indices = {
+        start: 0,
+        end: 6
+      }
+      Interpreters::PeriodicVisits.stub_any_instance(:generate_routes, ->(_vrp){ raise 'Should not enter here' }) do
+        result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
+        assert result
+      end
+    end
   end
 end

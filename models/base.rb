@@ -24,6 +24,7 @@ module Models
   end
 
   class Base < ActiveHash::Base
+    include ActiveModel::Serializers::JSON
     include ActiveModel::Validations
     include ActiveModel::Validations::HelperMethods
 

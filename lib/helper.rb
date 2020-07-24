@@ -68,6 +68,7 @@ module Helper
     {
       solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
       cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
+      costs: results.map{ |r| r && r[:costs] }.compact.sum,
       iterations: (results.size != 1) ? nil : results[0] && results[0][:iterations],
       heuristic_synthesis: (results.size != 1) ? nil : results[0] && results[0][:heuristic_synthesis],
       routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,

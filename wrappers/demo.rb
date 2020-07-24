@@ -27,8 +27,8 @@ module Wrappers
       timewindows = []
       if activity.timewindows && !activity.timewindows.empty?
         timewindows = [{
-          start: timewindows.first.start,
-          end: timewindows.first.end,
+          start: timewindows&.first&.start,
+          end: timewindows&.first&.end,
         }]
       end
       {

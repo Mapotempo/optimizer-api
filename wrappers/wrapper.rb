@@ -367,6 +367,11 @@ module Wrappers
       vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
 
+    def assert_no_overall_duration(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } &&
+        vrp.relations.none?{ |relation| %w[vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].include?(relation.type) }
+    end
+
     def assert_no_vehicle_distance_if_heuristic(vrp)
       vrp.vehicles.none?{ |vehicle| vehicle[:distance] } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
