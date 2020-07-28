@@ -318,7 +318,7 @@ module OptimizerWrapper
   end
 
   def self.split_independent_vrp_by_skills(vrp)
-    mission_skills = vrp.services.map(&:skills) + vrp.shipments.map(&:skills).uniq
+    mission_skills = (vrp.services.map(&:skills) + vrp.shipments.map(&:skills)).uniq
     return [vrp] if mission_skills.include?([])
 
     # Generate Services data
@@ -334,7 +334,7 @@ module OptimizerWrapper
     # Generate Vehicles data
     ### Be careful in case the alternative skills are supported again !
     grouped_vehicles = vrp.vehicles.group_by{ |vehicle| vehicle.skills.flatten }
-    vehicle_skills = vrp.vehicles.map{ |vehicle| vehicle.skills.flatten }.uniq
+    vehicle_skills = grouped_vehicles.keys.uniq
     skill_vehicle_ids = Hash.new{ [] }
     grouped_vehicles.each{ |skills, vehicles| skill_vehicle_ids[skills] += vehicles.map{ |vehicle| vrp.vehicles.find_index(vehicle) } }
 
