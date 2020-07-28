@@ -17,11 +17,9 @@
 #
 
 require './lib/interpreters/split_clustering.rb'
-require './lib/clusterers/balanced_kmeans.rb'
 require './lib/tsp_helper.rb'
 require './lib/helper.rb'
 require './util/job_manager.rb'
-require 'ai4r'
 
 module Interpreters
   class Dichotomious
