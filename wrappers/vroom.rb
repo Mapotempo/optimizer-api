@@ -46,7 +46,6 @@ module Wrappers
         :assert_vehicles_no_duration_limit,
         :assert_no_value_matrix,
         :assert_points_same_definition,
-        :assert_at_least_one_mission,
         :assert_no_distance_limitation,
         :assert_no_subtours,
         :assert_no_planning_heuristic,
@@ -106,7 +105,7 @@ module Wrappers
           point_id: point.id,
           travel_time: ((previous && point_index && vrp.matrices[0][:time]) ? vrp.matrices[0][:time][previous][point_index] : 0),
           travel_distance: ((previous && point_index && vrp.matrices[0][:distance]) ? vrp.matrices[0][:distance][previous][point_index] : 0),
-          detail: build_detail(service, service.activity, point, nil, vehicle)
+          detail: build_detail(service, service.activity, point, nil, nil, vehicle)
 #          travel_distance 0,
 #          travel_start_time 0,
 #          waiting_duration 0,
@@ -168,16 +167,6 @@ module Wrappers
     end
 
     private
-
-    def build_detail(_job, activity, point, _day_index, vehicle)
-      {
-        lat: point&.location&.lat,
-        lon: point&.location&.lon,
-        duration: activity.duration,
-        router_mode: vehicle ? vehicle.router_mode : nil,
-        speed_multiplier: vehicle ? vehicle.speed_multiplier : nil
-      }.delete_if{ |_k, v| v.nil? }
-    end
 
     def run_vroom(vehicles, services, points, matrices, dimensions, prefer_short, job)
       input = Tempfile.new('optimize-vroom-input', @tmp_dir)

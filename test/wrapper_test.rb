@@ -3104,7 +3104,7 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
     services_vrps = OptimizerWrapper.split_independent_vrp_by_skills(vrp)
-    assert_equal 5, services_vrps.size, 'Split_independent_vrp function does not generate expected number of services_vrps'
+    assert_equal 5, services_vrps.size, 'Split_independent_vrp_by_skills function does not generate expected number of services_vrps'
 
     # add services that can not be served by any vehicle (different configurations)
     vrp = TestHelper.create(VRP.independent_skills)
@@ -3112,13 +3112,28 @@ class WrapperTest < Minitest::Test
     vrp.services << Models::Service.new(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
     vrp.services << Models::Service.new(id: 'fake_service_2', skills: ['fake_skill1'], activity: { point: vrp.points.first })
     services_vrps = OptimizerWrapper.split_independent_vrp_by_skills(vrp)
-    assert_equal 6, services_vrps.size, 'Split_independent_vrp function does not generate expected number of services_vrps'
+    assert_equal 6, services_vrps.size, 'Split_independent_vrp_by_skills function does not generate expected number of services_vrps'
 
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
     vrp.services << Models::Service.new(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
     vrp.services << Models::Service.new(id: 'fake_service_3', skills: ['fake_skill2'], activity: { point: vrp.points.first })
     services_vrps = OptimizerWrapper.split_independent_vrp_by_skills(vrp)
-    assert_equal 7, services_vrps.size, 'Split_independent_vrp function does not generate expected number of services_vrps'
+    assert_equal 7, services_vrps.size, 'Split_independent_vrp_by_skills function does not generate expected number of services_vrps'
+  end
+
+  def test_split_independent_vrps_with_useless_vehicle
+    vrp = TestHelper.create(VRP.independent_skills)
+    vrp.vehicles << Models::Vehicle.new(id: 'useless_vehicle')
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal vrp.vehicles.size, result[:routes].size, 'All vehicles should appear in result, even though they can serve no service'
+  end
+
+  def test_split_independent_vrp_by_sticky_vehicle
+    vrp = TestHelper.create(VRP.independent)
+    vrp.vehicles << Models::Vehicle.new(id: 'useless_vehicle')
+    expected_number_of_vehicles = vrp.vehicles.size
+    services_vrps = OptimizerWrapper.split_independent_vrp_by_sticky_vehicle(vrp)
+    assert_equal expected_number_of_vehicles, services_vrps.collect{ |sub_vrp| sub_vrp.vehicles.size }.sum, 'some vehicles disapear because of split_independent_vrp_by_sticky_vehicle function'
   end
 end

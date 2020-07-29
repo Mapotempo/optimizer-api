@@ -86,7 +86,8 @@ module Heuristics
 
     def compute_initial_solution(vrp, &block)
       if @services_data.empty?
-        empty_result(vrp)
+        # TODO : create and use result structure instead of using wrapper function
+        vrp[:preprocessing_heuristic_result] = Wrappers::Wrapper.new.empty_result('heuristic', vrp)
         return []
       end
 
@@ -1026,17 +1027,6 @@ module Heuristics
           }
         }
       }.flatten
-    end
-
-    def empty_result(vrp)
-      vrp[:preprocessing_heuristic_result] = {
-        cost: 0,
-        solvers: ['heuristic'],
-        iterations: 0,
-        routes: [],
-        unassigned: [],
-        elapsed: 0.0 # ms
-      }
     end
 
     def prepare_output_and_collect_routes(vrp)

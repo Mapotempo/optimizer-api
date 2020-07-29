@@ -44,7 +44,6 @@ module Wrappers
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_only_empty_or_fill_quantities,
         :assert_points_same_definition,
-        :assert_at_least_one_mission,
         :assert_no_subtours,
         :assert_no_evaluation,
         :assert_no_first_solution_strategy,
@@ -73,39 +72,6 @@ module Wrappers
     end
 
     private
-
-    def build_timewindows(activity, day_index)
-      activity.timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index }.collect{ |timewindow|
-        {
-          start: timewindow.start,
-          end: timewindow.end
-        }
-      }
-    end
-
-    def build_quantities(job)
-      job.quantities.collect{ |quantity|
-        {
-          unit: quantity.unit.id,
-          label: quantity.unit.label,
-          value: quantity.value,
-          setup_value: quantity.unit.counting ? quantity.setup_value : 0
-        }
-      }
-    end
-
-    def build_detail(job, activity, point, day_index)
-      {
-        lat: point && point.location && point.location.lat,
-        lon: point && point.location && point.location.lon,
-        skills: job.skills,
-        setup_duration: activity.setup_duration,
-        duration: activity.duration,
-        additional_value: activity.additional_value,
-        timewindows: build_timewindows(activity, day_index),
-        quantities: build_quantities(job)
-      }.delete_if{ |_k, v| !v }.compact
-    end
 
     def assert_end_optimization(vrp)
       vrp.resolution_duration || vrp.resolution_iterations || vrp.resolution_iterations_without_improvment
@@ -473,7 +439,7 @@ module Wrappers
                     travel_distance: ((previous_index && point_index && vrp.matrices[0].distance) ? vrp.matrices[0].distance[previous_index][point_index] : 0),
                     begin_time: (a = act.at_xpath('endTime')) && a && Float(a.content) - duration,
                     departure_time: (a = act.at_xpath('endTime')) && a && Float(a.content),
-                    detail: build_detail(job, activity, (act['type'] == 'break') ? nil : point, nil)
+                    detail: build_detail(job, activity, (act['type'] == 'break') ? nil : point, nil, nil)
                   }.delete_if { |_k, v| !v }
                   previous_index = point_index
                   current_activity
@@ -498,7 +464,7 @@ module Wrappers
                   }.delete_if{ |_k, v| !v }] +
                   (vehicle.rests.empty? ? [nil] : [{
                     rest_id: vehicle.rests[0].id,
-                    detail: build_detail(rest, rest, nil, nil)
+                    detail: build_detail(rest, rest, nil, nil, nil)
                   }]) +
                   [vehicle.end_point && {
                     point_id: vehicle.end_point.id,

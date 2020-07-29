@@ -199,33 +199,8 @@ module OptimizerWrapper
     if !vrp.subtours.empty?
       multi_modal = Interpreters::MultiModal.new(vrp, service)
       optim_result = multi_modal.multimodal_routes
-    elsif vrp.vehicles.empty? # TODO: remove ?
-      optim_result = {
-        cost: nil,
-        solvers: [service.to_s],
-        iterations: nil,
-        routes: [],
-        unassigned: vrp.services.collect{ |service_|
-          {
-            service_id: service_[:id],
-            point_id: service_[:activity] ? service_[:activity][:point_id] : nil,
-            detail: {
-              lat: service_[:activity] ? service_[:activity][:point][:lat] : nil,
-              lon: service_[:activity] ? service_[:activity][:point][:lon] : nil,
-              setup_duration: service_[:activity] ? service_[:activity][:setup_duration] : nil,
-              duration: service_[:activity] ? service_[:activity][:duration] : nil,
-              timewindows: (service_[:activity][:timewindows] && !service_[:activity][:timewindows].empty?) ? [{
-                start: service_[:activity][:timewindows][0][:start],
-                end: service_[:activity][:timewindows][0][:start],
-              }] : [],
-              quantities: service_[:activity] ? service_[:quantities] : nil,
-            },
-            reason: 'No vehicle available for this service (split)'
-          }
-        },
-        elapsed: 0,
-        total_distance: nil
-      }
+    elsif vrp.vehicles.empty? || (vrp.services.empty? && vrp.shipments.empty?)
+      optim_result = Wrappers::Wrapper.new.empty_result(service.to_s, vrp, 'No vehicle available for this service')
     else
       services_to_reinject = []
       sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
@@ -351,8 +326,8 @@ module OptimizerWrapper
     }
 
     mission_skills.size.times.each{ |a_line|
-      (a_line..mission_skills.size - 1).each{ |b_line|
-        next if a_line == b_line || (compatibility_table[a_line].select.with_index{ |state, index| state & compatibility_table[b_line][index] }).empty?
+      ((a_line + 1)..mission_skills.size - 1).each{ |b_line|
+        next if (compatibility_table[a_line].select.with_index{ |state, index| state & compatibility_table[b_line][index] }).empty?
 
         b_set = independent_skills.find{ |set| set.include?(b_line) && set.exclude?(a_line) }
         next if b_set.nil?
@@ -363,14 +338,17 @@ module OptimizerWrapper
         independent_skills[set_index] += b_set
       }
     }
+
     # Original skills are retrieved
     independant_skill_sets = independent_skills.map{ |index_set|
       index_set.collect{ |index| mission_skills[index] }
     }
 
-    independent_vrps = independant_skill_sets.each_with_object([]) { |skills_set, sub_vrps|
+    unused_vehicles_indices = (0..vrp.vehicles.size - 1).to_a
+    independent_vrps = independant_skill_sets.collect{ |skills_set|
       # Compatible problem ids are retrieved
       vehicles_indices = skills_set.flat_map{ |skills| skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v } }.uniq
+      vehicles_indices.each{ |index| unused_vehicles_indices.delete(index) }
       service_ids = skills_set.flat_map{ |skills| skill_service_ids[skills] }
       shipment_ids = skills_set.flat_map{ |skills| skill_shipment_ids[skills] }
       service_vrp = {
@@ -383,20 +361,23 @@ module OptimizerWrapper
       sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
       sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
       sub_service_vrp[:vrp].resolution_iterations_without_improvment = vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
-      sub_vrps.push(sub_service_vrp[:vrp])
+      sub_service_vrp[:vrp]
     }
+
+    return independent_vrps if unused_vehicles_indices.empty?
+
+    sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp({ vrp: vrp }, [], unused_vehicles_indices)
+    sub_service_vrp[:vrp].matrices = []
+    independent_vrps.push(sub_service_vrp[:vrp])
+
     independent_vrps
   end
 
   def self.split_independent_vrp_by_sticky_vehicle(vrp)
-    # Intead of map{}.compact() or collect{}.compact() reduce([]){} or each_with_object([]){} is more efficient
-    # when there are items to skip in the loop because it makes one pass of the array instead of two
-    vrp.vehicles.each_with_index.each_with_object([]) { |(vehicle, v_i), sub_vrps|
+    vrp.vehicles.map.with_index{ |vehicle, v_i|
       vehicle_id = vehicle.id
       service_ids = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
       shipment_ids = vrp.shipments.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
-
-      next if service_ids.empty? && shipment_ids.empty? # No need to create this sub_problem if there is no shipment nor service in it
 
       service_vrp = {
         service: nil,
@@ -407,7 +388,7 @@ module OptimizerWrapper
       sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
       sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
       sub_service_vrp[:vrp].resolution_iterations_without_improvment = vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
-      sub_vrps.push(sub_service_vrp[:vrp])
+      sub_service_vrp[:vrp]
     }
   end
 
