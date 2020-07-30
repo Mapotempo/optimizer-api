@@ -63,7 +63,9 @@ module DistanceMatrix
         block&.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil)
         # set matrix_time and matrix_distance depending of dimensions order
         log "matrix computation #{matrix_points.size}x#{matrix_points.size}"
+        tic = Time.now
         router_matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, matrix_points, matrix_points, options)
+        log "matrix computed in #{(Time.now - tic).round(2)} seconds"
         m = Models::Matrix.create(
           id: 'm' + (id += 1).to_s,
           time: (router_matrices[dimensions.index(:time)] if dimensions.index(:time)),
