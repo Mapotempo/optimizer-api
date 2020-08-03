@@ -601,65 +601,34 @@ module Api
             stored_result = APIBase.dump_vrp_dir.read([id, params[:api_key], 'solution'].join('_'))
             solution = stored_result && Marshal.load(stored_result)
 
-            error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404) unless solution || (job && !job.killed? && job['options']['api_key'] == params[:api_key])
+            if solution.nil? && (job.nil? || job.killed? || Resque::Plugins::Status::Hash.should_kill?(id) || job['options']['api_key'] != params[:api_key])
+              status 404
+              error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
+            end
 
             solution ||= OptimizerWrapper::Result.get(id) || {}
             output_format = params[:format]&.to_sym || ((solution && solution['csv']) ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
-            if job&.killed? || Resque::Plugins::Status::Hash.should_kill?(id)
-              status 404
-              error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
-            elsif job&.failed?
-              status 202
-              if output_format == :csv
-                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
-              else
-                present({
-                  solutions: [solution['result']].flatten(1),
-                  job: {
-                    id: id,
-                    status: :failed,
-                    avancement: job.message,
-                    graph: solution['graph']
-                  }
-                }, with: Grape::Presenters::Presenter)
-              end
-            elsif job && !job.completed?
-              status 206
-              # TODO: why try to return a csv for queued job?
-              if output_format == :csv
-                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
-              else
-                present({
-                  solutions: [solution['result']].flatten(1),
-                  job: {
-                    id: id,
-                    status: ['queued', 'working'].include?(job.status) ? job.status.to_sym : nil,
-                    avancement: job.message,
-                    graph: solution['graph']
-                  }
-                }, with: Grape::Presenters::Presenter)
-              end
+            if job.completed?
+              OptimizerWrapper.job_remove(params[:api_key], id)
+              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
+            end
+
+            status 200
+
+            if output_format == :csv
+              present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
             else
-              if job
-                OptimizerWrapper.job_remove(params[:api_key], id)
-                APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if OptimizerWrapper.config[:dump][:solution]
-              end
-              status 200
-              if output_format == :csv
-                present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
-              else
-                present({
-                  solutions: [solution['result']].flatten(1),
-                  job: {
-                    id: id,
-                    status: :completed,
-                    avancement: job&.message,
-                    graph: solution['graph']
-                  }
-                }, with: Grape::Presenters::Presenter)
-              end
+              present({
+                solutions: [solution['result']].flatten(1),
+                job: {
+                  id: id,
+                  status: job.status.to_sym, # :queued, :working, :completed, #failed
+                  avancement: job.message,
+                  graph: solution['graph']
+                }
+              }, with: Grape::Presenters::Presenter)
             end
           end
 

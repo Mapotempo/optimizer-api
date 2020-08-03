@@ -38,6 +38,14 @@ class Api::V01::WithSolverTest < Api::V01::RequestHelper
     delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end
 
+  def test_delete_completed_job
+    TestHelper.solve_asynchronously do
+      @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
+      wait_status @job_id, 'completed', api_key: 'ortools'
+    end
+    delete_completed_job @job_id, api_key: 'ortools' if @job_id
+  end
+
   def test_using_two_solver
     TestHelper.solve_asynchronously do
       problem = VRP.lat_lon
