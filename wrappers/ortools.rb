@@ -881,6 +881,7 @@ module Wrappers
       end
     ensure
       input&.unlink
+      output&.close
       output&.unlink
       @thread&.value # wait for the termination of the thread in case there is one
       stdin&.close

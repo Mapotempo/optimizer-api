@@ -225,11 +225,9 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
       vrp = VRP.lat_lon
       vrp[:configuration][:restitution] = { csv: true }
       @job_id = submit_csv api_key: 'demo', vrp: vrp
-      wait_status_csv @job_id, 200, api_key: 'demo'
-      assert_equal 9, last_response.body.count("\n")
+      result = wait_status_csv @job_id, 'completed', api_key: 'demo'
+      assert_equal 9, result.count("\n")
     end
-  ensure
-    delete_completed_job @job_id, api_key: 'demo'
   end
 
   def test_returned_ids
@@ -250,8 +248,8 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
       }]
       vrp[:configuration][:restitution] = { csv: true }
       @job_id = submit_csv api_key: 'demo', vrp: vrp
-      wait_status_csv @job_id, 200, api_key: 'demo'
-      csv = last_response.body.split("\n")
+      result = wait_status_csv @job_id, 'completed', api_key: 'demo'
+      csv = result.split("\n")
       ids = csv.collect{ |line| line.split(',')[1] }
       assert_includes ids, 'shipment_0_pickup'
       assert_includes ids, 'shipment_0_delivery'
@@ -259,7 +257,5 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
         assert_includes ids, s[:id]
       }
     end
-  ensure
-    delete_completed_job @job_id, api_key: 'demo'
   end
 end
