@@ -201,6 +201,21 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     delete_job @job_id, api_key: 'demo'
   end
 
+  def test_get_completed_job_with_solution_dump
+    old_config_dump_solution = OptimizerWrapper.config[:dump][:solution]
+    OptimizerWrapper.config[:dump][:solution] = true
+    TestHelper.solve_asynchronously do
+      @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
+      wait_status @job_id, 'completed', api_key: 'demo'
+    end
+
+    get "/0.1/vrp/jobs/#{@job_id}", api_key: 'demo'
+    assert_equal 200, last_response.status, last_response.body
+    assert_equal 'completed', JSON.parse(last_response.body)['job']['status'], last_response.body
+  ensure
+    OptimizerWrapper.config[:dump][:solution] = old_config_dump_solution
+  end
+
   def test_block_call_under_clustering
     @job_ids = []
     TestHelper.solve_asynchronously do
