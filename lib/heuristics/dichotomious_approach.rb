@@ -17,11 +17,9 @@
 #
 
 require './lib/interpreters/split_clustering.rb'
-require './lib/clusterers/balanced_kmeans.rb'
 require './lib/tsp_helper.rb'
 require './lib/helper.rb'
 require './util/job_manager.rb'
-require 'ai4r'
 
 module Interpreters
   class Dichotomious
@@ -486,17 +484,22 @@ module Interpreters
           next if related_services.empty?
 
           related_services.each{ |_related_service|
-            data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, [], [], 0]
+            characteristics = { duration_from_and_to_depot: 0 }
+            characteristics[:matrix_index] = point[:matrix_index] if !vrp.matrices.empty?
+            data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, characteristics, [], 0]
           }
         }
 
         # No expected caracteristics neither strict limitations because we do not
         # know which vehicles will be used in advance
         options = { max_iterations: 100, restarts: 5, cut_symbol: cut_symbol, last_iteration_balance_rate: 0.0 }
-        limits = { metric_limit: { limit: cumulated_metrics[cut_symbol] / nb_clusters },
-                   strict_limit: {}}
+        limits = { metric_limit: { limit: cumulated_metrics[cut_symbol] / nb_clusters }, strict_limit: {}}
 
-        clusters, _centroid_indices = SplitClustering.kmeans_process([], nb_clusters, data_items, unit_symbols, limits, options)
+        options[:distance_matrix] = vrp.matrices[0][:time] if !vrp.matrices.empty?
+
+        options[:clusters_infos] = SplitClustering.collect_cluster_data(vrp, nb_clusters)
+
+        clusters, _centroid_indices = SplitClustering.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options)
 
         log "Dicho K-Means: split #{data_items.size} into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
 

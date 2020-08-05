@@ -17,7 +17,6 @@
 #
 
 require './lib/interpreters/split_clustering.rb'
-require './lib/clusterers/balanced_kmeans.rb'
 require './lib/tsp_helper.rb'
 
 module Interpreters

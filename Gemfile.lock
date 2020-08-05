@@ -5,6 +5,13 @@ GIT
     active_hash (1.4.1)
       activesupport (>= 2.2.2)
 
+GIT
+  remote: git://github.com/Mapotempo/balanced_vrp_clustering.git
+  revision: bae92bf1979892de3ba704ce75bc2e2d8efa284e
+  branch: dev
+  specs:
+    balanced_vrp_clustering (0.1.3)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -222,6 +229,7 @@ DEPENDENCIES
   active_hash!
   activemodel
   ai4r
+  balanced_vrp_clustering!
   benchmark-ips
   byebug
   charlock_holmes

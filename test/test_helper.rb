@@ -82,6 +82,10 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       raise StandardError, "If there is a new model class add it above. If not, following fields should not be in vrp: #{unknown_model_fields}" unless unknown_model_fields.empty?
     end
 
+    # partition[:entity] becomes a symbol
+    vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
+    vrp.preprocessing_partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
+
     vrp
   end
 
@@ -173,8 +177,8 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   end
 
   def self.vehicle_and_days_partitions
-    [{ method: 'balanced_kmeans', metric: 'duration', entity: 'vehicle' },
-     { method: 'balanced_kmeans', metric: 'duration', entity: 'work_day' }]
+    [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle },
+     { method: 'balanced_kmeans', metric: 'duration', entity: :work_day }]
   end
 end
 
