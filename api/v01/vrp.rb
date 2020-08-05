@@ -657,7 +657,7 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
 
-            if !job || job&.killed? || job['options']['api_key'] != params[:api_key]
+            if !job || job.killed? || Resque::Plugins::Status::Hash.should_kill?(id) || job['options']['api_key'] != params[:api_key]
               status 404
               error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
             else
