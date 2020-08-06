@@ -189,7 +189,7 @@ module Interpreters
     def self.remove_poor_routes(vrp, result)
       if result
         remove_empty_routes(result)
-        remove_poorly_populated_routes(vrp, result, 0.2) if !Interpreters::Dichotomious.dichotomious_candidate?(vrp: vrp, service: :ortools)
+        remove_poorly_populated_routes(vrp, result, 0.1) if !Interpreters::Dichotomious.dichotomious_candidate?(vrp: vrp, service: :ortools)
       end
     end
 
@@ -309,7 +309,7 @@ module Interpreters
         c.distance_matrix = options[:distance_matrix]
         c.vehicles_infos = options[:clusters_infos]
         c.centroid_indices = options[:centroid_indices] || []
-        c.on_empty = 'random'
+        c.on_empty = 'closest'
         c.logger = OptimizerLogger.logger
 
         ratio = 0.9 + 0.1 * (options[:restarts] - restart) / options[:restarts].to_f
@@ -497,7 +497,7 @@ module Interpreters
       r_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : 0
 
       vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
-        total_work_days = vehicle.total_work_days_in_range(r_start, r_end)
+        total_work_days = vrp.schedule_range_indices ? vehicle.total_work_days_in_range(r_start, r_end) : 1
         capacities = {
           duration: vrp.schedule_range_indices ? vrp.total_work_times[v_i] : vehicle.work_duration,
           visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
@@ -505,12 +505,12 @@ module Interpreters
         vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
         tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
         {
-          v_id: [vehicle.id],
-          days: compute_day_skills(tw),
+          id: [vehicle.id],
           depot: [vehicle.start_point.matrix_index || [vehicle.start_point.location.lat, vehicle.start_point.location.lon]].flatten,
           capacities: capacities,
           skills: vehicle.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
-          total_work_time: vehicle.total_work_time_in_range(r_start, r_end),
+          day_skills: compute_day_skills(tw),
+          duration: vehicle.total_work_time_in_range(r_start, r_end),
           total_work_days: total_work_days
         }
       }
@@ -525,12 +525,12 @@ module Interpreters
         end
         vehicles = Array.new(nb_clusters){ |simulated_vehicle|
           {
-            v_id: ["generated_vehicle_#{simulated_vehicle}"],
-            days: ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill'],
+            id: ["generated_vehicle_#{simulated_vehicle}"],
             depot: depots[simulated_vehicle],
             capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value| [key, value * vehicles.size / nb_clusters.to_f] }.to_h, #TODO: capacities needs a better way like depots...
             skills: [],
-            total_work_time: 0,
+            day_skills: ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill'],
+            duration: 0,
             total_work_days: 1
           }
         }
@@ -579,13 +579,13 @@ module Interpreters
       def compatible_characteristics?(service_chars, vehicle_chars)
         # Incompatile service and vehicle
         # if the vehicle cannot serve the service due to sticky_vehicle_id
-        return false if !service_chars[:v_id].empty? && (service_chars[:v_id] & vehicle_chars[:v_id]).empty?
+        return false if !service_chars[:v_id].empty? && (service_chars[:v_id] & vehicle_chars[:id]).empty?
 
         # if the service needs a skill that the vehicle doesn't have
         return false if !(service_chars[:skills] - vehicle_chars[:skills]).empty?
 
         # if service and vehicle have no matching days
-        return false if (service_chars[:days] & vehicle_chars[:days]).empty?
+        return false if (service_chars[:day_skills] & vehicle_chars[:day_skills]).empty?
 
         true # if not, they are compatible
       end
@@ -651,7 +651,7 @@ module Interpreters
             s_characteristics = {
               v_id: [s[:sticky_vehicle_ids]].flatten.compact,
               skills: related_skills,
-              days: day_skills
+              day_skills: day_skills
             }
 
             s_characteristics
@@ -738,7 +738,7 @@ module Interpreters
 
             # Merge the characteristics (sticky, skills, days)
             item0[4][:v_id] &= item_i[4][:v_id]
-            item0[4][:days] &= item_i[4][:days]
+            item0[4][:day_skills] &= item_i[4][:day_skills]
             item0[4][:skills].concat item_i[4][:skills]
             item0[4][:skills].uniq!
 
@@ -751,9 +751,9 @@ module Interpreters
         vehicles.collect{ |v|
           tw = [v.timewindow || v.sequence_timewindows].flatten.compact
           {
-            v_id: [v.id],
+            id: [v.id],
             skills: v.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
-            days: compute_day_skills(tw)
+            day_skills: compute_day_skills(tw)
           }
         }
       end

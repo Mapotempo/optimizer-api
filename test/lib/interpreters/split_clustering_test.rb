@@ -595,6 +595,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_functionality
       vrp = TestHelper.load_vrp(self)
+      vrp.resolution_duration = 120000
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
         result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
