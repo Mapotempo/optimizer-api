@@ -610,7 +610,7 @@ module Api
             output_format = params[:format]&.to_sym || ((solution && solution['csv']) ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
-            if job.completed?
+            if job&.completed? # job can still be nil if we have the solution from the dump
               OptimizerWrapper.job_remove(params[:api_key], id)
               APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
             end
@@ -624,8 +624,8 @@ module Api
                 solutions: [solution['result']].flatten(1),
                 job: {
                   id: id,
-                  status: job.status.to_sym, # :queued, :working, :completed, #failed
-                  avancement: job.message,
+                  status: job&.status&.to_sym || :completed, # :queued, :working, :completed, :failed
+                  avancement: job&.message,
                   graph: solution['graph']
                 }
               }, with: Grape::Presenters::Presenter)
