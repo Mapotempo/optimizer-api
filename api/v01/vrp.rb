@@ -43,7 +43,7 @@ module Api
         CSV.parse(object.force_encoding('utf-8'), col_sep: separator, headers: true).collect{ |row|
           r = row.to_h
 
-          r.keys.each{ |key|
+          r.each_key{ |key|
             next unless key.include?('.')
 
             part = key.split('.', 2)

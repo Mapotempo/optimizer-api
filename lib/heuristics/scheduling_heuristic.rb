@@ -310,7 +310,7 @@ module Heuristics
         }
       }
 
-      @uninserted.keys.each{ |service|
+      @uninserted.each_key{ |service|
         s = @uninserted[service][:original_service]
         service_in_vrp = vrp.services.find{ |current_service| current_service[:id] == s }
         unassigned << get_unassigned_info(vrp, service, service_in_vrp, @uninserted[service][:reason])
