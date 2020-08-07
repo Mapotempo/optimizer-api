@@ -87,6 +87,9 @@ Layout/EndAlignment:
 Layout/ElseAlignment:
   Enabled: false
 
+Performance/ChainArrayAllocation:
+  Enabled: true
+
 Style/BlockDelimiters:
   Enabled: false
 

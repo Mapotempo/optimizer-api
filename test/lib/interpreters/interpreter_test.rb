@@ -985,8 +985,8 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.min
-    assert_equal 1, result[:routes].collect{ |route| route[:activities].select{ |activity| activity[:rest_id] }.size }.max
+    assert_equal 1, result[:routes].collect{ |route| route[:activities].count{ |activity| activity[:rest_id] } }.min
+    assert_equal 1, result[:routes].collect{ |route| route[:activities].count{ |activity| activity[:rest_id] } }.max
   end
 
   def test_minimum_lapse_3_visits
@@ -1886,8 +1886,8 @@ class InterpreterTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 11, result[:routes][0][:activities].size
-    assert_equal 9.9, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
-    assert_equal 10, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
+    assert_equal 9.9, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 })
+    assert_equal 10, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 })
   end
 
   def test_multi_modal_route_with_complementary_partial_quantities
@@ -1980,8 +1980,8 @@ class InterpreterTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 10, result[:routes][0][:activities].size
-    assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
-    assert_equal 7.5, result[:routes][0][:activities].collect{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 }.inject(:+)
+    assert_equal 7.5, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 })
+    assert_equal 7.5, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 })
   end
 
   def test_overall_duration_several_vehicles
@@ -2012,7 +2012,7 @@ class InterpreterTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     vrp = TestHelper.create(problem)
-    assert !vrp.schedule_months_indices.empty?
+    refute_empty vrp.schedule_months_indices
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 2, expanded_vrp.relations.size
   end
@@ -2039,7 +2039,7 @@ class InterpreterTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     vrp = TestHelper.create(problem)
-    assert !vrp.schedule_months_indices.empty?
+    refute_empty vrp.schedule_months_indices
     expanded_vrp = periodic.send(:expand, vrp, nil)
     assert_equal 1, expanded_vrp.relations.size
   end

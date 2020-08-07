@@ -158,7 +158,7 @@ class SplitClusteringTest < Minitest::Test
         durations << service_vrp_day[:vrp].services_duration
       }
 
-      average_duration = durations.inject(0, :+) / durations.size
+      average_duration = durations.sum / durations.size
       min_duration = average_duration - 0.5 * average_duration
       max_duration = average_duration + 0.5 * average_duration
       o = durations.map{ |duration|
@@ -184,7 +184,7 @@ class SplitClusteringTest < Minitest::Test
       # First balanced duration should be the smallest according vehicle data
       assert 0, durations.index(durations.min)
 
-      cluster_weight_sum = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.sum
+      cluster_weight_sum = vrp.vehicles.sum{ |vehicle| vehicle.sequence_timewindows.size }
       minimum_sequence_timewindows = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.min
       # maximum_sequence_timewindows = vrp.vehicles.collect{ |vehicle| vehicle.sequence_timewindows.size }.max
       durations.each_with_index{ |duration, index|
@@ -204,7 +204,7 @@ class SplitClusteringTest < Minitest::Test
       services_vrps_vehicles.each{ |service_vrp_vehicle|
         durations << service_vrp_vehicle[:vrp].services_duration
       }
-      average_duration = durations.inject(0, :+) / durations.size
+      average_duration = durations.sum / durations.size
       min_duration = average_duration - 0.5 * average_duration
       max_duration = average_duration + 0.5 * average_duration
 
@@ -233,7 +233,7 @@ class SplitClusteringTest < Minitest::Test
         }
         next if durations.empty?
 
-        average_duration = durations.inject(0, :+) / durations.size
+        average_duration = durations.sum / durations.size
         min_duration = average_duration - 0.7 * average_duration
         max_duration = average_duration + 0.7 * average_duration
         durations.each_with_index{ |duration, index|
@@ -264,7 +264,9 @@ class SplitClusteringTest < Minitest::Test
         entity: :vehicle
       }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       assert_equal 1, generated_services_vrps.size
 
       vrp[:vehicles] << {
@@ -282,7 +284,9 @@ class SplitClusteringTest < Minitest::Test
         ]
       }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       assert_equal 2, generated_services_vrps.size
     end
 
@@ -293,7 +297,9 @@ class SplitClusteringTest < Minitest::Test
         partition[:metric] = :visits
       }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       assert_equal 10, generated_services_vrps.size
 
       vrp[:configuration][:preprocessing][:partitions] = [{
@@ -302,7 +308,9 @@ class SplitClusteringTest < Minitest::Test
         entity: :work_day
       }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       assert_equal 10, generated_services_vrps.size
     end
 
@@ -318,14 +326,18 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
       refute_equal only_monday_cluster, only_tuesday_cluster
 
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
       refute_equal only_monday_cluster, only_tuesday_cluster
@@ -339,7 +351,9 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [0, 2]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
       refute_equal only_monday_cluster, only_tuesday_cluster
@@ -348,7 +362,9 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       only_monday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       only_tuesday_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][3][:id] } }
       refute_equal only_monday_cluster, only_tuesday_cluster
@@ -370,11 +386,13 @@ class SplitClusteringTest < Minitest::Test
 
       assert_raises ArgumentError do # initialising centroids with incompatible services should raise an error
         vrp[:configuration][:preprocessing][:kmeans_centroids] = [0, 1]
-        Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo).flatten.compact
+        Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo)
       end
 
       vrp[:configuration][:preprocessing][:kmeans_centroids] = [2, 3] # initialising the with other services should be okay
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
 
       # but service 1 and 0 should be served by different vehicles
       cold_cluster = generated_services_vrps.find_index{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
@@ -393,7 +411,9 @@ class SplitClusteringTest < Minitest::Test
       vrp[:vehicles].first[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       only_monday_cluster = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       assert(only_monday_cluster[:vrp][:vehicles].any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw| tw[:day_index].zero? } })
     end
@@ -404,9 +424,11 @@ class SplitClusteringTest < Minitest::Test
 
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       # Each generated_services_vrps should have a different vehicle :
-      assert_equal generated_services_vrps.size, generated_services_vrps.collect{ |service| [service[:vrp].vehicles.first.id, service[:vrp].vehicles.first.sequence_timewindows] }.uniq.size
+      assert_nil generated_services_vrps.collect{ |service| [service[:vrp].vehicles.first.id, service[:vrp].vehicles.first.sequence_timewindows] }.uniq!, 'Each generated_services_vrps should have a different vehicle'
     end
 
     def test_good_vehicle_assignment_skills
@@ -420,7 +442,9 @@ class SplitClusteringTest < Minitest::Test
       vrp[:vehicles][0][:skills] = [['skill']]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       cluster_with_skill = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
       assert(cluster_with_skill[:vrp][:vehicles].any?{ |v| v[:skills].include?(['skill']) })
     end
@@ -428,7 +452,9 @@ class SplitClusteringTest < Minitest::Test
     def test_no_doubles_3000
       vrp = TestHelper.load_vrp(self)
 
-      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(vrp: vrp, service: :demo).flatten.compact
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(vrp: vrp, service: :demo)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
       assert_equal 15, generated_services_vrps.size
       generated_services_vrps.each{ |service|
         vehicle_day = service[:vrp][:vehicles].first[:sequence_timewindows].first[:day_index]
@@ -469,8 +495,8 @@ class SplitClusteringTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 2, result[:solvers].size
-      assert_equal ['service_1', 'service_2'], result[:routes][0][:activities].collect{ |activity| activity[:service_id] }.compact
-      assert_equal ['service_3', 'service_4'], result[:routes][1][:activities].collect{ |activity| activity[:service_id] }.compact
+      assert_equal([nil, 'service_1', 'service_2'], result[:routes][0][:activities].collect{ |activity| activity[:service_id] })
+      assert_equal([nil, 'service_3', 'service_4'], result[:routes][1][:activities].collect{ |activity| activity[:service_id] })
     end
 
     def test_correct_number_of_visits_when_concurrent_split_independent_and_max_split
@@ -508,7 +534,7 @@ class SplitClusteringTest < Minitest::Test
 
       assert  results[:solvers].size >= 2
       results[:routes].each{ |route|
-        assert route[:activities].collect{ |activity| activity[:service_id] }.compact.size <= 2
+        assert route[:activities].count{ |activity| activity[:service_id] } <= 2
       }
     end
 
@@ -521,16 +547,13 @@ class SplitClusteringTest < Minitest::Test
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: :work_day, restarts: @split_restarts)
 
       assert_equal 5, services_vrps.size
-      kg_limit = services_vrps.collect{ |s_v| 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'kg' }[:limit] }
-      qte_limit = services_vrps.collect{ |s_v| 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == 'qte' }[:limit] }
 
-      assert services_vrps.collect{ |s_v|
-        s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'kg' }[:value] * service[:visits_number] }.sum
-      }.select.with_index{ |value, i| value > kg_limit[i] }.size <= 1
-
-      assert services_vrps.collect{ |s_v|
-        s_v[:vrp].services.collect{ |service| service.quantities.find{ |qty| qty[:unit_id] == 'qte' }[:value] * service[:visits_number] }.sum
-      }.select.with_index{ |value, i| value > qte_limit[i] }.size <= 1
+      %w[kg qte].each{ |unit|
+        assert_operator services_vrps.count{ |s_v|
+          limit = 2 * s_v[:vrp].vehicles.first.capacities.find{ |cap| cap[:unit_id] == unit }[:limit]
+          s_v[:vrp].services.sum{ |service| service.quantities.find{ |qty| qty[:unit_id] == unit }[:value] * service[:visits_number] } > limit
+        }, :<=, 1
+      }
     end
 
     def test_fail_when_alternative_skills
@@ -582,7 +605,7 @@ class SplitClusteringTest < Minitest::Test
       check_vrp_services_size = problem.services.size
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       assert_equal check_vrp_services_size, problem.services.size
-      assert_equal problem.services.size, result[:unassigned].map{ |s| s[:service_id] }.compact.size + result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size
+      assert_equal problem.services.size, result[:unassigned].count{ |s| s[:service_id] } + result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }
     end
 
     def test_max_split_poorly_populated_route_limit_result
@@ -626,7 +649,9 @@ class SplitClusteringTest < Minitest::Test
         puts "Regularity trial: #{trial}/#{@regularity_restarts}"
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
         visits_unassigned << result[:unassigned].size
-        services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+        unassigned_service_ids = result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }
+        unassigned_service_ids.uniq!
+        services_unassigned << unassigned_service_ids.size
         reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
       }
 
@@ -667,7 +692,9 @@ class SplitClusteringTest < Minitest::Test
         puts "Regularity trial: #{trial}/#{@regularity_restarts}"
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
         visits_unassigned << result[:unassigned].size
-        services_unassigned << result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }.uniq.size
+        unassigned_service_ids = result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }
+        unassigned_service_ids.uniq!
+        services_unassigned << unassigned_service_ids.size
         reason_unassigned << result[:unassigned].map{ |unass| unass[:reason].slice(0, 8) }.group_by{ |e| e }.map{ |k, v| [k, v.length] }.to_h
       }
 

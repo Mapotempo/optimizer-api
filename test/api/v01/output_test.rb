@@ -97,9 +97,9 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
     csv = CSV.read(generated_file + '_csv')
 
-    assert_equal all_services_vrps.collect{ |service| service[:vrp].services.size }.sum + 1, csv.size
-    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq.size
-    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
+    assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq!.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq!.size
     assert csv.all?{ |line| line[4].count(',').zero? }, 'There should be only one vehicle in vehicles_ids column'
     assert csv.none?{ |line| line[5].nil? }, 'All timewindows of this vehicle should be shown'
   end
@@ -113,10 +113,10 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
     csv = CSV.read(generated_file + '_csv')
 
-    assert_equal all_services_vrps.collect{ |service| service[:vrp].services.size }.sum + 1, csv.size
-    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq.size
-    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq.size
-    assert_equal [nil], csv.collect(&:last).uniq - ['vehicle_tw_if_only_one']
+    assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq!.size
+    assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[4] }.uniq!.size
+    assert_equal [nil], csv.collect(&:last).uniq! - ['vehicle_tw_if_only_one']
   end
 
   def test_scheduling_generated_file
