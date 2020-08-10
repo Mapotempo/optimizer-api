@@ -296,5 +296,33 @@ module Models
         TestHelper.create(vrp) # check no error provided
       }
     end
+
+    def test_vehicle_unavailable_days_consideration
+      problem = VRP.toy
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
+      problem[:configuration][:schedule] = { range_indices: { start: 0, end: 7 }}
+
+      vrp = TestHelper.create(problem)
+      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+
+      problem[:vehicles].first[:timewindow] = { start: 0, end: 1000 }
+      vrp = TestHelper.create(problem)
+      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+
+      problem[:vehicles].first.delete(:timewindow)
+      problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000 }]
+      vrp = TestHelper.create(problem)
+      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+
+      problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000, day_index: 0 }]
+      vrp = TestHelper.create(problem)
+      assert_empty vrp.vehicles.first.unavailable_work_day_indices, 'This vehicle is only available on mondays, we can ignore unavailable_work_days_indices that are week-end days'
+
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
+      problem[:vehicles].first.delete(:timewindow)
+      problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000, day_index: 0 }, { start: 0, end: 1000, day_index: 5 }, { start: 0, end: 1000, day_index: 6 }]
+      vrp = TestHelper.create(problem)
+      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+    end
   end
 end

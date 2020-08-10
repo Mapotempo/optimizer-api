@@ -80,7 +80,7 @@ module Models
     field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil # extends schedule_range_date
-    field :schedule_unavailable_indices, default: nil # extends unavailable_date
+    field :schedule_unavailable_indices, default: [] # extends unavailable_date
     field :schedule_months_indices, default: []
 
     # ActiveHash doesn't validate the validator of the associated objects

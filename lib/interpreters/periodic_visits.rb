@@ -29,7 +29,7 @@ module Interpreters
         @have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.none?{ |shipment| shipment.pickup.timewindows.none?{ |timewindow| timewindow[:day_index] } || shipment.delivery.timewindows.none?{ |timewindow| timewindow[:day_index] } }
         @have_vehicles_day_index = vrp.vehicles.none?{ |vehicle| vehicle.sequence_timewindows.none? || vehicle.sequence_timewindows.none?{ |timewindow| timewindow[:day_index] } }
 
-        @unavailable_indices = vrp.schedule_unavailable_indices&.collect{ |unavailable_index|
+        @unavailable_indices = vrp.schedule_unavailable_indices.collect{ |unavailable_index|
           unavailable_index if unavailable_index >= vrp.schedule_range_indices[:start] && unavailable_index <= vrp.schedule_range_indices[:end]
         }&.compact
       end
@@ -301,15 +301,6 @@ module Interpreters
       }.flatten
     end
 
-    def build_vehicle_unavailable_work_day_indices(vehicle)
-      if @unavailable_indices
-        vehicle.unavailable_work_day_indices += @unavailable_indices.collect{ |unavailable_index|
-          unavailable_index
-        }
-        vehicle.unavailable_work_day_indices.uniq!
-      end
-    end
-
     def build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations, same_vehicle_list, lapses_list)
       new_vehicle = Marshal.load(Marshal.dump(vehicle))
       new_vehicle.id = "#{vehicle.id}_#{vehicle_day_index}"
@@ -341,7 +332,7 @@ module Interpreters
         vehicle.original_id = vehicle.id if vehicle.original_id.nil?
       }
       new_vehicles = vrp.vehicles.collect{ |vehicle|
-        build_vehicle_unavailable_work_day_indices(vehicle)
+        vehicle.unavailable_work_day_indices |= @unavailable_indices
         @equivalent_vehicles[vehicle.id] = []
         if vehicle.overall_duration
           same_vehicle_list << []
