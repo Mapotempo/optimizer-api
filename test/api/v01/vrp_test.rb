@@ -292,7 +292,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
       rest = Regexp.last_match(:rest)
 
       # The rest needs to be either clustering or heuristic solution
-      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/10 - solving scheduling heuristic } =~ rest
+      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/10 - scheduling heuristic } =~ rest
 
       refute_nil Regexp.last_match, assert_msg
     }

@@ -248,9 +248,7 @@ module OptimizerWrapper
       # TODO: refactor with dedicated class
       if vrp.schedule_range_indices
         periodic = Interpreters::PeriodicVisits.new(vrp)
-        vrp = periodic.expand(vrp, job) {
-          block&.call(nil, nil, nil, 'solving scheduling heuristic', nil, nil, nil)
-        }
+        vrp = periodic.expand(vrp, job, &block)
         optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
       end
 

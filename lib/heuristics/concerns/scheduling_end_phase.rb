@@ -21,13 +21,19 @@ require 'active_support/concern'
 module SchedulingEndPhase
   extend ActiveSupport::Concern
 
-  def refine_solution
+  def refine_solution(&block)
     @end_phase = true
     @ids_to_renumber = []
 
-    add_missing_visits if @allow_partial_assignment && !@same_point_day && !@relaxed_same_point_day
+    if @allow_partial_assignment && !@same_point_day && !@relaxed_same_point_day
+      block&.call(nil, nil, nil, 'scheduling heuristic - adding missing visits', nil, nil, nil)
+      add_missing_visits
+    end
 
-    correct_underfilled_routes unless @services_data.all?{ |_id, data| data[:exclusion_cost].zero? }
+    unless @services_data.all?{ |_id, data| data[:exclusion_cost].zero? }
+      block&.call(nil, nil, nil, 'scheduling heuristic - correcting underfilled routes', nil, nil, nil)
+      correct_underfilled_routes
+    end
   end
 
   def days_respecting_lapse(id, vehicle)
