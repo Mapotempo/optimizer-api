@@ -3,12 +3,6 @@ require 'bundler/setup'
 require 'resque/tasks'
 require './environment.rb'
 
-require 'rake/testtask'
-Rake::TestTask.new do |t|
-  ENV['APP_ENV'] ||= 'test'
-  t.pattern = 'test/**/*_test.rb'
-end
-
 # Clean the jobs which are interrupted by restarting queues which left in working status
 # TODO: eventually instead of removing these jobs, we can just re-queue them
 namespace :resque do

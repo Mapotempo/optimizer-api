@@ -31,6 +31,7 @@ sudo apt install libicu-dev
 ```
 brew install redis
 brew install geos
+bundle config build.thin --with-cflags="-Wno-error=implicit-function-declaration"
 ```
 
 ## Installation
@@ -52,12 +53,12 @@ Adjust config/environments files.
 ## Running
 
 ```
-bundle exec rackup -p 1791
+bundle exec rackup [-p 1791]
 ```
 
 And in production mode:
 ```
-APP_ENV=production bundle exec rackup -p 1791
+APP_ENV=production bundle exec rackup [-p 1791]
 ```
 
 Start Redis and then start the worker

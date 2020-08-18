@@ -3,50 +3,45 @@ ARG OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION}
 ARG REGISTRY=${REGISTRY:-registry.mapotempo.com/}
 ARG VROOM_VERSION=${VROOM_VERSION}
 
-# Install Optimizer-ortools
-FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION} as optimizer-ortools
-
 # Install Vroom
-RUN echo ${REGISTRY}mapotempo/vroom:${VROOM_VERSION}
 FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} as vroom
+RUN echo ${REGISTRY}mapotempo/vroom:${VROOM_VERSION}
 
-RUN echo ${VROOM_VERSION}
-
-# Rake
-FROM phusion/passenger-ruby25 as rake
+# From  Optimizer-ortools
+FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION}
 
 ENV LANG C.UTF-8
 
 RUN apt-get update > /dev/null && \
-  apt-get install -y git build-essential libgeos-dev libgeos-3.6.2 libicu-dev zlib1g-dev zlib1g nano > /dev/null
+  apt-get install -y libgeos-dev libgeos-3.8.0 libicu-dev zlib1g nano > /dev/null
 
 COPY . /srv/app
 WORKDIR /srv/app
 RUN bundle --version
 RUN bundle check || bundle install --full-index --without development -j $(nproc)
 
-# Final image
-FROM phusion/passenger-ruby25
-
-LABEL maintainer="Mapotempo <contact@mapotempo.com>"
-
 ENV APP_ENV production
 ENV REDIS_HOST redis-cache
-ENV LANG C.UTF-8
+LABEL maintainer="Mapotempo <tech@mapotempo.com>"
 
-COPY --from=optimizer-ortools /srv/or-tools srv/or-tools
-COPY --from=optimizer-ortools /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
-COPY --from=optimizer-ortools /srv/optimizer-ortools /srv/optimizer-ortools
-COPY --from=optimizer-ortools /lib/x86_64-linux-gnu/libm* /lib/x86_64-linux-gnu/
 COPY --from=vroom /srv/vroom/bin /srv/vroom/bin
 COPY --from=vroom /usr/lib/x86_64-linux-gnu/libboost* /usr/lib/x86_64-linux-gnu/
-COPY --from=rake /srv/app /srv/app
-COPY --from=rake /usr/local/ /usr/local/
-COPY --from=rake /usr/lib/x86_64-linux-gnu/libgeos* /usr/lib/x86_64-linux-gnu/
-COPY --from=rake /usr/lib/x86_64-linux-gnu/icu* /usr/lib/x86_64-linux-gnu/
-COPY --from=rake /usr/lib/x86_64-linux-gnu/libicu* /usr/lib/x86_64-linux-gnu/
 
-WORKDIR /srv/app
+# Enable app
+COPY docker/env.d/* /etc/nginx/main.d/
+COPY docker/snippets/* /etc/nginx/snippets/
+COPY docker/vhost.conf /etc/nginx/sites-enabled/default
+
+# Cleanup packages
+RUN apt-get remove -y git build-essential && \
+  apt-get autoremove -y && \
+  apt-get clean && \
+  bundle clean --force && \
+  echo -n > /var/lib/apt/extended_states && \
+  rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
+
+# Enable Nginx and Passenger
+RUN rm -f /etc/service/nginx/down
 
 EXPOSE 1791
 CMD ["bundle", "exec", "rackup", "-p", "1791"]
