@@ -15,7 +15,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :lateness, :int64, 8
   end
 
-  add_message 'ortools_result.Costs' do
+  add_message 'ortools_result.CostDetails' do
     optional :fixed, :float, 1
     optional :distance, :float, 2
     optional :distance_balance, :float, 3
@@ -33,7 +33,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
 
   add_message 'ortools_result.Route' do
     repeated :activities, :message, 1, 'ortools_result.Activity'
-    optional :costs, :message, 2, 'ortools_result.Costs'
+    optional :cost_details, :message, 2, 'ortools_result.CostDetails'
   end
   add_message 'ortools_result.Result' do
     optional :cost, :float, 1
@@ -45,7 +45,7 @@ end
 
 module OrtoolsResult
   Activity = Google::Protobuf::DescriptorPool.generated_pool.lookup('ortools_result.Activity').msgclass
-  Costs = Google::Protobuf::DescriptorPool.generated_pool.lookup('ortools_result.Costs').msgclass
+  Costs = Google::Protobuf::DescriptorPool.generated_pool.lookup('ortools_result.CostDetails').msgclass
   Route = Google::Protobuf::DescriptorPool.generated_pool.lookup('ortools_result.Route').msgclass
   Result = Google::Protobuf::DescriptorPool.generated_pool.lookup('ortools_result.Result').msgclass
 end

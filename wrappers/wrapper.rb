@@ -806,7 +806,7 @@ module Wrappers
       {
         solvers: [solver],
         cost: nil,
-        costs: Models::Costs.new({}),
+        cost_details: Models::CostDetails.new({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle| { vehicle_id: vehicle.id, activities: [] } },
         unassigned: (vrp.services.collect{ |service|

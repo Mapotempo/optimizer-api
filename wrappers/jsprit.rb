@@ -389,7 +389,7 @@ module Wrappers
       if solution
         {
           cost: Float(solution.at_xpath('cost').content),
-          costs: Models::Costs.new({}), # TODO: fulfill with solution costs
+          cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
           iterations: iterations,
           routes: fleet.collect{ |id, vehicle|
             route_index = solution.xpath('routes/route').find_index{ |route| route.at_xpath('vehicleId').content == id }

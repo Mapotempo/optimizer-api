@@ -18,7 +18,7 @@
 require './models/base'
 
 module Models
-  class Costs < Base
+  class CostDetails < Base
       field :total, default: 0
       field :fixed, default: 0
       field :time, default: 0
@@ -28,7 +28,7 @@ module Models
       field :overload, default: 0
 
       def +(other)
-        merged_cost = Costs.new({})
+        merged_cost = CostDetails.new({})
         self.attributes.each_key{ |key|
           merged_cost[key] = (self[key] || 0) + (other[key] || 0)
         }

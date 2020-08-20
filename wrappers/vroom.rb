@@ -154,7 +154,7 @@ module Wrappers
 
       {
         cost: cost,
-        costs: Models::Costs.new({}), # TODO: fulfill with solution costs
+        cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
         solvers: ['vroom'],
         elapsed: elapsed_time, # ms
 #        total_travel_distance: 0,
