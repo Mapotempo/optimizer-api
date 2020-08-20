@@ -17,6 +17,7 @@ RUN apt-get install -y git libgeos-dev ${libgeos} libicu-dev nano > /dev/null
 
 COPY . /srv/app
 WORKDIR /srv/app
+RUN gem install bundler --version 2.1.4
 RUN bundle --version
 RUN bundle check || bundle install --full-index --without development -j $(nproc)
 

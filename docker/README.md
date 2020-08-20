@@ -21,8 +21,6 @@ docker build --build-arg VROOM_VERSION=${VROOM_VERSION} \
 
 ```
 export CI_COMMIT_REF_NAME=latest
-export OPTIMIZER_ORTOOLS_VERSION=v1.1.0
-export VROOM_VERSION=v1.5.0
 export BRANCH=${BRANCH:-beta}
 docker build \
   --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \

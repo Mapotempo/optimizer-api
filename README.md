@@ -18,7 +18,7 @@ sudo apt install redis-server
 ```
 * libgeos-dev
 ```
-sudo apt install libgeos-dev libgeos-3.4.2
+sudo apt install libgeos-dev libgeos-3.7.1
 ```
 
 * libicu-dev
