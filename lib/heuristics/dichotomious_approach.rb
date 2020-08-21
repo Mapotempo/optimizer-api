@@ -461,7 +461,7 @@ module Interpreters
     def self.kmeans(vrp, cut_symbol)
       nb_clusters = 2
       # Split using balanced kmeans
-      if vrp.services.all?{ |service| service[:activity] }
+      if vrp.services.all?{ |service| service.activity }
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
         cumulated_metrics = Hash.new(0)
         data_items = []
@@ -483,11 +483,9 @@ module Interpreters
 
           next if related_services.empty?
 
-          related_services.each{ |_related_service|
-            characteristics = { duration_from_and_to_depot: [0, 0] }
-            characteristics[:matrix_index] = point[:matrix_index] unless vrp.matrices.empty?
-            data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, characteristics, [], 0]
-          }
+          characteristics = { duration_from_and_to_depot: [0, 0] }
+          characteristics[:matrix_index] = point[:matrix_index] unless vrp.matrices.empty?
+          data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, characteristics, [], 0]
         }
 
         # No expected caracteristics neither strict limitations because we do not
