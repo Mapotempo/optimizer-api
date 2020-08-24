@@ -261,10 +261,6 @@ module Wrappers
       vrp.matrices.none?(&:value)
     end
 
-    def assert_no_routes(vrp)
-      vrp.routes.empty? || vrp.routes.all?{ |route| route.mission_ids.empty? }
-    end
-
     def assert_no_subtours(vrp)
       vrp.subtours.empty?
     end
