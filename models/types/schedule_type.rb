@@ -17,7 +17,7 @@
 #
 
 class ScheduleType
-  def type_cast(value, mandatory = true, allow_zero = true)
+  def self.type_cast(value, mandatory = true, allow_zero = true)
     return_value = if !value.nil?
                     if /([0-9]+):([0-9]+):([0-9]+)/ =~ value.to_s
                       3600 * Regexp.last_match(1).to_i + 60 * Regexp.last_match(2).to_i + Regexp.last_match(3).to_i

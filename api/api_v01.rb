@@ -29,10 +29,12 @@ module Api
 
     content_type :json, 'application/json; charset=UTF-8'
     content_type :xml, 'application/xml'
+    content_type :csv, 'text/csv;'
+    default_format :json
 
     mount V01::Api
 
-    documentation_class = add_swagger_documentation(
+    add_swagger_documentation(
       hide_documentation_path: true,
       security_definitions: {
         api_key_query_param: {
