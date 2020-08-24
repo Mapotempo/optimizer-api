@@ -24,8 +24,6 @@ require_all 'models'
 module Api
   module V01
     class APIBase < Grape::API
-      private
-
       def self.tmp_vrp_dir
         ::OptimizerWrapper.tmp_vrp_dir
       end
