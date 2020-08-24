@@ -138,9 +138,7 @@ module Wrappers
     end
 
     def assert_services_no_priority(vrp)
-      vrp.services.empty? || vrp.services.all?{ |service|
-        service.priority == 4
-      }
+      vrp.services.empty? || vrp.services.uniq(&:priority).size == 1
     end
 
     def assert_vehicles_objective(vrp)
