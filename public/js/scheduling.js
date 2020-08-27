@@ -47,24 +47,20 @@ $(document).ready(function() {
               if (debug) console.log(err.status);
               return;
             }
-
-            if (xhr.status == 200) {
+            if (xhr.status == 200 && job.job && job.job.status == 'completed') {
               $('#infos').html(i18n.optimizeFinished);
-              if (job instanceof Object && 'solutions' in response) {
-                self.solutionJSON = (job.solutions);
-              } else {
+              jobsManager.getCSV(job.job.id, function (content) {
                 var a = document.createElement('a');
-                a.href = 'data:attachment/csv,' + encodeURIComponent(job);
+                a.href = 'data:attachment/csv,' + encodeURIComponent(content);
                 a.target = '_blank';
                 a.download = 'result.csv';
                 document.body.appendChild(a);
                 a.click();
-              }
-            } else if (xhr.status == 202) {
+              });
+            } else if (xhr.status == 500) {
               $('#infos').html(i18n.optimizeFinishedError);
               if (debug) console.log(job)
             }
-
           })
         }
       }).fail(function (error) {

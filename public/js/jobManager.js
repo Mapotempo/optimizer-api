@@ -145,11 +145,10 @@ var jobsManager = {
         url: '/0.1/vrp/jobs/'
           + (options.job.id || options.job.uuid)
           // + (options.format ? options.format : '')
-          + '?api_key=' + getParams()["api_key"],
+          + '.json?api_key=' + getParams()["api_key"],
         success: function (job, _, xhr) {
-
-          if (options.interval && (checkJSONJob(job) || checkCSVJob(xhr))) {
-            if (debug) console.log("REQUEST PENDING JOB", checkCSVJob(xhr), checkJSONJob(job));
+          if (options.interval && checkJSONJob(job)) {
+            if (debug) console.log("REQUEST PENDING JOB", checkJSONJob(job));
             requestPendingJobTimeout = true;
           }
 
@@ -197,17 +196,22 @@ var jobsManager = {
       url: '/0.1/vrp/jobs/' + jobId + '.json?api_key=' + getParams()["api_key"]
     }).done(function () { jobsManager.stopJobChecking(); })
       .fail(function (jqXHR, textStatus) { alert(textStatus); });
+  },
+  getCSV: function (jobId, cb) {
+    return $.ajax({
+      type: 'get',
+      url: '/0.1/vrp/jobs/' + jobId + '.csv?api_key=' + getParams()["api_key"],
+      success: function (content) {
+        cb(content);
+      }
+    }).done(function () { jobsManager.stopJobChecking(); })
+      .fail(function (jqXHR, textStatus) { alert(textStatus); });
   }
 };
 
-function checkCSVJob(xhr) {
-  if (debug) console.log(xhr, xhr.status);
-  return (xhr.status !== 200 && xhr.status !== 202);
-}
-
 function checkJSONJob(job) {
   if (debug) console.log("JOB: ", job, (job.job && job.job.status !== 'completed'));
-  return ((job.job && job.job.status !== 'completed') && typeof job !== 'string')
+  return ((job.job && job.job.status !== 'completed'))
 }
 
 function buildParams(base, params) {
