@@ -29,8 +29,8 @@ module Wrappers
     end
 
     def inapplicable_solve?(vrp)
-      solver_constraints.select{ |constraint|
-        !self.send(constraint, vrp)
+      solver_constraints.reject{ |constraint|
+        self.send(constraint, vrp)
       }
     end
 
@@ -194,6 +194,10 @@ module Wrappers
       }
     end
 
+    def assert_missions_no_late_multiplier(vrp)
+      assert_shipments_no_late_multiplier(vrp) && assert_services_no_late_multiplier(vrp)
+    end
+
     def assert_services_quantities_only_one(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         service.quantities.size > 1
@@ -335,6 +339,10 @@ module Wrappers
       (!vrp.shipments || vrp.shipments.empty?) || !vrp.resolution_evaluate_only
     end
 
+    def assert_only_one_visit(vrp)
+      vrp.services.all?{ |service| service.visits_number == 1 } && vrp.shipments.all?{ |shipment| shipment.visits_number == 1 }
+    end
+
     def assert_no_scheduling_if_evaluation(vrp)
       !vrp.schedule_range_indices || !vrp.resolution_evaluate_only
     end
@@ -370,6 +378,10 @@ module Wrappers
 
     def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)
       vrp.vehicles.none?{ |vehicle| vehicle[:free_approach] || vehicle[:free_return] } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    end
+
+    def assert_no_free_approach_or_return(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle.free_approach || vehicle.free_return }
     end
 
     def assert_no_vehicle_limit_if_heuristic(vrp)
@@ -446,8 +458,67 @@ module Wrappers
       }
     end
 
+    def assert_homogeneous_router_definitions(vrp)
+      vrp.vehicles.map{ |vehicle|
+        [vehicle.router_mode, vehicle.dimensions, vehicle.router_options]
+      }.uniq.size == 1
+    end
+
+    def assert_homogeneous_costs(vrp)
+      cost_profiles = Hash.new{ 0 }
+      vrp.vehicles.each{ |vehicle|
+        cost_profiles["#{vehicle.cost_time_multiplier}_#{vehicle.cost_distance_multiplier}_#{vehicle.cost_value_multiplier}"] += 1
+      }
+      cost_profiles.size == 1
+    end
+
+    def assert_no_exclusion_cost(vrp)
+      vrp.services.none?(&:exclusion_cost) && vrp.shipments.none?(&:exclusion_cost)
+    end
+
+    def assert_only_time_dimension(vrp)
+      vrp.vehicles.all? { |vehicle|
+        vehicle.cost_time_multiplier.positive? && vehicle.cost_distance_multiplier.zero? && vehicle.cost_value_multiplier.zero? && vehicle.distance.nil?
+      }
+    end
+
+    def assert_only_distance_dimension(vrp)
+      vrp.vehicles.all?{ |vehicle|
+        vehicle.cost_time_multiplier.zero? && vehicle.cost_distance_multiplier.positive? && vehicle.cost_value_multiplier.zero? &&
+          vehicle.duration.nil? && vehicle.timewindow.end.nil?
+      } && vrp.services.all?{ |service| service.activity.timewindows.empty? }
+    end
+
+    def assert_only_value_dimension(vrp)
+      vrp.vehicles.all?{ |vehicle|
+        vehicle.cost_time_multiplier.zero? && vehicle.cost_distance_multiplier.zero? && vehicle.cost_value_multiplier.positive? &&
+          vehicle.duration.nil? && vehicle.distance.nil? && vehicle.timewindow.end.nil?
+      }
+    end
+
+    def assert_single_dimension(vrp)
+      assert_only_time_dimension(vrp) ^ assert_only_distance_dimension(vrp) ^ assert_only_value_dimension(vrp)
+    end
+
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
       vrp.routes.empty? || !vrp.schedule_range_indices || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+    end
+
+    # TODO: Need a better way to represent solver preference
+    def assert_small_minimum_duration(vrp)
+      vrp.resolution_minimum_duration.nil? || vrp.vehicles.empty? || vrp.resolution_minimum_duration / vrp.vehicles.size < 5000
+    end
+
+    def assert_no_cost_fixed(vrp)
+      vrp.vehicles.all?{ |vehicle| vehicle.cost_fixed.nil? || vehicle.cost_fixed.zero? } || vrp.vehicles.map(&:cost_fixed).uniq.size == 1
+    end
+
+    def assert_no_setup_duration(vrp)
+      vrp.services.all?{ |service| service.activity.setup_duration.nil? || service.activity.setup_duration.zero? } &&
+        vrp.shipments.all?{ |shipment|
+          (shipment.pickup.setup_duration.nil? || shipment.pickup.setup_duration.zero?) &&
+            (shipment.delivery.setup_duration.nil? || shipment.delivery.setup_duration.zero?)
+        }
     end
 
     def solve_synchronous?(_vrp)

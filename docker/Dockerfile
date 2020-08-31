@@ -4,7 +4,7 @@ ARG REGISTRY=${REGISTRY:-registry.mapotempo.com/}
 ARG VROOM_VERSION=${VROOM_VERSION}
 
 # Install Vroom
-FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION:-v1.5.0} as vroom
+FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.8.0} as vroom
 
 # Rake
 FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.4.0}
@@ -27,8 +27,7 @@ ENV APP_ENV production
 ENV REDIS_HOST redis-cache
 ENV LANG C.UTF-8
 
-COPY --from=vroom /srv/vroom/bin /srv/vroom/bin
-COPY --from=vroom /usr/lib/x86_64-linux-gnu/libboost* /usr/lib/x86_64-linux-gnu/
+COPY --from=vroom /usr/local/bin /srv/vroom/bin
 
 RUN apt-get remove -y git build-essential && \
   apt-get autoremove -y && \
