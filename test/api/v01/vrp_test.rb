@@ -308,9 +308,9 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   def test_remove_unecessary_units_one_needed
     vrp = TestHelper.load_vrp(self)
     assert_equal 1, vrp.units.size
-    assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten.uniq,
+    assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten!.uniq!,
                     :==,
-                    vrp.services.collect{ |s| s.quantities.collect(&:unit_id) }.flatten.uniq
+                    vrp.services.collect{ |s| s.quantities.collect(&:unit_id) }.flatten!.uniq!
   end
 
   def test_vrp_creation_if_route_and_partitions

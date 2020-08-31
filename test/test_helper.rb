@@ -157,7 +157,10 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   ensure
     if pgid_worker
       # Kill all grandchildren
-      `ps -o pgid,pid | grep #{pgid_worker}`.split(/\n/).collect{ |i| i.split(' ')[-1].to_i }.sort.reverse_each{ |pid|
+      worker_pids = `ps -o pgid,pid | grep #{pgid_worker}`.split(/\n/)
+      worker_pids.collect!{ |i| i.split(' ')[-1].to_i }
+      worker_pids.sort!
+      worker_pids.reverse_each{ |pid|
         next if pid == pgid_worker
 
         Process.kill('SIGKILL', pid)

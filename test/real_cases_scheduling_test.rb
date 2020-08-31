@@ -25,9 +25,14 @@ class HeuristicTest < Minitest::Test
       assert result
       assert result[:unassigned].size <= 3
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
-      assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].select{ |activity| activity[:service_id] }.sum{ |activity| activity[:detail][:quantities][0][:value] } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
-      assert(result[:routes].none?{ |route| route[:activities].reject{ |stop| stop[:detail][:quantities].empty? }.collect{ |stop| stop[:detail][:quantities][0][:value] }.sum > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
-      assert_equal result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.size, result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.uniq.size
+      assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
+      result[:routes].each{ |route|
+        assert_operator route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] }, :<=, vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] + 1e-5
+      }
+      service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
+      service_ids.flatten!
+      service_ids.compact!
+      assert_nil service_ids.uniq!, 'There should not be any duplicate services'
     end
 
     def test_instance_baleares2_with_priority
@@ -37,9 +42,12 @@ class HeuristicTest < Minitest::Test
       assert(result[:unassigned].none?{ |service| service[:service_id].include?('3359') })
       assert(result[:unassigned].none?{ |service| service[:service_id].include?('0110') })
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
-      assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].select{ |activity| activity[:service_id] }.sum{ |activity| activity[:detail][:quantities][0][:value] } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
-      assert(result[:routes].none?{ |route| route[:activities].reject{ |stop| stop[:detail][:quantities].empty? }.sum{ |stop| stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
-      assert_equal result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.size, result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.uniq.size
+      assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
+      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
+      service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
+      service_ids.flatten!
+      service_ids.compact!
+      assert_nil service_ids.uniq!, 'There should not be any duplicate services'
     end
 
     def test_instance_andalucia2
@@ -48,9 +56,12 @@ class HeuristicTest < Minitest::Test
       assert result
       assert_equal 30, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
-      assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].select{ |activity| activity[:service_id] }.sum{ |activity| activity[:detail][:quantities][0][:value] } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
-      assert(result[:routes].none?{ |route| route[:activities].reject{ |stop| stop[:detail][:quantities].empty? }.sum{ |stop| stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
-      assert_equal (result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } } + result[:unassigned].collect{ |unassigned| unassigned[:service_id] }).flatten.compact.size, (result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } } + result[:unassigned].collect{ |unassigned| unassigned[:service_id] }).flatten.compact.uniq.size
+      assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
+      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
+      service_ids = (result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } } + result[:unassigned].collect{ |unassigned| unassigned[:service_id] })
+      service_ids.flatten!
+      service_ids.compact!
+      assert_nil service_ids.uniq!, 'There should not be any duplicate services'
     end
 
     def test_instance_andalucia1_two_vehicles
@@ -59,9 +70,12 @@ class HeuristicTest < Minitest::Test
       assert result
       assert_equal 0, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
-      assert_equal vrp.services.sum{ |service| service[:quantities][0] ? service[:quantities][0][:value] : 0 }, result[:routes].sum{ |route| route[:activities].select{ |activity| activity[:service_id] }.sum{ |activity| activity[:detail][:quantities][0] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0] ? unassigned[:detail][:quantities][0][:value] : 0 }
-      assert(result[:routes].none?{ |route| route[:activities].reject{ |stop| stop[:detail][:quantities].empty? }.sum{ |stop| stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
-      assert_equal result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.size, result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact.uniq.size
+      assert_equal vrp.services.sum{ |service| service[:quantities][0] ? service[:quantities][0][:value] : 0 }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] && activity[:detail][:quantities][0] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0] ? unassigned[:detail][:quantities][0][:value] : 0 }
+      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
+      service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
+      service_ids.flatten!
+      service_ids.compact!
+      assert_nil service_ids.uniq!, 'There should not be any duplicate services'
     end
 
     def test_without_same_point_day
@@ -69,7 +83,7 @@ class HeuristicTest < Minitest::Test
       expecting = vrp.visits
       vrp[:configuration][:resolution][:solver] = false
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal expecting, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+      assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       unassigned = result[:unassigned].size
       assert_equal 46, unassigned
 
@@ -77,42 +91,42 @@ class HeuristicTest < Minitest::Test
       vrp[:configuration][:resolution][:solver] = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert unassigned >= result[:unassigned].size
-      assert_equal expecting, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+      assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
     end
 
     def test_instance_clustered
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+      assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
 
       ['kg', 'qte', 'l'].each{ |unit_id|
         # Route quantities
-        problem_quantities = vrp.services.collect{ |service|
+        problem_quantities = vrp.services.sum{ |service|
           service.quantities.find{ |qte| qte[:unit][:id] == unit_id }.value * service.visits_number
-        }.sum.round(3)
+        }.round(3)
 
-        route_quantities = result[:routes].collect{ |route|
-          route[:activities].collect{ |activity|
-            activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
+        route_quantities = result[:routes].sum{ |route|
+          route[:activities].sum{ |activity|
+            (activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
               qte[:unit] == unit_id
-            }[:value]
+            }[:value]).to_f
           }
-        }.flatten.compact.sum
+        }
 
-        unassigned_quantities = result[:unassigned].collect{ |activity|
-          activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
+        unassigned_quantities = result[:unassigned].sum{ |activity|
+          (activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
             qte[:unit] == unit_id
-          }[:value]
-        }.flatten.compact.sum
+          }[:value]).to_f
+        }
 
         assert_in_delta problem_quantities, (route_quantities + unassigned_quantities).round(3), 1e-3
 
         # Route capacities
         result[:routes].each{ |route|
-          route_quantity = route[:activities].collect{ |activity|
-            activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte| qte[:unit] == unit_id }[:value]
-          }.compact.sum
+          route_quantity = route[:activities].sum{ |activity|
+            (activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte| qte[:unit] == unit_id }[:value]).to_f
+          }
           route_capacity = vrp[:vehicles].find{ |vehicle|
             vehicle[:id] == route[:vehicle_id].split('_').first
           }.capacities.find{ |cap| cap.unit_id == unit_id }.limit
@@ -121,44 +135,45 @@ class HeuristicTest < Minitest::Test
         }
       }
 
-      service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact
-      uniq_services_ids = service_ids.uniq
-      assert_equal service_ids.size, uniq_services_ids.size
+      service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
+      service_ids.flatten!
+      service_ids.compact!
+      assert_nil service_ids.uniq!, 'There should not be any duplicate services'
     end
 
     def test_instance_same_point_day
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size
+      assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
 
       ['kg', 'qte', 'l'].each{ |unit_id|
         # Route quantities
-        problem_quantities = vrp.services.collect{ |service|
+        problem_quantities = vrp.services.sum{ |service|
           service.quantities.find{ |qte| qte[:unit][:id] == unit_id }.value * service.visits_number
-        }.sum.round(3)
+        }.round(3)
 
-        route_quantities = result[:routes].collect{ |route|
-          route[:activities].collect{ |activity|
-            activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
+        route_quantities = result[:routes].sum{ |route|
+          route[:activities].sum{ |activity|
+            (activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
               qte[:unit] == unit_id
-            }[:value]
+            }[:value]).to_f
           }
-        }.flatten.compact.sum
+        }
 
-        unassigned_quantities = result[:unassigned].collect{ |activity|
-          activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
+        unassigned_quantities = result[:unassigned].sum{ |activity|
+          (activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte|
             qte[:unit] == unit_id
-          }[:value]
-        }.flatten.compact.sum
+          }[:value]).to_f
+        }
 
         assert_in_delta problem_quantities, (route_quantities + unassigned_quantities).round(3), 1e-3
 
         # Route capacities
         result[:routes].each{ |route|
-          route_quantity = route[:activities].collect{ |activity|
-            activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte| qte[:unit] == unit_id }[:value]
-          }.compact.sum
+          route_quantity = route[:activities].sum{ |activity|
+            (activity[:service_id] && activity[:detail][:quantities].size.positive? && activity[:detail][:quantities].find{ |qte| qte[:unit] == unit_id }[:value]).to_f
+          }
           route_capacity = vrp[:vehicles].find{ |vehicle|
             vehicle[:id] == route[:vehicle_id].split('_').first
           }.capacities.find{ |cap| cap.unit_id == unit_id }.limit
@@ -167,9 +182,10 @@ class HeuristicTest < Minitest::Test
         }
       }
 
-      service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }.flatten.compact
-      uniq_services_ids = service_ids.uniq
-      assert_equal service_ids.size, uniq_services_ids.size
+      service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
+      service_ids.flatten!
+      service_ids.compact!
+      assert_nil service_ids.uniq!, 'There should not be any duplicate services'
     end
 
     def test_vrp_allow_partial_assigment_false
@@ -207,8 +223,8 @@ class HeuristicTest < Minitest::Test
 
       assert_equal(
         vrp.visits,
-        result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
-        "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
+        result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
+        "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"
       )
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
@@ -226,14 +242,14 @@ class HeuristicTest < Minitest::Test
       vrps = TestHelper.load_vrps(self)
 
       unassigned_visits = []
-      expected = vrps.collect(&:visits).reduce(&:+)
+      expected = vrps.sum(&:visits)
       seen = 0
       vrps.each_with_index{ |vrp, vrp_i|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << result[:unassigned].size
-        seen += result[:unassigned].size + result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id] }.size }.flatten.reduce(&:+)
+        seen += result[:unassigned].size + result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
@@ -246,35 +262,36 @@ class HeuristicTest < Minitest::Test
       vrp.resolution_allow_partial_assignment = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result[:routes].any?{ |r| r[:activities].size - 2 < 5 }, "Expecting any of #{result[:routes].collect{ |r| r[:activities].size - 2 }} to be less than 10, this test is useless otherwise"
-      should_remain_assigned = result[:routes].collect{ |r| r[:activities].size - 2 }.select{ |nb| nb >= 5 }.reduce(&:+)
+      should_remain_assigned = result[:routes].sum{ |r| r[:activities].size - 2 >= 5 ? r[:activities].size - 2 : 0 }
 
       # one vehicle should have at least 5 stops :
       vrp.vehicles.each{ |v| v.cost_fixed = 5 }
       vrp.services.each{ |s| s.exclusion_cost = 1 }
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result[:routes].all?{ |r| (r[:activities].size - 2).zero? || r[:activities].size - 2 >= 5 }, 'Expecting no route with less than 5 stops unless it is empty'
-      assert_operator should_remain_assigned, :<=, result[:routes].collect{ |r| r[:activities].size - 2 }.reduce(&:+)
+      assert_operator(should_remain_assigned, :<=, result[:routes].sum{ |r| r[:activities].size - 2 })
       assert_equal 19, result[:unassigned].size
-      assert_equal vrp.visits, result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].size
+      assert_equal vrp.visits, result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } } + result[:unassigned].size
 
-      all_ids = (result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] }.compact } +
-                 result[:unassigned].collect{ |un| un[:service_id] }).flatten
+      all_ids = result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] } } + result[:unassigned].collect{ |un| un[:service_id] }
+      all_ids.flatten!
+      all_ids.compact!
       assert_equal vrp.visits, all_ids.size
-      assert_equal vrp.visits, all_ids.uniq.size
+      assert_nil all_ids.uniq!, 'There should not be any duplicate services'
     end
 
     def test_performance_13vl
       vrps = TestHelper.load_vrps(self)
 
       unassigned_visits = []
-      expected = vrps.collect(&:visits).reduce(&:+)
+      expected = vrps.sum(&:visits)
       seen = 0
       vrps.each_with_index{ |vrp, vrp_i|
         puts "solving problem #{vrp_i + 1}/#{vrps.size}"
         vrp.preprocessing_partitions = nil
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << result[:unassigned].size
-        seen += result[:unassigned].size + result[:routes].collect{ |r| r[:activities].select{ |a| a[:service_id] }.size }.flatten.reduce(&:+)
+        seen += result[:unassigned].size + result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
@@ -288,8 +305,8 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
       assert_equal 37, result[:unassigned].size
-      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
-                   "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
+      assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
+                   "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"
     end
 
     def test_treatment_site
@@ -297,14 +314,14 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_empty result[:unassigned]
-      assert_equal 262, result[:routes].select{ |r| r[:activities].any?{ |a| a[:service_id]&.include? 'service_0_' } }.collect{ |r| r[:vehicle_id] }.size # one treatment site per day
+      assert_equal(262, result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id]&.include? 'service_0_' } && r[:vehicle_id] }) # one treatment site per day
       assert(result[:routes].all?{ |r| r[:activities][-2][:service_id].include? 'service_0_' })
 
       vrp = TestHelper.load_vrp(self)
       vrp[:services].each{ |s|
         next if s[:id] == 'service_0' || s[:visits_number] == 1
 
-        days_used = result[:routes].select{ |r| r[:activities].any?{ |a| a[:service_id]&.include? "#{s[:id]}_" } }.collect{ |r| r[:vehicle_id].split('_').last.to_i }.sort
+        days_used = result[:routes].select{ |r| r[:activities].any?{ |a| a[:service_id]&.include? "#{s[:id]}_" } }.collect!{ |r| r[:vehicle_id].split('_').last.to_i }.sort!
         assert_equal s[:visits_number], days_used.size
         (1..days_used.size - 1).each{ |index|
           assert days_used[index] - days_used[index - 1] >= s[:minimum_lapse]

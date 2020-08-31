@@ -179,9 +179,9 @@ class HeuristicTest < Minitest::Test
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       uninserted = s.instance_variable_get(:@uninserted)
       candidate_services_ids = s.instance_variable_get(:@candidate_services_ids)
-      assert_equal vrp.visits, candidate_routes.collect{ |_v, d| d.collect{ |_day, route| route[:current_route].size } }.flatten.sum +
+      assert_equal vrp.visits, candidate_routes.sum{ |_v, d| d.sum{ |_day, route| route[:current_route].size } } +
                                uninserted.size +
-                               candidate_services_ids.collect{ |id| s.instance_variable_get(:@services_data)[id][:visits_number] }.sum
+                               candidate_services_ids.sum{ |id| s.instance_variable_get(:@services_data)[id][:visits_number] }
       assert starting_with >= s.instance_variable_get(:@uninserted).size
 
       all_ids = (uninserted.keys +
@@ -442,7 +442,7 @@ class HeuristicTest < Minitest::Test
       s.send(:empty_underfilled)
       assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route]
       (1..3).each{ |day|
-        assert !s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route].empty?
+        refute_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route]
       }
 
       # partial assignment is false

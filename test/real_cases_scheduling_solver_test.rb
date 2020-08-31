@@ -40,8 +40,8 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
-      assert_equal vrp.visits, result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size,
-                   "Found #{result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum + result[:unassigned].size} instead of #{vrp.visits} expected"
+      assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
+                   "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
@@ -57,7 +57,7 @@ class HeuristicTest < Minitest::Test
     def test_performance_12vl_with_solver
       vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
 
-      expected_visits_number = vrps.sum(&:visits) + vrps.collect{ |vrp| vrp.services.select{ |s| s[:visits_number].zero? }.size }.sum
+      expected_visits_number = vrps.sum(&:visits) + vrps.sum{ |vrp| vrp.services.count{ |s| s[:visits_number].zero? } }
 
       assigned_visits = []
       unassigned_visits = []
@@ -66,7 +66,7 @@ class HeuristicTest < Minitest::Test
         vrp.preprocessing_partitions = nil
         vrp.resolution_solver = true
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-        assigned_visits << result[:routes].collect{ |route| route[:activities].select{ |stop| stop[:service_id] }.size }.sum
+        assigned_visits << result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } }
         unassigned_visits << result[:unassigned].size
       }
       assert_equal expected_visits_number, assigned_visits.sum + unassigned_visits.sum,

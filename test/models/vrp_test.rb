@@ -56,7 +56,7 @@ module Models
       assert_equal 2 * vrp.services.size, vrp.visits
 
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_clustered')
-      assert_equal vrp.services.collect{ |s| s[:visits_number] }.sum, vrp.visits
+      assert_equal vrp.services.sum{ |s| s[:visits_number] }, vrp.visits
     end
 
     def test_vrp_scheduling
@@ -150,9 +150,9 @@ module Models
       vrp[:routes] = [{ mission_ids: ['service_1', 'service_3'], vehicle_id: 'vehicle_0' }]
       vrp[:configuration][:preprocessing] = { partitions: [{ entity: :vehicle }] }
       generated_vrp = TestHelper.create(vrp)
-      assert !generated_vrp.services[0].sticky_vehicles.empty?
+      refute_empty generated_vrp.services[0].sticky_vehicles
       assert_empty generated_vrp.services[1].sticky_vehicles
-      assert !generated_vrp.services[2].sticky_vehicles.empty?
+      refute_empty generated_vrp.services[2].sticky_vehicles
     end
 
     def test_solver_parameter_retrocompatibility
@@ -163,7 +163,7 @@ module Models
 
       vrp[:configuration][:resolution][:solver_parameter] = -1
       generated_vrp = TestHelper.create(vrp)
-      assert !generated_vrp.resolution_solver
+      refute generated_vrp.resolution_solver
       assert_nil generated_vrp.preprocessing_first_solution_strategy
 
       ['path_cheapest_arc', 'global_cheapest_arc', 'local_cheapest_insertion', 'savings', 'parallel_cheapest_insertion', 'first_unbound', 'christofides'].each_with_index{ |heuristic, heuristic_reference|
@@ -207,7 +207,7 @@ module Models
       vrp[:configuration][:resolution][:solver] = nil
       vrp[:configuration][:resolution][:solver_parameter] = -1
       generated_vrp = TestHelper.create(vrp)
-      assert !generated_vrp.resolution_solver
+      refute generated_vrp.resolution_solver
     end
 
     def test_reject_if_shipments_and_periodic_heuristic

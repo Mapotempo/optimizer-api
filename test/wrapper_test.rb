@@ -2501,7 +2501,7 @@ class WrapperTest < Minitest::Test
     }
 
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 1, result[:routes].collect{ |route| route[:activities].reject{ |activity| activity[:service_id].nil? }.size }.reduce(&:+)
+    assert_equal 1, (result[:routes].sum{ |route| route[:activities].count{ |activity| activity[:service_id] } })
     assert_equal 5, result[:unassigned].size
   end
 
@@ -2904,7 +2904,7 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert_equal problem[:services].size,
-                 result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + result[:unassigned].map{ |u| u[:service_id] }.size
+                 result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } } + result[:unassigned].count{ |u| u[:service_id] }
   end
 
   def test_compute_several_solutions
@@ -3010,7 +3010,10 @@ class WrapperTest < Minitest::Test
   def test_impossible_minimum_lapse_opened_days_real_case
     vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
-    assert_equal 12, result.select{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }.collect{ |un| un[:original_service_id] }.uniq.size
+    result.select!{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }
+    result.collect!{ |un| un[:original_service_id] }
+    result.uniq!
+    assert_equal 12, result.size
   end
 
   def test_lapse_with_unavailable_work_days

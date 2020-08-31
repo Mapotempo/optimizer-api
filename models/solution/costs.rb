@@ -29,7 +29,7 @@ module Models
 
       def +(other)
         merged_cost = Costs.new({})
-        self.attributes.keys.each{ |key|
+        self.attributes.each_key{ |key|
           merged_cost[key] = (self[key] || 0) + (other[key] || 0)
         }
         merged_cost

@@ -137,7 +137,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, result[:routes].size
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 5000, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } < 5000, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
       # Check activities
       assert_equal check_vrp_services_size + 2 + 1, result[:routes][0][:activities].size
       # Check elapsed time
@@ -151,7 +151,7 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
       services_by_routes.each{ |k, v|
         assert_equal v.size, (result[:routes].find{ |r| r[:vehicle_id] == k[0] }[:activities].count{ |a| a[:service_id] })
@@ -161,7 +161,7 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 42300, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } < 42300, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
       assert result[:elapsed] < 420000, "Too long elapsed time: #{result[:elapsed]}"
@@ -177,10 +177,10 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 59180, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } <= 59180, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check activities
-      activities = result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      activities = result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }
       assert activities > 140, "Not enough activities: #{activities}"
 
       # Check elapsed time
@@ -194,13 +194,13 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
 
       # Check routes
-      assert(result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? } <= 4)
+      assert_operator result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? }, :<=, 4
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 31700, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } < 31700, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
@@ -221,7 +221,7 @@ class RealCasesTest < Minitest::Test
       assert(result[:unassigned].one? { |unassigned| unassigned[:service_id] == 'R1183' })
       assert_operator result[:unassigned].size, :<=, 6
 
-      assert_equal check_vrp_services_size, result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } } + result[:unassigned].size
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }) + result[:unassigned].size
 
       # Check routes
       assert_equal 29, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
@@ -241,11 +241,11 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+) + result[:unassigned].size
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }) + result[:unassigned].size
       assert_equal 1, (result[:unassigned].count{ |u| !u[:reason].nil? })
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 6305, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } <= 6305, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
       assert result[:elapsed] < 7000, "Too long elapsed time: #{result[:elapsed]}"
@@ -258,10 +258,10 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 13225, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } <= 13225, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
       assert result[:elapsed] < 5000, "Too long elapsed time: #{result[:elapsed]}"
@@ -278,7 +278,7 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
       expected_ids = vrp.relations.first.linked_ids
       actual_route = result[:routes].first[:activities].collect{ |activity|
         activity[:service_id]
@@ -291,7 +291,7 @@ class RealCasesTest < Minitest::Test
       assert_equal expected_ids, route_order
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) <= 12085, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } <= 12085, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
       assert result[:elapsed] < 65000, "Too long elapsed time: #{result[:elapsed]}"
@@ -303,7 +303,7 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal vrp.services.size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
+      assert_equal vrp.services.size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
 
       expected_ids = vrp.relations.first.linked_ids
       actual_route = result[:routes].first[:activities].collect{ |activity|
@@ -317,7 +317,7 @@ class RealCasesTest < Minitest::Test
       assert_equal expected_ids, route_order
 
       # Check total travel time
-      assert result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+) < 13500, "Too long travel time: #{result[:routes].map{ |r| r[:total_travel_time] }.reduce(&:+)}"
+      assert result[:routes].sum{ |r| r[:total_travel_time] } < 13500, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
       assert result[:elapsed] < 35000, "Too long elapsed time: #{result[:elapsed]}"
@@ -333,8 +333,8 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      assert result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_eugene_leroy' }.size }.reduce(&:+) >= 2
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
+      assert result[:routes].sum{ |r| r[:activities].count{ |a| a[:point_id] == 'Park_eugene_leroy' } } >= 2
 
       # Check total cost
       assert result[:cost] < 6800, "Cost is to high: #{result[:cost]}"
@@ -353,8 +353,8 @@ class RealCasesTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert result
       # Check activities
-      assert_equal check_vrp_services_size, result[:routes].map{ |r| r[:activities].select{ |a| a[:service_id] }.size }.reduce(&:+)
-      assert result[:routes].map{ |r| r[:activities].select{ |a| a[:point_id] == 'Park_thiers' }.size }.reduce(&:+) >= 2
+      assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
+      assert result[:routes].sum{ |r| r[:activities].count{ |a| a[:point_id] == 'Park_thiers' } } >= 2
 
       # Check total cost
       assert result[:cost] < 7850, "Cost is to high: #{result[:cost]}"
@@ -379,11 +379,18 @@ class RealCasesTest < Minitest::Test
       routes = result[:routes]
       unassigned = result[:unassigned]
 
-      result_num = {}
-      result_num[:points] = (routes.flat_map{ |route| route[:activities].collect{ |act| act[:point_id] } } + unassigned.collect{ |unass| unass[:point_id] }).compact.uniq.size
-      result_num[:services] = (routes.flat_map{ |route| route[:activities].reject{ |act| act[:service_id].nil? } } + unassigned.reject{ |unass| unass[:service_id].nil? }).compact.uniq.size
-      result_num[:shipments] = (routes.flat_map{ |route| route[:activities].reject{ |act| act[:delivery_shipment_id].nil? && act[:pickup_shipment_id].nil? } } + unassigned.reject{ |unass| unass[:shipment_id].nil? }).compact.uniq.size
-      result_num[:rests] = (routes.flat_map{ |route| route[:activities].reject{ |act| act[:rest_id].nil? } } + unassigned.reject{ |unass| unass[:rest_id].nil? }).compact.uniq.size
+      result_num = {
+        points: routes.flat_map{ |route| route[:activities].collect{ |act| act[:point_id] } } + unassigned.collect{ |unass| unass[:point_id] },
+        services: routes.flat_map{ |route| route[:activities].reject{ |act| act[:service_id].nil? } } + unassigned.reject{ |unass| unass[:service_id].nil? },
+        shipments: routes.flat_map{ |route| route[:activities].reject{ |act| act[:delivery_shipment_id].nil? && act[:pickup_shipment_id].nil? } } + unassigned.reject{ |unass| unass[:shipment_id].nil? },
+        rests: routes.flat_map{ |route| route[:activities].reject{ |act| act[:rest_id].nil? } } + unassigned.reject{ |unass| unass[:rest_id].nil? },
+      }
+
+      result_num.each{ |k, v|
+        v.compact!
+        v.uniq!
+        result_num[k] = v.size
+      }
 
       %i[services shipments rests].each { |type|
         if vrp[type].nil?
@@ -404,7 +411,7 @@ class RealCasesTest < Minitest::Test
       vrp.restitution_intermediate_solutions = false
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      total_return_distance = result[:routes].collect{ |route| route[:activities].last[:travel_distance] }.sum
+      total_return_distance = result[:routes].sum{ |route| route[:activities].last[:travel_distance] }
       assert result
       assert result[:total_distance] - total_return_distance <= 85100
       assert result[:unassigned].size <= 6
@@ -418,7 +425,7 @@ class RealCasesTest < Minitest::Test
       vrp.restitution_intermediate_solutions = false
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      total_return_distance = result[:routes].collect{ |route| route[:activities].last[:travel_distance] }.sum
+      total_return_distance = result[:routes].sum{ |route| route[:activities].last[:travel_distance] }
       assert result
       assert result[:total_distance] - total_return_distance <= 183800
       assert_equal 0, result[:unassigned].size
@@ -448,7 +455,7 @@ class RealCasesTest < Minitest::Test
       vrp.vehicles.first.end_point_id = vrp.vehicles.first.start_point_id
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      total_return_distance = result[:routes].collect{ |route| route[:activities].last[:travel_distance] }.sum
+      total_return_distance = result[:routes].sum{ |route| route[:activities].last[:travel_distance] }
       assert result
       assert result[:total_distance] - total_return_distance <= 105700
       assert_equal 0, result[:unassigned].size

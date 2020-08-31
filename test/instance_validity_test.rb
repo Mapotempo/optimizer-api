@@ -77,22 +77,13 @@ class InstanceValidityTest < Minitest::Test
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)), :assert_no_planning_heuristic
   end
 
-  def test_assert_inapplicable_routes_whith_vroom
+  def test_assert_applicable_for_vroom_if_initial_routes
     problem = VRP.basic
-    problem[:routes] = [{
-      mission_ids: []
-    }]
-
-    vrp = TestHelper.create(problem)
-    refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_routes
-    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_routes
-
     problem[:routes] = [{
       mission_ids: ['service_1']
     }]
     vrp = TestHelper.create(problem)
-    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_routes
-    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_routes
+    assert_empty OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp)
   end
 
   def test_assert_inapplicable_for_vroom_if_vehicle_distance

@@ -138,9 +138,7 @@ module Wrappers
     end
 
     def assert_services_no_priority(vrp)
-      vrp.services.empty? || vrp.services.all?{ |service|
-        service.priority == 4
-      }
+      vrp.services.empty? || vrp.services.uniq(&:priority).size == 1
     end
 
     def assert_vehicles_objective(vrp)
@@ -261,10 +259,6 @@ module Wrappers
 
     def assert_no_value_matrix(vrp)
       vrp.matrices.none?(&:value)
-    end
-
-    def assert_no_routes(vrp)
-      vrp.routes.empty? || vrp.routes.all?{ |route| route.mission_ids.empty? }
     end
 
     def assert_no_subtours(vrp)

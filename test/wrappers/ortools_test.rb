@@ -947,8 +947,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 2, result[:routes].size
-    assert_equal problem[:services].size + problem[:vehicles].collect{ |vehicle| vehicle[:rest_ids].size }.inject(:+) + 2,
-                 result[:routes].collect{ |route| route[:activities].size }.sum
+    assert_equal problem[:services].size + problem[:vehicles].sum{ |vehicle| vehicle[:rest_ids].size } + 2, (result[:routes].sum{ |route| route[:activities].size })
   end
 
   def test_negative_time_windows_problem
@@ -4935,7 +4934,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
-    assert result[:heuristic_synthesis].min_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[:used]
+    assert result[:heuristic_synthesis].min_by{ |heuristic| heuristic[:cost] || Helper.fixnum_max }[:used]
     assert result[:cost]
   end
 
@@ -5020,7 +5019,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
-    assert result[:heuristic_synthesis].min_by{ |heuristic| heuristic[:cost] || result[:heuristic_synthesis].collect{ |heur| heur[:cost] }.compact.max + 20 }[:used]
+    assert result[:heuristic_synthesis].min_by{ |heuristic| heuristic[:cost] || Helper.fixnum_max }[:used]
   end
 
   def test_self_selection_computes_saving_only_once_if_rest
@@ -5568,7 +5567,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_empty result[:unassigned]
     shipment_route = result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:pickup_shipment_id] == 'shipment_0' } }
-    current_order = shipment_route[:activities].collect{ |stop| stop[:pickup_shipment_id] }.compact
+    current_order = shipment_route[:activities].collect{ |stop| stop[:pickup_shipment_id] }
+    current_order.compact!
 
     # add consecutivity :
     relation = Models::Relation.new(type: 'minimum_duration_lapse', linked_ids: [current_order[1], current_order[0]], lapse: 1800)
