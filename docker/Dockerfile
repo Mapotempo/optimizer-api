@@ -1,14 +1,13 @@
 ARG BRANCH=${BRANCH:-ce}
 ARG OPTIMIZER_ORTOOLS_VERSION=${OPTIMIZER_ORTOOLS_VERSION}
 ARG REGISTRY=${REGISTRY:-registry.mapotempo.com/}
-ARG VROOM_VERSION=${VROOM_VERSION}
+ARG VROOM_VERSION=${VROOM_VERSION:-v1.8.0}
 
 # Install Optimizer-ortools
 FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION} as optimizer-ortools
 
 # Install Vroom
-RUN echo ${REGISTRY}mapotempo/vroom:${VROOM_VERSION}
-FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} as vroom
+FROM vroomvrp/vroom-docker:${VROOM_VERSION} as vroom
 
 RUN echo ${VROOM_VERSION}
 
@@ -39,8 +38,7 @@ COPY --from=optimizer-ortools /srv/or-tools srv/or-tools
 COPY --from=optimizer-ortools /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/
 COPY --from=optimizer-ortools /srv/optimizer-ortools /srv/optimizer-ortools
 COPY --from=optimizer-ortools /lib/x86_64-linux-gnu/libm* /lib/x86_64-linux-gnu/
-COPY --from=vroom /srv/vroom/bin /srv/vroom/bin
-COPY --from=vroom /usr/lib/x86_64-linux-gnu/libboost* /usr/lib/x86_64-linux-gnu/
+COPY --from=vroom /usr/local/bin /srv/vroom/bin
 COPY --from=rake /srv/app /srv/app
 COPY --from=rake /usr/local/bundle /usr/local/bundle
 COPY --from=rake /usr/local/ /usr/local/
