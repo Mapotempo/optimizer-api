@@ -659,7 +659,6 @@ module Wrappers
           {
             original_service_id: service.original_id,
             service_id: service_id,
-            type: service.type.to_s,
             point_id: service.activity ? service.activity.point_id : service.activities.collect{ |activity| activity[:point_id] },
             detail: service.activity ? build_detail(service, service.activity, service.activity.point, nil, nil, nil) : { activities: service.activities }
           }
@@ -667,13 +666,13 @@ module Wrappers
           shipment = vrp.shipments.find{ |sh| sh.id == shipment_id }
           [{
             original_shipment_id: shipment.original_id,
-            shipment_id: shipment_id.to_s,
+            pickup_shipment_id: shipment_id.to_s,
             type: 'pickup',
             point_id: shipment.pickup.point_id,
             detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
           }, {
             original_shipment_id: shipment.original_id,
-            shipment_id: shipment_id.to_s,
+            delivery_shipment_id: shipment_id.to_s,
             type: 'delivery',
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
