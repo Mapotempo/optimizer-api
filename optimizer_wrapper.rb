@@ -568,7 +568,7 @@ module OptimizerWrapper
   def self.check_result_consistency(expected_value, results)
     [results].flatten(1).each{ |result|
       nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
-      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:shipment_id] }
+      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:pickup_shipment_id] || unassigned[:delivery_shipment_id] }
 
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
