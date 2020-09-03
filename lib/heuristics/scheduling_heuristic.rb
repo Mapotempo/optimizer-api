@@ -90,7 +90,8 @@ module Heuristics
         return []
       end
 
-      block&.call()
+      block&.call(nil, nil, nil, 'scheduling heuristic - start solving', nil, nil, nil)
+
       @starting_time = Time.now
 
       fill_days
@@ -111,11 +112,12 @@ module Heuristics
 
       # Reorder routes with solver and try to add more visits
       if vrp.resolution_solver && !@candidate_services_ids.empty?
+        block&.call(nil, nil, nil, 'scheduling heuristic - re-ordering routes', nil, nil, nil)
         reorder_routes(vrp)
         fill_days
       end
 
-      refine_solution
+      refine_solution(&block)
 
       begin
         check_solution_validity
@@ -128,6 +130,7 @@ module Heuristics
 
       @output_tool&.close_file
 
+      block&.call(nil, nil, nil, 'scheduling heuristic - preparing result', nil, nil, nil)
       routes = prepare_output_and_collect_routes(vrp)
       routes
     end
