@@ -618,7 +618,7 @@ module Api
 
             status 200
 
-            if output_format == :csv
+            if output_format == :csv && job&.completed?
               present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
             else
               present({
