@@ -398,7 +398,7 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_raises NoMethodError do
       vrp.routes.first.indice
     end
-    assert vrp.routes.first.index
-    assert_equal 10, vrp.routes.first.index
+    assert vrp.routes.first.day_index
+    assert_equal 10, vrp.routes.first.day_index
   end
 end

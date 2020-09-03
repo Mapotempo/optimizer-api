@@ -55,8 +55,8 @@ module SchedulingDataInitialization
 
   def initialize_routes(routes)
     considered_ids = []
-    routes.sort_by(&:index).each{ |defined_route|
-      associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.index.to_i]
+    routes.sort_by(&:day_index).each{ |defined_route|
+      associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.day_index.to_i]
       defined_route.mission_ids.each{ |id|
         next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
 
@@ -71,7 +71,7 @@ module SchedulingDataInitialization
         else
           @uninserted["#{id}_#{considered_ids.count(id) + 1}_#{@services_data[id][:visits_number]}"] = {
             original_service: id,
-            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.index}) : already #{associated_route ? associated_route[:current_route].size : 0} elements in route"
+            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.day_index}) : already #{associated_route ? associated_route[:current_route].size : 0} elements in route"
           }
         end
 
@@ -81,8 +81,8 @@ module SchedulingDataInitialization
       }
     }
 
-    routes.sort_by(&:index).each{ |defined_route|
-      plan_routes_missing_in_routes(defined_route.vehicle_id, defined_route.index.to_i)
+    routes.sort_by(&:day_index).each{ |defined_route|
+      plan_routes_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
     }
 
     # TODO : try to affect missing visits with add_missing visits functions

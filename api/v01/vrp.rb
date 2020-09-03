@@ -341,9 +341,9 @@ module Api
 
       def self.vrp_request_route(this)
         this.optional(:vehicle_id, type: String, desc: 'Vehicle linked to the current described route')
-        this.optional(:indice, type: Integer, desc: '[ DEPRECATED : use index instead ]')
-        this.optional(:index, type: Integer, desc: 'Index of the route. Must be provided if first_solution_strategy is \'periodic\' and no route date is provided.')
-        this.optional(:date, type: Date, desc: 'Date of the route. Must be provided if first_solution_strategy is \'periodic\' and no route index is provided.')
+        this.optional(:indice, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use day_index instead ]')
+        this.optional(:day_index, type: Integer, desc: 'Index of the route. Must be provided if first_solution_strategy is \'periodic\'.')
+        this.optional(:date, type: Date, desc: 'Date of the route. Must be provided if first_solution_strategy is \'periodic\'.')
         this.requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route')
         this.mutually_exclusive :indice, :index, :day
       end
@@ -405,6 +405,7 @@ module Api
         this.optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
         this.optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
         this.optional(:repetition, type: Integer, documentation: { hidden: true }, desc: 'Number of times the optimization process is going to be repeated. Only the best solution is returned.')
+        this.optional(:dicho_algorithm_service_limit, type: Integer, documentation: { hidden: true }, desc: 'Minimum number of services required to allow a call to heuristic dichotomious_approach')
         this.at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
         this.mutually_exclusive :initial_time_out, :minimum_duration
       end
