@@ -38,6 +38,7 @@ module Wrappers
         :assert_services_no_timewindows,
         :assert_services_no_priority,
         :assert_no_shipments,
+        :assert_no_direct_shipments,
         :assert_matrices_only_one,
         :assert_correctness_provided_matrix_indices,
         :assert_correctness_matrices_vehicles_and_points_definition,
