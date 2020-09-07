@@ -787,8 +787,11 @@ module Wrappers
         log 'Job killed', level: :fatal # Keep trace in worker
         raise OptimizerWrapper::JobKilledError
       else # Fatal Error
-        message = if @thread.value == 127
+        message = case @thread.value
+                  when 127
                     'Executable does not exist'
+                  when 137 # Segmentation Fault
+                    "SIGKILL received: manual intervention or 'oom-killer' [OUT-OF-MEMORY]"
                   else
                     "Job terminated with unknown thread status: #{@thread.value}"
                   end
