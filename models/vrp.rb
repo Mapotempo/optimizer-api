@@ -135,6 +135,26 @@ module Models
     end
 
     def self.check_consistency(hash)
+      # matrix_id consistency
+      hash[:vehicles]&.each{ |v|
+        if v[:matrix_id] && (hash[:matrices].nil? || hash[:matrices].none?{ |m| m[:id] == v[:matrix_id] })
+          raise OptimizerWrapper::DiscordantProblemError, 'There is no matrix with id vehicle[:matrix_id]'
+        end
+      }
+
+      # matrix_index consistency
+      if hash[:matrices].nil? || hash[:matrices].empty?
+        raise OptimizerWrapper::DiscordantProblemError, 'There is a point with point[:matrix_index] defined but there is no matrix' if hash[:points]&.any?{ |p| p[:matrix_index] }
+      else
+        max_matrix_index = hash[:points].max{ |p| p[:matrix_index] || -1 }[:matrix_index] || -1
+        matrix_not_big_enough = hash[:matrices].any?{ |matrix_group|
+          Models::Matrix.field_names.any?{ |dimension|
+            matrix_group[dimension] && (matrix_group[dimension].size <= max_matrix_index || matrix_group[dimension].any?{ |col| col.size <= max_matrix_index })
+          }
+        }
+        raise OptimizerWrapper::DiscordantProblemError, 'All matrices should have at least maximum(point[:matrix_index]) number of rows and columns' if matrix_not_big_enough
+      end
+
       # shipment position consistency
       forbidden_position_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
       hash[:shipments]&.each{ |shipment|

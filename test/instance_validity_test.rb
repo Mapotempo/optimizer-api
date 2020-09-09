@@ -22,10 +22,9 @@ class InstanceValidityTest < Minitest::Test
     problem = VRP.basic
     problem[:points] << { id: 'point_4', matrix_index: 4 }
 
-    vrp = TestHelper.create(problem)
-    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_correctness_provided_matrix_indices
-    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_correctness_provided_matrix_indices
-    assert_includes OptimizerWrapper.config[:services][:jsprit].inapplicable_solve?(vrp), :assert_correctness_provided_matrix_indices
+    assert_raises OptimizerWrapper::DiscordantProblemError do
+      TestHelper.create(problem)
+    end
   end
 
   def test_first_solution_acceptance_with_solvers
