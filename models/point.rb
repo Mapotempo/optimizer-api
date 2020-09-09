@@ -27,9 +27,5 @@ module Models
     # validates_numericality_of :matrix_index, allow_nil: true
 
     belongs_to :location, class_name: 'Models::Location'
-
-    def self.find_by_vehicle_id(*params)
-      find_by_vehicle_start_id(*params) || find_by_vehicle_end_id(*params)
-    end
   end
 end

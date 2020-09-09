@@ -577,7 +577,6 @@ module OptimizerWrapper
   private
 
   def self.check_result_consistency(expected_value, results)
-    #byebug ######  check next line
     [results].flatten(1).each{ |result|
       nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
       nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:shipment_id] }
