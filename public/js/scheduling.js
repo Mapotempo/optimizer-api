@@ -1,5 +1,6 @@
 'use-strict';
 
+var timer = null;
 
 $(document).ready(function() {
 
@@ -15,7 +16,7 @@ $(document).ready(function() {
   $('#csv-vehicles-label').append(i18n.form['csv-vehicles-label']);
   $('#json-config-label').append(i18n.form['json-config-label']);
 
-  $('#infos').html(i18n.waitingSubmit);
+  $('#optim-infos').html(i18n.waitingSubmit);
 
   jobsManager.ajaxGetJobs(true);
 
@@ -36,40 +37,39 @@ $(document).ready(function() {
         data: problem_data
       }).done(function (response) {
         var job = response.job;
-        $('#infos').html(i18n.optimizeLoading);
+        $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> - <span id="timer"></span>');
+        timer = displayTimer();
         if (job !== null) {
           jobsManager.checkJobStatus({
             job: job,
             interval: 5000
           }, function (err, job, xhr) {
             if (err) {
-              $('#infos').html(i18n.failureCallOptim(err));
+              $('#optim-infos').html(i18n.failureCallOptim(err));
               if (debug) console.log(err.status);
               return;
             }
             if (xhr.status == 200 && job.job && job.job.status == 'completed') {
-              $('#infos').html(i18n.optimizeFinished);
-              jobsManager.getCSV(job.job.id, function (content) {
-                var a = document.createElement('a');
-                a.href = 'data:attachment/csv,' + encodeURIComponent(content);
-                a.target = '_blank';
-                a.download = 'result.csv';
-                document.body.appendChild(a);
-                a.click();
-              });
+              $('#optim-infos').html(i18n.optimizeFinished);
+              displaySolution(job.job.id, job.solutions[0], { downloadButton: true });
+              clearInterval(timer);
             } else if (xhr.status == 500) {
-              $('#infos').html(i18n.optimizeFinishedError);
-              if (debug) console.log(job)
+              $('#optim-infos').html(i18n.optimizeFinishedError);
+              initForm();
+              clearInterval(timer);
+              if (debug) console.log(job);
             }
           })
         }
       }).fail(function (error) {
-        $('#infos').html(i18n.failureCallOptim('Vérification des fichiers requise'));
+        $('#optim-infos').html(i18n.failureCallOptim('Vérification des fichiers requise'));
+        initForm();
+        clearInterval(timer);
         if (debug) console.log(error.responseText);
       });
 
     } else {
-      $('#infos').html(i18n.form.invalidConfig);
+      $('#optim-infos').html(i18n.form.invalidConfig);
     }
   });
 });

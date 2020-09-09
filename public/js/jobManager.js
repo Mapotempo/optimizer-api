@@ -222,3 +222,12 @@ function buildParams(base, params) {
       return acc
     }, base);
 }
+
+function downloadButton(jobId, content) {
+  var a = document.createElement('a');
+  a.href = content;
+  a.target = '_blank';
+  a.download = 'result_' + jobId + '.csv';
+  document.body.appendChild(a);
+  a.click();
+}

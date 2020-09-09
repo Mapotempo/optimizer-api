@@ -113,13 +113,6 @@ $(document).ready(function() {
     else if (value)
       throw i18n.invalidDuration(value);
   };
-
-  var initForm = function() {
-    clearInterval(timer);
-    $('#send-files').attr('disabled', false);
-    $('#optim-infos').html('');
-  };
-
   customers = [];
 
   var buildVRP = function() {
@@ -373,16 +366,14 @@ $(document).ready(function() {
       contentType: 'application/json',
       data: JSON.stringify({ vrp: vrp }),
     }).done(function (result) {
-
       if (debug) console.log("Calling optimization... ", result);
-
       $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
+      timer = displayTimer();
       $('#optim-kill').click(function (e) {
         jobsManager.delete($('#optim-job-uid').val())
         .done(function () {
-          clearInterval(timer);
           $('#optim-infos').html('');
-          displaySolution(lastSolution, { initForm: true });
+          displayPDSolution(result, { initForm: true });
         })
         e.preventDefault();
         return false;
@@ -400,6 +391,7 @@ $(document).ready(function() {
           if (debug) console.log("Error: ", err);
           alert("An error occured");
           initForm();
+          clearInterval(timer);
           return;
         }
 
@@ -414,7 +406,7 @@ $(document).ready(function() {
               $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
             lastSolution = job.solutions[0];
             $('#display-solution').click(function (e) {
-              displaySolution(lastSolution);
+              displayPDSolution(job);
               e.preventDefault();
               return false;
             });
@@ -429,17 +421,19 @@ $(document).ready(function() {
           if (job.job.graph) {
             displayGraph(job.job.graph);
           }
-          callback(job.solutions[0]);
+          callback(job);
         }
         else if (job.job.status == 'failed' || job.job.status == 'killed') {
           if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
           alert(i18n.failureCallOptim(job.job.avancement));
           initForm();
+          clearInterval(timer);
         }
       })
     }).fail(function (xhr, status, message) {
       alert(i18n.failureCallOptim(status + " " + message + " " + xhr.responseText));
       initForm();
+      clearInterval(timer);
     })
   };
 
@@ -458,11 +452,11 @@ $(document).ready(function() {
         var start = activity['detail']['timewindows'] && activity['detail']['timewindows'][0] && activity['detail']['timewindows'][0]['start'];
         var d = (previous_lat == lat && previous_lon == lon ? 0 : setup_duration) + (activity['detail']['duration'] || 0);
         var end = activity['detail']['timewindows'] && activity['detail']['timewindows'][0] && activity['detail']['timewindows'][0]['end'];
-        var quantity1_1 = activity['detail']['quantities'].find(function(element) {
+        var quantity1_1 = activity['detail']['quantities'] && activity['detail']['quantities'].find(function(element) {
           return String(element['unit']) == 'unit0';
         });
         var value1_1 = quantity1_1 && quantity1_1['value'] || 0;
-        var quantity1_2 = activity['detail']['quantities'].find(function(element) {
+        var quantity1_2 = activity['detail']['quantities'] && activity['detail']['quantities'].find(function(element) {
           return String(element['unit']) == 'unit1';
         });
         var value1_2 = quantity1_2 && quantity1_2['value'] || 0;
@@ -699,15 +693,20 @@ $(document).ready(function() {
     });
   };
 
-  var displaySolution = function(solution, options) {
-    $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: ' + Math.round(solution.total_distance / 1000) + ')');
+  var displayPDSolution = function(result, options) {
+    var solution = result.solutions[0];
+    $('#optim-infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: ' + Math.round(solution.total_distance / 1000) + ')');
     // if (result) {
     var csv = createCSV(solution);
-    $('#infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
+    var jsonData = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(solution));
+    $('#optim-infos').append(' - <a download="result_' + result.job.id + '.json" href="' + jsonData + '">' + i18n.downloadJSON + '</a>');
+    $('#optim-infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
     $('#result').html(csv);
     // }
-    if (options && options.initForm)
+    clearInterval(timer);
+    if (options && options.initForm) {
       initForm();
+    }
   };
 
   var configParse = {
@@ -719,6 +718,7 @@ $(document).ready(function() {
     {
       alert(i18n.errorFile(i18n[inputElem.id.replace('file-', '')]) + reason);
       initForm();
+      clearInterval(timer);
       $('#send-files').attr('disabled', false);
     },
     complete: function(res, file, inputElem) {
@@ -728,8 +728,8 @@ $(document).ready(function() {
         var vrp = buildVRP();
         if (vrp) {
           if (debug) { console.log("Input json for optim: ", vrp); console.log(JSON.stringify(vrp)); }
-          callOptimization(vrp, function(solution) {
-            displaySolution(solution, {initForm: true})
+          callOptimization(vrp, function(result) {
+            displayPDSolution(result)
           });
         }
       }
@@ -738,6 +738,7 @@ $(document).ready(function() {
         else {
           alert(e);
           initForm();
+          clearInterval(timer);
         }
       }
     }
@@ -754,7 +755,6 @@ $(document).ready(function() {
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
       $('#send-files').attr('disabled', true);
       $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> - <span id="timer"></span>');
-      timer = displayTimer()
       $('#infos').html('');
       $('#result').html('');
       $('#result-graph').hide();
