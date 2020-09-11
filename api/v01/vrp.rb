@@ -618,7 +618,7 @@ module Api
 
             status 200
 
-            if output_format == :csv && job&.completed?
+            if output_format == :csv && (job.nil? || job.completed?) # At this step, if the job is nil then it has already been retrieved into the result store
               present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
             else
               present({

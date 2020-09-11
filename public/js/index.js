@@ -2,6 +2,7 @@
 var jsonFile = null;
 var jsonFileDOM = $('#json-file');
 var postForm = $('#post-form');
+
 var timer = null;
 
 jobsManager.ajaxGetJobs(true);
@@ -27,8 +28,6 @@ postForm.on('submit', function (e) {
       return false;
     }
 
-    timer = displayTimer();
-
     $('#send-files').attr('disabled', true);
     $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> - <span id="timer"></span>');
 
@@ -37,11 +36,11 @@ postForm.on('submit', function (e) {
       dataType: 'json',
       contentType: "application/json",
     }).done(function (submittedJob) {
+      timer = displayTimer();
       $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + submittedJob.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
       $('#optim-kill').click(function (e) {
         jobsManager.delete($('#optim-job-uid').val())
           .done(function () {
-            clearInterval(timer);
             $('#optim-infos').html('');
             displaySolution(submittedJob, lastSolution, { initForm: true });
           });
@@ -57,6 +56,7 @@ postForm.on('submit', function (e) {
       }, function (err, job) {
         if (err) {
           initForm();
+          clearInterval(timer);
           alert("An error occured");
           return;
         }
@@ -92,7 +92,7 @@ postForm.on('submit', function (e) {
           if (job.job.graph) {
             displayGraph(job.job.graph);
           }
-          displaySolution(submittedJob.job.id, job.solutions[0], { initForm: true });
+          displaySolution(submittedJob.job.id, job.solutions[0], { downloadButton: true });
         }
         else if (job.job.status == 'failed' || job.job.status == 'killed') {
           if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
@@ -112,25 +112,3 @@ postForm.on('submit', function (e) {
   reader.readAsText(file);
   return false;
 });
-
-var displaySolution = function (jobId, solution, options) {
-  var csv = "/0.1/vrp/jobs/" + jobId + '.csv' + '?api_key=' + getParams()['api_key'];
-  if (typeof solution === 'string') {
-    $('#result').html(solution);
-  } else if (typeof solution !== 'string') {
-    $('#infos').html('iterations: ' + solution.iterations + ' cost: <b>' + Math.round(solution.cost) + '</b> (time: ' + (solution.total_time && solution.total_time.toHHMMSS()) + ' distance: ' + Math.round(solution.total_distance / 1000) + ')');
-    $('#result').html(JSON.stringify(solution, null, 4));
-  }
-
-  $('#infos').append(' - <a download="result_' + jobId + '.csv" href="' + csv + '">' + i18n.downloadCSV + '</a>');
-
-  if (options && options.initForm)
-    initForm();
-};
-
-var initForm = function() {
-  jobsManager.stopJobChecking();
-  clearInterval(timer);
-  $('#send-files').attr('disabled', false);
-  $('#optim-infos').html('');
-};
