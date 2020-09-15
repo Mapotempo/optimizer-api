@@ -386,6 +386,7 @@ module Interpreters
         end
 
         data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, cumulated_metrics, options[:basic_split])
+
         limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
 
         options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
@@ -692,6 +693,8 @@ module Interpreters
 
         zip_dataitems(vrp, data_items, linked_objects) if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty?
 
+        add_duration_from_and_to_depot(vrp, data_items) if !basic_split && (vrp.matrices.empty? || vrp.vehicles.any?{ |v| v.matrix_id.nil? } || vrp.matrices.any?{ |m| m[:time].nil? || m[:time].empty? })
+
         [data_items, cumulated_metrics, linked_objects]
       end
 
@@ -748,6 +751,35 @@ module Interpreters
             item0[4][:skills].uniq!
 
             items.delete_at(index_i)
+          }
+        }
+      end
+
+      def add_duration_from_and_to_depot(vrp, data_items)
+        vehicle_start_locations = vrp.vehicles.select(&:start_point).collect!{ |v| [v.start_point.location.lat, v.start_point.location.lon] }.uniq
+        vehicle_end_locations = vrp.vehicles.select(&:end_point).collect!{ |v| [v.end_point.location.lat, v.end_point.location.lon] }.uniq
+
+        locations = data_items.collect{ |point| [point[0], point[1]] }
+
+        tic = Time.now
+        log "matrix computation #{vehicle_start_locations.size}x#{locations.size} + #{locations.size}x#{vehicle_end_locations.size}"
+        time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], vehicle_start_locations, locations).first if vehicle_start_locations.any?
+        time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], locations, vehicle_end_locations).first if vehicle_end_locations.any?
+        log "matrix computed in #{(Time.now - tic).round(2)} seconds"
+
+        v_index = {
+          from: vrp.vehicles.collect{ |v| vehicle_start_locations.find_index([v.start_point.location.lat, v.start_point.location.lon]) if v.start_point },
+          to: vrp.vehicles.collect{ |v| vehicle_end_locations.find_index([v.end_point.location.lat, v.end_point.location.lon]) if v.end_point }
+        }
+
+        data_items.each_with_index{ |point, p_index|
+          point[4][:duration_from_and_to_depot] = []
+
+          vrp.vehicles.each_with_index{ |vehicle, v_i|
+            duration_from = time_matrix_from_depot[v_index[:from][v_i]][p_index] if v_index[:from][v_i]
+            duration_to = time_matrix_to_depot[p_index][v_index[:to][v_i]] if v_index[:to][v_i]
+
+            point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) / vehicle.router_options[:speed_multiplier]
           }
         }
       end
