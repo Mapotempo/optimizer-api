@@ -3076,4 +3076,14 @@ class WrapperTest < Minitest::Test
 
     assert OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
   end
+
+  def test_solver_used_with_direct_shipment
+    problem = VRP.pud
+    problem[:shipments].first[:direct] = true
+
+    generated_vrp = TestHelper.create(problem)
+    assert_includes OptimizerWrapper.config[:services][:jsprit].inapplicable_solve?(generated_vrp), :assert_no_direct_shipments
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(generated_vrp), :assert_no_direct_shipments
+    assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(generated_vrp)
+  end
 end

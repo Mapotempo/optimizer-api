@@ -98,6 +98,10 @@ module Wrappers
       vrp.shipments.empty?
     end
 
+    def assert_no_direct_shipments(vrp)
+      vrp.shipments.none?{ |shipment| shipment.direct }
+    end
+
     def assert_no_shipments_with_multiple_timewindows(vrp)
       vrp.shipments.empty? || vrp.shipments.none? { |shipment|
         shipment.pickup.timewindows.size > 1 || shipment.delivery.timewindows.size > 1

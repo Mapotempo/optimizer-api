@@ -222,6 +222,12 @@ module Wrappers
             lapse: shipment.maximum_inroute_duration
           )
         end
+        if shipment.direct
+          relations << OrtoolsVrp::Relation.new(
+            type: 'sequence',
+            linked_ids: [shipment.id + 'pickup', shipment.id + 'delivery']
+          )
+        end
         services << OrtoolsVrp::Service.new(
           time_windows: shipment.pickup.timewindows.collect{ |tw|
             OrtoolsVrp::TimeWindow.new(start: tw.start || -2**56, end: tw.end || 2**56)

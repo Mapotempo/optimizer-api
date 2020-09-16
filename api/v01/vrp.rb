@@ -297,6 +297,7 @@ module Api
         this.requires(:delivery, type: Hash, allow_blank: false, desc: 'Activity of drop off') do
           Vrp.vrp_request_activity(self)
         end
+        this.optional(:direct, type: Boolean, default: false, desc: 'When activated, vehicle should go directly to delivery point after pick up')
         this.optional(:quantity_ids, type: String, documentation: { hidden: true }, desc: 'Quantities to consider, CSV front only')
         this.optional(:quantities, type: Array, desc: 'Define the entities which are taken and dropped') do
           Vrp.vrp_request_quantity(self)

@@ -20,6 +20,7 @@ require './models/base'
 module Models
   class Shipment < Base
     field :priority, default: 4
+    field :direct, default: false
     field :exclusion_cost, default: nil
     field :maximum_inroute_duration, default: nil
 
