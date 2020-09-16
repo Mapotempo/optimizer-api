@@ -193,6 +193,25 @@ class SplitClusteringTest < Minitest::Test
       }
     end
 
+    def test_if_duration_from_and_to_depot_is_filled_correctly
+      problem = VRP.lat_lon
+      problem[:matrices] = []
+      problem[:vehicles] << problem[:vehicles].first.dup
+
+      mock = MiniTest::Mock.new
+      mock.expect(:call, nil, [Models::Vrp, Array])
+
+      Interpreters::SplitClustering.stub(:add_duration_from_and_to_depot, mock) do
+        Interpreters::SplitClustering.split_balanced_kmeans({ vrp: TestHelper.create(problem), service: :demo }, problem[:vehicles].size, cut_symbol: :duration, entity: :vehicle, restarts: 1)
+      end
+      mock.verify # check if it is called
+
+      OptimizerWrapper.router.stub(:matrix, ->(_url, _router_mode, _router_dimension, src, dst){ return [Array.new(src.size){ |i| Array.new(dst.size){ (i + 1) * 100 } }] }) do
+        data_items, _cumulated_metrics, _linked_objects = Interpreters::SplitClustering.send(:collect_data_items_metrics, TestHelper.create(problem), Hash.new(0), false)
+        assert_equal [200.0, 300.0, 400.0, 500.0], (data_items.flat_map{ |d_i| d_i[4][:duration_from_and_to_depot].uniq }) # check the values are correct
+      end
+    end
+
     def test_cluster_two_phases
       vrp = TestHelper.load_vrp(self)
 
@@ -271,6 +290,7 @@ class SplitClusteringTest < Minitest::Test
 
       vrp[:vehicles] << {
         id: 'vehicle_1',
+        matrix_id: 'm1',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         router_mode: 'car',
