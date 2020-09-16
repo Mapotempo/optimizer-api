@@ -64,6 +64,7 @@ module Models
     field :resolution_vehicle_limit, default: nil
     field :resolution_solver, default: true
     field :resolution_same_point_day, default: false
+    field :resolution_minimize_days_worked, default: false
     field :resolution_allow_partial_assignment, default: true
     field :resolution_evaluate_only, default: false
     field :resolution_split_number, default: 1
@@ -416,6 +417,7 @@ module Models
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
       self.resolution_solver = resolution[:solver]
       self.resolution_same_point_day = resolution[:same_point_day]
+      self.resolution_minimize_days_worked = resolution[:minimize_days_worked]
       self.resolution_allow_partial_assignment = resolution[:allow_partial_assignment]
       self.resolution_evaluate_only = resolution[:evaluate_only]
       self.resolution_split_number = resolution[:split_number]

@@ -37,6 +37,7 @@ module Heuristics
       @relaxed_same_point_day = false
       @duration_in_tw = false # TODO: create parameter for this
       @end_phase = false
+      @spread_among_days = !vrp.resolution_minimize_days_worked
 
       # heuristic data
       @services_data = {}
@@ -671,7 +672,7 @@ module Heuristics
 
     def fill_days
       ### fill planning ###
-      if @same_point_day || @relaxed_same_point_day
+      if @spread_among_days
         fill_grouped
       else
         fill_basic

@@ -555,6 +555,7 @@ class HeuristicTest < Minitest::Test
 
     def test_with_activities
       vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:resolution][:minimize_days_worked] = true
       vrp[:vehicles].each{ |v|
         v[:sequence_timewindows].each{ |tw|
           tw[:end] = 10000
