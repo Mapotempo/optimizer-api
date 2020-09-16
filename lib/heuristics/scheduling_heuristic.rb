@@ -987,7 +987,7 @@ module Heuristics
       end
     end
 
-    def get_stop(vrp, stop)
+    def get_stop(vrp, stop, options = {})
       associated_point = vrp[:points].find{ |point| point[:id] == stop }
 
       {
@@ -995,8 +995,10 @@ module Heuristics
         detail: {
           lat: (associated_point[:location][:lat] if associated_point[:location]),
           lon: (associated_point[:location][:lon] if associated_point[:location]),
-          quantities: []
-        }
+          quantities: [],
+          begin_time: options[:begin_time],
+          departure_time: options[:departure_time]
+        }.delete_if{ |_k, v| !v }
       }
     end
 
@@ -1044,11 +1046,21 @@ module Heuristics
       @candidate_routes.each{ |_vehicle, all_days_routes|
         all_days_routes.keys.sort.each{ |day|
           route = all_days_routes[day]
-          computed_activities = []
 
-          computed_activities << get_stop(vrp, route[:start_point_id]) if route[:start_point_id]
-          computed_activities += get_activities(day, vrp, route[:current_route])
-          computed_activities << get_stop(vrp, route[:end_point_id]) if route[:end_point_id]
+          computed_activities = []
+          start_time, end_time = if route[:current_route].empty?
+            computed_activities << get_stop(vrp, route[:start_point_id]) if route[:start_point_id]
+            computed_activities << get_stop(vrp, route[:end_point_id]) if route[:end_point_id]
+
+            [route[:tw_start], route[:tw_start]]
+          else
+            end_of_route = route[:end_point_id] ? route[:current_route].last[:end] + matrix(route, route[:current_route].last[:point_id], route[:end_point_id]) : route[:current_route].last[:end]
+            computed_activities << get_stop(vrp, route[:start_point_id], departure_time: route[:current_route].first[:start]) if route[:start_point_id]
+            computed_activities += get_activities(day, vrp, route[:current_route])
+            computed_activities << get_stop(vrp, route[:end_point_id], begin_time: end_of_route) if route[:end_point_id]
+
+            [route[:current_route].first[:start], end_of_route]
+          end
 
           routes << {
             vehicle: {
@@ -1059,6 +1071,8 @@ module Heuristics
 
           solution << {
             vehicle_id: route[:vehicle_id],
+            start_time: start_time,
+            end_time: end_time,
             activities: computed_activities
           }
         }

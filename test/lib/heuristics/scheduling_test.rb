@@ -687,5 +687,17 @@ class HeuristicTest < Minitest::Test
 
       assert correct_lapses
     end
+
+    def test_ensure_total_time_and_travel_info
+      vrp = VRP.scheduling
+      vrp[:matrices].first[:distance] = vrp[:matrices].first[:time]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_time] }, 'At least one route total_time was not provided'
+      assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_time].positive? }, 'At least one route total_time is lower or equal to zero'
+      assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_travel_time] }, 'At least one route total_travel_time was not provided'
+      assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_travel_time].positive? }, 'At least one route total_travel_time is lower or equal to zero'
+      assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_distance] }, 'At least one route total_travel_distance was not provided'
+      assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_distance].positive? }, 'At least one route total_distance is lower or equal to zero'
+    end
   end
 end

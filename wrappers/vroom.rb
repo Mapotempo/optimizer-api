@@ -158,6 +158,8 @@ module Wrappers
 #        start_time: 0,
 #        end_time: 0,
         routes: [{
+          start_time: 0,
+          end_time: activities.collect{ |a| a[:travel_time].to_f + (a[:detail] ? a[:detail][:duration].to_f : 0) }.reduce(&:+),
           vehicle_id: vehicle.id,
           activities: activities
         }],

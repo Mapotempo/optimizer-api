@@ -5610,4 +5610,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
     delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == route[first_shipment_index][:pickup_shipment_id] }
     assert_equal shipment_index + 1, delivery_index
   end
+
+  def test_ensure_total_time_and_travel_info_with_ortools
+    vrp = VRP.basic
+    vrp[:matrices].first[:distance] = vrp[:matrices].first[:time]
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_time] }, 'At least one route total_time was not provided'
+    assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_travel_time] }, 'At least one route total_travel_time was not provided'
+    assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_distance] }, 'At least one route total_travel_distance was not provided'
+  end
 end
