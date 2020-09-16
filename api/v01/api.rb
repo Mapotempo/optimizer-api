@@ -45,24 +45,18 @@ module Api
         STDERR.puts "\n\n#{e.class} (#{e.message}):\n    " + e.backtrace.join("\n    ") + "\n\n" if ENV['APP_ENV'] != 'test'
 
         response = { error: e.class, message: e.message }
-        if e.is_a?(RangeError) || e.is_a?(Grape::Exceptions::ValidationErrors) ||
-           e.is_a?(Grape::Exceptions::InvalidMessageBody) || e.is_a?(ActiveHash::RecordNotFound)
+        if e.is_a?(RangeError) ||
+           e.is_a?(RouterError) ||
+           e.is_a?(ActiveHash::RecordNotFound) ||
+           e.is_a?(Grape::Exceptions::InvalidMessageBody) ||
+           e.is_a?(Grape::Exceptions::ValidationErrors) ||
+           e.is_a?(OptimizerWrapper::DiscordantProblemError) ||
+           e.is_a?(OptimizerWrapper::UnsupportedProblemError) ||
+           e.is_a?(OptimizerWrapper::UnsupportedRouterModeError)
+          response[:message] += ' ' + e.data.map { |service| service.join(', ') }.join(' | ') if e.is_a?(OptimizerWrapper::UnsupportedProblemError)
           rack_response(format_message(response, e.backtrace), 400)
         elsif e.is_a?(Grape::Exceptions::MethodNotAllowed)
-          rack_response(format_message(response, nil), 405)
-        elsif e.is_a?(OptimizerWrapper::UnsupportedRouterModeError)
-          rack_response(format_message(response, nil), 400)
-        elsif e.is_a?(OptimizerWrapper::UnsupportedProblemError)
-          response[:message] += ' ' + e.data.map { |service| service.join(', ') }.join(' | ')
-          rack_response(format_message(response, nil), 400)
-        elsif e.is_a?(OptimizerWrapper::DiscordantProblemError)
-          rack_response(format_message(response, nil), 400)
-        elsif e.is_a?(OptimizerWrapper::SchedulingHeuristicError)
-          rack_response(format_message(response, nil), 500)
-        elsif e.is_a?(RouterError)
-          rack_response(format_message(response, nil), 400)
-        elsif e.is_a?(CacheError)
-          rack_response(format_message(response, nil), 500)
+          rack_response(format_message(response, e.backtrace), 405)
         else
           rack_response(format_message(response, e.backtrace), 500)
         end
