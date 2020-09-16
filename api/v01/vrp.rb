@@ -398,6 +398,7 @@ module Api
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
         this.optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
         this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called')
+        this.optional(:minimize_used_days, type: Boolean, default: false, desc: 'Tries to fill minimum possible days. Starts filling sooner days.')
         this.optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is \'periodic\'. Not available ORtools.')
         this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling only) Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
         this.optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')

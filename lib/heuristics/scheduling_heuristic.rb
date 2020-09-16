@@ -62,6 +62,7 @@ module Heuristics
       # heuristic options
       @allow_partial_assignment = vrp.resolution_allow_partial_assignment
       @same_point_day = vrp.resolution_same_point_day
+      @spread_among_days = !vrp.resolution_minimize_used_days
       @relaxed_same_point_day = false
       @duration_in_tw = false # TODO: create parameter for this
       @end_phase = false
@@ -673,7 +674,7 @@ module Heuristics
 
     def fill_days
       ### fill planning ###
-      if @same_point_day || @relaxed_same_point_day
+      if @spread_among_days
         fill_grouped
       else
         fill_basic
