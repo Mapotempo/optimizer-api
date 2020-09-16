@@ -43,7 +43,6 @@ module Wrappers
         :assert_points_same_definition,
         :assert_vehicles_no_zero_duration,
         :assert_at_least_one_mission,
-        :assert_correctness_provided_matrix_indices,
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_square_matrix,
         :assert_vehicle_tw_if_schedule,

@@ -543,7 +543,7 @@ module Api
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
               d_params = declared(params, include_missing: false)
               vrp_params = d_params[:points] ? d_params : d_params[:vrp]
-              APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), { vrp: vrp_params }.to_json) if OptimizerWrapper.config[:dump][:vrp]
+              APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
 
               APIBase.services(api_key)[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {}).each{ |key, value|
                 next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value

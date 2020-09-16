@@ -215,16 +215,6 @@ module Wrappers
       }
     end
 
-    def assert_correctness_provided_matrix_indices(vrp)
-      dimensions = vrp.vehicles.collect(&:dimensions).flatten.uniq
-      max_matrix_index = vrp.points.collect(&:matrix_index).max || 0
-      vrp.matrices.all?{ |matrix|
-        dimensions.all?{ |dimension|
-          matrix[dimension].nil? || matrix[dimension].size > max_matrix_index && matrix[dimension].all?{ |line| line.size > max_matrix_index }
-        }
-      }
-    end
-
     def assert_correctness_matrices_vehicles_and_points_definition(vrp)
       # Either there is no matrix and all points are with a location
       # or all points and vehicles have matrix_index and matrix_id, respectively

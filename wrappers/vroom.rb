@@ -40,7 +40,6 @@ module Wrappers
         :assert_no_shipments,
         :assert_no_direct_shipments,
         :assert_matrices_only_one,
-        :assert_correctness_provided_matrix_indices,
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_one_vehicle_only_or_no_sticky_vehicle,
         :assert_no_relations,

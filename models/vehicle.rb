@@ -99,8 +99,8 @@ module Models
 
     has_many :sequence_timewindows, class_name: 'Models::Timewindow'
 
-    belongs_to :start_point, class_name: 'Models::Point', inverse_of: :vehicle_start
-    belongs_to :end_point, class_name: 'Models::Point', inverse_of: :vehicle_end
+    belongs_to :start_point, class_name: 'Models::Point'
+    belongs_to :end_point, class_name: 'Models::Point'
     belongs_to :timewindow, class_name: 'Models::Timewindow'
     has_many :capacities, class_name: 'Models::Capacity'
     # include ValidateTimewindows # <- This doesn't work

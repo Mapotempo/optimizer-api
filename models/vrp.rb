@@ -135,17 +135,37 @@ module Models
     end
 
     def self.check_consistency(hash)
-      periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
+      # matrix_id consistency
+      hash[:vehicles]&.each{ |v|
+        if v[:matrix_id] && (hash[:matrices].nil? || hash[:matrices].none?{ |m| m[:id] == v[:matrix_id] })
+          raise OptimizerWrapper::DiscordantProblemError, 'There is no matrix with id vehicle[:matrix_id]'
+        end
+      }
 
-      forbidden_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
-      hash[:shipments].to_a.each{ |shipment|
-        raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
+      # matrix_index consistency
+      if hash[:matrices].nil? || hash[:matrices].empty?
+        raise OptimizerWrapper::DiscordantProblemError, 'There is a point with point[:matrix_index] defined but there is no matrix' if hash[:points]&.any?{ |p| p[:matrix_index] }
+      else
+        max_matrix_index = hash[:points].max{ |p| p[:matrix_index] || -1 }[:matrix_index] || -1
+        matrix_not_big_enough = hash[:matrices].any?{ |matrix_group|
+          Models::Matrix.field_names.any?{ |dimension|
+            matrix_group[dimension] && (matrix_group[dimension].size <= max_matrix_index || matrix_group[dimension].any?{ |col| col.size <= max_matrix_index })
+          }
+        }
+        raise OptimizerWrapper::DiscordantProblemError, 'All matrices should have at least maximum(point[:matrix_index]) number of rows and columns' if matrix_not_big_enough
+      end
+
+      # shipment position consistency
+      forbidden_position_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
+      hash[:shipments]&.each{ |shipment|
+        raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_position_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
       }
 
       # routes consistency
+      periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
       hash[:routes]&.each{ |route|
         route[:mission_ids].each{ |id|
-          corresponding_service = [hash[:services], hash[:shipments]].flatten.compact.find{ |s| s[:id] == id }
+          corresponding_service = hash[:services]&.find{ |s| s[:id] == id } || hash[:shipments]&.find{ |s| s[:id] == id }
 
           raise OptimizerWrapper::DiscordantProblemError, 'Each mission_ids should refer to an existant service or shipment' if corresponding_service.nil?
           raise OptimizerWrapper::UnsupportedProblemError, 'Services in initialize routes should have only one activity' if corresponding_service[:activities] && periodic
@@ -172,8 +192,7 @@ module Models
       end
 
       # periodic consistency
-      periodic_heuristic = hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
-      return unless periodic_heuristic
+      return unless periodic
 
       if hash[:relations]
         incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - ['force_first', 'never_first', 'force_end']
@@ -181,7 +200,7 @@ module Models
       end
 
       raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
-                                                                                                                                                (!hash[:configuration][:schedule] || hash[:configuration][:schedule][:range_indice])
+                                                                                                                                                (!configuration[:schedule] || configuration[:schedule][:range_indice])
 
       raise OptimizerWrapper::DiscordantProblemError, 'Shipments are not available with periodic heuristic.' unless hash[:shipments].to_a.empty?
 
