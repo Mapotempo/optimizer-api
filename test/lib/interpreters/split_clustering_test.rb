@@ -290,6 +290,7 @@ class SplitClusteringTest < Minitest::Test
 
       vrp[:vehicles] << {
         id: 'vehicle_1',
+        matrix_id: 'm1',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         router_mode: 'car',
