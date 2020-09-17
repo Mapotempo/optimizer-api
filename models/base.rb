@@ -130,7 +130,7 @@ module Models
 
       define_method("#{name}_id=") do |val_id|
         c = class_from_string(options[:class_name])
-        self[name] = c.find(val_id)
+        self[name] = val_id && c.find(val_id)
       end
     end
 
