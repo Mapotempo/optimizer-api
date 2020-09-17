@@ -241,7 +241,7 @@ module Models
 
     def self.convert_position_relations(hash)
       relations_to_remove = []
-      hash[:relations].to_a.each_with_index{ |r, r_i|
+      hash[:relations]&.each_with_index{ |r, r_i|
         case r[:type]
         when 'force_first'
           r[:linked_ids].each{ |id|
@@ -287,7 +287,7 @@ module Models
     end
 
     def self.convert_route_indice_into_index(hash)
-      hash[:routes].to_a.each{ |route|
+      hash[:routes]&.each{ |route|
         next unless route[:indice]
 
         log 'Route indice was used instead of route index', level: :warn
