@@ -73,5 +73,24 @@ class HeuristicTest < Minitest::Test
                    "Expecting #{expected_visits_number} visits but have #{assigned_visits.sum + unassigned_visits.sum}"
       assert unassigned_visits.sum <= 441, "Expecting less than 441 unassigned visits, have #{unassigned_visits.sum}"
     end
+
+    def test_performance_britanny_with_solver
+      unassigned_count = Array.new(3){
+        vrp = TestHelper.load_vrp(self, fixture_file: 'performance_britanny')
+        result = nil
+        Interpreters::SplitClustering.stub(:kmeans_process, lambda{ |nb_clusters, data_items, unit_symbols, limits, options|
+          options.delete(:distance_matrix)
+          options[:restarts] = 4
+          # byebug
+          Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items, unit_symbols, limits, options) # call original method
+        }) do
+          result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+        end
+        result[:unassigned].size
+      }
+
+      assert_operator unassigned_count.max, :<=, 225
+      assert_operator unassigned_count.min, :<=, 115
+    end
   end
 end

@@ -693,7 +693,7 @@ module Interpreters
 
         zip_dataitems(vrp, data_items, linked_objects) if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty?
 
-        add_duration_from_and_to_depot(vrp, data_items) if !basic_split && (vrp.matrices.empty? || vrp.vehicles.any?{ |v| v.matrix_id.nil? } || vrp.matrices.any?{ |m| m[:time].nil? || m[:time].empty? })
+        add_duration_from_and_to_depot(vrp, data_items) if !basic_split
 
         [data_items, cumulated_metrics, linked_objects]
       end
@@ -756,32 +756,48 @@ module Interpreters
       end
 
       def add_duration_from_and_to_depot(vrp, data_items)
-        vehicle_start_locations = vrp.vehicles.select(&:start_point).collect!{ |v| [v.start_point.location.lat, v.start_point.location.lon] }.uniq
-        vehicle_end_locations = vrp.vehicles.select(&:end_point).collect!{ |v| [v.end_point.location.lat, v.end_point.location.lon] }.uniq
+        if vrp.matrices.empty? || vrp.vehicles.any?{ |v| v.matrix_id.nil? } || vrp.matrices.any?{ |m| m[:time].nil? || m[:time].empty? }
+          vehicle_start_locations = vrp.vehicles.select(&:start_point).collect!{ |v| [v.start_point.location.lat, v.start_point.location.lon] }.uniq
+          vehicle_end_locations = vrp.vehicles.select(&:end_point).collect!{ |v| [v.end_point.location.lat, v.end_point.location.lon] }.uniq
 
-        locations = data_items.collect{ |point| [point[0], point[1]] }
+          locations = data_items.collect{ |point| [point[0], point[1]] }
 
-        tic = Time.now
-        log "matrix computation #{vehicle_start_locations.size}x#{locations.size} + #{locations.size}x#{vehicle_end_locations.size}"
-        time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], vehicle_start_locations, locations).first if vehicle_start_locations.any?
-        time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], locations, vehicle_end_locations).first if vehicle_end_locations.any?
-        log "matrix computed in #{(Time.now - tic).round(2)} seconds"
+          tic = Time.now
+          log "matrix computation #{vehicle_start_locations.size}x#{locations.size} + #{locations.size}x#{vehicle_end_locations.size}"
+          time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], vehicle_start_locations, locations).first if vehicle_start_locations.any?
+          time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], locations, vehicle_end_locations).first if vehicle_end_locations.any?
+          log "matrix computed in #{(Time.now - tic).round(2)} seconds"
 
-        v_index = {
-          from: vrp.vehicles.collect{ |v| vehicle_start_locations.find_index([v.start_point.location.lat, v.start_point.location.lon]) if v.start_point },
-          to: vrp.vehicles.collect{ |v| vehicle_end_locations.find_index([v.end_point.location.lat, v.end_point.location.lon]) if v.end_point }
-        }
-
-        data_items.each_with_index{ |point, p_index|
-          point[4][:duration_from_and_to_depot] = []
-
-          vrp.vehicles.each_with_index{ |_vehicle, v_i|
-            duration_from = time_matrix_from_depot[v_index[:from][v_i]][p_index] if v_index[:from][v_i]
-            duration_to = time_matrix_to_depot[p_index][v_index[:to][v_i]] if v_index[:to][v_i]
-
-            point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) # TODO: investigate why division by vehicle.router_options[:speed_multiplier] detoriarates the performance of scheduling
+          v_index = {
+            from: vrp.vehicles.collect{ |v| vehicle_start_locations.find_index([v.start_point.location.lat, v.start_point.location.lon]) if v.start_point },
+            to: vrp.vehicles.collect{ |v| vehicle_end_locations.find_index([v.end_point.location.lat, v.end_point.location.lon]) if v.end_point }
           }
-        }
+
+          data_items.each_with_index{ |point, p_index|
+            point[4][:duration_from_and_to_depot] = []
+
+            vrp.vehicles.each_with_index{ |_vehicle, v_i|
+              duration_from = time_matrix_from_depot[v_index[:from][v_i]][p_index] if v_index[:from][v_i]
+              duration_to = time_matrix_to_depot[p_index][v_index[:to][v_i]] if v_index[:to][v_i]
+
+              point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) # TODO: investigate why division by vehicle.router_options[:speed_multiplier] detoriarates the performance of scheduling
+            }
+          }
+        else
+          locations = data_items.collect{ |point| point[4][:matrix_index] }
+
+          data_items.each{ |point| point[4][:duration_from_and_to_depot] = [] }
+
+          vrp.vehicles.each{ |v|
+            matrix = vrp.matrices.find{ |m| m.id == v.matrix_id }[:time]
+            time_matrix_from_depot = Helper.unsquared_matrix(matrix, [v.start_point.matrix_index], locations) if v.start_point
+            time_matrix_to_depot = Helper.unsquared_matrix(matrix, locations, [v.end_point.matrix_index]) if v.end_point
+
+            data_items.each_with_index{ |point, p_index|
+              point[4][:duration_from_and_to_depot] << (v.start_point ? time_matrix_from_depot[0][p_index].to_f : 0.0) + (v.end_point ? time_matrix_to_depot[p_index][0].to_f : 0.0)
+            }
+          }
+        end
       end
 
       def generate_expected_characteristics(vehicles)
