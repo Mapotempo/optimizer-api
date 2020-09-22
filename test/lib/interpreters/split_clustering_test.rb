@@ -196,6 +196,8 @@ class SplitClusteringTest < Minitest::Test
     def test_if_duration_from_and_to_depot_is_filled_correctly
       problem = VRP.lat_lon
       problem[:matrices] = []
+      problem[:points].each{ |p| p.delete(:matrix_index) }
+      problem[:vehicles][0].delete(:matrix_id)
       problem[:vehicles] << problem[:vehicles].first.dup
 
       mock = MiniTest::Mock.new

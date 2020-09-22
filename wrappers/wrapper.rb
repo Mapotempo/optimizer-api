@@ -656,29 +656,33 @@ module Wrappers
         reachable_by_a_vehicle = (service.activity ? [service.activity] : service.activities).any?{ |activity|
           index = activity.point.matrix_index
           vrp.vehicles.find{ |vehicle|
-            if (vehicle.cost_time_multiplier&.positive? && !vehicle.cost_late_multiplier&.positive? && ((vehicle.timewindow&.start && vehicle.timewindow&.end) || vehicle.sequence_timewindows&.size&.positive?)) ||
-               (vehicle.cost_distance_multiplier&.positive? && vehicle.distance)
+            feasible = true
 
-              metric = vehicle.cost_time_multiplier&.positive? ? :time : :distance
+            start_index = vehicle.start_point&.matrix_index
+            end_index = vehicle.end_point&.matrix_index
+            matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id } if start_index || end_index
 
-              start_index = vehicle.start_point&.matrix_index
-              end_index = vehicle.end_point&.matrix_index
+            if vehicle.cost_time_multiplier&.positive? &&
+               !vehicle.cost_late_multiplier&.positive? &&
+               ((vehicle.timewindow&.start && vehicle.timewindow&.end) || vehicle.sequence_timewindows&.size&.positive?)
+              vehicle_available_time = vehicle.timewindow.end - vehicle.timewindow.start if vehicle.timewindow
+              vehicle_available_time = vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max if vehicle.sequence_timewindows&.size&.positive?
 
-              cost = 0
-              cost += vrp.matrices[0][metric][start_index][index]                   if start_index
-              cost += activity.duration                                             if metric == :time
-              cost += vrp.matrices[0][metric][index][end_index]                     if end_index
+              min_time = (start_index && matrix[:time][start_index][index]).to_f + (end_index && matrix[:time][index][end_index]).to_f + activity.duration
 
-              if metric == :time
-                vehicle_available_time = vehicle.timewindow.end - vehicle.timewindow.start if vehicle.timewindow
-                vehicle_available_time = vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max if vehicle.sequence_timewindows&.size&.positive?
-                vehicle_available_time >= cost
-              else
-                vehicle.distance >= cost
-              end
-            else
-              true
+              feasible &&= (vehicle_available_time >= min_time)
             end
+
+            if feasible &&
+               (start_index || end_index) &&
+               vehicle.cost_distance_multiplier&.positive? &&
+               vehicle.distance
+              min_dist = (start_index && matrix[:distance][start_index][index]).to_f + (end_index && matrix[:distance][index][end_index]).to_f
+
+              feasible &&= (vehicle.distance >= min_dist)
+            end
+
+            feasible
           }
         }
 

@@ -3086,4 +3086,17 @@ class WrapperTest < Minitest::Test
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(generated_vrp), :assert_no_direct_shipments
     assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(generated_vrp)
   end
+
+  def test_check_distances_if_distance_and_time_with_lateness
+    vrp = VRP.basic
+
+    vrp[:matrices][0][:distance] = vrp[:matrices][0][:time]
+
+    vrp[:vehicles].first[:cost_time_multiplier] = 1
+    vrp[:vehicles].first[:cost_late_multiplier] = 1
+    vrp[:vehicles].first[:cost_distance_multiplier] = 1
+    vrp[:vehicles].first[:distance] = 1
+
+    OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), [])
+  end
 end
