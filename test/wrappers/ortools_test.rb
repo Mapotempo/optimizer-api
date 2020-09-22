@@ -4839,15 +4839,16 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
-    assert_equal 2310, result[:cost]
+    expected_cost = result[:cost]
+    expected_route = result[:routes].first[:activities].collect{ |a| a[:service_id] }
 
     problem[:configuration][:resolution][:evaluate_only] = true
     problem[:routes] = [{
-      mission_ids: ['service_2', 'service_1'],
+      mission_ids: expected_route.compact,
       vehicle_id: 'vehicle_1'
     }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 2310, result[:cost]
+    assert_equal expected_cost, result[:cost]
     assert_equal 1, result[:iterations]
   end
 
