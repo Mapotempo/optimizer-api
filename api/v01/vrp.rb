@@ -79,9 +79,6 @@ module Api
             failure: [
               { code: 400, message: 'Bad Request', model: ::Api::V01::Status }
             ],
-            security: [{
-              api_key_query_param: []
-            }],
             detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
           }
           params {
@@ -138,9 +135,6 @@ module Api
             failure: [
               { code: 404, message: 'Not Found', model: ::Api::V01::Status }
             ],
-            security: [{
-              api_key_query_param: []
-            }],
             detail: 'Get the job status and details, contains progress avancement. Return the best actual solutions currently found.'
           }
           params {

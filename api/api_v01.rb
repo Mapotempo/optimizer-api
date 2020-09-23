@@ -43,6 +43,13 @@ module Api
           in: 'query'
         }
       },
+      security: [{
+        api_key_query_param: [],
+      }],
+      schemes: [
+        'http',
+        'https'
+      ],
       consumes: [
         'application/json; charset=UTF-8',
         'application/xml',
