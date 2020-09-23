@@ -4,7 +4,7 @@ services:
 before_install:
   - export REGISTRY=${REGISTRY:-registry.mapotempo.com/}
   - source ci-utils/version.sh
-  - docker build --build-arg VROOM_VERSION=${VROOM_VERSION:-v1.2.0} --build-arg OPTIMIZER_ORTOOLS_VERSION=$OPTIMIZER_ORTOOLS_VERSION -f docker/Dockerfile -t registry.test.com/mapotempo/optimizer-api:latest .
+  - docker build --build-arg VROOM_VERSION=${VROOM_VERSION:-v1.5.0} --build-arg OPTIMIZER_ORTOOLS_VERSION=$OPTIMIZER_ORTOOLS_VERSION -f docker/Dockerfile -t registry.test.com/mapotempo/optimizer-api:latest .
   - docker swarm init
   - mkdir -p ./redis
   - docker stack deploy -c ./docker/docker-compose.yml optimizer
