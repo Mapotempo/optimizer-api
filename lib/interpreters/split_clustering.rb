@@ -361,6 +361,8 @@ module Interpreters
         c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
       end
 
+      raise 'Incorrect split in kmeans_process' if clusters.size > nb_clusters # it should be never more
+
       [clusters, centroids_characteristics]
     end
 

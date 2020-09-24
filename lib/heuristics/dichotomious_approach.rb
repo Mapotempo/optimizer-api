@@ -32,7 +32,7 @@ module Interpreters
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
           !service_vrp[:vrp].schedule_range_indices &&
           service_vrp[:vrp].shipments.empty? && # TODO: check dicho with a P&D instance to remove this condition
-          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } # TODO: Remove and use matrix/matrix_index in clustering
+          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon }
         )
     end
 
@@ -69,10 +69,17 @@ module Interpreters
         if (result.nil? || result[:unassigned].size >= 0.7 * service_vrp[:vrp].services.size) && feasible_vrp(result, service_vrp) &&
            service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit && service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit
           sub_service_vrps = []
-          loop do
+
+          3.times do # TODO: move this logic inside the split function
             sub_service_vrps = split(service_vrp, job)
             break if sub_service_vrps.size == 2
           end
+
+          # TODO: instead of an error, we can just continue the optimisation in the child process
+          # by modifying the resolution_dicho_division_X_limit's here so that the child runs the
+          # optimisation instead of trying to split again
+          raise 'dichotomious_heuristic cannot split the problem into two clusters' if sub_service_vrps.size != 2
+
           results = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
             sub_service_vrp[:vrp].resolution_split_number = sub_service_vrps[0][:vrp].resolution_split_number + 1 if !index.zero?
             sub_service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[0][:vrp].resolution_total_split_number if !index.zero?
@@ -436,10 +443,8 @@ module Interpreters
           }
         }
       else
-        raise 'Incorrect split size with kmeans' if services_by_cluster.size > 2
-
         # Kmeans return 1 vrp
-        sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp] # this part of the code is never reached
+        sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp]
         sub_vrp.points = vrp.points
         sub_vrp.vehicles = vrp.vehicles
         sub_vrp.vehicles.each{ |vehicle|
