@@ -139,6 +139,7 @@ module VrpConfiguration
     optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
       use :vrp_request_schedule
     end
+    mutually_exclusive :solver_parameter, :first_solution_strategy
   end
 
   params :vrp_request_partition do
@@ -174,7 +175,7 @@ module VrpConfiguration
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
     optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
     optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
-    optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called')
+    optional(:solver, type: Boolean, desc: '(default: true) Defines if solver should be called')
     optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is \'periodic\'. Not available ORtools.')
     optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling only) Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
     optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
@@ -186,6 +187,7 @@ module VrpConfiguration
     optional(:dicho_algorithm_service_limit, type: Integer, documentation: { hidden: true }, desc: 'Minimum number of services required to allow a call to heuristic dichotomious_approach')
     at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
     mutually_exclusive :initial_time_out, :minimum_duration
+    mutually_exclusive :solver, :solver_parameter
   end
 
   params :vrp_request_restitution do
