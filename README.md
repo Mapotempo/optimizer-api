@@ -1,4 +1,4 @@
-# Mapotempo Optimizer API [![Build Status](https://travis-ci.org/Mapotempo/optimizer-api.svg?branch=master)](https://travis-ci.org/Mapotempo/optimizer-api)
+# Mapotempo Optimizer API [![Build Status](https://travis-ci.com/Mapotempo/optimizer-api.svg?branch=master)](https://travis-ci.com/Mapotempo/optimizer-api)
 
 Run an optimizer REST API depending of many contraints for a Vehicle Routing Problem (VRP).
 
