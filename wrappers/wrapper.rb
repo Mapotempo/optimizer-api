@@ -205,9 +205,9 @@ module Wrappers
     end
 
     def assert_matrices_only_one(vrp)
-      vrp.vehicles.collect{ |vehicle|
+      vrp.vehicles.group_by{ |vehicle|
         vehicle.matrix_id || [vehicle.router_mode.to_sym, vehicle.router_dimension, vehicle.speed_multiplier]
-      }.uniq.size == 1
+      }.size <= 1
     end
 
     def assert_square_matrix(vrp)
@@ -459,17 +459,15 @@ module Wrappers
     end
 
     def assert_homogeneous_router_definitions(vrp)
-      vrp.vehicles.map{ |vehicle|
+      vrp.vehicles.group_by{ |vehicle|
         [vehicle.router_mode, vehicle.dimensions, vehicle.router_options]
-      }.uniq.size == 1
+      }.size <= 1
     end
 
     def assert_homogeneous_costs(vrp)
-      cost_profiles = Hash.new{ 0 }
-      vrp.vehicles.each{ |vehicle|
-        cost_profiles["#{vehicle.cost_time_multiplier}_#{vehicle.cost_distance_multiplier}_#{vehicle.cost_value_multiplier}"] += 1
-      }
-      cost_profiles.size == 1
+      vrp.vehicles.group_by{ |vehicle|
+        [vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier, vehicle.cost_value_multiplier]
+      }.size <= 1
     end
 
     def assert_no_exclusion_cost(vrp)
@@ -477,27 +475,34 @@ module Wrappers
     end
 
     def assert_only_time_dimension(vrp)
-      vrp.vehicles.all? { |vehicle|
-        vehicle.cost_time_multiplier.positive? && vehicle.cost_distance_multiplier.zero? && vehicle.cost_value_multiplier.zero? && vehicle.distance.nil?
+      vrp.vehicles.none? { |vehicle|
+        vehicle.cost_distance_multiplier.to_f.positive? ||
+          vehicle.cost_value_multiplier.to_f.positive? ||
+          vehicle.distance
       }
     end
 
     def assert_only_distance_dimension(vrp)
-      vrp.vehicles.all?{ |vehicle|
-        vehicle.cost_time_multiplier.zero? && vehicle.cost_distance_multiplier.positive? && vehicle.cost_value_multiplier.zero? &&
-          vehicle.duration.nil? && vehicle.timewindow.end.nil?
-      } && vrp.services.all?{ |service| service.activity.timewindows.empty? }
+      vrp.vehicles.none?{ |vehicle|
+        vehicle.cost_time_multiplier.to_f.positive? ||
+          vehicle.cost_value_multiplier.to_f.positive? ||
+          vehicle.duration ||
+          vehicle.timewindow&.end
+      } && vrp.services.none?{ |service| service.activity.timewindows&.any? }
     end
 
     def assert_only_value_dimension(vrp)
-      vrp.vehicles.all?{ |vehicle|
-        vehicle.cost_time_multiplier.zero? && vehicle.cost_distance_multiplier.zero? && vehicle.cost_value_multiplier.positive? &&
-          vehicle.duration.nil? && vehicle.distance.nil? && vehicle.timewindow.end.nil?
+      vrp.vehicles.none?{ |vehicle|
+        vehicle.cost_time_multiplier.to_f.positive? ||
+          vehicle.cost_distance_multiplier.to_f.positive? ||
+          vehicle.duration ||
+          vehicle.distance ||
+          vehicle.timewindow&.end
       }
     end
 
     def assert_single_dimension(vrp)
-      assert_only_time_dimension(vrp) ^ assert_only_distance_dimension(vrp) ^ assert_only_value_dimension(vrp)
+      vrp.vehicles.empty? || (assert_only_time_dimension(vrp) ^ assert_only_distance_dimension(vrp) ^ assert_only_value_dimension(vrp))
     end
 
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
