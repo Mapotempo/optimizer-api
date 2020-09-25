@@ -190,13 +190,6 @@ module Models
         end
       end
 
-      if configuration[:resolution]
-        if configuration[:resolution][:solver] && configuration[:resolution][:solver_parameter].to_i == -1 ||
-           !configuration[:resolution][:solver].nil? && configuration[:resolution][:solver] == false && configuration[:resolution][:solver_parameter] && configuration[:resolution][:solver_parameter] != -1
-          raise OptimizerWrapper::DiscordantProblemError, 'Deprecated and new solver parameter used at the same time with uncompatible values'
-        end
-      end
-
       # periodic consistency
       return unless periodic
 
@@ -274,15 +267,18 @@ module Models
     end
 
     def self.deduce_solver_parameter(hash)
-      if hash[:configuration] && hash[:configuration][:resolution] && hash[:configuration][:resolution][:solver_parameter]
-        if hash[:configuration][:resolution][:solver_parameter] == -1
-          hash[:configuration][:resolution][:solver] = false
-        else
+      resolution = hash[:configuration] && hash[:configuration][:resolution]
+      return unless resolution
+
+      if resolution[:solver_parameter] == -1
+        resolution[:solver] = false
+        resolution[:solver_parameter] = nil
+      elsif resolution[:solver_parameter]
           correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
-          hash[:configuration][:resolution][:solver] = true
           hash[:configuration][:preprocessing] ||= {}
           hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
-        end
+          resolution[:solver] = true
+          resolution[:solver_parameter] = nil
       end
     end
 

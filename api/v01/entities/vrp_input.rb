@@ -139,6 +139,7 @@ module VrpConfiguration
     optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
       use :vrp_request_schedule
     end
+    mutually_exclusive :solver_parameter, :first_solution_strategy
   end
 
   params :vrp_request_partition do
@@ -187,6 +188,7 @@ module VrpConfiguration
     optional(:dicho_algorithm_service_limit, type: Integer, documentation: { hidden: true }, desc: 'Minimum number of services required to allow a call to heuristic dichotomious_approach')
     at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
     mutually_exclusive :initial_time_out, :minimum_duration
+    mutually_exclusive :solver, :solver_parameter
   end
 
   params :vrp_request_restitution do
