@@ -17,11 +17,11 @@
 #
 
 class ScheduleType
-  def self.type_cast(value, mandatory = true, allow_zero = true)
+  def self.type_cast(value)
     return_value = if !value.nil?
-                    if /([0-9]+):([0-9]+):([0-9]+)/ =~ value.to_s
+                    if /\A([0-9]+):([0-9]{2}):([0-9]{2})\z/ =~ value.to_s
                       3600 * Regexp.last_match(1).to_i + 60 * Regexp.last_match(2).to_i + Regexp.last_match(3).to_i
-                    elsif /([0-9]+):([0-9]+)/ =~ value.to_s
+                    elsif /\A([0-9]+):([0-9]{2})\z/ =~ value.to_s
                       3600 * Regexp.last_match(1).to_i + 60 * Regexp.last_match(2).to_i
                     elsif /\A[0-9]+\.{0,1}[0-9]*\z/ =~ value.to_s
                       value.to_i
@@ -31,11 +31,9 @@ class ScheduleType
                       log 'error', level: :error
                       raise ArgumentError, 'Invalid Time value'
                     end
-                  elsif mandatory
-                    0
                   end
 
-    if return_value&.negative? || (!allow_zero && return_value&.zero?)
+    if return_value&.negative?
       log 'error', level: :error
       raise ArgumentError, 'Invalid Time value'
     end
