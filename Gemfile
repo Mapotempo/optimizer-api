@@ -9,7 +9,7 @@ gem 'rack-cors'
 gem 'rakeup'
 gem 'thin'
 
-gem 'grape', '>1.4.0', github: 'Mapotempo/grape', branch: 'master'
+gem 'grape', '>=1.5.0' # Important fixes are introduced in v1.5.0 (see PR #2096 & #2098)
 gem 'grape-entity'
 gem 'grape_logging'
 gem 'grape-swagger'

@@ -161,7 +161,7 @@ module VrpConfiguration
     optional(:partitions, type: Array, desc: 'Describes partition process to perform before solving. Partitions will be performed in provided order') do
       use :vrp_request_partition
     end
-    optional(:first_solution_strategy, types: Array[String], desc: 'Forces first solution strategy. Either one value to force specific behavior, or a list in order to test several ones and select the best. If string is \'internal\', we will choose among pre-selected behaviors. There can not be more than three behaviors (ORtools only).', coerce_with: ->(value) { FirstSolType.new.type_cast(value) })
+    optional(:first_solution_strategy, type: Array[String], desc: 'Forces first solution strategy. Either one value to force specific behavior, or a list in order to test several ones and select the best. If string is \'internal\', we will choose among pre-selected behaviors. There can not be more than three behaviors (ORtools only).', coerce_with: ->(value) { FirstSolType.new.type_cast(value) })
   end
 
   params :vrp_request_resolution do
@@ -290,7 +290,7 @@ module VrpMissions
 
   params :vrp_request_rest do
     requires(:id, type: String, allow_blank: false)
-    requires(:duration, types: [String, Float, Integer], desc: 'Duration of the vehicle rest', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    requires(:duration, type: Integer, default: 0, desc: 'Duration of the vehicle rest', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
       use :vrp_request_timewindow
     end
@@ -369,10 +369,10 @@ module VrpShared
   extend Grape::API::Helpers
 
   params :vrp_request_activity do
-    optional(:position, types: Symbol, default: :neutral, values: [:neutral, :always_first, :always_middle, :always_last, :never_first, :never_middle, :never_last], desc: 'Provides an indication on when to do this service among whole route', coerce_with: ->(value) { value.to_sym })
-    optional(:duration, types: [String, Float, Integer], desc: 'Time while the current activity stands until it\'s over (in seconds)', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:position, type: Symbol, default: :neutral, values: [:neutral, :always_first, :always_middle, :always_last, :never_first, :never_middle, :never_last], desc: 'Provides an indication on when to do this service among whole route', coerce_with: ->(value) { value.to_sym })
+    optional(:duration, type: Integer, default: 0, desc: 'Time while the current activity stands until it\'s over (in seconds)', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
-    optional(:setup_duration, types: [String, Float, Integer], desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:setup_duration, type: Integer, default: 0, desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:late_multiplier, type: Float, desc: '(ORtools only) Overrides the late_multiplier defined at the vehicle level')
     optional(:timewindow_start_day_shift_number, documentation: { hidden: true }, type: Integer, desc: '[ DEPRECATED ]')
     requires(:point_id, type: String, allow_blank: false, desc: 'Reference to the associated point')
@@ -412,9 +412,9 @@ module VrpShared
   end
 
   params :vrp_request_timewindow do
-    optional(:id, types: String)
-    optional(:start, types: [String, Float, Integer], desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.type_cast(value, false) })
-    optional(:end, types: [String, Float, Integer], desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.type_cast(value, false) })
+    optional(:id, type: String)
+    optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:end, type: Integer, desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:day_index, type: Integer, values: 0..6, desc: '(Scheduling only) Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
     at_least_one_of :start, :end, :day_index
   end
@@ -445,9 +445,9 @@ module VrpVehicles
     optional :matrix_id, type: String, desc: 'Related matrix, if already defined'
     optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index'
 
-    optional(:duration, types: [String, Float, Integer], desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.type_cast(value, false, false) })
-    optional(:overall_duration, types: [String, Float, Integer], documentation: { hidden: true }, desc: '(Scheduling only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.type_cast(value, false, false) })
-    optional(:distance, types: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
+    optional(:duration, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:overall_duration, type: Integer, values: ->(v) { v.positive? }, documentation: { hidden: true }, desc: '(Scheduling only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:distance, type: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
     optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
     optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
     optional :skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]. Not available with periodic heuristic.',

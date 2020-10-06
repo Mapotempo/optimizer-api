@@ -16,19 +16,6 @@ GIT
       color-generator
       geojson2image
 
-GIT
-  remote: https://github.com/Mapotempo/grape.git
-  revision: 9a91f5b0dc15f0f3df648086021a0b2f5d3b0a92
-  branch: master
-  specs:
-    grape (1.4.1)!
-      activesupport
-      builder
-      dry-types (>= 1.1)
-      mustermann-grape (~> 1.0.0)
-      rack (>= 1.3.0)
-      rack-accept
-
 GEM
   remote: https://rubygems.org/
   specs:
@@ -70,7 +57,7 @@ GEM
       concurrent-ruby (~> 1.0)
     dry-equalizer (0.3.0)
     dry-inflector (0.2.0)
-    dry-logic (1.0.7)
+    dry-logic (1.0.8)
       concurrent-ruby (~> 1.0)
       dry-core (~> 0.2)
       dry-equalizer (~> 0.2)
@@ -87,6 +74,13 @@ GEM
       chunky_png (~> 1.3)
       oj (~> 3.6)
     google-protobuf (3.13.0)
+    grape (1.5.0)
+      activesupport
+      builder
+      dry-types (>= 1.1)
+      mustermann-grape (~> 1.0.0)
+      rack (>= 1.3.0)
+      rack-accept
     grape-entity (0.8.1)
       activesupport (>= 3.0.0)
       multi_json (>= 1.3.2)
@@ -269,7 +263,7 @@ DEPENDENCIES
   byebug
   charlock_holmes
   google-protobuf (>= 3)
-  grape (> 1.4.0)!
+  grape (>= 1.5.0)
   grape-entity
   grape-swagger
   grape-swagger-entity
