@@ -423,8 +423,7 @@ class Wrappers::VroomTest < Minitest::Test
           start: 100,
           end: 20000
         },
-        rest_ids: ['rest_a'],
-        cost_late_multiplier: 1
+        rest_ids: ['rest_a']
       }],
       services: [{
         id: 'service_b',
@@ -581,7 +580,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_shipments
-    vroom = OptimizerWrapper.config[:services][:ortools]
+    vroom = OptimizerWrapper.config[:services][:vroom]
     vrp = TestHelper.create(VRP.pud)
     result = vroom.solve(vrp, 'test')
     assert result
@@ -681,7 +680,7 @@ class Wrappers::VroomTest < Minitest::Test
   end
 
   def test_mixed_shipments_and_services
-    vroom = OptimizerWrapper.config[:services][:ortools]
+    vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
       matrices: [{
         id: 'matrix_0',

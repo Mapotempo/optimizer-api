@@ -49,7 +49,7 @@ module Wrappers
         :assert_no_distance_limitation,
         :assert_vehicles_no_duration_limit,
         :assert_vehicles_no_force_start,
-        :assert_vehicles_no_late_multiplier,
+        :assert_vehicles_no_late_multiplier_or_single_vehicle,
         :assert_vehicles_no_overload_multiplier,
         :assert_vehicles_start_or_end,
 
@@ -265,12 +265,14 @@ module Wrappers
       vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq + vrp.services.flat_map{ |service| service.sticky_vehicles.map(&:id) }.uniq
       vrp_units = vrp.units.select{ |unit| vrp.vehicles.map{ |vehicle| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit }&.max&.positive? }
       problem[:vehicles] = vrp.vehicles.map{ |vehicle|
+        tw_end = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier.zero?) && vehicle.timewindow&.end || 2**30
         {
           id: 0,
           start_index: vehicle.start_point_id ? points[vehicle.start_point_id].matrix_index : nil,
           end_index: vehicle.end_point_id ? points[vehicle.end_point_id].matrix_index : nil,
           capacity: vrp_units.map{ |unit| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit&.to_i || 0 },
-          time_window: [vehicle.timewindow&.start || 0, vehicle.timewindow&.end || 2**30],
+          # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
+          time_window: [vehicle.timewindow&.start || 0, tw_end],
           skills: ([vrp_skills.find_index{ |sk| sk == vehicle.id }] + (vehicle.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || [])).compact,
           breaks: vehicle.rests.map{ |rest|
             rest_index = @rest_hash["#{vehicle.id}_#{rest.id}"][:index]
