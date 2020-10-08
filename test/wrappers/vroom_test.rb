@@ -424,7 +424,6 @@ class Wrappers::VroomTest < Minitest::Test
           end: 20000
         },
         rest_ids: ['rest_a'],
-        cost_late_multiplier: 1
       }],
       services: [{
         id: 'service_b',

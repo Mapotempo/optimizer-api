@@ -160,6 +160,10 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_no_late_multiplier_or_single_vehicle(vrp)
+      assert_vehicles_no_late_multiplier(vrp) || assert_vehicles_only_one(vrp)
+    end
+
     def assert_vehicles_no_overload_multiplier(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |capacity|
