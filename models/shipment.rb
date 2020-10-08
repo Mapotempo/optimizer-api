@@ -34,8 +34,7 @@ module Models
 
     # validates_numericality_of :visits_number
 
-    field :unavailable_visit_indices, default: nil
-
+    field :unavailable_visit_indices, default: []
     field :unavailable_visit_day_indices, default: [] # extends unavailable_visit_day_date
 
     field :minimum_lapse, default: nil
@@ -50,5 +49,14 @@ module Models
     belongs_to :delivery, class_name: 'Models::Activity'
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
+
+    def duplicate_safe(options = {})
+      # TODO : replace by implementing initialize_copy function for shallow copy + create model for visits
+      Models::Shipment.new(self.attributes.each_with_object({}) { |(k, v), data|
+        next if [:sticky_vehicle_ids, :quantity_ids].include?(k)
+
+        data[k] = options[k] || v
+      })
+    end
   end
 end

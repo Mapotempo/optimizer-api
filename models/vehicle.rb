@@ -232,6 +232,15 @@ module Models
       @working_range_indices = nil
     end
 
+    def duplicate_safe(options = {})
+      # TODO : replace by implementing initialize_copy function for shallow copy
+      Models::Vehicle.new([self.attributes.keys + options.keys].flatten.each_with_object({}) { |key, data|
+        next if [:start_point_id, :end_point_id, :capacity_ids, :sequence_timewindow_ids, :timewindow_id].include?(key)
+
+        data[key] = options[key] || self[key]
+      })
+    end
+
     private
 
     def working_week_days
