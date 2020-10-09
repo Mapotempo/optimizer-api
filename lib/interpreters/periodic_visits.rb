@@ -33,10 +33,6 @@ module Interpreters
 
         @schedule_start = vrp.schedule_range_indices[:start]
         @schedule_end = vrp.schedule_range_indices[:end]
-
-        @unavailable_indices = vrp.schedule_unavailable_indices.collect{ |unavailable_index|
-          unavailable_index if unavailable_index >= vrp.schedule_range_indices[:start] && unavailable_index <= vrp.schedule_range_indices[:end]
-        }&.compact
       end
     end
 
@@ -49,6 +45,7 @@ module Interpreters
       vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
         (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
       }
+      compute_possible_days(vrp.services)
 
       if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
         scheduling_heuristic = Heuristics::Scheduling.new(vrp, job)
@@ -56,7 +53,6 @@ module Interpreters
       end
 
       vrp.services = generate_services(vrp)
-      compute_days_interval(vrp)
       vrp.shipments = generate_shipments(vrp)
 
       @periods.uniq!
@@ -159,8 +155,6 @@ module Interpreters
           unavailable_index.negative? || unavailable_index > vrp.schedule_range_indices[:end]
         }.compact
 
-        service.unavailable_visit_day_indices |= @unavailable_indices
-
         (service.activity ? [service.activity] : service.activities).each{ |activity|
           activity.timewindows = generate_timewindows(activity.timewindows)
         }
@@ -176,7 +170,9 @@ module Interpreters
           new_service = duplicate_safe(
             service,
             id: "#{service.id}_#{visit_index + 1}_#{service.visits_number}",
-            visits_number: 1
+            visits_number: 1,
+            first_possible_days: [service.first_possible_days[visit_index]],
+            last_possible_days: [service.last_possible_days[visit_index]]
           )
           new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}"] if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
 
@@ -191,7 +187,7 @@ module Interpreters
         shipment.unavailable_visit_day_indices.delete_if{ |unavailable_index|
           unavailable_index.negative? || unavailable_index > vrp.schedule_range_indices[:end]
         }.compact
-        shipment.unavailable_visit_day_indices |= @unavailable_indices
+
         shipment.pickup.timewindows = generate_timewindows(shipment.pickup.timewindows)
         shipment.delivery.timewindows = generate_timewindows(shipment.delivery.timewindows)
 
@@ -242,7 +238,6 @@ module Interpreters
         vehicle.original_id = vehicle.id if vehicle.original_id.nil?
       }
       new_vehicles = vrp.vehicles.collect{ |vehicle|
-        vehicle.unavailable_work_day_indices |= @unavailable_indices
         @equivalent_vehicles[vehicle.id] = []
         vehicles = (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |vehicle_day_index|
           next if vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
@@ -424,42 +419,37 @@ module Interpreters
       end
     end
 
-    def compute_days_interval(vrp)
-      first_day = vrp.schedule_range_indices[:start]
-      last_day = vrp.schedule_range_indices[:end]
-
-      vrp.services.each{ |service|
-        service_index, service_total_quantity = service[:id].split('_')[-2].to_i, service[:id].split('_')[-1].to_i
-
-        day = first_day
+    def compute_possible_days(services)
+      # for each of this service's visits, computes first and last possible day to be assigned
+      # TODO : this should also be computed for shipments. This will probably be done automatically when implementing visits model
+      services.each{ |service|
+        day = @schedule_start
         nb_services_seen = 0
-        service_first_possible_day = -1
-        service_last_possible_day = -1
 
-        while day <= last_day && service_first_possible_day == -1
-          if !service.unavailable_visit_day_indices.include?(day)
+        # first possible day
+        while day <= @schedule_end && nb_services_seen < service.visits_number
+          if service.unavailable_visit_day_indices.include?(day)
+            day += 1
+          else
+            service.first_possible_days += [day]
             nb_services_seen += 1
-            service_first_possible_day = (nb_services_seen == service_index) ? day : -1
             day += service.minimum_lapse || 1
           end
-
-          day += 1
         end
 
-        day = last_day
-        nb_services_seen = service_total_quantity
-        while day >= first_day && service_last_possible_day == -1
-          service_last_possible_day = (nb_services_seen == service_index) ? day : -1
-
-          if !service.unavailable_visit_day_indices.include?(day)
-            nb_services_seen -= 1
+        # last possible day
+        day = @schedule_end
+        nb_services_seen = 0
+        while day >= @schedule_start && nb_services_seen < service.visits_number
+          if service.unavailable_visit_day_indices.include?(day)
+            day -= 1
+          else
+            service.last_possible_days += [day]
+            nb_services_seen += 1
             day -= service.minimum_lapse || 1
           end
-
-          day -= 1
         end
-        service[:first_possible_day] = service_first_possible_day
-        service[:last_possible_day] = service_last_possible_day
+        service.last_possible_days.reverse!
       }
     end
 
