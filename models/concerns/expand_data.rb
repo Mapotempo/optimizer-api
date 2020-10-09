@@ -63,4 +63,17 @@ module ExpandData
       }
     }
   end
+
+  def expand_unavailable_indices
+    unavailable_indices = self.schedule_unavailable_indices.select{ |unavailable_index|
+      unavailable_index >= self.schedule_range_indices[:start] && unavailable_index <= self.schedule_range_indices[:end]
+    }
+
+    self.vehicles.each{ |vehicle|
+      vehicle.unavailable_work_day_indices |= unavailable_indices
+    }
+    [self.services + self.shipments].flatten.each{ |mission|
+      mission.unavailable_visit_day_indices |= unavailable_indices
+    }
+  end
 end
