@@ -22,20 +22,31 @@ module Interpreters
   class MultiTrips
     def expand(vrp)
       vrp.vehicles = vrp.vehicles.collect{ |vehicle|
-        if vehicle.trips && vehicle.trips >= 1
-          new_ids = (0..vehicle.trips - 1).collect{ |index| vehicle.id + '_trip_' + index.to_s }
-          containing_relations = vrp.relations.select{ |relation| relation.linked_vehicle_ids.include?(vehicle.id) }.each{ |relation|
-            relation.linked_vehicle_ids -= vehicle.id
-            relation.linked_vehicle_ids += new_ids
-          }
-          vrp.relations += [Models::Relation.new(type: 'vehicle_trips', linked_vehicle_ids: new_ids)]
-
-          (0..vehicle.trips - 1).collect{ |index|
+        if vehicle.trips > 1
+          new_ids = Array.new(vehicle.trips) { |index| vehicle.id + '_trip_' + index.to_s }
+          new_vehicles = new_ids.collect{ |id|
             new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle.id += "_trip_#{index}"
+            new_vehicle.original_id = new_vehicle.id
+            new_vehicle.id = id
             new_vehicle.trips = 1
             new_vehicle
           }
+
+          vrp.relations.select{ |relation| relation.linked_vehicle_ids.include?(vehicle.id) }.each{ |relation|
+            relation.linked_vehicle_ids -= [vehicle.id]
+            relation.linked_vehicle_ids += new_ids
+          }
+
+          vrp.relations += [Models::Relation.new(type: 'vehicle_trips', linked_vehicle_ids: new_ids)]
+          # vrp.relations += [Models::Relation.new(type: 'vehicle_group_duration', linked_vehicle_ids: new_ids, lapse: vehicle.duration)] if vehicle.duration # TODO: Requires a complete rework of overall_duration
+          # vrp.relations += [Models::Relation.new(type: 'vehicle_group_duration', linked_vehicle_ids: new_ids, lapse: vehicle.overall_duration)] if vehicle.overall_duration # TODO: Requires a complete rework of overall_duration
+
+          vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle.id == vehicle.id } }.each{ |service|
+            service.sticky_vehicles -= [vehicle.id]
+            service.sticky_vehicles += new_ids
+          }
+
+          new_vehicles
         else
           vehicle
         end
