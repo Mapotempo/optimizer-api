@@ -32,8 +32,8 @@ module SchedulingDataInitialization
       @candidate_routes[original_vehicle_id][vehicle.global_day_index] = {
         vehicle_id: vehicle[:id],
         global_day_index: vehicle[:global_day_index],
-        tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - (vehicle.global_day_index % 7) * 86400,
-        tw_end: (vehicle.timewindow.end < 84600) ? vehicle.timewindow.end : vehicle.timewindow.end - (vehicle.global_day_index % 7) * 86400,
+        tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - vehicle.global_day_index * 86400,
+        tw_end: (vehicle.timewindow.end < 84600) ? vehicle.timewindow.end : vehicle.timewindow.end - vehicle.global_day_index * 86400,
         start_point_id: vehicle[:start_point_id],
         end_point_id: vehicle[:end_point_id],
         duration: vehicle[:duration] || (vehicle.timewindow.end - vehicle.timewindow.start),
@@ -116,7 +116,7 @@ module SchedulingDataInitialization
   def collect_services_data(vrp)
     available_units = vrp.vehicles.collect{ |vehicle| vehicle[:capacities] ? vehicle[:capacities].collect{ |capacity| capacity[:unit_id] } : nil }.flatten.compact.uniq
     vrp.services.each{ |service|
-      has_only_one_day = vrp.vehicles.all?{ |v| v.timewindow&.day_index || v.sequence_timewindows.size == 1 && v.sequence_timewindows.first.day_index }
+      has_only_one_day = vrp.vehicles.collect{ |v| v.global_day_index % 7 }.uniq.size == 1
       period = if service.visits_number == 1
                   nil
                 elsif has_only_one_day

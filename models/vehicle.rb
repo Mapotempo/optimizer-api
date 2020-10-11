@@ -108,7 +108,7 @@ module Models
 
     def self.create(hash)
       if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_work_day_indices]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
-        work_day_indices = hash[:sequence_timewindows].collect{ |tw| tw[:day_index] }
+        work_day_indices = hash[:sequence_timewindows].collect{ |tw| tw[:day_index] || (0..6).to_a }.flatten.uniq
         hash[:unavailable_work_day_indices].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
       end
 

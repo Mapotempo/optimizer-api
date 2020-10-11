@@ -19,719 +19,128 @@ require './test/test_helper'
 require 'date'
 
 class InterpreterTest < Minitest::Test
-  def test_expand_vrp_sequence_and_visit_range
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ],
-        distance: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0'],
-        sequence_timewindows: [{
-          start: 1,
-          end: 1
-        }]
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: 1,
-              end: 2
-            }, {
-              start: 5,
-              end: 7
-            }]
-          },
-          visits_number: 2
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_indices: {
-            start: 0,
-            end: 1
-          }
-        }
-      }
-    }
+  def periodic_expand(problem)
     vrp = TestHelper.create(problem)
     periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 2, expanded_vrp[:vehicles].size
-    assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2 })
-    assert_equal expanded_vrp[:services][0].activity.timewindows[0][:start], expanded_vrp[:services][1].activity.timewindows[0][:start]
+    periodic.send(:expand, vrp, nil)
+  end
+
+  def test_global_periodic_expand
+    problem = VRP.scheduling
+    problem[:services].each{ |service|
+      service[:visits_number] = 2
+    }
+    number_of_days = problem[:configuration][:schedule][:range_indices][:end] - problem[:configuration][:schedule][:range_indices][:start] + 1
+
+    expanded_vrp = periodic_expand(problem)
+    assert_equal number_of_days, expanded_vrp[:vehicles].size
+    assert_equal problem[:services].collect{ |s| s[:visits_number] }.sum, expanded_vrp[:services].size
     assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
     assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
   end
 
   def test_expand_vrp_schedule_range_date
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ],
-        distance: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0'],
-        sequence_timewindows: [{
-          start: 1,
-          end: 1
-        }]
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: 1,
-              end: 2
-            }, {
-              start: 5,
-              end: 7
-            }]
-          },
-          visits_number: 2
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_date: {
-            start: Date.new(2017, 1, 27),
-            end: Date.new(2017, 1, 28)
-          }
-        }
-      }
+    problem = VRP.scheduling
+    problem[:services].each{ |service|
+      service[:visits_number] = 2
     }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 2, expanded_vrp[:vehicles].size
-    assert_equal expanded_vrp[:vehicles][0].timewindow[:start] + 86400, expanded_vrp[:vehicles][1].timewindow[:start]
-    assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 2 })
-    assert_equal expanded_vrp[:services][0].activity.timewindows[0][:start], expanded_vrp[:services][1].activity.timewindows[0][:start]
+    number_of_days = 2
+    problem[:configuration][:schedule] = { range_date: { start: Date.new(2017, 1, 27), end: Date.new(2017, 1, 28) }}
+
+    expanded_vrp = periodic_expand(problem)
+    assert_equal number_of_days, expanded_vrp[:vehicles].size
+    assert_equal problem[:services].collect{ |s| s[:visits_number] }.sum, expanded_vrp[:services].size
     assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
     assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
+  end
+
+  def test_generated_service_timewindows_after_periodic_expand
+    problem = VRP.scheduling
+    problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
+
+    expanded_vrp = periodic_expand(problem)
+    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 1 }, 'There are no day index so we can keep original service timewindows'
+
+    problem = VRP.scheduling
+    problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200, day_index: 0 }] }
+    problem[:configuration][:schedule][:range_indices][:end] = 10
+
+    expanded_vrp = periodic_expand(problem)
+    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 2 }, 'There are two mondays and service is only available on mondays so there should be two timewindows'
+
+    problem = VRP.scheduling
+    problem[:configuration][:schedule][:range_indices][:end] = 10
+    problem[:vehicles].each{ |v| v[:timewindow] = { start: 0, end: 10, day_index: 3 } }
+    problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
+
+    expanded_vrp = periodic_expand(problem)
+    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.uniq.size == 11 }, 'There should be one timewindow per day because vehicle has day_indices'
+  end
+
+  def test_generated_vehicle_timewindow_after_periodic_expand
+    problem = VRP.scheduling
+    problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
+    expanded_vrp = periodic_expand(problem)
+    assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
+    assert_equal 1, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'No need to expand timewindows when no day_index are provided'
+
+    problem = VRP.scheduling
+    problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
+    problem[:services].first[:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
+    expanded_vrp = periodic_expand(problem)
+    assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
+    assert_equal 4, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'There should be as many vehicles as days in schedule because at least one day_index has been specified'
+
+    problem = VRP.scheduling
+    problem[:vehicles].first[:timewindow] = { start: 0, end: 10, day_index: 1 }
+    expanded_vrp = periodic_expand(problem)
+    assert_equal 1, expanded_vrp.vehicles.size, 'There should be only one vehicle because there is only one tuesday and this vehicle is not available other days'
+    assert_equal 86400, expanded_vrp.vehicles.first.timewindow.start, 'Timewindows should be properly expanded, according to day_index'
   end
 
   def test_expand_vrp_unavailable_visits
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ],
-        distance: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0'],
-        sequence_timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 1,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 2,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 3,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 4,
-          start: 1,
-          end: 11
-        }]
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              day_index: 0,
-              start: 1,
-              end: 2
-            }, {
-              day_index: 0,
-              start: 5,
-              end: 7
-            }, {
-              day_index: 1,
-              start: 402,
-              end: 408
-            }]
-          },
-          unavailable_visit_day_indices: (6..8).to_a + (12..13).to_a,
-          unavailable_visit_indices: [2],
-          visits_number: 3
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_indices: {
-            start: 6,
-            end: 20
-          }
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 10, expanded_vrp[:vehicles].size
-    assert_equal 1, expanded_vrp[:vehicles][0].timewindow[:start]
-    assert_equal expanded_vrp[:vehicles][0].timewindow[:start] + 86400, expanded_vrp[:vehicles][1].timewindow[:start]
-    assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert_equal 2 * problem[:rests].size, expanded_vrp[:rests].size
-    assert_equal 3, expanded_vrp[:services][0].activity.timewindows.size
-    assert_equal 3, expanded_vrp[:services][1].activity.timewindows.size
-  end
+    problem = VRP.scheduling
+    problem[:services].each{ |s| s[:visits_number] = 2 }
+    expanded_vrp = periodic_expand(problem)
 
-  def test_expand_vrp_with_date
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ],
-        distance: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0'],
-        sequence_timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 1,
-          start: 1,
-          end: 11
-        }],
-        unavailable_work_date: [Date.new(2017, 1, 8), Date.new(2017, 1, 11)]
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              day_index: 0,
-              start: 1,
-              end: 2
-            }, {
-              day_index: 0,
-              start: 5,
-              end: 7
-            }, {
-              day_index: 1,
-              start: 402,
-              end: 408
-            }]
-          },
-          unavailable_visit_day_date: [Date.new(2017, 1, 2), Date.new(2017, 1, 11), Date.new(2017, 1, 17)],
-          visits_number: 2
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_date: {
-            start: Date.new(2017, 1, 2), # monday
-            end: Date.new(2017, 1, 12) # thursday
-          }
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 4, expanded_vrp[:vehicles].size
-    assert_equal expanded_vrp[:vehicles][0].timewindow[:start] + 86400, expanded_vrp[:vehicles][1].timewindow[:start]
-    assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 })
-  end
+    assert_equal 2 * problem[:services].size, expanded_vrp.services.size
 
-  def test_expand_vrp_service_over_a_week
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ],
-        distance: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0'],
-        sequence_timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 1,
-          start: 2,
-          end: 12
-        }]
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [
-              { day_index: 0, start: 1, end: 2 },
-              { day_index: 0, start: 5, end: 7 },
-              { day_index: 1, start: 402, end: 408 },
-              { day_index: 3, start: 803, end: 809 },
-              { day_index: 4, start: 204, end: 210 },
-              { day_index: 5, start: 605, end: 611 }
-            ]
-          },
-          visits_number: 2
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_indices: {
-            start: 0,
-            end: 13
-          }
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 4, expanded_vrp[:vehicles].size
-    assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 })
-    ## The timewindows cover multiple services
-    assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
-    assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
-  end
-
-  def test_expand_vrp_with_date_and_indices
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ],
-        distance: [
-          [0,  1,  1,  10, 0],
-          [1,  0,  1,  10, 1],
-          [1,  1,  0,  10, 1],
-          [10, 10, 10, 0,  10],
-          [0,  1,  1,  10, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0'],
-        sequence_timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 1,
-          start: 4,
-          end: 14
-        }],
-        unavailable_work_day_indices: [1, 2, 3, 4, 6, 7]
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              day_index: 0,
-              start: 1,
-              end: 2
-            }, {
-              day_index: 0,
-              start: 5,
-              end: 7
-            }, {
-              day_index: 1,
-              start: 402,
-              end: 408
-            }]
-          },
-          unavailable_visit_day_indices: [0, 1, 2, 4, 6, 7],
-          visits_number: 2
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_date: {
-            start: Date.new(2017, 1, 2), # monday
-            end: Date.new(2017, 1, 12) # thursday
-          }
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 2, expanded_vrp[:vehicles].size
-    assert_equal 1, expanded_vrp[:vehicles][0].timewindow[:start]
-    assert_equal 11, expanded_vrp[:vehicles][0].timewindow[:end]
-    assert_equal 86404, expanded_vrp[:vehicles][1].timewindow[:start]
-    assert_equal 86414, expanded_vrp[:vehicles][1].timewindow[:end]
-    assert_equal 2 * (size - 1), expanded_vrp[:services].size
-    assert(expanded_vrp[:services].all?{ |service| service.activity.timewindows.size == 6 || 7 })
+    problem[:services].first[:unavailable_visit_indices] = [1]
+    expanded_vrp = periodic_expand(problem)
+    assert_equal 2 * problem[:services].size - 1, expanded_vrp.services.size
   end
 
   def test_date_and_unavailable_date
-    size = 2
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1],
-          [1, 0]
-        ],
-        distance: [
-          [0, 1],
-          [1, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        sequence_timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 1,
-          start: 4,
-          end: 14
-        }]
-      }],
-      services: [{
-          id: 'service_1',
-          activity: {
-            point_id: 'point_1',
-            timewindows: [{
-              day_index: 0,
-              start: 5,
-              end: 12
-            }]
-          },
-          visits_number: 2
-        }],
-      configuration: {
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_date: {
-            start: Date.new(2017, 1, 2), # monday
-            end: Date.new(2017, 1, 3) # thursday
-          },
-          unavailable_date: [
-            Date.new(2017, 1, 2)
-          ],
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 1, expanded_vrp[:vehicles].size
-    assert_equal 'vehicle_0_1', expanded_vrp[:vehicles].first[:id]
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 15, expanded_vrp.vehicles.size
+
+    vrp = VRP.scheduling
+    vrp[:vehicles][0][:unavailable_work_date] = [Date.new(2020, 1, 6)]
+    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
+    assert_equal [7], TestHelper.create(vrp).vehicles.first.unavailable_work_day_indices
+    expanded_vehicles = periodic_expand(vrp).vehicles
+    assert_equal 14, expanded_vehicles.size
+    assert_nil expanded_vehicles.find{ |v| v.id == 'vehicle_0_7' }, 'There should be no vehicle generated for day index 7'
   end
 
-  def test_date_and_unavailable_indices
-    size = 2
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1],
-          [1, 0,]
-        ],
-        distance: [
-          [0, 1],
-          [1, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        sequence_timewindows: [{
-          day_index: 0,
-          start: 1,
-          end: 11
-        }, {
-          day_index: 1,
-          start: 4,
-          end: 14
-        }]
-      }],
-      services: [{
-          id: 'service_1',
-          activity: {
-            point_id: 'point_1',
-            timewindows: [{
-              day_index: 0,
-              start: 5,
-              end: 12
-            }]
-          },
-          visits_number: 2
-        }],
-      configuration: {
-        resolution: {
-          duration: 10
-        },
-        schedule: {
-          range_date: {
-            start: Date.new(2017, 1, 2), # monday
-            end: Date.new(2017, 1, 3) # thursday
-          },
-          unavailable_indices: [
-            1
-          ],
-        }
-      }
+  def test_indices_and_unavailable_indices
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 16 }}
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 17, expanded_vrp.vehicles.size
+
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule] = {
+      range_indices: { start: 0, end: 16 },
+      unavailable_indices: [7]
     }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
-    assert_equal 1, expanded_vrp[:vehicles].size
-    assert_equal 'vehicle_0_0', expanded_vrp[:vehicles].last[:id]
+    vrp[:vehicles][0][:unavailable_work_day_indices] = [2]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 15, expanded_vrp.vehicles.size
+    assert_nil expanded_vrp.vehicles.find{ |v| v.id == 'vehicle_0_2' }, 'There should be no vehicle generated for day index 2'
+    assert_nil expanded_vrp.vehicles.find{ |v| v.id == 'vehicle_0_7' }, 'There should be no vehicle generated for day index 7'
   end
 
   def test_multiple_reference_to_same_rests
@@ -1086,8 +495,8 @@ class InterpreterTest < Minitest::Test
         },
         schedule: {
           range_date: {
-            start: '2017-09-01',
-            end: '2017-09-30'
+            start: '2017-09-01', # friday
+            end: '2017-09-30' # saturday
           }
         }
       },
@@ -1985,6 +1394,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_overall_duration_several_vehicles
+    skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:vehicles] << { id: 'vehicle_1' }
     problem[:relations] = [{
@@ -1996,14 +1406,11 @@ class InterpreterTest < Minitest::Test
     problem[:configuration][:schedule] = {
       range_indices: { start: 6, end: 7 }
     }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
 
     problem[:relations].first[:type] = 'vehicle_group_duration'
-    vrp = TestHelper.create(problem)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(vrp)
     assert_equal 1,  expanded_vrp.relations.size
     assert_equal 4,  expanded_vrp.relations.first[:linked_vehicle_ids].size
 
@@ -2029,9 +1436,7 @@ class InterpreterTest < Minitest::Test
     problem[:configuration][:schedule] = {
       range_indices: { start: 6, end: 7 }
     }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
 
     problem[:relations].first[:type] = 'vehicle_group_duration_on_months'
@@ -2040,7 +1445,7 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     refute_empty vrp.schedule_months_indices
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
   end
 
@@ -2054,19 +1459,17 @@ class InterpreterTest < Minitest::Test
     problem[:configuration][:schedule] = {
       range_indices: { start: 0, end: 7 }
     }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
 
     problem[:relations].first[:periodicity] = 2
-    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
 
     problem[:configuration][:schedule] = {
       range_indices: { start: 0, end: 14 }
     }
-    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
   end
 
@@ -2080,35 +1483,38 @@ class InterpreterTest < Minitest::Test
     problem[:configuration][:schedule] = {
       range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 2, 1) }
     }
-    vrp = TestHelper.create(problem)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
 
     problem[:relations].first[:periodicity] = 2
-    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
 
     problem[:configuration][:schedule] = {
       range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 3, 1) }
     }
-    expanded_vrp = periodic.send(:expand, TestHelper.create(problem), nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
   end
 
-  def test_unavailable_work_day_date_transformed_into_indice
+  def test_expand_rests
     vrp = VRP.scheduling
-    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
-    periodic = Interpreters::PeriodicVisits.new(TestHelper.create(vrp))
-    assert_equal 15, periodic.send(:expand, TestHelper.create(vrp), nil).vehicles.size
+    vrp[:rests] = [{
+      id: 'rest',
+      timewindows: [{ start: 1, end: 1, day_index: 0 }],
+      duration: 1
+    }]
+    vrp[:vehicles].first[:rest_ids] = ['rest']
 
-    vrp = VRP.scheduling
-    vrp[:vehicles][0][:unavailable_work_date] = [Date.new(2020, 1, 6)]
-    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
-    assert_equal [7], TestHelper.create(vrp).vehicles.first.unavailable_work_day_indices
-    periodic = Interpreters::PeriodicVisits.new(TestHelper.create(vrp))
-    expanded_vehicles = periodic.send(:expand, TestHelper.create(vrp), nil).vehicles
-    assert_equal 14, expanded_vehicles.size
-    assert(expanded_vehicles.none?{ |v| v.id == 'vehicle_0_7' })
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 1, expanded_vrp.rests.size, 'We are expecting one rest because vehicle has rests on mondays and there is one in schedule'
+
+    vrp[:configuration][:schedule][:range_indices][:end] = 9
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.rests.size, 'We are expecting two rests because vehicle has rests on mondays and there are two in schedule'
+
+    vrp[:rests].first[:timewindows].each{ |tw| tw.delete(:day_index) }
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 10, expanded_vrp.rests.size, 'We are expecting ten rests because vehicle has rests everyday and there are ten days in schedule'
   end
 end

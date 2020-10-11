@@ -89,8 +89,10 @@ class HeuristicTest < Minitest::Test
         result[:unassigned].size
       }
 
-      assert_operator unassigned_count.max, :<=, 225
-      assert_operator unassigned_count.min, :<=, 115
+      # should almost never violated (if happens twice, most probably there is a perf degredation)
+      assert_operator unassigned_count.mean, :<=, 180, "#{unassigned_count}.mean should be smaller"
+      assert_operator unassigned_count.min, :<=, 120, "#{unassigned_count}.min should be smaller"
+      assert_operator unassigned_count.max, :<=, 240, "#{unassigned_count}.max should be smaller"
     end
   end
 end
