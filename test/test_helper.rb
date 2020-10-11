@@ -677,7 +677,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp
   end
 
-  def self.lat_lon_scheduling_two_vehicles
+  def self.lat_lon_two_vehicles
     {
       units: [{
         id: 'kg'
@@ -780,27 +780,13 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         start_point_id: 'point_0',
         end_point_id: 'point_0',
         # router_mode: 'car',
-        router_dimension: 'distance',
-        sequence_timewindows: [
-          { start: 0, end: 100000, day_index: 0 },
-          { start: 0, end: 100000, day_index: 1 },
-          { start: 0, end: 100000, day_index: 2 },
-          { start: 0, end: 100000, day_index: 3 },
-          { start: 0, end: 100000, day_index: 4 }
-        ]
+        router_dimension: 'distance'
       }, {
         id: 'vehicle_1',
         matrix_id: 'm1',
         start_point_id: 'point_0',
         end_point_id: 'point_0',
-        router_dimension: 'distance',
-        sequence_timewindows: [
-          { start: 0, end: 100000, day_index: 0 },
-          { start: 0, end: 100000, day_index: 1 },
-          { start: 0, end: 100000, day_index: 2 },
-          { start: 0, end: 100000, day_index: 3 },
-          { start: 0, end: 100000, day_index: 4 }
-        ]
+        router_dimension: 'distance'
       }],
       services: [{
         id: 'service_1',
@@ -883,20 +869,35 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       configuration: {
         resolution: {
-          duration: 100,
-          solver: false
-        },
-        preprocessing: {
-          first_solution_strategy: ['periodic']
-        },
-        schedule: {
-          range_indices: {
-            start: 0,
-            end: 3
-          }
+          duration: 100
         }
       }
     }
+  end
+
+  def self.lat_lon_scheduling_two_vehicles
+    vrp = lat_lon_two_vehicles
+    vrp[:vehicles].each{ |v|
+      v[:sequence_timewindows] = [
+        { start: 0, end: 100000, day_index: 0 },
+        { start: 0, end: 100000, day_index: 1 },
+        { start: 0, end: 100000, day_index: 2 },
+        { start: 0, end: 100000, day_index: 3 },
+        { start: 0, end: 100000, day_index: 4 }
+      ]
+    }
+    vrp[:configuration][:resolution][:solver] = false
+    vrp[:configuration][:preprocessing] = {
+      first_solution_strategy: ['periodic']
+    }
+    vrp[:configuration][:schedule] = {
+      range_indices: {
+        start: 0,
+        end: 3
+      }
+    }
+
+    vrp
   end
 
   def self.scheduling_seq_timewindows

@@ -57,7 +57,7 @@ module Models
 
     field :force_start, default: false
     field :shift_preference, default: :minimize_span
-    field :trips, default: nil
+    field :trips, default: 1
     field :duration, default: nil
     field :overall_duration, default: nil
     field :distance, default: nil
