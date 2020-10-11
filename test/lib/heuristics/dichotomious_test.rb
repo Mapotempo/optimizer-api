@@ -104,6 +104,38 @@ class DichotomiousTest < Minitest::Test
       assert Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
     end
 
+    def test_infinite_loop_due_to_impossible_to_cluster
+      vrp = VRP.lat_lon
+      vrp[:configuration][:resolution][:duration] = 10
+      vrp[:points].each{ |p| p[:location] = { lat: 45, lon: 5 } } # all at the same location (impossible to cluster)
+
+      vrp[:matrices][0][:time] = Array.new(7){ Array.new(7, 1) }
+      vrp[:matrices][0][:time].each_with_index{ |row, i| row[i] = 0 }
+      vrp[:matrices][0][:distance] = vrp[:matrices][0][:time]
+
+      vrp[:services].each{ |s| s[:activity][:duration] = 500 }
+
+      vrp[:vehicles].first[:duration] = 3600
+      vrp[:vehicles] << vrp[:vehicles].first.dup
+      vrp[:vehicles].last[:id] = 'v_1'
+
+      problem = TestHelper.create(vrp)
+
+      problem.resolution_dicho_algorithm_vehicle_limit = 1
+      problem.resolution_dicho_division_vehicle_limit = 1
+      problem.resolution_dicho_algorithm_service_limit = 5
+      problem.resolution_dicho_division_service_limit = 5
+
+      counter = 0
+      Interpreters::Dichotomious.stub(:kmeans, lambda{ |vrpi, cut_symbol|
+        assert_operator counter, :<, 3, 'Interpreters::Dichotomious::kmeans is called too many times. Either there is an infinite loop due to imposible clustering or dicho split logic is altered.'
+        counter += 1
+        Interpreters::Dichotomious.send(:__minitest_stub__kmeans, vrpi, cut_symbol)
+      }) do
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
+      end
+    end
+
     def test_cluster_dichotomious_heuristic
       # Warning: This test is not enough to ensure that two services at the same point will
       # not end up in two different routes because after clustering there is tsp_simple.

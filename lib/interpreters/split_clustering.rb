@@ -361,6 +361,8 @@ module Interpreters
         c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
       end
 
+      raise 'Incorrect split in kmeans_process' if clusters.size > nb_clusters # it should be never more
+
       [clusters, centroids_characteristics]
     end
 
@@ -510,8 +512,8 @@ module Interpreters
           v_id: [vehicle.id],
           days: compute_day_skills(tw),
           depot: {
-            coordinates: [vehicle.start_point.location.lat, vehicle.start_point.location.lon],
-            matrix_index: vehicle.start_point.matrix_index
+            coordinates: [vehicle.start_point&.location&.lat, vehicle.start_point&.location&.lon],
+            matrix_index: vehicle.start_point&.matrix_index
           },
           capacities: capacities,
           skills: vehicle.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
