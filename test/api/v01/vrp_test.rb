@@ -402,6 +402,22 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_equal 10, vrp.routes.first.day_index
   end
 
+  def test_split_independent_vrp_by_sticky_vehicle
+    vrp = VRP.independent
+    vrp[:services] << {
+      id: 'fake_service',
+      activity: {
+        point_id: 'point_2'
+      },
+      sticky_vehicle_ids: [
+        'missing_vehicle_id'
+      ],
+    }
+    assert_raises ActiveHash::RecordNotFound do
+      TestHelper.create(vrp)
+    end
+  end
+
   def test_multitrips
     vrp = VRP.lat_lon_two_vehicles
     vrp[:vehicles].first[:trips] = 2

@@ -5428,7 +5428,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:routes][0][:activities].find{ |activity| activity[:service_id] == 'service_1_1_1' }[:detail][:timewindows].size
   end
 
-  def test_subproblem_with_one_vehicle_and_service
+  def test_subproblem_with_one_vehicle_and_no_possible_service
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5489,7 +5489,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert result
-    assert result[:cost].zero?
+    assert result[:cost].nil?
   end
 
   def test_build_rest

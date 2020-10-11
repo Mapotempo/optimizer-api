@@ -219,11 +219,7 @@ module Filters
 
   def self.filter_skills(vrp)
     # Remove duplicate skills and sort
-    vrp.services.each{ |s|
-      s.skills = s.skills&.uniq&.sort
-    }
-
-    vrp.shipments.each{ |s|
+    (vrp.services + vrp.shipments).each{ |s|
       s.skills = s.skills&.uniq&.sort
     }
 

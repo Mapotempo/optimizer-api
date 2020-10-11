@@ -42,7 +42,6 @@ module Wrappers
         :assert_only_empty_or_fill_quantities,
         :assert_points_same_definition,
         :assert_vehicles_no_zero_duration,
-        :assert_at_least_one_mission,
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_square_matrix,
         :assert_vehicle_tw_if_schedule,
@@ -458,45 +457,6 @@ module Wrappers
 
     private
 
-    def build_timewindows(activity, day_index)
-      activity.timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index }.collect{ |timewindow|
-        {
-          start: timewindow.start,
-          end: timewindow.end
-        }
-      }
-    end
-
-    def build_quantities(job, job_loads, delivery = nil)
-      if job_loads
-        job_loads.collect{ |current_load|
-          associated_quantity = job.quantities.find{ |quantity| quantity.unit && quantity.unit.id == current_load[:unit] } if job
-          {
-            unit: current_load[:unit],
-            label: current_load[:label],
-            value: associated_quantity && associated_quantity.value && (delivery.nil? ? 1 : -1) * associated_quantity.value,
-            setup_value: current_load[:counting] ? associated_quantity && associated_quantity.setup_value : nil,
-            current_load: current_load[:current_load]
-          }.delete_if{ |_k, v| !v }.compact
-        }
-      else
-        job.quantities.collect{ |quantity|
-          next if quantity.unit.nil?
-
-          {
-            unit: quantity.unit.id,
-            label: quantity.unit.label,
-            value: quantity&.value && (delivery.nil? ? 1 : -1) * quantity.value,
-            setup_value: quantity.unit.counting ? quantity.setup_value : 0
-          }
-        }.compact
-      end
-    end
-
-    def build_rest(rest, day_index, job_load)
-      build_detail(nil, rest, nil, day_index, job_load, nil, nil)
-    end
-
     def build_costs(costs)
       cost = Models::Costs.new(
         fixed: costs&.fixed || 0,
@@ -510,21 +470,6 @@ module Wrappers
       cost
     end
 
-    def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
-      {
-        lat: point && point.location && point.location.lat,
-        lon: point && point.location && point.location.lon,
-        skills: job && job.skills,
-        setup_duration: activity && activity[:setup_duration],
-        duration: activity && activity.duration,
-        additional_value: activity && activity[:additional_value],
-        timewindows: activity && build_timewindows(activity, day_index),
-        quantities: build_quantities(job, job_load, delivery),
-        router_mode: vehicle ? vehicle.router_mode : nil,
-        speed_multiplier: vehicle ? vehicle.speed_multiplier : nil
-      }.delete_if{ |_k, v| !v }.compact
-    end
-
     def check_services_compatible_days(vrp, vehicle, service)
       if vrp.schedule_range_indices && (service.minimum_lapse || service.maximum_lapse)
         (vehicle.global_day_index >= service[:first_possible_day] && vehicle.global_day_index <= service[:last_possible_day]) ? true : false
@@ -533,59 +478,9 @@ module Wrappers
       end
     end
 
-    def empty_result(vrp)
-      {
-        solvers: ['ortools'],
-        cost: 0,
-        costs: Models::Costs.new({}),
-        iterations: 0,
-        elapsed: 0, # ms
-        routes: [],
-        unassigned: (vrp.services.collect{ |service|
-          {
-            service_id: service.id,
-            type: service.type.to_s,
-            point_id: service.activity.point_id,
-            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil)
-          }
-        }) + (vrp.shipments.collect{ |shipment|
-          [{
-            shipment_id: shipment.id,
-            type: 'pickup',
-            point_id: shipment.pickup.point_id,
-            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
-          }] << {
-            shipment_id: shipment.id,
-            type: 'delivery',
-            point_id: shipment.delivery.point_id,
-            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
-          }
-        }).flatten + (vrp.rests.collect{ |rest|
-          {
-            rest_id: rest.id,
-            detail: build_rest(rest, nil, {})
-          }
-        })
-      }
-    end
-
-    def build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
-      if previous_matrix_index && current_matrix_index
-        travel_distance = vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0
-        travel_time = vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0
-        travel_value = vehicle_matrix[:value] ? vehicle_matrix[:value][previous_matrix_index][current_matrix_index] : 0
-        return {
-          travel_distance: travel_distance,
-          travel_time: travel_time,
-          travel_value: travel_value
-        }
-      end
-      {}
-    end
-
     def parse_output(vrp, _services, points, _matrix_indices, _cost, _iterations, output)
       if vrp.vehicles.empty? || (vrp.services.nil? || vrp.services.empty?) && (vrp.shipments.nil? || vrp.shipments.empty?)
-        return empty_result(vrp)
+        return empty_result('ortools', vrp)
       end
 
       content = OrtoolsResult::Result.decode(output.read)
@@ -608,7 +503,6 @@ module Wrappers
 
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
-      solution_cost = Models::Costs.new({})
       {
         cost: content.cost || 0,
         solvers: ['ortools'],
@@ -866,7 +760,7 @@ module Wrappers
       if @thread.value.success?
         if result == 'No solution found...'
           cost = Helper.fixnum_max
-          @previous_result = empty_result(vrp)
+          @previous_result = empty_result('ortools', vrp)
           @previous_result[:cost] = cost
         else
           @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
