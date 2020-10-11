@@ -89,7 +89,6 @@ TIME=true HTML=true APP_ENV=test bundle exec rake test
 ```
 This generates a report with test times. You can find the report in optimizer-api/test/html_reports folder.
 
-
 You can add your own tests on specific Vehicle Routing Problem (for instance data from real cases). Let's see how to create a new test called "new_test".
 You will find template for test in `test/real_cases_test.rb`
 
