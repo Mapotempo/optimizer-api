@@ -304,7 +304,7 @@ module SchedulingEndPhase
             []
           else
             referent_route ||= day_data
-            insertion_costs = compute_costs_for_route(day_data, remaining_ids)
+            insertion_costs = compute_costs(vehicle, :id, day, remaining_ids, false)
             insertion_costs.each{ |cost|
               cost[:vehicle] = vehicle
               cost[:day] = day
@@ -403,7 +403,7 @@ module SchedulingEndPhase
         keep_inserting = true
         inserted = []
         while keep_inserting
-          insertion_costs = compute_costs_for_route(route_data, still_removed.collect(&:first).uniq - inserted)
+          insertion_costs = compute_costs(vehicle, :id, day, still_removed.collect(&:first).uniq - inserted)
 
           if insertion_costs.flatten.empty?
             keep_inserting = false
@@ -449,7 +449,7 @@ module SchedulingEndPhase
           most_prio_and_frequent.each_with_index{ |service, s_i|
             potential_costs[s_i][vehicle] ||= {}
 
-            cost = compute_costs_for_route(day_route, [service[0]]).first
+            cost = compute_costs(vehicle, :id, day, [service[0]], false).first
             potential_costs[s_i][vehicle][day] = cost
           }
         }

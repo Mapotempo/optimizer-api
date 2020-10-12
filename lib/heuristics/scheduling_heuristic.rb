@@ -479,44 +479,64 @@ module Heuristics
       update_route(new_route, 0, solver_route.first[:begin_time])
     end
 
-    def compute_costs_for_route(route_data, set = nil)
-      vehicle = route_data[:vehicle_id].split('_')[0..-2].join('_')
-      day = route_data[:vehicle_id].split('_').last.to_i
+    def compatibility_regarding_same_point_day(vehicle, day, id)
+      point = @services_data[id][:points_ids].first # there can be only on point in points_ids because @relaxed/same_point_day is on
 
-      ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
-      insertion_costs = []
-      set ||= @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:visits_number] == 1 } : @to_plan_service_ids
-      # we will assign services with one vehicle in relaxed_same_point_day part
-      set.select{ |service|
-        # quantities are respected
-        ((@same_point_day && @services_data[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
-          (!@same_point_day && @services_data[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
-          # service is available at this day
-          !@services_data[service][:unavailable_days].include?(day) &&
-          (@services_data[service][:sticky_vehicles_ids].empty? || @services_data[service][:sticky_vehicles_ids].include?(vehicle))
-      }.each{ |service_id|
-        next if @services_data[service_id][:used_days] && !days_respecting_lapse(service_id, vehicle).include?(day)
+      return false if @relaxed_same_point_day &&
+                      !@points_vehicles_and_days[point][:vehicles].empty? &&
+                      (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !(@points_vehicles_and_days[point][:maximum_visits_number] < @services_data[id][:visits_number] || @points_vehicles_and_days[point][:days].include?(day)))
 
-        point = @services_data[service_id][:points_ids].first if @same_point_day || @relaxed_same_point_day # there can be only on point in points_ids
-        next if @relaxed_same_point_day &&
-                !@points_vehicles_and_days[point][:vehicles].empty? &&
-                (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !(@points_vehicles_and_days[point][:maximum_visits_number] < @services_data[service_id][:visits_number] || @points_vehicles_and_days[point][:days].include?(day)))
+      return false if @same_point_day && @unlocked.include?(id) && (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !@points_vehicles_and_days[point][:days].include?(day))
 
-        next if @same_point_day && @unlocked.include?(service_id) && (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !@points_vehicles_and_days[point][:days].include?(day))
+      return false unless same_point_compatibility(id, vehicle, day)
 
-        period = @services_data[service_id][:heuristic_period]
+      return false unless @relaxed_same_point_day || @services_data[id][:group_capacity].all?{ |need, quantity| quantity <= @candidate_routes[vehicle][day][:capacity_left][need] }
 
-        next if !(period.nil? ||
-                route_data[:available_ids].include?(service_id) && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil? &&
-                same_point_compatibility(service_id, vehicle, day))
+      true
+    end
 
-        next if two_visits_and_can_not_assign_second(vehicle, day, service_id)
+    def compatible_route(vehicle, day, id, first_visit = true)
+      return false unless @candidate_routes[vehicle][day][:available_ids].include?(id) &&
+                          !@services_data[id][:unavailable_days].include?(day)
 
-        other_indices = find_best_index(service_id, route_data)
-        insertion_costs << other_indices if other_indices
-      }
+      # TODO : to put consider within @candidate_routes[vehicle][day][:available_ids]
+      return false unless @services_data[id][:sticky_vehicles_ids].empty? || @services_data[id][:sticky_vehicles_ids].include?(vehicle)
 
-      insertion_costs.compact
+      return false unless @services_data[id][:capacity].all?{ |need, quantity| quantity <= @candidate_routes[vehicle][day][:capacity_left][need] }
+
+      return false unless @services_data[id][:used_days].empty? || days_respecting_lapse(id, vehicle).include?(day)
+
+      period = @services_data[id][:heuristic_period]
+      return false if first_visit && period && (day + period..@schedule_end).step(period).all?{ |current_day| @vehicle_day_completed[vehicle][current_day] }
+
+      return false if (@same_point_day || @relaxed_same_point_day) && !compatibility_regarding_same_point_day(vehicle, day, id)
+
+      return false if two_visits_and_can_not_assign_second(vehicle, day, id)
+
+      true
+    end
+
+    def compute_costs(vehicle, iterate_over, additional_data, set = nil, first_visit = true)
+      costs = if iterate_over == :day
+        service_id = additional_data
+        @candidate_routes[vehicle].collect{ |day, route_data|
+          next unless compatible_route(vehicle, day, service_id, first_visit)
+
+          find_best_index(service_id, route_data)
+        }
+      elsif iterate_over == :id
+        day = additional_data
+        set ||= @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:visits_number] == 1 } : @to_plan_service_ids
+        set.collect{ |service_id|
+          next unless compatible_route(vehicle, day, service_id, first_visit)
+
+          find_best_index(service_id, @candidate_routes[vehicle][day])
+        }
+      else
+        raise OptimizerWrapper::SchedulingHeuristicError, 'Trying to compute costs with unknow iteration parameter'
+      end
+
+      costs.compact
     end
 
     def two_visits_and_can_not_assign_second(vehicle, day, service_id)
@@ -529,16 +549,14 @@ module Heuristics
     end
 
     def same_point_compatibility(service_id, vehicle, day)
-      # reminder : services in (relaxed_)same_point_day relation have only one point_id
       same_point_compatible_day = true
 
       return same_point_compatible_day if @services_data[service_id][:heuristic_period].nil?
 
       last_visit_day = day + (@services_data[service_id][:visits_number] - 1) * @services_data[service_id][:heuristic_period]
       if @relaxed_same_point_day
-        # we know only one activity/point_id because @same_point_day was activated
         involved_days = (day..last_visit_day).step(@services_data[service_id][:heuristic_period]).collect{ |d| d }
-        already_involved = @candidate_routes[vehicle].select{ |_d, r| r[:current_route].any?{ |s| s[:point_id] == @services_data[service_id][:points_ids].first } }.collect{ |d, _r| d }
+        already_involved = @points_vehicles_and_days[@services_data[service_id][:points_ids].first][:days] # reminder : services in (relaxed_)same_point_day relation have only one point_id
         if !already_involved.empty? &&
            @services_data[service_id][:visits_number] > @freq_max_at_point[@services_data[service_id][:points_ids].first] &&
            (involved_days & already_involved).size < @freq_max_at_point[@services_data[service_id][:points_ids].first]
@@ -548,6 +566,7 @@ module Heuristics
         end
       elsif @unlocked.include?(service_id)
         # can not finish later (over whole period) than service at same_point
+        # if @unlocked includes service_id then there should be at least one visit of service with higher or equal freq in the route
         stop = @candidate_routes[vehicle][day][:current_route].select{ |stop| stop[:point_id] == @services_data[service_id][:points_ids].first }.max_by{ |stop| @services_data[stop[:id]][:visits_number] }
         stop_last_visit_day = day + (@services_data[stop[:id]][:visits_number] - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
         same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
@@ -753,7 +772,7 @@ module Heuristics
     def try_to_add_new_point(vehicle, day)
       route_data = @candidate_routes[vehicle][day]
 
-      insertion_costs = compute_costs_for_route(route_data)
+      insertion_costs = compute_costs(vehicle, :id, day)
 
       return [nil, [], []] if insertion_costs.empty?
 
