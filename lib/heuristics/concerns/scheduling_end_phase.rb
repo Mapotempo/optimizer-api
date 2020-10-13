@@ -498,7 +498,7 @@ module SchedulingEndPhase
         to_plan[:seq].each{ |day|
           insert_point_in_route(@candidate_routes[to_plan[:vehicle]][day], potential_costs[to_plan[:s_i]][to_plan[:vehicle]][day], false)
         }
-        @output_tool&.insert_visits(@services_data[to_plan[:service]][:used_days], to_plan[:service], @services_data[to_plan[:service]][:visits_number])
+        @output_tool&.insert_visits(to_plan[:vehicle], @services_data[to_plan[:service]][:used_days], to_plan[:service], @services_data[to_plan[:service]][:visits_number])
 
         most_prio_and_frequent.delete_if{ |service| service.first == to_plan[:service] }
         adapted_still_removed.delete_if{ |service| service.first == to_plan[:service] }

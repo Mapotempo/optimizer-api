@@ -92,24 +92,37 @@ module OutputHelper
 
   # To output data about scheduling heuristic process
   class Scheduling
-    def initialize(name, vehicle_names, job, schedule_end)
-      @file_name = "scheduling_construction#{"_#{name}" if name}#{"_#{job}" if job}".parameterize
+    def initialize(name, vehicles, job, schedule_end)
+      ### csv file ###
+      @csv_name = "scheduling_construction#{"_#{name}" if name}#{"_#{job}" if job}".parameterize
       @nb_days = schedule_end
 
       @scheduling_file = ''
-      @scheduling_file << 'customer_id,nb_visits,'
+      @scheduling_file << 'customer_id,nb_visits,vehicle_id,'
       (0..@nb_days).each{ |day|
         @scheduling_file << "#{day},"
       }
       @scheduling_file << "\n"
-
-      @scheduling_file << "CLUSTER WITH VEHICLES #{vehicle_names} ------\n"
     end
 
-    def insert_visits(days, inserted_id, nb_visits)
+    def initialize_geojson(name, vehicles, services, job)
+      ### geojson file ###
+      @geojson_name = "scheduling_construction_geojson#{"_#{name}" if name}#{"_#{job}" if job}".parameterize
+      @geojson_counter = 0
+      @coordinates = {}
+      services.each{ |s|
+        @coordinates[s.id] = [s.activity.point.location.lon, s.activity.point.location.lat] if s.activity # no need to output if we do not know where
+      }
+      vehicles.each{ |v|
+        @coordinates[v.start_point_id] = [v.start_point.location.lon, v.start_point.location.lat] if v.start_point_id
+        @coordinates[v.end_point_id] = [v.end_point.location.lon, v.end_point.location.lat] if v.end_point
+      }
+    end
+
+    def insert_visits(vehicle_id, days, inserted_id, nb_visits)
       return if days.empty?
 
-      line = "#{inserted_id},#{nb_visits}"
+      line = "#{inserted_id},#{nb_visits},#{vehicle_id}"
       (0..@nb_days).each{ |day|
         line << if days.include?(day)
           ',X'
@@ -118,6 +131,56 @@ module OutputHelper
         end
       }
       @scheduling_file << "#{line}\n"
+    end
+
+    def compute_route(route_data)
+      return unless @geojson_name
+
+      current_route = route_data[:current_route]
+      route_data[:geojson] = [{
+        type: 'Feature',
+        properties: {
+          color: route_data[:color],
+          name: "start_#{route_data[:vehicle_id]}_#{route_data[:global_day_index]}"
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: [@coordinates[route_data[:start_point_id]], @coordinates[current_route[0][:id]]]
+        }
+      }] + Array.new(current_route.size - 1){ |index_in_route|
+        {
+          type: 'Feature',
+          properties: {
+            name: "#{current_route[index_in_route][:id]}_to_#{current_route[index_in_route + 1][:id]}"
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [@coordinates[current_route[index_in_route][:id]], @coordinates[current_route[index_in_route + 1][:id]]]
+          }
+        }
+      } + [{
+        type: 'Feature',
+        properties: {
+          color: route_data[:color],
+          name: "end_#{route_data[:vehicle_id]}_#{route_data[:global_day_index]}"
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: [@coordinates[current_route.last[:id]], @coordinates[route_data[:end_point_id]]]
+        }
+      }]
+    end
+
+    def output_geojson(name, routes)
+      return unless @geojson_name
+
+      geojson = {
+        type: 'FeatureCollection',
+        features: routes.flat_map{ |_v, d| d.collect{ |_day, data| data[:geojson] } }
+      }
+
+      Api::V01::APIBase.dump_vrp_dir.write("#{@geojson_name}_#{@geojson_counter}_" + name, geojson.to_json, mode: 'a')
+      @geojson_counter += 1
     end
 
     def remove_visits(removed_days, all_inserted_days, inserted_id, nb_visits)
@@ -153,7 +216,7 @@ module OutputHelper
     end
 
     def close_file
-      Api::V01::APIBase.dump_vrp_dir.write(@file_name, @scheduling_file, mode: 'a')
+      Api::V01::APIBase.dump_vrp_dir.write(@csv_name, @scheduling_file, mode: 'a')
     end
   end
 end
