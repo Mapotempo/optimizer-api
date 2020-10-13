@@ -208,7 +208,8 @@ module Models
           occurence = group[1].size
           # TODO : fix case where serveral timewindows correspond to the same day
           tw_index = working_week_days.find_index(week_day_index)
-          tw = self.sequence_timewindows[tw_index]
+          tw = self.timewindow
+          tw ||= self.sequence_timewindows[tw_index]
           total_work_time += (tw.end - tw.start) * occurence
         }
         @total_work_time_in_range[[range_start, range_end]] = total_work_time
@@ -232,11 +233,23 @@ module Models
       @working_range_indices = nil
     end
 
+    def available_at(day)
+      return false unless working_week_days.include?(day % 7)
+
+      return false if self.unavailable_work_day_indices.to_a.include?(day)
+
+      true
+    end
+
     private
 
     def working_week_days
-      # TODO : fix case where vehicle has no sequence_timewindows but single timewindow for all days
-      @working_week_days ||= self.sequence_timewindows.collect(&:day_index)
+      @working_week_days ||=
+        if self.timewindow
+          [self.timewindow.day_index || (0..6).to_a].flatten
+        else
+          self.sequence_timewindows.collect(&:day_index)
+        end
     end
 
     def working_day_indices_in_range(range_start, range_end)
