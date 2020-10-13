@@ -124,14 +124,14 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     job = 'fake_job'
     schedule_end = 5
 
-    output_tool = OutputHelper::Scheduling.new(name, 'fake_vehicles', job, schedule_end)
+    output_tool = OutputHelper::Scheduling.new(name, [Models::Vehicle.new({ id: 'fake_vehicles' })], job, schedule_end)
     file_name = File.join(Api::V01::APIBase.dump_vrp_dir.cache, 'scheduling_construction_test_fake_job')
 
     refute File.exist?(file_name), 'File created before end of generation'
 
     output_tool.add_comment('my comment')
     days = [0, 2, 4]
-    output_tool.insert_visits(days, 'service_id', 3)
+    output_tool.insert_visits('a vehicle', days, 'service_id', 3)
     output_tool.close_file
 
     assert File.exist?(file_name), 'File not found'
@@ -141,7 +141,8 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     assert(csv.any?{ |line|
       line[0] == 'service_id' &&
         line[1] == '3' &&
-        line[2] == 'X' && line[4] == 'X' && line[6] == 'X' &&
+        line[2] == 'a vehicle' &&
+        line[3] == 'X' && line[5] == 'X' && line[7] == 'X' &&
         line.count('X') == days.size
     })
   end

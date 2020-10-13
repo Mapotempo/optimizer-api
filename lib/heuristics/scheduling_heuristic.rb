@@ -81,7 +81,8 @@ module Heuristics
       compute_latest_authorized
       @cost = 0
 
-      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
+      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] || OptimizerWrapper.config[:debug][:geojson_schedule] ? OutputHelper::Scheduling.new(vrp.name, vrp.vehicles, job, @schedule_end) : nil
+      @output_tool&.initialize_geojson(vrp.name, vrp.vehicles, vrp.services, job) if OptimizerWrapper.config[:debug][:geojson_schedule]
     end
 
     def compute_initial_solution(vrp, &block)
@@ -404,12 +405,14 @@ module Heuristics
 
     def clean_routes(service, vehicle, reaffect = false)
       ### when allow_partial_assignment is false, removes all affected visits of [service] because we can not affect all visits ###
-      @candidate_routes[vehicle].collect{ |_day, day_route|
+      @candidate_routes[vehicle].collect{ |day, day_route|
         remove_index = day_route[:current_route].find_index{ |stop| stop[:id] == service }
         next unless remove_index
 
         used_point = day_route[:current_route][remove_index][:point_id]
         day_route[:current_route].slice!(remove_index)
+        day_route[:geojson] = @output_tool&.compute_route(day_route)
+        @output_tool&.output_geojson("removing_#{service}_in_#{vehicle}_#{day}.geojson", @candidate_routes)
         @services_data[service][:capacity].each{ |need, qty| day_route[:capacity_left][need] += qty }
 
         update_point_vehicle_and_days(used_point)
@@ -691,7 +694,7 @@ module Heuristics
           best_point = select_point(insertion_costs, current_route.empty?)
 
           insert_point_in_route(route_data, best_point)
-          @output_tool&.insert_visits(@services_data[best_point[:id]][:used_days], best_point[:id], @services_data[best_point[:id]][:visits_number])
+          @output_tool&.insert_visits(vehicle, @services_data[best_point[:id]][:used_days], best_point[:id], @services_data[best_point[:id]][:visits_number])
 
           @to_plan_service_ids.delete(best_point[:id])
         else
@@ -762,7 +765,7 @@ module Heuristics
       insert_point_in_route(route_data, best_index)
       impacted_days = adjust_candidate_routes(vehicle, day)
 
-      @output_tool&.insert_visits(@services_data[best_index[:id]][:used_days], best_index[:id], @services_data[best_index[:id]][:visits_number])
+      @output_tool&.insert_visits(vehicle, @services_data[best_index[:id]][:used_days], best_index[:id], @services_data[best_index[:id]][:visits_number])
 
       @to_plan_service_ids.delete(best_index[:id])
 
@@ -974,6 +977,9 @@ module Heuristics
 
         update_route(route_data, point_to_add[:position] + 1)
       end
+
+      route_data[:geojson] = @output_tool&.compute_route(route_data)
+      @output_tool&.output_geojson("inserting_#{point_to_add[:id]}_in_#{route_data[:vehicle_id]}_#{route_data[:global_day]}.geojson", @candidate_routes)
     end
 
     def matrix(route_data, start, arrival, dimension = :time)
