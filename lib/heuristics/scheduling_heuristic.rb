@@ -63,7 +63,6 @@ module Heuristics
       @unlocked = []
       @same_located = {}
       @freq_max_at_point = Hash.new(0)
-      @max_day = {} # max_day[visits_number][minimum_lapse] = last day authorized
 
       @uninserted = {}
       @missing_visits = {}
@@ -422,6 +421,13 @@ module Heuristics
 
       if reaffect
         @candidate_services_ids << service
+        @candidate_routes.each{ |_vehicle, data|
+          data.each{ |day, r_d|
+            next unless day <= @services_data[service][:max_day]
+
+            r_d[:available_ids] |= service
+          }
+        }
         @uninserted.each{ |id, info|
           @uninserted.delete(id) if info[:original_service] == service
         }
@@ -494,10 +500,9 @@ module Heuristics
         next if @same_point_day && @unlocked.include?(service_id) && (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !@points_vehicles_and_days[point][:days].include?(day))
 
         period = @services_data[service_id][:heuristic_period]
-        latest_authorized_day = @max_day[@services_data[service_id][:visits_number]][period]
 
         next if !(period.nil? ||
-                day <= latest_authorized_day && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil? &&
+                route_data[:available_ids].include?(service_id) && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil? &&
                 same_point_compatibility(service_id, vehicle, day))
 
         next if two_visits_and_can_not_assign_second(vehicle, day, service_id)
@@ -729,6 +734,7 @@ module Heuristics
       max_shift = best_index[:potential_shift]
       additional_durations = @services_data[best_index[:id]][:durations].first + best_index[:considered_setup_duration]
       @same_located[best_index[:id]].each_with_index{ |service_id, i|
+        @candidate_routes.each{ |_vehicle, data| data.each{ |_day, r_d| r_d[:available_ids].delete(service_id) } }
         @services_data[service_id][:used_days] << route_data[:global_day_index]
         route_data[:current_route].insert(best_index[:position] + i + 1,
                                           id: service_id,
@@ -951,6 +957,7 @@ module Heuristics
       @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] = [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number], @services_data[point_to_add[:id]][:visits_number]].max
       @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
+      @candidate_routes.each{ |_vehicle, data| data.each{ |_day, r_d| r_d[:available_ids].delete(point_to_add[:id]) } } if first_visit
       @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:visits_number]].max
 
       current_route.insert(point_to_add[:position],

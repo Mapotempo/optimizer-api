@@ -41,6 +41,7 @@ module SchedulingDataInitialization
         maximum_ride_distance: vehicle.maximum_ride_distance,
         router_dimension: vehicle.router_dimension.to_sym,
         cost_fixed: vehicle.cost_fixed,
+        available_ids: [],
       }
       @vehicle_day_completed[vehicle.original_id][vehicle.global_day_index] = false
       @missing_visits[vehicle.original_id] = []
@@ -221,10 +222,16 @@ module SchedulingDataInitialization
   end
 
   def compute_latest_authorized
-    @services_data.group_by{ |_id, data| [data[:visits_number], data[:heuristic_period]] }.each{ |parameters, set|
-      visits_number, lapse = parameters
-      @max_day[visits_number] = {} unless @max_day[visits_number]
-      @max_day[visits_number][lapse] = set.collect{ |service, data| data[:max_day] }.max
+    @services_data.group_by{ |_id, data| [data[:visits_number], data[:heuristic_period]] }.each{ |_parameters, set|
+      latest_day = set.max_by{ |_service, data| data[:raw].last_possible_days.first }.last[:raw].last_possible_days.first # first is for first visit
+
+      @candidate_routes.each{ |vehicle, data|
+        data.each_key{ |day|
+          next if day > latest_day
+
+          @candidate_routes[vehicle][day][:available_ids] += set.collect(&:first)
+        }
+      }
     }
   end
 

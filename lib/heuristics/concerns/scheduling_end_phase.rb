@@ -278,6 +278,7 @@ module SchedulingEndPhase
       break if all_empty || !smth_removed
     end
 
+    compute_latest_authorized
     removed
   end
 
@@ -435,12 +436,7 @@ module SchedulingEndPhase
 
   def reaffect_prohibiting_partial_assignment(still_removed)
     # allow any day to assign visits
-    copy_max_day = @max_day.deep_dup
-    @max_day.each{ |visits_number, hash_set|
-      hash_set.each{ |key, _value|
-        @max_day[visits_number][key] = @schedule_end
-      }
-    }
+    @candidate_routes.each{ |_vehicle, data| data.each{ |_day, r_d| r_d[:available_ids] = @services_data.keys } }
 
     banned = []
     adapted_still_removed = still_removed.collect(&:first).uniq.collect{ |id| [id, @services_data[id][:visits_number]] }
@@ -515,7 +511,7 @@ module SchedulingEndPhase
     end
 
     # restaure right days to insert
-    @max_day = copy_max_day
+    compute_latest_authorized
     still_removed
   end
 
