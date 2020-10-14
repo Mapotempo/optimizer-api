@@ -449,6 +449,124 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
+  def self.lat_lon_pud
+    {
+      matrices: [{
+        id: 'm1',
+        time: [
+          [0, 2824, 2824, 1110, 2299, 2299, 1823],
+          [2780, 0, 0, 2132, 660, 660, 2803],
+          [2780, 0, 0, 2132, 660, 660, 2803],
+          [1174, 2212, 2212, 0, 1687, 1687, 1248],
+          [2349, 668, 668, 1701, 0, 0, 2372],
+          [2349, 668, 668, 1701, 0, 0, 2372],
+          [1863, 2865, 2865, 1240, 2340, 2340, 0]
+        ],
+        distance: [
+          [0, 53744.7, 53744.7, 15417.8, 47523.6, 47523.6, 27177.2],
+          [52770.6, 0, 0, 41717.6, 5566.7, 5566.7, 53715.5],
+          [52770.6, 0, 0, 41717.6, 5566.7, 5566.7, 53715.5],
+          [16537, 43048.8, 43048.8, 0, 36827.6, 36827.6, 18271.5],
+          [47608.5, 5636.2, 5636.2, 36555.5, 0, 0, 48553.4],
+          [47608.5, 5636.2, 5636.2, 36555.5, 0, 0, 48553.4],
+          [27976.8, 54797.1, 54797.1, 18252.9, 48576, 48576, 0]
+        ]
+      }],
+      units: [],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0,
+        location: { lat: 45.288798, lon: 4.951565 }
+      }, {
+        id: 'point_1',
+        matrix_index: 1,
+        location: { lat: 45.6047844887, lon: 4.7589656711 }
+      }, {
+        id: 'point_2',
+        matrix_index: 2,
+        location: { lat: 45.6047844887, lon: 4.7589656711 }
+      }, {
+        id: 'point_3',
+        matrix_index: 3,
+        location: { lat: 45.344334, lon: 4.817731 }
+      }, {
+        id: 'point_4',
+        matrix_index: 4,
+        location: { lat: 45.5764120817, lon: 4.8056146502 }
+      }, {
+        id: 'point_5',
+        matrix_index: 5,
+        location: { lat: 45.5764120817, lon: 4.8056146502 }
+      }, {
+        id: 'point_6',
+        matrix_index: 6,
+        location: { lat: 45.2583248913, lon: 4.6873225272 }
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'm1',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        router_dimension: 'distance',
+      }],
+      shipments: [{
+        id: 'shipment_1',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'shipment_2',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_2'
+        }
+      }, {
+        id: 'shipment_3',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_3'
+        }
+      }, {
+        id: 'shipment_4',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_4'
+        }
+      }, {
+        id: 'shipment_5',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_5'
+        }
+      }, {
+        id: 'shipment_6',
+        pickup: {
+          point_id: 'point_0'
+        },
+        delivery: {
+          point_id: 'point_6'
+        }
+      }],
+      configuration: {
+        resolution: {
+          duration: 2000
+        },
+        preprocessing: {}
+      }
+    }
+  end
+
   def self.scheduling
     {
       matrices: [{

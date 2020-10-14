@@ -759,6 +759,20 @@ class SplitClusteringTest < Minitest::Test
       assert result
     end
 
+    def test_basic_from_depots_shipments_split
+      problem = VRP.lat_lon_pud
+      problem[:configuration][:preprocessing][:max_split_size] = 4
+      problem[:vehicles] << {
+        id: 'vehicle_1',
+        matrix_id: 'm1',
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        router_dimension: 'distance',
+      }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      assert result
+    end
+
     def test_scheduling_partitions_without_recurrence
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.preprocessing_first_solution_strategy = nil
