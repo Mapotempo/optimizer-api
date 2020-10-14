@@ -188,7 +188,13 @@ module Wrappers
 
     def assert_services_no_late_multiplier(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
-        service.activity ? service.activity&.late_multiplier&.positive? : service.activities.none?{ |activity| activity&.late_multiplier&.positive? }
+        if service.activity
+          service.activity&.timewindows&.size&.positive? && service.activity&.late_multiplier&.positive?
+        else
+          service.activities.none?{ |activity|
+            activity&.timewindows&.size&.positive? && activity&.late_multiplier&.positive?
+          }
+        end
       }
     end
 
