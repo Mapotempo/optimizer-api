@@ -277,7 +277,7 @@ module Interpreters
       sub_vrp.rests = sub_vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
       sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
       sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
-      sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact
+      sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
 
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
@@ -377,7 +377,8 @@ module Interpreters
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
-      if vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
+      if vrp.shipments.all?{ |shipment| shipment&.pickup&.point&.location && shipment&.delivery&.point&.location} &&
+      vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
