@@ -109,6 +109,14 @@ If you don't want to run some long real cases tests you can deactive them:
 ```
 SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
 ```
+If you want to run a specific test file (let's say real_cases_scheduling_test.rb file only):
+```
+APP_ENV=test bundle exec rake test TEST=test/real_cases_scheduling_test.rb
+```
+If you want to run only one specific test (let's say test_instance_clustered test only) you can use focus or call:
+```
+APP_ENV=test bundle exec rake test TESTOPTS="--name=test_instance_clustered"
+```
 
 # Travis
 To test on travis with a optimizer-ortools different than the latest version, specify in your travis configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you travis owner nick.
