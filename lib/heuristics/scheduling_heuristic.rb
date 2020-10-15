@@ -56,7 +56,6 @@ module Heuristics
 
       @previous_candidate_routes = nil
       @candidate_routes = {}
-      @routes_referents = []
       @points_vehicles_and_days = {}
 
       # heuristic options
@@ -957,7 +956,6 @@ module Heuristics
 
       @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:visits_number]].max
 
-      @routes_referents << point_to_add[:point] if current_route.empty?
       current_route.insert(point_to_add[:position],
                            id: point_to_add[:id],
                            point_id: point_to_add[:point],
@@ -1091,14 +1089,16 @@ module Heuristics
     def select_point(insertion_costs, empty_route)
       ### chose the most interesting point to insert according to [insertion_costs] ###
       if empty_route
-        if @routes_referents.empty?
+        if @candidate_routes.all?{ |_veh, data| data.all?{ |_day, day_route| day_route[:current_route].empty? } }
           # chose closest with highest frequency
-          to_consider_set = insertion_costs.group_by{ |s| @services_data[s[:id]][:visits_number] }.sort_by{ |nb, _set| nb}.reverse.first[1]
+          to_consider_set = insertion_costs.group_by{ |s| @services_data[s[:id]][:visits_number] }.sort_by{ |nb, _set| nb }.reverse.first[1]
           return to_consider_set.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * s[:additional_route_time] }
         else
           # chose distant service with highest frequency
           # max_priority + 1 so that priority never equal to max_priority and no multiplication by 0
-          return insertion_costs.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * @routes_referents.collect{ |ref| matrix(@candidate_routes[@candidate_routes.keys.first].first[1], ref, s[:point]) }.min * @services_data[s[:id]][:visits_number]**2 }
+          highest_frequency = insertion_costs.collect{ |cost| @services_data[cost[:id]][:visits_number] }.max
+          referents = @candidate_routes.collect{ |_vehicle, data| data.collect{ |_day, day_route| day_route[:current_route].empty? ? nil : day_route[:current_route].max_by{ |stop| matrix(day_route, day_route[:start_point_id], stop[:point_id]) + matrix(day_route, stop[:point_id], day_route[:end_point_id]) }[:point_id] } }.flatten.compact
+          return insertion_costs.select{ |cost| @services_data[cost[:id]][:visits_number] == highest_frequency }.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * referents.collect{ |ref| matrix(@candidate_routes[@candidate_routes.keys.first].first[1], ref, s[:point]) }.min * @services_data[s[:id]][:visits_number]**2 }
         end
       end
 
