@@ -48,7 +48,6 @@ module Heuristics
       @candidate_vehicles = []
       @vehicle_day_completed = {}
       @candidate_routes = {}
-      @routes_referents = []
       @points_vehicles_and_days = {}
       vrp.vehicles.group_by{ |vehicle| vehicle.id.split('_')[0..-2].join('_') }.each{ |vehicle_id, _set|
         @candidate_vehicles << vehicle_id
@@ -954,7 +953,6 @@ module Heuristics
 
       @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:visits_number]].max
 
-      @routes_referents << point_to_add[:point] if current_route.empty?
       current_route.insert(point_to_add[:position],
                            id: point_to_add[:id],
                            point_id: point_to_add[:point],
@@ -1087,14 +1085,15 @@ module Heuristics
     def select_point(insertion_costs, empty_route)
       ### chose the most interesting point to insert according to [insertion_costs] ###
       if empty_route
-        if @routes_referents.empty?
+        if @candidate_routes.all?{ |_veh, data| data.all?{ |_day, day_route| day_route[:current_route].empty? } }
           # chose closest with highest frequency
-          to_consider_set = insertion_costs.group_by{ |s| @services_data[s[:id]][:visits_number] }.sort_by{ |nb, _set| nb}.reverse.first[1]
+          to_consider_set = insertion_costs.group_by{ |s| @services_data[s[:id]][:visits_number] }.max_by{ |nb, _set| nb }[1]
           return to_consider_set.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * s[:additional_route_time] }
         else
           # chose distant service with highest frequency
           # max_priority + 1 so that priority never equal to max_priority and no multiplication by 0
-          return insertion_costs.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * @routes_referents.collect{ |ref| matrix(@candidate_routes[@candidate_routes.keys.first].first[1], ref, s[:point]) }.min * @services_data[s[:id]][:visits_number]**2 }
+          referents = @candidate_routes.collect{ |_vehicle_id, all_routes| all_routes.collect{ |_day, route_data| find_referent(route_data) } }.flatten.compact
+          return insertion_costs.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * distance_from_set(referents, s).min * @services_data[s[:id]][:visits_number]**2 }
         end
       end
 
@@ -1140,6 +1139,22 @@ module Heuristics
             (arrival_time.between?(tw[:start], tw[:end]) || arrival_time <= tw[:start]) && # arrival_time is accepted
             (!@duration_in_tw || ([tw[:start], arrival_time].max + duration <= tw[:end]))) # duration accepted in tw
       }.min_by{ |tw| tw[:start] }
+    end
+
+    def find_referent(route_data)
+      if route_data[:current_route].empty?
+        nil
+      else
+        route_data[:current_route].max_by{ |stop|
+          matrix(route_data, route_data[:start_point_id], stop[:point_id]) + matrix(route_data, stop[:point_id], route_data[:end_point_id])
+        }[:point_id]
+      end
+    end
+
+    def distance_from_set(set, current)
+      set.collect{ |point_id|
+        matrix(@candidate_routes[@candidate_routes.keys.first].first[1], point_id, current[:point])
+      }
     end
 
     def construct_sub_vrp(vrp, vehicle, current_route)

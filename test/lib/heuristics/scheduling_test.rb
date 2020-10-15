@@ -539,7 +539,7 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.day_index = 300
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 36, result[:unassigned].size
+      assert_equal 38, result[:unassigned].size
     end
 
     def test_sticky_in_scheduling
