@@ -33,7 +33,6 @@ module Heuristics
       return if vrp.services.empty?
 
       # heuristic data
-      @candidate_vehicles = []
       @vehicle_day_completed = {}
       @to_plan_service_ids = []
       @previous_candidate_service_ids = nil
@@ -68,7 +67,6 @@ module Heuristics
       # global data
       @schedule_end = vrp.schedule_range_indices[:end]
       vrp.vehicles.group_by{ |vehicle| vehicle.id.split('_')[0..-2].join('_') }.each{ |vehicle_id, _set|
-        @candidate_vehicles << vehicle_id
         @candidate_routes[vehicle_id] = {}
         @vehicle_day_completed[vehicle_id] = {}
       }
@@ -354,8 +352,8 @@ module Heuristics
     end
 
     def reorder_routes(vrp)
-      @candidate_vehicles.each{ |vehicle|
-        @candidate_routes[vehicle].each{ |day, route|
+      @candidate_routes.each{ |vehicle, data|
+        data.each{ |day, route|
           next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size <= 1
 
           corresponding_vehicle = vrp.vehicles.find{ |v| v.id == "#{vehicle}_#{day}" }
@@ -700,7 +698,7 @@ module Heuristics
     end
 
     def fill_days
-      @candidate_vehicles.each{ |current_vehicle|
+      @candidate_routes.each_key{ |current_vehicle|
         current_vehicle_index = 0
         break if @vehicle_day_completed[current_vehicle].all?{ |days, completed| completed }
 
@@ -733,12 +731,12 @@ module Heuristics
             ensure_routes_will_not_be_rejected(current_vehicle, impacted_days.sort) if @candidate_services_ids.size >= @services_data.size * 0.5 # shouldn't it be < ?
 
             current_vehicle_index += 1
-            if current_vehicle_index == @candidate_vehicles.size
+            if current_vehicle_index == @candidate_routes.keys.size
               best_day = nil
               current_vehicle_index = 0
             end
 
-            current_vehicle = @candidate_vehicles[current_vehicle_index]
+            current_vehicle = @candidate_routes.keys[current_vehicle_index]
           end
         end
       }
