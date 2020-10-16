@@ -45,14 +45,10 @@ module Heuristics
       @to_plan_service_ids = []
       @used_to_adjust = []
 
-      @candidate_vehicles = []
-      @vehicle_day_completed = {}
       @candidate_routes = {}
       @points_vehicles_and_days = {}
       vrp.vehicles.group_by{ |vehicle| vehicle.id.split('_')[0..-2].join('_') }.each{ |vehicle_id, _set|
-        @candidate_vehicles << vehicle_id
         @candidate_routes[vehicle_id] = {}
-        @vehicle_day_completed[vehicle_id] = {}
       }
 
       @indices = {}
@@ -203,11 +199,11 @@ module Heuristics
 
     private
 
-    def plan_next_visits(vehicle, service, this_service_days, first_unseen_visit)
-      return if @services_data[service][:visits_number] == 1
+    def plan_next_visits(vehicle, service, first_unseen_visit)
+      return if @services_data[service][:raw].visits_number == 1
 
       days_available = @candidate_routes[vehicle].keys
-      next_day = this_service_days.max + @services_data[service][:heuristic_period]
+      next_day = @services_data[service][:used_days].max + @services_data[service][:heuristic_period]
       day_to_insert = days_available.select{ |day| day >= next_day.round }.min
       impacted_days = []
       if day_to_insert
@@ -217,11 +213,10 @@ module Heuristics
 
       cleaned_service = false
       need_to_add_visits = false
-      (first_unseen_visit..@services_data[service][:visits_number]).each{ |visit_number|
+      (first_unseen_visit..@services_data[service][:raw].visits_number).each{ |visit_number|
         inserted_day = nil
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
           inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number) if days_available.include?(day_to_insert)
-          this_service_days << inserted_day if inserted_day
           impacted_days |= [inserted_day]
 
           next_day += @services_data[service][:heuristic_period]
@@ -241,9 +236,9 @@ module Heuristics
           impacted_days = []
         else
           need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
-          @uninserted["#{service}_#{visit_number}_#{@services_data[service][:visits_number]}"] = {
+          @uninserted["#{service}_#{visit_number}_#{@services_data[service][:raw].visits_number}"] = {
             original_service: service,
-            reason: "Visit not assignable by heuristic, first visit assigned at day #{this_service_days.min}"
+            reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_data[service][:used_days].min}"
           }
         end
       }
@@ -259,9 +254,9 @@ module Heuristics
         next if @used_to_adjust.include?(service[:id])
 
         @used_to_adjust << service[:id]
-        @output_tool&.insert_visits(vehicle, @services_data[service[:id]][:used_days], service[:id], @services_data[service[:id]][:visits_number])
+        @output_tool&.insert_visits(vehicle, @services_data[service[:id]][:used_days], service[:id], @services_data[service[:id]][:raw].visits_number)
 
-        plan_next_visits(vehicle, service[:id], [day_finished], 2)
+        plan_next_visits(vehicle, service[:id], 2)
       }.compact
     end
 
@@ -308,20 +303,20 @@ module Heuristics
       day_route
     end
 
-    def collect_unassigned(vrp)
+    def collect_unassigned
       unassigned = []
 
-      @candidate_services_ids.each{ |point|
-        service_in_vrp = vrp.services.find{ |service| service[:id] == point }
+      @candidate_services_ids.each{ |id|
+        service_in_vrp = @services_data[id][:raw]
         (1..service_in_vrp.visits_number).each{ |index|
-          unassigned << get_unassigned_info(vrp, "#{point}_#{index}_#{service_in_vrp.visits_number}", service_in_vrp, 'Heuristic could not affect this service before all vehicles are full')
+          unassigned << get_unassigned_info("#{id}_#{index}_#{service_in_vrp.visits_number}", service_in_vrp, 'Heuristic could not affect this service before all vehicles are full')
         }
       }
 
       @uninserted.each_key{ |service|
-        s = @uninserted[service][:original_service]
-        service_in_vrp = vrp.services.find{ |current_service| current_service[:id] == s }
-        unassigned << get_unassigned_info(vrp, service, service_in_vrp, @uninserted[service][:reason])
+        id = @uninserted[service][:original_service]
+        service_in_vrp = @services_data[id][:raw]
+        unassigned << get_unassigned_info(service, service_in_vrp, @uninserted[service][:reason])
       }
 
       unassigned
@@ -355,8 +350,8 @@ module Heuristics
     end
 
     def reorder_routes(vrp)
-      @candidate_vehicles.each{ |vehicle|
-        @candidate_routes[vehicle].each{ |day, route|
+      @candidate_routes.each{ |vehicle, data|
+        data.each{ |day, route|
           next if route[:current_route].collect{ |s| s[:point_id] }.uniq.size <= 1
 
           corresponding_vehicle = vrp.vehicles.find{ |v| v.id == "#{vehicle}_#{day}" }
@@ -427,7 +422,7 @@ module Heuristics
         @candidate_services_ids << service
         @candidate_routes.each{ |_vehicle, data|
           data.each{ |day, r_d|
-            next unless day <= @services_data[service][:max_day]
+            next unless day <= @services_data[service][:raw].last_possible_days.first # first is for first visit
 
             r_d[:available_ids] |= service
           }
@@ -436,8 +431,8 @@ module Heuristics
           @uninserted.delete(id) if info[:original_service] == service
         }
       else
-        (1..@services_data[service][:visits_number]).each{ |number_in_sequence|
-          @uninserted["#{service}_#{number_in_sequence}_#{@services_data[service][:visits_number]}"] = {
+        (1..@services_data[service][:raw].visits_number).each{ |number_in_sequence|
+          @uninserted["#{service}_#{number_in_sequence}_#{@services_data[service][:raw].visits_number}"] = {
             original_service: service,
             reason: 'Partial assignment only'
           }
@@ -449,8 +444,8 @@ module Heuristics
       # unaffected all points at this location
       points_at_same_location = @candidate_services_ids.select{ |id| @services_data[id][:points_ids] == @services_data[service][:points_ids] }
       points_at_same_location.each{ |id|
-        (1..@services_data[id][:visits_number]).each{ |visit|
-          @uninserted["#{id}_#{visit}_#{@services_data[id][:visits_number]}"] = {
+        (1..@services_data[id][:raw].visits_number).each{ |visit|
+          @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
             original_service: id,
             reason: 'Partial assignment only'
           }
@@ -484,14 +479,14 @@ module Heuristics
 
       ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
       insertion_costs = []
-      set ||= @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:visits_number] == 1 } : @to_plan_service_ids
+      set ||= @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:raw].visits_number == 1 } : @to_plan_service_ids
       # we will assign services with one vehicle in relaxed_same_point_day part
       set.select{ |service|
         # quantities are respected
         ((@same_point_day && @services_data[service][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
           (!@same_point_day && @services_data[service][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
           # service is available at this day
-          !@services_data[service][:unavailable_days].include?(day) &&
+          !@services_data[service][:raw].unavailable_visit_day_indices.include?(day) &&
           (@services_data[service][:sticky_vehicles_ids].empty? || @services_data[service][:sticky_vehicles_ids].include?(vehicle))
       }.each{ |service_id|
         next if @services_data[service_id][:used_days] && !days_respecting_lapse(service_id, vehicle).include?(day)
@@ -499,14 +494,14 @@ module Heuristics
         point = @services_data[service_id][:points_ids].first if @same_point_day || @relaxed_same_point_day # there can be only on point in points_ids
         next if @relaxed_same_point_day &&
                 !@points_vehicles_and_days[point][:vehicles].empty? &&
-                (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !(@points_vehicles_and_days[point][:maximum_visits_number] < @services_data[service_id][:visits_number] || @points_vehicles_and_days[point][:days].include?(day)))
+                (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !(@points_vehicles_and_days[point][:maximum_visits_number] < @services_data[service_id][:raw].visits_number || @points_vehicles_and_days[point][:days].include?(day)))
 
         next if @same_point_day && @unlocked.include?(service_id) && (!@points_vehicles_and_days[point][:vehicles].include?(vehicle) || !@points_vehicles_and_days[point][:days].include?(day))
 
         period = @services_data[service_id][:heuristic_period]
 
         next if !(period.nil? ||
-                route_data[:available_ids].include?(service_id) && (day + period..@schedule_end).step(period).find{ |current_day| @vehicle_day_completed[vehicle][current_day] }.nil? &&
+                route_data[:available_ids].include?(service_id) && (day + period..@schedule_end).step(period).find{ |current_day| @candidate_routes[vehicle][current_day.floor] && @candidate_routes[vehicle][current_day.floor][:completed] || @candidate_routes[vehicle][current_day.ceil] && @candidate_routes[vehicle][current_day.ceil][:completed] }.nil? &&
                 same_point_compatibility(service_id, vehicle, day))
 
         next if two_visits_and_can_not_assign_second(vehicle, day, service_id)
@@ -519,7 +514,7 @@ module Heuristics
     end
 
     def two_visits_and_can_not_assign_second(vehicle, day, service_id)
-      return false unless @services_data[service_id][:visits_number] == 2 # || @end_phase ?
+      return false unless @services_data[service_id][:raw].visits_number == 2 # || @end_phase ?
 
       next_day = day + @services_data[service_id][:heuristic_period]
       day_to_insert = @candidate_routes[vehicle].keys.select{ |potential_day| potential_day >= next_day.round }.min
@@ -533,13 +528,13 @@ module Heuristics
 
       return same_point_compatible_day if @services_data[service_id][:heuristic_period].nil?
 
-      last_visit_day = day + (@services_data[service_id][:visits_number] - 1) * @services_data[service_id][:heuristic_period]
+      last_visit_day = day + (@services_data[service_id][:raw].visits_number - 1) * @services_data[service_id][:heuristic_period]
       if @relaxed_same_point_day
         # we know only one activity/point_id because @same_point_day was activated
         involved_days = (day..last_visit_day).step(@services_data[service_id][:heuristic_period]).collect{ |d| d }
         already_involved = @candidate_routes[vehicle].select{ |_d, r| r[:current_route].any?{ |s| s[:point_id] == @services_data[service_id][:points_ids].first } }.collect{ |d, _r| d }
         if !already_involved.empty? &&
-           @services_data[service_id][:visits_number] > @freq_max_at_point[@services_data[service_id][:points_ids].first] &&
+           @services_data[service_id][:raw].visits_number > @freq_max_at_point[@services_data[service_id][:points_ids].first] &&
            (involved_days & already_involved).size < @freq_max_at_point[@services_data[service_id][:points_ids].first]
           same_point_compatible_day = false
         elsif !already_involved.empty? && (involved_days & already_involved).size < involved_days.size
@@ -547,8 +542,8 @@ module Heuristics
         end
       elsif @unlocked.include?(service_id)
         # can not finish later (over whole period) than service at same_point
-        stop = @candidate_routes[vehicle][day][:current_route].select{ |stop| stop[:point_id] == @services_data[service_id][:points_ids].first }.max_by{ |stop| @services_data[stop[:id]][:visits_number] }
-        stop_last_visit_day = day + (@services_data[stop[:id]][:visits_number] - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
+        stop = @candidate_routes[vehicle][day][:current_route].select{ |s| s[:point_id] == @services_data[service_id][:points_ids].first }.max_by{ |s| @services_data[s[:id]][:raw].visits_number }
+        stop_last_visit_day = day + (@services_data[stop[:id]][:raw].visits_number - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
         same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
       end
 
@@ -669,7 +664,7 @@ module Heuristics
       while impacted_days.size.positive?
         started_day = impacted_days.first
         can_not_insert_more = false
-        while @candidate_routes[vehicle][started_day][:current_route].map{ |stop| @services_data[stop[:id]][:exclusion_cost] }.reduce(&:+) < @candidate_routes[vehicle][started_day][:cost_fixed] || can_not_insert_more
+        while @candidate_routes[vehicle][started_day][:current_route].map{ |stop| @services_data[stop[:id]][:raw].exclusion_cost || 0 }.reduce(&:+) < @candidate_routes[vehicle][started_day][:cost_fixed] || can_not_insert_more
           inserted_id, _unlocked_ids = try_to_add_new_point(vehicle, started_day)
           impacted_days |= adjust_candidate_routes(vehicle, started_day)
           can_not_insert_more = true unless inserted_id
@@ -680,9 +675,9 @@ module Heuristics
     end
 
     def fill_days
-      @candidate_vehicles.each{ |current_vehicle|
+      @candidate_routes.each_key{ |current_vehicle|
         current_vehicle_index = 0
-        break if @vehicle_day_completed[current_vehicle].all?{ |days, completed| completed }
+        break if @candidate_routes[current_vehicle].all?{ |_day, route| route[:completed] }
 
         possible_to_fill = !@to_plan_service_ids.empty?
         already_considered_days = []
@@ -708,16 +703,16 @@ module Heuristics
             adjust_candidate_routes(current_vehicle, best_day)
           elsif inserted_id.nil? || !possible_to_fill
             impacted_days = adjust_candidate_routes(current_vehicle, best_day)
-            @vehicle_day_completed[current_vehicle][best_day] = true
+            @candidate_routes[current_vehicle][best_day][:completed] = true
             ensure_routes_will_not_be_rejected(current_vehicle, impacted_days.sort) if @candidate_services_ids.size >= @services_data.size * 0.5 # shouldn't it be < ?
 
             current_vehicle_index += 1
-            if current_vehicle_index == @candidate_vehicles.size
+            if current_vehicle_index == @candidate_routes.keys.size
               best_day = nil
               current_vehicle_index = 0
             end
 
-            current_vehicle = @candidate_vehicles[current_vehicle_index]
+            current_vehicle = @candidate_routes.keys[current_vehicle_index]
           end
         end
       }
@@ -900,14 +895,14 @@ module Heuristics
       list
     end
 
-    def get_unassigned_info(vrp, id, service_in_vrp, reason)
+    def get_unassigned_info(custom_id, service_in_vrp, reason)
       {
         original_service_id: service_in_vrp.id,
-        service_id: id,
+        service_id: custom_id,
         point_id: service_in_vrp.activity&.point_id,
         detail: {
-          lat: vrp.points.find{ |point| service_in_vrp.activity && point[:id] == service_in_vrp.activity.point_id }&.location&.lat,
-          lon: vrp.points.find{ |point| service_in_vrp.activity && point[:id] == service_in_vrp.activity.point_id }&.location&.lon,
+          lat: service_in_vrp.activity&.point&.location&.lat,
+          lon: service_in_vrp.activity&.point&.location&.lon,
           setup_duration: service_in_vrp.activity&.setup_duration,
           duration: service_in_vrp.activity&.duration,
           timewindows: service_in_vrp.activity&.timewindows ? service_in_vrp.activity.timewindows.collect{ |tw| { start: tw.start, end: tw.end } }.sort_by{ |t| t[:start] } : [],
@@ -926,11 +921,11 @@ module Heuristics
       @services_data[point_to_add[:id]][:used_vehicles] |= [point_to_add[:vehicle]]
       @points_vehicles_and_days[point_to_add[:point]][:vehicles] = @points_vehicles_and_days[point_to_add[:point]][:vehicles] | [route_data[:vehicle_id].split('_')[0..-2].join('_')]
       @points_vehicles_and_days[point_to_add[:point]][:days] = @points_vehicles_and_days[point_to_add[:point]][:days] | [route_data[:global_day_index]]
-      @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] = [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number], @services_data[point_to_add[:id]][:visits_number]].max
+      @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] = [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number], @services_data[point_to_add[:id]][:raw].visits_number].max
       @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
       @candidate_routes.each{ |_vehicle, data| data.each{ |_day, r_d| r_d[:available_ids].delete(point_to_add[:id]) } } if first_visit
-      @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:visits_number]].max
+      @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:raw].visits_number].max
 
       current_route.insert(point_to_add[:position],
                            id: point_to_add[:id],
@@ -1048,7 +1043,7 @@ module Heuristics
         }
       }
 
-      unassigned = collect_unassigned(vrp)
+      unassigned = collect_unassigned
       vrp[:preprocessing_heuristic_result] = {
         cost: @cost,
         solvers: ['heuristic'],
@@ -1066,21 +1061,21 @@ module Heuristics
       if empty_route
         if @candidate_routes.all?{ |_veh, data| data.all?{ |_day, day_route| day_route[:current_route].empty? } }
           # chose closest with highest frequency
-          to_consider_set = insertion_costs.group_by{ |s| @services_data[s[:id]][:visits_number] }.max_by{ |nb, _set| nb }[1]
+          to_consider_set = insertion_costs.group_by{ |s| @services_data[s[:id]][:raw].visits_number }.max_by{ |nb, _set| nb }[1]
           return to_consider_set.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * s[:additional_route_time] }
         else
           # chose distant service with highest frequency
           # max_priority + 1 so that priority never equal to max_priority and no multiplication by 0
           referents = @candidate_routes.collect{ |_vehicle_id, all_routes| all_routes.collect{ |_day, route_data| find_referent(route_data) } }.flatten.compact
-          return insertion_costs.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * distance_from_set(referents, s).min * @services_data[s[:id]][:visits_number]**2 }
+          return insertion_costs.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * distance_from_set(referents, s).min * @services_data[s[:id]][:raw].visits_number**2 }
         end
       end
 
       costs = insertion_costs.collect{ |s| s[:additional_route_time] }
       if costs.min != 0
-        insertion_costs.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:visits_number]**2) }
+        insertion_costs.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:raw].visits_number**2) }
       else
-        freq = insertion_costs.collect{ |s| @services_data[s[:id]][:visits_number] }
+        freq = insertion_costs.collect{ |s| @services_data[s[:id]][:raw].visits_number }
         zero_idx = (0..(costs.size - 1)).select{ |i| costs[i].zero? }
         potential = zero_idx.select{ |i| freq[i] == freq.max }
         if !potential.empty?
@@ -1089,14 +1084,14 @@ module Heuristics
         else
           # TODO : more tests to improve.
           # we can consider having a limit such that if additional route is > limit then we keep service with additional_route = 0 (and freq max among those)
-          insertion_costs.reject{ |s| s[:additional_route_time].zero? }.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:visits_number]**2) }
+          insertion_costs.reject{ |s| s[:additional_route_time].zero? }.min_by{ |s| ((@services_data[s[:id]][:priority].to_f + 1) / @max_priority) * (s[:additional_route_time] / @services_data[s[:id]][:raw].visits_number**2) }
         end
       end
     end
 
     def try_to_insert_at(vehicle, day, service, visit_number)
       # when adjusting routes, tries to insert [service] at [day] for [vehicle]
-      if !@vehicle_day_completed[vehicle][day] &&
+      if !@candidate_routes[vehicle][day][:completed] &&
          @services_data[service][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 } &&
          @services_data[service][:sticky_vehicles_ids].empty? || @services_data[service][:sticky_vehicles_ids].include?(vehicle)
 

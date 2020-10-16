@@ -30,15 +30,15 @@ module SchedulingEndPhase
       add_missing_visits
     end
 
-    unless @services_data.all?{ |_id, data| data[:exclusion_cost].zero? }
+    unless @services_data.all?{ |_id, data| (data[:raw].exclusion_cost || 0).zero? }
       block&.call(nil, nil, nil, 'scheduling heuristic - correcting underfilled routes', nil, nil, nil)
       correct_underfilled_routes
     end
   end
 
   def days_respecting_lapse(id, vehicle)
-    min_lapse = @services_data[id][:minimum_lapse]
-    max_lapse = @services_data[id][:maximum_lapse]
+    min_lapse = @services_data[id][:raw].minimum_lapse
+    max_lapse = @services_data[id][:raw].maximum_lapse
     used_days = @services_data[id][:used_days]
 
     return @candidate_routes[vehicle].keys if used_days.empty?
@@ -58,7 +58,7 @@ module SchedulingEndPhase
       previous_day = nil
       uninserted_indices = []
       @services_data[id][:used_days].sort.each{ |day|
-        if previous_day.nil? || previous_day + @services_data[id][:maximum_lapse] >= day
+        if previous_day.nil? || previous_day + @services_data[id][:raw].maximum_lapse >= day
           @services_data[id][:used_vehicles].each{ |vehicle|
             stop = @candidate_routes[vehicle][day][:current_route].find{ |route_stop| route_stop[:id] == id }
 
@@ -82,7 +82,7 @@ module SchedulingEndPhase
       }
 
       uninserted_indices.each{ |indice|
-        @uninserted["#{id}_#{indice}_#{@services_data[id][:visits_number]}"] = {
+        @uninserted["#{id}_#{indice}_#{@services_data[id][:raw].visits_number}"] = {
           original_service: service,
           reason: "Still unassigned after end_phase. Original reasons : #{key_and_reasons.collect(&:last).uniq}."
         }
@@ -99,8 +99,8 @@ module SchedulingEndPhase
 
     until costs.empty?
       # select best visit to insert
-      max_priority = costs.keys.collect{ |id| @services_data[id][:priority] + 1 }.max
-      best_cost = costs.min_by{ |id, info| ((@services_data[id][:priority].to_f + 1) / max_priority) * (info[:cost][:additional_route_time] / @services_data[id][:visits_number]**2) }
+      max_priority = costs.keys.collect{ |id| @services_data[id][:raw].priority + 1 }.max
+      best_cost = costs.min_by{ |id, info| ((@services_data[id][:raw].priority.to_f + 1) / max_priority) * (info[:cost][:additional_route_time] / @services_data[id][:raw].visits_number**2) }
 
       id = best_cost[0]
       day = best_cost[1][:day]
@@ -109,7 +109,7 @@ module SchedulingEndPhase
 
       @ids_to_renumber |= [id]
       insert_point_in_route(@candidate_routes[vehicle][day], best_cost[1][:cost])
-      @output_tool&.add_single_visit(day, @services_data[id][:used_days], id, @services_data[id][:visits_number])
+      @output_tool&.add_single_visit(day, @services_data[id][:used_days], id, @services_data[id][:raw].visits_number)
 
       costs = update_costs(costs, best_cost)
     end
@@ -239,12 +239,12 @@ module SchedulingEndPhase
 
           all_empty = false
 
-          next if day_route[:current_route].map{ |stop| @services_data[stop[:id]][:exclusion_cost] }.reduce(&:+) >= day_route[:cost_fixed]
+          next if day_route[:current_route].map{ |stop| @services_data[stop[:id]][:raw].exclusion_cost || 0 }.reduce(&:+) >= day_route[:cost_fixed]
 
           smth_removed = true
           locally_removed = day_route[:current_route].collect{ |stop|
             @services_data[stop[:id]][:used_days].delete(day)
-            @output_tool&.remove_visits([day], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:visits_number])
+            @output_tool&.remove_visits([day], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
             [stop[:id], stop[:number_in_sequence]]
           }
           day_route[:current_route] = []
@@ -255,7 +255,7 @@ module SchedulingEndPhase
 
           if @allow_partial_assignment
             locally_removed.each{ |removed_id, number_in_sequence|
-              @uninserted["#{removed_id}_#{number_in_sequence}_#{@services_data[removed_id][:visits_number]}"] = {
+              @uninserted["#{removed_id}_#{number_in_sequence}_#{@services_data[removed_id][:raw].visits_number}"] = {
                 original_service: removed_id,
                 reason: 'Unaffected because route was underfilled'
               }
@@ -263,8 +263,8 @@ module SchedulingEndPhase
           else
             locally_removed.each{ |removed_id, _number_in_sequence|
               clean_routes(removed_id, vehicle, false)
-              (1..@services_data[removed_id][:visits_number]).each{ |visit|
-                @uninserted["#{removed_id}_#{visit}_#{@services_data[removed_id][:visits_number]}"][:reason] = 'Unaffected because route was underfilled'
+              (1..@services_data[removed_id][:raw].visits_number).each{ |visit|
+                @uninserted["#{removed_id}_#{visit}_#{@services_data[removed_id][:raw].visits_number}"][:reason] = 'Unaffected because route was underfilled'
 
                 next if visit == 1
 
@@ -328,7 +328,7 @@ module SchedulingEndPhase
         point_to_add = select_point(acceptable_costs, referent_route)
         @ids_to_renumber |= [point_to_add[:id]]
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
-        @output_tool&.add_single_visit(point_to_add[:day], @services_data[point_to_add[:id]][:used_days], point_to_add[:id], @services_data[point_to_add[:id]][:visits_number])
+        @output_tool&.add_single_visit(point_to_add[:day], @services_data[point_to_add[:id]][:used_days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
         still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
         @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == to_plan[:service] }[0])
       end
@@ -408,7 +408,7 @@ module SchedulingEndPhase
           if insertion_costs.flatten.empty?
             keep_inserting = false
             empty_routes.delete_if{ |tab| tab[0] == vehicle && tab[1] == day }
-            if route_data[:current_route].empty? || route_data[:current_route].map{ |stop| @services_data[stop[:id]][:exclusion_cost] }.reduce(&:+) < route_data[:cost_fixed]
+            if route_data[:current_route].empty? || route_data[:current_route].map{ |stop| @services_data[stop[:id]][:raw].exclusion_cost || 0 }.reduce(&:+) < route_data[:cost_fixed]
               route_data[:current_route] = []
               previous_vehicle_filled_info = vehicle_info
             else
@@ -416,7 +416,7 @@ module SchedulingEndPhase
               route_data[:current_route].each{ |stop|
                 @ids_to_renumber |= [stop[:id]]
                 still_removed.delete(still_removed.find{ |removed| removed.first == stop[:id] })
-                @output_tool&.add_single_visit(route_data[:global_day_index], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:visits_number])
+                @output_tool&.add_single_visit(route_data[:global_day_index], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
                 @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == stop[:id] }[0])
               }
             end
@@ -439,8 +439,8 @@ module SchedulingEndPhase
     @candidate_routes.each{ |_vehicle, data| data.each{ |_day, r_d| r_d[:available_ids] = @services_data.keys } }
 
     banned = []
-    adapted_still_removed = still_removed.collect(&:first).uniq.collect{ |id| [id, @services_data[id][:visits_number]] }
-    most_prioritary = adapted_still_removed.group_by{ |removed| @services_data[removed.first][:priority] }.min_by{ |priority, _set| priority }[1]
+    adapted_still_removed = still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
+    most_prioritary = adapted_still_removed.group_by{ |removed| @services_data[removed.first][:raw].priority }.min_by{ |priority, _set| priority }[1]
     most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
     until most_prio_and_frequent.empty?
       potential_costs = most_prio_and_frequent.collect{ |_| {} }
@@ -473,7 +473,7 @@ module SchedulingEndPhase
       if sequences.empty? && !available_sequences.empty?
         allowed_non_empty_sequences = available_sequences.reject{ |sequence|
           sequence[:seq].empty? ||
-            sequence[:seq].count{ |day| @candidate_routes[sequence[:vehicle]][day][:current_route].empty? } > @services_data[sequence[:service]][:visits_number] / 3.0
+            sequence[:seq].count{ |day| @candidate_routes[sequence[:vehicle]][day][:current_route].empty? } > @services_data[sequence[:service]][:raw].visits_number / 3.0
         }
 
         sequences = if allowed_non_empty_sequences.empty?
@@ -505,7 +505,7 @@ module SchedulingEndPhase
       break if adapted_still_removed.empty? || (adapted_still_removed - banned).empty?
 
       while most_prio_and_frequent.empty?
-        most_prioritary = (adapted_still_removed - banned).group_by{ |removed| @services_data[removed.first][:priority] }.min_by{ |priority, _set| priority }[1]
+        most_prioritary = (adapted_still_removed - banned).group_by{ |removed| @services_data[removed.first][:raw].priority }.min_by{ |priority, _set| priority }[1]
         most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
       end
     end
@@ -518,18 +518,13 @@ module SchedulingEndPhase
   def deduce_sequences(id, visits_number, days)
     sequences = []
 
-    if visits_number == 1
-      return days.collect{ |day| [day] }
-    end
-
-    min_lapse = @services_data[id][:minimum_lapse]
-    max_lapse = @services_data[id][:maximum_lapse]
+    return days.collect{ |day| [day] } if visits_number == 1
 
     days.sort.each_with_index{ |first_day, day_index|
       available_days = days.slice(days.find_index(first_day)..-1)
       break if available_days.size < visits_number
 
-      sequences += find_sequences_from(days.slice(day_index + 1..-1), visits_number - 1, min_lapse, max_lapse, [first_day])
+      sequences += find_sequences_from(days.slice(day_index + 1..-1), visits_number - 1, @services_data[id][:raw].minimum_lapse, @services_data[id][:raw].maximum_lapse, [first_day])
     }
 
     sequences
