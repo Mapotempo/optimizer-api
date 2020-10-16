@@ -110,7 +110,7 @@ module SchedulingDataInitialization
 
       next if @services_data[id][:used_days].size == @services_data[id][:visits_number]
 
-      plan_next_visits(vehicle, id, @services_data[id][:used_days], @services_data[id][:used_days].size + 1)
+      plan_next_visits(vehicle, id, @services_data[id][:used_days].size + 1)
     }
   end
 

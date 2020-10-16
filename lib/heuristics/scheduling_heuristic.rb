@@ -203,11 +203,11 @@ module Heuristics
 
     private
 
-    def plan_next_visits(vehicle, service, this_service_days, first_unseen_visit)
+    def plan_next_visits(vehicle, service, first_unseen_visit)
       return if @services_data[service][:visits_number] == 1
 
       days_available = @candidate_routes[vehicle].keys
-      next_day = this_service_days.max + @services_data[service][:heuristic_period]
+      next_day = @services_data[service][:used_days].max + @services_data[service][:heuristic_period]
       day_to_insert = days_available.select{ |day| day >= next_day.round }.min
       impacted_days = []
       if day_to_insert
@@ -221,7 +221,6 @@ module Heuristics
         inserted_day = nil
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
           inserted_day = try_to_insert_at(vehicle, day_to_insert, service, visit_number) if days_available.include?(day_to_insert)
-          this_service_days << inserted_day if inserted_day
           impacted_days |= [inserted_day]
 
           next_day += @services_data[service][:heuristic_period]
@@ -243,7 +242,7 @@ module Heuristics
           need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
           @uninserted["#{service}_#{visit_number}_#{@services_data[service][:visits_number]}"] = {
             original_service: service,
-            reason: "Visit not assignable by heuristic, first visit assigned at day #{this_service_days.min}"
+            reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_data[service][:used_days].min}"
           }
         end
       }
@@ -261,7 +260,7 @@ module Heuristics
         @used_to_adjust << service[:id]
         @output_tool&.insert_visits(vehicle, @services_data[service[:id]][:used_days], service[:id], @services_data[service[:id]][:visits_number])
 
-        plan_next_visits(vehicle, service[:id], [day_finished], 2)
+        plan_next_visits(vehicle, service[:id], 2)
       }.compact
     end
 
