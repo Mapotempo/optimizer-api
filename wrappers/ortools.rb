@@ -523,6 +523,7 @@ module Wrappers
           earliest_start = route_start
           {
             vehicle_id: vehicle.id,
+            original_vehicle_id: vehicle.original_id,
             costs: route_costs,
             activities: route.activities.collect.with_index{ |activity, activity_index|
               current_activity = nil
@@ -584,6 +585,7 @@ module Wrappers
                   current_matrix_index = point.matrix_index
                   route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                   current_activity = {
+                    original_service_id: service.original_id,
                     service_id: service.id,
                     point_id: point ? point.id : nil,
                     current_distance: activity.current_distance,
@@ -601,6 +603,7 @@ module Wrappers
                   earliest_start = activity.start_time || 0
                   route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                   current_activity = {
+                    original_shipment_id: shipment.original_id,
                     pickup_shipment_id: shipment_activity.zero? && shipment.id,
                     delivery_shipment_id: shipment_activity == 1 && shipment.id,
                     point_id: point.id,
@@ -640,6 +643,7 @@ module Wrappers
         unassigned: (vrp.services.collect(&:id) - collected_indices.collect{ |index| index < vrp.services.size && vrp.services[index].id }).collect{ |service_id|
           service = vrp.services.find{ |s| s.id == service_id }
           {
+            original_service_id: service.original_id,
             service_id: service_id,
             type: service.type.to_s,
             point_id: service.activity ? service.activity.point_id : service.activities.collect{ |activity| activity[:point_id] },
@@ -648,11 +652,13 @@ module Wrappers
         } + (vrp.shipments.collect(&:id) - collected_indices.collect{ |index| index >= vrp.services.size && ((index - vrp.services.size) / 2).to_i < vrp.shipments.size && vrp.shipments[((index - vrp.services.size) / 2).to_i].id }.uniq).collect{ |shipment_id|
           shipment = vrp.shipments.find{ |sh| sh.id == shipment_id }
           [{
+            original_shipment_id: shipment.original_id,
             shipment_id: shipment_id.to_s,
             type: 'pickup',
             point_id: shipment.pickup.point_id,
             detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
           }, {
+            original_shipment_id: shipment.original_id,
             shipment_id: shipment_id.to_s,
             type: 'delivery',
             point_id: shipment.delivery.point_id,

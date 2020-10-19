@@ -694,7 +694,7 @@ module OptimizerWrapper
     tic_parse_result = Time.now
     result[:routes].each{ |r|
       details = nil
-      v = vrp.vehicles.find{ |v| v.id == r[:vehicle_id] }
+      v = vrp.vehicles.find{ |vehicle| vehicle.id == r[:vehicle_id] }
       if r[:end_time] && r[:start_time]
         r[:total_time] = r[:end_time] - r[:start_time]
       end

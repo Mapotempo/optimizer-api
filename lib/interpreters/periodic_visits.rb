@@ -233,19 +233,16 @@ module Interpreters
 
     def generate_vehicles(vrp)
       rests_durations = Array.new(vrp.vehicles.size, 0)
-      vrp.vehicles.each{ |vehicle|
-        vehicle.id = vehicle.original_id if vehicle.original_id # if we used work_day clustering
-        vehicle.original_id = vehicle.id if vehicle.original_id.nil?
-      }
       new_vehicles = vrp.vehicles.collect{ |vehicle|
         @equivalent_vehicles[vehicle.id] = []
+        @equivalent_vehicles[vehicle.original_id] = []
         vehicles = (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |vehicle_day_index|
           next if vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
 
           timewindows = [vehicle.timewindow || vehicle.sequence_timewindows].flatten
           if timewindows.empty?
             new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
-            @equivalent_vehicles[vehicle.id] << new_vehicle.id
+            @equivalent_vehicles[vehicle.original_id] << new_vehicle.id
             new_vehicle
           else
             timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == vehicle_day_index % 7 }.collect{ |associated_timewindow|
@@ -263,7 +260,7 @@ module Interpreters
         if vehicle.overall_duration
           new_relation = Models::Relation.new(
             type: 'vehicle_group_duration',
-            linked_vehicle_ids: @equivalent_vehicles[vehicle.id],
+            linked_vehicle_ids: @equivalent_vehicles[vehicle.original_id],
             lapse: vehicle.overall_duration + rests_durations[index]
           )
           vrp.relations << new_relation

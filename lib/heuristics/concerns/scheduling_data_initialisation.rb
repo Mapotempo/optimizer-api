@@ -23,10 +23,9 @@ module SchedulingDataInitialization
 
   def generate_route_structure(vrp)
     vrp.vehicles.each{ |vehicle|
-      original_vehicle_id = vehicle[:id].split('_').slice(0, vehicle[:id].split('_').size - 1).join('_')
       capacity = compute_capacities(vehicle[:capacities], true)
       vrp.units.reject{ |unit| capacity.has_key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
-      @candidate_routes[original_vehicle_id][vehicle.global_day_index] = {
+      @candidate_routes[vehicle.original_id][vehicle.global_day_index] = {
         vehicle_id: vehicle.id,
         global_day_index: vehicle.global_day_index,
         tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - vehicle.global_day_index * 86400,
@@ -43,8 +42,8 @@ module SchedulingDataInitialization
         router_dimension: vehicle.router_dimension.to_sym,
         cost_fixed: vehicle.cost_fixed,
       }
-      @vehicle_day_completed[original_vehicle_id][vehicle.global_day_index] = false
-      @missing_visits[original_vehicle_id] = []
+      @vehicle_day_completed[vehicle.original_id][vehicle.global_day_index] = false
+      @missing_visits[vehicle.original_id] = []
     }
 
     initialize_routes(vrp.routes) unless vrp.routes.empty?

@@ -924,7 +924,7 @@ module Heuristics
 
     def get_unassigned_info(vrp, id, service_in_vrp, reason)
       {
-        original_service_id: service_in_vrp[:id],
+        original_service_id: service_in_vrp.id,
         service_id: id,
         point_id: service_in_vrp.activity&.point_id,
         detail: {
@@ -1012,6 +1012,7 @@ module Heuristics
         {
           day_week_num: "#{day % 7}_#{Helper.string_padding(day / 7 + 1, size_weeks)}",
           day_week: "#{day_name}_#{Helper.string_padding(day / 7 + 1, size_weeks)}",
+          original_service_id: service_in_vrp.id,
           service_id: "#{point[:id]}_#{point[:number_in_sequence]}_#{service_in_vrp.visits_number}",
           point_id: service_in_vrp.activity&.point&.id || service_in_vrp.activities[point[:activity]]&.point&.id,
           begin_time: point[:arrival],
@@ -1033,7 +1034,7 @@ module Heuristics
       routes = []
       solution = []
 
-      @candidate_routes.each{ |_vehicle, all_days_routes|
+      @candidate_routes.each{ |vehicle_id, all_days_routes|
         all_days_routes.keys.sort.each{ |day|
           route = all_days_routes[day]
 
@@ -1061,6 +1062,7 @@ module Heuristics
 
           solution << {
             vehicle_id: route[:vehicle_id],
+            original_vehicle_id: vehicle_id,
             start_time: start_time,
             end_time: end_time,
             activities: computed_activities
