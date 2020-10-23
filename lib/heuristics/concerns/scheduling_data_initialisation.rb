@@ -152,32 +152,30 @@ module SchedulingDataInitialization
 
     @to_plan_service_ids = []
     vrp.points.each{ |point|
-      same_located_set = vrp.services.select{ |service|
-        (service.activity ? [service.activity] : service.activities).any?{ |activity|
-          activity.point.id == point.id
-        }
-      }.sort_by(&:visits_number)
+      same_located_set = @services_data.select{ |_id, data| data[:points_ids].include?(point.id) }.sort_by{ |_id, data| data[:raw].visits_number }
 
       next if same_located_set.empty?
 
-      raise OptimizerWrapper.UnsupportedProblemError, 'Same_point_day is not supported if a set has one service with several activities' if same_located_set.any?{ |s| !s.activities.empty? }
+      raise OptimizerWrapper.UnsupportedProblemError, 'Same_point_day is not supported if a set has one service with several activities' if same_located_set.any?{ |id, data| data[:points_ids].size > 1 }
+
+      raise OptimizerWrapper::UnsupportedProblemError, 'Same_point_day is not supported if frequences of a set have no common multiplexer' unless common_divisor?(same_located_set.collect{ |_id, data| data[:heuristic_period] })
 
       group_tw = best_common_tw(same_located_set)
-      if group_tw.empty? && !same_located_set.all?{ |service| @services_data[service[:id]][:tws_sets].first.empty? }
+      if group_tw.empty? && !same_located_set.all?{ |_id, data| data[:tws_sets].first.empty? }
         reject_group(same_located_set)
       else
         representative_ids = []
         # one representative per freq
-        same_located_set.group_by{ |service| @services_data[service[:id]][:heuristic_period] }.each{ |_period, sub_set|
-          representative_id = sub_set[0][:id]
+        same_located_set.group_by{ |_id, data| data[:heuristic_period] }.each{ |_period, sub_set|
+          representative_id = sub_set[0][0]
           representative_ids << representative_id
-          @services_data[representative_id][:tws_sets] = [group_tw]
-          @services_data[representative_id][:group_duration] = sub_set.sum{ |s| s.activity.duration }
-          @same_located[representative_id] = sub_set.delete_if{ |s| s[:id] == representative_id }.collect{ |s| s[:id] }
-          @services_data[representative_id][:group_capacity] = Marshal.load(Marshal.dump(@services_data[representative_id][:capacity]))
-          @same_located[representative_id].each{ |service_id|
-            @services_data[service_id][:capacity].each{ |unit, value| @services_data[representative_id][:group_capacity][unit] += value }
-            @services_data[service_id][:tws_sets] = [group_tw]
+          sub_set[0][1][:tws_sets] = [group_tw]
+          sub_set[0][1][:group_duration] = sub_set.sum{ |_id, data| data[:durations].first }
+          @same_located[representative_id] = sub_set.collect(&:first) - [representative_id]
+          sub_set[0][1][:group_capacity] = Marshal.load(Marshal.dump(sub_set[0][1][:capacity]))
+          @same_located[representative_id].each{ |id|
+            @services_data[id][:capacity].each{ |unit, value| sub_set[0][1][:group_capacity][unit] += value }
+            @services_data[id][:tws_sets] = [group_tw]
           }
         }
 
@@ -205,11 +203,11 @@ module SchedulingDataInitialization
   end
 
   def reject_group(group)
-    group.each{ |service|
-      (1..service.visits_number).each{ |index|
-        @candidate_services_ids.delete(service[:id])
-        @uninserted["#{service[:id]}_#{index}_#{service.visits_number}"] = {
-          original_service: service[:id],
+    group.each{ |id, data|
+      (1..data[:raw].visits_number).each{ |index|
+        @candidate_services_ids.delete(id)
+        @uninserted["#{id}_#{index}_#{data[:raw].visits_number}"] = {
+          original_service: id,
           reason: 'Same_point_day conflict : services at this geografical point have no compatible timewindow'
         }
       }
@@ -232,9 +230,9 @@ module SchedulingDataInitialization
 
   def best_common_tw(set)
     ### finds the biggest tw common to all services in [set] ###
-    first_with_tw = set.find{ |service| !@services_data[service[:id]][:tws_sets].first.empty? }
+    first_with_tw = set.find{ |_id, data| !data[:tws_sets].first.empty? }
     if first_with_tw
-      group_tw = @services_data[first_with_tw[:id]][:tws_sets].first.collect{ |tw| { day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
+      group_tw = @services_data[first_with_tw[0]][:tws_sets].first.collect{ |tw| { day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
       # all timewindows are assigned to a day
       group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw|
         (0..6).each{ |day|
@@ -244,12 +242,12 @@ module SchedulingDataInitialization
       group_tw.delete_if{ |tw| tw[:day_index].nil? }
 
       # finding minimal common timewindow
-      set.each{ |service|
-        next if @services_data[service[:id]][:tws_sets].first.empty?
+      set.each{ |_id, data|
+        next if data[:tws_sets].first.empty?
 
         # remove all tws with no intersection with this service tws
         group_tw.delete_if{ |tw1|
-          @services_data[service[:id]][:tws_sets].first.none?{ |tw2|
+          data[:tws_sets].first.none?{ |tw2|
             (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
               (tw1[:start].nil? || tw2[:end].nil? || tw1[:start] <= tw2[:end]) &&
               (tw1[:end].nil? || tw2[:start].nil? || tw1[:end] >= tw2[:start])
@@ -259,7 +257,7 @@ module SchedulingDataInitialization
         next if group_tw.empty?
 
         # adjust all tws with intersections with this point tws
-        @services_data[service[:id]][:tws_sets].first.each{ |tw1|
+        data[:tws_sets].first.each{ |tw1|
           intersecting_tws = group_tw.select{ |tw2|
             (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
               (tw2[:start].nil? || tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start]) &&
@@ -304,5 +302,19 @@ module SchedulingDataInitialization
     }
 
     capacities
+  end
+
+  def common_divisor?(lapses)
+    # If lapses have common multiplexer then any of these
+    # services will be assigned at the same time as service
+    # with smallest lapse (and normaly biggest number of visits).
+    # If this is not the case, we can not guarantee
+    # same_point_day constraint.
+    uniq_lapses = lapses.uniq
+    uniq_lapses.compact!
+    return true if uniq_lapses.size < 2
+
+    gcd = Filters.gcd_of_array(uniq_lapses)
+    gcd > 1 # if gcd is 1 that means there is no common divisor
   end
 end
