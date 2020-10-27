@@ -1158,7 +1158,8 @@ module Heuristics
       # configuration
       route_vrp.schedule_range_indices = nil
 
-      route_vrp.resolution_duration = 1000
+      route_vrp.resolution_minimum_duration = 100
+      route_vrp.resolution_time_out_multiplier = 5
       route_vrp.resolution_solver = true
       route_vrp.restitution_intermediate_solutions = false
 
