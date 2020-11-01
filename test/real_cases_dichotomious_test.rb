@@ -28,8 +28,8 @@ class RealCasesTest < Minitest::Test
       assert result
 
       # TODO: remove the logs after dicho overhead problem is fixed
-      log "duration_min = #{vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f}", level: :debug
-      log "duration_max = #{vrp[:configuration][:resolution][:duration] / 1000.to_f}", level: :debug
+      log "duration_min = #{vrp.resolution_minimum_duration / 1000.to_f}", level: :debug
+      log "duration_max = #{vrp.resolution_duration / 1000.to_f}", level: :debug
       log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
@@ -37,8 +37,8 @@ class RealCasesTest < Minitest::Test
       assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
 
       # Check time
-      duration_min = vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f
-      duration_max = vrp[:configuration][:resolution][:duration] / 1000.to_f
+      duration_min = vrp.resolution_minimum_duration / 1000.to_f
+      duration_max = vrp.resolution_duration / 1000.to_f
       duration_optimization = result[:elapsed] / 1000.to_f
       duration_elapsed =  t2 - t1
 
@@ -61,8 +61,8 @@ class RealCasesTest < Minitest::Test
       assert result
 
       # TODO: remove the logs after dicho overhead problem is fixed
-      log "duration_min = #{vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f}", level: :debug
-      log "duration_max = #{vrp[:configuration][:resolution][:duration] / 1000.to_f}", level: :debug
+      log "duration_min = #{vrp.resolution_minimum_duration / 1000.to_f}", level: :debug
+      log "duration_max = #{vrp.resolution_duration / 1000.to_f}", level: :debug
       log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
@@ -73,8 +73,8 @@ class RealCasesTest < Minitest::Test
       assert result[:routes].size < 48, "Too many routes: #{result[:routes].size}"
 
       # Check time
-      duration_min = vrp[:configuration][:resolution][:minimum_duration] / 1000.to_f
-      duration_max = vrp[:configuration][:resolution][:duration] / 1000.to_f
+      duration_min = vrp.resolution_minimum_duration / 1000.to_f
+      duration_max = vrp.resolution_duration / 1000.to_f
       duration_optimization = result[:elapsed] / 1000.to_f
       duration_elapsed =  t2 - t1
 
