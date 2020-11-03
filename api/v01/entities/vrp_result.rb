@@ -102,25 +102,25 @@ module Api
     end
 
     class VrpResultJobGraphItem < Grape::Entity
-      expose :iteration, documentation: { type: Integer, desc: 'Iteration number.' }
-      expose :time, documentation: { type: Integer, desc: 'Time in ms since resolution begin.' }
-      expose :cost, documentation: { type: Float, desc: 'Current best cost at this iteration.' }
+      expose :iteration, documentation: { type: Integer, desc: 'Iteration number' }
+      expose :time, documentation: { type: Integer, desc: 'Time in ms since resolution begin' }
+      expose :cost, documentation: { type: Float, desc: 'Current best cost at this iteration' }
     end
 
     class VrpResultJob < Grape::Entity
       expose :id, documentation: { type: String, desc: 'Job uniq ID' }
-      expose :status, documentation: { type: String, desc: 'One of queued, working, completed, killed or failed.' }
-      expose :avancement, documentation: { type: String, desc: 'Free form advancement message.' }
-      expose :graph, using: VrpResultJobGraphItem, documentation: { is_array: true, desc: 'Items to plot cost evolution.' }
+      expose :status, documentation: { type: String, desc: 'One of queued, working, completed, killed or failed' }
+      expose :avancement, documentation: { type: String, desc: 'Free form advancement message' }
+      expose :graph, using: VrpResultJobGraphItem, documentation: { is_array: true, desc: 'Items to plot cost evolution' }
     end
 
     class VrpResult < Grape::Entity
-      expose :solutions, using: VrpResultSolution, documentation: { is_array: true, desc: 'The current best solution.' }
-      expose :job, using: VrpResultJob, documentation: { desc: 'The Job status.' }
+      expose :solutions, using: VrpResultSolution, documentation: { is_array: true, desc: 'The current best solution' }
+      expose :job, using: VrpResultJob, documentation: { desc: 'The Job status' }
     end
 
     class VrpJobsList < Grape::Entity
-      expose :jobs, using: VrpResultJob, documentation: { is_array: true, desc: 'The Jobs.' }
+      expose :jobs, using: VrpResultJob, documentation: { is_array: true, desc: 'The Jobs' }
     end
   end
 end
