@@ -194,5 +194,13 @@ class DichotomiousTest < Minitest::Test
         assert_equal service_vrp_in[:vrp].points.size, service_vrp_in[:vrp].matrices.first.distance.size
       }
     end
+
+    def test_kmeans_function_with_services_at_same_location
+      vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
+      assert vrp.services.group_by{ |s| s.activity.point_id }.any?{ |_pt_id, set| set.size > 1 }, 'This test is useless if there are not several services with same point_id'
+      split = Interpreters::Dichotomious.send(:kmeans, vrp, :duration)
+      assert_equal 2, split.size
+      assert_equal vrp.services.size, split.collect(&:size).sum, 'Wrong number of services will be returned'
+    end
   end
 end
