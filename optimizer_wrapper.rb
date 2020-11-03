@@ -595,26 +595,41 @@ module OptimizerWrapper
     end
   end
 
-  def self.route_total_dimension(vrp, route, vehicle, dimension)
+  def self.compute_route_total_dimensions(vrp, route, matrix)
     previous = nil
-    route[:activities].sum{ |a|
+    dimensions = []
+    dimensions << :time if matrix.time
+    dimensions << :distance if matrix.distance
+    dimensions << :value if matrix.value
+
+    total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
+    route[:activities].each{ |activity|
       # TODO: This next operation is expensive for big instances. Is there a better way?
-      point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
-        s.id == a[:service_id]
-      }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
-        s.id == a[:pickup_shipment_id]
-      }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
-        s.id == a[:delivery_shipment_id]
-      }.delivery.point_id : nil
+      point_id = activity[:point_id]
+      point_id ||= if activity[:service_id]
+        vrp.services.find{ |s| s.id == activity[:service_id] }.activity.point_id
+      elsif activity[:pickup_shipment_id]
+        vrp.shipments.find{ |s| s.id == activity[:pickup_shipment_id] }.pickup.point_id
+      elsif activity[:delivery_shipment_id]
+        vrp.shipments.find{ |s| s.id == activity[:delivery_shipment_id] }.pickup.point_id
+      end
+
       if point_id
         point = vrp.points.find{ |p| p.id == point_id }.matrix_index
         if previous && point
-          a[('travel_' + dimension.to_s).to_sym] = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension)[previous][point]
+          dimensions.each{ |dimension|
+            activity[('travel_' + dimension.to_s).to_sym] = matrix.send(dimension)[previous][point]
+            total[dimension] += activity[('travel_' + dimension.to_s).to_sym].round
+            activity[:current_distance] ||= total[dimension].round if dimension == :distance
+          }
         end
       end
       previous = point
-      a[('travel_' + dimension.to_s).to_sym] || 0
     }
+
+    route[:total_travel_time] = total[:time] if dimensions.include?(:time)
+    route[:total_distance] = total[:distance] if dimensions.include?(:distance)
+    route[:total_travel_value] = total[:value] if dimensions.include?(:value)
   end
 
   def self.build_csv_activity(name, route, activity)
@@ -700,15 +715,9 @@ module OptimizerWrapper
       end
 
       matrix = vrp.matrices.find{ |mat| mat.id == v.matrix_id }
-      if matrix.time
-        r[:total_travel_time] = route_total_dimension(vrp, r, v, :time)
-      end
-      if matrix.value
-        r[:total_travel_value] = route_total_dimension(vrp, r, v, :value)
-      end
-      if matrix.distance
-        r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
-      elsif matrix[:distance].nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
+      compute_route_total_dimensions(vrp, r, matrix)
+
+      if matrix.distance.nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
         details = route_details(vrp, r, v)
         if details && !details.empty?
           r[:total_distance] = details.map(&:first).compact.reduce(:+)

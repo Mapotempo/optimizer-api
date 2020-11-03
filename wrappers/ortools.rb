@@ -591,6 +591,7 @@ module Wrappers
                     point_id: point ? point.id : nil,
                     current_distance: activity.current_distance,
                     begin_time: earliest_start,
+                    end_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
                     departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
                     detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
                     alternative: service.activities ? activity.alternative : nil
@@ -609,6 +610,7 @@ module Wrappers
                     delivery_shipment_id: shipment_activity == 1 && shipment.id,
                     point_id: point.id,
                     begin_time: earliest_start,
+                    end_time: earliest_start + (shipment_activity.zero? ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i),
                     departure_time: earliest_start + (shipment_activity.zero? ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i),
                     detail: build_detail(shipment, shipment_activity.zero? ? shipment.pickup : shipment.delivery, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle, shipment_activity.zero? ? nil : true)
                   }.merge(route_data).delete_if{ |_k, v| !v }
@@ -623,6 +625,7 @@ module Wrappers
                 current_activity = {
                   rest_id: activity.id,
                   begin_time: earliest_start,
+                  end_time: earliest_start + vehicle_rest[:duration],
                   departure_time: earliest_start + vehicle_rest[:duration],
                   detail: build_rest(vehicle_rest, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads)
                 }

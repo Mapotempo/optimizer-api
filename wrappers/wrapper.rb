@@ -621,6 +621,7 @@ module Wrappers
               timewindows: (service.activity && service.activity.timewindows) ? service.activity.timewindows.collect{ |tw| { start: tw.start, end: tw.end } } : [],
               quantities: service.quantities ? service.quantities.collect{ |qte| { unit: qte.unit.id, value: qte.value } } : nil
             },
+            type: 'service',
             reason: reason
           }
         }.compact

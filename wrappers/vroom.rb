@@ -91,6 +91,7 @@ module Wrappers
       previous = vehicle_have_start ? vehicle.start_point.matrix_index : nil
       activities = ([vehicle_have_start ? {
         point_id: vehicle.start_point.id,
+        type: 'start',
         detail: vehicle.start_point.location ? {
           lat: vehicle.start_point.location.lat,
           lon: vehicle.start_point.location.lon
@@ -101,10 +102,13 @@ module Wrappers
         point = vrp.points.select{ |point| point[:id] == vrp.services[i].activity.point[:id] }[0]
         service = vrp.services[i]
         current_activity = {
+          original_service_id: service.original_id,
           service_id: service.id,
           point_id: point.id,
+          type: 'service',
           travel_time: ((previous && point_index && vrp.matrices[0][:time]) ? vrp.matrices[0][:time][previous][point_index] : 0),
           travel_distance: ((previous && point_index && vrp.matrices[0][:distance]) ? vrp.matrices[0][:distance][previous][point_index] : 0),
+          travel_value: ((previous && point_index && vrp.matrices[0][:value]) ? vrp.matrices[0][:value][previous][point_index] : 0),
           detail: build_detail(service, service.activity, point, nil, nil, vehicle)
 #          travel_distance 0,
 #          travel_start_time 0,
@@ -119,6 +123,7 @@ module Wrappers
       }.compact +
       [vehicle_have_end ? {
         point_id: vehicle.end_point.id,
+        type: 'end',
         detail: vehicle.end_point.location ? {
           lat: vehicle.end_point.location.lat,
           lon: vehicle.end_point.location.lon
@@ -160,6 +165,7 @@ module Wrappers
           start_time: 0,
           end_time: activities.collect{ |a| a[:travel_time].to_f + (a[:detail] ? a[:detail][:duration].to_f : 0) }.reduce(&:+),
           vehicle_id: vehicle.id,
+          original_vehicle_id: vehicle.original_id,
           activities: activities
         }],
         unassigned: []
