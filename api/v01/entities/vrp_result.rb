@@ -61,6 +61,7 @@ module Api
       expose :travel_value, documentation: { type: Integer, desc: 'Travel value from previous point' }
       expose :waiting_time, documentation: { type: Integer, desc: '' }
       expose :begin_time, documentation: { type: Integer, desc: 'Time visit starts' }
+      expose :end_time, documentation: { type: Integer, desc: 'Time visit ends' }
       expose :departure_time, documentation: { type: Integer, desc: '' }
       expose :service_id, documentation: { type: String, desc: 'Internal reference of the service' }
       expose :pickup_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
@@ -77,6 +78,7 @@ module Api
       expose :total_travel_time, documentation: { type: Integer, desc: 'Sum of every travel time within the route' }
       expose :total_distance, documentation: { type: Integer, desc: 'Sum of every distance within the route' }
       expose :total_time, documentation: { type: Integer, desc: 'Sum of every travel time and activity duration of the route' }
+      expose :total_waiting_time, documentation: { type: Integer, desc: 'Sum of every idle time within the route' }
       expose :start_time, documentation: { type: Integer, desc: 'Give the actual start time of the current route if provided by the solve' }
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
       expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place' }
