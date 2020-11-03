@@ -504,13 +504,14 @@ module Interpreters
 
         clusters, _centroid_indices = SplitClustering.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options)
 
-        log "Dicho K-Means: split #{data_items.size} into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
-
         services_by_cluster = clusters.collect{ |cluster|
-          cluster.data_items.collect{ |data|
-            vrp.services.find{ |service| service.activity.point_id == data[2] }
+          cluster.data_items.flat_map{ |data|
+            vrp.services.select{ |service| service.activity.point_id == data[2] }
           }
         }
+
+        log "Dicho K-Means: split #{vrp.services.size} into #{services_by_cluster.map.with_index{ |subset, s_i| "#{subset.size}(#{clusters[s_i].data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')} (cut symbol: #{options[:cut_symbol]})"
+
         services_by_cluster
       else
         log 'Split not available when services have no activities', level: :error
