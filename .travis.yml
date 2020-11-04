@@ -15,24 +15,25 @@ jobs:
       install: skip
       env: TEST_SUITE='basis'
       script: bash ci-utils/tests.sh ${TEST_SUITE}
-    - env: TEST_SUITE='dicho'
-      install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
-    - env: TEST_SUITE='scheduling'
-      install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
-    - env: TEST_SUITE='real_scheduling'
-      install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
-    - env: TEST_SUITE='real_scheduling_solver'
-      install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
-    - env: TEST_SUITE='split_clustering'
-      install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
-    - env: TEST_SUITE='real'
-      install: skip
-      script: bash ci-utils/tests.sh ${TEST_SUITE}
+    #   It requires to have an upgraded travis plan or to point our own CI environment
+    # - env: TEST_SUITE='dicho'
+    #   install: skip
+    #   script: bash ci-utils/tests.sh ${TEST_SUITE}
+    # - env: TEST_SUITE='scheduling'
+    #   install: skip
+    #   script: bash ci-utils/tests.sh ${TEST_SUITE}
+    # - env: TEST_SUITE='real_scheduling'
+    #   install: skip
+    #   script: bash ci-utils/tests.sh ${TEST_SUITE}
+    # - env: TEST_SUITE='real_scheduling_solver'
+    #   install: skip
+    #   script: bash ci-utils/tests.sh ${TEST_SUITE}
+    # - env: TEST_SUITE='split_clustering'
+    #   install: skip
+    #   script: bash ci-utils/tests.sh ${TEST_SUITE}
+    # - env: TEST_SUITE='real'
+    #   install: skip
+    #   script: bash ci-utils/tests.sh ${TEST_SUITE}
     - stage: deploy
       name: "Deploy"
       install: skip
