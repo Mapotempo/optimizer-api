@@ -488,7 +488,7 @@ module OptimizerWrapper
   end
 
   def self.build_csv(solutions)
-    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance']
+    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'waiting_time', 'begin_time', 'end_time', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance', 'total_waiting_time']
     quantities_header = []
     unit_ids = []
     optim_planning_output = nil
@@ -630,6 +630,25 @@ module OptimizerWrapper
     route[:total_travel_time] = total[:time] if dimensions.include?(:time)
     route[:total_distance] = total[:distance] if dimensions.include?(:distance)
     route[:total_travel_value] = total[:value] if dimensions.include?(:value)
+    route[:total_waiting_time] = route[:activities].collect{ |a| a[:waiting_time] }.sum if route[:activities].all?{ |a| a[:waiting_time] }
+  end
+
+  def self.compute_route_waiting_times(route)
+    seen = 1
+    previous_end = route[:activities].first[:type] == 'depot' ? route[:activities].first[:begin_time] : route[:activities].first[:end_time]
+    route[:activities].first[:waiting_time] = 0
+    first_service_seen = true
+    while seen < route[:activities].size
+      considered_setup = if route[:activities][seen][:type] == 'rest'
+                           0
+                         else
+                           (first_service_seen || route[:activities][seen][:travel_time].positive?) ? (route[:activities][seen][:detail][:setup_duration] || 0) : 0
+                         end
+      first_service_seen = false if %(w[service pickup delivery]).include?(route[:activities][seen][:type])
+      route[:activities][seen][:waiting_time] = route[:activities][seen][:begin_time] - (previous_end + considered_setup + (route[:activities][seen][:travel_time] || 0))
+      previous_end = route[:activities][seen][:end_time]
+      seen += 1
+    end
   end
 
   def self.build_csv_activity(name, route, activity)
@@ -641,14 +660,18 @@ module OptimizerWrapper
       activity['detail']['lat'],
       activity['detail']['lon'],
       type,
+      formatted_duration(activity['waiting_time']),
+      formatted_duration(activity['begin_time']),
+      formatted_duration(activity['end_time']),
       formatted_duration(activity['detail']['setup_duration'] || 0),
       formatted_duration(activity['detail']['duration'] || 0),
       activity['detail']['additional_value'] || 0,
       activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
       name,
       route && formatted_duration(route['total_travel_time']),
-      route && route['total_distance']
-    ]
+      route && route['total_distance'],
+      route && formatted_duration(route['total_waiting_time']),
+    ].flatten
   end
 
   def self.build_complete_id(activity)
@@ -715,7 +738,6 @@ module OptimizerWrapper
       end
 
       matrix = vrp.matrices.find{ |mat| mat.id == v.matrix_id }
-      compute_route_total_dimensions(vrp, r, matrix)
 
       if matrix.distance.nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
         details = route_details(vrp, r, v)
@@ -728,13 +750,17 @@ module OptimizerWrapper
           }
         end
       end
+
+      compute_route_waiting_times(r) unless r[:activities].empty? || result[:solvers].include?('vroom')
+      compute_route_total_dimensions(vrp, r, matrix)
+
       if vrp.restitution_geometry && r[:activities].size > 1
         details = route_details(vrp, r, v) if details.nil?
         r[:geometry] = details.map(&:last) if details
       end
     }
 
-    [:total_time, :total_travel_time, :total_travel_value, :total_distance].each{ |stat_symbol|
+    [:total_time, :total_travel_time, :total_travel_value, :total_distance, :total_waiting_time].each{ |stat_symbol|
       next if !result[:routes].all?{ |r| r[stat_symbol] }
 
       result[stat_symbol] = result[:routes].collect{ |r|

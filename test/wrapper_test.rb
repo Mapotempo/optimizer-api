@@ -3169,4 +3169,10 @@ class WrapperTest < Minitest::Test
     assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] != a[:service_id] } })
     assert(result[:routes].all?{ |route| route[:vehicle_id] && route[:original_vehicle_id] && route[:vehicle_id] != route[:original_vehicle_id] })
   end
+
+  def test_consistency_between_current_and_total_route_distance
+    vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert(result[:routes].all?{ |route| route[:activities].last[:current_distance] == route[:total_distance] })
+  end
 end

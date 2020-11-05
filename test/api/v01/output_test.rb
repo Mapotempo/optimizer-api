@@ -249,13 +249,143 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
       vrp[:configuration][:restitution] = { csv: true }
       @job_id = submit_csv api_key: 'demo', vrp: vrp
       result = wait_status_csv @job_id, 'completed', api_key: 'demo'
-      csv = result.split("\n")
-      ids = csv.collect{ |line| line.split(',')[1] }
+      csv = CSV.parse(result, headers: true)
+      ids = csv.collect{ |line| line['id'] }
       assert_includes ids, 'shipment_0_pickup'
       assert_includes ids, 'shipment_0_delivery'
       vrp[:services].each{ |s|
         assert_includes ids, s[:id]
       }
     end
+  end
+
+  def test_returned_keys_json_result
+    methods = {
+      vroom: {
+        problem: VRP.lat_lon,
+        solver_name: 'vroom',
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time start_time end_time],
+        expected_activities_keys: %w[point_id travel_distance travel_time travel_value service_id original_service_id detail current_distance type],
+        expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
+      },
+      ortools: {
+        problem: VRP.lat_lon_capacitated,
+        solver_name: 'ortools',
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time costs initial_loads],
+        expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time service_id original_service_id pickup_shipment_id delivery_shipment_id original_shipment_id detail current_distance alternative type departure_time],
+        expected_unassigned_keys: %w[point_id service_id original_service_id shipment_id original_shipment_id detail type reason]
+      },
+      periodic_ortools: {
+        problem: VRP.lat_lon_two_vehicles,
+        solver_name: 'ortools',
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time costs initial_loads],
+        expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time service_id original_service_id detail current_distance alternative type departure_time],
+        expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
+      },
+      periodic_heuristic: {
+        problem: VRP.lat_lon_scheduling,
+        solver_name: 'heuristic',
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time],
+        expected_activities_keys: %w[point_id travel_distance travel_time waiting_time begin_time end_time service_id original_service_id detail current_distance alternative type day_week_num day_week],
+        expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
+      }
+    }
+
+    methods[:ortools][:problem][:shipments] = [{
+      id: 'shipment_0',
+      pickup: { point_id: 'point_0' },
+      delivery: { point_id: 'point_2' }
+    }, {
+      id: 'shipment_unfeasible',
+      pickup: { point_id: 'point_0' },
+      delivery: { point_id: 'unreachable_point' }
+    }]
+
+    methods[:periodic_ortools][:problem][:configuration][:first_solution_strategy] = nil
+
+    methods.each{ |method, data|
+      problem = data[:problem]
+      problem[:matrices].each{ |matrix|
+        [:time, :distance].each{ |dimension|
+          matrix[dimension].each{ |line| line << 2**32 }
+          matrix[dimension] << [2**32] * matrix[dimension].first.size
+        }
+      }
+      problem[:points] << { id: 'unreachable_point', matrix_index: problem[:matrices].first[:time].first.size - 1, location: { lat: 51.513402, lon: -0.217704 }}
+      problem[:services] << { id: 'unfeasible_service', activity: { point_id: 'unreachable_point' }}
+      problem[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }} if method == :periodic_ortools
+      response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: problem }.to_json, 'CONTENT_TYPE' => 'application/json'
+      result = JSON.parse(response.body)
+
+      assert_equal data[:solver_name], result['solutions'][0]['solvers'].first, "We should have called #{data[:solver_name]} solver"
+      assert result['solutions'][0]['elapsed']
+
+      activity_keys = result['solutions'][0]['routes'].inject([]){ |a_k, route| a_k | route['activities'].flat_map(&:keys) }
+      assert_empty (data[:expected_activities_keys] - activity_keys), "#{data[:expected_activities_keys] - activity_keys} activity keys are missing in #{method} result"
+      assert_empty (activity_keys - data[:expected_activities_keys]), "#{activity_keys - data[:expected_activities_keys]} activity keys are not documented, found in #{method}"
+
+      result['solutions'][0]['routes'].each{ |route|
+        assert_empty (data[:expected_route_keys] - route.keys), "#{data[:expected_route_keys] - route.keys} route keys are missing in #{method} result"
+        assert_empty (route.keys - data[:expected_route_keys]), "#{route.keys - data[:expected_route_keys]} route keys are not documented, found in #{method}"
+      }
+
+      refute_empty result['solutions'][0]['unassigned']
+      unassigned_keys = result['solutions'][0]['unassigned'].flat_map(&:keys).uniq
+      assert_empty (data[:expected_unassigned_keys] - unassigned_keys), "#{data[:expected_unassigned_keys] - unassigned_keys} unassigned keys are missing in #{method} result"
+      assert_empty (unassigned_keys - data[:expected_unassigned_keys]), "#{unassigned_keys - data[:expected_unassigned_keys]} unassigned keys are not documented, found in #{method}"
+    }
+  end
+
+  def test_returned_keys_csv
+    methods = {
+      vroom: {
+        problem: VRP.lat_lon,
+        solver_name: 'vroom',
+        scheduling_keys: []
+      },
+      ortools: {
+        problem: VRP.lat_lon,
+        solver_name: 'ortools',
+        scheduling_keys: []
+      },
+      periodic_ortools: {
+        problem: VRP.lat_lon,
+        solver_name: 'ortools',
+        scheduling_keys: %w[day_week_num day_week]
+      },
+      periodic_heuristic: {
+        problem: VRP.lat_lon_scheduling,
+        solver_name: 'heuristic',
+        scheduling_keys: %w[day_week_num day_week]
+      }
+    }
+
+    expected_route_keys = %w[vehicle_id total_travel_time total_travel_distance total_waiting_time]
+    expected_activities_keys = %w[point_id waiting_time begin_time end_time id lat lon duration setup_duration additional_value skills tags]
+    expected_unassigned_keys = %w[point_id id type unassigned_reason]
+
+    [:ortools, :periodic_ortools].each{ |method| methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 } }
+
+    methods.each{ |method, data|
+      problem = data[:problem]
+      problem[:matrices].each{ |matrix|
+        [:time, :distance].each{ |dimension|
+          matrix[dimension].each{ |line| line << 2**32 }
+          matrix[dimension] << [2**32] * matrix[dimension].first.size
+        }
+      }
+      problem[:points] << { id: 'unreachable_point', matrix_index: problem[:matrices].first[:time].first.size - 1, location: { lat: 51.513402, lon: -0.217704 }}
+      problem[:services] << { id: 'unfeasible_service', activity: { point_id: 'unreachable_point' }}
+      problem[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }} if method == :periodic_ortools
+      problem[:configuration][:restitution] = { csv: true }
+      response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: problem }.to_json, 'CONTENT_TYPE' => 'application/json'
+      headers = response.body.slice(1..-1).split('\n').map{ |line| line.split(',') }.first
+      assert_empty (expected_activities_keys - headers), "#{expected_activities_keys - headers} activity keys are missing in #{method}"
+      assert_empty (expected_route_keys - headers - data[:scheduling_keys]), "#{expected_route_keys - headers} route keys are missing in #{method} result"
+      assert_empty (expected_unassigned_keys - headers), "#{expected_unassigned_keys - headers} unassigned keys are missing in #{method}"
+
+      undocumented = headers - expected_route_keys - expected_activities_keys - expected_unassigned_keys - data[:scheduling_keys]
+      assert_empty undocumented, "#{undocumented} keys are not documented, found in #{method}"
+    }
   end
 end

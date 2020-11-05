@@ -552,6 +552,7 @@ module Wrappers
                   previous_matrix_index = points[vehicle.start_point.id].matrix_index
                   current_activity = {
                     point_id: vehicle.start_point.id,
+                    type: 'depot',
                     begin_time: earliest_start,
                     current_distance: activity.current_distance,
                     detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
@@ -564,6 +565,7 @@ module Wrappers
                 if vehicle.end_point
                   current_activity = {
                     point_id: vehicle.end_point.id,
+                    type: 'depot',
                     current_distance: activity.current_distance,
                     begin_time: earliest_start,
                     detail: {
@@ -589,6 +591,7 @@ module Wrappers
                     original_service_id: service.original_id,
                     service_id: service.id,
                     point_id: point ? point.id : nil,
+                    type: 'service',
                     current_distance: activity.current_distance,
                     begin_time: earliest_start,
                     end_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
@@ -609,6 +612,7 @@ module Wrappers
                     pickup_shipment_id: shipment_activity.zero? && shipment.id,
                     delivery_shipment_id: shipment_activity == 1 && shipment.id,
                     point_id: point.id,
+                    type: (shipment_activity.zero? ? 'pickup' : 'delivery'),
                     begin_time: earliest_start,
                     end_time: earliest_start + (shipment_activity.zero? ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i),
                     departure_time: earliest_start + (shipment_activity.zero? ? vrp.shipments[shipment_index].pickup[:duration].to_i : vrp.shipments[shipment_index].delivery[:duration].to_i),
@@ -624,6 +628,7 @@ module Wrappers
                 earliest_start = activity.start_time
                 current_activity = {
                   rest_id: activity.id,
+                  type: 'rest',
                   begin_time: earliest_start,
                   end_time: earliest_start + vehicle_rest[:duration],
                   departure_time: earliest_start + vehicle_rest[:duration],
@@ -674,6 +679,7 @@ module Wrappers
             {
               vehicle_id: vehicle.id,
               rest_id: rest_id,
+              type: 'rest',
               detail: build_rest(rest, nil, {})
             }
           }
