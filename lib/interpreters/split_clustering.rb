@@ -144,7 +144,7 @@ module Interpreters
       sub_service_vrps = split_balanced_kmeans(service_vrp, 2, basic_split: true)
 
       result = []
-      sub_service_vrps.sort_by{ |sub_service_vrp| -sub_service_vrp[:vrp].services.size }.each_with_index{ |sub_service_vrp, index|
+      sub_service_vrps.sort_by{ |sub_service_vrp| -sub_service_vrp[:vrp].services.size - sub_service_vrp[:vrp].shipments.size * 2 }.each_with_index{ |sub_service_vrp, index|
         sub_vrp = sub_service_vrp[:vrp]
         sub_problem_size_ratio = (sub_vrp.services.size + sub_vrp.shipments.size).to_f / problem_size
 
@@ -168,7 +168,7 @@ module Interpreters
         transfer_unused_vehicle_limit = sub_vrp.resolution_vehicle_limit - sub_result[:routes].size
         transfer_unused_time_limit = [sub_vrp.resolution_duration - sub_result[:elapsed].to_f, 0].max
 
-        log "sub vrp (size: #{sub_problem[:vrp][:services].size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
+        log "sub vrp (services: #{sub_problem[:vrp].services.size} + shipments: #{sub_problem[:vrp].shipments.size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
         raise 'Incorrect activities count' if sub_vrp.visits != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.compact.size
 
         available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
@@ -277,7 +277,7 @@ module Interpreters
       sub_vrp.rests = sub_vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
       sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
       sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
-      sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact
+      sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
 
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
@@ -377,7 +377,8 @@ module Interpreters
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
-      if vrp.services.all?{ |service| service[:activity] && service[:activity][:point][:location] } && nb_clusters > 1
+      if vrp.shipments.all?{ |shipment| shipment&.pickup&.point&.location && shipment&.delivery&.point&.location} &&
+      vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
@@ -608,7 +609,7 @@ module Interpreters
                             quantities: shipment.quantities)
       end
 
-      def build_services_from_shipments(shipments)
+      def build_services_from_shipments(depot_ids, shipments)
         shipments.map{ |shipment|
           if depot_ids.include?(shipment.pickup.point.id)
             build_service_like(shipment, shipment.delivery)
@@ -638,7 +639,7 @@ module Interpreters
                     }
                   end
 
-        custom_shipments = build_services_from_shipments(vrp.shipments)
+        custom_shipments = build_services_from_shipments(depot_ids, vrp.shipments)
 
         (vrp.services + custom_shipments).group_by{ |s|
           location = if s.activity

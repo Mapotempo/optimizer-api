@@ -2396,6 +2396,11 @@ class WrapperTest < Minitest::Test
       }],
       matrices: [{
         id: 'matrix_0',
+        time: [
+          [0, 5, 2**32],
+          [5, 0, 2**32],
+          [2**32, 2**32, 0]
+        ],
         distance: [
           [0, 5, 2**32],
           [5, 0, 2**32],

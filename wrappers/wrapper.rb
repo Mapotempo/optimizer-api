@@ -818,12 +818,12 @@ module Wrappers
           }.delete_if{ |_k, v| !v }
         }) + (vrp.shipments.collect{ |shipment|
           [{
-            pickup_shipment_id: shipment_id.to_s,
+            pickup_shipment_id: shipment.id.to_s,
             point_id: shipment.pickup.point_id,
             detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil),
             reason: unassigned_reason
           }.delete_if{ |_k, v| !v }] << {
-            delivery_shipment_id: shipment_id.to_s,
+            delivery_shipment_id: shipment.id.to_s,
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true),
             reason: unassigned_reason
