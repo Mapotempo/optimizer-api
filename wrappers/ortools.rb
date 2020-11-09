@@ -471,11 +471,8 @@ module Wrappers
     end
 
     def check_services_compatible_days(vrp, vehicle, service)
-      if vrp.schedule_range_indices && (service.minimum_lapse || service.maximum_lapse)
-        (vehicle.global_day_index >= service[:first_possible_day] && vehicle.global_day_index <= service[:last_possible_day]) ? true : false
-      else
-        true
-      end
+      !vrp.schedule_range_indices || (!service.minimum_lapse && !service.maximum_lapse) ||
+        vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
     end
 
     def parse_output(vrp, _services, points, _matrix_indices, _cost, _iterations, output)

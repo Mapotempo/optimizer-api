@@ -23,27 +23,24 @@ module SchedulingDataInitialization
 
   def generate_route_structure(vrp)
     vrp.vehicles.each{ |vehicle|
-      @indices[vehicle[:start_point_id]] = vrp[:points].find{ |pt| pt[:id] == vehicle[:start_point_id] }[:matrix_index] if vehicle[:start_point_id]
-      @indices[vehicle[:end_point_id]] = vrp[:points].find{ |pt| pt[:id] == vehicle[:end_point_id] }[:matrix_index] if vehicle[:end_point_id]
-
       original_vehicle_id = vehicle[:id].split('_').slice(0, vehicle[:id].split('_').size - 1).join('_')
       capacity = compute_capacities(vehicle[:capacities], true)
       vrp.units.reject{ |unit| capacity.has_key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
       @candidate_routes[original_vehicle_id][vehicle.global_day_index] = {
-        vehicle_id: vehicle[:id],
-        global_day_index: vehicle[:global_day_index],
+        vehicle_id: vehicle.id,
+        global_day_index: vehicle.global_day_index,
         tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - vehicle.global_day_index * 86400,
         tw_end: (vehicle.timewindow.end < 84600) ? vehicle.timewindow.end : vehicle.timewindow.end - vehicle.global_day_index * 86400,
-        start_point_id: vehicle[:start_point_id],
-        end_point_id: vehicle[:end_point_id],
-        duration: vehicle[:duration] || (vehicle.timewindow.end - vehicle.timewindow.start),
-        matrix_id: vehicle[:matrix_id],
+        start_point_id: vehicle.start_point&.id,
+        end_point_id: vehicle.end_point&.id,
+        duration: vehicle.duration || (vehicle.timewindow.end - vehicle.timewindow.start),
+        matrix_id: vehicle.matrix_id,
         current_route: [],
         capacity: capacity,
         capacity_left: Marshal.load(Marshal.dump(capacity)),
-        maximum_ride_time: vehicle[:maximum_ride_time],
-        maximum_ride_distance: vehicle[:maximum_ride_distance],
-        router_dimension: vehicle[:router_dimension].to_sym,
+        maximum_ride_time: vehicle.maximum_ride_time,
+        maximum_ride_distance: vehicle.maximum_ride_distance,
+        router_dimension: vehicle.router_dimension.to_sym,
         cost_fixed: vehicle.cost_fixed,
       }
       @vehicle_day_completed[original_vehicle_id][vehicle.global_day_index] = false
@@ -128,15 +125,16 @@ module SchedulingDataInitialization
                   service[:minimum_lapse] || 1
                 end
       @services_data[service.id] = {
-        capacity: compute_capacities(service[:quantities], false, available_units),
+        capacity: compute_capacities(service.quantities, false, available_units),
         setup_durations: service.activity ? [service.activity.setup_duration] : service.activities.collect(&:setup_duration),
         durations: service.activity ? [service.activity.duration] : service.activities.collect(&:duration),
         heuristic_period: period,
         minimum_lapse: service.minimum_lapse,
         maximum_lapse: service.maximum_lapse,
+        max_day: service.last_possible_days.first, # first is for first visit
         visits_number: service.visits_number,
         points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
-        tws_sets: service.activity ? [service.activity.timewindows || []] : service.activities.collect(&:timewindows || []),
+        tws_sets: service.activity ? [service.activity.timewindows] : service.activities.collect(&:timewindows),
         unavailable_days: service.unavailable_visit_day_indices,
         used_days: [],
         used_vehicles: [],
@@ -195,8 +193,18 @@ module SchedulingDataInitialization
   end
 
   def collect_indices(vrp)
-    @services_data.collect{ |_id, data| data[:points_ids] }.flatten.uniq.sort.each{ |point_id|
-      @indices[point_id] = vrp.points.find{ |pt| pt.id == point_id }&.matrix_index
+    vrp.vehicles.each{ |vehicle|
+      @indices[vehicle.start_point.id] = vehicle.start_point.matrix_index if vehicle.start_point
+      @indices[vehicle.end_point.id] = vehicle.end_point.matrix_index if vehicle.end_point
+    }
+
+    vrp.services.each{ |service|
+      (service.activity ? [service.activity] : service.activities).each{ |activity|
+        @indices[activity.point.id] = activity.point.matrix_index
+      }
+    }
+
+    @indices.each_key{ |point_id|
       @points_vehicles_and_days[point_id] = { vehicles: [], days: [], maximum_visits_number: 0 }
     }
   end
@@ -214,29 +222,11 @@ module SchedulingDataInitialization
   end
 
   def compute_latest_authorized
-    all_days = @candidate_routes.collect{ |_vehicle, data| data.keys }.flatten.uniq.sort
-
     @services_data.group_by{ |_id, data| [data[:visits_number], data[:heuristic_period]] }.each{ |parameters, set|
       visits_number, lapse = parameters
       @max_day[visits_number] = {} unless @max_day[visits_number]
-      @max_day[visits_number][lapse] = compute_last_authorized_day(all_days, visits_number, lapse)
+      @max_day[visits_number][lapse] = set.collect{ |service, data| data[:max_day] }.max
     }
-  end
-
-  def compute_last_authorized_day(available_days, visits_number, lapse)
-    current_day = available_days.last
-    real_day = available_days.last
-
-    return current_day if visits_number == 1
-
-    visits_done = 1
-    while visits_done < visits_number
-      real_day -= lapse
-      current_day = available_days.select{ |day| day <= real_day.round }.max
-      visits_done += 1
-    end
-
-    current_day
   end
 
   def best_common_tw(set)
