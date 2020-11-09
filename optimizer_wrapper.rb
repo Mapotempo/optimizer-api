@@ -732,9 +732,9 @@ module OptimizerWrapper
         r[stat_symbol]
       }.reduce(:+)
     }
-    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.services.size}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.services.size + 2 * vrp.shipments.size) * 100).round(1)}%)"
-    used_vehicles = result[:routes].map{ |r| r[:vehicle_id] if r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }.compact
-    log "result - #{used_vehicles.size}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicles}"
+    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.visits}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.visits + 2 * vrp.shipments.size) * 100).round(1)}%)"
+    used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }
+    log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicle_count}"
     log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
 
     result

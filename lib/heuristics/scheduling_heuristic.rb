@@ -28,51 +28,47 @@ module Heuristics
     include SchedulingEndPhase
 
     def initialize(vrp, job = nil)
-      @services_data = {}
-
       return if vrp.services.empty?
 
-      # heuristic data
-      @candidate_vehicles = []
-      @vehicle_day_completed = {}
-      @to_plan_service_ids = []
-      @previous_candidate_service_ids = nil
-      @candidate_services_ids = []
-
-      @indices = {}
-      @matrices = vrp[:matrices]
-
-      # in the case of same_point_day, service with higher heuristic period unlocks others
-      @services_unlocked_by = {}
-      @unlocked = []
-      @same_located = {}
-      @freq_max_at_point = Hash.new(0)
-      @max_day = {} # max_day[visits_number][minimum_lapse] = last day authorized
-
-      @used_to_adjust = []
-      @previous_uninserted = nil
-      @uninserted = {}
-      @missing_visits = {}
-
-      @previous_candidate_routes = nil
-      @candidate_routes = {}
-      @routes_referents = []
-      @points_vehicles_and_days = {}
-
-      # heuristic options
+      # global data
+      @schedule_end = vrp.schedule_range_indices[:end]
       @allow_partial_assignment = vrp.resolution_allow_partial_assignment
       @same_point_day = vrp.resolution_same_point_day
       @relaxed_same_point_day = false
       @duration_in_tw = false # TODO: create parameter for this
       @end_phase = false
 
-      # global data
-      @schedule_end = vrp.schedule_range_indices[:end]
+      # heuristic data
+      @services_data = {}
+      @candidate_services_ids = []
+      @to_plan_service_ids = []
+      @used_to_adjust = []
+
+      @candidate_vehicles = []
+      @vehicle_day_completed = {}
+      @candidate_routes = {}
+      @routes_referents = []
+      @points_vehicles_and_days = {}
       vrp.vehicles.group_by{ |vehicle| vehicle.id.split('_')[0..-2].join('_') }.each{ |vehicle_id, _set|
         @candidate_vehicles << vehicle_id
         @candidate_routes[vehicle_id] = {}
         @vehicle_day_completed[vehicle_id] = {}
       }
+
+      @indices = {}
+      @matrices = vrp[:matrices]
+
+      # same_point_day : service with higher heuristic_period unlocks others
+      @services_unlocked_by = {}
+      @unlocked = []
+      @same_located = {}
+      @freq_max_at_point = Hash.new(0)
+      @max_day = {} # max_day[visits_number][minimum_lapse] = last day authorized
+
+      @uninserted = {}
+      @missing_visits = {}
+
+      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
 
       collect_services_data(vrp)
       @max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
@@ -81,19 +77,22 @@ module Heuristics
       compute_latest_authorized
       @cost = 0
 
-      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
+      # secondary data
+      @previous_candidate_service_ids = nil
+      @previous_uninserted = nil
+      @previous_candidate_routes = nil
     end
 
     def compute_initial_solution(vrp, &block)
-      if @services_data.empty?
+      if vrp.services.empty?
         # TODO : create and use result structure instead of using wrapper function
         vrp[:preprocessing_heuristic_result] = Wrappers::Wrapper.new.empty_result('heuristic', vrp)
         return []
       end
 
       block&.call(nil, nil, nil, 'scheduling heuristic - start solving', nil, nil, nil)
-
       @starting_time = Time.now
+      @output_tool&.add_comment('COMPUTE_INITIAL_SOLUTION')
 
       fill_days
 
@@ -103,6 +102,7 @@ module Heuristics
         # relax the @same_point_day constraint but
         # keep the logic of unlocked for less frequent visits.
         # We still call fill_grouped but with same_point_day = false
+        @output_tool&.add_comment('RELAX_SAME_POINT_DAY')
         @to_plan_service_ids = @candidate_services_ids
         @same_point_day = false
         @relaxed_same_point_day = true
@@ -115,6 +115,7 @@ module Heuristics
       if vrp.resolution_solver && !@candidate_services_ids.empty?
         block&.call(nil, nil, nil, 'scheduling heuristic - re-ordering routes', nil, nil, nil)
         reorder_routes(vrp)
+        @output_tool&.add_comment('FILL_AFTER_REORDERING')
         fill_days
       end
 
@@ -761,7 +762,6 @@ module Heuristics
       best_index[:end] = best_index[:end] - @services_data[best_index[:id]][:group_duration] + @services_data[best_index[:id]][:durations].first if @same_point_day
       insert_point_in_route(route_data, best_index)
       impacted_days = adjust_candidate_routes(vehicle, day)
-
       @output_tool&.insert_visits(@services_data[best_index[:id]][:used_days], best_index[:id], @services_data[best_index[:id]][:visits_number])
 
       @to_plan_service_ids.delete(best_index[:id])
