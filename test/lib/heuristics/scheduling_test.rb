@@ -493,6 +493,8 @@ class HeuristicTest < Minitest::Test
 
       # providing uncomplete solution (compared to solution without initial routes)
       puts "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
+      vrp.routes = routes
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 0, result[:unassigned].size
       assert_equal expected_nb_visits, result[:routes].sum{ |r| r[:activities].size - 2 } + result[:unassigned].size

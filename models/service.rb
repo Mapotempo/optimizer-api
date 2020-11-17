@@ -19,6 +19,8 @@ require './models/base'
 
 module Models
   class Service < Base
+    field :original_id, default: nil
+
     field :priority, default: 4
     field :exclusion_cost, default: nil
     # ActiveHash doesn't validate the validator of the associated objects

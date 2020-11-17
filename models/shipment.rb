@@ -19,6 +19,8 @@ require './models/base'
 
 module Models
   class Shipment < Base
+    field :original_id, default: nil
+
     field :priority, default: 4
     field :direct, default: false
     field :exclusion_cost, default: nil

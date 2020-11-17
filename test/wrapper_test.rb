@@ -3146,4 +3146,27 @@ class WrapperTest < Minitest::Test
     services_vrps = OptimizerWrapper.split_independent_vrp_by_sticky_vehicle(vrp)
     assert_equal expected_number_of_vehicles, services_vrps.collect{ |sub_vrp| sub_vrp.vehicles.size }.sum, 'some vehicles disapear because of split_independent_vrp_by_sticky_vehicle function'
   end
+
+  def test_ensure_original_id_provided_if_scheduling_optimization
+    # with scheduling heuristic
+    vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia2')
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    refute_empty result[:unassigned]
+    assert(result[:unassigned].all?{ |un| un[:original_service_id] })
+    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] } })
+    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] != a[:service_id] } })
+    assert(result[:routes].all?{ |route| route[:vehicle_id] && route[:original_vehicle_id] && route[:vehicle_id] != route[:original_vehicle_id] })
+
+    # with ORtools
+    vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia2')
+    vrp.preprocessing_first_solution_strategy = ['savings']
+    vrp.resolution_duration = 6000
+    vrp.resolution_solver = true
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    refute_empty result[:unassigned]
+    assert(result[:unassigned].all?{ |un| un[:original_service_id] })
+    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] } })
+    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] != a[:service_id] } })
+    assert(result[:routes].all?{ |route| route[:vehicle_id] && route[:original_vehicle_id] && route[:vehicle_id] != route[:original_vehicle_id] })
+  end
 end

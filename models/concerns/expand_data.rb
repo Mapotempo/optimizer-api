@@ -76,4 +76,10 @@ module ExpandData
       mission.unavailable_visit_day_indices |= unavailable_indices
     }
   end
+
+  def provide_original_ids
+    (self.services + self.shipments + self.vehicles).each{ |element|
+      element.original_id = element.id
+    }
+  end
 end
