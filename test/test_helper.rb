@@ -86,7 +86,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
     vrp.preprocessing_partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
 
-    vrp.provide_original_ids unless vrp.is_a?(Hash) # TODO : re-dump with this modification
+    vrp.provide_original_ids unless vrp.is_a?(Hash) # TODO: re-dump with this modification
 
     vrp
   end

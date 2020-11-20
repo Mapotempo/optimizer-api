@@ -7,10 +7,11 @@ GIT
 
 GIT
   remote: git://github.com/Mapotempo/balanced_vrp_clustering.git
-  revision: 14cf6d7336de3c8d6924cd2931fb43b26c70699e
+  revision: 68406fde5241378780afd0ff01c697791aa3205b
   branch: dev
   specs:
-    balanced_vrp_clustering (0.1.6)
+    balanced_vrp_clustering (0.1.7)
+      awesome_print
       color-generator
       geojson2image
 
@@ -28,6 +29,7 @@ GEM
     ansi (1.5.0)
     anyway_config (1.4.4)
     ast (2.4.1)
+    awesome_print (1.8.0)
     axiom-types (0.1.1)
       descendants_tracker (~> 0.0.4)
       ice_nine (~> 0.11.0)
@@ -37,7 +39,7 @@ GEM
     builder (3.2.3)
     byebug (11.0.1)
     charlock_holmes (0.7.7)
-    chunky_png (1.3.12)
+    chunky_png (1.3.14)
     coercible (1.0.0)
       descendants_tracker (~> 0.0.1)
     color-generator (0.0.4)
