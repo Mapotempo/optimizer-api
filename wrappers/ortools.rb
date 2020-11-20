@@ -615,6 +615,8 @@ module Wrappers
                 end
                 previous_matrix_index = current_matrix_index
               elsif activity.type == 'break'
+
+              
                 activity.id
                 vehicle_rest_ids[vehicle.id] << activity.id
                 vehicle_rest = vehicle.rests.find{ |rest| rest.id == activity.id }
