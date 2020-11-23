@@ -704,5 +704,20 @@ class HeuristicTest < Minitest::Test
       assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_distance] }, 'At least one route total_travel_distance was not provided'
       assert result[:routes].all?{ |route| route[:activities].none?{ |r| r[:service_id] } || route[:total_distance].positive? }, 'At least one route total_distance is lower or equal to zero'
     end
+
+    def test_global_formula_to_find_original_id_back
+      vrp = VRP.lat_lon_scheduling
+      vrp[:services][0][:id] = 'service1'
+      vrp[:services][1][:id] = 'service2_d'
+      vrp[:services][2][:id] = 'service_3_'
+      vrp[:services][3][:id] = 'service__4'
+
+      vrp = TestHelper.create(vrp)
+      original_ids = vrp.services.collect(&:id)
+      periodic = Interpreters::PeriodicVisits.new(vrp)
+      periodic.expand(vrp, nil)
+
+      assert_empty vrp.services.collect{ |s| s[:id].split('_').slice(0..-3).join('_') } - original_ids, 'Scheduling IDs structure has changed. We can not find original ID from expanded ID with current formula (used in scheduling heuristic mainly)'
+    end
   end
 end
