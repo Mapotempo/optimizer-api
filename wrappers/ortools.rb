@@ -750,7 +750,7 @@ module Wrappers
         next unless r && t # if there is no iteration and time then there is nothing to do
 
         begin
-          @previous_result = if vrp.restitution_intermediate_solutions && s
+          @previous_result = if vrp.restitution_intermediate_solutions && s && !/Final Iteration :/.match(line)
                                parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
                              end
           block&.call(self, iterations, nil, nil, cost, time, @previous_result) # if @previous_result=nil, it will not override the existing solution
