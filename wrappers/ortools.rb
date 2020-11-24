@@ -684,11 +684,11 @@ module Wrappers
         return [0, 0, @previous_result = parse_output(vrp, services, points, matrix_indices, 0, 0, nil)]
       end
 
-      input = Tempfile.new('optimize-or-tools-input', @tmp_dir)
+      input = Tempfile.new('optimize-or-tools-input', @tmp_dir, binmode: true)
       input.write(OrtoolsVrp::Problem.encode(problem))
       input.close
 
-      output = Tempfile.new('optimize-or-tools-output', @tmp_dir)
+      output = Tempfile.new('optimize-or-tools-output', @tmp_dir, binmode: true)
 
       correspondant = { 'path_cheapest_arc' => 0, 'global_cheapest_arc' => 1, 'local_cheapest_insertion' => 2, 'savings' => 3, 'parallel_cheapest_insertion' => 4, 'first_unbound' => 5, 'christofides' => 6 }
 
