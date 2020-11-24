@@ -119,7 +119,7 @@ module SchedulingEndPhase
 
   def update_costs(costs, best_cost)
     # update costs for inserted id, available_days changed
-    uninserted_set = @uninserted.keys.select{ |key| key.include?(best_cost[0] + '_') }
+    uninserted_set = @uninserted.keys.select{ |key| key.split('_').slice(0..-3).join('_') == best_cost[0] }
     @uninserted.delete(uninserted_set.first)
     if uninserted_set.size > 1
       available_days = days_respecting_lapse(best_cost[0], best_cost[1][:vehicle])
