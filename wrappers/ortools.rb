@@ -480,6 +480,7 @@ module Wrappers
         return empty_result('ortools', vrp)
       end
 
+      output.rewind
       content = OrtoolsResult::Result.decode(output.read)
       output.rewind
 
