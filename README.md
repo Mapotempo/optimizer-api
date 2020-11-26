@@ -83,7 +83,7 @@ Run tests:
 APP_ENV=test bundle exec rake test
 ```
 
-If you want to get information about how long last each test:
+If you want to get information about how long each test lasts:
 ```
 TIME=true HTML=true APP_ENV=test bundle exec rake test
 ```
