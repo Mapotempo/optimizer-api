@@ -29,7 +29,7 @@ require './api/root'
 require 'minitest/reporters'
 Minitest::Reporters.use! [
   Minitest::Reporters::ProgressReporter.new,
-  ENV['HTML'] && Minitest::Reporters::HtmlReporter.new, # Create html report with many more informations
+  ENV['HTML'] && Minitest::Reporters::HtmlReporter.new, # Create an HTML report with more information
   ENV['TIME'] && Minitest::Reporters::SpecReporter.new, # Generate a report to find slowest tests
 ].compact
 
