@@ -141,9 +141,9 @@ module Enumerable
   def median(already_sorted = false)
     return nil if empty?
 
-    sort! unless already_sorted
+    ret = already_sorted ? self : sort
     m_pos = size / 2 # no to_f!
-    size.odd? ? self[m_pos] : self[m_pos - 1..m_pos].mean
+    size.odd? ? ret[m_pos] : ret[m_pos - 1..m_pos].mean
   end
 
   # The mode is the single most popular item in the array.
