@@ -80,8 +80,15 @@ curl -X POST --header "Content-Type:application/json" --data '{"vrp":{vehicles":
 
 Run tests:
 ```
-APP_ENV=test ROUTER_URL=http://localhost:4899 bundle exec rake test
+APP_ENV=test bundle exec rake test
 ```
+
+If you want to get information about how long each test lasts:
+```
+TIME=true HTML=true APP_ENV=test bundle exec rake test
+```
+This generates a report with test times. You can find the report in optimizer-api/test/html_reports folder.
+
 
 You can add your own tests on specific Vehicle Routing Problem (for instance data from real cases). Let's see how to create a new test called "new_test".
 You will find template for test in `test/real_cases_test.rb`
