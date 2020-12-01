@@ -315,7 +315,7 @@ module Interpreters
         ratio = 0.9 + 0.1 * (options[:restarts] - restart) / options[:restarts].to_f
 
         # TODO: move the creation of data_set to the gem side GEM should create it if necessary
-        options[:seed] = Random.new_seed # gem does not initialise the seed randomly
+        options[:seed] = rand(1234567890) # gem does not initialise the seed randomly
         c.build(DataSet.new(data_items: c.centroid_indices.empty? ? data_items : data_items.dup), options[:cut_symbol], ratio, options)
 
         c.clusters.delete([])
