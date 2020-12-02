@@ -94,7 +94,7 @@ class HeuristicTest < Minitest::Test
       assert_equal 6, data_services['service_4'][:heuristic_period]
     end
 
-    def test_clean_routes
+    def test_clean_stops
       vrp = VRP.scheduling_seq_timewindows
       vrp[:services][0][:visits_number] = 2
       vrp[:services][0][:minimum_lapse] = 7
@@ -112,19 +112,19 @@ class HeuristicTest < Minitest::Test
         :@candidate_routes,
         'vehicle_0' => {
           0 => {
-            current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
           },
           7 => {
-            current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
           }
         }
       )
-      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first[:id], 'vehicle_0')
-      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
-      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:current_route].size
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0')
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:stops].size
     end
 
-    def test_clean_routes_small_lapses
+    def test_clean_stops_small_lapses
       vrp = VRP.scheduling_seq_timewindows
       vrp[:services][0][:visits_number] = 4
       vrp[:services][0][:minimum_lapse] = 3
@@ -144,22 +144,22 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
+                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 },
                                 3 => {
-                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
+                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 },
                                 7 => {
-                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
+                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 },
                                 10 => {
-                                  current_route: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
+                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
                                 }
                             })
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 3, data_services['service_1'][:heuristic_period]
-      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first[:id], 'vehicle_0')
-      assert(s.instance_variable_get(:@candidate_routes).all?{ |_key, data| data.all?{ |_k, d| d[:current_route].empty? } })
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0')
+      assert(s.instance_variable_get(:@candidate_routes).all?{ |_key, data| data.all?{ |_k, d| d[:stops].empty? } })
     end
 
     def test_add_missing_visits
@@ -179,19 +179,19 @@ class HeuristicTest < Minitest::Test
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       uninserted = s.instance_variable_get(:@uninserted)
       candidate_services_ids = s.instance_variable_get(:@candidate_services_ids)
-      assert_equal vrp.visits, candidate_routes.sum{ |_v, d| d.sum{ |_day, route| route[:current_route].size } } +
+      assert_equal vrp.visits, candidate_routes.sum{ |_v, d| d.sum{ |_day, route| route[:stops].size } } +
                                uninserted.size +
-                               candidate_services_ids.sum{ |id| s.instance_variable_get(:@services_data)[id][:visits_number] }
+                               candidate_services_ids.sum{ |id| s.instance_variable_get(:@services_data)[id][:raw].visits_number }
       assert starting_with >= s.instance_variable_get(:@uninserted).size
 
       all_ids = (uninserted.keys +
-                 candidate_routes.collect{ |_v, d| d.collect{ |_day, route_day| route_day[:current_route].collect{ |stop| "#{stop[:id]}_#{stop[:number_in_sequence]}_#{services_data[stop[:id]][:visits_number]}" } } } +
-                 candidate_services_ids.collect{ |id| (1..services_data[id][:visits_number]).collect{ |visit_index| "#{id}_#{visit_index}_#{services_data[id][:visits_number]}" } }).flatten
+                 candidate_routes.collect{ |_v, d| d.collect{ |_day, route_day| route_day[:stops].collect{ |stop| "#{stop[:id]}_#{stop[:number_in_sequence]}_#{services_data[stop[:id]][:raw].visits_number}" } } } +
+                 candidate_services_ids.collect{ |id| (1..services_data[id][:raw].visits_number).collect{ |visit_index| "#{id}_#{visit_index}_#{services_data[id][:raw].visits_number}" } }).flatten
       assert_equal vrp.visits, all_ids.size
       assert_equal vrp.visits, all_ids.uniq.size
     end
 
-    def test_clean_routes_with_position_requirement_never_first
+    def test_clean_stops_with_position_requirement_never_first
       vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Heuristics::Scheduling.new(vrp)
@@ -203,20 +203,20 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{ id: 'service_1', point_id: 'point_0', requirement: :neutral }, { id: 'service_2', point_id: 'point_0', requirement: :never_first }], vehicle: vehicule
+                                  stops: [{ id: 'service_1', point_id: 'point_0', requirement: :neutral }, { id: 'service_2', point_id: 'point_0', requirement: :never_first }], vehicle: vehicule
                                 }
                               })
       assert_equal vrp.services.size, s.instance_variable_get(:@candidate_services_ids).size
       s.instance_variable_get(:@candidate_services_ids).delete('service_1')
       s.instance_variable_get(:@candidate_services_ids).delete('service_2')
       assert_equal vrp.services.size - 2, s.instance_variable_get(:@candidate_services_ids).size
-      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].first[:id], 'vehicle_0')
-      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0')
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
       assert(s.instance_variable_get(:@uninserted).none?{ |id, _info| id.include?('service_2') })
       assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size # service 2 can be assigned again
     end
 
-    def test_clean_routes_with_position_requirement_never_last
+    def test_clean_stops_with_position_requirement_never_last
       vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Heuristics::Scheduling.new(vrp)
@@ -228,13 +228,13 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{ id: 'service_1', point_id: 'point_0', requirement: :never_last }, { id: 'service_2', point_id: 'point_0', requirement: :neutral }], vehicle: vehicule
+                                  stops: [{ id: 'service_1', point_id: 'point_0', requirement: :never_last }, { id: 'service_2', point_id: 'point_0', requirement: :neutral }], vehicle: vehicule
                                 }
                               })
       s.instance_variable_get(:@candidate_services_ids).delete('service_1')
       s.instance_variable_get(:@candidate_services_ids).delete('service_2')
-      s.send(:clean_routes, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route][1][:id], 'vehicle_0')
-      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route].size
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops][1][:id], 'vehicle_0')
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
       assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size # service 1 can be assigned again
     end
 
@@ -247,7 +247,7 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{
+                                  stops: [{
                                     id: 'service_1',
                                     start: 50,
                                     arrival: 100,
@@ -269,7 +269,7 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
-                                  current_route: [{
+                                  stops: [{
                                     id: 'service_1',
                                     start: 50,
                                     arrival: 60,
@@ -294,8 +294,8 @@ class HeuristicTest < Minitest::Test
 
       service = { id: 'service_2', point_id: 'point_2', duration: 0 }
       timewindow = { start_time: 47517.6, arrival_time: 48559.4, final_time: 48559.4, setup_duration: 0 }
-      route_data = { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 },
-                                     { id: 'service_with_activities', point_id: 'point_1', start: 47517.6, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 }],
+      route_data = { stops: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 },
+                             { id: 'service_with_activities', point_id: 'point_1', start: 47517.6, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 }],
                      tw_end: 100000, router_dimension: :time, matrix_id: 'm1' }
       s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
@@ -303,8 +303,8 @@ class HeuristicTest < Minitest::Test
 
       s.send(:insertion_cost_with_tw, timewindow, route_data, service, 1)
 
-      assert_equal 0, route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:activity]
-      assert_equal 'point_1', route_data[:current_route].find{ |stop| stop[:id].include?('with_activities') }[:point_id]
+      assert_equal 0, route_data[:stops].find{ |stop| stop[:id].include?('with_activities') }[:activity]
+      assert_equal 'point_1', route_data[:stops].find{ |stop| stop[:id].include?('with_activities') }[:point_id]
     end
 
     def test_compute_shift_two_potential_tws
@@ -320,10 +320,10 @@ class HeuristicTest < Minitest::Test
 
       service_to_plan = '1028167_CLI_84_1AB'
       service_data = s.instance_variable_get(:@services_data)[service_to_plan]
-      route_data[:current_route] = [
+      route_data[:stops] = [
         { id: '1028167_INI_84_1AB', point_id: '1028167', start: 21600, arrival: 21700, end: 22000, considered_setup_duration: 120, activity: 0 }
       ]
-      route_data[:current_route][0][:point_id] = service_data[:points_ids][0]
+      route_data[:stops][0][:point_id] = service_data[:points_ids][0]
       times_back_to_depot = potential_tws.collect{ |tw|
         _next_a, _accepted, _shift, back_depot = s.send(:insertion_cost_with_tw, tw, route_data, { id: service_to_plan, point_id: service_data[:points_ids][0], duration: 876 }, 0)
         back_depot
@@ -410,7 +410,7 @@ class HeuristicTest < Minitest::Test
 
       timewindow = { start_time: 0, arrival_time: 3807, final_time: 3807, setup_duration: 0 }
       route_data = { tw_end: 10000, start_point_id: 'point_0', end_point_id: 'point_0', matrix_id: 'm1',
-                     current_route: [{ id: 'service_with_activities', point_id: 'point_10', start: 0, arrival: 1990, end: 1990, considered_setup_duration: 0, activity: 1 }] }
+                     stops: [{ id: 'service_with_activities', point_id: 'point_10', start: 0, arrival: 1990, end: 1990, considered_setup_duration: 0, activity: 1 }] }
       service = { id: 'service_3', point_id: 'point_3', duration: 0 }
 
       set = s.send(:insertion_cost_with_tw, timewindow, route_data, service, 0)
@@ -431,19 +431,19 @@ class HeuristicTest < Minitest::Test
       route_with_four = route_with_three + [{ id: 'service_4', point_id: 'point_4', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
       candidate_route = {
         'vehicle_0' => {
-          0 => { current_route: route_with_one, cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
-          1 => { current_route: route_with_two, cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
-          2 => { current_route: route_with_three, cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
-          3 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] }
+          0 => { stops: route_with_one, cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
+          1 => { stops: route_with_two, cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
+          2 => { stops: route_with_three, cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
+          3 => { stops: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] }
         }
       }
 
       # standard case :
       s.instance_variable_set(:@candidate_routes, candidate_route.deep_dup)
       s.send(:empty_underfilled)
-      assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:current_route]
+      assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops]
       (1..3).each{ |day|
-        refute_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route]
+        refute_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops]
       }
 
       # partial assignment is false
@@ -454,23 +454,23 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes, candidate_route)
       s.send(:empty_underfilled)
       (0..3).each{ |day|
-        assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route]
+        assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops]
       }
 
       # partial assignment is false with routes sorted differently
       s.instance_variable_set(
         :@candidate_routes,
         'vehicle_0' => {
-          0 => { current_route: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
-          1 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_3', point_id: 'point_3', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
-          2 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
-          3 => { current_route: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
+          0 => { stops: route_with_four, cost_fixed: 2, global_day_index: 3, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
+          1 => { stops: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_3', point_id: 'point_3', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 2, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
+          2 => { stops: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }, { id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 1, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
+          3 => { stops: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }], cost_fixed: 2, global_day_index: 0, tw_start: 0, tw_end: 10000, matrix_id: 'm1', capacity_left: {}, capacity: {}, available_ids: [vrp_to_solve.services.collect(&:id)] },
         }
       )
 
       s.send(:empty_underfilled)
       (0..3).each{ |day|
-        assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:current_route]
+        assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops]
       }
     end
 
@@ -503,18 +503,18 @@ class HeuristicTest < Minitest::Test
       # [1, 4, 6] is the only combination such that every day is available for service_2,
       # and none of these day's route is empty
       [1, 4, 6].each{ |day|
-        assert(new_routes['vehicle_0'][day][:current_route].any?{ |stop| stop[:id]&.include?('service_2') })
+        assert(new_routes['vehicle_0'][day][:stops].any?{ |stop| stop[:id]&.include?('service_2') })
       }
 
       sequences = s.send(:deduce_sequences, 'service_1', 7, [0, 1, 2, 3, 4, 5, 6])
       assert_equal [[0, 1, 2, 3, 4, 5, 6]], sequences
       s.send(:reaffect, [['service_1', 7]])
-      assert((0..6).all?{ |day| new_routes['vehicle_0'][day][:current_route].any?{ |stop| stop[:id]&.include?('service_1') } })
+      assert((0..6).all?{ |day| new_routes['vehicle_0'][day][:stops].any?{ |stop| stop[:id]&.include?('service_1') } })
       s.send(:empty_underfilled)
       new_routes = s.instance_variable_get(:@candidate_routes)
       # this is room enough to assign every visit of service_1,
       # but that would violate minimum stop per route expected
-      assert((0..6).none?{ |day| new_routes['vehicle_0'][day][:current_route].any?{ |stop| stop[:id]&.include?('service_1') } })
+      assert((0..6).none?{ |day| new_routes['vehicle_0'][day][:stops].any?{ |stop| stop[:id]&.include?('service_1') } })
     end
 
     def test_compute_latest_authorized_day

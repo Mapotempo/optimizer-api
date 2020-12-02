@@ -57,7 +57,7 @@ class HeuristicTest < Minitest::Test
       vrp.resolution_minimize_days_worked = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal 39, result[:unassigned].size
+      assert_equal 30, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
       assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
@@ -89,7 +89,7 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       unassigned = result[:unassigned].size
-      assert_equal 32, unassigned
+      assert_equal 46, unassigned
 
       vrp = TestHelper.load_vrp(self)
       vrp[:configuration][:resolution][:solver] = true
@@ -309,7 +309,7 @@ class HeuristicTest < Minitest::Test
       vrp.resolution_minimize_days_worked = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
-      assert_equal 52, result[:unassigned].size
+      assert_equal 62, result[:unassigned].size
       assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
                    "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"
     end

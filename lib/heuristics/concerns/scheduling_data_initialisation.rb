@@ -34,7 +34,7 @@ module SchedulingDataInitialization
         end_point_id: vehicle.end_point&.id,
         duration: vehicle.duration || (vehicle.timewindow.end - vehicle.timewindow.start),
         matrix_id: vehicle.matrix_id,
-        current_route: [],
+        stops: [],
         capacity: capacity,
         capacity_left: Marshal.load(Marshal.dump(capacity)),
         maximum_ride_time: vehicle.maximum_ride_time,
@@ -70,7 +70,7 @@ module SchedulingDataInitialization
         else
           @uninserted["#{id}_#{considered_ids.count(id)}_#{@services_data[id][:raw].visits_number}"] = {
             original_service: id,
-            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.day_index}) : already #{associated_route ? associated_route[:current_route].size : 0} elements in route"
+            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.day_index}) : already #{associated_route ? associated_route[:stops].size : 0} elements in route"
           }
         end
 
@@ -96,11 +96,11 @@ module SchedulingDataInitialization
     }
   end
 
-  def plan_routes_missing_in_routes(vehicle, day)
+  def plan_routes_missing_in_routes(vehicle_id, day)
     max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
-    return unless @candidate_routes[vehicle][day]
+    return unless @candidate_routes[vehicle_id][day]
 
-    @candidate_routes[vehicle][day][:current_route].sort_by{ |stop|
+    @candidate_routes[vehicle_id][day][:stops].sort_by{ |stop|
       id = stop[:id]
       @services_data[id][:priority].to_f + 1 / (max_priority * @services_data[id][:raw].visits_number**2)
     }.each{ |stop|
@@ -108,7 +108,7 @@ module SchedulingDataInitialization
 
       next if @services_data[id][:used_days].size == @services_data[id][:raw].visits_number
 
-      plan_next_visits(vehicle, id, @services_data[id][:used_days].size + 1)
+      plan_next_visits(vehicle_id, id, @services_data[id][:used_days].size + 1)
       @output_tool&.insert_visits(@services_data[id][:used_days], id, @services_data[id][:visits_number])
     }
   end
@@ -220,11 +220,11 @@ module SchedulingDataInitialization
     @services_data.group_by{ |_id, data| [data[:raw].visits_number, data[:heuristic_period]] }.each{ |_parameters, set|
       latest_day = set.max_by{ |_service, data| data[:raw].last_possible_days.first }.last[:raw].last_possible_days.first # first is for first visit
 
-      @candidate_routes.each{ |vehicle, data|
-        data.each_key{ |day|
+      @candidate_routes.each{ |vehicle_id, all_routes|
+        all_routes.each_key{ |day|
           next if day > latest_day
 
-          @candidate_routes[vehicle][day][:available_ids] += set.collect(&:first)
+          @candidate_routes[vehicle_id][day][:available_ids] += set.collect(&:first)
         }
       }
     }
