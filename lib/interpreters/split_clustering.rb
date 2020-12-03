@@ -510,7 +510,7 @@ module Interpreters
         vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
         tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
         {
-          v_id: [vehicle.id],
+          id: [vehicle.id],
           days: compute_day_skills(tw),
           depot: {
             coordinates: [vehicle.start_point&.location&.lat, vehicle.start_point&.location&.lon],

@@ -802,5 +802,18 @@ class SplitClusteringTest < Minitest::Test
         assert result
       end
     end
+
+    def test_clustering_with_sticky_vehicles
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:services].find{ |s| s[:id] == 'service_1' }[:sticky_vehicle_ids] = ['vehicle_0']
+      vrp[:services].find{ |s| s[:id] == 'service_5' }[:sticky_vehicle_ids] = ['vehicle_0']
+      vrp[:services].find{ |s| s[:id] == 'service_12' }[:sticky_vehicle_ids] = ['vehicle_1']
+      vrp[:configuration][:preprocessing] = {
+        partitions: [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }]
+      }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 2, (result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0' }[:activities].collect{ |a| a[:service_id] } & ['service_1', 'service_5']).size
+      assert_equal 1, (result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_1' }[:activities].collect{ |a| a[:service_id] } & ['service_12']).size
+    end
   end
 end
