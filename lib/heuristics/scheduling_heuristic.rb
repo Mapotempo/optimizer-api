@@ -323,8 +323,10 @@ module Heuristics
     end
 
     def provide_group_tws(services, day)
+      services_from_same_point_day_relation = @services_unlocked_by.flat_map{ |id, set| [id, set].flatten }
+
       services.each{ |service|
-        next if !@services_unlocked_by.flat_map{ |id, set| [id, set].flatten }.include?(service.id) || # not in a same_point_day_relation
+        next if !services_from_same_point_day_relation.include?(service.id) ||
                 @services_data[service[:id]][:tws_sets].all?(&:empty?)
 
         start_with_tw = !service.activity.timewindows.empty?
