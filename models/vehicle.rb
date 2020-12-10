@@ -263,9 +263,11 @@ module Models
     def working_week_days
       @working_week_days ||=
         if self.timewindow
-          [self.timewindow.day_index || (0..6).to_a].flatten
+          self.timewindow.day_index ? [self.timewindow.day_index] : (0..6).to_a
+        elsif self.sequence_timewindows.empty?
+          (0..6).to_a
         else
-          self.sequence_timewindows.collect(&:day_index)
+          self.sequence_timewindows.flat_map{ |tw| tw.day_index || (0..6).to_a }.uniq
         end
     end
 
