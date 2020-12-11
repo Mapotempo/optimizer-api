@@ -184,8 +184,8 @@ module Api
         this.exactly_one_of :matrix_id, :router_mode
         this.optional :router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance'
         this.optional :speed_multiplier, type: Float, default: 1.0, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.'
-        this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) } } : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (only available for truck mode at this time).'
-        this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (only available for truck mode at this time).'
+        this.optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) } } : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (available only for truck mode at this time).'
+        this.optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (available only for truck mode at this time).'
         this.optional :traffic, type: Boolean, desc: 'Take into account traffic or not'
         this.optional :departure, type: DateTime, desc: 'Departure date time (only used if router supports traffic)'
         this.optional :track, type: Boolean, default: true, desc: 'Use track or not'
@@ -367,15 +367,15 @@ module Api
       def self.vrp_request_partition(this)
         this.requires(:method, type: String, values: %w[hierarchical_tree balanced_kmeans], desc: 'Method used to partition')
         this.optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
-        this.optional(:entity, type: Symbol, values: [:vehicle, :work_day], desc: 'Describes what the partition corresponds to. Only available if method in [balanced_kmeans hierarchical_tree].', coerce_with: ->(value) { value.to_sym })
-        this.optional(:threshold, type: Integer, desc: 'Maximum size of partition. Only available if method in [iterative_kmean clique].')
+        this.optional(:entity, type: Symbol, values: [:vehicle, :work_day], desc: 'Describes what the partition corresponds to. Available only if method in [balanced_kmeans hierarchical_tree].', coerce_with: ->(value) { value.to_sym })
+        this.optional(:threshold, type: Integer, desc: 'Maximum size of partition. Available only if method in [iterative_kmean clique].')
       end
 
       def self.vrp_request_preprocessing(this)
         this.optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
         this.optional(:partition_method, type: String, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
         this.optional(:partition_metric, type: Symbol, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
-        this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available with deprecated partition_method.')
+        this.optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Available only with deprecated partition_method.')
         this.optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
         this.optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
         this.optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
@@ -398,8 +398,9 @@ module Api
         this.optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
         this.optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
         this.optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called')
-        this.optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Only available if first_solution_strategy is \'periodic\'. Not available ORtools.')
-        this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling only) Assumes solution is valid even if only a subset of one service\'s visits are affected. Default: true. Not available ORtools.')
+        this.optional(:minimize_days_worked, type: Boolean, default: false, desc: '(Scheduling heuristic only) Starts filling earlier days of the period first and minimizes the total number of days worked. Available only if first_solution_strategy is \'periodic\'. Not available with ORtools.')
+        this.optional(:same_point_day, type: Boolean, desc: '(Scheduling heuristic only) Forces visits of services with the same point_id to take place on the same days. Available only if first_solution_strategy is \'periodic\'. Not available with ORtools.')
+        this.optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling heuristic only) Considers a solution as valid even if only a subset of the visits of a service is performed. If disabled, a service can only appear fully assigned or fully unassigned in the solution. Not available with ORtools.')
         this.optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
         this.optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
         this.optional(:several_solutions, type: Integer, allow_blank: false, default: 1, desc: 'Return several solution computed with different matrices')

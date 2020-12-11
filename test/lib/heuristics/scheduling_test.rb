@@ -489,7 +489,7 @@ class HeuristicTest < Minitest::Test
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Heuristics::Scheduling.new(vrp)
       candidate_routes = s.instance_variable_get(:@candidate_routes)
-      assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:current_route].size == expecting.size } })
+      assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:stops].size == expecting.size } })
 
       # providing uncomplete solution (compared to solution without initial routes)
       puts "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
@@ -528,8 +528,8 @@ class HeuristicTest < Minitest::Test
       generated_starting_routes = scheduling.instance_variable_get(:@candidate_routes)
 
       # scheduling initialization uses best order to initialize routes
-      assert(generated_starting_routes['BALEARES'][0][:current_route].find_index{ |stop| stop[:id] == '5482' } >
-             generated_starting_routes['BALEARES'][0][:current_route].find_index{ |stop| stop[:id] == '0833' })
+      assert(generated_starting_routes['BALEARES'][0][:stops].find_index{ |stop| stop[:id] == '5482' } >
+             generated_starting_routes['BALEARES'][0][:stops].find_index{ |stop| stop[:id] == '0833' })
     end
 
     def test_unassign_if_vehicle_not_available_at_provided_day
@@ -555,6 +555,7 @@ class HeuristicTest < Minitest::Test
 
     def test_with_activities
       vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:resolution][:minimize_days_worked] = true
       vrp[:vehicles].each{ |v|
         v[:sequence_timewindows].each{ |tw|
           tw[:end] = 10000

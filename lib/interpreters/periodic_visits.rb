@@ -33,6 +33,8 @@ module Interpreters
 
         @schedule_start = vrp.schedule_range_indices[:start]
         @schedule_end = vrp.schedule_range_indices[:end]
+
+        compute_possible_days(vrp)
       end
     end
 
@@ -45,7 +47,6 @@ module Interpreters
       vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
         (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
       }
-      compute_possible_days(vrp.services)
 
       if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
         scheduling_heuristic = Heuristics::Scheduling.new(vrp, job)
@@ -416,16 +417,16 @@ module Interpreters
       end
     end
 
-    def compute_possible_days(services)
+    def compute_possible_days(vrp)
       # for each of this service's visits, computes first and last possible day to be assigned
       # TODO : this should also be computed for shipments. This will probably be done automatically when implementing visits model
-      services.each{ |service|
+      vrp.services.each{ |service|
         day = @schedule_start
         nb_services_seen = 0
 
         # first possible day
         while day <= @schedule_end && nb_services_seen < service.visits_number
-          if service.unavailable_visit_day_indices.include?(day)
+          if service.unavailable_visit_day_indices.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
             day += 1
           else
             service.first_possible_days += [day]
@@ -438,7 +439,7 @@ module Interpreters
         day = @schedule_end
         nb_services_seen = 0
         while day >= @schedule_start && nb_services_seen < service.visits_number
-          if service.unavailable_visit_day_indices.include?(day)
+          if service.unavailable_visit_day_indices.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
             day -= 1
           else
             service.last_possible_days += [day]
