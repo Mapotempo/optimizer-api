@@ -117,6 +117,7 @@ module SchedulingDataInitialization
     available_units = vrp.vehicles.collect{ |vehicle| vehicle[:capacities] ? vehicle[:capacities].collect{ |capacity| capacity[:unit_id] } : nil }.flatten.compact.uniq
     vrp.services.each{ |service|
       has_only_one_day = vrp.vehicles.collect{ |v| v.global_day_index % 7 }.uniq.size == 1
+      # if this changes then we should change it in check_consistency function too :
       period = if service.visits_number == 1
                   nil
                 elsif has_only_one_day
@@ -155,10 +156,6 @@ module SchedulingDataInitialization
       same_located_set = @services_data.select{ |_id, data| data[:points_ids].include?(point.id) }.sort_by{ |_id, data| data[:raw].visits_number }
 
       next if same_located_set.empty?
-
-      raise OptimizerWrapper.UnsupportedProblemError, 'Same_point_day is not supported if a set has one service with several activities' if same_located_set.any?{ |id, data| data[:points_ids].size > 1 }
-
-      raise OptimizerWrapper::UnsupportedProblemError, 'Same_point_day is not supported if frequences of a set have no common multiplexer' unless common_divisor?(same_located_set.collect{ |_id, data| data[:heuristic_period] })
 
       group_tw = best_common_tw(same_located_set)
       if group_tw.empty? && !same_located_set.all?{ |_id, data| data[:tws_sets].first.empty? }
@@ -302,19 +299,5 @@ module SchedulingDataInitialization
     }
 
     capacities
-  end
-
-  def common_divisor?(lapses)
-    # If lapses have common multiplexer then any of these
-    # services will be assigned at the same time as service
-    # with smallest lapse (and normaly biggest number of visits).
-    # If this is not the case, we can not guarantee
-    # same_point_day constraint.
-    uniq_lapses = lapses.uniq
-    uniq_lapses.compact!
-    return true if uniq_lapses.size < 2
-
-    gcd = Filters.gcd_of_array(uniq_lapses)
-    gcd > 1 # if gcd is 1 that means there is no common divisor
   end
 end
