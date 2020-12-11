@@ -56,22 +56,29 @@ module Api
 
     class VrpResultSolutionRouteActivities < Grape::Entity
       expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
-      expose :travel_distance, documentation: { type: Integer, desc: 'travel distance from the previous point' }
-      expose :travel_duration, documentation: { type: Integer, desc: 'travel time from the previous point' }
-      expose :waiting_duration, documentation: { type: Integer, desc: '' }
-      expose :arrival_time, documentation: { type: Integer, desc: '' }
+      expose :travel_distance, documentation: { type: Integer, desc: 'Travel distance from previous point' }
+      expose :travel_time, documentation: { type: Integer, desc: 'Travel time from previous point' }
+      expose :travel_value, documentation: { type: Integer, desc: 'Travel value from previous point' }
+      expose :waiting_time, documentation: { type: Integer, desc: '' }
+      expose :begin_time, documentation: { type: Integer, desc: 'Time visit starts' }
+      expose :end_time, documentation: { type: Integer, desc: 'Time visit ends' }
       expose :departure_time, documentation: { type: Integer, desc: '' }
-      expose :service_id, documentation: { type: String, desc: '' }
-      expose :pickup_shipment_id, documentation: { type: String, desc: '' }
-      expose :delivery_shipment_id, documentation: { type: String, desc: '' }
+      expose :service_id, documentation: { type: String, desc: 'Internal reference of the service' }
+      expose :pickup_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      expose :delivery_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
       expose :detail, using: VrpResultSolutionRouteActivityDetails, documentation: { desc: '' }
+      expose :type, documentation: { type: String, desc: 'depot, rest, service, pickup or delivery' }
+      expose :current_distance, documentation: { type: Integer, desc: 'Travel distance from route start to current point' }
+      expose :alternative, documentation: { type: Integer, desc: 'When one service has alternative activities, index of the chosen one' }
     end
 
     class VrpResultSolutionRoute < Grape::Entity
-      expose :vehicle_id, documentation: { type: String, desc: 'Reference of the vehicule used for the current route' }
+      expose :vehicle_id, documentation: { type: String, desc: 'Internal reference of the vehicule used for the current route' }
       expose :activities, using: VrpResultSolutionRouteActivities, documentation: { is_array: true, desc: 'Every step of the route' }
+      expose :total_travel_time, documentation: { type: Integer, desc: 'Sum of every travel time within the route' }
       expose :total_distance, documentation: { type: Integer, desc: 'Sum of every distance within the route' }
       expose :total_time, documentation: { type: Integer, desc: 'Sum of every travel time and activity duration of the route' }
+      expose :total_waiting_time, documentation: { type: Integer, desc: 'Sum of every idle time within the route' }
       expose :start_time, documentation: { type: Integer, desc: 'Give the actual start time of the current route if provided by the solve' }
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
       expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place' }
@@ -79,48 +86,49 @@ module Api
       expose :costs, using: VRPResultDetailedCosts, documentation: { desc: 'The impact of the current route within the solution cost' }
     end
 
-    class VrpResultSolutionUnassigneds < Grape::Entity
+    class VrpResultSolutionUnassigned < Grape::Entity
       expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
-      expose :service_id, documentation: { type: String, desc: '' }
-      expose :pickup_shipment_id, documentation: { type: String, desc: '' }
-      expose :delivery_shipment_id, documentation: { type: String, desc: '' }
+      expose :service_id, documentation: { type: String, desc: 'Internal reference of the service' }
+      expose :pickup_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      expose :delivery_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
       expose :detail, using: VrpResultSolutionRouteActivityDetails, documentation: { desc: '' }
+      expose :type, documentation: { type: String, desc: 'depot, rest, service, pickup or delivery' }
+      expose :reason, documentation: { type: String, desc: 'Unassigned reason. Only available when activity was rejected within preprocessing fase or periodic first_solution_strategy.' }
     end
 
     class VrpResultSolution < Grape::Entity
-      expose :heuristics_synthesis, documentation: { type: Hash, desc: 'When first_solution_strategies are provided, sum up of tryied heuristics and their performance.' }
+      expose :heuristic_synthesis, documentation: { type: Hash, desc: 'When first_solution_strategies are provided, sum up of tryied heuristics and their performance.' }
       expose :solvers, documentation: { is_array: true, type: String, desc: 'Solvers used to perform the optimization' }
       expose :cost, documentation: { type: Float, desc: 'The actual cost of the solution considering all costs' }
       expose :costs, using: VRPResultDetailedCosts, documentation: { desc: 'The detail of the different costs which impact the solution' }
       expose :iterations, documentation: { type: Integer, desc: 'Total number of iteration performed to obtain the current result' }
       expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }
       expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route' }
-      expose :start_time, documentation: { type: Integer, desc: '' }
-      expose :end_time, documentation: { type: Integer, desc: '' }
       expose :routes, using: VrpResultSolutionRoute, documentation: { is_array: true, desc: 'All the route calculated' }
-      expose :unassigned, using: VrpResultSolutionUnassigneds, documentation: { is_array: true, desc: 'Jobs which are not part of the solution' }
+      expose :unassigned, using: VrpResultSolutionUnassigned, documentation: { is_array: true, desc: 'Jobs which are not part of the solution' }
+      expose :elapsed, documentation: { type: Integer, desc: 'Elapsed time within solver in ms' }
     end
 
     class VrpResultJobGraphItem < Grape::Entity
-      expose :iteration, documentation: { type: Integer, desc: 'Iteration number.' }
-      expose :time, documentation: { type: Integer, desc: 'Time in ms since resolution begin.' }
-      expose :cost, documentation: { type: Float, desc: 'Current best cost at this iteration.' }
+      expose :iteration, documentation: { type: Integer, desc: 'Iteration number' }
+      expose :time, documentation: { type: Integer, desc: 'Time in ms since resolution begin' }
+      expose :cost, documentation: { type: Float, desc: 'Current best cost at this iteration' }
     end
 
     class VrpResultJob < Grape::Entity
       expose :id, documentation: { type: String, desc: 'Job uniq ID' }
-      expose :status, documentation: { type: String, desc: 'One of queued, working, completed, killed or failed.' }
-      expose :avancement, documentation: { type: String, desc: 'Free form advancement message.' }
-      expose :graph, using: VrpResultJobGraphItem, documentation: { is_array: true, desc: 'Items to plot cost evolution.' }
+      expose :status, documentation: { type: String, desc: 'One of queued, working, completed, killed or failed' }
+      expose :avancement, documentation: { type: String, desc: 'Free form advancement message' }
+      expose :graph, using: VrpResultJobGraphItem, documentation: { is_array: true, desc: 'Items to plot cost evolution' }
     end
 
     class VrpResult < Grape::Entity
-      expose :solutions, using: VrpResultSolution, documentation: { is_array: true, desc: 'The current best solution.' }
-      expose :job, using: VrpResultJob, documentation: { desc: 'The Job status.' }
+      expose :solutions, using: VrpResultSolution, documentation: { is_array: true, desc: 'The current best solution' }
+      expose :job, using: VrpResultJob, documentation: { desc: 'The Job status' }
     end
 
     class VrpJobsList < Grape::Entity
-      expose :jobs, using: VrpResultJob, documentation: { is_array: true, desc: 'The Jobs.' }
+      expose :jobs, using: VrpResultJob, documentation: { is_array: true, desc: 'The Jobs' }
     end
   end
 end

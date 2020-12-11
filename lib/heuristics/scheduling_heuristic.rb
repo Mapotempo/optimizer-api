@@ -906,6 +906,7 @@ module Heuristics
           timewindows: service_in_vrp.activity&.timewindows ? service_in_vrp.activity.timewindows.collect{ |tw| { start: tw.start, end: tw.end } }.sort_by{ |t| t[:start] } : [],
           quantities: service_in_vrp.quantities.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } }
         },
+        type: 'service',
         reason: reason
       }
     end
@@ -955,50 +956,75 @@ module Heuristics
         start = @indices[start] if start.is_a?(String)
         arrival = @indices[arrival] if arrival.is_a?(String)
 
+        return nil unless @matrices.find{ |matrix| matrix[:id] == route_data[:matrix_id] }[dimension]
+
         @matrices.find{ |matrix| matrix[:id] == route_data[:matrix_id] }[dimension][start][arrival]
       end
     end
 
-    def get_stop(vrp, stop, options = {})
-      associated_point = vrp[:points].find{ |point| point[:id] == stop }
+    def get_stop(day, vrp, type, data = {})
+      day_name = { 0 => 'mon', 1 => 'tue', 2 => 'wed', 3 => 'thu', 4 => 'fri', 5 => 'sat', 6 => 'sun' }[day % 7]
+      size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
+      week = Helper.string_padding(day / 7 + 1, size_weeks)
+
+      service_in_vrp = @services_data[data[:id]][:raw] if type == 'service'
+      associated_point = vrp.points.find{ |point| point.id == data[:point_id] }
 
       {
-        point_id: stop,
+        day_week_num: "#{day % 7}_#{week}",
+        day_week: "#{day_name}_#{week}",
+        point_id: data[:point_id],
+        service_id: ("#{data[:id]}_#{data[:number_in_sequence]}_#{service_in_vrp.visits_number}" if type == 'service'),
+        original_service_id: service_in_vrp&.id,
+        travel_time: data[:travel_time],
+        travel_distance: data[:travel_distance],
+        begin_time: data[:arrival],
+        end_time: data[:end],
+        type: type,
+        alternative: (data[:activity] if service_in_vrp&.activities),
         detail: {
-          lat: (associated_point[:location][:lat] if associated_point[:location]),
-          lon: (associated_point[:location][:lon] if associated_point[:location]),
-          quantities: [],
-          begin_time: options[:begin_time],
-          departure_time: options[:departure_time]
+          lat: associated_point.location&.lat,
+          lon: associated_point.location&.lon,
+          timewindows: ((service_in_vrp.activity&.timewindows || service_in_vrp.activities[data[:activity]].timewindows)&.select{ |t| t.day_index == day % 7 }&.collect{ |tw| { start: tw.start, end: tw.end } } if type == 'service'),
+          quantities: service_in_vrp&.quantities&.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } } || [],
+          setup_duration: data[:considered_setup_duration],
+          duration: (data[:end] - data[:arrival] if type == 'service'),
+          skills: (service_in_vrp.skills + [day_name] if type == 'service')
         }.delete_if{ |_k, v| !v }
+      }.delete_if{ |_k, v| !v }
+    end
+
+    def collect_route_stops(route_data, day, vrp)
+      previous = route_data[:start_point_id]
+      route_data[:stops].collect{ |stop|
+        stop[:travel_time] = matrix(route_data, previous, stop[:point_id])
+        stop[:travel_distance] = matrix(route_data, previous, stop[:point_id], :distance)
+        previous = stop[:point_id]
+
+        get_stop(day, vrp, 'service', stop)
       }
     end
 
-    def get_activities(day, vrp, route_activities)
-      day_name = { 0 => 'mon', 1 => 'tue', 2 => 'wed', 3 => 'thu', 4 => 'fri', 5 => 'sat', 6 => 'sun' }[day % 7]
-      size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
-      route_activities.collect.with_index{ |point, point_index|
-        service_in_vrp = vrp.services.find{ |s| s.id == point[:id] }
-        associated_point = vrp.points.find{ |pt| pt.id == point[:point_id] || pt.matrix_index == point[:point_id] }
-        {
-          day_week_num: "#{day % 7}_#{Helper.string_padding(day / 7 + 1, size_weeks)}",
-          day_week: "#{day_name}_#{Helper.string_padding(day / 7 + 1, size_weeks)}",
-          original_service_id: service_in_vrp.id,
-          service_id: "#{point[:id]}_#{point[:number_in_sequence]}_#{service_in_vrp.visits_number}",
-          point_id: service_in_vrp.activity&.point&.id || service_in_vrp.activities[point[:activity]]&.point&.id,
-          begin_time: point[:arrival],
-          departure_time: route_activities[point_index + 1] ? route_activities[point_index + 1][:start] : point[:end],
-          detail: {
-            lat: associated_point.location&.lat,
-            lon: associated_point.location&.lon,
-            skills: @services_data[point[:id]][:skills].to_a << day_name,
-            setup_duration: point[:considered_setup_duration],
-            duration: point[:end] - point[:arrival],
-            timewindows: (service_in_vrp.activity&.timewindows || service_in_vrp.activities[point[:activity]].timewindows).select{ |t| t.day_index == day % 7 }.collect{ |tw| { start: tw.start, end: tw.end } },
-            quantities: service_in_vrp.quantities&.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } }
-          }
-        }
-      }.flatten
+    def get_activities(day, route_data, vrp)
+      computed_activities = []
+      route_start = route_data[:stops].empty? ? route_data[:tw_start] : route_data[:stops].first[:start]
+      route_end, final_travel_time, final_travel_distance = if route_data[:stops].empty?
+        [route_start + (route_data[:end_point_id] && route_data[:start_point_id] ? matrix(route_data, route_data[:start_point_id], route_data[:end_point_id]) : 0),
+         (route_data[:end_point_id] && route_data[:start_point_id] ? matrix(route_data, route_data[:start_point_id], route_data[:end_point_id]) : 0),
+         (route_data[:end_point_id] && route_data[:start_point_id] ? matrix(route_data, route_data[:start_point_id], route_data[:end_point_id], :distance) : 0)]
+      elsif route_data[:end_point_id]
+        [route_data[:stops].last[:end] + matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id]),
+         matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id]),
+         matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id], :distance)]
+      else
+        [route_data[:stops].last[:end], nil, nil]
+      end
+
+      computed_activities << get_stop(day, vrp, 'depot', point_id: route_data[:start_point_id], arrival: route_start, travel_time: 0, travel_distance: 0) if route_data[:start_point_id]
+      computed_activities += collect_route_stops(route_data, day, vrp)
+      computed_activities << get_stop(day, vrp, 'depot', point_id: route_data[:end_point_id], arrival: route_end, travel_time: final_travel_time, travel_distance: final_travel_distance) if route_data[:end_point_id]
+
+      [computed_activities, route_start, route_end]
     end
 
     def prepare_output_and_collect_routes(vrp)
@@ -1006,28 +1032,11 @@ module Heuristics
       solution = []
 
       @candidate_routes.each{ |vehicle_id, all_routes|
-        all_routes.keys.sort.each{ |day|
-          route_data = all_routes[day]
-
-          computed_activities = []
-          start_time, end_time = if route_data[:stops].empty?
-            computed_activities << get_stop(vrp, route_data[:start_point_id]) if route_data[:start_point_id]
-            computed_activities << get_stop(vrp, route_data[:end_point_id]) if route_data[:end_point_id]
-
-            [route_data[:tw_start], route_data[:tw_start]]
-          else
-            end_of_route = route_data[:end_point_id] ? route_data[:stops].last[:end] + matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id]) : route_data[:stops].last[:end]
-            computed_activities << get_stop(vrp, route_data[:start_point_id], departure_time: route_data[:stops].first[:start]) if route_data[:start_point_id]
-            computed_activities += get_activities(day, vrp, route_data[:stops])
-            computed_activities << get_stop(vrp, route_data[:end_point_id], begin_time: end_of_route) if route_data[:end_point_id]
-
-            [route_data[:stops].first[:start], end_of_route]
-          end
+        all_routes.sort_by{ |day, _route_data| day }.each{ |day, route_data|
+          computed_activities, start_time, end_time = get_activities(day, route_data, vrp)
 
           routes << {
-            vehicle: {
-              id: route_data[:vehicle_id]
-            },
+            vehicle: { id: route_data[:vehicle_id] },
             mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
           }
 

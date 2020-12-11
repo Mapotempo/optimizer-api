@@ -23,7 +23,7 @@ module Wrappers
       super(hash)
     end
 
-    def build_route_activity(mission, activity)
+    def build_route_activity(mission, type, activity)
       timewindows = []
       if activity.timewindows && !activity.timewindows.empty?
         timewindows = [{
@@ -33,11 +33,15 @@ module Wrappers
       end
       {
         point_id: activity.point.id,
+        travel_time: 0,
         travel_distance: 0,
         travel_start_time: 0,
-        waiting_duration: 0,
+        waiting_time: 0,
         arrival_time: 0,
         departure_time: 0,
+        type: type,
+        begin_time: 0,
+        end_time: 0,
         detail: {
           lat: activity.point&.location&.lat,
           lon: activity.point&.location&.lon,
@@ -52,8 +56,12 @@ module Wrappers
     def build_route_depot(point)
       point && {
           point_id: point.id,
+          travel_time: 0,
           travel_distance: 0,
           travel_start_time: 0,
+          type: 'depot',
+          begin_time: 0,
+          end_time: 0,
           detail: {
             lat: point.location&.lat,
             lon: point.location&.lon,
@@ -77,13 +85,13 @@ module Wrappers
               [build_route_depot(vehicle.start_point)] +
               vrp.shipments.collect{ |shipment|
                 [:pickup, :delivery].collect{ |a|
-                  mission_hash = build_route_activity(shipment, shipment.send(a))
+                  mission_hash = build_route_activity(shipment, a.to_s, shipment.send(a))
                   mission_hash[a.to_s + '_shipment_id'] = shipment.id if shipment.send(a)
                   mission_hash
                 }.compact
               }.flatten +
               vrp.services.collect{ |service|
-                mission_hash = build_route_activity(service, service.activity || service.activities.first)
+                mission_hash = build_route_activity(service, 'service', service.activity || service.activities.first)
                 mission_hash[:service_id] = service.id
                 mission_hash
               } +

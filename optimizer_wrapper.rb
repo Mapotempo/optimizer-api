@@ -488,7 +488,7 @@ module OptimizerWrapper
   end
 
   def self.build_csv(solutions)
-    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance']
+    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'waiting_time', 'begin_time', 'end_time', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance', 'total_waiting_time']
     quantities_header = []
     unit_ids = []
     optim_planning_output = nil
@@ -595,26 +595,60 @@ module OptimizerWrapper
     end
   end
 
-  def self.route_total_dimension(vrp, route, vehicle, dimension)
+  def self.compute_route_total_dimensions(vrp, route, matrix)
     previous = nil
-    route[:activities].sum{ |a|
+    dimensions = []
+    dimensions << :time if matrix.time
+    dimensions << :distance if matrix.distance
+    dimensions << :value if matrix.value
+
+    total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
+    route[:activities].each{ |activity|
       # TODO: This next operation is expensive for big instances. Is there a better way?
-      point_id = a[:point_id] ? a[:point_id] : a[:service_id] ? vrp.services.find{ |s|
-        s.id == a[:service_id]
-      }.activity.point_id : a[:pickup_shipment_id] ? vrp.shipments.find{ |s|
-        s.id == a[:pickup_shipment_id]
-      }.pickup.point_id : a[:delivery_shipment_id] ? vrp.shipments.find{ |s|
-        s.id == a[:delivery_shipment_id]
-      }.delivery.point_id : nil
+      point_id = activity[:point_id]
+      point_id ||= if activity[:service_id]
+        vrp.services.find{ |s| s.id == activity[:service_id] }.activity.point_id
+      elsif activity[:pickup_shipment_id]
+        vrp.shipments.find{ |s| s.id == activity[:pickup_shipment_id] }.pickup.point_id
+      elsif activity[:delivery_shipment_id]
+        vrp.shipments.find{ |s| s.id == activity[:delivery_shipment_id] }.pickup.point_id
+      end
+
       if point_id
         point = vrp.points.find{ |p| p.id == point_id }.matrix_index
         if previous && point
-          a[('travel_' + dimension.to_s).to_sym] = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension)[previous][point]
+          dimensions.each{ |dimension|
+            activity[('travel_' + dimension.to_s).to_sym] = matrix.send(dimension)[previous][point]
+            total[dimension] += activity[('travel_' + dimension.to_s).to_sym].round
+            activity[:current_distance] ||= total[dimension].round if dimension == :distance
+          }
         end
       end
       previous = point
-      a[('travel_' + dimension.to_s).to_sym] || 0
     }
+
+    route[:total_travel_time] = total[:time] if dimensions.include?(:time)
+    route[:total_distance] = total[:distance] if dimensions.include?(:distance)
+    route[:total_travel_value] = total[:value] if dimensions.include?(:value)
+    route[:total_waiting_time] = route[:activities].collect{ |a| a[:waiting_time] }.sum if route[:activities].all?{ |a| a[:waiting_time] }
+  end
+
+  def self.compute_route_waiting_times(route)
+    seen = 1
+    previous_end = route[:activities].first[:type] == 'depot' ? route[:activities].first[:begin_time] : route[:activities].first[:end_time]
+    route[:activities].first[:waiting_time] = 0
+    first_service_seen = true
+    while seen < route[:activities].size
+      considered_setup = if route[:activities][seen][:type] == 'rest'
+                           0
+                         else
+                           (first_service_seen || route[:activities][seen][:travel_time].positive?) ? (route[:activities][seen][:detail][:setup_duration] || 0) : 0
+                         end
+      first_service_seen = false if %(w[service pickup delivery]).include?(route[:activities][seen][:type])
+      route[:activities][seen][:waiting_time] = route[:activities][seen][:begin_time] - (previous_end + considered_setup + (route[:activities][seen][:travel_time] || 0))
+      previous_end = route[:activities][seen][:end_time]
+      seen += 1
+    end
   end
 
   def self.build_csv_activity(name, route, activity)
@@ -626,14 +660,18 @@ module OptimizerWrapper
       activity['detail']['lat'],
       activity['detail']['lon'],
       type,
+      formatted_duration(activity['waiting_time']),
+      formatted_duration(activity['begin_time']),
+      formatted_duration(activity['end_time']),
       formatted_duration(activity['detail']['setup_duration'] || 0),
       formatted_duration(activity['detail']['duration'] || 0),
       activity['detail']['additional_value'] || 0,
       activity['detail']['skills'].to_a.empty? ? nil : activity['detail']['skills'].to_a.flatten.join(','),
       name,
       route && formatted_duration(route['total_travel_time']),
-      route && route['total_distance']
-    ]
+      route && route['total_distance'],
+      route && formatted_duration(route['total_waiting_time']),
+    ].flatten
   end
 
   def self.build_complete_id(activity)
@@ -700,15 +738,8 @@ module OptimizerWrapper
       end
 
       matrix = vrp.matrices.find{ |mat| mat.id == v.matrix_id }
-      if matrix.time
-        r[:total_travel_time] = route_total_dimension(vrp, r, v, :time)
-      end
-      if matrix.value
-        r[:total_travel_value] = route_total_dimension(vrp, r, v, :value)
-      end
-      if matrix.distance
-        r[:total_distance] = route_total_dimension(vrp, r, v, :distance)
-      elsif matrix[:distance].nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
+
+      if matrix.distance.nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
         details = route_details(vrp, r, v)
         if details && !details.empty?
           r[:total_distance] = details.map(&:first).compact.reduce(:+)
@@ -719,13 +750,17 @@ module OptimizerWrapper
           }
         end
       end
+
+      compute_route_waiting_times(r) unless r[:activities].empty? || result[:solvers].include?('vroom')
+      compute_route_total_dimensions(vrp, r, matrix)
+
       if vrp.restitution_geometry && r[:activities].size > 1
         details = route_details(vrp, r, v) if details.nil?
         r[:geometry] = details.map(&:last) if details
       end
     }
 
-    [:total_time, :total_travel_time, :total_travel_value, :total_distance].each{ |stat_symbol|
+    [:total_time, :total_travel_time, :total_travel_value, :total_distance, :total_waiting_time].each{ |stat_symbol|
       next if !result[:routes].all?{ |r| r[stat_symbol] }
 
       result[stat_symbol] = result[:routes].collect{ |r|

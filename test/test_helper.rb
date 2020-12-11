@@ -779,7 +779,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp = lat_lon_capacitated
     vrp[:vehicles].each{ |v|
       v.delete(:capacities)
-      v[:timewindow] = { start: 0, end: 10 }
+      v[:timewindow] = { start: 28800, end: 61200 }
     }
     vrp[:services].each{ |v| v.delete(:quantities) }
     vrp[:configuration] = {
