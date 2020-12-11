@@ -203,31 +203,48 @@ module Models
 
       if @total_work_time_in_range[[range_start, range_end]].nil? # if info for this range is not already calculated, calculate
         total_work_time = 0
-        working_day_indices_in_range(range_start, range_end).group_by{ |range_day| range_day.modulo(7) }.each{ |group|
-          week_day_index = group[0]
-          occurence = group[1].size
-          # TODO : fix case where serveral timewindows correspond to the same day
-          tw_index = working_week_days.find_index(week_day_index)
-          tw = self.timewindow
-          tw ||= self.sequence_timewindows[tw_index]
-          total_work_time += (tw.end - tw.start) * occurence
-        }
-        @total_work_time_in_range[[range_start, range_end]] = total_work_time
+        if self.timewindow.nil? && self.sequence_timewindows.empty?
+          total_work_time = working_day_indices_in_range(range_start, range_end).size * [2**32, self.duration].compact.min
+        else
+          working_day_indices_in_range(range_start, range_end).group_by{ |range_day| range_day.modulo(7) }.each{ |group|
+            week_day_index = group[0]
+            occurence = group[1].size
+
+            (self.timewindow ? [self.timewindow] : self.sequence_timewindows).select{ |timewindow|
+              timewindow.day_index.nil? || timewindow.day_index == week_day_index
+            }.each{ |timewindow|
+              timewindow_duration =
+                if timewindow.start && timewindow.end
+                  timewindow.end - timewindow.start
+                else
+                  2**32
+                end
+
+              # TODO : consider overall duration
+              total_work_time += [timewindow_duration, self.duration].compact.min * occurence
+            }
+          }
+        end
+
+        @total_work_time_in_range[[range_start, range_end]] = [total_work_time, 2**32].min
       end
 
       @total_work_time_in_range[[range_start, range_end]]
     end
 
     def work_duration
-      return 2**32 if self.timewindow.nil? && self.sequence_timewindows.empty?
+      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle should not have sequence timewindow if there is no schedule' unless self.sequence_timewindows.empty?
 
-      return nil if !self.sequence_timewindows.empty? ||
-                    self.timewindow[:start].nil? || self.timewindow[:end].nil?
+      timewindow_duration = if self.timewindow.nil? || self.timewindow.start.nil? || self.timewindow.end.nil?
+        2**32
+      else
+        self.timewindow.end - self.timewindow.start
+      end
 
-      self.timewindow[:end] - self.timewindow[:start]
+      [timewindow_duration, self.duration].compact.min
     end
 
-    def ignore_computed_data
+    def reset_computed_data
       @total_work_time_in_range = nil
       @working_week_days = nil
       @working_range_indices = nil

@@ -511,7 +511,6 @@ module Interpreters
         tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
         {
           id: [vehicle.id],
-          days: compute_day_skills(tw),
           depot: {
             coordinates: [vehicle.start_point&.location&.lat, vehicle.start_point&.location&.lon],
             matrix_index: vehicle.start_point&.matrix_index
@@ -566,7 +565,7 @@ module Interpreters
           }
         end
       }
-      vehicle_list.each(&:ignore_computed_data)
+      vehicle_list.each(&:reset_computed_data)
       vehicle_list
     end
 
