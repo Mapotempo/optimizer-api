@@ -212,6 +212,7 @@ module Models
 
         hash[:services].group_by{ |s| s[:activity][:point_id] || s[:activity][:point][:id] }.each{ |_point_id, set|
           uniq_lapses = set.collect{ |service| service[:minimum_lapse] || 1 }
+          uniq_lapses.compact!
           uniq_lapses.uniq!
 
           next if uniq_lapses.min == 1 || uniq_lapses.size == 1
@@ -221,7 +222,7 @@ module Models
           # with smallest lapse (and normaly biggest number of visits).
           # If this is not the case, we can not guarantee
           # same_point_day constraint.
-          raise OptimizerWrapper::UnsupportedProblemError, 'Same_point_day is not supported if frequencies of a set have no common divisor' unless ::Filters.gcd_of_array(uniq_lapses) > 1
+          raise OptimizerWrapper::UnsupportedProblemError, 'Same_point_day is not supported if frequencies of a set have no common divisor' unless ::Filters.gcd_of_array(uniq_lapses.map(&:to_i)) > 1
         }
       end
     end
