@@ -5673,4 +5673,66 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
   end
+
+  def test_force_start_when_there_is_a_service_with_late_tw_begin
+    # ortools should return a sensible order for services
+    # even if the begining and end of the route is fixed
+    # by the force_start and a service with a very late TW
+
+    vrp = VRP.basic
+
+    size = 3
+
+    # A time matrix that leads to incorrect order in the old force_start implementation
+    vrp[:matrices] = [
+      {
+        id: 'matrix_0',
+        time: [(0..size - 2).to_a + [15, 17]] +
+          (1..size).collect{ |i| [1] + (0..i - 1).to_a.reverse + Array.new(size - i){ |j| 2 * (j + 1) } }
+      }
+    ]
+
+    vrp[:points] = Array.new(size + 1){ |p| { id: "point_#{p}", matrix_index: p } }
+
+    vrp[:services] = Array.new(size){ |s|
+      {
+        id: "service_#{s + 1}",
+        activity: {
+          duration: 1,
+          point_id: "point_#{s + 1}",
+          timewindows: [{ start: 0, end: 30 }]
+        }
+      }
+    }
+    vrp[:services][-1][:activity][:timewindows] = [{ start: 28, end: nil }] # "bad" TW
+
+    vrp[:vehicles] = [
+      {
+        id: 'vehicle',
+        cost_time_multiplier: 1,
+        cost_waiting_time_multiplier: 1,
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        shift_preference: 'force_start',
+        timewindow: { start: 0, end: 30 }
+      }
+    ]
+
+    vrp[:routes] = [
+      {
+        vehicle_id: 'vehicle',
+        mission_ids: ([size - 1] + (1..size - 2).to_a.sample(size - 2) + [size]).collect{ |i| "service_#{i}" }
+      }
+    ]
+
+    vrp[:configuration][:resolution][:duration] = 20
+    vrp[:configuration][:resolution][:first_solution_strategy] = 1
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+
+    visit_order = result[:routes][0][:activities].collect{ |a| a[:point_id]&.split('_')&.last&.to_i }
+
+    assert_equal (0..size).to_a + [0], visit_order, 'Services are not visited in the expected order'
+  end
 end
