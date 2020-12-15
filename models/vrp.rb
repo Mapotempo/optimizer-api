@@ -136,6 +136,11 @@ module Models
     end
 
     def self.check_consistency(hash)
+      # vehicle time cost consistency
+      if hash[:vehicles]&.any?{ |v| v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1) }
+        raise OptimizerWrapper::DiscordantProblemError, 'cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
+      end
+
       # matrix_id consistency
       hash[:vehicles]&.each{ |v|
         if v[:matrix_id] && (hash[:matrices].nil? || hash[:matrices].none?{ |m| m[:id] == v[:matrix_id] })
