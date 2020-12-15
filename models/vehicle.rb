@@ -204,7 +204,7 @@ module Models
       if @total_work_time_in_range[[range_start, range_end]].nil? # if info for this range is not already calculated, calculate
         total_work_time = 0
         if self.timewindow.nil? && self.sequence_timewindows.empty?
-          total_work_time = working_day_indices_in_range(range_start, range_end).size * [2**32, self.duration].compact.min
+          total_work_time = working_day_indices_in_range(range_start, range_end).size * (self.duration || 2**32)
         else
           working_day_indices_in_range(range_start, range_end).group_by{ |range_day| range_day.modulo(7) }.each{ |group|
             week_day_index = group[0]
