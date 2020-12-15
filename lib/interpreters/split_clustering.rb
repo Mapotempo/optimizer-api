@@ -377,7 +377,7 @@ module Interpreters
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
-      if vrp.shipments.all?{ |shipment| shipment&.pickup&.point&.location && shipment&.delivery&.point&.location} &&
+      if vrp.shipments.all?{ |shipment| shipment&.pickup&.point&.location && shipment&.delivery&.point&.location } &&
          vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
         unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
