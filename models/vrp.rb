@@ -275,6 +275,7 @@ module Models
         else
           correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
           hash[:configuration][:resolution][:solver] = true
+          hash[:configuration][:preprocessing] ||= {}
           hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
         end
       end

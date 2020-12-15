@@ -118,7 +118,7 @@ module Models
     end
 
     def need_matrix_time?
-      cost_time_multiplier.positive? || timewindow.end || cost_late_multiplier&.positive? ||
+      cost_time_multiplier.positive? || timewindow&.end || cost_late_multiplier&.positive? ||
         cost_setup_time_multiplier.positive? || !rests.empty? || maximum_ride_time || duration || overall_duration
     end
 
