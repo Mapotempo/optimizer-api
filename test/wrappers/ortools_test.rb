@@ -5735,4 +5735,40 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     assert_equal (0..size).to_a + [0], visit_order, 'Services are not visited in the expected order'
   end
+
+  def test_pause_should_be_last_if_possible
+    vrp = VRP.basic
+
+    vrp[:services].each{ |s|
+      s[:activity][:duration] = 1
+      s[:activity][:timewindows] = [{ start: 0, end: 100 }]
+    }
+
+    vrp[:rests] = [{ id: 'rest', timewindows: [{ start: 0, end: 50 }], duration: 10 }]
+
+    vrp[:vehicles][0] = {
+      id: 'vehicle',
+      cost_time_multiplier: 1,
+      cost_waiting_time_multiplier: 1,
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      matrix_id: 'matrix_0',
+      # shift_preference: 'force_start', # with force_start pause is already at the correct place
+      timewindow: { start: 0, end: 200 },
+      rest_ids: ['rest']
+    }
+    vrp[:routes] = [
+      {
+        vehicle_id: 'vehicle',
+        mission_ids: [3, 1, 2].collect{ |i| "service_#{i}" } # start from the optimal solution
+      }
+    ]
+
+    vrp[:configuration][:resolution][:duration] = 50
+    vrp[:configuration][:resolution][:first_solution_strategy] = 1 # don't waste time with heuristic selector
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+
+    assert result[:routes][0][:activities][-2][:rest_id], 'Pause should be at the last spot'
+  end
 end
