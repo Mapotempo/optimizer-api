@@ -65,12 +65,13 @@ module Heuristics
 
       @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
 
+      generate_route_structure(vrp)
       collect_services_data(vrp)
       @max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
       collect_indices(vrp)
-      generate_route_structure(vrp)
       compute_latest_authorized
       @cost = 0
+      initialize_routes(vrp.routes) unless vrp.routes.empty?
 
       # secondary data
       @previous_candidate_service_ids = nil
@@ -462,12 +463,7 @@ module Heuristics
           @uninserted.delete(id) if info[:original_service] == service_id
         }
       else
-        (1..@services_data[service_id][:raw].visits_number).each{ |number_in_sequence|
-          @uninserted["#{service_id}_#{number_in_sequence}_#{@services_data[service_id][:raw].visits_number}"] = {
-            original_service: service_id,
-            reason: 'Partial assignment only'
-          }
-        }
+        reject_all_visits(service_id, @services_data[service_id][:raw].visits_number, 'Partial assignment only')
       end
 
       return if reaffect
@@ -1223,6 +1219,18 @@ module Heuristics
       @candidate_routes = @previous_candidate_routes
       @uninserted = @previous_uninserted
       @candidate_services_ids = @previous_candidate_service_ids
+    end
+
+    def reject_all_visits(original_service_id, visits_number, specified_reason)
+      visits_number.times.each{ |visit_index|
+        @uninserted["#{original_service_id}_#{visit_index + 1}_#{visits_number}"] = {
+          original_service: original_service_id,
+          reason: specified_reason
+        }
+      }
+
+      @candidate_services_ids.delete(original_service_id)
+      @to_plan_service_ids.delete(original_service_id)
     end
   end
 end

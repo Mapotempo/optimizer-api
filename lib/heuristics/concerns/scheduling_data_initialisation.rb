@@ -46,8 +46,6 @@ module SchedulingDataInitialization
       }
       @missing_visits[vehicle.original_id] = []
     }
-
-    initialize_routes(vrp.routes) unless vrp.routes.empty?
   end
 
   def initialize_routes(routes)
@@ -113,24 +111,32 @@ module SchedulingDataInitialization
     }
   end
 
+  def compute_period(service, one_working_day_per_vehicle)
+    if service.visits_number == 1
+      nil
+    elsif one_working_day_per_vehicle
+      ideal_lapse = service.minimum_lapse ? (service.minimum_lapse.to_f / 7).ceil * 7 : 7
+      if service.maximum_lapse.nil? || service.maximum_lapse >= ideal_lapse
+        ideal_lapse
+      else
+        reject_all_visits(service.id, service.visits_number, 'Vehicles have only one working day, no lapse will allow to affect more than one visit.')
+        nil
+      end
+    else
+      service.minimum_lapse || 1
+    end
+  end
+
   def collect_services_data(vrp)
-    available_units = vrp.vehicles.collect{ |vehicle| vehicle[:capacities] ? vehicle[:capacities].collect{ |capacity| capacity[:unit_id] } : nil }.flatten.compact.uniq
+    available_units = vrp.vehicles.flat_map{ |v| v.capacities.collect{ |capacity| capacity.unit.id } }.uniq
+    one_working_day_per_vehicle = @candidate_routes.all?{ |_vehicle_id, all_routes| all_routes.keys.uniq{ |day| day % 7 }.size == 1 }
     vrp.services.each{ |service|
-      has_only_one_day = vrp.vehicles.collect{ |v| v.global_day_index % 7 }.uniq.size == 1
-      # if this changes then we should change it in check_consistency function too :
-      period = if service.visits_number == 1
-                  nil
-                elsif has_only_one_day
-                  service.minimum_lapse ? (service.minimum_lapse.to_f / 7).ceil * 7 : 7
-                else
-                  service.minimum_lapse || 1
-                end
       @services_data[service.id] = {
         raw: service,
         capacity: compute_capacities(service.quantities, false, available_units),
         setup_durations: service.activity ? [service.activity.setup_duration] : service.activities.collect(&:setup_duration),
         durations: service.activity ? [service.activity.duration] : service.activities.collect(&:duration),
-        heuristic_period: period,
+        heuristic_period: compute_period(service, one_working_day_per_vehicle),
         points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
         tws_sets: service.activity ? [service.activity.timewindows] : service.activities.collect(&:timewindows),
         used_days: [],
@@ -159,7 +165,7 @@ module SchedulingDataInitialization
 
       group_tw = best_common_tw(same_located_set)
       if group_tw.empty? && !same_located_set.all?{ |_id, data| data[:tws_sets].first.empty? }
-        reject_group(same_located_set)
+        reject_group(same_located_set, 'Same_point_day conflict : services at this geographical point have no compatible timewindow')
       else
         representative_ids = []
         # one representative per freq
@@ -201,15 +207,9 @@ module SchedulingDataInitialization
     }
   end
 
-  def reject_group(group)
+  def reject_group(group, specified_reason)
     group.each{ |id, data|
-      (1..data[:raw].visits_number).each{ |index|
-        @candidate_services_ids.delete(id)
-        @uninserted["#{id}_#{index}_#{data[:raw].visits_number}"] = {
-          original_service: id,
-          reason: 'Same_point_day conflict : services at this geografical point have no compatible timewindow'
-        }
-      }
+      reject_all_visits(id, data[:raw].visits_number, specified_reason)
     }
   end
 

@@ -576,5 +576,52 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@services_data, { 'id' => { heuristic_period: 2, raw: vrp.services.first }})
       assert s.send(:exist_possible_first_route_according_to_same_point_day?, 'id', 'point_0') # can assign to 0 and 2 and 4
     end
+
+    def test_lapse_when_only_one_working_week_day
+      raw_vrp = VRP.scheduling
+      raw_vrp[:services][0][:visits_number] = 2
+      raw_vrp[:services][0][:minimum_lapse] = 6
+      raw_vrp[:services][0][:maximum_lapse] = 10
+      raw_vrp[:services][1][:visits_number] = 3
+      raw_vrp[:services][1][:minimum_lapse] = 5
+      raw_vrp[:services][1][:maximum_lapse] = 9
+      raw_vrp[:services][2][:visits_number] = 3
+      raw_vrp[:services][2][:minimum_lapse] = 2
+      raw_vrp[:services][2][:maximum_lapse] = 4
+      raw_vrp[:configuration][:schedule][:range_indices][:end] = 21
+
+      vrp = TestHelper.create(raw_vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
+      assert_equal [6, 5, 2], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
+
+      raw_vrp[:vehicles].first.delete(:timewindow)
+      raw_vrp[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 20, day_index: 0 }]
+      vrp = TestHelper.create(raw_vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
+      # only one route per week, lapse should be multiple of 7
+      assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
+      assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
+
+      raw_vrp[:vehicles] << {
+        id: 'new_vehicle',
+        matrix_id: 'matrix_0',
+        timewindow: { start: 0, end: 20 }
+      }
+      vrp = TestHelper.create(raw_vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
+      # all days are allowed again
+      assert_equal [6, 5, 2], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
+
+      raw_vrp[:vehicles].last.delete(:timewindow)
+      raw_vrp[:vehicles][1][:sequence_timewindows] = [{ start: 0, end: 20, day_index: 2 }]
+      vrp = TestHelper.create(raw_vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
+      assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
+      assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
+    end
   end
 end
