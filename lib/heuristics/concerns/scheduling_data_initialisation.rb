@@ -163,7 +163,9 @@ module SchedulingDataInitialization
       else
         representative_ids = []
         # one representative per freq
-        same_located_set.group_by{ |_id, data| data[:heuristic_period] }.each{ |_period, sub_set|
+        same_located_set.group_by{ |_id, data| data[:raw].visits_number }.sort_by{ |visits_number, _sub_set|
+          visits_number
+        }.each{ |_visits_number, sub_set|
           representative_id = sub_set[0][0]
           representative_ids << representative_id
           sub_set[0][1][:tws_sets] = [group_tw]

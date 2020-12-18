@@ -303,13 +303,42 @@ module Heuristics
       route
     end
 
+    def exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
+      # TODO : eventually consider unavailable_days here
+      return true unless @same_point_day || @relaxed_same_point_day
+
+      return true unless @unlocked.include?(service_id) && @services_data[service_id][:raw].visits_number > 1
+
+      available_days = @points_vehicles_and_days[point_id][:days]
+      current_day = available_days.first
+      seen_visits = 1
+      while seen_visits < @services_data[service_id][:raw].visits_number && current_day
+        current_day = available_days.find{ |day| day >= current_day + @services_data[service_id][:heuristic_period] }
+        seen_visits += 1 if current_day
+      end
+
+      seen_visits == @services_data[service_id][:raw].visits_number
+    end
+
+    def provide_fair_reason(service_id)
+      reason = 'Heuristic could not affect this service before all vehicles are full'
+
+      # if no capacity limitation, would there be a way to assign this service
+      # while respecting same_point_day constraints ?
+      point_id = @services_data[service_id][:points_ids][0]
+      reason = "All this service's visits can not be assigned with other services at same location" unless exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
+
+      reason
+    end
+
     def collect_unassigned
       unassigned = []
 
       @candidate_services_ids.each{ |id|
         service_in_vrp = @services_data[id][:raw]
         (1..service_in_vrp.visits_number).each{ |index|
-          unassigned << get_unassigned_info("#{id}_#{index}_#{service_in_vrp.visits_number}", service_in_vrp, 'Heuristic could not affect this service before all vehicles are full')
+          reason = provide_fair_reason(id)
+          unassigned << get_unassigned_info("#{id}_#{index}_#{service_in_vrp.visits_number}", service_in_vrp, reason)
         }
       }
 

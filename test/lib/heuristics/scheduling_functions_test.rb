@@ -556,5 +556,25 @@ class HeuristicTest < Minitest::Test
       assert_equal 261, vrp.services.first.last_possible_days.size
       assert_equal 0, vrp.services.first.last_possible_days.first, 'There are 261 working days, hence a service with 261 visits can only start at day 0'
     end
+
+    def test_exist_possible_first_route_according_to_same_point_day
+      vrp = TestHelper.create(VRP.lat_lon_scheduling)
+      vrp.resolution_same_point_day = true
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Heuristics::Scheduling.new(vrp)
+
+      s.instance_variable_set(:@points_vehicles_and_days, { 'point_0' => { days: [0, 2, 4, 6] }})
+      s.instance_variable_set(:@unlocked, ['id'])
+      vrp.services.first.visits_number = 2
+      s.instance_variable_set(:@services_data, { 'id' => { heuristic_period: 3, raw: vrp.services.first }})
+      assert s.send(:exist_possible_first_route_according_to_same_point_day?, 'id', 'point_0') # can assign to 0 and 6
+
+      vrp.services.first.visits_number = 3
+      s.instance_variable_set(:@services_data, { 'id' => { heuristic_period: 3, raw: vrp.services.first }})
+      refute s.send(:exist_possible_first_route_according_to_same_point_day?, 'id', 'point_0') # can assign to 0 and 6 and then nothing
+
+      s.instance_variable_set(:@services_data, { 'id' => { heuristic_period: 2, raw: vrp.services.first }})
+      assert s.send(:exist_possible_first_route_according_to_same_point_day?, 'id', 'point_0') # can assign to 0 and 2 and 4
+    end
   end
 end
