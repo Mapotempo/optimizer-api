@@ -1967,6 +1967,7 @@ class WrapperTest < Minitest::Test
       time: vrp[:matrices].first[:time].collect(&:dup)
     }
     vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:id] += '_bis'
     vrp[:vehicles].last[:matrix_id] = 'matrix_1'
     unassigned_services = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)[:unassigned]
     assert_empty(unassigned_services.select{ |un| un[:reason] == 'Unreachable' })
@@ -1990,6 +1991,7 @@ class WrapperTest < Minitest::Test
       time: vrp[:matrices].first[:time].collect(&:dup)
     }
     vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:id] += '_bis'
     vrp[:vehicles].last[:matrix_id] = 'matrix_1'
     # filling both half of matrix line 1 with big value :
     vrp[:matrices].each{ |matrice|
@@ -3046,5 +3048,14 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(problem)
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
     refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
+  end
+
+  def test_reject_when_duplicated_ids
+    vrp = VRP.toy
+    vrp[:services] << vrp[:services].first
+
+    assert_raises OptimizerWrapper::DiscordantProblemError do
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
+    end
   end
 end

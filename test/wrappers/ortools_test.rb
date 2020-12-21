@@ -3901,7 +3901,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_force_first
     problem = VRP.basic
-    problem[:vehicles] << problem[:vehicles][0]
+    problem[:vehicles] << problem[:vehicles][0].dup
     problem[:vehicles][1][:id] += '_copy'
     problem[:vehicles].each{ |v| v[:start_point_id] = nil }
     problem[:relations] = [{
@@ -3924,7 +3924,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_force_end
     problem = VRP.basic
-    problem[:vehicles] << problem[:vehicles][0]
+    problem[:vehicles] << problem[:vehicles][0].dup
     problem[:vehicles][1][:id] += '_copy'
     problem[:vehicles].each{ |v| v[:start_point_id] = nil }
     problem[:relations] = [{
@@ -3951,7 +3951,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_never_first
     problem = VRP.basic
-    problem[:vehicles] << problem[:vehicles][0]
+    problem[:vehicles] << problem[:vehicles][0].dup
     problem[:vehicles][1][:id] += '_copy'
     problem[:vehicles].each{ |v| v[:start_point_id] = nil }
     problem[:relations] = [{

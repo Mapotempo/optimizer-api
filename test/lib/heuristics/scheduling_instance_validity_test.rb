@@ -85,7 +85,10 @@ class InstanceValidityTest < Minitest::Test
 
       assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem))
 
-      problem[:vehicles] *= 3
+      problem[:vehicles] += [{
+        id: 'vehicle_1',
+        matrix_id: 'matrix_0'
+      }]
 
       assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_vehicle_limit_if_heuristic
     end
