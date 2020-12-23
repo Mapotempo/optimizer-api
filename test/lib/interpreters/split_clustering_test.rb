@@ -640,7 +640,7 @@ class SplitClusteringTest < Minitest::Test
       reason_unassigned = []
       vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
       (1..@regularity_restarts).each{ |trial|
-        puts "Regularity trial: #{trial}/#{@regularity_restarts}"
+        OptimizerLogger.log "Regularity trial: #{trial}/#{@regularity_restarts}"
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
         visits_unassigned << result[:unassigned].size
         unassigned_service_ids = result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }
