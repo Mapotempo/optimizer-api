@@ -30,6 +30,7 @@ end
 use Rack::Locale
 
 require './environment'
+#\ -p 1791
 run Api::Root
 
 # Serve files from the public directory
