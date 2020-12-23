@@ -279,14 +279,14 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
         problem: VRP.lat_lon_two_vehicles,
         solver_name: 'ortools',
         expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time costs initial_loads],
-        expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time service_id original_service_id detail current_distance alternative type departure_time],
+        expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time departure_time service_id original_service_id detail current_distance alternative type],
         expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
       },
       periodic_heuristic: {
         problem: VRP.lat_lon_scheduling,
         solver_name: 'heuristic',
         expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time],
-        expected_activities_keys: %w[point_id travel_distance travel_time waiting_time begin_time end_time service_id original_service_id detail current_distance alternative type day_week_num day_week],
+        expected_activities_keys: %w[point_id travel_distance travel_time waiting_time begin_time end_time departure_time service_id original_service_id detail current_distance alternative type day_week_num day_week],
         expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
       }
     }

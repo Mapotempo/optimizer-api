@@ -980,6 +980,7 @@ module Heuristics
         travel_distance: data[:travel_distance],
         begin_time: data[:arrival],
         end_time: data[:end],
+        departure_time: data[:end],
         type: type,
         alternative: (data[:activity] if service_in_vrp&.activities),
         detail: {
