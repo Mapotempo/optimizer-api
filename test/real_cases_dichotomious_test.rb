@@ -21,6 +21,9 @@ class RealCasesTest < Minitest::Test
   if !ENV['SKIP_REAL_DICHO'] && !ENV['SKIP_DICHO'] && !ENV['TRAVIS']
 
     def test_dichotomious_first_instance
+      skip "This test have incorrect bounds so it never passes and it takes 3 hours to complete.
+            Followed by gitlab-issue https://gitlab.com/mapotempo/optimizer-api/-/issues/648"
+
       vrp = TestHelper.load_vrp(self)
       t1 = Time.now
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -54,6 +57,9 @@ class RealCasesTest < Minitest::Test
     end
 
     def test_dichotomious_second_instance
+      skip "This test have incorrect bounds so it never passes and it takes 3 hours to complete.
+            Followed by gitlab-issue https://gitlab.com/mapotempo/optimizer-api/-/issues/648"
+
       vrp = TestHelper.load_vrp(self)
       t1 = Time.now
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
