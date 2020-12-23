@@ -1,5 +1,23 @@
 version: '3.3'
 services:
+  redis:
+    image: redis:${REDIS_VERSION:-3.2-alpine}
+    hostname: travis-redis
+    volumes:
+      - ../redis:/data
+    command: redis-server --appendonly yes
+    networks:
+      - resque
+
+  redis-cache:
+    image: redis:${REDIS_VERSION:-3.2-alpine}
+    hostname: travis-redis-cache
+    volumes:
+      - ../redis:/data
+    command: redis-server --save ""
+    networks:
+      - redis_cache
+
   api:
     image: registry.test.com/mapotempo/optimizer-api:latest
     hostname: travis-api
@@ -28,24 +46,6 @@ services:
     networks:
       - redis_cache
       - resque
-
-  redis:
-    image: redis:${REDIS_VERSION:-3.2-alpine}
-    hostname: travis-redis
-    volumes:
-      - ../redis:/data
-    command: redis-server --appendonly yes
-    networks:
-      - resque
-
-  redis-cache:
-    image: redis:${REDIS_VERSION:-3.2-alpine}
-    hostname: travis-redis-cache
-    volumes:
-      - ../redis:/data
-    command: redis-server --save ""
-    networks:
-      - redis_cache
 
 networks:
   resque:

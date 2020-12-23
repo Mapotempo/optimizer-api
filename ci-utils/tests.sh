@@ -3,7 +3,6 @@ TEST_ENV=''
 TEST_LOG_LEVEL='info'
 TEST_COVERAGE='false'
 DOCKER_SERVICE_NAME=optimizer_api
-CONTAINER=${DOCKER_SERVICE_NAME}.1.$(docker service ps -f "name=${DOCKER_SERVICE_NAME}.1" ${DOCKER_SERVICE_NAME} -q --no-trunc | head -n1)
 
 case "$1" in
   'basis')
@@ -31,21 +30,37 @@ case "$1" in
     ;;
 esac
 
-while true;
+max_time=60 # Time in secondes
+total_dockercompose_services=4
+for ((cpt=1;cpt<=$max_time;cpt++));
 do
-  STATE=$(docker ps | grep ${CONTAINER})
-  if [ -n "${STATE}" ]; then break; fi
-  docker service ls
-  docker service ps --no-trunc ${DOCKER_SERVICE_NAME}
+  if [ $cpt == ${max_time} ];
+  then
+    echo "Could not start services after ${max_time} seconds"
+    docker service ls
+    for srv in $(docker service ls | grep 0/1 | awk '{print $1}');
+    do
+      docker service ps --no-trunc $srv
+      docker service logs $srv
+    done
+    exit 1
+  fi
+
+  nbps=$(docker service ls | grep 1/1 | awk '{print $4}' | wc -l)
+  if [ ${nbps} -eq ${total_dockercompose_services} ];
+  then
+    echo "All services up, starting tests"
+    break;
+  fi
+
+  echo "Waiting for all services (${nbps}/${total_dockercompose_services}) to start ($cpt secondes)."
   sleep 1
 done
-
-docker exec -i ${CONTAINER} apt update -y > /dev/null
-docker exec -i ${CONTAINER} apt install git -y > /dev/null
 
 # Output something regularly or Travis kills the job
 while sleep 60; do echo "=====[ $SECONDS seconds still running ]====="; done &
 
+CONTAINER=${DOCKER_SERVICE_NAME}.1.$(docker service ps -f "name=${DOCKER_SERVICE_NAME}.1" ${DOCKER_SERVICE_NAME} -q --no-trunc | head -n1)
 # Run the tests without an output buffer and register the exit value
 stdbuf -o0 docker exec -it ${CONTAINER} bundle exec rake test ${TEST_ENV}
 test_exit_status=$?
