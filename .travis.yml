@@ -7,6 +7,7 @@ before_install:
   - docker build --build-arg VROOM_VERSION=${VROOM_VERSION:-v1.5.0} --build-arg OPTIMIZER_ORTOOLS_VERSION=$OPTIMIZER_ORTOOLS_VERSION -f docker/Dockerfile -t registry.test.com/mapotempo/optimizer-api:latest .
   - docker swarm init
   - mkdir -p ./redis
+  - mkdir -p ./redis-count
   - docker stack deploy -c ./docker/docker-compose.yml optimizer
 
 jobs:

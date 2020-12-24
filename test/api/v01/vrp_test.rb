@@ -16,11 +16,11 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './api/root'
-
 require './test/api/v01/request_helper'
 
 class Api::V01::VrpTest < Api::V01::RequestHelper
   include Rack::Test::Methods
+  include FakeRedis
 
   def app
     Api::Root
@@ -427,5 +427,30 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     assert_equal 3, vrp.vehicles.size
     Interpreters::MultiTrips.new.expand(vrp) # consecutive MultiTrips.expand should not produce any error
     assert_equal 3, vrp.vehicles.size
+  end
+
+  def test_count_optimizations
+     [
+      { method: 'post', uri: 'submit', operation: :submit_vrp, options: { vrp: VRP.toy }},
+      { method: 'get', uri: "jobs/#{@job_id}.json", operation: :get_job, options: {}},
+      { method: 'get', uri: 'jobs', operation: :get_job_list, options: {}},
+      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one !
+    ].each do |obj|
+      (1..2).each do |cpt|
+        send(obj[:method], "/0.1/vrp/#{obj[:uri]}", { api_key: 'demo' }.merge(obj[:options]))
+
+        keys = OptimizerWrapper.config[:redis_count].keys("optimizer:#{obj[:operation]}:#{Time.now.utc.to_s[0..9]}_key:demo_ip*")
+
+        case obj[:operation]
+        when :submit_vrp
+          assert_equal 1, keys.count
+          assert_equal({ 'hits' => cpt.to_s, 'transactions' => (VRP.toy[:vehicles].count * VRP.toy[:points].count * cpt).to_s }, OptimizerWrapper.config[:redis_count].hgetall(keys.first)) # only one key
+        when :get_job
+          assert_equal 0, keys.count
+        when :delete_job
+          assert_equal 0, keys.count
+        end
+      end
+    end
   end
 end

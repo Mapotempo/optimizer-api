@@ -539,6 +539,7 @@ module Api
           }
           post do
             begin
+              count :submit_vrp
               # Api key is not declared as part of the VRP and must be handled carefully and separatly from other parameters
               api_key = params[:api_key]
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
@@ -567,6 +568,7 @@ module Api
                   status 201
                   present({ job: { id: ret, status: :queued }}, with: Grape::Presenters::Presenter)
                 elsif ret.is_a?(Hash)
+                  count_incr :submit_vrp, transactions: vrp.transactions
                   status 200
                   if vrp.restitution_csv
                     present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
