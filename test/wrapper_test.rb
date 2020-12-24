@@ -3028,7 +3028,10 @@ class WrapperTest < Minitest::Test
   end
 
   def test_detecting_unfeasible_services_can_not_take_too_long
-    vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
+    old_config_solve_repetition = OptimizerWrapper.config[:solve][:repetition]
+    old_logger_level = OptimizerLogger.level # this is a perf test
+    OptimizerLogger.level = :fatal # turn off output completely no matter the setting
+    OptimizerWrapper.config[:solve][:repetition] = 1 # fix repetition to measure the perf correctly
 
     total_time = 0.0
     OptimizerWrapper.stub(
@@ -3042,20 +3045,25 @@ class WrapperTest < Minitest::Test
 
         {
           routes: [],
-          unassigned: (vrp.services.collect{ |service|
+          unassigned: vrp.services.flat_map{ |service|
             (1..service.visits_number).collect{ |visit|
               { service_id: "#{service.id}_#{visit}", detail: {}}
             }
-          }).flatten
+          }
         }
       }
     ) do
+      vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
+
       vrps.each{ |vrp|
         OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       }
     end
 
-    assert_operator total_time, :<=, 14.0
+    assert_operator total_time, :<=, 1.5, 'check_distances function took longer than expected'
+  ensure
+    OptimizerLogger.level = old_logger_level if old_logger_level
+    OptimizerWrapper.config[:solve][:repetition] = old_config_solve_repetition if old_config_solve_repetition
   end
 
   def test_initial_route_with_infeasible_service
