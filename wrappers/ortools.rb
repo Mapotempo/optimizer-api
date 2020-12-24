@@ -136,7 +136,7 @@ module Wrappers
             quantities: vrp.units.collect{ |unit|
               is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
               q = service.quantities.find{ |quantity| quantity.unit == unit }
-              (q&.value) ? (is_empty_unit ? -1 : 1) * ((service.type.to_s == 'delivery') ? -1 : 1) * (q.value * (unit.counting ? 1 : 1000)).round : 0
+              q&.value.to_f * (is_empty_unit ? -1 : 1) * (service.type.to_s == 'delivery' ? -1 : 1)
             },
             duration: service.activity.duration,
             additional_value: service.activity.additional_value,
@@ -169,7 +169,7 @@ module Wrappers
               quantities: vrp.units.collect{ |unit|
                 is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
                 q = service.quantities.find{ |quantity| quantity.unit == unit }
-                (q&.value) ? (is_empty_unit ? -1 : 1) * ((service.type.to_s == 'delivery') ? -1 : 1) * (q.value * (unit.counting ? 1 : 1000)).round : 0
+                q&.value.to_f * (is_empty_unit ? -1 : 1) * (service.type.to_s == 'delivery' ? -1 : 1)
               },
               duration: possible_activity.duration,
               additional_value: possible_activity.additional_value,
@@ -233,7 +233,7 @@ module Wrappers
           quantities: vrp.units.collect{ |unit|
             is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
-            (q && q.value) ? (is_empty_unit ? -1 : 1) * (q.value * 1000).round : 0
+            q&.value.to_f * (is_empty_unit ? -1 : 1)
           },
           duration: shipment.pickup.duration,
           additional_value: shipment.pickup.additional_value,
@@ -254,7 +254,7 @@ module Wrappers
           quantities: vrp.units.collect{ |unit|
             is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
             q = shipment.quantities.find{ |quantity| quantity.unit == unit }
-            (q&.value) ? - (is_empty_unit ? -1 : 1) * (q.value * 1000).round : 0
+            -q&.value.to_f * (is_empty_unit ? -1 : 1)
           },
           duration: shipment.delivery.duration,
           additional_value: shipment.delivery.additional_value,
@@ -297,14 +297,14 @@ module Wrappers
           vehicle.coef_setup || 1,
           vehicle.additional_service || 0,
           vehicle.additional_setup || 0,
-          vrp.units.collect{ |unit|
+          vrp.units.flat_map{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             [
-              (q && q.limit && q.limit < 1e+22) ? unit.counting ? q.limit : (q.limit * 1000).round : -2147483648,
-              (q && q.overload_multiplier) || 0,
-              (unit && unit.counting) || false
+              (q&.limit && q.limit < 1e+22) ? q.limit : -1,
+              q&.overload_multiplier || 0,
+              unit&.counting || false
             ]
-          }.flatten.compact,
+          }.compact,
           [
             vehicle.timewindow&.start || 0,
             vehicle.timewindow&.end || 2147483647,
@@ -360,9 +360,9 @@ module Wrappers
           capacities: vrp.units.collect{ |unit|
             q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
             OrtoolsVrp::Capacity.new(
-              limit: (q && q.limit && q.limit < 1e+22) ? unit.counting ? q.limit : (q.limit * 1000).round : -2147483648,
-              overload_multiplier: (q && q.overload_multiplier) || 0,
-              counting: (unit && unit.counting) || false
+              limit: (q&.limit && q.limit < 1e+22) ? q.limit : -1,
+              overload_multiplier: q&.overload_multiplier || 0,
+              counting: unit&.counting || false
             )
           },
           time_window: OrtoolsVrp::TimeWindow.new(
@@ -483,15 +483,6 @@ module Wrappers
       output.rewind
       content = OrtoolsResult::Result.decode(output.read)
       output.rewind
-
-      # Currently, we continue to multiply by 1000 so we divide by 1000.0
-      # but this needs to be updated by unit.precision_coef
-      content.routes.each{ |route|
-        route.costs.overload = (route.costs.overload || 0) / 1000.0 if route.costs
-        route.activities.each{ |activity|
-          activity.quantities.map!{ |val| val / 1000.0 }
-        }
-      }
 
       return @previous_result if content.routes.empty? && @previous_result
 
