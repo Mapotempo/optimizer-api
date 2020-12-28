@@ -492,7 +492,7 @@ class HeuristicTest < Minitest::Test
       assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:stops].size == expecting.size } })
 
       # providing uncomplete solution (compared to solution without initial routes)
-      puts "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
+      OptimizerLogger.log "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -502,7 +502,7 @@ class HeuristicTest < Minitest::Test
 
       # providing different solution (compared to solution without initial routes)
       vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
-      puts "On vehicle #{vehicle_id}_#{day}, expecting #{expecting}"
+      OptimizerLogger.log "On vehicle #{vehicle_id}_#{day}, expecting #{expecting}"
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
       vrp.routes.first.vehicle.id = vehicle_id

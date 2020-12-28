@@ -15,7 +15,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   end
   add_message 'ortools_vrp.Service' do
     repeated :time_windows, :message, 1, 'ortools_vrp.TimeWindow'
-    repeated :quantities, :int64, 2
+    repeated :quantities, :float, 2
     optional :duration, :uint32, 3
     optional :priority, :uint32, 4
     repeated :vehicle_indices, :int32, 5
@@ -23,7 +23,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :setup_duration, :uint32, 7
     optional :id, :string, 9
     optional :late_multiplier, :float, 10
-    repeated :setup_quantities, :int32, 11
+    repeated :setup_quantities, :float, 11
     optional :additional_value, :uint32, 12
     optional :exclusion_cost, :int64, 13
     repeated :refill_quantities, :bool, 14
@@ -37,7 +37,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :exclusion_cost, :int64, 5
   end
   add_message 'ortools_vrp.Capacity' do
-    optional :limit, :int64, 1
+    optional :limit, :float, 1
     optional :overload_multiplier, :float, 2
     optional :counting, :bool, 3
   end
