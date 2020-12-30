@@ -64,8 +64,8 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
   def test_exceed_params_limit
     vrp = VRP.toy
     vrp[:points] *= 151
-    post '/0.1/vrp/submit', api_key: 'vroom', vrp: vrp
-    assert_equal 400, last_response.status, last_response.body
+    post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
+    assert_equal 413, last_response.status, last_response.body
     assert_includes JSON.parse(last_response.body)['message'], 'Exceeded points limit authorized'
   end
 
@@ -452,5 +452,20 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
         end
       end
     end
+  end
+
+  def test_use_quota
+    post '/0.1/vrp/submit', { api_key: 'demo', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
+    assert last_response.ok?, last_response.body
+
+    post '/0.1/vrp/submit', { api_key: 'demo', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
+    assert_equal 429, last_response.status
+
+    assert_includes JSON.parse(last_response.body)['message'], 'Too many monthly requests'
+    assert_equal({ "Content-Type" => "application/json; charset=UTF-8",
+                   "X-RateLimit-Limit" => 6,
+                   "X-RateLimit-Remaining" => 2,
+                   "X-RateLimit-Reset" => Time.now.utc.to_date.next_month.to_time.to_i,
+                   "Content-Length"=> "50" }, last_response.headers)
   end
 end

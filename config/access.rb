@@ -17,8 +17,8 @@
 #
 module OptimizerWrapper
   @access_by_api_key = {
-    # params_limit overload values from profile
-    'demo' => { profile: :demo, params_limit: { points: nil, vehicles: nil }},
+    # params_limit and quota overload values from profile
+    'demo' => { profile: :demo, params_limit: { points: nil, vehicles: nil }, quotas: [{ operation: :optimize, daily: 4 }, { monthly: 6 }] },
     'solvers' => { profile: :solvers },
     'vroom' => { profile: :vroom },
     'ortools' => { profile: :ortools },

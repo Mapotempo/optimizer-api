@@ -539,7 +539,6 @@ module Api
           }
           post do
             begin
-              count :submit_vrp
               # Api key is not declared as part of the VRP and must be handled carefully and separatly from other parameters
               api_key = params[:api_key]
               checksum = Digest::MD5.hexdigest Marshal.dump(params)
@@ -547,22 +546,24 @@ module Api
               vrp_params = d_params[:points] ? d_params : d_params[:vrp]
               APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
 
-              APIBase.services(api_key)[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {}).each{ |key, value|
+              params_limit = APIBase.profile(params[:api_key])[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
+              params_limit.each{ |key, value|
                 next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value
 
                 error!({
-                  status: 'Exceeded params limit',
                   message: "Exceeded #{key} limit authorized for your account: #{value}. Please contact support or sales to increase limits."
-                }, 400)
+                }, 413)
               }
 
               vrp = ::Models::Vrp.create(vrp_params)
+              count :optimize, true, vrp.transactions
+
               if !vrp.valid? || vrp_params.nil? || vrp_params.keys.empty?
                 vrp.errors.add(:empty_file, message: 'JSON file is empty') if vrp_params.nil?
                 vrp.errors.add(:empty_vrp, message: 'VRP structure is empty') if vrp_params&.keys&.empty?
-                error!({ status: 'Model Validation Error', message: vrp.errors }, 400)
+                error!("Model Validation Error: #{vrp.errors}", 400)
               else
-                ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.services(api_key), vrp, checksum)
+                ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.profile(api_key), vrp, checksum)
                 if ret.is_a?(String)
                   # present result, with: VrpResult
                   status 201
@@ -576,7 +577,7 @@ module Api
                     present({ solutions: [ret], job: { status: :completed }}, with: Grape::Presenters::Presenter)
                   end
                 else
-                  error!({ status: 'Internal Server Error' }, 500)
+                  error!('Internal Server Error', 500)
                 end
               end
             ensure
@@ -608,7 +609,7 @@ module Api
 
             if solution.nil? && (job.nil? || job.killed? || Resque::Plugins::Status::Hash.should_kill?(id) || job['options']['api_key'] != params[:api_key])
               status 404
-              error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
+              error!({ message: "Job with id='#{id}' not found" }, 404)
             end
 
             solution ||= OptimizerWrapper::Result.get(id) || {}
@@ -664,7 +665,7 @@ module Api
 
             if !job || job.killed? || Resque::Plugins::Status::Hash.should_kill?(id) || job['options']['api_key'] != params[:api_key]
               status 404
-              error!({ status: 'Not Found', message: "Job with id='#{id}' not found" }, 404)
+              error!({ message: "Job with id='#{id}' not found" }, 404)
             else
               OptimizerWrapper.job_kill(params[:api_key], id)
               job.status = 'killed'
