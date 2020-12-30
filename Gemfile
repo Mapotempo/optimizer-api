@@ -15,8 +15,10 @@ gem 'grape-swagger', '<0.26.0' # TODO: Waiting Grape 1+
 gem 'grape-swagger-entity', '<0.1.6' # TODO: Waiting Grape 1+
 gem 'grape_logging'
 
+gem 'actionpack'
 gem 'active_hash', github: 'Mapotempo/active_hash'
 gem 'activemodel'
+
 gem 'charlock_holmes'
 gem 'http_accept_language'
 gem 'i18n'

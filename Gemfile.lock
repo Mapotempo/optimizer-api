@@ -18,6 +18,7 @@ GIT
 GEM
   remote: https://rubygems.org/
   specs:
+    actionpack (1.4.0)
     activemodel (5.2.3)
       activesupport (= 5.2.3)
     activesupport (5.2.3)
@@ -237,6 +238,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  actionpack
   active_hash!
   activemodel
   ai4r

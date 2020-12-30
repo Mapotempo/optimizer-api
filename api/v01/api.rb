@@ -43,7 +43,7 @@ module Api
           @count_key ||= [
             [:optimizer, operation, count_time.to_s[0..9]],
             [:key, params[:api_key]],
-            [:ip, request.ip],
+            [:ip, (env['action_dispatch.remote_ip'] || request.ip).to_s],
             [:asset, params[:asset]]
           ].map{ |a| a.join(':') }.join('_')
         end

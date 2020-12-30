@@ -19,6 +19,7 @@ Bundler.require
 require 'rack/cors'
 require 'rack/contrib/locale'
 require 'rack/contrib/try_static'
+require 'action_dispatch'
 
 use Rack::Cors do
   allow do
@@ -38,3 +39,5 @@ use Rack::TryStatic,
     root: 'public',
     urls: %w[/],
     try: ['.html', 'index.html', '/index.html']
+
+use ActionDispatch::RemoteIp
