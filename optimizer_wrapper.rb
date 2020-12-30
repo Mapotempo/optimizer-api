@@ -568,7 +568,7 @@ module OptimizerWrapper
 
   def self.check_result_consistency(expected_value, results)
     [results].flatten(1).each{ |result|
-      nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
+      nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }
       nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:pickup_shipment_id] || unassigned[:delivery_shipment_id] }
 
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
@@ -580,7 +580,7 @@ module OptimizerWrapper
   end
 
   def self.adjust_vehicles_duration(vrp)
-      vrp.vehicles.select{ |v| v.duration? && v.rests.size > 0 }.each{ |v|
+      vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
         v.rests.each{ |r|
           v.duration += r.duration
         }
