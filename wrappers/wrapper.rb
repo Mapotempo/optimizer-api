@@ -886,6 +886,57 @@ module Wrappers
       vrp
     end
 
+    def unassigned_services(vrp, unassigned_reason)
+      vrp.services.flat_map{ |service|
+        Array.new(service.visits_number) { |visit_index|
+          {
+            service_id: vrp.scheduling? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id,
+            type: service.type.to_s,
+            point_id: service.activity.point_id,
+            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
+            reason: unassigned_reason
+          }.delete_if{ |_k, v| !v }
+        }
+      }
+    end
+
+    def unassigned_shipments(vrp, unassigned_reason)
+      vrp.shipments.flat_map{ |shipment|
+        shipment.visits_number.times.flat_map{ |visit_index|
+          [{
+            pickup_shipment_id: vrp.scheduling? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
+            point_id: shipment.pickup.point_id,
+            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil),
+            reason: unassigned_reason
+           }.delete_if{ |_k, v| !v },
+           {
+            delivery_shipment_id: vrp.scheduling? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
+            point_id: shipment.delivery.point_id,
+            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true),
+            reason: unassigned_reason
+          }.delete_if{ |_k, v| !v }]
+        }
+      }
+    end
+
+    def unassigned_rests(vrp)
+      new_vehicles = if vrp.scheduling?
+        periodic = Interpreters::PeriodicVisits.new(vrp)
+        periodic.generate_vehicles(vrp)
+      else
+        vrp.vehicles
+      end
+
+      new_vehicles.flat_map{ |vehicle|
+        vehicle.rests.flat_map{ |rest|
+          {
+            rest_id: rest.id,
+            detail: build_rest(rest, nil)
+          }
+        }
+      }
+    end
+
     def empty_result(solver, vrp, unassigned_reason = nil)
       {
         solvers: [solver],
@@ -893,32 +944,7 @@ module Wrappers
         cost_details: Models::CostDetails.new({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle| { vehicle_id: vehicle.id, activities: [] } },
-        unassigned: (vrp.services.collect{ |service|
-          {
-            service_id: service.id,
-            type: service.type.to_s,
-            point_id: service.activity.point_id,
-            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }
-        }) + (vrp.shipments.collect{ |shipment|
-          [{
-            pickup_shipment_id: shipment.id.to_s,
-            point_id: shipment.pickup.point_id,
-            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }] << {
-            delivery_shipment_id: shipment.id.to_s,
-            point_id: shipment.delivery.point_id,
-            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }
-        }).flatten + (vrp.rests.collect{ |rest|
-          {
-            rest_id: rest.id,
-            detail: build_rest(rest, nil, {})
-          }
-        }),
+        unassigned: (unassigned_services(vrp, unassigned_reason) + unassigned_shipments(vrp, unassigned_reason) + unassigned_rests(vrp)).flatten,
         elapsed: 0,
         total_distance: nil
       }

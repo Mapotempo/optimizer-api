@@ -3163,4 +3163,37 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     assert(result[:routes].all?{ |route| route[:activities].last[:current_distance] == route[:total_distance] })
   end
+
+  def test_empty_result_when_no_vehicle
+    vrp = TestHelper.create(VRP.toy)
+    vrp.vehicles = []
+    expected = vrp.visits
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+    assert_equal expected, result[:unassigned].size # automatically checked within define_process call
+
+    vrp = TestHelper.create(VRP.pud)
+    vrp.vehicles = []
+    expected = vrp.visits
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+    assert_equal expected, result[:unassigned].size # automatically checked within define_process call
+
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:services] = []
+    vrp[:rests] = [{
+      id: 'rest_v1'
+    }, {
+      id: 'rest_v2'
+    }]
+    vrp[:vehicles][0][:rest_ids] = 'rest_v1'
+    vrp[:vehicles][1][:rest_ids] = 'rest_v2'
+    expected = vrp[:vehicles].size
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert_equal expected, result[:unassigned].size
+
+    vrp[:vehicles][0][:rest_ids] = []
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert_equal expected - 1, result[:unassigned].size
+  end
 end
