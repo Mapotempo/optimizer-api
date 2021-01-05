@@ -8,7 +8,7 @@
 
 - Allow support for semicolumn and tabulation in CSV files
 - Collect current distance from OR-Tools
-- Allow initial routes when partitions are required. Note that, it currently cannot ensure that all missions of a route will be assigned to the same route.
+- Allow initial routes when partitions are required. Note that, this feature is available for preprocessing/partitions but is under development for split based algorithms (`split_solve` and `dichotomous`)
 - Position field for activities
 - Sheduling and initial routes are now compatible
 - Unfeasible missions are removed from routes [#31](https://github.com/Mapotempo/optimizer-api/pull/31)
@@ -84,7 +84,7 @@
 - Check distance method to separate time and distance logics [#65](https://github.com/Mapotempo/optimizer-api/pull/65)
 - Split by skills was generating unexpected sub-problems [#47](https://github.com/Mapotempo/optimizer-api/pull/47)
 - Remove duplicated empty routes for the same vehicle [#50](https://github.com/Mapotempo/optimizer-api/pull/50)
-- Infinite loop due to impossible split within dicho [#67](https://github.com/Mapotempo/optimizer-api/pull/67)
+- Infinite loop due to impossible split within `dichotomous` [#67](https://github.com/Mapotempo/optimizer-api/pull/67)
 - Avoid depot duplication [#72](https://github.com/Mapotempo/optimizer-api/pull/72)
 - Wrong number of visits [#86](https://github.com/Mapotempo/optimizer-api/pull/86)
 - Protobuf needs binarymode [#87](https://github.com/Mapotempo/optimizer-api/pull/87)
