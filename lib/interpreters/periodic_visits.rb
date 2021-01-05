@@ -24,7 +24,7 @@ module Interpreters
       @equivalent_vehicles = {}
       @epoch = Date.new(1970, 1, 1)
 
-      if vrp.schedule_range_indices
+      if vrp.scheduling?
         have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
         have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.any?{ |shipment| shipment.pickup.timewindows.any?(&:day_index) || shipment.delivery.timewindows.any?(&:day_index) }
         have_vehicles_day_index = vrp.vehicles.any?{ |vehicle| (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows ).any?(&:day_index) }
@@ -39,7 +39,7 @@ module Interpreters
     end
 
     def expand(vrp, job, &block)
-      return vrp unless vrp.schedule_range_indices
+      return vrp unless vrp.scheduling?
 
       vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
       vrp.relations = generate_relations(vrp)

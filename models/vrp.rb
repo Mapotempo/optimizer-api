@@ -568,5 +568,9 @@ module Models
     def transactions
       vehicles.count * points.count
     end
+
+    def scheduling?
+      !self.schedule_range_indices.nil?
+    end
   end
 end
