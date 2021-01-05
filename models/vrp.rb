@@ -476,11 +476,7 @@ module Models
     end
 
     def visits
-      Helper.visits(self.services)
-    end
-
-    def activity_count
-      visits + self.shipments.size * 2
+      Helper.visits(self.services, self.shipments)
     end
 
     def total_work_times

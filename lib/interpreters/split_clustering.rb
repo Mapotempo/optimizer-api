@@ -169,7 +169,7 @@ module Interpreters
         transfer_unused_time_limit = [sub_vrp.resolution_duration - sub_result[:elapsed].to_f, 0].max
 
         log "sub vrp (services: #{sub_problem[:vrp].services.size} + shipments: #{sub_problem[:vrp].shipments.size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
-        raise 'Incorrect activities count' if sub_vrp.visits != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.compact.size
+        raise 'Incorrect activities count' if sub_vrp.visits != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact.size
 
         available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         empties_or_fills_used = remove_used_empties_and_refills(sub_vrp, sub_result).compact

@@ -126,7 +126,7 @@ module OptimizerWrapper
     log "max_durations: #{services_vrps.map{ |sv| sv[:vrp].resolution_duration&.round }}", level: :info
     tic = Time.now
 
-    expected_activity_count = services_vrps.collect{ |sv| sv[:vrp].activity_count }.sum
+    expected_activity_count = services_vrps.collect{ |sv| sv[:vrp].visits }.sum
 
     several_service_vrps = Interpreters::SeveralSolutions.expand_several_solutions(services_vrps)
 
@@ -168,7 +168,7 @@ module OptimizerWrapper
     log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}", level: :info
 
     tic = Time.now
-    expected_activity_count = vrp.activity_count
+    expected_activity_count = vrp.visits
 
     result ||= Interpreters::SplitClustering.split_clusters(service_vrp, job, &block)        # Calls recursively define_process
 
