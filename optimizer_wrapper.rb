@@ -72,7 +72,7 @@ module OptimizerWrapper
 
     Filters.filter(vrp)
 
-    vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+    vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.periodic_heuristic?
       config[:solve][:repetition]
     else
       1
@@ -224,11 +224,11 @@ module OptimizerWrapper
       if vrp.scheduling?
         periodic = Interpreters::PeriodicVisits.new(vrp)
         vrp = periodic.expand(vrp, job, &block)
-        optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+        optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
       end
 
       unfeasible_services += sub_unfeasible_services
-      if vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      if vrp.resolution_solver && !vrp.periodic_heuristic?
         # TODO: Move select best heuristic in each solver
         Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
 

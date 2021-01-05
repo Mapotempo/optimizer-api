@@ -48,7 +48,7 @@ module Interpreters
         (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
       }
 
-      if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      if vrp.periodic_heuristic?
         scheduling_heuristic = Heuristics::Scheduling.new(vrp, job)
         vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
       end

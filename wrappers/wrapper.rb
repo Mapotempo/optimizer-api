@@ -455,7 +455,7 @@ module Wrappers
     end
 
     def assert_route_date_or_indice_if_periodic(vrp)
-      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?(&:day_index)
+      !vrp.periodic_heuristic? || vrp.routes.all?(&:day_index)
     end
 
     def assert_not_too_many_visits_in_route(vrp)
@@ -517,7 +517,7 @@ module Wrappers
     end
 
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
-      vrp.routes.empty? || !vrp.scheduling? || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      vrp.routes.empty? || !vrp.scheduling? || vrp.periodic_heuristic?
     end
 
     # TODO: Need a better way to represent solver preference

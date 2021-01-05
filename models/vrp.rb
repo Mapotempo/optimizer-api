@@ -572,5 +572,9 @@ module Models
     def scheduling?
       !self.schedule_range_indices.nil?
     end
+
+    def periodic_heuristic?
+      self.preprocessing_first_solution_strategy.to_a.include?('periodic')
+    end
   end
 end
