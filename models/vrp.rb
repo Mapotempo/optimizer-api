@@ -199,6 +199,13 @@ module Models
         end
       end
 
+      # number of visits consistency
+      if !configuration[:schedule]
+        (hash[:services].to_a + hash[:shipments].to_a).each{ |s|
+          raise OptimizerWrapper::DiscordantProblemError, 'There can not be more than one visit if no schedule is provided' unless s[:visits_number].to_i <= 1
+        }
+      end
+
       # periodic consistency
       return unless periodic
 
