@@ -821,8 +821,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -929,8 +928,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -1022,8 +1020,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -1106,8 +1103,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -1194,8 +1190,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
