@@ -403,7 +403,7 @@ module Interpreters
 
         toc = Time.now
 
-        result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |cluster|
+        result_items = clusters.collect{ |cluster|
           cluster.data_items.flat_map{ |i|
             linked_objects[i[2]]
           }
@@ -412,9 +412,11 @@ module Interpreters
         log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} data_items into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
 
         result_items.collect.with_index{ |result_item, result_index|
+          next if result_item.empty?
+
           vehicles_indices = [result_index] if options[:entity] == :work_day || options[:entity] == :vehicle
           build_partial_service_vrp(service_vrp, result_item, vehicles_indices, options[:entity])
-        }
+        }.compact
       else
         log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
 
