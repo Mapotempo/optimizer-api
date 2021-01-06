@@ -90,21 +90,11 @@ module Models
         s[:maximum_lapse] = 3
       }
       vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
-      TestHelper.create(vrp) # no raise
+      TestHelper.create(vrp) # no raise because if only one visit then lapse is not a problem
 
       vrp = VRP.scheduling
       vrp[:services].each{ |s|
-        s[:visits_number] = 2
-        s[:minimum_lapse] = 2
-      }
-      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
-      TestHelper.create(vrp) # no raise
-
-      vrp = VRP.scheduling
-      vrp[:services].each{ |s|
-        s[:visits_number] = 2
-        s[:minimum_lapse] = 2
-        s[:maximum_lapse] = 3
+        s[:visits_number] = 2 # he now have more than one visit
       }
       vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
       assert_raises OptimizerWrapper::DiscordantProblemError do
@@ -118,7 +108,30 @@ module Models
         s[:maximum_lapse] = 7
       }
       vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
-      TestHelper.create(vrp) # no raise
+      vrp[:configuration][:schedule][:range_indices][:end] = 14
+      TestHelper.create(vrp) # no raise because it is possible to find a lapse multiple of 7
+
+      vrp = VRP.scheduling
+      vrp[:services].each{ |s|
+        s[:visits_number] = 2
+        s[:minimum_lapse] = 8
+        s[:maximum_lapse] = 15
+      }
+      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
+      vrp[:configuration][:schedule][:range_indices][:end] = 21
+      TestHelper.create(vrp) # no raise because it is possible to find a lapse multiple of 7
+
+      vrp = VRP.scheduling
+      vrp[:services].each{ |s|
+        s[:visits_number] = 2
+        s[:minimum_lapse] = 8
+        s[:maximum_lapse] = 12
+      }
+      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
+      vrp[:configuration][:schedule][:range_indices][:end] = 14
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp) # no lapse multiple of 7 is possible
+      end
     end
 
     def test_split_independent_vrp_by_sticky_vehicle
