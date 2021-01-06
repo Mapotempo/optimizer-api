@@ -7,34 +7,28 @@
 ### Added
 
 - Allow support for semicolumn and tabulation in CSV files
-- Collect current distance from OR-Tools
-- Allow initial routes when partitions are required. Note that, this feature is available for preprocessing/partitions but is under development for split based algorithms (`split_solve` and `dichotomous`)
-- Position field for activities
-- Sheduling and initial routes are now compatible
+- Allow initial routes when partitions are required (Especially for Scheduling problems). Note that, this feature is available for preprocessing/partitions but is under development for split based algorithms (`split_solve` and `dichotomous`)
+- `position` field for activities
 - Unfeasible missions are removed from routes [#31](https://github.com/Mapotempo/optimizer-api/pull/31)
-- Log reasons of unfeasible missions [#35](https://github.com/Mapotempo/optimizer-api/pull/35)
-- Read and log OR-Tools version
-- Route costs [#46](https://github.com/Mapotempo/optimizer-api/pull/46)
-- Log of matrix computation [#52](https://github.com/Mapotempo/optimizer-api/pull/52)
-- [WIP] Allow multidepot within clustering [#56](https://github.com/Mapotempo/optimizer-api/pull/56)
+- Detailed route costs both for routes and solutions [#46](https://github.com/Mapotempo/optimizer-api/pull/46)
+- [WIP] Allow multidepot within clustering, it currently only influence initialization of clusters [#56](https://github.com/Mapotempo/optimizer-api/pull/56)
 - Introduce direct shipments, pickup and delivery must be consecutive [#51](https://github.com/Mapotempo/optimizer-api/pull/51)
-- Return `total_time` and `total_travel_distance` from scheduling heuristic [#63](https://github.com/Mapotempo/optimizer-api/pull/63)
 - Return original ids for missions and vehicles [#73](https://github.com/Mapotempo/optimizer-api/pull/73)
 - Return `total_waiting_time` [#83](https://github.com/Mapotempo/optimizer-api/pull/83)
-- Introduce `minimize_days_worked` parameter for scheduling heuristic [#89](https://github.com/Mapotempo/optimizer-api/pull/89)
+- Introduce `minimize_days_worked` parameter for scheduling heuristic. The default behavior of scheduling heuristic is now to balance work load over the period, the introduced parameter allows to return to the previous behavior [#89](https://github.com/Mapotempo/optimizer-api/pull/89)
 - Detect unconsistent `same_point_day` definition [#76](https://github.com/Mapotempo/optimizer-api/pull/76)
 
 ### Changed
 
 - Cache is now part of wrappers hash
-- Update tests
+- Collect current distance from OR-Tools
 - Refactoring of the chaining of the various solving procedures (Rework `define_process`)
 - Now use OR-Tools asserts instead or recompiling the entire project
 - Reject too small lapses
 - Bump OR-Tools to v7.8
-- Various edits, improvments and refactoring within sheduling heuristic
+- Various edits, improvements and refactoring within scheduling heuristic
 - Sheduling heuristic now empty underfilled routes to reaffect [#28](https://github.com/Mapotempo/optimizer-api/pull/28)
-- Improve unreachable detection performances [#28](https://github.com/Mapotempo/optimizer-api/pull/28)
+- Improve unfeasible service detection performance [#28](https://github.com/Mapotempo/optimizer-api/pull/28) [#65](https://github.com/Mapotempo/optimizer-api/pull/65)
 - Avoid heuristic selection when unncessary [#31](https://github.com/Mapotempo/optimizer-api/pull/31)
 - Shipments are now tolerated within `split_clustering` if the pickup or the delivery is located at a depot [#46](https://github.com/Mapotempo/optimizer-api/pull/46)
 - Reduce clustering default restarts from 50 to 10 [#49](https://github.com/Mapotempo/optimizer-api/pull/49)
@@ -50,16 +44,15 @@
 - Bump VROOM to v1.5.0 [#66](https://github.com/Mapotempo/optimizer-api/pull/66)
 - Reduce memory usage for scheduling problems [#71](https://github.com/Mapotempo/optimizer-api/pull/71)
 - Reduce OR-Tools computation time within scheduling heuristic [#78](https://github.com/Mapotempo/optimizer-api/pull/78)
-- Route referents [#89](https://github.com/Mapotempo/optimizer-api/pull/89)
+- Rework route referents definition within scheduling heuristic, in order to improve routes initialization [#89](https://github.com/Mapotempo/optimizer-api/pull/89)
 - Bump Ruby to 2.5.5 [#97](https://github.com/Mapotempo/optimizer-api/pull/97)
 - Delegate quantity rounding to optimizer-ortools [#98](https://github.com/Mapotempo/optimizer-api/pull/98)
 - Improve Force start & breaks through optimizer-ortools [#98](https://github.com/Mapotempo/optimizer-api/pull/98)
 
 ### Removed
 
-- `solver_parameter` from the model, it now fulfills `solver` and `preprocessing_first_solution_strategy` parameters
-- OR-Tools logs within sheduling heuristic [#28](https://github.com/Mapotempo/optimizer-api/pull/28)
-- Relation id [#31](https://github.com/Mapotempo/optimizer-api/pull/31)
+- `solver_parameter` from the internal model, it is replaced by `solver` and `first_solution_strategy` parameters
+- Relation `id` was mandatory, but was never used or returned [#31](https://github.com/Mapotempo/optimizer-api/pull/31)
 - Vehicle sort by day index [#31](https://github.com/Mapotempo/optimizer-api/pull/31)
 - `overall_duration` parameter from API as it is not functional [#46](https://github.com/Mapotempo/optimizer-api/pull/46)
 
@@ -67,7 +60,6 @@
 
 - Resolution time when using split_independent or max_split procedures
 - Alternative activities with empties and fills
-- Unreachable points detection
 - Shift computation for sheduling problems
 - Sheduling heuristic now rejects shipments and rests [#28](https://github.com/Mapotempo/optimizer-api/pull/28)
 - Reject empty problems [#35](https://github.com/Mapotempo/optimizer-api/pull/35)
@@ -78,12 +70,11 @@
 - Error when delete operation is invoked immedialty after get [#38](https://github.com/Mapotempo/optimizer-api/pull/38)
 - Coerce `first_solution_strategy` into array [#38](https://github.com/Mapotempo/optimizer-api/pull/38)
 - Avoid unecessary route generation [#46](https://github.com/Mapotempo/optimizer-api/pull/46)
-- Correclty handle consecutive delete operations [#52](https://github.com/Mapotempo/optimizer-api/pull/52)
-- Solution returned from cache [#53](https://github.com/Mapotempo/optimizer-api/pull/53)
+- Correctly handle consecutive delete operations [#52](https://github.com/Mapotempo/optimizer-api/pull/52)
 - Returned http error codes [#62](https://github.com/Mapotempo/optimizer-api/pull/62)
-- Check distance method to separate time and distance logics [#65](https://github.com/Mapotempo/optimizer-api/pull/65)
 - Split by skills was generating unexpected sub-problems [#47](https://github.com/Mapotempo/optimizer-api/pull/47)
 - Remove duplicated empty routes for the same vehicle [#50](https://github.com/Mapotempo/optimizer-api/pull/50)
+- Return `total_time` and `total_travel_distance` from scheduling heuristic [#63](https://github.com/Mapotempo/optimizer-api/pull/63)
 - Infinite loop due to impossible split within `dichotomous` [#67](https://github.com/Mapotempo/optimizer-api/pull/67)
 - Avoid depot duplication [#72](https://github.com/Mapotempo/optimizer-api/pull/72)
 - Wrong number of visits [#86](https://github.com/Mapotempo/optimizer-api/pull/86)
@@ -94,5 +85,5 @@
 
 ### Deprecated
 
-- Positions are no longer relations
+- Positions are no longer relations and must defined at activity level
 - Route indice is now index [#31](https://github.com/Mapotempo/optimizer-api/pull/31)
