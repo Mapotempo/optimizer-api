@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2018
+# Copyright © Mapotempo, 2020
 #
 # This file is part of Mapotempo.
 #
@@ -15,14 +15,24 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-module OptimizerWrapper
-  @access_by_api_key = {
-    # params_limit and quota overload values from profile
-    'demo' => { profile: :demo, params_limit: { points: nil, vehicles: nil }, quotas: [{ operation: :optimize, daily: 4 }, { monthly: 6 }] },
-    'expired' => { profile: :standard, expire_at: '2000-01-01' },
-    'solvers' => { profile: :solvers },
-    'vroom' => { profile: :vroom },
-    'ortools' => { profile: :ortools },
-    'jsprit' => { profile: :jsprit },
-  }
+require './test/test_helper'
+
+class Api::V01::ApiTest < Minitest::Test
+  include Rack::Test::Methods
+
+  def app
+    Api::Root
+  end
+
+  def test_should_not_access
+    get '/0.1/vrp/submit'
+    assert_equal 401, last_response.status
+    assert_equal '401 Unauthorized', JSON.parse(last_response.body)['error']
+  end
+
+  def test_should_not_access_if_expired
+    get '/0.1/vrp/submit', api_key: 'expired'
+    assert_equal 402, last_response.status
+    assert_equal '402 Subscription expired', JSON.parse(last_response.body)['error']
+  end
 end
