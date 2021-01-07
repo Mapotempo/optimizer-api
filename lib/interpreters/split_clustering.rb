@@ -415,7 +415,8 @@ module Interpreters
           next if result_item.empty?
 
           vehicles_indices = [result_index] if options[:entity] == :work_day || options[:entity] == :vehicle
-          build_partial_service_vrp(service_vrp, result_item, vehicles_indices, options[:entity])
+          # TODO: build_partial_service_vrp can work directly with the list of services instead of ids.
+          build_partial_service_vrp(service_vrp, result_item.collect(&:id), vehicles_indices, options[:entity])
         }.compact
       else
         log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
@@ -486,7 +487,7 @@ module Interpreters
         # cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size, vrp.vehicles, vrp.points, clusters)
         adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == :work_day
         result_items.collect.with_index{ |result_item, _result_index|
-          build_partial_service_vrp(service_vrp, result_item) #, cluster_vehicles && cluster_vehicles[result_index])
+          build_partial_service_vrp(service_vrp, result_item.collect(&:id)) #, cluster_vehicles && cluster_vehicles[result_index])
         }
       else
         log 'Split hierarchical not available when services have no activity', level: :error
@@ -712,7 +713,7 @@ module Interpreters
 
             point = sub_set[0].activity.point
             characteristics[:matrix_index] = point[:matrix_index] if !vrp.matrices.empty?
-            linked_objects["#{point.id}_#{sub_set_index}"] = sub_set.collect{ |object| object[:id] }
+            linked_objects["#{point.id}_#{sub_set_index}"] = sub_set
             # TODO : group sticky and skills (in expected characteristics too)
             characteristics[:duration_from_and_to_depot] = [0, 0] if basic_split
             data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, characteristics, nil]
