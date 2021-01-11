@@ -72,6 +72,7 @@ module Wrappers
     def solve(vrp, _job = nil, _thread_proc = nil, &_block)
       {
         cost: 0,
+        costs: Models::Costs.new({}),
         solvers: [:demo],
         total_travel_distance: 0,
         total_travel_time: 0,
