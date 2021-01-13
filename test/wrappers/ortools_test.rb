@@ -5684,11 +5684,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     size = 3
 
     # A time matrix that leads to incorrect order in the old force_start implementation
+    array_first_column = [1]
     vrp[:matrices] = [
       {
         id: 'matrix_0',
         time: [(0..size - 2).to_a + [15, 17]] +
-          (1..size).collect{ |i| [1] + (0..i - 1).to_a.reverse + Array.new(size - i){ |j| 2 * (j + 1) } }
+          (1..size).collect{ |i| array_first_column + (0..i - 1).to_a.reverse + Array.new(size - i){ |j| 2 * (j + 1) } }
       }
     ]
 
