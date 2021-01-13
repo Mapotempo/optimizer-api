@@ -96,55 +96,6 @@ module Models
       assert_equal [3], created_vrp.services[1].unavailable_visit_day_indices
     end
 
-    def test_reject_work_day_partition
-      vrp = VRP.scheduling
-      vrp[:services].each{ |s|
-        s[:visits_number] = 1
-        s[:minimum_lapse] = 2
-        s[:maximum_lapse] = 3
-      }
-      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
-      TestHelper.create(vrp) # no raise
-
-      vrp = VRP.scheduling
-      vrp[:services].each{ |s|
-        s[:visits_number] = 2
-        s[:minimum_lapse] = 2
-      }
-      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
-      TestHelper.create(vrp) # no raise
-
-      vrp = VRP.scheduling
-      vrp[:services].each{ |s|
-        s[:visits_number] = 2
-        s[:minimum_lapse] = 2
-        s[:maximum_lapse] = 3
-      }
-      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp = VRP.scheduling
-      vrp[:services].each{ |s|
-        s[:visits_number] = 2
-        s[:minimum_lapse] = 2
-        s[:maximum_lapse] = 7
-      }
-      vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
-      TestHelper.create(vrp) # no raise
-    end
-
-    def test_reject_routes_with_activities
-      vrp = VRP.scheduling
-      vrp[:services].first[:activities] = [vrp[:services].first[:activity]]
-      vrp[:services].first.delete(:activity)
-      vrp[:routes] = [{ mission_ids: ['service_1'] }]
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
-        TestHelper.create(vrp)
-      end
-    end
-
     def test_deduce_sticky_vehicles_if_route_and_clustering
       vrp = VRP.basic
       vrp[:routes] = [{ mission_ids: ['service_1', 'service_3'], vehicle_id: 'vehicle_0' }]
@@ -173,38 +124,6 @@ module Models
         assert generated_vrp.resolution_solver
         assert_equal [heuristic], generated_vrp.preprocessing_first_solution_strategy
       }
-    end
-
-    def test_reject_if_shipments_and_periodic_heuristic
-      vrp = VRP.scheduling
-      vrp[:shipments] = [{
-        id: 'shipment_0',
-        pickup: {
-          point_id: 'point_0'
-        },
-        delivery: {
-          point_id: 'point_1'
-        }
-      }]
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-    end
-
-    def test_reject_if_rests_and_periodic_heuristic
-      vrp = VRP.scheduling
-      vrp[:rests] = [{
-        id: 'rest_0',
-        duration: 1,
-        timewindows: [{
-          day_index: 0
-        }]
-      }]
-      vrp[:vehicles].first[:rests] = ['rest_0']
-
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
     end
 
     def test_deduce_consistent_relations
@@ -288,6 +207,59 @@ module Models
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000, day_index: 0 }, { start: 0, end: 1000, day_index: 5 }, { start: 0, end: 1000, day_index: 6 }]
       vrp = TestHelper.create(problem)
       assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+    end
+
+    def test_remove_unecessary_units
+      vrp = TestHelper.load_vrp(self)
+      assert_empty vrp.units
+      vrp.vehicles.all?{ |v| v.capacities.empty? }
+      vrp.services.all?{ |s| s.quantities.empty? }
+    end
+
+    def test_remove_unecessary_units_one_needed
+      vrp = TestHelper.load_vrp(self)
+      assert_equal 1, vrp.units.size
+      assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten!.uniq!,
+                      :==,
+                      vrp.services.collect{ |s| s.quantities.collect(&:unit_id) }.flatten!.uniq!
+    end
+
+    def test_vrp_creation_if_route_and_partitions
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:routes] = [{
+        vehicle_id: 'vehicle_0',
+        mission_ids: ['service_1']
+      }, {
+        vehicle_id: 'vehicle_1',
+        mission_ids: ['service_7']
+      }]
+      vrp[:configuration][:preprocessing] = {
+        partitions: TestHelper.vehicle_and_days_partitions
+      }
+
+      vrp = TestHelper.create(vrp)
+      assert_equal 2, (vrp.services.count{ |s| !s.sticky_vehicles.empty? })
+      assert_equal 'vehicle_0', vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicles.first.id
+      assert_equal 'vehicle_1', vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicles.first.id
+    end
+
+    def test_transform_route_indice_into_index
+      original_vrp = VRP.lat_lon_scheduling_two_vehicles
+      original_vrp[:routes] = [{
+        vehicle_id: 'vehicle_0',
+        mission_ids: ['service_1'],
+        indice: 10
+      }]
+      original_vrp[:configuration][:preprocessing] = {
+        partitions: TestHelper.vehicle_and_days_partitions
+      }
+
+      vrp = TestHelper.create(original_vrp)
+      assert_raises NoMethodError do
+        vrp.routes.first.indice
+      end
+      assert vrp.routes.first.day_index
+      assert_equal 10, vrp.routes.first.day_index
     end
   end
 end
