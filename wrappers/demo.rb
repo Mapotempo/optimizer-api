@@ -82,6 +82,7 @@ module Wrappers
         routes: vrp.vehicles.collect{ |vehicle|
           {
             vehicle_id: vehicle.id,
+            original_vehicle_id: vehicle.original_id,
             activities: (
               [build_route_depot(vehicle.start_point)] +
               vrp.shipments.collect{ |shipment|

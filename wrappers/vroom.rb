@@ -106,6 +106,7 @@ module Wrappers
         }.compact
         {
           vehicle_id: vehicle.id,
+          original_vehicle_id: vehicle.original_id,
           activities: activities,
           start_time: activities.first[:begin_time],
           end_time: activities.last[:begin_time] + (activities.last[:duration] || 0),
@@ -185,6 +186,7 @@ module Wrappers
         type: 'rest',
         detail: build_rest(original_rest),
         begin_time: begin_time,
+        end_time: begin_time + step['service'],
         departure_time: begin_time + step['service']
       }.delete_if{ |_k, v| v.nil? }
     end
@@ -206,10 +208,15 @@ module Wrappers
       service = vrp.services[step['id']]
       point = service.activity.point
       route_data = compute_route_data(vrp, point, step)
+      begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
       job_data = {
+        original_service_id: service.original_id,
         service_id: service.id,
         type: 'service',
         point_id: point.id,
+        begin_time: begin_time,
+        end_time: begin_time && (begin_time + step['service']),
+        departure_time: begin_time && (begin_time + step['service']),
         detail: build_detail(service, service.activity, point, nil, vehicle)
       }.merge(route_data).delete_if{ |_k, v| v.nil? }
       @previous = point
@@ -222,11 +229,16 @@ module Wrappers
       activity = type == 'pickup' ? shipment.pickup : shipment.delivery
       point = activity.point
       route_data = compute_route_data(vrp, point, step)
+      begin_time = step['arrival'] + step['waiting_time']
       job_data = {
+        original_shipment_id: shipment.original_id,
         pickup_shipment_id: type == 'pickup' && shipment.id,
         delivery_shipment_id: type == 'delivery' && shipment.id,
         type: type,
         point_id: point.id,
+        begin_time: begin_time,
+        end_time: begin_time + step['service'],
+        departure_time: begin_time + step['service'],
         detail: build_detail(shipment, activity, point, nil, vehicle)
       }.merge(route_data).delete_if{ |_k, v| v.nil? || v == false }
       @previous = point
@@ -236,12 +248,10 @@ module Wrappers
     def compute_route_data(vrp, point, step)
       return {} if step['type'].nil?
 
-      begin_time = step['arrival'] + step['waiting_time']
       {
-        begin_time: begin_time,
-        departure_time: begin_time + step['service'],
         travel_time: (@previous && point.matrix_index && vrp.matrices[0][:time] ? vrp.matrices[0][:time][@previous.matrix_index][point.matrix_index] : 0),
         travel_distance: (@previous && point.matrix_index && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][@previous.matrix_index][point.matrix_index] : 0),
+        travel_value: (@previous && point.matrix_index && vrp.matrices[0][:value] ? vrp.matrices[0][:value][@previous.matrix_index][point.matrix_index] : 0)
       }
     end
 
@@ -299,7 +309,7 @@ module Wrappers
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
           time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] },
           delivery: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }&.value&.to_i || 0 },
-          anykey: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }&.value&.to_i || 0 }
+          pickup: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }&.value&.to_i || 0 }
         }.delete_if{ |k, v|
           v.nil? || v.is_a?(Array) && v.empty? ||
             k == :delivery && pickup_flag ||
@@ -356,7 +366,7 @@ module Wrappers
                                                            cost_value_multiplier: vrp.vehicles.first.cost_value_multiplier.positive? ? 1 : 0)
       (0..size_matrix - 1).each{ |i|
         (0..size_matrix - 1).each{ |j|
-          agglomerate_matrix[i][j] = agglomerate_matrix[i][j].round
+          agglomerate_matrix[i][j] = [agglomerate_matrix[i][j].round, 2**28].min
         }
       }
       if vrp.vehicles.first.start_point_id.nil? && vrp.vehicles.first.end_point_id.nil?

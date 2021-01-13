@@ -530,6 +530,7 @@ module Wrappers
           earliest_start = route_start
           {
             vehicle_id: vehicle.id,
+            original_vehicle_id: vehicle.original_id,
             cost_details: route_costs,
             activities: route.activities.collect.with_index{ |activity, activity_index|
               current_activity = nil

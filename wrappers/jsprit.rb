@@ -455,6 +455,7 @@ module Wrappers
             else
               {
                 vehicle_id: vehicle.id,
+                original_vehicle_id: vehicle.original_id,
                 activities:
                   ([vehicle.start_point && {
                     point_id: vehicle.start_point.id,
