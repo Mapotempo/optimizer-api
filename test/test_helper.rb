@@ -775,6 +775,16 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
+  def self.lat_lon_capacitated_2dimensions
+    vrp = lat_lon_capacitated
+    vrp[:vehicles].each{ |vehicle|
+      vehicle[:cost_time_multiplier] = 1
+      vehicle[:cost_distance_multiplier] = 1
+    }
+
+    vrp
+  end
+
   def self.lat_lon_scheduling
     vrp = lat_lon_capacitated
     vrp[:vehicles].each{ |v|
@@ -997,6 +1007,16 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }
       }
     }
+  end
+
+  def self.lat_lon_two_vehicles_2dimensions
+    vrp = lat_lon_two_vehicles
+    vrp[:vehicles].each{ |vehicle|
+      vehicle[:cost_time_multiplier] = 1
+      vehicle[:cost_distance_multiplier] = 1
+    }
+
+    vrp
   end
 
   def self.lat_lon_scheduling_two_vehicles

@@ -266,20 +266,20 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
         problem: VRP.lat_lon,
         solver_name: 'vroom',
         expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time start_time end_time],
-        expected_activities_keys: %w[point_id travel_distance travel_time travel_value service_id original_service_id detail current_distance type],
+        expected_activities_keys: %w[point_id travel_distance travel_time travel_value begin_time end_time service_id original_service_id detail current_distance type departure_time],
         expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
       },
       ortools: {
-        problem: VRP.lat_lon_capacitated,
+        problem: VRP.lat_lon_capacitated_2dimensions,
         solver_name: 'ortools',
-        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time costs initial_loads],
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time cost_details initial_loads],
         expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time service_id original_service_id pickup_shipment_id delivery_shipment_id original_shipment_id detail current_distance alternative type departure_time],
-        expected_unassigned_keys: %w[point_id service_id original_service_id shipment_id original_shipment_id detail type reason]
+        expected_unassigned_keys: %w[point_id service_id original_service_id pickup_shipment_id delivery_shipment_id original_shipment_id detail type reason]
       },
       periodic_ortools: {
-        problem: VRP.lat_lon_two_vehicles,
+        problem: VRP.lat_lon_two_vehicles_2dimensions,
         solver_name: 'ortools',
-        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time costs initial_loads],
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time cost_details initial_loads],
         expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time departure_time service_id original_service_id detail current_distance alternative type],
         expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
       },
@@ -303,11 +303,12 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     }]
 
     methods[:periodic_ortools][:problem][:configuration][:first_solution_strategy] = nil
+    dimensions = %i[time distance]
 
     methods.each{ |method, data|
       problem = data[:problem]
       problem[:matrices].each{ |matrix|
-        [:time, :distance].each{ |dimension|
+        dimensions.each{ |dimension|
           matrix[dimension].each{ |line| line << 2**32 }
           matrix[dimension] << [2**32] * matrix[dimension].first.size
         }
@@ -366,11 +367,12 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     expected_unassigned_keys = %w[point_id id type unassigned_reason]
 
     [:ortools, :periodic_ortools].each{ |method| methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 } }
+    dimensions = %i[time distance]
 
     methods.each{ |method, data|
       problem = data[:problem]
       problem[:matrices].each{ |matrix|
-        [:time, :distance].each{ |dimension|
+        dimensions.each{ |dimension|
           matrix[dimension].each{ |line| line << 2**32 }
           matrix[dimension] << [2**32] * matrix[dimension].first.size
         }
