@@ -3196,4 +3196,12 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal expected - 1, result[:unassigned].size
   end
+
+  def test_empty_result_when_no_mission
+    vrp = TestHelper.create(VRP.lat_lon_two_vehicles)
+    vrp.services = []
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+    assert_equal 2, result[:routes].size
+  end
 end

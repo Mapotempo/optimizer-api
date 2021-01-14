@@ -920,14 +920,7 @@ module Wrappers
     end
 
     def unassigned_rests(vrp)
-      new_vehicles = if vrp.scheduling?
-        periodic = Interpreters::PeriodicVisits.new(vrp)
-        periodic.generate_vehicles(vrp)
-      else
-        vrp.vehicles
-      end
-
-      new_vehicles.flat_map{ |vehicle|
+      vrp.vehicles.flat_map{ |vehicle|
         vehicle.rests.flat_map{ |rest|
           {
             rest_id: rest.id,
@@ -937,7 +930,17 @@ module Wrappers
       }
     end
 
+    def expand_vehicles_for_consistent_empty_result(vrp)
+      if vrp.scheduling? && !vrp.schedule_expanded_vehicles
+        periodic = Interpreters::PeriodicVisits.new(vrp)
+        periodic.generate_vehicles(vrp)
+      else
+        vrp.vehicles
+      end
+    end
+
     def empty_result(solver, vrp, unassigned_reason = nil)
+      vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp)
       {
         solvers: [solver],
         cost: nil,
