@@ -1,4 +1,5 @@
 require 'fileutils'
+require 'zlib'
 
 class CacheError < StandardError; end
 
@@ -14,7 +15,7 @@ class CacheManager
   def read(name, _options = nil)
     filtered_name = name.to_s.parameterize(separator: '')
     if File.exist?(File.join(@cache, filtered_name))
-      File.read(File.join(@cache, filtered_name), mode: 'r')
+      Zlib::Inflate.inflate(File.read(File.join(@cache, filtered_name), mode: 'r'))
     end
   rescue StandardError => e
     raise CacheError, "Got error #{e} attempting to read cache #{name}." if !cache.is_a? ActiveSupport::Cache::NullStore
@@ -24,10 +25,11 @@ class CacheManager
     raise CacheError, 'Stored value is not a String' if !value.is_a? String
 
     File.open(File.join(@cache, name.to_s.parameterize(separator: '')), options[:mode]) do |f|
-      if value.bytesize < @filesize_limit.megabytes
-        f.write(value)
+      compressed = Zlib::Deflate.deflate(value)
+      if compressed.bytesize < @filesize_limit.megabytes
+        f.write(compressed)
       else
-        f.write("File size is greater than #{@filesize_limit} Mb.")
+        f.write("File size is greater than #{@filesize_limit} Mb after compression.")
       end
     end
   rescue StandardError => e

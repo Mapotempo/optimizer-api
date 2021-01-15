@@ -95,7 +95,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
 
     assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
-    csv = CSV.read(generated_file + '_csv')
+    csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file + '_csv'))
 
     assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq!.size
@@ -111,7 +111,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
 
     assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
-    csv = CSV.read(generated_file + '_csv')
+    csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file + '_csv'))
 
     assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq!.size
@@ -125,18 +125,19 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     schedule_end = 5
 
     output_tool = OutputHelper::Scheduling.new(name, 'fake_vehicles', job, schedule_end)
-    file_name = File.join(Api::V01::APIBase.dump_vrp_dir.cache, 'scheduling_construction_test_fake_job')
+    file = 'scheduling_construction_test_fake_job'
+    filepath = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
-    refute File.exist?(file_name), 'File created before end of generation'
+    refute File.exist?(filepath), 'File created before end of generation'
 
     output_tool.add_comment('my comment')
     days = [0, 2, 4]
     output_tool.insert_visits(days, 'service_id', 3)
     output_tool.close_file
 
-    assert File.exist?(file_name), 'File not found'
+    assert File.exist?(filepath), 'File not found'
 
-    csv = CSV.read(file_name)
+    csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file))
     assert(csv.any?{ |line| line.first == 'my comment' })
     assert(csv.any?{ |line|
       line[0] == 'service_id' &&
