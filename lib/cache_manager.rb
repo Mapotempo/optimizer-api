@@ -15,7 +15,12 @@ class CacheManager
   def read(name, _options = nil)
     filtered_name = name.to_s.parameterize(separator: '')
     if File.exist?(File.join(@cache, filtered_name))
-      Zlib::Inflate.inflate(File.read(File.join(@cache, filtered_name), mode: 'r'))
+      content = File.read(File.join(@cache, filtered_name), mode: 'r')
+      begin
+        Zlib::Inflate.inflate(content)
+      rescue Zlib::DataError # Previously dumped files were not compressed, protect them
+        content
+      end
     end
   rescue StandardError => e
     raise CacheError, "Got error #{e} attempting to read cache #{name}." if !cache.is_a? ActiveSupport::Cache::NullStore
