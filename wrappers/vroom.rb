@@ -78,7 +78,7 @@ module Wrappers
         return empty_result('vroom', vrp)
       end
 
-      points = Hash[vrp.points.map{ |point| [point.id, point] }]
+      @points = Hash[vrp.points.map{ |point| [point.id, point] }]
       rest_equivalence(vrp)
 
       matrix_indices = vrp.services.map{ |service|
@@ -92,7 +92,7 @@ module Wrappers
       matrix_indices.uniq!
 
       tic = Time.now
-      result = run_vroom(vrp, points, [:time, :distance], job)
+      result = run_vroom(vrp, [:time, :distance], job)
       elapsed_time = (Time.now - tic) * 1000
 
       return if !result
@@ -153,20 +153,16 @@ module Wrappers
 
     def read_step(vrp, vehicle, step)
       case step['type']
-      when 'start'
-        read_depot(vehicle, step)
-      when 'end'
-        read_depot(vehicle, step)
       when 'job'
         read_job(vrp, vehicle, step)
+      when 'pickup', 'delivery'
+        read_shipment(vrp, vehicle, step)
+      when 'start', 'end'
+        read_depot(vehicle, step)
       when 'break'
         read_break(step)
-      when 'pickup'
-        read_shipment(vrp, vehicle, step)
-      when 'delivery'
-        read_shipment(vrp, vehicle, step)
       else
-        raise
+        raise 'Unimplemented stop type in wrappers/vroom.rb'
       end
     end
 
@@ -270,17 +266,60 @@ module Wrappers
       }.delete_if{ |_k, v| v.nil? }
     end
 
-    def run_vroom(vrp, points, dimensions, _job)
-      input = Tempfile.new('optimize-vroom-input', @tmp_dir)
-      problem = { vehicles: [], jobs: [], matrix: [] }
-      vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq + vrp.services.flat_map{ |service| service.sticky_vehicles.map(&:id) }.uniq
-      vrp_units = vrp.units.select{ |unit| vrp.vehicles.map{ |vehicle| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit }&.max&.positive? }
-      problem[:vehicles] = vrp.vehicles.map{ |vehicle|
+    def collect_jobs(vrp, vrp_skills, vrp_units)
+      vrp.services.map.with_index{ |service, index|
+        # Activity is mandatory
+        pickup_flag = service.quantities.none?{ |quantity| quantity.value.negative? }
+        {
+          id: index,
+          location_index: @points[service.activity.point_id].matrix_index,
+          service: service.activity.duration.to_i,
+          skills: service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
+            service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
+          time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] },
+          delivery: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }&.value&.to_i || 0 },
+          pickup: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }&.value&.to_i || 0 }
+        }.delete_if{ |k, v|
+          v.nil? || v.is_a?(Array) && v.empty? ||
+            k == :delivery && pickup_flag ||
+            k == :anykey && !pickup_flag
+        }
+      }
+    end
+
+    def collect_shipments(vrp, vrp_skills, vrp_units)
+      vrp.shipments.map.with_index{ |shipment, index|
+        {
+          amount: vrp_units.map{ |unit| shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }&.value&.to_i || 0 },
+          skills: shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
+            shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
+          pickup: {
+            id: vrp.services.size + index * 2,
+            service: shipment.pickup.duration,
+            location_index: @points[shipment.pickup.point_id].matrix_index,
+            time_windows: shipment.pickup.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
+          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
+          delivery: {
+            id: vrp.services.size + index * 2 + 1,
+            service: shipment.delivery.duration,
+            location_index: @points[shipment.delivery.point_id].matrix_index,
+            time_windows: shipment.delivery.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
+          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
+        }.delete_if{ |_k, v|
+          v.nil? || v.is_a?(Array) && v.empty?
+        }
+      }
+    end
+
+    def collect_vehicles(vrp, vrp_skills, vrp_units)
+      vrp.vehicles.map{ |vehicle|
         tw_end = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier.zero?) && vehicle.timewindow&.end || 2**30
         {
           id: 0,
-          start_index: vehicle.start_point_id ? points[vehicle.start_point_id].matrix_index : nil,
-          end_index: vehicle.end_point_id ? points[vehicle.end_point_id].matrix_index : nil,
+          start_index: vehicle.start_point_id ? @points[vehicle.start_point_id].matrix_index : nil,
+          end_index: vehicle.end_point_id ? @points[vehicle.end_point_id].matrix_index : nil,
           capacity: vrp_units.map{ |unit| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit&.to_i || 0 },
           # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
           time_window: [vehicle.timewindow&.start || 0, tw_end],
@@ -298,47 +337,18 @@ module Wrappers
             k == :time_window && v.first.zero? && v.last == 2**30
         }
       }
-      problem[:jobs] = vrp.services.map.with_index{ |service, index|
-        # Activity is mandatory
-        pickup_flag = service.quantities.none?{ |quantity| quantity.value.negative? }
-        {
-          id: index,
-          location_index: points[service.activity.point_id].matrix_index,
-          service: service.activity.duration.to_i,
-          skills: service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
-          priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
-          time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] },
-          delivery: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }&.value&.to_i || 0 },
-          pickup: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }&.value&.to_i || 0 }
-        }.delete_if{ |k, v|
-          v.nil? || v.is_a?(Array) && v.empty? ||
-            k == :delivery && pickup_flag ||
-            k == :anykey && !pickup_flag
-        }
-      }
-      problem[:shipments] = vrp.shipments.map.with_index{ |shipment, index|
-        {
-          amount: vrp_units.map{ |unit| shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }&.value&.to_i || 0 },
-          skills: shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
-          priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
-          pickup: {
-            id: vrp.services.size + index * 2,
-            service: shipment.pickup.duration,
-            location_index: points[shipment.pickup.point_id].matrix_index,
-            time_windows: shipment.pickup.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
-          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
-          delivery: {
-            id: vrp.services.size + index * 2 + 1,
-            service: shipment.delivery.duration,
-            location_index: points[shipment.delivery.point_id].matrix_index,
-            time_windows: shipment.delivery.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
-          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
-        }.delete_if{ |_k, v|
-          v.nil? || v.is_a?(Array) && v.empty?
-        }
-      }
+    end
+
+    def run_vroom(vrp, dimensions, _job)
+      input = Tempfile.new('optimize-vroom-input', @tmp_dir)
+      problem = { vehicles: [], jobs: [], matrix: [] }
+
+      # WARNING: only first alternative set of skills is used
+      vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq + vrp.services.flat_map{ |service| service.sticky_vehicles.map(&:id) }.uniq
+      vrp_units = vrp.units.select{ |unit| vrp.vehicles.map{ |vehicle| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit }&.max&.positive? }
+      problem[:vehicles] = collect_vehicles(vrp, vrp_skills, vrp_units)
+      problem[:jobs] = collect_jobs(vrp, vrp_skills, vrp_units)
+      problem[:shipments] = collect_shipments(vrp, vrp_skills, vrp_units)
       matrix_indices = (problem[:jobs].map{ |job| job[:location_index] } +
         problem[:shipments].flat_map{ |shipment| [shipment[:pickup][:location_index], shipment[:delivery][:location_index]] } +
         problem[:vehicles].flat_map{ |vec| [vec[:start_index], vec[:end_index]].uniq.compact }).uniq.sort
