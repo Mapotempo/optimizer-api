@@ -4,10 +4,10 @@ ARG REGISTRY=${REGISTRY:-registry.mapotempo.com/}
 ARG VROOM_VERSION=${VROOM_VERSION}
 
 # Install Vroom
-FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} as vroom
+FROM ${REGISTRY}mapotempo/vroom:${VROOM_VERSION:-v1.5.0} as vroom
 
 # Rake
-FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION}
+FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.4.0}
 
 ENV LANG C.UTF-8
 
