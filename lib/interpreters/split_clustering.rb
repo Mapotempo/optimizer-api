@@ -31,12 +31,6 @@ module Interpreters
     # TODO: private method
     def self.split_clusters(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
-      empties_or_fills = (vrp.services.select{ |service| service.quantities.any?(&:fill) } +
-                          vrp.services.select{ |service| service.quantities.any?(&:empty) }).uniq
-      depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
-      ship_candidates = vrp.shipments.select{ |shipment|
-        depot_ids.include?(shipment.pickup.point_id) || depot_ids.include?(shipment.delivery.point_id)
-      }
 
       if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
         splited_service_vrps = generate_split_vrps(service_vrp, job, block)
@@ -70,10 +64,7 @@ module Interpreters
         }
 
         return Helper.merge_results(split_results)
-      elsif !vrp.scheduling? &&
-            vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 &&
-            vrp.shipments.size == ship_candidates.size &&
-            (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
+      elsif split_solve_candidate?(service_vrp)
         return split_solve(service_vrp, &block)
       else
         service_vrp[:dicho_level] ||= 0
@@ -127,6 +118,19 @@ module Interpreters
           raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.preprocessing_partition_method}"
         end
       end
+    end
+
+    def self.split_solve_candidate?(service_vrp)
+      vrp = service_vrp[:vrp]
+      empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
+      depot_ids = vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id].compact }.uniq
+
+      !vrp.scheduling? &&
+        vrp.preprocessing_max_split_size &&
+        vrp.vehicles.size > 1 &&
+        (vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit > 1) &&
+        (vrp.shipments.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size &&
+        vrp.shipments.all?{ |s| depot_ids.include?(s.pickup.point_id) || depot_ids.include?(s.delivery.point_id) }
     end
 
     def self.split_solve(service_vrp, job = nil, &block)
