@@ -68,8 +68,9 @@ module Wrappers
       ]
     end
 
-    def solve_synchronous?(_vrp)
-      true
+    def solve_synchronous?(vrp)
+      compatible_routers = %i[car truck_medium]
+      vrp.points.size < 200 && vrp.vehicles.all?{ |vehicle| compatible_routers.include?(vehicle.router_mode) } # WARNING: this should change accordinglty to router evolution
     end
 
     def solve(vrp, job = nil, _thread_proc = nil)
