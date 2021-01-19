@@ -97,7 +97,7 @@ module Interpreters
               block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
 
               # TODO : global variable to know if work_day entity
-              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == :work_day
+              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].schedule_range_indices, s_v[:vrp].vehicles, partition[:entity])
               options = { cut_symbol: cut_symbol, entity: partition[:entity] }
               options[:restarts] = partition[:restarts] if partition[:restarts]
               split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
@@ -106,7 +106,7 @@ module Interpreters
           when 'hierarchical_tree'
             generated_service_vrps = current_service_vrps.collect{ |s_v|
               current_vrp = s_v[:vrp]
-              current_vrp.vehicles = list_vehicles([current_vrp.vehicles.first]) if partition[:entity] == :work_day
+              current_vrp.vehicles = list_vehicles(s_v[:vrp].schedule_range_indices, [current_vrp.vehicles.first], partition[:entity])
               split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol: cut_symbol, entity: partition[:entity])
             }
             current_service_vrps = generated_service_vrps.flatten
@@ -545,23 +545,49 @@ module Interpreters
       vehicles
     end
 
-    def self.list_vehicles(vehicles)
+    def self.duplicate_vehicle(vehicle, timewindow, schedule)
+      if timewindow.nil?
+        (schedule[:start]..[schedule[:end], 6].min).collect{ |day|
+          new_vehicle = Marshal.load(Marshal.dump(vehicle))
+          new_vehicle.timewindow = Models::Timewindow.new(day_index: day)
+          new_vehicle
+        }
+      elsif timewindow.day_index
+        return [] unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == timewindow.day_index }
+
+        new_vehicle = Marshal.load(Marshal.dump(vehicle))
+        new_vehicle.timewindow = timewindow
+        new_vehicle.sequence_timewindows = nil
+        [new_vehicle]
+      elsif timewindow
+        new_vehicles = (0..6).collect{ |day|
+          next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
+
+          tw = Marshal.load(Marshal.dump(timewindow))
+          tw.day_index = day
+          new_vehicle = Marshal.load(Marshal.dump(vehicle))
+          new_vehicle.timewindow = tw
+          new_vehicle.sequence_timewindows = nil
+          new_vehicle
+        }
+        new_vehicles.compact
+      end
+    end
+
+    def self.list_vehicles(schedule, vehicles, entity)
+      # provides one vehicle per cluster when partitioning with work_day entity
+      return vehicles unless entity == :work_day
+
       vehicle_list = []
       vehicles.each{ |vehicle|
-        if vehicle[:timewindow]
-          (0..6).each{ |day|
-            tw = Marshal.load(Marshal.dump(vehicle[:timewindow]))
-            tw[:day_index] = day
-            new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle[:timewindow] = tw
-            vehicle_list << new_vehicle
+        if vehicle.timewindow
+          vehicle_list += duplicate_vehicle(vehicle, vehicle.timewindow, schedule)
+        elsif vehicle.sequence_timewindows.size.positive?
+          vehicle.sequence_timewindows.each{ |timewindow|
+            vehicle_list += duplicate_vehicle(vehicle, timewindow, schedule)
           }
-        elsif vehicle[:sequence_timewindows]
-          vehicle[:sequence_timewindows].each_with_index{ |tw, tw_i|
-            new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle[:sequence_timewindows] = [tw]
-            vehicle_list << new_vehicle
-          }
+        else
+          vehicle_list += duplicate_vehicle(vehicle, nil, schedule)
         end
       }
       vehicle_list.each(&:reset_computed_data)
