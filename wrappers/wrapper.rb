@@ -495,12 +495,12 @@ module Wrappers
 
     def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
       {
-        lat: point && point.location && point.location.lat,
-        lon: point && point.location && point.location.lon,
-        skills: job && job.skills,
-        setup_duration: activity && activity[:setup_duration],
-        duration: activity && activity.duration,
-        additional_value: activity && activity[:additional_value],
+        lat: point&.location&.lat,
+        lon: point&.location&.lon,
+        skills: job&.skills,
+        setup_duration: activity&.setup_duration,
+        duration: activity&.duration,
+        additional_value: activity&.additional_value,
         timewindows: activity && build_timewindows(activity, day_index),
         quantities: build_quantities(job, job_load, delivery),
         router_mode: vehicle ? vehicle.router_mode : nil,
@@ -613,14 +613,7 @@ module Wrappers
             original_service_id: service.id,
             service_id: vrp.schedule_range_indices ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
             point_id: service.activity ? service.activity.point_id : nil,
-            detail: {
-              lat: service.activity&.point&.location ? service.activity.point.location.lat : nil,
-              lon: service.activity&.point&.location ? service.activity.point.location.lon : nil,
-              setup_duration: service.activity ? service.activity.setup_duration : nil,
-              duration: service.activity ? service.activity.duration : nil,
-              timewindows: (service.activity && service.activity.timewindows) ? service.activity.timewindows.collect{ |tw| { start: tw.start, end: tw.end } } : [],
-              quantities: service.quantities ? service.quantities.collect{ |qte| { unit: qte.unit.id, value: qte.value } } : nil
-            },
+            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
             type: 'service',
             reason: reason
           }

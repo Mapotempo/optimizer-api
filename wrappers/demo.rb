@@ -42,14 +42,7 @@ module Wrappers
         type: type,
         begin_time: 0,
         end_time: 0,
-        detail: {
-          lat: activity.point&.location&.lat,
-          lon: activity.point&.location&.lon,
-          setup_duration: activity.setup_duration,
-          duration: activity.duration,
-          timewindows: timewindows,
-          quantities: mission.quantities,
-        }
+        detail: build_detail(mission, activity, activity.point, nil, nil, nil)
       }
     end
 

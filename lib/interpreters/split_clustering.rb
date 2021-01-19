@@ -242,7 +242,7 @@ module Interpreters
       }
     end
 
-    def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicles_indices = nil)
+    def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicles_indices = nil, entity = nil)
       log '---> build_partial_service_vrp', level: :debug
       tic = Time.now
       # WARNING: Below we do marshal dump load but we continue using original objects
@@ -278,6 +278,7 @@ module Interpreters
       sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
       sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
       sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
+      sub_vrp = add_corresponding_entity_skills(entity, sub_vrp)
 
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
@@ -411,7 +412,7 @@ module Interpreters
 
         result_items.collect.with_index{ |result_item, result_index|
           vehicles_indices = [result_index] if options[:entity] == :work_day || options[:entity] == :vehicle
-          build_partial_service_vrp(service_vrp, result_item, vehicles_indices)
+          build_partial_service_vrp(service_vrp, result_item, vehicles_indices, options[:entity])
         }
       else
         log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
@@ -940,6 +941,26 @@ module Interpreters
           limits = { limit: cumulated_metrics[cut_symbol] / nb_clusters }
         end
         limits
+      end
+
+      def add_corresponding_entity_skills(entity, vrp)
+        return vrp unless entity
+
+        corresponding_id =
+          case entity
+          when :vehicle
+            vrp.vehicles.first.id
+          when :work_day
+            cluster_day = (vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows.first).day_index
+            %w[mon tue wed thu fri sat sun][cluster_day]
+          end
+
+        vrp.vehicles.first.skills.first << corresponding_id
+        vrp.services.each{ |service|
+          service.skills << corresponding_id
+        }
+
+        vrp
       end
     end
 

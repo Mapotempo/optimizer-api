@@ -990,7 +990,7 @@ module Heuristics
           quantities: service_in_vrp&.quantities&.collect{ |qte| { unit: qte.unit.id, value: qte.value, label: qte.unit.label } } || [],
           setup_duration: data[:considered_setup_duration],
           duration: (data[:end] - data[:arrival] if type == 'service'),
-          skills: (service_in_vrp.skills + [day_name] if type == 'service')
+          skills: (service_in_vrp.skills if type == 'service')
         }.delete_if{ |_k, v| !v }
       }.delete_if{ |_k, v| !v }
     end
