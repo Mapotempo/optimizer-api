@@ -296,7 +296,6 @@ module Interpreters
     def self.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options = {}, &block)
       biggest_cluster_size = 0
       clusters = []
-      centroids_characteristics = []
       restart = 0
       best_limit_score = nil
       c = nil
@@ -356,14 +355,13 @@ module Interpreters
           log best_limit_score.to_s + ' -> New best cluster metric (' + c.centroids.collect{ |centroid| centroid[3][options[:cut_symbol]] }.join(', ') + ')'
           biggest_cluster_size = c.clusters.size
           clusters = c.clusters
-          centroids_characteristics = c.centroids.collect{ |centroid| centroid[4] }
         end
         c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
       end
 
       raise 'Incorrect split in kmeans_process' if clusters.size > nb_clusters # it should be never more
 
-      [clusters, centroids_characteristics]
+      clusters
     end
 
     def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {}, &block)
@@ -400,7 +398,7 @@ module Interpreters
 
         options[:clusters_infos] = collect_cluster_data(vrp, nb_clusters)
 
-        clusters, centroid_characteristics = kmeans_process(nb_clusters, data_items, unit_symbols, limits, options, &block)
+        clusters = kmeans_process(nb_clusters, data_items, unit_symbols, limits, options, &block)
 
         toc = Time.now
 
