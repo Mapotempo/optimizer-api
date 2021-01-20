@@ -72,8 +72,9 @@ class InstanceValidityTest < Minitest::Test
 
   def test_assert_inapplicable_vroom_with_periodic_heuristic
     problem = VRP.scheduling
+    problem[:services].first[:visits_number] = 2
 
-    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)), :assert_no_planning_heuristic
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)), :assert_only_one_visit
   end
 
   def test_assert_applicable_for_vroom_if_initial_routes

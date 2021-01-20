@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'active_support'
+require 'active_support/core_ext'
 require 'tmpdir'
 
 require './wrappers/demo'
@@ -42,6 +43,8 @@ module OptimizerWrapper
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
   PARAMS_LIMIT = { points: 100000, vehicles: 1000 }.freeze
+  QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }] # Only taken into account if REDIS_COUNT
+  REDIS_COUNT = ENV['REDIS_COUNT_HOST'] && Redis.new(host: ENV['REDIS_COUNT_HOST'])
 
   DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'dump')
   FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)
@@ -72,7 +75,8 @@ module OptimizerWrapper
         services: {
           vrp: [:vroom, :ortools]
         },
-        params_limit: PARAMS_LIMIT
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       }
     },
     solve: {
@@ -91,6 +95,7 @@ module OptimizerWrapper
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
       output_schedule: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
-    }
+    },
+    redis_count: REDIS_COUNT,
   }
 end
