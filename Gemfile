@@ -1,22 +1,25 @@
 source 'https://rubygems.org'
-ruby '~> 2.5.5'
+ruby '~> 2.5'
 
 gem 'require_all'
 
 gem 'puma'
 gem 'rack'
 gem 'rack-cors'
-gem 'rakeup'
+gem 'rake'
 gem 'thin'
 
-gem 'grape', '<0.19.0' # TODO: Grape 1.2.4 reduces performances
+gem 'grape', '>=1.5.0' # Important fixes are introduced in v1.5.0 (see PR #2096 & #2098)
 gem 'grape-entity'
-gem 'grape-swagger', '<0.26.0' # TODO: Waiting Grape 1+
-gem 'grape-swagger-entity', '<0.1.6' # TODO: Waiting Grape 1+
 gem 'grape_logging'
+gem 'grape-swagger'
+gem 'grape-swagger-entity'
+gem 'hashie'
 
-gem 'active_hash', github: 'Mapotempo/active_hash'
+gem 'actionpack'
+gem 'active_hash', github: 'Mapotempo/active_hash', branch: 'mapo'
 gem 'activemodel'
+
 gem 'charlock_holmes'
 gem 'http_accept_language'
 gem 'i18n'
@@ -28,8 +31,8 @@ gem 'resque-status', '>0.4'
 gem 'rest-client'
 
 gem 'ai4r'
-gem 'sim_annealing'
 gem 'balanced_vrp_clustering', github: 'Mapotempo/balanced_vrp_clustering', branch: 'dev'
+gem 'sim_annealing'
 
 gem 'polylines'
 gem 'rgeo'
@@ -67,6 +70,7 @@ group :test do
   gem 'minitest-stub_any_instance'
   gem 'rack-test'
   gem 'simplecov', require: false
+  gem 'fakeredis'
 end
 
 group :production do

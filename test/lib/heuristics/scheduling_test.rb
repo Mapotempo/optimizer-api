@@ -721,7 +721,7 @@ class HeuristicTest < Minitest::Test
       assert_empty vrp.services.collect{ |s| s[:id].split('_').slice(0..-3).join('_') } - original_ids, 'Scheduling IDs structure has changed. We can not find original ID from expanded ID with current formula (used in scheduling heuristic mainly)'
     end
 
-    def test_correct_costs_merge_with_empty_subproblem
+    def test_correct_detailed_costs_merge_with_empty_subproblem
       vrp = VRP.scheduling
       vrp[:vehicles] << {
         id: 'vehicle_1',
@@ -735,7 +735,7 @@ class HeuristicTest < Minitest::Test
       vrp[:services].each{ |s| s[:sticky_vehicle_ids] = ['vehicle_0'] }
       vrp[:matrices].first[:distance] = vrp[:matrices].first[:time]
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      assert result[:costs] # TODO: Verify costs content whenever it is correctly returned by scheduling heuristic
+      assert result[:cost_details] # TODO: Verify costs content whenever it is correctly returned by scheduling heuristic
     end
   end
 end

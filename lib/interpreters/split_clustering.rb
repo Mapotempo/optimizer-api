@@ -97,7 +97,7 @@ module Interpreters
               block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
 
               # TODO : global variable to know if work_day entity
-              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].vehicles) if partition[:entity] == :work_day
+              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].schedule_range_indices, s_v[:vrp].vehicles, partition[:entity])
               options = { cut_symbol: cut_symbol, entity: partition[:entity] }
               options[:restarts] = partition[:restarts] if partition[:restarts]
               split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
@@ -106,7 +106,7 @@ module Interpreters
           when 'hierarchical_tree'
             generated_service_vrps = current_service_vrps.collect{ |s_v|
               current_vrp = s_v[:vrp]
-              current_vrp.vehicles = list_vehicles([current_vrp.vehicles.first]) if partition[:entity] == :work_day
+              current_vrp.vehicles = list_vehicles(s_v[:vrp].schedule_range_indices, [current_vrp.vehicles.first], partition[:entity])
               split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol: cut_symbol, entity: partition[:entity])
             }
             current_service_vrps = generated_service_vrps.flatten
@@ -242,7 +242,7 @@ module Interpreters
       }
     end
 
-    def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicles_indices = nil)
+    def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicles_indices = nil, entity = nil)
       log '---> build_partial_service_vrp', level: :debug
       tic = Time.now
       # WARNING: Below we do marshal dump load but we continue using original objects
@@ -278,6 +278,7 @@ module Interpreters
       sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
       sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
       sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
+      sub_vrp = add_corresponding_entity_skills(entity, sub_vrp)
 
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
@@ -296,7 +297,6 @@ module Interpreters
     def self.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options = {}, &block)
       biggest_cluster_size = 0
       clusters = []
-      centroids_characteristics = []
       restart = 0
       best_limit_score = nil
       c = nil
@@ -356,14 +356,13 @@ module Interpreters
           log best_limit_score.to_s + ' -> New best cluster metric (' + c.centroids.collect{ |centroid| centroid[3][options[:cut_symbol]] }.join(', ') + ')'
           biggest_cluster_size = c.clusters.size
           clusters = c.clusters
-          centroids_characteristics = c.centroids.collect{ |centroid| centroid[4] }
         end
         c.centroid_indices = [] if c.centroid_indices.size < nb_clusters
       end
 
       raise 'Incorrect split in kmeans_process' if clusters.size > nb_clusters # it should be never more
 
-      [clusters, centroids_characteristics]
+      clusters
     end
 
     def self.split_balanced_kmeans(service_vrp, nb_clusters, options = {}, &block)
@@ -400,7 +399,7 @@ module Interpreters
 
         options[:clusters_infos] = collect_cluster_data(vrp, nb_clusters)
 
-        clusters, centroid_characteristics = kmeans_process(nb_clusters, data_items, unit_symbols, limits, options, &block)
+        clusters = kmeans_process(nb_clusters, data_items, unit_symbols, limits, options, &block)
 
         toc = Time.now
 
@@ -413,7 +412,7 @@ module Interpreters
 
         result_items.collect.with_index{ |result_item, result_index|
           vehicles_indices = [result_index] if options[:entity] == :work_day || options[:entity] == :vehicle
-          build_partial_service_vrp(service_vrp, result_item, vehicles_indices)
+          build_partial_service_vrp(service_vrp, result_item, vehicles_indices, options[:entity])
         }
       else
         log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
@@ -546,23 +545,49 @@ module Interpreters
       vehicles
     end
 
-    def self.list_vehicles(vehicles)
+    def self.duplicate_vehicle(vehicle, timewindow, schedule)
+      if timewindow.nil?
+        (schedule[:start]..[schedule[:end], 6].min).collect{ |day|
+          new_vehicle = Marshal.load(Marshal.dump(vehicle))
+          new_vehicle.timewindow = Models::Timewindow.new(day_index: day)
+          new_vehicle
+        }
+      elsif timewindow.day_index
+        return [] unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == timewindow.day_index }
+
+        new_vehicle = Marshal.load(Marshal.dump(vehicle))
+        new_vehicle.timewindow = timewindow
+        new_vehicle.sequence_timewindows = nil
+        [new_vehicle]
+      elsif timewindow
+        new_vehicles = (0..6).collect{ |day|
+          next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
+
+          tw = Marshal.load(Marshal.dump(timewindow))
+          tw.day_index = day
+          new_vehicle = Marshal.load(Marshal.dump(vehicle))
+          new_vehicle.timewindow = tw
+          new_vehicle.sequence_timewindows = nil
+          new_vehicle
+        }
+        new_vehicles.compact
+      end
+    end
+
+    def self.list_vehicles(schedule, vehicles, entity)
+      # provides one vehicle per cluster when partitioning with work_day entity
+      return vehicles unless entity == :work_day
+
       vehicle_list = []
       vehicles.each{ |vehicle|
-        if vehicle[:timewindow]
-          (0..6).each{ |day|
-            tw = Marshal.load(Marshal.dump(vehicle[:timewindow]))
-            tw[:day_index] = day
-            new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle[:timewindow] = tw
-            vehicle_list << new_vehicle
+        if vehicle.timewindow
+          vehicle_list += duplicate_vehicle(vehicle, vehicle.timewindow, schedule)
+        elsif vehicle.sequence_timewindows.size.positive?
+          vehicle.sequence_timewindows.each{ |timewindow|
+            vehicle_list += duplicate_vehicle(vehicle, timewindow, schedule)
           }
-        elsif vehicle[:sequence_timewindows]
-          vehicle[:sequence_timewindows].each_with_index{ |tw, tw_i|
-            new_vehicle = Marshal.load(Marshal.dump(vehicle))
-            new_vehicle[:sequence_timewindows] = [tw]
-            vehicle_list << new_vehicle
-          }
+        else
+          vehicle_list += duplicate_vehicle(vehicle, nil, schedule)
         end
       }
       vehicle_list.each(&:reset_computed_data)
@@ -942,6 +967,26 @@ module Interpreters
           limits = { limit: cumulated_metrics[cut_symbol] / nb_clusters }
         end
         limits
+      end
+
+      def add_corresponding_entity_skills(entity, vrp)
+        return vrp unless entity
+
+        corresponding_id =
+          case entity
+          when :vehicle
+            vrp.vehicles.first.id
+          when :work_day
+            cluster_day = (vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows.first).day_index
+            %w[mon tue wed thu fri sat sun][cluster_day]
+          end
+
+        vrp.vehicles.first.skills.first << corresponding_id
+        vrp.services.each{ |service|
+          service.skills << corresponding_id
+        }
+
+        vrp
       end
     end
 

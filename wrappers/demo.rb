@@ -42,14 +42,7 @@ module Wrappers
         type: type,
         begin_time: 0,
         end_time: 0,
-        detail: {
-          lat: activity.point&.location&.lat,
-          lon: activity.point&.location&.lon,
-          setup_duration: activity.setup_duration,
-          duration: activity.duration,
-          timewindows: timewindows,
-          quantities: mission.quantities,
-        }
+        detail: build_detail(mission, activity, activity.point, nil, nil, nil)
       }
     end
 
@@ -72,7 +65,7 @@ module Wrappers
     def solve(vrp, _job = nil, _thread_proc = nil, &_block)
       {
         cost: 0,
-        costs: Models::Costs.new({}),
+        cost_details: Models::CostDetails.new({}),
         solvers: [:demo],
         total_travel_distance: 0,
         total_travel_time: 0,
@@ -82,6 +75,7 @@ module Wrappers
         routes: vrp.vehicles.collect{ |vehicle|
           {
             vehicle_id: vehicle.id,
+            original_vehicle_id: vehicle.original_id,
             activities: (
               [build_route_depot(vehicle.start_point)] +
               vrp.shipments.collect{ |shipment|

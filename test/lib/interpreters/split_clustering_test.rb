@@ -251,7 +251,9 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
-      assert_equal 10, generated_services_vrps.size
+      # 2 vehicles available from monday to friday
+      # but schedule from monday to thursday : 4 days
+      assert_equal 8, generated_services_vrps.size
 
       vrp[:configuration][:preprocessing][:partitions] = [{
         method: 'balanced_kmeans',
@@ -262,7 +264,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
-      assert_equal 10, generated_services_vrps.size
+      assert_equal 8, generated_services_vrps.size
     end
 
     def test_unavailable_days_taken_into_account_work_day
@@ -366,7 +368,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
       only_monday_cluster = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
-      assert(only_monday_cluster[:vrp][:vehicles].any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw| tw[:day_index].zero? } })
+      assert(only_monday_cluster[:vrp].vehicles.any?{ |vehicle| vehicle.timewindow.day_index.zero? })
     end
 
     def test_good_vehicle_assignment_two_phases
@@ -379,7 +381,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
       # Each generated_services_vrps should have a different vehicle :
-      assert_nil generated_services_vrps.collect{ |service| [service[:vrp].vehicles.first.id, service[:vrp].vehicles.first.sequence_timewindows] }.uniq!, 'Each generated_services_vrps should have a different vehicle'
+      assert_nil generated_services_vrps.collect{ |service| [service[:vrp].vehicles.first.id, service[:vrp].vehicles.first.timewindow] }.uniq!, 'Each generated_services_vrps should have a different vehicle'
     end
 
     def test_good_vehicle_assignment_skills
@@ -397,7 +399,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
       cluster_with_skill = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
-      assert(cluster_with_skill[:vrp][:vehicles].any?{ |v| v[:skills].include?(['skill']) })
+      assert(cluster_with_skill[:vrp].vehicles.any?{ |v| v.skills.any?{ |skill_set| skill_set.include?('skill') } })
     end
 
     def test_no_doubles_3000
@@ -408,8 +410,9 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.compact!
       assert_equal 15, generated_services_vrps.size
       generated_services_vrps.each{ |service|
-        vehicle_day = service[:vrp][:vehicles].first[:sequence_timewindows].first[:day_index]
-        assert(service[:vrp][:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(vehicle_day) })
+        vehicle_day = service[:vrp].vehicles.first.timewindow.day_index
+        services_timewindows_day_index = service[:vrp].services.collect{ |s| s.activity.timewindows.collect(&:day_index) }
+        assert(services_timewindows_day_index.all?{ |days_set| days_set.empty? || days_set.include?(vehicle_day) })
       }
     end
 
@@ -492,8 +495,9 @@ class SplitClusteringTest < Minitest::Test
     def test_avoid_capacities_overlap
       vrp = TestHelper.load_vrp(self, fixture_file: 'results_regularity')
       vrp.vehicles.first.capacities.delete_if{ |cap| cap[:unit_id] == 'l' }
-      vrp.vehicles = Interpreters::SplitClustering.list_vehicles(vrp.vehicles)
       vrp.schedule_range_indices = { start: 0, end: 13 }
+      vrp.vehicles = Interpreters::SplitClustering.list_vehicles(vrp.schedule_range_indices, vrp.vehicles, :work_day)
+      
       service_vrp = { vrp: vrp, service: :demo }
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: :work_day, restarts: @split_restarts)
 
@@ -743,6 +747,61 @@ class SplitClusteringTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 2, (result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0' }[:activities].collect{ |a| a[:service_id] } & ['service_1', 'service_5']).size
       assert_equal 1, (result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_1' }[:activities].collect{ |a| a[:service_id] } & ['service_12']).size
+    end
+
+    def test_list_vehicles
+      # with timewindow
+      vrp = TestHelper.create(VRP.basic)
+      vrp.vehicles.first.timewindow = Models::Timewindow.new(start: 0, end: 10)
+      # one vehicle with no day index : we should generate one vehicle per week_day :
+      assert_equal 7, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
+      assert_equal 7, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 10 }, vrp.vehicles, :work_day).size
+      assert_equal 7, Interpreters::SplitClustering.list_vehicles({ start: 1, end: 7 }, vrp.vehicles, :work_day).size
+      # or one vehicle per day, if schedule is less than one week
+      assert_equal 5, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 4 }, vrp.vehicles, :work_day).size
+  
+      vrp.vehicles.first.timewindow[:day_index] = 0
+      # if vehicle is only available at one week day then we should generate one cluster only
+      assert_equal 1, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 4 }, vrp.vehicles, :work_day).size
+
+      # with sequence_timewindows
+      vrp = TestHelper.create(VRP.basic)
+      vrp.vehicles.first.sequence_timewindows = [
+        Models::Timewindow.new(start: 0, end: 10),
+        Models::Timewindow.new(start: 15, end: 35)
+      ]
+      # we generate one cluster per week day, for each vehicle sequence timewindow
+      assert_equal 14, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
+      # or one cluster per schedule day, for each vehicle sequence timewindow
+      # if schedule is less than a week
+      assert_equal 8, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 3 }, vrp.vehicles, :work_day).size
+  
+      vrp.vehicles.first.sequence_timewindows = [
+        Models::Timewindow.new(start: 0, end: 10, day_index: 0),
+        Models::Timewindow.new(start: 15, end: 35, day_index: 1)
+      ]
+      assert_equal 2, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
+      assert_equal 1, Interpreters::SplitClustering.list_vehicles({ start: 1, end: 6 }, vrp.vehicles, :work_day).size
+  
+      vrp.vehicles.first.sequence_timewindows = [
+        Models::Timewindow.new(start: 0, end: 10, day_index: 0),
+        Models::Timewindow.new(start: 15, end: 35)
+      ]
+      assert_equal 8, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
+  
+      vrp.vehicles.first.sequence_timewindows = [
+        Models::Timewindow.new(start: 0, end: 10, day_index: 0),
+        Models::Timewindow.new(start: 15, end: 35, day_index: 0)
+      ]
+      assert_equal 2, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 7 }, vrp.vehicles, :work_day).size
+  
+      # with no timewindow
+      vrp = TestHelper.create(VRP.basic)
+      # if a vehicle has no timewindow it is similar to having a vehicle with one timewindow but not day_index
+      # we generate one cluster per vehicle per week day
+      assert_equal 7, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
+      # if schedule is less than a week, we generate one cluster per vehicle per day
+      assert_equal 5, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 4 }, vrp.vehicles, :work_day).size
     end
   end
 end

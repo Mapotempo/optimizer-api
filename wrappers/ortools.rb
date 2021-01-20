@@ -457,14 +457,14 @@ module Wrappers
 
     private
 
-    def build_costs(costs)
-      cost = Models::Costs.new(
-        fixed: costs&.fixed || 0,
-        time: costs && (costs.time + costs.time_fake + costs.time_without_wait) || 0,
-        distance: costs && (costs.distance + costs.distance_fake) || 0,
-        value: costs&.value || 0,
-        lateness: costs&.lateness || 0,
-        overload: costs&.overload || 0
+    def build_cost_details(cost_details)
+      cost = Models::CostDetails.new(
+        fixed: cost_details&.fixed || 0,
+        time: cost_details && (cost_details.time + cost_details.time_fake + cost_details.time_without_wait) || 0,
+        distance: cost_details && (cost_details.distance + cost_details.distance_fake) || 0,
+        value: cost_details&.value || 0,
+        lateness: cost_details&.lateness || 0,
+        overload: cost_details&.overload || 0
       )
       cost.total = cost.attributes.values.sum
       cost
@@ -473,6 +473,20 @@ module Wrappers
     def check_services_compatible_days(vrp, vehicle, service)
       !vrp.schedule_range_indices || (!service.minimum_lapse && !service.maximum_lapse) ||
         vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
+    end
+
+    def build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
+      if previous_matrix_index && current_matrix_index
+        travel_distance = vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0
+        travel_time = vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0
+        travel_value = vehicle_matrix[:value] ? vehicle_matrix[:value][previous_matrix_index][current_matrix_index] : 0
+        return {
+          travel_distance: travel_distance,
+          travel_time: travel_time,
+          travel_value: travel_value
+        }
+      end
+      {}
     end
 
     def parse_output(vrp, _services, points, _matrix_indices, _cost, _iterations, output)
@@ -492,6 +506,7 @@ module Wrappers
 
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
+      solution_cost = Models::CostDetails.new({})
       {
         cost: content.cost || 0,
         solvers: ['ortools'],
@@ -500,7 +515,7 @@ module Wrappers
         routes: content.routes.each_with_index.collect{ |route, index|
           vehicle = vrp.vehicles[index]
           vehicle_matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }
-          route_costs = build_costs(route.costs)
+          route_costs = build_cost_details(route.cost_details)
           costs_array << route_costs
 
           previous_matrix_index = nil
@@ -516,7 +531,7 @@ module Wrappers
           {
             vehicle_id: vehicle.id,
             original_vehicle_id: vehicle.original_id,
-            costs: route_costs,
+            cost_details: route_costs,
             activities: route.activities.collect.with_index{ |activity, activity_index|
               current_activity = nil
               current_index = activity.index || 0
@@ -645,7 +660,6 @@ module Wrappers
           {
             original_service_id: service.original_id,
             service_id: service_id,
-            type: service.type.to_s,
             point_id: service.activity ? service.activity.point_id : service.activities.collect{ |activity| activity[:point_id] },
             detail: service.activity ? build_detail(service, service.activity, service.activity.point, nil, nil, nil) : { activities: service.activities }
           }
@@ -653,13 +667,13 @@ module Wrappers
           shipment = vrp.shipments.find{ |sh| sh.id == shipment_id }
           [{
             original_shipment_id: shipment.original_id,
-            shipment_id: shipment_id.to_s,
+            pickup_shipment_id: shipment_id.to_s,
             type: 'pickup',
             point_id: shipment.pickup.point_id,
             detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil)
           }, {
             original_shipment_id: shipment.original_id,
-            shipment_id: shipment_id.to_s,
+            delivery_shipment_id: shipment_id.to_s,
             type: 'delivery',
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true)
@@ -675,7 +689,7 @@ module Wrappers
             }
           }
         }
-      }.merge(costs: costs_array.sum)
+      }.merge(cost_details: costs_array.sum)
     end
 
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
@@ -774,8 +788,11 @@ module Wrappers
         log 'Job killed', level: :fatal # Keep trace in worker
         raise OptimizerWrapper::JobKilledError
       else # Fatal Error
-        message = if @thread.value == 127
+        message = case @thread.value
+                  when 127
                     'Executable does not exist'
+                  when 137 # Segmentation Fault
+                    "SIGKILL received: manual intervention or 'oom-killer' [OUT-OF-MEMORY]"
                   else
                     "Job terminated with unknown thread status: #{@thread.value}"
                   end

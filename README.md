@@ -18,7 +18,7 @@ sudo apt install redis-server
 ```
 * libgeos-dev
 ```
-sudo apt install libgeos-dev libgeos-3.4.2
+sudo apt install libgeos-dev libgeos-3.7.1
 ```
 
 * libicu-dev
@@ -40,9 +40,9 @@ bundle install
 ```
 
 This project requires some solver and interface projects in order to be fully functionnal!
-* [Vroom actual master](https://github.com/VROOM-Project/vroom)
-* [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v7.5](https://github.com/google/or-tools/releases/tag/v7.5)
-* (optional / not anymore supported) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
+* [Vroom v1.8.0](https://github.com/VROOM-Project/vroom/releases/tag/v1.8.0)
+* [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8)
+* (optional / not supported anymore) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
 
 ## Configuration
 
@@ -52,12 +52,12 @@ Adjust config/environments files.
 ## Running
 
 ```
-bundle exec rake server
+bundle exec rackup [-p 1791]
 ```
 
 And in production mode:
 ```
-APP_ENV=production bundle exec rake server
+APP_ENV=production bundle exec rackup [-p 1791]
 ```
 
 Start Redis and then start the worker
@@ -89,7 +89,6 @@ TIME=true HTML=true APP_ENV=test bundle exec rake test
 ```
 This generates a report with test times. You can find the report in optimizer-api/test/html_reports folder.
 
-
 You can add your own tests on specific Vehicle Routing Problem (for instance data from real cases). Let's see how to create a new test called "new_test".
 You will find template for test in `test/real_cases_test.rb`
 
@@ -107,7 +106,7 @@ TEST_DUMP_VRP=true APP_ENV=test bundle exec rake test TEST=test/real_cases_test.
 
 Note: you can update a test and run the modified scenario with new vrp `.json`:
 ```
-bundle exec rake server
+bundle exec rackup [-p 1791]
 COUNT=5 QUEUE=* bundle exec rake resque:workers
 curl -X POST --header "Content-Type:application/json" --data @test/fixtures/my_test.json http://localhost:1791/0.1/vrp/submit.json?api_key=key
 ```
