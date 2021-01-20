@@ -202,6 +202,7 @@ end
 module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
   def self.toy
     {
+      units: [{ id: 'u1' }],
       points: [{
         id: 'p1',
         location: {

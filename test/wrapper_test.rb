@@ -2820,6 +2820,17 @@ class WrapperTest < Minitest::Test
     assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
   end
 
+  def test_impossible_service_with_negative_quantity
+    vrp = VRP.toy
+    vrp[:services].first[:quantities] = [{ unit_id: 'u1', value: -5 }]
+    vrp[:vehicles].first[:capacities] = [{ unit_id: 'u1', limit: 5 }]
+    assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+
+    vrp[:services].first[:quantities].first[:value] = -6
+    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_equal(1, result.count{ |un| un[:reason] == 'Service quantity greater than any vehicle capacity' })
+  end
+
   def test_feasible_if_tardiness_allowed
     vrp = VRP.basic
 

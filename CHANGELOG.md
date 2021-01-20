@@ -15,10 +15,15 @@
 - Bump OR-Tools v7.8 [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - VROOM were previously always called synchronously, it is now reserved to a set of effective `router_mode` (:car, :truck_medium) within a limit of points (<200). [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 
+### Removed
+
+
 ### Fixed
 
 - `unassigned` output were in some cases returning the key `shipment_id` instead of `pickup_shipment_id` and `delivery_shipment_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - Uniformize route content and always return `original_vehicle_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- Infeasibility detection of services with negative quantity [#111](https://github.com/Mapotempo/optimizer-api/pull/111)
+
 
 ## [v0.1.5] - 2021-01-05
 

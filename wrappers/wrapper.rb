@@ -750,7 +750,7 @@ module Wrappers
 
       vrp.services.each{ |service|
         service.quantities.each{ |qty|
-          if vehicle_max_capacities[qty.unit_id] && qty.value && vehicle_max_capacities[qty.unit_id] < qty.value
+          if vehicle_max_capacities[qty.unit_id] && qty.value && vehicle_max_capacities[qty.unit_id] < qty.value.abs
             add_unassigned(unfeasible, vrp, service, 'Service quantity greater than any vehicle capacity')
             break
           end
