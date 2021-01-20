@@ -95,7 +95,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
 
     assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
-    csv = CSV.read(generated_file + '_csv')
+    csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file + '_csv'))
 
     assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq!.size
@@ -111,7 +111,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
 
     assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
     assert File.exist?(generated_file + '_csv'), 'Csv file not found'
-    csv = CSV.read(generated_file + '_csv')
+    csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file + '_csv'))
 
     assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
     assert_equal all_services_vrps.size + 1, csv.collect{ |line| line[3] }.uniq!.size
@@ -125,18 +125,19 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     schedule_end = 5
 
     output_tool = OutputHelper::Scheduling.new(name, 'fake_vehicles', job, schedule_end)
-    file_name = File.join(Api::V01::APIBase.dump_vrp_dir.cache, 'scheduling_construction_test_fake_job')
+    file = 'scheduling_construction_test_fake_job'
+    filepath = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
-    refute File.exist?(file_name), 'File created before end of generation'
+    refute File.exist?(filepath), 'File created before end of generation'
 
     output_tool.add_comment('my comment')
     days = [0, 2, 4]
     output_tool.insert_visits(days, 'service_id', 3)
     output_tool.close_file
 
-    assert File.exist?(file_name), 'File not found'
+    assert File.exist?(filepath), 'File not found'
 
-    csv = CSV.read(file_name)
+    csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file))
     assert(csv.any?{ |line| line.first == 'my comment' })
     assert(csv.any?{ |line|
       line[0] == 'service_id' &&
@@ -265,20 +266,20 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
         problem: VRP.lat_lon,
         solver_name: 'vroom',
         expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time start_time end_time],
-        expected_activities_keys: %w[point_id travel_distance travel_time travel_value service_id original_service_id detail current_distance type],
+        expected_activities_keys: %w[point_id travel_distance travel_time travel_value begin_time end_time service_id original_service_id detail current_distance type departure_time],
         expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
       },
       ortools: {
-        problem: VRP.lat_lon_capacitated,
+        problem: VRP.lat_lon_capacitated_2dimensions,
         solver_name: 'ortools',
-        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time costs initial_loads],
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time cost_details initial_loads],
         expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time service_id original_service_id pickup_shipment_id delivery_shipment_id original_shipment_id detail current_distance alternative type departure_time],
-        expected_unassigned_keys: %w[point_id service_id original_service_id shipment_id original_shipment_id detail type reason]
+        expected_unassigned_keys: %w[point_id service_id original_service_id pickup_shipment_id delivery_shipment_id original_shipment_id detail type reason]
       },
       periodic_ortools: {
-        problem: VRP.lat_lon_two_vehicles,
+        problem: VRP.lat_lon_two_vehicles_2dimensions,
         solver_name: 'ortools',
-        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time costs initial_loads],
+        expected_route_keys: %w[vehicle_id original_vehicle_id activities total_travel_time total_distance total_time total_waiting_time start_time end_time cost_details initial_loads],
         expected_activities_keys: %w[point_id travel_distance travel_time travel_value waiting_time begin_time end_time departure_time service_id original_service_id detail current_distance alternative type],
         expected_unassigned_keys: %w[point_id service_id original_service_id detail type reason]
       },
@@ -302,11 +303,12 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     }]
 
     methods[:periodic_ortools][:problem][:configuration][:first_solution_strategy] = nil
+    dimensions = %i[time distance]
 
     methods.each{ |method, data|
       problem = data[:problem]
       problem[:matrices].each{ |matrix|
-        [:time, :distance].each{ |dimension|
+        dimensions.each{ |dimension|
           matrix[dimension].each{ |line| line << 2**32 }
           matrix[dimension] << [2**32] * matrix[dimension].first.size
         }
@@ -365,11 +367,12 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     expected_unassigned_keys = %w[point_id id type unassigned_reason]
 
     [:ortools, :periodic_ortools].each{ |method| methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 } }
+    dimensions = %i[time distance]
 
     methods.each{ |method, data|
       problem = data[:problem]
       problem[:matrices].each{ |matrix|
-        [:time, :distance].each{ |dimension|
+        dimensions.each{ |dimension|
           matrix[dimension].each{ |line| line << 2**32 }
           matrix[dimension] << [2**32] * matrix[dimension].first.size
         }

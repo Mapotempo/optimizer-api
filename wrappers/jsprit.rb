@@ -389,6 +389,7 @@ module Wrappers
       if solution
         {
           cost: Float(solution.at_xpath('cost').content),
+          cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
           iterations: iterations,
           routes: fleet.collect{ |id, vehicle|
             route_index = solution.xpath('routes/route').find_index{ |route| route.at_xpath('vehicleId').content == id }
@@ -454,6 +455,7 @@ module Wrappers
             else
               {
                 vehicle_id: vehicle.id,
+                original_vehicle_id: vehicle.original_id,
                 activities:
                   ([vehicle.start_point && {
                     point_id: vehicle.start_point.id,

@@ -1054,6 +1054,7 @@ module Heuristics
       unassigned = collect_unassigned
       vrp[:preprocessing_heuristic_result] = {
         cost: @cost,
+        cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
         solvers: ['heuristic'],
         iterations: 0,
         routes: solution,

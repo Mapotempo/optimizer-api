@@ -185,7 +185,7 @@ class RealCasesTest < Minitest::Test
       assert result[:routes].sum{ |r| r[:total_travel_time] } < 40500, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
-      assert result[:elapsed] < 600, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 4500, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Lille - 141 services with time window and quantity - no late for services

@@ -342,8 +342,7 @@ class Wrappers::VroomTest < Minitest::Test
           start: 100,
           end: 20000
         },
-        rest_ids: ['rest_a'],
-        cost_late_multiplier: 1
+        rest_ids: ['rest_a']
       }],
       services: [{
         id: 'service_b',
@@ -424,8 +423,7 @@ class Wrappers::VroomTest < Minitest::Test
           start: 100,
           end: 20000
         },
-        rest_ids: ['rest_a'],
-        cost_late_multiplier: 1
+        rest_ids: ['rest_a']
       }],
       services: [{
         id: 'service_b',
@@ -579,5 +577,183 @@ class Wrappers::VroomTest < Minitest::Test
     assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_time] }, 'At least one route total_time was not provided'
     assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_travel_time] }, 'At least one route total_travel_time was not provided'
     assert result[:routes].all?{ |route| route[:activities].empty? || route[:total_distance] }, 'At least one route total_travel_distance was not provided'
+  end
+
+  def test_shipments
+    vroom = OptimizerWrapper.config[:services][:vroom]
+    vrp = TestHelper.create(VRP.pud)
+    result = vroom.solve(vrp, 'test')
+    assert result
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
+  def test_shipments_quantities
+    vroom = OptimizerWrapper.config[:services][:vroom]
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 3, 3],
+          [3, 0, 3],
+          [3, 3, 0]
+        ]
+      }],
+      units: [{
+        id: 'unit_0',
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        cost_time_multiplier: 1,
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        capacities: [{
+          unit_id: 'unit_0',
+          limit: 2
+        }]
+      }],
+      shipments: [{
+        id: 'shipment_0',
+        pickup: {
+          point_id: 'point_1',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_2',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          value: 2
+        }]
+      }, {
+        id: 'shipment_1',
+        pickup: {
+          point_id: 'point_1',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_2',
+          duration: 3,
+          late_multiplier: 0,
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          value: 2
+        }]
+      }],
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
+        },
+        resolution: {
+          duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = TestHelper.create(problem)
+    result = vroom.solve(vrp, 'test')
+    assert result
+    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1, result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
+    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1, result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
+  def test_mixed_shipments_and_services
+    vroom = OptimizerWrapper.config[:services][:vroom]
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1, 1],
+          [1, 0, 1, 1],
+          [1, 1, 0, 1],
+          [1, 1, 1, 0]
+        ]
+      }],
+      units: [{
+        id: 'unit_0',
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        cost_time_multiplier: 1,
+        start_point_id: 'point_0',
+        end_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activity: {
+          point_id: 'point_1',
+        },
+        quantities: [{
+          unit_id: 'unit_0',
+          setup_value: 1,
+        }]
+      }],
+      shipments: [{
+        id: 'shipment_1',
+        pickup: {
+          point_id: 'point_2',
+          duration: 1,
+          late_multiplier: 0,
+        },
+        delivery: {
+          point_id: 'point_3',
+          duration: 1,
+          late_multiplier: 0,
+        }
+      }],
+      configuration: {
+        preprocessing: {
+          prefer_short_segment: true
+        },
+        resolution: {
+          duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+    vrp = TestHelper.create(problem)
+    result = vroom.solve(vrp, 'test')
+    assert result
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, result[:unassigned].size
+    assert_equal 5, result[:routes][0][:activities].size
   end
 end

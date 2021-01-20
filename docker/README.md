@@ -11,18 +11,12 @@ Optimizer requires the two following images that must be manually built.
 see https://github.com/mapotempo/optimizer-ortools.git
 
 #### Vroom
-```
-export VROOM_VERSION=v1.5.0
-docker build --build-arg VROOM_VERSION=${VROOM_VERSION} \
-  -f ./docker/vroom/Dockerfile -t ${REGISTRY}mapotempo/vroom:${VROOM_VERSION} .
-```
+see https://github.com/VROOM-Project/vroom-docker
 
 ## Build API
 
 ```
 export CI_COMMIT_REF_NAME=latest
-export OPTIMIZER_ORTOOLS_VERSION=v1.1.0
-export VROOM_VERSION=v1.5.0
 export BRANCH=${BRANCH:-beta}
 docker build \
   --build-arg ORTOOLS_VERSION=${ORTOOLS_VERSION} \

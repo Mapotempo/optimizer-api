@@ -77,6 +77,15 @@ class Api::V01::VrpTest < Api::V01::RequestHelper
     submit_vrp api_key: 'demo', vrp: vrp
   end
 
+  def test_refute_solver_and_solver_parameter
+    vrp = VRP.toy
+    vrp[:configuration][:resolution][:solver] = true
+    vrp[:configuration][:resolution][:solver_parameter] = 0
+    post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
+    assert_equal 400, last_response.status, last_response.body
+    assert_includes JSON.parse(last_response.body)['message'], 'vrp[configuration][resolution][solver], vrp[configuration][resolution][solver_parameter] are mutually exclusive'
+  end
+
   def test_time_parameters
     vrp = VRP.toy
     vrp[:vehicles][0][:duration] = '12:00'

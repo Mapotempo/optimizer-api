@@ -63,12 +63,12 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # TODO: Either find a way to call grape validators automatically or add necessary grape coerces here
     [:duration, :setup_duration].each { |symbol|
       vrp[:services]&.each{ |service|
-        service[:activity][symbol] = ScheduleType.new.type_cast(service[:activity][symbol]) if service[:activity] && service[:activity][symbol]
-        service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.new.type_cast(activity[symbol]) if activity && activity[symbol] }
+        service[:activity][symbol] = ScheduleType.type_cast(service[:activity][symbol]) if service[:activity] && service[:activity][symbol]
+        service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.type_cast(activity[symbol]) if activity && activity[symbol] }
       }
       vrp[:shipments]&.each{ |shipment|
-        shipment[:pickup][symbol]   = ScheduleType.new.type_cast(shipment[:pickup][symbol])   if shipment[:pickup] && shipment[:pickup][symbol]
-        shipment[:delivery][symbol] = ScheduleType.new.type_cast(shipment[:delivery][symbol]) if shipment[:delivery] && shipment[:delivery][symbol]
+        shipment[:pickup][symbol]   = ScheduleType.type_cast(shipment[:pickup][symbol])   if shipment[:pickup] && shipment[:pickup][symbol]
+        shipment[:delivery][symbol] = ScheduleType.type_cast(shipment[:delivery][symbol]) if shipment[:delivery] && shipment[:delivery][symbol]
       }
     }
 
@@ -783,6 +783,16 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
+  def self.lat_lon_capacitated_2dimensions
+    vrp = lat_lon_capacitated
+    vrp[:vehicles].each{ |vehicle|
+      vehicle[:cost_time_multiplier] = 1
+      vehicle[:cost_distance_multiplier] = 1
+    }
+
+    vrp
+  end
+
   def self.lat_lon_scheduling
     vrp = lat_lon_capacitated
     vrp[:vehicles].each{ |v|
@@ -1005,6 +1015,16 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }
       }
     }
+  end
+
+  def self.lat_lon_two_vehicles_2dimensions
+    vrp = lat_lon_two_vehicles
+    vrp[:vehicles].each{ |vehicle|
+      vehicle[:cost_time_multiplier] = 1
+      vehicle[:cost_distance_multiplier] = 1
+    }
+
+    vrp
   end
 
   def self.lat_lon_scheduling_two_vehicles

@@ -18,10 +18,21 @@
 require './test/test_helper'
 
 class RubocopTest < Minitest::Test
-  def test_no_offenses_in_tests
-    output = `rubocop -f c -S --parallel ./test/*`
-    /[0-9]* files inspected,\ (.*)\ offenses\ detected/ =~ output
-    n_offeses = Regexp.last_match(1)
-    assert_equal('no', n_offeses, "Following new Rubocop offenses added to the tests:\n\n#{output}")
+  def test_no_error_in_files
+    parallel = ENV['RUBOCOP_PARALLEL'] || ENV['TRAVIS'] ? '--parallel' : nil
+    # parallel option could cause not to use rubocop from bundle
+    options = "#{parallel} -f c --config .rubocop.yml --fail-level E --display-only-fail-level-offenses"
+    cmd = "bundle exec rubocop ./* #{options}"
+    o = system(cmd, [:out, :err] => '/dev/null')
+    assert o, "New Rubocop offenses added to the project, run: #{cmd}"
+  end
+
+  def test_no_warning_in_tests
+    parallel = ENV['RUBOCOP_PARALLEL'] || ENV['TRAVIS'] ? '--parallel' : nil
+    # parallel option could cause not to use rubocop from bundle
+    options = "#{parallel} -f c --config .rubocop.yml --fail-level W --display-only-fail-level-offenses"
+    cmd = "bundle exec rubocop ./test/* #{options}"
+    o = system(cmd, [:out, :err] => '/dev/null')
+    assert o, "New Rubocop offenses added to the tests, run: #{cmd}"
   end
 end

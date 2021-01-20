@@ -29,131 +29,98 @@ module Wrappers
 
     def solver_constraints
       super + [
+        # Costs
+        :assert_homogeneous_costs,
+        :assert_no_cost_fixed,
         :assert_vehicles_objective,
-        :assert_vehicles_only_one,
-        :assert_vehicles_start_or_end,
-        :assert_vehicles_no_end_time_or_late_multiplier,
-        :assert_services_no_capacities,
-        :assert_services_no_skills,
-        :assert_services_no_timewindows,
-        :assert_services_no_priority,
-        :assert_no_shipments,
-        :assert_no_direct_shipments,
-        :assert_matrices_only_one,
+
+        # Problem
         :assert_correctness_matrices_vehicles_and_points_definition,
-        :assert_one_vehicle_only_or_no_sticky_vehicle,
-        :assert_no_relations,
-        :assert_vehicles_no_duration_limit,
-        :assert_no_value_matrix,
-        :assert_points_same_definition,
-        :assert_no_distance_limitation,
-        :assert_no_subtours,
-        :assert_no_planning_heuristic,
         :assert_no_evaluation,
-        :assert_no_first_solution_strategy,
-        :assert_solver,
         :assert_no_partitions,
-        :assert_no_overall_duration,
+        :assert_no_relations,
+        :assert_no_subtours,
+        :assert_points_same_definition,
+        :assert_single_dimension,
+
+        # Vehicle/route constraints
+        :assert_homogeneous_router_definitions,
+        :assert_matrices_only_one,
+        :assert_no_distance_limitation,
+        :assert_vehicles_no_duration_limit,
+        :assert_vehicles_no_force_start,
+        :assert_vehicles_no_late_multiplier_or_single_vehicle,
+        :assert_vehicles_no_overload_multiplier,
+        :assert_vehicles_start_or_end,
+
+        # Mission constraints
+        :assert_no_direct_shipments,
+        :assert_no_exclusion_cost,
+        :assert_no_setup_duration,
+        :assert_missions_no_late_multiplier,
+        :assert_only_one_visit,
+
+        # Solver
+        :assert_no_first_solution_strategy,
+        :assert_no_free_approach_or_return,
+        :assert_small_minimum_duration,
+        :assert_solver,
       ]
     end
 
-    def solve_synchronous?(_vrp)
-      true
+    def solve_synchronous?(vrp)
+      compatible_routers = %i[car truck_medium]
+      vrp.points.size < 200 && vrp.vehicles.all?{ |vehicle| compatible_routers.include?(vehicle.router_mode) } # WARNING: this should change accordinglty to router evolution
     end
 
     def solve(vrp, job = nil, _thread_proc = nil)
-      if vrp.points.empty? || vrp.services.empty?
-        return {
-          cost: 0,
-          solvers: ['vroom'],
-          elapsed: 0, # ms
-          routes: [],
-          unassigned: []
-        }
+      if vrp.points.empty? || vrp.services.empty? && vrp.shipments.empty?
+        return empty_result('vroom', vrp)
       end
 
-      points = Hash[vrp.points.collect{ |point| [point.id, point] }]
+      @points = Hash[vrp.points.map{ |point| [point.id, point] }]
+      rest_equivalence(vrp)
 
-      vehicle = vrp.vehicles.first
-      vehicle_have_start = !vehicle.start_point_id.nil?
-      vehicle_have_end = !vehicle.end_point_id.nil?
+      matrix_indices = vrp.services.map{ |service|
+        service.activity.point.matrix_index
+      }
+
+      matrix_indices += vrp.shipments.flat_map{ |shipment|
+        [shipment.pickup.point.matrix_index, shipment.delivery.point.matrix_index]
+      }
+      matrix_indices += vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point&.matrix_index, vehicle.end_point&.matrix_index] }.compact
+      matrix_indices.uniq!
 
       tic = Time.now
-      result = run_vroom(vrp.vehicles, vrp.services, points, vrp.matrices, [:time, :distance], vrp.preprocessing_prefer_short_segment, job)
-      elapsed_time = (Time.now - tic) * 1000 # ms
+      result = run_vroom(vrp, [:time, :distance], job)
+      elapsed_time = (Time.now - tic) * 1000
 
       return if !result
 
-      tour = result['routes'][0]['steps'].collect{ |step| step['job'] }.compact
-      log tour.inspect
-
-      cost = (result['summary']['cost']) + vehicle.cost_fixed
-      previous = vehicle_have_start ? vehicle.start_point.matrix_index : nil
-      activities = ([vehicle_have_start ? {
-        point_id: vehicle.start_point.id,
-        type: 'start',
-        detail: vehicle.start_point.location ? {
-          lat: vehicle.start_point.location.lat,
-          lon: vehicle.start_point.location.lon
-        } : nil
-      }.delete_if{ |_k, v| !v } : nil] +
-      tour.collect{ |i|
-        point_index = vrp.services[i].activity.point[:matrix_index]
-        point = vrp.points.select{ |point| point[:id] == vrp.services[i].activity.point[:id] }[0]
-        service = vrp.services[i]
-        current_activity = {
-          original_service_id: service.original_id,
-          service_id: service.id,
-          point_id: point.id,
-          type: 'service',
-          travel_time: ((previous && point_index && vrp.matrices[0][:time]) ? vrp.matrices[0][:time][previous][point_index] : 0),
-          travel_distance: ((previous && point_index && vrp.matrices[0][:distance]) ? vrp.matrices[0][:distance][previous][point_index] : 0),
-          travel_value: ((previous && point_index && vrp.matrices[0][:value]) ? vrp.matrices[0][:value][previous][point_index] : 0),
-          detail: build_detail(service, service.activity, point, nil, nil, vehicle)
-#          travel_distance 0,
-#          travel_start_time 0,
-#          waiting_time 0,
-#          arrival_time 0,
-#          duration 0,
-#          pickup_shipments_id [:id0:],
-#          delivery_shipments_id [:id0:]
+      cost = (result['summary']['cost'])
+      routes = result['routes'].map.with_index{ |route, index|
+        @previous = nil
+        vehicle = vrp.vehicles[index]
+        cost += vehicle.cost_fixed if route['steps'].size.positive?
+        activities = route['steps'].map{ |step|
+          read_step(vrp, vehicle, step)
+        }.compact
+        {
+          vehicle_id: vehicle.id,
+          original_vehicle_id: vehicle.original_id,
+          activities: activities,
+          start_time: activities.first[:begin_time],
+          end_time: activities.last[:begin_time] + (activities.last[:duration] || 0),
         }
-        previous = point_index
-        current_activity
-      }.compact +
-      [vehicle_have_end ? {
-        point_id: vehicle.end_point.id,
-        type: 'end',
-        detail: vehicle.end_point.location ? {
-          lat: vehicle.end_point.location.lat,
-          lon: vehicle.end_point.location.lon
-        } : nil
-      }.delete_if{ |_k, v| !v } : nil]).compact
+      }
 
-      rests = vehicle.rests
-      if vehicle.timewindow&.start
-        rests.sort_by!{ |rest| rest.timewindows[0].end ? -rest.timewindows[0].end : -2**31 }.each{ |rest|
-          time = vehicle.timewindow.start + vrp.services[tour[0]].activity.duration
-          i = pos_rest = 0
-          if vehicle_have_start
-            time += vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.time[vehicle.start_point.matrix_index][vrp.services[tour[0]].activity.point.matrix_index]
-            pos_rest += 1
-          end
-          if !rest.timewindows[0].end || time < rest.timewindows[0].end
-            pos_rest += 1
-            while i < tour.size - 1 && (!rest.timewindows[0].end || (time += vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.time[vrp.services[tour[i]].activity.point.matrix_index][vrp.services[tour[i + 1]].activity.point.matrix_index] + vrp.services[tour[i + 1]].activity.duration) < rest.timewindows[0].end)
-              i += 1
-            end
-            pos_rest += i
-          end
-          activities.insert(pos_rest, rest_id: rest.id)
-        }
-      else
-        rests.each{ |rest| activities.insert(vehicle_have_end ? -2 : -1, rest_id: rest.id) }
-      end
+      unassigneds = result['unassigned'].map{ |step| read_unassigned(vrp, step) }
+
+      log 'Solution cost: ' + cost.to_s + ' & unassigned: ' + unassigneds.size.to_s, level: :info
 
       {
         cost: cost,
+        cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
         solvers: ['vroom'],
         elapsed: elapsed_time, # ms
 #        total_travel_distance: 0,
@@ -161,42 +128,240 @@ module Wrappers
 #        total_waiting_time: 0,
 #        start_time: 0,
 #        end_time: 0,
-        routes: [{
-          start_time: 0,
-          end_time: activities.collect{ |a| a[:travel_time].to_f + (a[:detail] ? a[:detail][:duration].to_f : 0) }.reduce(&:+),
-          vehicle_id: vehicle.id,
-          original_vehicle_id: vehicle.original_id,
-          activities: activities
-        }],
-        unassigned: []
+        routes: routes,
+        unassigned: unassigneds
       }
     end
 
     private
 
-    def run_vroom(vehicles, services, points, matrices, dimensions, prefer_short, job)
+    def rest_equivalence(vrp)
+      rest_index = 0
+      @rest_hash = {}
+      vrp.vehicles.each{ |vehicle|
+        vehicle.rests.each{ |rest|
+          @rest_hash["#{vehicle.id}_#{rest.id}"] = {
+            index: rest_index,
+            vehicle: vehicle.id,
+            rest: rest
+          }
+          rest_index += 1
+        }
+      }
+      @rest_hash
+    end
+
+    def read_step(vrp, vehicle, step)
+      case step['type']
+      when 'job'
+        read_job(vrp, vehicle, step)
+      when 'pickup', 'delivery'
+        read_shipment(vrp, vehicle, step)
+      when 'start', 'end'
+        read_depot(vehicle, step)
+      when 'break'
+        read_break(step)
+      else
+        raise 'Unimplemented stop type in wrappers/vroom.rb'
+      end
+    end
+
+    def read_unassigned(vrp, step)
+      id = step['id']
+      if id < vrp.services.size
+        read_job(vrp, nil, step)
+      else
+        read_shipment(vrp, nil, step)
+      end
+    end
+
+    def read_break(step)
+      original_rest = @rest_hash.find{ |_key, value| value[:index] == step['id'] }.last[:rest]
+      begin_time = step['arrival'] + step['waiting_time']
+      {
+        rest_id: original_rest.id,
+        type: 'rest',
+        detail: build_rest(original_rest),
+        begin_time: begin_time,
+        end_time: begin_time + step['service'],
+        departure_time: begin_time + step['service']
+      }.delete_if{ |_k, v| v.nil? }
+    end
+
+    def read_depot(vehicle, step)
+      point = step['type'] == 'start' ? vehicle&.start_point : vehicle&.end_point
+      return nil if point.nil?
+
+      @previous = point
+      {
+        point_id: point.id,
+        type: 'depot',
+        begin_time: step['arrival'],
+        detail: build_detail(nil, nil, point, nil, vehicle)
+      }.delete_if{ |_k, v| v.nil? }
+    end
+
+    def read_job(vrp, vehicle, step)
+      service = vrp.services[step['id']]
+      point = service.activity.point
+      route_data = compute_route_data(vrp, point, step)
+      begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
+      job_data = {
+        original_service_id: service.original_id,
+        service_id: service.id,
+        type: 'service',
+        point_id: point.id,
+        begin_time: begin_time,
+        end_time: begin_time && (begin_time + step['service']),
+        departure_time: begin_time && (begin_time + step['service']),
+        detail: build_detail(service, service.activity, point, nil, vehicle)
+      }.merge(route_data).delete_if{ |_k, v| v.nil? }
+      @previous = point
+      job_data
+    end
+
+    def read_shipment(vrp, vehicle, step)
+      shipment = vrp.shipments[((step['id'] - vrp.services.size) / 2).floor]
+      type = ((step['id'] - vrp.services.size) % 2).zero? ? 'pickup' : 'delivery'
+      activity = type == 'pickup' ? shipment.pickup : shipment.delivery
+      point = activity.point
+      route_data = compute_route_data(vrp, point, step)
+      begin_time = step['arrival'] + step['waiting_time']
+      job_data = {
+        original_shipment_id: shipment.original_id,
+        pickup_shipment_id: type == 'pickup' && shipment.id,
+        delivery_shipment_id: type == 'delivery' && shipment.id,
+        type: type,
+        point_id: point.id,
+        begin_time: begin_time,
+        end_time: begin_time + step['service'],
+        departure_time: begin_time + step['service'],
+        detail: build_detail(shipment, activity, point, nil, vehicle)
+      }.merge(route_data).delete_if{ |_k, v| v.nil? || v == false }
+      @previous = point
+      job_data
+    end
+
+    def compute_route_data(vrp, point, step)
+      return {} if step['type'].nil?
+
+      {
+        travel_time: (@previous && point.matrix_index && vrp.matrices[0][:time] ? vrp.matrices[0][:time][@previous.matrix_index][point.matrix_index] : 0),
+        travel_distance: (@previous && point.matrix_index && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][@previous.matrix_index][point.matrix_index] : 0),
+        travel_value: (@previous && point.matrix_index && vrp.matrices[0][:value] ? vrp.matrices[0][:value][@previous.matrix_index][point.matrix_index] : 0)
+      }
+    end
+
+    def build_rest(rest)
+      build_detail(nil, rest, nil, nil, nil)
+    end
+
+    def build_detail(_job, activity, point, _day_index, vehicle)
+      {
+        lat: point&.location&.lat,
+        lon: point&.location&.lon,
+        duration: activity&.duration,
+        router_mode: vehicle&.router_mode,
+        speed_multiplier: vehicle&.speed_multiplier
+      }.delete_if{ |_k, v| v.nil? }
+    end
+
+    def collect_jobs(vrp, vrp_skills, vrp_units)
+      vrp.services.map.with_index{ |service, index|
+        # Activity is mandatory
+        pickup_flag = service.quantities.none?{ |quantity| quantity.value.negative? }
+        {
+          id: index,
+          location_index: @points[service.activity.point_id].matrix_index,
+          service: service.activity.duration.to_i,
+          skills: service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
+            service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
+          time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] },
+          delivery: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }&.value&.to_i || 0 },
+          pickup: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }&.value&.to_i || 0 }
+        }.delete_if{ |k, v|
+          v.nil? || v.is_a?(Array) && v.empty? ||
+            k == :delivery && pickup_flag ||
+            k == :anykey && !pickup_flag
+        }
+      }
+    end
+
+    def collect_shipments(vrp, vrp_skills, vrp_units)
+      vrp.shipments.map.with_index{ |shipment, index|
+        {
+          amount: vrp_units.map{ |unit| shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }&.value&.to_i || 0 },
+          skills: shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
+            shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
+          pickup: {
+            id: vrp.services.size + index * 2,
+            service: shipment.pickup.duration,
+            location_index: @points[shipment.pickup.point_id].matrix_index,
+            time_windows: shipment.pickup.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
+          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
+          delivery: {
+            id: vrp.services.size + index * 2 + 1,
+            service: shipment.delivery.duration,
+            location_index: @points[shipment.delivery.point_id].matrix_index,
+            time_windows: shipment.delivery.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
+          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
+        }.delete_if{ |_k, v|
+          v.nil? || v.is_a?(Array) && v.empty?
+        }
+      }
+    end
+
+    def collect_vehicles(vrp, vrp_skills, vrp_units)
+      vrp.vehicles.map{ |vehicle|
+        tw_end = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier.zero?) && vehicle.timewindow&.end || 2**30
+        {
+          id: 0,
+          start_index: vehicle.start_point_id ? @points[vehicle.start_point_id].matrix_index : nil,
+          end_index: vehicle.end_point_id ? @points[vehicle.end_point_id].matrix_index : nil,
+          capacity: vrp_units.map{ |unit| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit&.to_i || 0 },
+          # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
+          time_window: [vehicle.timewindow&.start || 0, tw_end],
+          skills: ([vrp_skills.find_index{ |sk| sk == vehicle.id }] + (vehicle.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || [])).compact,
+          breaks: vehicle.rests.map{ |rest|
+            rest_index = @rest_hash["#{vehicle.id}_#{rest.id}"][:index]
+            {
+              id: rest_index,
+              service: rest.duration,
+              time_windows: rest.timewindows.map{ |tw| [tw&.start || 0, tw&.end || 2**30] }
+            }
+          }
+        }.delete_if{ |k, v|
+          v.nil? || v.is_a?(Array) && v.empty? ||
+            k == :time_window && v.first.zero? && v.last == 2**30
+        }
+      }
+    end
+
+    def run_vroom(vrp, dimensions, _job)
       input = Tempfile.new('optimize-vroom-input', @tmp_dir)
       problem = { vehicles: [], jobs: [], matrix: [] }
-      vehicle = vehicles.first
-      problem[:vehicles] << {
-        id: 0,
-        start_index: vehicle.start_point_id ? points[vehicle.start_point_id].matrix_index : nil,
-        end_index: vehicle.end_point_id ? points[vehicle.end_point_id].matrix_index : nil
-      }.delete_if{ |_k, v| v.nil? }
-      problem[:jobs] = services.collect.with_index{ |service, index|
-        [{
-          id: index,
-          location_index: points[service.activity.point_id].matrix_index
-        }]
-      }.flatten
 
-      matrix_indices = (problem[:jobs].collect{ |jb| jb[:location_index] } + problem[:vehicles].collect{ |vec| [vec[:start_index], vec[:end_index]].uniq.compact }.flatten).uniq.sort
-      matrix = matrices.find{ |current_matrix| current_matrix.id == vehicle.matrix_id }
+      # WARNING: only first alternative set of skills is used
+      vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq + vrp.services.flat_map{ |service| service.sticky_vehicles.map(&:id) }.uniq
+      vrp_units = vrp.units.select{ |unit| vrp.vehicles.map{ |vehicle| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit }&.max&.positive? }
+      problem[:vehicles] = collect_vehicles(vrp, vrp_skills, vrp_units)
+      problem[:jobs] = collect_jobs(vrp, vrp_skills, vrp_units)
+      problem[:shipments] = collect_shipments(vrp, vrp_skills, vrp_units)
+      matrix_indices = (problem[:jobs].map{ |job| job[:location_index] } +
+        problem[:shipments].flat_map{ |shipment| [shipment[:pickup][:location_index], shipment[:delivery][:location_index]] } +
+        problem[:vehicles].flat_map{ |vec| [vec[:start_index], vec[:end_index]].uniq.compact }).uniq.sort
+      matrix = vrp.matrices.find{ |current_matrix| current_matrix.id == vrp.vehicles.first.matrix_id }
       size_matrix = matrix_indices.size
 
       # Index relabeling
-      problem[:jobs].each{ |jb|
-        jb[:location_index] = matrix_indices.find_index{ |ind| ind == jb[:location_index] }
+      problem[:jobs].each{ |job|
+        job[:location_index] = matrix_indices.find_index{ |ind| ind == job[:location_index] }
+      }
+      problem[:shipments].each{ |shipment|
+        shipment[:pickup][:location_index] = matrix_indices.find_index{ |index| index == shipment[:pickup][:location_index] }
+        shipment[:delivery][:location_index] = matrix_indices.find_index{ |index| index == shipment[:delivery][:location_index] }
       }
       problem[:vehicles].each{ |vec|
         vec[:start_index] = matrix_indices.find_index{ |ind| ind == vec[:start_index] } if vec[:start_index]
@@ -206,30 +371,24 @@ module Wrappers
         end
       }
 
-      agglomerate_matrix = vehicle.matrix_blend(matrix, matrix_indices, dimensions, cost_time_multiplier: vehicle.cost_time_multiplier, cost_distance_multiplier: vehicle.cost_distance_multiplier)
-      if prefer_short
-        coeff = 20.0 / 100.0
-        (0..size_matrix - 1).each{ |i|
-          (0..size_matrix - 1).each{ |j|
-            agglomerate_matrix[i][j] = (agglomerate_matrix[i][j] + coeff * Math.sqrt(agglomerate_matrix[i][j])).round
-          }
+      agglomerate_matrix = vrp.vehicles.first.matrix_blend(matrix, matrix_indices, dimensions,
+                                                           cost_time_multiplier: vrp.vehicles.first.cost_time_multiplier.positive? ? 1 : 0,
+                                                           cost_distance_multiplier: vrp.vehicles.first.cost_distance_multiplier.positive? ? 1 : 0,
+                                                           cost_value_multiplier: vrp.vehicles.first.cost_value_multiplier.positive? ? 1 : 0)
+      (0..size_matrix - 1).each{ |i|
+        (0..size_matrix - 1).each{ |j|
+          agglomerate_matrix[i][j] = [agglomerate_matrix[i][j].round, 2**28].min
         }
-      else
-        (0..size_matrix - 1).each{ |i|
-          (0..size_matrix - 1).each{ |j|
-            agglomerate_matrix[i][j] = agglomerate_matrix[i][j].round
-          }
-        }
-      end
-
-      if vehicle.start_point_id.nil? && vehicle.end_point_id.nil?
+      }
+      if vrp.vehicles.first.start_point_id.nil? && vrp.vehicles.first.end_point_id.nil?
         # If there is no start or end depot for the vehicle
         # set the distance of the auxiliary node to all other nodes as zero
         agglomerate_matrix << Array.new(size_matrix, 0)
         agglomerate_matrix.each{ |row| row << 0 }
       end
-
       problem[:matrix] = agglomerate_matrix
+      problem.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
+
       input.write(problem.to_json)
       input.close
 

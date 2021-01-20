@@ -5586,20 +5586,20 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_operator shipment_route[shipment_index][:departure_time] + 1800, :<=, other_shipment_route[other_shipment_index][:begin_time]
   end
 
-  def test_costs
+  def test_cost_details
     vrp = VRP.basic
     vrp[:units] = [{ id: 'kg' }]
     vrp[:vehicles].first.merge!(cost_fixed: 1, cost_time_multiplier: 2, capacities: [{ unit_id: 'kg', limit: 1, overload_multiplier: 0.3 }])
     vrp[:services].first[:quantities] = [{ unit_id: 'kg', value: 2 }]
     vrp[:services].first[:activity].merge!(timewindows: [{ start: 0, end: 1 }], late_multiplier: 0.007)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal 21.321, result[:costs].total.round(3)
-    assert_equal 1, result[:costs].fixed
-    assert_equal 20, result[:costs].time
-    assert_equal 0, result[:costs].distance
-    assert_equal 0, result[:costs].value
-    assert_equal 0.021, result[:costs].lateness.round(3)
-    assert_equal 0.3, result[:costs].overload.round(3)
+    assert_equal 21.321, result[:cost_details].total.round(3)
+    assert_equal 1, result[:cost_details].fixed
+    assert_equal 20, result[:cost_details].time
+    assert_equal 0, result[:cost_details].distance
+    assert_equal 0, result[:cost_details].value
+    assert_equal 0.021, result[:cost_details].lateness.round(3)
+    assert_equal 0.3, result[:cost_details].overload.round(3)
   end
 
   def test_direct_shipment
@@ -5684,11 +5684,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     size = 3
 
     # A time matrix that leads to incorrect order in the old force_start implementation
+    array_first_column = [1]
     vrp[:matrices] = [
       {
         id: 'matrix_0',
         time: [(0..size - 2).to_a + [15, 17]] +
-          (1..size).collect{ |i| [1] + (0..i - 1).to_a.reverse + Array.new(size - i){ |j| 2 * (j + 1) } }
+          (1..size).collect{ |i| array_first_column + (0..i - 1).to_a.reverse + Array.new(size - i){ |j| 2 * (j + 1) } }
       }
     ]
 

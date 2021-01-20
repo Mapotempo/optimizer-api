@@ -83,7 +83,7 @@ module Api
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
       expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place' }
       expose :initial_loads, using: VrpResultDetailQuantities, documentation: { is_array: true, desc: 'Give the actual initial loads of the route' }
-      expose :costs, using: VRPResultDetailedCosts, documentation: { desc: 'The impact of the current route within the solution cost' }
+      expose :cost_details, using: VRPResultDetailedCosts, documentation: { desc: 'The impact of the current route within the solution cost' }
     end
 
     class VrpResultSolutionUnassigned < Grape::Entity
@@ -100,7 +100,7 @@ module Api
       expose :heuristic_synthesis, documentation: { type: Hash, desc: 'When first_solution_strategies are provided, sum up of tryied heuristics and their performance.' }
       expose :solvers, documentation: { is_array: true, type: String, desc: 'Solvers used to perform the optimization' }
       expose :cost, documentation: { type: Float, desc: 'The actual cost of the solution considering all costs' }
-      expose :costs, using: VRPResultDetailedCosts, documentation: { desc: 'The detail of the different costs which impact the solution' }
+      expose :cost_details, using: VRPResultDetailedCosts, documentation: { desc: 'The detail of the different costs which impact the solution' }
       expose :iterations, documentation: { type: Integer, desc: 'Total number of iteration performed to obtain the current result' }
       expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }
       expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route' }
