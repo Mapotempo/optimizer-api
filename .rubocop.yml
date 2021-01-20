@@ -3,19 +3,22 @@ require:
   - rubocop-performance
 
 AllCops:
-  TargetRubyVersion: 2.5.5
-
-Layout/LineLength:
-  Enabled: false
+  TargetRubyVersion: 2.5
 
 Layout/SpaceBeforeBlockBraces:
   Enabled: false
 
+Layout/LineLength:
+  Max: 120
+
 Metrics/MethodLength:
-  Enabled: false
+  Max: 30
 
 Metrics/AbcSize:
   Enabled: false
+
+Naming/MethodParameterName:
+  MinNameLength: 1
 
 Style/AsciiComments:
   Enabled: false
@@ -26,10 +29,10 @@ Metrics/PerceivedComplexity:
 Metrics/CyclomaticComplexity:
   Enabled: false
 
-Layout/ParameterAlignment:
+Style/Documentation:
   Enabled: false
 
-Style/Documentation:
+Style/DoubleNegation:
   Enabled: false
 
 Style/TrailingCommaInArrayLiteral:
@@ -44,12 +47,11 @@ Style/TrailingCommaInArguments:
 Style/MultilineBlockChain:
   Enabled: false
 
-Style/TernaryParentheses:
-  EnforcedStyle: require_parentheses_when_complex
+Style/MultilineTernaryOperator:
+  Enabled: false
 
 Layout/SpaceInsideHashLiteralBraces:
-  Enabled: true
-  EnforcedStyle: compact
+  Enabled: false
 
 Style/NegatedIf:
   Enabled: false
@@ -58,6 +60,9 @@ Layout/FirstHashElementIndentation:
   Enabled: false
 
 Style/NumericLiterals:
+  Enabled: false
+
+Style/NumericPredicate:
   Enabled: false
 
 Style/SignalException:
@@ -78,25 +83,13 @@ Style/ClassAndModuleChildren:
 Metrics/ClassLength:
   Enabled: false
 
-Layout/IndentationWidth:
-  Enabled: false
-
 Layout/EndAlignment:
-  Enabled: false
-
-Layout/ElseAlignment:
-  Enabled: false
-
-Performance/ChainArrayAllocation:
-  Enabled: true
+  EnforcedStyleAlignWith: keyword
 
 Style/BlockDelimiters:
   Enabled: false
 
 Style/RedundantSelf:
-  Enabled: false
-
-Style/GuardClause:
   Enabled: false
 
 Style/SymbolArray:
@@ -105,16 +98,10 @@ Style/SymbolArray:
 Style/WordArray:
   Enabled: false
 
+Style/RaiseArgs:
+  EnforcedStyle: compact
+
 Style/ParallelAssignment:
-  Enabled: false
-
-Style/PreferredHashMethods:
-  EnforcedStyle: verbose
-
-Style/RedundantException:
-  Enabled: false
-
-Style/FrozenStringLiteralComment:
   Enabled: false
 
 Lint/RaiseException:
@@ -126,8 +113,8 @@ Lint/StructNewOverride:
 Style/HashEachMethods:
   Enabled: true
 
-Style/HashTransformKeys:
+Style/HashTransformValues:
   Enabled: true
 
-Style/HashTransformValues:
+Style/HashTransformKeys:
   Enabled: true
