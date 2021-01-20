@@ -72,20 +72,39 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
   end
 
   def test_skill_when_partitions
-    vrp = VRP.lat_lon
-    vrp[:vehicles] << vrp[:vehicles][0].dup
-    vrp[:configuration][:restitution] = { csv: true }
-    vrp[:configuration][:preprocessing] = {
-      partitions: [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: :vehicle
-      }]
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
+    # ensure one unassigned service :
+    vrp[:services].first[:activity][:timewindows] = [{ end: 100 }]
+    vrp[:vehicles].each{ |v| v[:timewindow] = { start: 200 } }
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 }}
+
+    response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)['solutions'].first
+    to_check = result['routes'].flat_map{ |route| route['activities'].select{ |stop| stop['type'] == 'service' } } + result['unassigned']
+    to_check.each{ |element|
+      # each element should have 3 skills added by clustering :
+      assert_equal 3, element['detail']['skills'].size
+      # - exactly 1 skill corresponding to vehicle_id entity
+      assert(element['detail']['skills'].include?('vehicle_0') ^ element['detail']['skills'].include?('vehicle_1'))
+      # - exactly 1 skill corresponding to work_day entity
+      assert_equal element['detail']['skills'].size - 1, (element['detail']['skills'] - %w[mon tue wed thu fri sat sun]).size
+      # - exactly 1 skill corresponding to cluster number
+      assert_equal 1, (element['detail']['skills'].count{ |skill| skill.include?('cluster') })
     }
 
-    csv_data = submit_csv api_key: 'demo', vrp: vrp
-    assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
-    assert(csv_data.select{ |line| line[csv_data.first.find_index('type')] == 'visit' }.all?{ |line| line[csv_data.first.find_index('skills')] && line[csv_data.first.find_index('skills')] != '' })
+    vrp[:configuration][:preprocessing][:partitions].delete_if{ |partition| partition[:entity] == :work_day }
+    response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)['solutions'].first
+    to_check = result['routes'].flat_map{ |route| route['activities'].select{ |stop| stop['type'] == 'service' } } + result['unassigned']
+    to_check.each{ |element|
+      # each element should have 3 skills added by clustering :
+      assert_equal 2, element['detail']['skills'].size
+      # - exactly 1 skill corresponding to vehicle_id entity
+      assert(element['detail']['skills'].include?('vehicle_0') ^ element['detail']['skills'].include?('vehicle_1'))
+      # - exactly 1 skill corresponding to cluster number
+      assert_equal 1, (element['detail']['skills'].count{ |skill| skill.include?('cluster') })
+    }
   end
 
   def test_clustering_generated_files

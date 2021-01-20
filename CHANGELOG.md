@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Corresponding vehicle_id is returned within each service's skills if problem is partitioned with vehicle entity [#110](https://github.com/Mapotempo/optimizer-api/pull/110)
+
 ### Changed
 
 - Bump grape to v1.5.0 - It speeds up the processing of POST requests for nested problems (up to 20 times faster, https://github.com/ruby-grape/grape/pull/2096) [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
