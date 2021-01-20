@@ -536,5 +536,25 @@ class HeuristicTest < Minitest::Test
         assert_equal 0, vrp.services.first.last_possible_days.first, "There are #{visits_number} working days, hence a service with #{visits_number} visits can only start at day 0"
       }
     end
+
+    def test_compute_latest_authorized_day_2
+      vrp = VRP.scheduling
+      vrp[:vehicles].first.delete(:timewindow)
+      vrp[:vehicles].first[:sequence_timewindows] = [
+        { start: 0, end: 20, day_index: 0 },
+        { start: 0, end: 20, day_index: 1 },
+        { start: 0, end: 20, day_index: 2 },
+        { start: 0, end: 20, day_index: 3 },
+        { start: 0, end: 20, day_index: 4 }
+      ]
+      vrp[:services].first[:visits_number] = 261
+      vrp[:services].first[:minimum_lapse] = 1
+      vrp[:configuration][:schedule][:range_indices][:end] = 364
+
+      vrp = TestHelper.create(vrp)
+      Interpreters::PeriodicVisits.new(vrp) # call to function compute_possible_days
+      assert_equal 261, vrp.services.first.last_possible_days.size
+      assert_equal 0, vrp.services.first.last_possible_days.first, 'There are 261 working days, hence a service with 261 visits can only start at day 0'
+    end
   end
 end
