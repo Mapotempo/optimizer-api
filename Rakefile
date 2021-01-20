@@ -1,14 +1,7 @@
 require 'rubygems'
 require 'bundler/setup'
-require 'rakeup'
 require 'resque/tasks'
 require './environment.rb'
-
-RakeUp::ServerTask.new do |t|
-  t.port = 1791
-  t.pid_file = 'tmp/server.pid'
-  t.server = :puma
-end
 
 # Clean the jobs which are interrupted by restarting queues which left in working status
 # TODO: eventually instead of removing these jobs, we can just re-queue them

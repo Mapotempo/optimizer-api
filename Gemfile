@@ -6,7 +6,7 @@ gem 'require_all'
 gem 'puma'
 gem 'rack'
 gem 'rack-cors'
-gem 'rakeup'
+gem 'rake'
 gem 'thin'
 
 gem 'grape', '>=1.5.0' # Important fixes are introduced in v1.5.0 (see PR #2096 & #2098)
@@ -16,8 +16,10 @@ gem 'grape-swagger'
 gem 'grape-swagger-entity'
 gem 'hashie'
 
+gem 'actionpack'
 gem 'active_hash', github: 'Mapotempo/active_hash', branch: 'mapo'
 gem 'activemodel'
+
 gem 'charlock_holmes'
 gem 'http_accept_language'
 gem 'i18n'
@@ -68,6 +70,7 @@ group :test do
   gem 'minitest-stub_any_instance'
   gem 'rack-test'
   gem 'simplecov', require: false
+  gem 'fakeredis'
 end
 
 group :production do

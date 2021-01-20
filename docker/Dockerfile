@@ -38,4 +38,4 @@ RUN apt-get remove -y git build-essential && \
 WORKDIR /srv/app
 
 EXPOSE 1791
-CMD ["bundle", "exec", "rake", "server"]
+CMD ["bundle", "exec", "rackup"]

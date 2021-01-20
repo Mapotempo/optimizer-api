@@ -18,16 +18,30 @@ services:
     networks:
       - redis_cache
 
+  redis-count:
+    image: redis:${REDIS_VERSION:-3.2-alpine}
+    volumes:
+      - ../redis-count:/data
+    hostname: redis-count
+    command: redis-server --appendonly yes
+    deploy:
+      restart_policy:
+        condition: any
+    networks:
+      - redis_count
+
   api:
     image: registry.test.com/mapotempo/optimizer-api:latest
     hostname: travis-api
     environment:
-      REDIS_RESQUE_HOST: redis
-      REDIS_HOST: redis-cache
       APP_ENV: test
+      REDIS_COUNT_HOST: redis-count
+      REDIS_HOST: redis-cache
+      REDIS_RESQUE_HOST: redis
     networks:
       - base
       - redis_cache
+      - redis_count
       - resque
 
   resque-default:
@@ -38,6 +52,7 @@ services:
       APP_ENV: test
       COUNT: 5
       QUEUES: DEFAULT
+      REDIS_COUNT_HOST: redis-count
       REDIS_HOST: redis-cache
       REDIS_RESQUE_HOST: redis
       ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
@@ -45,9 +60,11 @@ services:
     command: bundle exec rake resque:workers
     networks:
       - redis_cache
+      - redis_count
       - resque
 
 networks:
-  resque:
-  redis_cache:
   base:
+  redis_cache:
+  redis_count:
+  resque:

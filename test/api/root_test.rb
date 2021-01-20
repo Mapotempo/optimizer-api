@@ -27,7 +27,7 @@ class Api::RootTest < Minitest::Test
   end
 
   def test_ping
-    get '/ping?api_key=demo'
+    get '/ping'
     assert last_response.ok?, last_response.body
     assert_equal '"pong"', last_response.body
   end

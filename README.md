@@ -52,12 +52,12 @@ Adjust config/environments files.
 ## Running
 
 ```
-bundle exec rake server
+bundle exec rackup [-p 1791]
 ```
 
 And in production mode:
 ```
-APP_ENV=production bundle exec rake server
+APP_ENV=production bundle exec rackup [-p 1791]
 ```
 
 Start Redis and then start the worker
@@ -106,7 +106,7 @@ TEST_DUMP_VRP=true APP_ENV=test bundle exec rake test TEST=test/real_cases_test.
 
 Note: you can update a test and run the modified scenario with new vrp `.json`:
 ```
-bundle exec rake server
+bundle exec rackup [-p 1791]
 COUNT=5 QUEUE=* bundle exec rake resque:workers
 curl -X POST --header "Content-Type:application/json" --data @test/fixtures/my_test.json http://localhost:1791/0.1/vrp/submit.json?api_key=key
 ```

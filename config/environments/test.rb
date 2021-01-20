@@ -16,7 +16,9 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'active_support'
+require 'active_support/core_ext'
 require 'tmpdir'
+require 'fakeredis'
 
 require './wrappers/demo'
 require './wrappers/vroom'
@@ -43,6 +45,8 @@ module OptimizerWrapper
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
   PARAMS_LIMIT = { points: 150, vehicles: 10 }.freeze
+  QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }] # Only taken into account if REDIS_COUNT
+  REDIS_COUNT = Redis.new # Fake redis
 
   DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'test', 'dump')
   FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)
@@ -74,35 +78,40 @@ module OptimizerWrapper
         services: {
           vrp: [:demo, :vroom, :jsprit, :ortools]
         },
-        params_limit: PARAMS_LIMIT
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       },
       solvers: {
         queue: 'DEFAULT',
         services: {
           vrp: [:vroom, :ortools]
         },
-        params_limit: PARAMS_LIMIT
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       },
       vroom: {
         queue: 'DEFAULT',
         services: {
           vrp: [:vroom]
         },
-        params_limit: PARAMS_LIMIT
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       },
       ortools: {
         queue: 'DEFAULT',
         services: {
           vrp: [:ortools]
         },
-        params_limit: PARAMS_LIMIT
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       },
       jsprit: {
         queue: 'DEFAULT',
         services: {
           vrp: [:jsprit]
         },
-        params_limit: PARAMS_LIMIT
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       },
     },
     solve: {
@@ -121,6 +130,7 @@ module OptimizerWrapper
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
       output_schedule: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
-    }
+    },
+    redis_count: REDIS_COUNT,
   }
 end
