@@ -24,27 +24,26 @@ module PeriodicService
   def can_affect_all_visits?(service)
     return true if service.visits_number == 1
 
-    current_day = self.schedule_range_indices[:start]
-    decimal_day = current_day
-    current_visit = 0
-    while current_visit < service.visits_number && current_day <= self.schedule_range_indices[:end]
-      potential_vehicle = self.vehicles.find{ |v|
-        !v.unavailable_work_day_indices.include?(current_day) &&
-          (v.timewindow.nil? && v.sequence_timewindows.empty? ||
-          v.timewindow && (v.timewindow.day_index.nil? || current_day % 7 == v.timewindow.day_index) ||
-          v.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index })
-      }
+    self.vehicles.any?{ |vehicle|
+      current_day = self.schedule_range_indices[:start]
+      decimal_day = current_day
+      current_visit = 0
 
-      if potential_vehicle
-        decimal_day += (service.minimum_lapse || 1)
-        current_day = decimal_day.round
-        current_visit += 1
-      else
-        decimal_day += 1
-        current_day += 1
+      while current_visit < service.visits_number && current_day <= self.schedule_range_indices[:end]
+        if !vehicle.unavailable_work_day_indices.include?(current_day) &&
+           (vehicle.timewindow.nil? && vehicle.sequence_timewindows.empty? ||
+           (vehicle.timewindow && (vehicle.timewindow.day_index.nil? || current_day % 7 == vehicle.timewindow.day_index)) ||
+           (vehicle.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index }))
+          decimal_day += (service.minimum_lapse || 1)
+          current_day = decimal_day.round
+          current_visit += 1
+        else
+          decimal_day += 1
+          current_day += 1
+        end
       end
-    end
 
-    current_visit == service.visits_number
+      current_visit == service.visits_number
+    }
   end
 end
