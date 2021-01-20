@@ -18,7 +18,7 @@ sudo apt install redis-server
 ```
 * libgeos-dev
 ```
-sudo apt install libgeos-dev libgeos-3.4.2
+sudo apt install libgeos-dev libgeos-3.7.1
 ```
 
 * libicu-dev
@@ -40,9 +40,9 @@ bundle install
 ```
 
 This project requires some solver and interface projects in order to be fully functionnal!
-* [Vroom actual master](https://github.com/VROOM-Project/vroom)
-* [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v7.5](https://github.com/google/or-tools/releases/tag/v7.5)
-* (optional / not anymore supported) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
+* [Vroom v1.8.0](https://github.com/VROOM-Project/vroom/releases/tag/v1.8.0)
+* [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8)
+* (optional / not supported anymore) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
 
 ## Configuration
 

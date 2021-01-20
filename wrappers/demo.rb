@@ -72,7 +72,7 @@ module Wrappers
     def solve(vrp, _job = nil, _thread_proc = nil, &_block)
       {
         cost: 0,
-        costs: Models::Costs.new({}),
+        cost_details: Models::CostDetails.new({}),
         solvers: [:demo],
         total_travel_distance: 0,
         total_travel_time: 0,
@@ -82,6 +82,7 @@ module Wrappers
         routes: vrp.vehicles.collect{ |vehicle|
           {
             vehicle_id: vehicle.id,
+            original_vehicle_id: vehicle.original_id,
             activities: (
               [build_route_depot(vehicle.start_point)] +
               vrp.shipments.collect{ |shipment|

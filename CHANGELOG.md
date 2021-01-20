@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Bump grape to v1.5.0 - It speeds up the processing of POST requests for nested problems (up to 20 times faster, https://github.com/ruby-grape/grape/pull/2096) [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- Bump grape-swagger to v1.3.0 - The documentation is now correctly generated. It allows SDK generation. [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- The fields `costs` introduced in v0.1.5 is renamed `cost_details` to avoid confusion with field `cost` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- Bump VROOM to v1.8.0 and start using the features integrated since v1.3.0 [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- Bump OR-Tools v7.8 [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- VROOM were previously always called synchronously, it is now reserved to a set of effective `router_mode` (:car, :truck_medium) within a limit of points (<200). [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+
+### Fixed
+
+- `unassigned` output were in some cases returning the key `shipment_id` instead of `pickup_shipment_id` and `delivery_shipment_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- Uniformize route content and always return `original_vehicle_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+
 ## [v0.1.5] - 2021-01-05
 
 ### Added

@@ -175,41 +175,6 @@ module Models
       }
     end
 
-    def test_compatible_solver_parameters
-      vrp = VRP.basic
-      vrp[:configuration][:resolution][:solver] = true
-      vrp[:configuration][:resolution][:solver_parameter] = -1
-
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp[:configuration][:resolution][:solver] = false
-      vrp[:configuration][:resolution][:solver_parameter] = 0
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp[:configuration][:resolution][:solver] = true
-      vrp[:configuration][:resolution][:solver_parameter] = 0
-      TestHelper.create(vrp) # checks nothing is raised if parameters are consistent
-
-      vrp[:configuration][:resolution][:solver] = false
-      vrp[:configuration][:resolution][:solver_parameter] = -1
-      TestHelper.create(vrp) # checks nothing is raised if parameters are consistent
-
-      # good deduction of resolution_solver value
-      vrp[:configuration][:resolution][:solver] = nil
-      vrp[:configuration][:resolution][:solver_parameter] = 0
-      generated_vrp = TestHelper.create(vrp)
-      assert generated_vrp.resolution_solver
-
-      vrp[:configuration][:resolution][:solver] = nil
-      vrp[:configuration][:resolution][:solver_parameter] = -1
-      generated_vrp = TestHelper.create(vrp)
-      refute generated_vrp.resolution_solver
-    end
-
     def test_reject_if_shipments_and_periodic_heuristic
       vrp = VRP.scheduling
       vrp[:shipments] = [{

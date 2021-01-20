@@ -29,8 +29,8 @@ module Wrappers
     end
 
     def inapplicable_solve?(vrp)
-      solver_constraints.select{ |constraint|
-        !self.send(constraint, vrp)
+      solver_constraints.reject{ |constraint|
+        self.send(constraint, vrp)
       }
     end
 
@@ -160,6 +160,10 @@ module Wrappers
       }
     end
 
+    def assert_vehicles_no_late_multiplier_or_single_vehicle(vrp)
+      assert_vehicles_no_late_multiplier(vrp) || assert_vehicles_only_one(vrp)
+    end
+
     def assert_vehicles_no_overload_multiplier(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |capacity|
@@ -184,7 +188,13 @@ module Wrappers
 
     def assert_services_no_late_multiplier(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
-        service.activity ? service.activity&.late_multiplier&.positive? : service.activities.none?{ |activity| activity&.late_multiplier&.positive? }
+        if service.activity
+          service.activity&.timewindows&.size&.positive? && service.activity&.late_multiplier&.positive?
+        else
+          service.activities.none?{ |activity|
+            activity&.timewindows&.size&.positive? && activity&.late_multiplier&.positive?
+          }
+        end
       }
     end
 
@@ -194,6 +204,10 @@ module Wrappers
       }
     end
 
+    def assert_missions_no_late_multiplier(vrp)
+      assert_shipments_no_late_multiplier(vrp) && assert_services_no_late_multiplier(vrp)
+    end
+
     def assert_services_quantities_only_one(vrp)
       vrp.services.empty? || vrp.services.none?{ |service|
         service.quantities.size > 1
@@ -201,9 +215,9 @@ module Wrappers
     end
 
     def assert_matrices_only_one(vrp)
-      vrp.vehicles.collect{ |vehicle|
+      vrp.vehicles.group_by{ |vehicle|
         vehicle.matrix_id || [vehicle.router_mode.to_sym, vehicle.router_dimension, vehicle.speed_multiplier]
-      }.uniq.size == 1
+      }.size <= 1
     end
 
     def assert_square_matrix(vrp)
@@ -290,19 +304,19 @@ module Wrappers
     end
 
     def assert_no_distance_limitation(vrp)
-      vrp[:vehicles].none?{ |vehicle| vehicle[:distance] }
+      vrp.vehicles.none?(&:distance)
     end
 
     def assert_vehicle_tw_if_schedule(vrp)
       vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' ||
-        vrp[:vehicles].all?{ |vehicle|
-          vehicle[:timewindow] && (vehicle[:timewindow][:start] || vehicle[:timewindow][:end]) ||
-            vehicle[:sequence_timewindows]&.any?{ |tw| (tw[:start] || tw[:end]) }
+        vrp.vehicles.all?{ |vehicle|
+          vehicle.timewindow && (vehicle.timewindow.start || vehicle.timewindow.end) ||
+            vehicle.sequence_timewindows&.any?{ |tw| (tw.start || tw.end) }
         }
     end
 
     def assert_if_sequence_tw_then_schedule(vrp)
-      vrp.vehicles.find{ |vehicle| vehicle[:sequence_timewindows] }.nil? || vrp.schedule_range_indices
+      vrp.vehicles.find{ |vehicle| !vehicle.sequence_timewindows.empty? }.nil? || vrp.schedule_range_indices
     end
 
     def assert_if_periodic_heuristic_then_schedule(vrp)
@@ -335,41 +349,50 @@ module Wrappers
       (!vrp.shipments || vrp.shipments.empty?) || !vrp.resolution_evaluate_only
     end
 
+    def assert_only_one_visit(vrp)
+      vrp.services.all?{ |service| service.visits_number == 1 } && vrp.shipments.all?{ |shipment| shipment.visits_number == 1 }
+    end
+
     def assert_no_scheduling_if_evaluation(vrp)
       !vrp.schedule_range_indices || !vrp.resolution_evaluate_only
     end
 
     def assert_route_if_evaluation(vrp)
-      !vrp.resolution_evaluate_only || vrp[:routes] && !vrp[:routes].empty?
+      !vrp.resolution_evaluate_only || vrp.routes && !vrp.routes.empty?
     end
 
     def assert_wrong_vehicle_shift_preference_with_heuristic(vrp)
-      (vrp.vehicles.collect{ |vehicle| vehicle[:shift_preference] }.uniq - [:minimize_span] - ['minimize_span']).empty? || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+      (vrp.vehicles.map(&:shift_preference).uniq - [:minimize_span] - ['minimize_span']).empty? || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
 
     def assert_no_vehicle_overall_duration_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+      vrp.vehicles.none?(&:overall_duration) || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
 
     def assert_no_overall_duration(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:overall_duration] } &&
-        vrp.relations.none?{ |relation| %w[vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].include?(relation.type) }
+      relation_array = %w[vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months]
+      vrp.vehicles.none?(&:overall_duration) &&
+        vrp.relations.none?{ |relation| relation_array.include?(relation.type) }
     end
 
     def assert_no_vehicle_distance_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:distance] } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+      vrp.vehicles.none?(&:distance) || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
 
     def assert_possible_to_get_distances_if_maximum_ride_distance(vrp)
-      !vrp.vehicles.any?{ |vehicle| vehicle[:maximum_ride_distance] } || (vrp.points.all?{ |point| point[:location] && point[:location][:lat] } || vrp.matrices.all?{ |matrix| matrix[:distance] && !matrix[:distance].empty? })
+      vrp.vehicles.none?(&:maximum_ride_distance) || (vrp.points.all?{ |point| point.location&.lat } || vrp.matrices.all?{ |matrix| matrix.distance && !matrix.distance.empty? })
     end
 
     def assert_no_skills_if_heuristic(vrp)
-      vrp.services.none?{ |service| !service[:skills].empty? } || vrp.vehicles.none?{ |vehicle| !vehicle[:skills].flatten.empty? } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || !vrp.preprocessing_partitions.empty?
+      vrp.services.none?{ |service| !service.skills.empty? } || vrp.vehicles.none?{ |vehicle| !vehicle.skills.flatten.empty? } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || !vrp.preprocessing_partitions.empty?
     end
 
     def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle[:free_approach] || vehicle[:free_return] } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+      vrp.vehicles.none?{ |vehicle| vehicle.free_approach || vehicle.free_return } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    end
+
+    def assert_no_free_approach_or_return(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle.free_approach || vehicle.free_return }
     end
 
     def assert_no_vehicle_limit_if_heuristic(vrp)
@@ -401,7 +424,7 @@ module Wrappers
     end
 
     def assert_lat_lon_for_partition(vrp)
-      vrp.preprocessing_partition_method.nil? || vrp.points.all?{ |pt| pt[:location] && pt[:location][:lat] && pt[:location][:lon] }
+      vrp.preprocessing_partition_method.nil? || vrp.points.all?{ |pt| pt.location && pt.location.lat && pt.location.lon }
     end
 
     def assert_vehicle_entity_only_before_work_day(vrp)
@@ -446,8 +469,72 @@ module Wrappers
       }
     end
 
+    def assert_homogeneous_router_definitions(vrp)
+      vrp.vehicles.group_by{ |vehicle|
+        [vehicle.router_mode, vehicle.dimensions, vehicle.router_options]
+      }.size <= 1
+    end
+
+    def assert_homogeneous_costs(vrp)
+      vrp.vehicles.group_by{ |vehicle|
+        [vehicle.cost_time_multiplier, vehicle.cost_distance_multiplier, vehicle.cost_value_multiplier]
+      }.size <= 1
+    end
+
+    def assert_no_exclusion_cost(vrp)
+      vrp.services.none?(&:exclusion_cost) && vrp.shipments.none?(&:exclusion_cost)
+    end
+
+    def assert_only_time_dimension(vrp)
+      vrp.vehicles.none? { |vehicle|
+        vehicle.cost_distance_multiplier.to_f.positive? ||
+          vehicle.cost_value_multiplier.to_f.positive? ||
+          vehicle.distance
+      }
+    end
+
+    def assert_only_distance_dimension(vrp)
+      vrp.vehicles.none?{ |vehicle|
+        vehicle.cost_time_multiplier.to_f.positive? ||
+          vehicle.cost_value_multiplier.to_f.positive? ||
+          vehicle.duration ||
+          vehicle.timewindow&.end
+      } && vrp.services.none?{ |service| service.activity.timewindows&.any? }
+    end
+
+    def assert_only_value_dimension(vrp)
+      vrp.vehicles.none?{ |vehicle|
+        vehicle.cost_time_multiplier.to_f.positive? ||
+          vehicle.cost_distance_multiplier.to_f.positive? ||
+          vehicle.duration ||
+          vehicle.distance ||
+          vehicle.timewindow&.end
+      }
+    end
+
+    def assert_single_dimension(vrp)
+      vrp.vehicles.empty? || (assert_only_time_dimension(vrp) ^ assert_only_distance_dimension(vrp) ^ assert_only_value_dimension(vrp))
+    end
+
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
       vrp.routes.empty? || !vrp.schedule_range_indices || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+    end
+
+    # TODO: Need a better way to represent solver preference
+    def assert_small_minimum_duration(vrp)
+      vrp.resolution_minimum_duration.nil? || vrp.vehicles.empty? || vrp.resolution_minimum_duration / vrp.vehicles.size < 5000
+    end
+
+    def assert_no_cost_fixed(vrp)
+      vrp.vehicles.all?{ |vehicle| vehicle.cost_fixed.nil? || vehicle.cost_fixed.zero? } || vrp.vehicles.map(&:cost_fixed).uniq.size == 1
+    end
+
+    def assert_no_setup_duration(vrp)
+      vrp.services.all?{ |service| service.activity.setup_duration.nil? || service.activity.setup_duration.zero? } &&
+        vrp.shipments.all?{ |shipment|
+          (shipment.pickup.setup_duration.nil? || shipment.pickup.setup_duration.zero?) &&
+            (shipment.delivery.setup_duration.nil? || shipment.delivery.setup_duration.zero?)
+        }
     end
 
     def solve_synchronous?(_vrp)
@@ -806,7 +893,7 @@ module Wrappers
       {
         solvers: [solver],
         cost: nil,
-        costs: Models::Costs.new({}),
+        cost_details: Models::CostDetails.new({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle| { vehicle_id: vehicle.id, activities: [] } },
         unassigned: (vrp.services.collect{ |service|
