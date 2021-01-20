@@ -30,10 +30,10 @@ module PeriodicService
       current_visit = 0
 
       while current_visit < service.visits_number && current_day <= self.schedule_range_indices[:end]
-          if !vehicle.unavailable_work_day_indices.include?(current_day) &&
-             (vehicle.timewindow.nil? && vehicle.sequence_timewindows.empty? ||
-             (vehicle.timewindow && (vehicle.timewindow.day_index.nil? || current_day % 7 == vehicle.timewindow.day_index)) ||
-             (vehicle.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index }))
+        if !vehicle.unavailable_work_day_indices.include?(current_day) &&
+           (vehicle.timewindow.nil? && vehicle.sequence_timewindows.empty? ||
+           (vehicle.timewindow && (vehicle.timewindow.day_index.nil? || current_day % 7 == vehicle.timewindow.day_index)) ||
+           (vehicle.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index }))
           decimal_day += (service.minimum_lapse || 1)
           current_day = decimal_day.round
           current_visit += 1
