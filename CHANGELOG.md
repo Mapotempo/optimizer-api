@@ -4,7 +4,7 @@
 
 ### Added
 
-- Corresponding vehicle_id is returned for each service's skills if problem is partitioned with vehicle entity [#110](https://github.com/Mapotempo/optimizer-api/pull/110)
+- Corresponding vehicle_id is returned within each service's skills if problem is partitioned with vehicle entity [#110](https://github.com/Mapotempo/optimizer-api/pull/110)
 
 ## [v0.1.5] - 2021-01-05
 
