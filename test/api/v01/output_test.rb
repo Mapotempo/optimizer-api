@@ -77,6 +77,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
     # ensure one unassigned service :
     vrp[:services].first[:activity][:timewindows] = [{ end: 100 }]
     vrp[:vehicles].each{ |v| v[:timewindow] = { start: 200 } }
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 }}
 
     response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)['solutions'].first

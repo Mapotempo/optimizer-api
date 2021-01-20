@@ -251,7 +251,9 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
-      assert_equal 10, generated_services_vrps.size
+      # 2 vehicles available from monday to friday
+      # but schedule from monday to thursday : 4 days
+      assert_equal 8, generated_services_vrps.size
 
       vrp[:configuration][:preprocessing][:partitions] = [{
         method: 'balanced_kmeans',
@@ -262,7 +264,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
-      assert_equal 10, generated_services_vrps.size
+      assert_equal 8, generated_services_vrps.size
     end
 
     def test_unavailable_days_taken_into_account_work_day
@@ -366,7 +368,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
       only_monday_cluster = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
-      assert(only_monday_cluster[:vrp][:vehicles].any?{ |vehicle| vehicle[:sequence_timewindows].any?{ |tw| tw[:day_index].zero? } })
+      assert(only_monday_cluster[:vrp].vehicles.any?{ |vehicle| vehicle.timewindow.day_index.zero? })
     end
 
     def test_good_vehicle_assignment_two_phases
@@ -379,7 +381,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
       # Each generated_services_vrps should have a different vehicle :
-      assert_nil generated_services_vrps.collect{ |service| [service[:vrp].vehicles.first.id, service[:vrp].vehicles.first.sequence_timewindows] }.uniq!, 'Each generated_services_vrps should have a different vehicle'
+      assert_nil generated_services_vrps.collect{ |service| [service[:vrp].vehicles.first.id, service[:vrp].vehicles.first.timewindow] }.uniq!, 'Each generated_services_vrps should have a different vehicle'
     end
 
     def test_good_vehicle_assignment_skills
@@ -397,7 +399,7 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
       cluster_with_skill = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
-      assert(cluster_with_skill[:vrp][:vehicles].any?{ |v| v[:skills].include?(['skill']) })
+      assert(cluster_with_skill[:vrp].vehicles.any?{ |v| v.skills.any?{ |skill_set| skill_set.include?('skill') } })
     end
 
     def test_no_doubles_3000
@@ -408,8 +410,9 @@ class SplitClusteringTest < Minitest::Test
       generated_services_vrps.compact!
       assert_equal 15, generated_services_vrps.size
       generated_services_vrps.each{ |service|
-        vehicle_day = service[:vrp][:vehicles].first[:sequence_timewindows].first[:day_index]
-        assert(service[:vrp][:services].all?{ |s| s[:activity][:timewindows].empty? || s[:activity][:timewindows].collect{ |tw| tw[:day_index] }.include?(vehicle_day) })
+        vehicle_day = service[:vrp].vehicles.first.timewindow.day_index
+        services_timewindows_day_index = service[:vrp].services.collect{ |s| s.activity.timewindows.collect(&:day_index) }
+        assert(services_timewindows_day_index.all?{ |days_set| days_set.empty? || days_set.include?(vehicle_day) })
       }
     end
 
@@ -492,8 +495,9 @@ class SplitClusteringTest < Minitest::Test
     def test_avoid_capacities_overlap
       vrp = TestHelper.load_vrp(self, fixture_file: 'results_regularity')
       vrp.vehicles.first.capacities.delete_if{ |cap| cap[:unit_id] == 'l' }
-      vrp.vehicles = Interpreters::SplitClustering.list_vehicles({ start: 0, end: 13 }, vrp.vehicles, :work_day)
       vrp.schedule_range_indices = { start: 0, end: 13 }
+      vrp.vehicles = Interpreters::SplitClustering.list_vehicles(vrp.schedule_range_indices, vrp.vehicles, :work_day)
+      
       service_vrp = { vrp: vrp, service: :demo }
       services_vrps = Interpreters::SplitClustering.split_balanced_kmeans(service_vrp, 5, cut_symbol: :duration, entity: :work_day, restarts: @split_restarts)
 
