@@ -38,6 +38,7 @@ Rake::TestTask.new do |t|
   $stderr.sync = true
   ENV['APP_ENV'] ||= 'test'
   t.pattern = 'test/**/*_test.rb'
+  t.warning = false
 end
 
 task clean_tmp_dir: :environment do
