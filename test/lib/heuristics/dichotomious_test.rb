@@ -202,5 +202,9 @@ class DichotomiousTest < Minitest::Test
       assert_equal 2, split.size
       assert_equal vrp.services.size, split.collect(&:size).sum, 'Wrong number of services will be returned'
     end
+
+    def test_rest_cannot_appear_as_a_mission_in_the_initial_route
+      assert_empty Interpreters::Dichotomious.send(:build_initial_routes, [{ routes: [activities: [{ rest_id: 'id' }]] }])
+    end
   end
 end
