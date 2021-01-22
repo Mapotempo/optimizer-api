@@ -17,8 +17,8 @@
 #
 require 'active_support'
 require 'active_support/core_ext'
+require 'redis'
 require 'tmpdir'
-require 'fakeredis'
 
 require './wrappers/demo'
 require './wrappers/vroom'
@@ -46,7 +46,7 @@ module OptimizerWrapper
 
   PARAMS_LIMIT = { points: 150, vehicles: 10 }.freeze
   QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }] # Only taken into account if REDIS_COUNT
-  REDIS_COUNT = Redis.new # Fake redis
+  REDIS_COUNT = ENV['REDIS_COUNT_HOST'] && Redis.new(host: ENV['REDIS_COUNT_HOST']) || Redis.new
 
   DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'test', 'dump')
   FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)

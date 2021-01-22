@@ -17,6 +17,7 @@
 #
 require 'active_support'
 require 'active_support/core_ext'
+require 'redis'
 require 'tmpdir'
 
 require './wrappers/demo'

@@ -110,12 +110,12 @@ module Api
               error!("Model Validation Error: #{vrp.errors}", 400)
             else
               ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.profile(api_key), vrp, checksum)
+              count_incr :optimize, transactions: vrp.transactions
               if ret.is_a?(String)
                 # present result, with: VrpResult
                 status 201
                 present({ job: { id: ret, status: :queued }}, with: Grape::Presenters::Presenter)
               elsif ret.is_a?(Hash)
-                count_incr :submit_vrp, transactions: vrp.transactions
                 status 200
                 if vrp.restitution_csv
                   present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
