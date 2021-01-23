@@ -137,8 +137,8 @@ GEM
     nokogiri (1.10.10)
       mini_portile2 (~> 2.4.0)
     oj (3.11.0)
-    parallel (1.19.2)
-    parser (2.7.1.4)
+    parallel (1.20.1)
+    parser (2.7.2.0)
       ast (~> 2.4.1)
     path_expander (1.1.0)
     polylines (0.3.0)
@@ -164,7 +164,6 @@ GEM
       redis (>= 3.0.4)
     redis-store (1.6.0)
       redis (>= 2.2, < 5)
-    regexp_parser (1.8.0)
     require_all (3.0.0)
     resque (1.27.4)
       mono_logger (~> 1.0)
@@ -185,29 +184,25 @@ GEM
     rgeo (2.1.1)
     rgeo-geojson (2.1.1)
       rgeo (>= 1.0.0)
-    rubocop (0.91.0)
+    rubocop (0.81.0)
+      jaro_winkler (~> 1.5.1)
       parallel (~> 1.10)
-      parser (>= 2.7.1.1)
+      parser (>= 2.7.0.1)
       rainbow (>= 2.2.2, < 4.0)
-      regexp_parser (>= 1.7)
       rexml
-      rubocop-ast (>= 0.4.0, < 1.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 1.4.0, < 2.0)
-    rubocop-ast (0.4.2)
-      parser (>= 2.7.1.4)
-    rubocop-minitest (0.10.1)
-      rubocop (>= 0.87)
-    rubocop-performance (1.8.1)
-      rubocop (>= 0.87.0)
-      rubocop-ast (>= 0.4.0)
+    rubocop-minitest (0.9.0)
+      rubocop (>= 0.74)
+    rubocop-performance (1.6.1)
+      rubocop (>= 0.71.0)
     rubrowser (2.9.0)
       litecable
       parser
       puma
       websocket
     ruby-next-core (0.10.2)
-    ruby-progressbar (1.10.1)
+    ruby-progressbar (1.11.0)
     ruby2_keywords (0.0.2)
     sim_annealing (0.0.2)
     simplecov (0.19.0)
@@ -295,7 +290,7 @@ DEPENDENCIES
   rest-client
   rgeo
   rgeo-geojson
-  rubocop
+  rubocop (< 0.82)
   rubocop-minitest
   rubocop-performance
   rubrowser

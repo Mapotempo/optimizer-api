@@ -45,7 +45,7 @@ group :development, :test do
   gem 'byebug'
 
   # For linting and offline code analysis
-  gem 'rubocop'
+  gem 'rubocop', '< 0.82'
   gem 'rubocop-minitest', require: false
   gem 'rubocop-performance', require: false
   gem 'solargraph'
