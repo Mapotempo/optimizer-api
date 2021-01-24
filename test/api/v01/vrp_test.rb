@@ -15,18 +15,18 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './api/root'
+require './test/test_helper'
 require './test/api/v01/request_helper'
 
-class Api::V01::VrpTest < Api::V01::RequestHelper
+class Api::V01::VrpTest < Minitest::Test
   include Rack::Test::Methods
   include FakeRedis
+  include TestHelper
 
   def app
     Api::Root
   end
 
-  # Unit tests
   def test_submit_vrp_in_queue
     TestHelper.solve_asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy

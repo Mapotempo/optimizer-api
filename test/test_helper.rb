@@ -159,35 +159,6 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     end
   end
 
-  def self.solve_asynchronously
-    pid_worker = Process.spawn({ 'COUNT' => '1', 'QUEUE' => 'DEFAULT' }, 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
-    pgid_worker = Process.getpgid(pid_worker)
-    sleep 0.1 while `ps -o pgid | grep #{pgid_worker}`.split(/\n/).size < 2 # wait for the worker to launch
-    old_config_solve_synchronously = OptimizerWrapper.config[:solve][:synchronously]
-    OptimizerWrapper.config[:solve][:synchronously] = false
-    old_resque_inline = Resque.inline
-    Resque.inline = false
-    yield
-  ensure
-    if pgid_worker
-      # Kill all grandchildren
-      worker_pids = `ps -o pgid,pid | grep #{pgid_worker}`.split(/\n/)
-      worker_pids.collect!{ |i| i.split(' ')[-1].to_i }
-      worker_pids.sort!
-      worker_pids.reverse_each{ |pid|
-        next if pid == pgid_worker
-
-        Process.kill('SIGKILL', pid)
-        Process.detach(pid)
-      }
-      Process.kill('SIGTERM', -pgid_worker) # Kill the process group (this doesn't kill grandchildren)
-      puts "Waiting the worker process group #{pgid_worker} to die\n"
-      Process.waitpid(-pgid_worker, 0)
-      Resque.inline = old_resque_inline if old_resque_inline
-      OptimizerWrapper.config[:solve][:synchronously] = old_config_solve_synchronously if old_config_solve_synchronously
-    end
-  end
-
   def self.expand_vehicles(vrp)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     periodic.generate_vehicles(vrp)

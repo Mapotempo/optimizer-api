@@ -15,10 +15,12 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+require './test/test_helper'
 require './test/api/v01/request_helper'
 
-class Api::V01::WithSolverTest < Api::V01::RequestHelper
+class Api::V01::WithSolverTest < Minitest::Test
   include Rack::Test::Methods
+  include TestHelper
 
   def app
     Api::Root

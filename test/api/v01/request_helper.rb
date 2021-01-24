@@ -17,12 +17,8 @@
 #
 require './test/test_helper'
 
-class Api::V01::RequestHelper < Minitest::Test
+module TestHelper
   include Rack::Test::Methods
-
-  def app
-    Api::Root
-  end
 
   def wait_status(job_id, status, options)
     puts "#{job_id} #{Time.now} waiting #{status} status"
@@ -108,5 +104,34 @@ class Api::V01::RequestHelper < Minitest::Test
     delete "0.1/vrp/jobs/#{job_id}.json", params
     assert_equal 404, last_response.status, last_response.body
     puts "#{job_id} #{Time.now} delete_completed done"
+  end
+
+  def self.solve_asynchronously
+    pid_worker = Process.spawn({ 'APP_ENV' => 'test', 'COUNT' => '1', 'QUEUE' => 'DEFAULT' }, 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
+    pgid_worker = Process.getpgid(pid_worker)
+    sleep 0.1 while `ps -o pgid | grep #{pgid_worker}`.split(/\n/).size < 2 # wait for the worker to launch
+    old_config_solve_synchronously = OptimizerWrapper.config[:solve][:synchronously]
+    OptimizerWrapper.config[:solve][:synchronously] = false
+    old_resque_inline = Resque.inline
+    Resque.inline = false
+    yield
+  ensure
+    Resque.inline = old_resque_inline
+    OptimizerWrapper.config[:solve][:synchronously] = old_config_solve_synchronously
+    if pgid_worker
+      # Kill all grandchildren
+      worker_pids = `ps -o pgid,pid | grep #{pgid_worker}`.split(/\n/)
+      worker_pids.collect!{ |i| i.split(' ')[-1].to_i }
+      worker_pids.sort!
+      worker_pids.reverse_each{ |pid|
+        next if pid == pgid_worker
+
+        Process.kill('SIGKILL', pid)
+        Process.detach(pid)
+      }
+      Process.kill('SIGTERM', -pgid_worker) # Kill the process group (this doesn't kill grandchildren)
+      puts "Waiting the worker process group #{pgid_worker} to die\n"
+      Process.waitpid(-pgid_worker, 0)
+    end
   end
 end

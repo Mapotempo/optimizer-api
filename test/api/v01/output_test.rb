@@ -15,11 +15,14 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+require './test/test_helper'
 require './test/api/v01/request_helper'
+
 require 'minitest/around/unit'
 
-class Api::V01::OutputTest < Api::V01::RequestHelper
+class Api::V01::OutputTest < Minitest::Test
   include Rack::Test::Methods
+  include TestHelper
 
   def app
     Api::Root
@@ -338,7 +341,7 @@ class Api::V01::OutputTest < Api::V01::RequestHelper
       response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: problem }.to_json, 'CONTENT_TYPE' => 'application/json'
       result = JSON.parse(response.body)
 
-      assert_equal data[:solver_name], result['solutions'][0]['solvers'].first, "We should have called #{data[:solver_name]} solver"
+      assert_equal data[:solver_name], result['solutions'].first['solvers'].first, "We should have called #{data[:solver_name]} solver"
       assert result['solutions'][0]['elapsed']
 
       activity_keys = result['solutions'][0]['routes'].inject([]){ |a_k, route| a_k | route['activities'].flat_map(&:keys) }
