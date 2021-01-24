@@ -28,7 +28,7 @@ class Api::V01::WithSolverTest < Minitest::Test
 
   def test_deleted_job
     # using ORtools to make sure that optimization takes enough time to be cut before ending
-    TestHelper.solve_asynchronously do
+    asynchronously start_worker: true do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
       puts JSON.parse(last_response.body) if JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
@@ -41,7 +41,7 @@ class Api::V01::WithSolverTest < Minitest::Test
   end
 
   def test_delete_completed_job
-    TestHelper.solve_asynchronously do
+    asynchronously start_worker: true do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'completed', api_key: 'ortools'
     end
@@ -49,7 +49,7 @@ class Api::V01::WithSolverTest < Minitest::Test
   end
 
   def test_using_two_solver
-    TestHelper.solve_asynchronously do
+    asynchronously start_worker: true do
       problem = VRP.lat_lon
       problem[:vehicles].first[:end_point_id] = nil
       problem[:vehicles] << Marshal.load(Marshal.dump(problem[:vehicles].first))

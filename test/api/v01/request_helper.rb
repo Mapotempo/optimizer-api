@@ -106,10 +106,12 @@ module TestHelper
     puts "#{job_id} #{Time.now} delete_completed done"
   end
 
-  def self.solve_asynchronously
-    pid_worker = Process.spawn({ 'APP_ENV' => 'test', 'COUNT' => '1', 'QUEUE' => 'DEFAULT' }, 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
-    pgid_worker = Process.getpgid(pid_worker)
-    sleep 0.1 while `ps -o pgid | grep #{pgid_worker}`.split(/\n/).size < 2 # wait for the worker to launch
+  def asynchronously(options = {start_worker: false})
+    if options[:start_worker]
+      pid_worker = Process.spawn({ 'COUNT' => '1', 'QUEUE' => 'DEFAULT' }, 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
+      pgid_worker = Process.getpgid(pid_worker)
+      sleep 0.1 while `ps -o pgid | grep #{pgid_worker}`.split(/\n/).size < 2 # wait for the worker to launch
+    end
     old_config_solve_synchronously = OptimizerWrapper.config[:solve][:synchronously]
     OptimizerWrapper.config[:solve][:synchronously] = false
     old_resque_inline = Resque.inline
@@ -118,7 +120,7 @@ module TestHelper
   ensure
     Resque.inline = old_resque_inline
     OptimizerWrapper.config[:solve][:synchronously] = old_config_solve_synchronously
-    if pgid_worker
+    if options[:start_worker] && pgid_worker
       # Kill all grandchildren
       worker_pids = `ps -o pgid,pid | grep #{pgid_worker}`.split(/\n/)
       worker_pids.collect!{ |i| i.split(' ')[-1].to_i }
