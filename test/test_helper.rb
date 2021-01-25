@@ -18,7 +18,6 @@
 require 'minitest'
 require 'simplecov'
 SimpleCov.start if (!ENV.has_key?('COV') && !ENV.has_key?('COVERAGE')) || (ENV['COV'] != 'false' && ENV['COVERAGE'] != 'false')
-require 'fakeredis/minitest'
 
 ENV['APP_ENV'] ||= 'test'
 require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
@@ -46,12 +45,6 @@ require 'minitest/focus'
 require 'byebug'
 require 'rack/test'
 require 'find'
-
-module FakeRedis
-  def teardown
-    OptimizerWrapper.config[:redis_count].flushall
-  end
-end
 
 module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDisableDirective, Metrics/ModuleLength
   def self.coerce(vrp)

@@ -20,8 +20,13 @@ require './test/api/v01/request_helper'
 
 class Api::V01::VrpTest < Minitest::Test
   include Rack::Test::Methods
-  include FakeRedis
   include TestHelper
+
+  def clear_optim_redis_count
+    OptimizerWrapper.config[:redis_count].keys.select{ |key| key =~ /optimizer:/ }.each do |to_remove|
+      OptimizerWrapper.config[:redis_count].del(to_remove)
+    end
+  end
 
   def app
     Api::Root
@@ -64,7 +69,7 @@ class Api::V01::VrpTest < Minitest::Test
   def test_exceed_params_limit
     vrp = VRP.toy
     vrp[:points] *= 151
-    post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
+    post '/0.1/vrp/submit', api_key: 'quota', vrp: vrp
     assert_equal 413, last_response.status, last_response.body
     assert_includes JSON.parse(last_response.body)['message'], 'Exceeded points limit authorized'
   end
@@ -181,7 +186,6 @@ class Api::V01::VrpTest < Minitest::Test
 
     get "/0.1/vrp/jobs/#{@job_id}", api_key: 'vroom'
     assert_equal 404, last_response.status, last_response.body
-    assert_equal JSON.parse(last_response.body)['status'], 'Not Found'
     assert_includes JSON.parse(last_response.body)['message'], 'not found'
   ensure
     delete_job @job_id, api_key: 'demo'
@@ -439,11 +443,12 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_count_optimizations
-     [
-      { method: 'post', uri: 'submit', operation: :submit_vrp, options: { vrp: VRP.toy }},
+    clear_optim_redis_count
+    [
+      { method: 'post', uri: 'submit', operation: :optimize, options: { vrp: VRP.toy }},
       { method: 'get', uri: "jobs/#{@job_id}.json", operation: :get_job, options: {}},
       { method: 'get', uri: 'jobs', operation: :get_job_list, options: {}},
-      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one !
+      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one!
     ].each do |obj|
       (1..2).each do |cpt|
         send(obj[:method], "/0.1/vrp/#{obj[:uri]}", { api_key: 'demo' }.merge(obj[:options]))
@@ -451,12 +456,10 @@ class Api::V01::VrpTest < Minitest::Test
         keys = OptimizerWrapper.config[:redis_count].keys("optimizer:#{obj[:operation]}:#{Time.now.utc.to_s[0..9]}_key:demo_ip*")
 
         case obj[:operation]
-        when :submit_vrp
+        when :optimize
           assert_equal 1, keys.count
           assert_equal({ 'hits' => cpt.to_s, 'transactions' => (VRP.toy[:vehicles].count * VRP.toy[:points].count * cpt).to_s }, OptimizerWrapper.config[:redis_count].hgetall(keys.first)) # only one key
-        when :get_job
-          assert_equal 0, keys.count
-        when :delete_job
+        else
           assert_equal 0, keys.count
         end
       end
@@ -464,17 +467,16 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_use_quota
-    post '/0.1/vrp/submit', { api_key: 'demo', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
+    clear_optim_redis_count
+    post '/0.1/vrp/submit', { api_key: 'quota', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
     assert last_response.ok?, last_response.body
 
-    post '/0.1/vrp/submit', { api_key: 'demo', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
+    post '/0.1/vrp/submit', { api_key: 'quota', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
     assert_equal 429, last_response.status
 
-    assert_includes JSON.parse(last_response.body)['message'], 'Too many monthly requests'
-    assert_equal({ "Content-Type" => "application/json; charset=UTF-8",
-                   "X-RateLimit-Limit" => 6,
-                   "X-RateLimit-Remaining" => 2,
-                   "X-RateLimit-Reset" => Time.now.utc.to_date.next_month.to_time.to_i,
-                   "Content-Length"=> "50" }, last_response.headers)
+    assert_includes JSON.parse(last_response.body)['message'], 'Too many daily requests'
+    assert_equal ["application/json; charset=UTF-8", 4, 0, Time.now.utc.to_date.next_day.to_time.to_i], last_response.headers.select{ |key|
+      key =~ /(Content-Type|X-RateLimit-Limit|X-RateLimit-Remaining|X-RateLimit-Reset)/
+    }.values
   end
 end
