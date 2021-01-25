@@ -5500,7 +5500,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_build_rest
     rest = Models::Rest.new(duration: 1)
-    assert OptimizerWrapper.config[:services][:ortools].send(:build_rest, rest, nil, {})
+    assert OptimizerWrapper.config[:services][:ortools].send(:build_rest, rest)
   end
 
   def test_ortools_performance_when_duration_limit

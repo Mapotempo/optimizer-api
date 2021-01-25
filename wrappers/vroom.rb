@@ -197,7 +197,7 @@ module Wrappers
         point_id: point.id,
         type: 'depot',
         begin_time: step['arrival'],
-        detail: build_detail(nil, nil, point, nil, vehicle)
+        detail: build_detail(nil, nil, point, nil, nil, vehicle)
       }.delete_if{ |_k, v| v.nil? }
     end
 
@@ -214,7 +214,7 @@ module Wrappers
         begin_time: begin_time,
         end_time: begin_time && (begin_time + step['service']),
         departure_time: begin_time && (begin_time + step['service']),
-        detail: build_detail(service, service.activity, point, nil, vehicle)
+        detail: build_detail(service, service.activity, point, nil, nil, vehicle)
       }.merge(route_data).delete_if{ |_k, v| v.nil? }
       @previous = point
       job_data
@@ -236,7 +236,7 @@ module Wrappers
         begin_time: begin_time,
         end_time: begin_time + step['service'],
         departure_time: begin_time + step['service'],
-        detail: build_detail(shipment, activity, point, nil, vehicle)
+        detail: build_detail(shipment, activity, point, nil, nil, vehicle)
       }.merge(route_data).delete_if{ |_k, v| v.nil? || v == false }
       @previous = point
       job_data
@@ -250,20 +250,6 @@ module Wrappers
         travel_distance: (@previous && point.matrix_index && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][@previous.matrix_index][point.matrix_index] : 0),
         travel_value: (@previous && point.matrix_index && vrp.matrices[0][:value] ? vrp.matrices[0][:value][@previous.matrix_index][point.matrix_index] : 0)
       }
-    end
-
-    def build_rest(rest)
-      build_detail(nil, rest, nil, nil, nil)
-    end
-
-    def build_detail(_job, activity, point, _day_index, vehicle)
-      {
-        lat: point&.location&.lat,
-        lon: point&.location&.lon,
-        duration: activity&.duration,
-        router_mode: vehicle&.router_mode,
-        speed_multiplier: vehicle&.speed_multiplier
-      }.delete_if{ |_k, v| v.nil? }
     end
 
     def collect_jobs(vrp, vrp_skills, vrp_units)

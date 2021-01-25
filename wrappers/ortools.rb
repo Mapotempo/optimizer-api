@@ -638,7 +638,7 @@ module Wrappers
                   begin_time: earliest_start,
                   end_time: earliest_start + vehicle_rest[:duration],
                   departure_time: earliest_start + vehicle_rest[:duration],
-                  detail: build_rest(vehicle_rest, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads)
+                  detail: build_rest(vehicle_rest)
                 }
                 earliest_start += vehicle_rest[:duration]
               end
@@ -685,7 +685,7 @@ module Wrappers
               vehicle_id: vehicle.id,
               rest_id: rest_id,
               type: 'rest',
-              detail: build_rest(rest, nil, {})
+              detail: build_rest(rest)
             }
           }
         }
