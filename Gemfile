@@ -9,11 +9,11 @@ gem 'rack-cors'
 gem 'rake'
 gem 'thin'
 
-gem 'grape', '>=1.5.0' # Important fixes are introduced in v1.5.0 (see PR #2096 & #2098)
+gem 'grape', '>=1.5.1' # Important fixes are introduced in v1.5.1 (see PRs #2013, #2096 & #2098)
 gem 'grape-entity'
-gem 'grape_logging'
 gem 'grape-swagger'
 gem 'grape-swagger-entity'
+gem 'grape_logging'
 gem 'hashie'
 
 gem 'actionpack'
