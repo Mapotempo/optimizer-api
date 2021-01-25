@@ -73,18 +73,18 @@ module SchedulingEndPhase
         current_visit_index += 1
       }
 
-      key_and_reasons = @uninserted.select{ |_key, data|
-        data[:original_service_id] == id
-      }.collect{ |key, data| [key, data[:reason]] }
+      reasons = []
+      @uninserted.each{ |uninserted_id, info|
+        next unless info[:original_id] == uninserted_id
 
-      key_and_reasons.each{ |data|
-        @uninserted.delete(data[0])
+        @uninserted.delete(uninserted_id)
+        reasons |= info[:reason]
       }
 
       uninserted_indices.each{ |indice|
         @uninserted["#{id}_#{indice}_#{@services_data[id][:raw].visits_number}"] = {
-          original_service: service,
-          reason: "Still unassigned after end_phase. Original reasons : #{key_and_reasons.collect(&:last).uniq}."
+          original_id: service,
+          reason: "Still unassigned after end_phase. Original reasons : #{reasons}."
         }
       }
     }
@@ -119,7 +119,7 @@ module SchedulingEndPhase
 
   def update_costs(costs, best_cost)
     # update costs for inserted id, available_days changed
-    uninserted_set = @uninserted.keys.select{ |key| key.split('_').slice(0..-3).join('_') == best_cost[0] }
+    uninserted_set = @uninserted.select{ |_key, info| info[:original_id] == best_cost[0] }.keys
     @uninserted.delete(uninserted_set.first)
     if uninserted_set.size > 1
       available_days = days_respecting_lapse(best_cost[0], best_cost[1][:vehicle])
@@ -256,7 +256,7 @@ module SchedulingEndPhase
           if @allow_partial_assignment
             locally_removed.each{ |removed_id, number_in_sequence|
               @uninserted["#{removed_id}_#{number_in_sequence}_#{@services_data[removed_id][:raw].visits_number}"] = {
-                original_service: removed_id,
+                original_id: removed_id,
                 reason: 'Unaffected because route was underfilled'
               }
             }
@@ -264,7 +264,8 @@ module SchedulingEndPhase
             locally_removed.each{ |removed_id, _number_in_sequence|
               clean_stops(removed_id, vehicle, false)
               (1..@services_data[removed_id][:raw].visits_number).each{ |visit|
-                @uninserted["#{removed_id}_#{visit}_#{@services_data[removed_id][:raw].visits_number}"][:reason] = 'Unaffected because route was underfilled'
+                uninserted_id = "#{removed_id}_#{visit}_#{@services_data[removed_id][:raw].visits_number}"
+                @uninserted[uninserted_id][:reason] = 'Unaffected because route was underfilled'
 
                 next if visit == 1
 
@@ -330,7 +331,7 @@ module SchedulingEndPhase
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
         @output_tool&.add_single_visit(point_to_add[:day], @services_data[point_to_add[:id]][:used_days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
         still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
-        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == to_plan[:service] }[0])
+        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == to_plan[:service] }[0])
       end
     end
 
@@ -420,7 +421,7 @@ module SchedulingEndPhase
                 @ids_to_renumber |= [stop[:id]]
                 still_removed.delete(still_removed.find{ |removed| removed.first == stop[:id] })
                 @output_tool&.add_single_visit(route_data[:global_day_index], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
-                @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == stop[:id] }[0])
+                @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == stop[:id] }[0])
               }
             end
           else
@@ -502,7 +503,7 @@ module SchedulingEndPhase
         most_prio_and_frequent.delete_if{ |service| service.first == to_plan[:service] }
         adapted_still_removed.delete_if{ |service| service.first == to_plan[:service] }
         still_removed.delete_if{ |service| service.first == to_plan[:service] }
-        @uninserted.delete_if{ |_id, data| data[:original_service] == to_plan[:service] }
+        @uninserted.delete_if{ |_id, data| data[:original_id] == to_plan[:service] }
       end
 
       break if adapted_still_removed.empty? || (adapted_still_removed - banned).empty?
