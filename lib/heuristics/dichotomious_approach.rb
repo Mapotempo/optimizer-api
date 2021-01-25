@@ -208,7 +208,7 @@ module Interpreters
         result[:routes].map{ |route|
           next if route.nil?
 
-          mission_ids = route[:activities].map{ |activity| activity[:service_id] || activity[:rest_id] }.compact
+          mission_ids = route[:activities].map{ |activity| activity[:service_id] }.compact
           next if mission_ids.empty?
 
           Models::Route.new(
