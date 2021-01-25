@@ -444,11 +444,11 @@ class Api::V01::VrpTest < Minitest::Test
 
   def test_count_optimizations
     clear_optim_redis_count
-     [
+    [
       { method: 'post', uri: 'submit', operation: :optimize, options: { vrp: VRP.toy }},
       { method: 'get', uri: "jobs/#{@job_id}.json", operation: :get_job, options: {}},
       { method: 'get', uri: 'jobs', operation: :get_job_list, options: {}},
-      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one !
+      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one!
     ].each do |obj|
       (1..2).each do |cpt|
         send(obj[:method], "/0.1/vrp/#{obj[:uri]}", { api_key: 'demo' }.merge(obj[:options]))
