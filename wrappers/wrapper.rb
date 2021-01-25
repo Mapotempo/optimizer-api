@@ -562,7 +562,7 @@ module Wrappers
             current_load: current_load[:current_load]
           }.delete_if{ |_k, v| !v }
         }
-      else
+      elsif job
         job.quantities.collect{ |quantity|
           next if quantity.unit.nil?
 
@@ -576,8 +576,12 @@ module Wrappers
       end
     end
 
-    def build_rest(rest, day_index, job_load)
-      build_detail(nil, rest, nil, day_index, job_load, nil, nil)
+    def build_rest(rest, vehicle = nil)
+      {
+        duration: rest.duration,
+        router_mode: vehicle&.router_mode,
+        speed_multiplier: vehicle&.speed_multiplier
+      }
     end
 
     def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
@@ -590,8 +594,8 @@ module Wrappers
         additional_value: activity&.additional_value,
         timewindows: activity && build_timewindows(activity, day_index),
         quantities: build_quantities(job, job_load, delivery),
-        router_mode: vehicle ? vehicle.router_mode : nil,
-        speed_multiplier: vehicle ? vehicle.speed_multiplier : nil
+        router_mode: vehicle&.router_mode,
+        speed_multiplier: vehicle&.speed_multiplier
       }.delete_if{ |_k, v| !v }
     end
 
