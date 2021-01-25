@@ -502,7 +502,7 @@ module Interpreters
 
         options[:clusters_infos] = SplitClustering.collect_cluster_data(vrp, nb_clusters)
 
-        clusters, _centroid_indices = SplitClustering.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options)
+        clusters = SplitClustering.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options)
 
         services_by_cluster = clusters.collect{ |cluster|
           cluster.data_items.flat_map{ |data|
