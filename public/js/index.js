@@ -26,6 +26,7 @@ postForm.on('submit', function (e) {
       vrp = JSON.parse(evt.target.result);
     } catch(e) {
       alert("Le fichier fourni n'est pas dans un format JSON valide :\n" + e);
+      return false;
     }
 
     if (!vrp.vrp) {
