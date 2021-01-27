@@ -14,7 +14,6 @@ gem 'grape-entity'
 gem 'grape-swagger'
 gem 'grape-swagger-entity'
 gem 'grape_logging'
-gem 'hashie'
 
 gem 'actionpack'
 gem 'active_hash', github: 'Mapotempo/active_hash', branch: 'mapo'
@@ -39,6 +38,8 @@ gem 'rgeo'
 gem 'rgeo-geojson'
 
 gem 'google-protobuf', '>=3'
+
+gem 'zlib'
 
 group :development, :test do
   gem 'benchmark-ips' # to in-place benchmark of different implementations

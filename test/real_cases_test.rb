@@ -18,8 +18,6 @@
 require './test/test_helper'
 
 class RealCasesTest < Minitest::Test
-  include Hashie::Extensions::SymbolizeKeys
-
   if !ENV['SKIP_REAL_CASES']
     # ##################################
     # ########## TEST PATTERN
@@ -426,7 +424,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_g1g2
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self)
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -440,7 +438,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_hv11
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self)
       vrp.resolution_minimum_duration = 40000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -454,7 +452,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_tv1
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self)
       vrp.resolution_minimum_duration = 30000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -467,7 +465,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization with vehicle returning at the depot
     def test_instance_fr_tv11
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_fr_tv1')
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false

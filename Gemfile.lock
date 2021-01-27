@@ -103,7 +103,6 @@ GEM
     grape_logging (1.8.4)
       grape
       rack
-    hashie (4.1.0)
     http-accept (1.7.0)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
@@ -147,7 +146,7 @@ GEM
     nio4r (2.5.4)
     nokogiri (1.10.10)
       mini_portile2 (~> 2.4.0)
-    oj (3.11.0)
+    oj (3.11.2)
     parallel (1.20.1)
     parser (2.7.2.0)
       ast (~> 2.4.1)
@@ -262,6 +261,7 @@ GEM
     websocket (1.2.8)
     yard (0.9.25)
     zeitwerk (2.4.0)
+    zlib (1.0.0)
 
 PLATFORMS
   ruby
@@ -281,7 +281,6 @@ DEPENDENCIES
   grape-swagger
   grape-swagger-entity
   grape_logging
-  hashie
   http_accept_language
   i18n
   minitest
@@ -314,6 +313,7 @@ DEPENDENCIES
   simplecov
   solargraph
   thin
+  zlib
 
 RUBY VERSION
    ruby 2.5.7p206
