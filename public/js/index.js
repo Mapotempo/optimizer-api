@@ -21,7 +21,13 @@ postForm.on('submit', function (e) {
 
   var reader = new FileReader();
   reader.onload = function (evt) {
-    var vrp = JSON.parse(evt.target.result);
+    var vrp;
+    try {
+      vrp = JSON.parse(evt.target.result);
+    } catch(e) {
+      alert("Le fichier fourni n'est pas dans un format JSON valide :\n" + e);
+      return false;
+    }
 
     if (!vrp.vrp) {
       alert("Fichier invalide");
