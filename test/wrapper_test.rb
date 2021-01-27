@@ -956,53 +956,6 @@ class WrapperTest < Minitest::Test
     end
   end
 
-  def test_point_id_not_defined
-    problem = {
-      points: [{
-        id: 'point_0',
-        location: {
-          lat: 1000,
-          lon: 1000
-        }
-      }, {
-        id: 'point_1',
-        location: {
-          lat: 1000,
-          lon: 1000
-        }
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        speed_multiplier: 1,
-      }],
-      services: [{
-          id: 'service_0',
-          activity: {
-            point_id: 'point_0'
-          }
-        }, {
-          id: 'service_1',
-          activity: {
-            point_id: 'point_2'
-          }
-      }],
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 10
-        }
-      }
-    }
-
-    exception = assert_raises ActiveHash::RecordNotFound do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-    end
-    assert_equal('Couldn\'t find Models::Point with ID=point_2', exception.message)
-  end
-
   def test_geometry_polyline_encoded
     problem = {
       points: [{
@@ -3174,7 +3127,7 @@ class WrapperTest < Minitest::Test
     assert_equal vrp.vehicles.size, result[:routes].size, 'All vehicles should appear in result, even though they can serve no service'
   end
 
-  def test_split_independent_vrp_by_sticky_vehicle
+  def test_split_independent_vrp_by_sticky_vehicle_with_useless_vehicle
     vrp = TestHelper.create(VRP.independent)
     vrp.vehicles << Models::Vehicle.new(id: 'useless_vehicle')
     expected_number_of_vehicles = vrp.vehicles.size

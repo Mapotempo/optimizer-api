@@ -271,11 +271,11 @@ class Api::V01::VrpTest < Minitest::Test
         TestHelper.solve_asynchronously do
           vrp = VRP.lat_lon_scheduling_two_vehicles
           vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-          @job_id = submit_vrp(api_key: 'ortools', vrp: vrp)
-          wait_status @job_id, 'completed', api_key: 'ortools'
+          @job_id = submit_vrp(api_key: 'demo', vrp: vrp)
+          wait_status @job_id, 'completed', api_key: 'demo'
           output.flush
         end
-        delete_completed_job @job_id, api_key: 'ortools' if @job_id
+        delete_completed_job @job_id, api_key: 'demo' if @job_id
 
         lines_with_avancement = output.grep(/avancement/)
       ensure
@@ -309,137 +309,6 @@ class Api::V01::VrpTest < Minitest::Test
 
       refute_nil Regexp.last_match, assert_msg
     }
-  end
-
-  def test_remove_unecessary_units
-    vrp = TestHelper.load_vrp(self)
-    assert_empty vrp.units
-    vrp.vehicles.all?{ |v| v.capacities.empty? }
-    vrp.services.all?{ |s| s.quantities.empty? }
-  end
-
-  def test_remove_unecessary_units_one_needed
-    vrp = TestHelper.load_vrp(self)
-    assert_equal 1, vrp.units.size
-    assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten!.uniq!,
-                    :==,
-                    vrp.services.collect{ |s| s.quantities.collect(&:unit_id) }.flatten!.uniq!
-  end
-
-  def test_vrp_creation_if_route_and_partitions
-    vrp = VRP.lat_lon_scheduling_two_vehicles
-    vrp[:routes] = [{
-      vehicle_id: 'vehicle_0',
-      mission_ids: ['service_1']
-    }, {
-      vehicle_id: 'vehicle_1',
-      mission_ids: ['service_7']
-    }]
-    vrp[:configuration][:preprocessing] = {
-      partitions: TestHelper.vehicle_and_days_partitions
-    }
-
-    vrp = TestHelper.create(vrp)
-    assert_equal 2, (vrp.services.count{ |s| !s.sticky_vehicles.empty? })
-    assert_equal 'vehicle_0', vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicles.first.id
-    assert_equal 'vehicle_1', vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicles.first.id
-  end
-
-  def test_reject_if_service_with_activities_in_position_relation
-    vrp = VRP.lat_lon_scheduling_two_vehicles
-    vrp[:services].first[:activities] = [vrp[:services].first[:activity]]
-    vrp[:services].first.delete(:activity)
-    vrp[:relations] = [{
-      id: 'force_first',
-      type: 'force_first',
-      linked_ids: [vrp[:services].first[:id]]
-    }]
-
-    assert_raises OptimizerWrapper::DiscordantProblemError do
-      TestHelper.create(vrp)
-    end
-  end
-
-  def test_reject_if_periodic_with_any_relation
-    vrp = VRP.scheduling
-    ['shipment', 'meetup',
-     'same_route', 'sequence', 'order',
-     'minimum_day_lapse', 'maximum_day_lapse', 'minimum_duration_lapse', 'maximum_duration_lapse',
-     'vehicle_group_duration', 'vehicle_group_duration_on_weeks', 'vehicle_group_duration_on_months'].each{ |relation_type|
-        vrp[:relations] = [{
-          type: relation_type,
-          linked_ids: ['service_1', 'service_2']
-        }]
-
-        assert_raises OptimizerWrapper::DiscordantProblemError do
-          TestHelper.create(vrp)
-        end
-    }
-  end
-
-  def test_reject_if_pickup_position_uncompatible_with_delivery
-    vrp = VRP.toy
-    vrp[:shipments] = [{
-      id: 'shipment_0',
-      pickup: {
-        point_id: 'point_0',
-        position: :always_last
-      },
-      delivery: {
-        point_id: 'point_1',
-        position: :always_first
-      }
-    }]
-
-    assert_raises OptimizerWrapper::DiscordantProblemError do
-      TestHelper.create(vrp)
-    end
-  end
-
-  def test_transform_route_indice_into_index
-    original_vrp = VRP.lat_lon_scheduling_two_vehicles
-    original_vrp[:routes] = [{
-      vehicle_id: 'vehicle_0',
-      mission_ids: ['service_1'],
-      indice: 10
-    }]
-    original_vrp[:configuration][:preprocessing] = {
-      partitions: TestHelper.vehicle_and_days_partitions
-    }
-
-    vrp = TestHelper.create(original_vrp)
-    assert_raises NoMethodError do
-      vrp.routes.first.indice
-    end
-    assert vrp.routes.first.day_index
-    assert_equal 10, vrp.routes.first.day_index
-  end
-
-  def test_split_independent_vrp_by_sticky_vehicle
-    vrp = VRP.independent
-    vrp[:services] << {
-      id: 'fake_service',
-      activity: {
-        point_id: 'point_2'
-      },
-      sticky_vehicle_ids: [
-        'missing_vehicle_id'
-      ],
-    }
-    assert_raises ActiveHash::RecordNotFound do
-      TestHelper.create(vrp)
-    end
-  end
-
-  def test_multitrips
-    vrp = VRP.lat_lon_two_vehicles
-    vrp[:vehicles].first[:trips] = 2
-
-    vrp = TestHelper.create(vrp)
-    Interpreters::MultiTrips.new.expand(vrp)
-    assert_equal 3, vrp.vehicles.size
-    Interpreters::MultiTrips.new.expand(vrp) # consecutive MultiTrips.expand should not produce any error
-    assert_equal 3, vrp.vehicles.size
   end
 
   def test_count_optimizations
