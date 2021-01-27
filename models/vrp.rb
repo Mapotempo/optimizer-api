@@ -122,9 +122,10 @@ module Models
       Models.delete_all if delete
 
       vrp = super({})
+      self.filter(hash) # TODO : add filters.rb here
+      # moved filter here to make sure we do have schedule_indices (not date) to do work_day check with lapses
       self.check_consistency(hash)
       self.ensure_retrocompatibility(hash)
-      self.filter(hash) # TODO : add filters.rb here
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
         vrp.send("#{key}=", hash[key]) if hash[key]
@@ -184,7 +185,15 @@ module Models
       # configuration consistency
       if configuration[:preprocessing]
         if configuration[:preprocessing][:partitions]&.any?{ |partition| partition[:entity].to_sym == :work_day }
-          if hash[:services].any?{ |s| (s[:visits_number] || 1) > 1 && (s[:minimum_lapse] || 1) < 7 && s[:maximum_lapse] && s[:maximum_lapse] < 7 }
+          if hash[:services].any?{ |s|
+              if hash[:configuration][:schedule][:range_indices][:end] <= 6
+                (s[:visits_number] || 1) > 1
+              else
+                (s[:visits_number] || 1) > 1 &&
+                ((s[:minimum_lapse]&.floor || 1)..(s[:maximum_lapse]&.ceil || hash[:configuration][:schedule][:range_indices][:end])).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
+              end
+            }
+
             raise OptimizerWrapper::DiscordantProblemError, 'Work day partition implies that lapses of all services can be a multiple of 7. There are services whose minimum and maximum lapse do not permit such lapse'
           end
         end
@@ -207,21 +216,6 @@ module Models
 
       if hash[:configuration][:resolution][:same_point_day]
         raise OptimizerWrapper.UnsupportedProblemError, 'Same_point_day is not supported if a set has one service with several activities' if hash[:services].any?{ |service| service[:activities].to_a.size.positive? }
-
-        hash[:services].group_by{ |s| s[:activity][:point_id] || s[:activity][:point][:id] }.each{ |_point_id, set|
-          uniq_lapses = set.collect{ |service| service[:minimum_lapse] || 1 }
-          uniq_lapses.compact!
-          uniq_lapses.uniq!
-
-          next if uniq_lapses.min == 1 || uniq_lapses.size == 1
-
-          # If lapses have common divisor then any of these
-          # services will be assigned at the same time as service
-          # with smallest lapse (and normaly biggest number of visits).
-          # If this is not the case, we can not guarantee
-          # same_point_day constraint.
-          raise OptimizerWrapper::UnsupportedProblemError, 'Same_point_day is not supported if frequencies of a set have no common divisor' unless ::Filters.gcd_of_array(uniq_lapses.map(&:to_i)) > 1
-        }
       end
     end
 

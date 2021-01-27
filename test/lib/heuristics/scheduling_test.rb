@@ -737,5 +737,56 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert result[:cost_details] # TODO: Verify costs content whenever it is correctly returned by scheduling heuristic
     end
+
+    def test_same_point_day_option_used_with_uncompatible_lapses
+      vrp = VRP.lat_lon_scheduling
+      vrp[:configuration][:schedule][:range_indices][:end] = 5 # 6 days
+      vrp[:services].each_with_index{ |s, s_i|
+        s[:activity][:point_id] = 'point_1'
+        s[:activity][:duration] = 1 # to try to spread
+        s[:visits_number] = s_i + 1
+        s[:minimum_lapse], s[:maximum_lapse] =
+          case s_i + 1
+          when 1
+            [nil, nil]
+          when 2
+            [5, 5]
+          when 3
+            [2, 3]
+          when 4
+            [1, 2]
+          when 5
+            [1, 2]
+          when 6
+            [1, 1]
+          end
+      }
+
+      vrp[:configuration][:resolution][:same_point_day] = true
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert result # this problem should not be rejected
+      assert_empty result[:unassigned] # there is one service that happens every day so there is no conflict between visits assignment
+
+      # TODO : repartition of visits could be improved
+      # current repartition : (all shifted at sooner days)
+      # for service with 4 visits it would be nicer to have visit 3 at day 3 and visit 4 at day 5
+      # ["vehicle_0_0", ["service_2_1_2", "service_3_1_3", "service_4_1_4", "service_5_1_5", "service_6_1_6"]]
+      # ["vehicle_0_1", ["service_4_2_4", "service_5_2_5", "service_6_2_6"]]
+      # ["vehicle_0_2", ["service_3_2_3", "service_4_3_4", "service_5_3_5", "service_6_3_6"]]
+      # ["vehicle_0_3", ["service_4_4_4", "service_5_4_5", "service_6_4_6"]]
+      # ["vehicle_0_4", ["service_3_3_3", "service_5_5_5", "service_6_5_6"]]
+      # ["vehicle_0_5", ["service_1_1_1", "service_2_2_2", "service_6_6_6"]]
+
+      vrp[:services].delete_if{ |s| s[:visits_number] == 6 }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 2, result[:unassigned].size
+      # TODO : this message should be improved
+      # in fact service with 5 visits goes from day 0 to day 4
+      # therefore service 2 can not be assigned because it will be assigned after service with 5 visits
+      # and service with 5 visits implies that no visit should be assigned at day 5
+      assert_equal [2, 2], (result[:unassigned].collect{ |un| un[:service_id].split('_').last.to_i })
+      reasons = result[:unassigned].collect{ |un| un[:reason] }
+      assert_equal ["All this service's visits can not be assigned with other services at same location"], reasons.uniq
+    end
   end
 end
