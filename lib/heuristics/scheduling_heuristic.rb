@@ -238,7 +238,7 @@ module Heuristics
         else
           need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
           @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
-            original_service: service_id,
+            original_id: service_id,
             reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_data[service_id][:used_days].min}"
           }
         end
@@ -343,10 +343,9 @@ module Heuristics
         }
       }
 
-      @uninserted.each_key{ |service|
-        id = @uninserted[service][:original_service]
-        service_in_vrp = @services_data[id][:raw]
-        unassigned << get_unassigned_info(service, service_in_vrp, @uninserted[service][:reason])
+      @uninserted.each{ |uninserted_id, info|
+        service_in_vrp = @services_data[info[:original_id]][:raw]
+        unassigned << get_unassigned_info(uninserted_id, service_in_vrp, info[:reason])
       }
 
       unassigned
@@ -459,8 +458,8 @@ module Heuristics
             route_data[:available_ids] |= service_id
           }
         }
-        @uninserted.each{ |id, info|
-          @uninserted.delete(id) if info[:original_service] == service_id
+        @uninserted.each{ |uninserted_id, info|
+          @uninserted.delete(uninserted_id) if info[:original_id] == service_id
         }
       else
         reject_all_visits(service_id, @services_data[service_id][:raw].visits_number, 'Partial assignment only')
@@ -473,7 +472,7 @@ module Heuristics
       points_at_same_location.each{ |id|
         (1..@services_data[id][:raw].visits_number).each{ |visit|
           @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
-            original_service: id,
+            original_id: id,
             reason: 'Partial assignment only'
           }
         }
@@ -782,13 +781,14 @@ module Heuristics
 
       @to_plan_service_ids.delete(best_index[:id])
 
-      unlocked_ids = if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty? && !@relaxed_same_point_day
-        services_to_add = @services_unlocked_by[best_index[:id]] - @uninserted.collect{ |_un, data| data[:original_service] }
-        @to_plan_service_ids += services_to_add
-        @unlocked += services_to_add
+      unlocked_ids =
+        if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty? && !@relaxed_same_point_day
+          services_to_add = @services_unlocked_by[best_index[:id]] - @uninserted.collect{ |_un, data| data[:original_id] }
+          @to_plan_service_ids += services_to_add
+          @unlocked += services_to_add
 
-        services_to_add
-      end
+          services_to_add
+        end
 
       [best_index[:id], unlocked_ids.to_a]
     end
@@ -1224,7 +1224,7 @@ module Heuristics
     def reject_all_visits(original_service_id, visits_number, specified_reason)
       visits_number.times.each{ |visit_index|
         @uninserted["#{original_service_id}_#{visit_index + 1}_#{visits_number}"] = {
-          original_service: original_service_id,
+          original_id: original_service_id,
           reason: specified_reason
         }
       }

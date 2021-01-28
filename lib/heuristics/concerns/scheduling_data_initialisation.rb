@@ -62,12 +62,12 @@ module SchedulingDataInitialization
           insert_point_in_route(associated_route, best_index, false)
 
           # unlock corresponding services
-          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }
+          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_id] }
           @to_plan_service_ids += services_to_add
           @unlocked += services_to_add
         else
           @uninserted["#{id}_#{considered_ids.count(id)}_#{@services_data[id][:raw].visits_number}"] = {
-            original_service: id,
+            original_id: id,
             reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.day_index}) : already #{associated_route ? associated_route[:stops].size : 0} elements in route"
           }
         end
@@ -84,10 +84,10 @@ module SchedulingDataInitialization
 
     # TODO : try to affect missing visits with add_missing visits functions
 
-    @uninserted.group_by{ |_k, v| v[:original_service] }.each{ |id, set|
+    @uninserted.group_by{ |_k, v| v[:original_id] }.each{ |id, set|
       (set.size + 1..@services_data[id][:raw].visits_number).each{ |visit|
         @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
-          original_service: id,
+          original_id: id,
           reason: 'Routes provided do not allow to assign this visit because previous visit could not be planned in specified route'
         }
       }
