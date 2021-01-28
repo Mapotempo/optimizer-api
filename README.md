@@ -68,12 +68,12 @@ APP_ENV=production COUNT=5 QUEUE=* bundle exec rake resque:workers
 ## Usage
 
 The API is defined in Swagger format at
-http://localhost:1791/swagger_doc
+http://localhost:1791/0.1/swagger_doc
 and can be tested with Swagger-UI
-http://swagger.mapotempo.com/?url=http://optimizer.mapotempo.com/swagger_doc
+http://swagger.mapotempo.com/?url=http://optimizer.mapotempo.com/0.1/swagger_doc
 
 ```
-curl -X POST --header "Content-Type:application/json" --data '{"vrp":{vehicles":[]}}' http://localhost:1791/0.1/vrp/submit.json?api_key=key
+curl -X POST --header "Content-Type:application/json" --data '{"vrp":{"vehicles":[]}}' http://localhost:1791/0.1/vrp/submit.json?api_key=demo
 ```
 
 ## Test
