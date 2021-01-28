@@ -8,7 +8,7 @@ GIT
 
 GIT
   remote: https://github.com/Mapotempo/balanced_vrp_clustering.git
-  revision: 68406fde5241378780afd0ff01c697791aa3205b
+  revision: 972c1c393f3a259539f6eadf80f867f89f3766e7
   branch: dev
   specs:
     balanced_vrp_clustering (0.1.7)
