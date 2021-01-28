@@ -2976,22 +2976,6 @@ class WrapperTest < Minitest::Test
     assert_equal(2, result.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
   end
 
-  def test_impossible_lapse_advanced
-    vrp = VRP.scheduling
-    vrp[:services].first[:visits_number] = 2
-    vrp[:services].first[:minimum_lapse] = 1
-    vrp[:vehicles].first[:timewindow][:day_index] = 0
-    vrp[:vehicles] << {
-      id: 'fake vehicle',
-      timewindow: { day_index: 1 }
-    }
-    vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-
-    # we split by work_day, each vehicle will only drive one day in the schedule so it is not possible to affect service with two visits
-    assert_equal 2, OptimizerWrapper.config[:services][:ortools].detect_unfeasible_services(TestHelper.create(vrp)).size
-    assert_equal 1, OptimizerWrapper.config[:services][:ortools].detect_unfeasible_services(TestHelper.create(vrp)).uniq{ |un| un[:original_service_id] }.size
-  end
-
   def test_impossible_minimum_lapse_opened_days_real_case
     vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
