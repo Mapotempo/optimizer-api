@@ -153,32 +153,6 @@ module Models
       assert_equal('Couldn\'t find Models::Point with ID=missing_point_id', exception.message)
     end
 
-    def test_same_point_day_authorized
-      vrp = VRP.scheduling
-      reference_point = vrp[:services].first[:activity][:point_id]
-      vrp[:services].first[:visits_number] = 3
-      vrp[:services].first[:minimum_lapse] = 3
-      vrp[:services].first[:maximum_lapse] = 3
-      vrp[:services] << {
-        id: 'last_service',
-        visits_number: 2,
-        minimum_lapse: 6,
-        maximum_lapse: 6,
-        activity: {
-          point_id: reference_point
-        }
-      }
-      vrp[:configuration][:resolution][:same_point_day] = true
-      vrp[:configuration][:schedule][:range_indices][:end] = 10
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
-      assert result # there exist a common_divisor
-
-      vrp[:services].last[:minimum_lapse] = vrp[:services].last[:maximum_lapse] = 7
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
-        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
-      end
-    end
-
     def test_reject_if_shipments_and_periodic_heuristic
       vrp = VRP.pud
       vrp[:configuration][:preprocessing][:first_solution_strategy] = 'periodic'
