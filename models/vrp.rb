@@ -83,6 +83,7 @@ module Models
     field :schedule_range_indices, default: nil # extends schedule_range_date
     field :schedule_unavailable_indices, default: [] # extends unavailable_date
     field :schedule_months_indices, default: []
+    field :schedule_expanded_vehicles, default: false
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -197,6 +198,13 @@ module Models
             raise OptimizerWrapper::DiscordantProblemError, 'Work day partition implies that lapses of all services can be a multiple of 7. There are services whose minimum and maximum lapse do not permit such lapse'
           end
         end
+      end
+
+      # number of visits consistency
+      if !configuration[:schedule]
+        (hash[:services].to_a + hash[:shipments].to_a).each{ |s|
+          raise OptimizerWrapper::DiscordantProblemError, 'There can not be more than one visit if no schedule is provided' unless s[:visits_number].to_i <= 1
+        }
       end
 
       # periodic consistency
@@ -469,11 +477,7 @@ module Models
     end
 
     def visits
-      Helper.visits(self.services)
-    end
-
-    def activity_count
-      visits + self.shipments.size * 2
+      Helper.visits(self.services, self.shipments)
     end
 
     def total_work_times
@@ -564,6 +568,14 @@ module Models
 
     def transactions
       vehicles.count * points.count
+    end
+
+    def scheduling?
+      !self.schedule_range_indices.nil?
+    end
+
+    def periodic_heuristic?
+      self.preprocessing_first_solution_strategy.to_a.include?('periodic')
     end
   end
 end

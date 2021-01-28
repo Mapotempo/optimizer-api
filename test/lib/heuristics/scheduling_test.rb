@@ -788,5 +788,84 @@ class HeuristicTest < Minitest::Test
       reasons = result[:unassigned].collect{ |un| un[:reason] }
       assert_equal ["All this service's visits can not be assigned with other services at same location"], reasons.uniq
     end
+
+    def test_empty_scheduling_result_when_no_vehicle
+      vrp = TestHelper.create(VRP.scheduling)
+      vrp.services.first.visits_number = 10
+      vrp.vehicles = []
+      expected = vrp.visits
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+      assert_equal expected, result[:unassigned].size # automatically checked within define_process call
+
+      vrp = TestHelper.create(VRP.pud)
+      vrp.shipments.first.visits_number = 10
+      vrp.vehicles = []
+      vrp.schedule_range_indices = { start: 0, end: 4 }
+      expected = vrp.visits
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+      assert_equal expected, result[:unassigned].size # automatically checked within define_process call
+
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:services] = []
+      vrp[:rests] = [{
+        id: 'rest_v1'
+      }, {
+        id: 'rest_v2'
+      }]
+      vrp[:vehicles][0][:rest_ids] = 'rest_v1'
+      vrp[:vehicles][1][:rest_ids] = 'rest_v2'
+      # vehicles are available every day
+      expected = (vrp[:configuration][:schedule][:range_indices][:end] - vrp[:configuration][:schedule][:range_indices][:start] + 1) * 2
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal expected, result[:unassigned].size
+
+      vrp[:vehicles][0][:rest_ids] = ['rest_v1', 'rest_v2']
+      vrp[:vehicles][1][:rest_ids] = []
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal expected, result[:unassigned].size
+
+      vrp[:vehicles][0][:rest_ids] = 'rest_v1'
+      vrp[:vehicles][1][:rest_ids] = 'rest_v2'
+      vrp[:vehicles][0][:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal expected - 1, result[:unassigned].size
+    end
+
+    def test_empty_scheduling_result_when_no_mission
+      vrp = TestHelper.create(VRP.scheduling)
+      # 1 vehicle, 4 days
+      vrp.services = []
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_equal 1 * 4, result[:routes].size
+
+      vrp = TestHelper.create(VRP.scheduling)
+      # 1 vehicle, 4 days
+      vrp.services = []
+      vrp.vehicles.first.unavailable_work_day_indices = [0]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_equal 1 * 3, result[:routes].size
+
+      vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
+      vrp.vehicles.first.sequence_timewindows.delete_if{ |tw| tw.day_index < 2 }
+      vrp.schedule_range_indices[:end] = 3
+      # 1 vehicle, 2 days available / 4 days in schedule
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert_equal 1 * 2, result[:routes].size
+
+      # testing behaviour within scheduling_heuristic
+      vrp = TestHelper.create(VRP.scheduling)
+      result = Heuristics::Scheduling.stub_any_instance(
+        :compute_initial_solution,
+        lambda { |vrp_in|
+          vrp.preprocessing_heuristic_result = Wrappers::Wrapper.new.empty_result('heuristic', vrp_in)
+          return []
+        }
+      ) do
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      end
+      assert_equal 1 * 4, result[:routes].size
+    end
   end
 end

@@ -72,7 +72,7 @@ module OptimizerWrapper
 
     Filters.filter(vrp)
 
-    vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+    vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.periodic_heuristic?
       config[:solve][:repetition]
     else
       1
@@ -126,7 +126,7 @@ module OptimizerWrapper
     log "max_durations: #{services_vrps.map{ |sv| sv[:vrp].resolution_duration&.round }}", level: :info
     tic = Time.now
 
-    expected_activity_count = services_vrps.collect{ |sv| sv[:vrp].activity_count }.sum
+    expected_activity_count = services_vrps.collect{ |sv| sv[:vrp].visits }.sum
 
     several_service_vrps = Interpreters::SeveralSolutions.expand_several_solutions(services_vrps)
 
@@ -168,7 +168,7 @@ module OptimizerWrapper
     log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}", level: :info
 
     tic = Time.now
-    expected_activity_count = vrp.activity_count
+    expected_activity_count = vrp.visits
 
     result ||= Interpreters::SplitClustering.split_clusters(service_vrp, job, &block)        # Calls recursively define_process
 
@@ -221,14 +221,14 @@ module OptimizerWrapper
       }
 
       # TODO: refactor with dedicated class
-      if vrp.schedule_range_indices
+      if vrp.scheduling?
         periodic = Interpreters::PeriodicVisits.new(vrp)
         vrp = periodic.expand(vrp, job, &block)
-        optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+        optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
       end
 
       unfeasible_services += sub_unfeasible_services
-      if vrp.resolution_solver && !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      if vrp.resolution_solver && !vrp.periodic_heuristic?
         # TODO: Move select best heuristic in each solver
         Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
 
@@ -837,14 +837,14 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    if vrp.matrices.size.positive? && vrp.shipments.size.zero? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.schedule_range_indices
+    if vrp.matrices.size.positive? && vrp.shipments.size.zero? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
       raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.') if vrp.services.any?{ |s| s.activities.size.positive? }
 
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if !vrp.matrices.empty? && vrp.shipments.empty? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.schedule_range_indices
+    if !vrp.matrices.empty? && vrp.shipments.empty? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else

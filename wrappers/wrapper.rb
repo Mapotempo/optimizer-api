@@ -43,7 +43,7 @@ module Wrappers
     end
 
     def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size == 1 && !vrp.schedule_range_indices
+      vrp.vehicles.size == 1 && !vrp.scheduling?
     end
 
     def assert_vehicles_start(vrp)
@@ -316,11 +316,11 @@ module Wrappers
     end
 
     def assert_if_sequence_tw_then_schedule(vrp)
-      vrp.vehicles.find{ |vehicle| !vehicle.sequence_timewindows.empty? }.nil? || vrp.schedule_range_indices
+      vrp.vehicles.find{ |vehicle| !vehicle.sequence_timewindows.empty? }.nil? || vrp.scheduling?
     end
 
     def assert_if_periodic_heuristic_then_schedule(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.schedule_range_indices
+      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.scheduling?
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
@@ -354,7 +354,7 @@ module Wrappers
     end
 
     def assert_no_scheduling_if_evaluation(vrp)
-      !vrp.schedule_range_indices || !vrp.resolution_evaluate_only
+      !vrp.scheduling? || !vrp.resolution_evaluate_only
     end
 
     def assert_route_if_evaluation(vrp)
@@ -455,7 +455,7 @@ module Wrappers
     end
 
     def assert_route_date_or_indice_if_periodic(vrp)
-      !vrp.preprocessing_first_solution_strategy.to_a.include?('periodic') || vrp.routes.all?(&:day_index)
+      !vrp.periodic_heuristic? || vrp.routes.all?(&:day_index)
     end
 
     def assert_not_too_many_visits_in_route(vrp)
@@ -517,7 +517,7 @@ module Wrappers
     end
 
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
-      vrp.routes.empty? || !vrp.schedule_range_indices || vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      vrp.routes.empty? || !vrp.scheduling? || vrp.periodic_heuristic?
     end
 
     # TODO: Need a better way to represent solver preference
@@ -633,7 +633,7 @@ module Wrappers
         vehicle_work_days = [0, 1, 2, 3, 4, 5] if vehicle_work_days.empty?
         vehicle_lateness = vehicle.cost_late_multiplier&.positive?
 
-        days = vrp.schedule_range_indices ? (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |day| day } : [0]
+        days = vrp.scheduling? ? (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |day| day } : [0]
         days.any?{ |day|
           vehicle_work_days.include?(day % 7) && !vehicle.unavailable_work_day_indices.include?(day) &&
             !service.unavailable_visit_day_indices.include?(day) &&
@@ -702,7 +702,7 @@ module Wrappers
 
           {
             original_service_id: service.id,
-            service_id: vrp.schedule_range_indices ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
+            service_id: vrp.scheduling? ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
             point_id: service.activity ? service.activity.point_id : nil,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
             type: 'service',
@@ -778,7 +778,7 @@ module Wrappers
         add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow') if !find_vehicle(vrp, service)
 
         # unconsistency for planning
-        next if !vrp.schedule_range_indices
+        next if !vrp.scheduling?
 
         add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse') unless vrp.can_affect_all_visits?(service)
       }
@@ -886,39 +886,68 @@ module Wrappers
       vrp
     end
 
+    def unassigned_services(vrp, unassigned_reason)
+      vrp.services.flat_map{ |service|
+        Array.new(service.visits_number) { |visit_index|
+          {
+            service_id: vrp.scheduling? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id,
+            type: service.type.to_s,
+            point_id: service.activity.point_id,
+            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
+            reason: unassigned_reason
+          }.delete_if{ |_k, v| !v }
+        }
+      }
+    end
+
+    def unassigned_shipments(vrp, unassigned_reason)
+      vrp.shipments.flat_map{ |shipment|
+        shipment.visits_number.times.flat_map{ |visit_index|
+          [{
+            pickup_shipment_id: vrp.scheduling? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
+            point_id: shipment.pickup.point_id,
+            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil),
+            reason: unassigned_reason
+           }.delete_if{ |_k, v| !v },
+           {
+            delivery_shipment_id: vrp.scheduling? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
+            point_id: shipment.delivery.point_id,
+            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true),
+            reason: unassigned_reason
+          }.delete_if{ |_k, v| !v }]
+        }
+      }
+    end
+
+    def unassigned_rests(vrp)
+      vrp.vehicles.flat_map{ |vehicle|
+        vehicle.rests.flat_map{ |rest|
+          {
+            rest_id: rest.id,
+            detail: build_rest(rest, nil)
+          }
+        }
+      }
+    end
+
+    def expand_vehicles_for_consistent_empty_result(vrp)
+      if vrp.scheduling? && !vrp.schedule_expanded_vehicles
+        periodic = Interpreters::PeriodicVisits.new(vrp)
+        periodic.generate_vehicles(vrp)
+      else
+        vrp.vehicles
+      end
+    end
+
     def empty_result(solver, vrp, unassigned_reason = nil)
+      vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp)
       {
         solvers: [solver],
         cost: nil,
         cost_details: Models::CostDetails.new({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle| { vehicle_id: vehicle.id, activities: [] } },
-        unassigned: (vrp.services.collect{ |service|
-          {
-            service_id: service.id,
-            type: service.type.to_s,
-            point_id: service.activity.point_id,
-            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }
-        }) + (vrp.shipments.collect{ |shipment|
-          [{
-            pickup_shipment_id: shipment.id.to_s,
-            point_id: shipment.pickup.point_id,
-            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }] << {
-            delivery_shipment_id: shipment.id.to_s,
-            point_id: shipment.delivery.point_id,
-            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }
-        }).flatten + (vrp.rests.collect{ |rest|
-          {
-            rest_id: rest.id,
-            detail: build_rest(rest, nil, {})
-          }
-        }),
+        unassigned: (unassigned_services(vrp, unassigned_reason) + unassigned_shipments(vrp, unassigned_reason) + unassigned_rests(vrp)).flatten,
         elapsed: 0,
         total_distance: nil
       }

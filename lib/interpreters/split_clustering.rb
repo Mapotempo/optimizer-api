@@ -70,7 +70,7 @@ module Interpreters
         }
 
         return Helper.merge_results(split_results)
-      elsif !vrp.schedule_range_indices &&
+      elsif !vrp.scheduling? &&
             vrp.preprocessing_max_split_size && vrp.vehicles.size > 1 &&
             vrp.shipments.size == ship_candidates.size &&
             (ship_candidates.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
@@ -169,7 +169,7 @@ module Interpreters
         transfer_unused_time_limit = [sub_vrp.resolution_duration - sub_result[:elapsed].to_f, 0].max
 
         log "sub vrp (services: #{sub_problem[:vrp].services.size} + shipments: #{sub_problem[:vrp].shipments.size}) uses #{sub_result[:routes].map{ |route| route[:vehicle_id] }.size} vehicles #{sub_result[:routes].map{ |route| route[:vehicle_id] }}, unassigned: #{sub_result[:unassigned].size}"
-        raise 'Incorrect activities count' if sub_vrp.visits != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] }.compact.size
+        raise 'Incorrect activities count' if sub_vrp.visits != sub_result[:routes].flat_map{ |r| r[:activities].map{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }.compact.size + sub_result[:unassigned].map{ |u| u[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact.size
 
         available_vehicle_ids.delete_if{ |id| sub_result[:routes].collect{ |route| route[:vehicle_id] }.include?(id) }
         empties_or_fills_used = remove_used_empties_and_refills(sub_vrp, sub_result).compact
@@ -497,13 +497,13 @@ module Interpreters
       # collecting vehicles then eliminating to have nb_clusters vehicles,
       # we can create one with nb_clusters items directly.
 
-      r_start = vrp.schedule_range_indices ? vrp.schedule_range_indices[:start] : 0
-      r_end = vrp.schedule_range_indices ? vrp.schedule_range_indices[:end] : 0
+      r_start = vrp.scheduling? ? vrp.schedule_range_indices[:start] : 0
+      r_end = vrp.scheduling? ? vrp.schedule_range_indices[:end] : 0
 
       vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
-        total_work_days = vrp.schedule_range_indices ? vehicle.total_work_days_in_range(r_start, r_end) : 1
+        total_work_days = vrp.scheduling? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
         capacities = {
-          duration: vrp.schedule_range_indices ? vrp.total_work_times[v_i] : vehicle.work_duration,
+          duration: vrp.scheduling? ? vrp.total_work_times[v_i] : vehicle.work_duration,
           visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
         }
         vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }

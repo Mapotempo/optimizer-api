@@ -24,7 +24,7 @@ module Interpreters
       @equivalent_vehicles = {}
       @epoch = Date.new(1970, 1, 1)
 
-      if vrp.schedule_range_indices
+      if vrp.scheduling?
         have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
         have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.any?{ |shipment| shipment.pickup.timewindows.any?(&:day_index) || shipment.delivery.timewindows.any?(&:day_index) }
         have_vehicles_day_index = vrp.vehicles.any?{ |vehicle| (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows ).any?(&:day_index) }
@@ -39,7 +39,7 @@ module Interpreters
     end
 
     def expand(vrp, job, &block)
-      return vrp unless vrp.schedule_range_indices
+      return vrp unless vrp.scheduling?
 
       vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
       vrp.relations = generate_relations(vrp)
@@ -48,7 +48,7 @@ module Interpreters
         (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
       }
 
-      if vrp.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      if vrp.periodic_heuristic?
         scheduling_heuristic = Heuristics::Scheduling.new(vrp, job)
         vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
       end
@@ -233,6 +233,8 @@ module Interpreters
     end
 
     def generate_vehicles(vrp)
+      return vrp.vehicles if vrp.schedule_expanded_vehicles
+
       rests_durations = Array.new(vrp.vehicles.size, 0)
       new_vehicles = vrp.vehicles.collect{ |vehicle|
         @equivalent_vehicles[vehicle.id] = []
@@ -269,6 +271,8 @@ module Interpreters
 
         vehicles
       }.flatten
+
+      vrp.schedule_expanded_vehicles = true
       new_vehicles
     end
 
