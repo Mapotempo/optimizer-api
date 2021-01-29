@@ -300,9 +300,17 @@ module ValidateData
   end
 
   def check_clustering_parameters(configuration)
+    if @hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_trips' }
+      if configuration[:preprocessing][:partitions]&.any?
+        raise OptimizerWrapper::UnsupportedProblemError.new(
+          'Partitioning is not currently available with vehicle_trips relation'
+        )
+      end
+    end
+
     return unless configuration[:preprocessing][:partitions]&.any?{ |partition|
       partition[:entity].to_sym == :work_day
-    }
+    } && configuration[:schedule]
 
     if @hash[:services].any?{ |s|
         min_lapse = s[:minimum_lapse]&.floor || 1

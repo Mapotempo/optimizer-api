@@ -497,5 +497,17 @@ module Models
         check_consistency(vrp)
       end
     end
+
+    def test_vehicle_trips_uncompatible_with_clustering
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:configuration][:preprocessing] = nil
+      check_consistency(vrp) # this should not raise
+    end
   end
 end
