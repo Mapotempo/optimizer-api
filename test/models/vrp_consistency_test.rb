@@ -190,5 +190,39 @@ module Models
         TestHelper.create(problem)
       end
     end
+
+    def test_reject_if_several_visits_but_no_schedule_provided
+      # If this test fail then it probably returns 'Wrong number of visits returned in result'
+      # This makes sense, since we do not expand the problem if no schedule is provided,
+      # therefore there is a gap between expected and returned number of visits
+      vrp = VRP.toy
+      vrp[:services][0][:visits_number] = 10
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 } }
+      assert TestHelper.create(vrp) # no raise when schedule is provided
+
+      vrp = VRP.pud
+      vrp[:shipments][0][:visits_number] = 10
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 } }
+      assert TestHelper.create(vrp) # no raise when no schedule is provided
+    end
+
+    def test_incorrect_matrix_indices
+      problem = VRP.basic
+      problem[:points] << { id: 'point_4', matrix_index: 4 }
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(problem)
+      end
+    end
   end
 end
