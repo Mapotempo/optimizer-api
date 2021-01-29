@@ -85,14 +85,14 @@ class HeuristicTest < Minitest::Test
     def test_without_same_point_day
       vrp = TestHelper.load_vrp(self)
       expecting = vrp.visits
-      vrp[:configuration][:resolution][:solver] = false
+      vrp.resolution_solver = false
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       unassigned = result[:unassigned].size
       assert_equal 46, unassigned
 
       vrp = TestHelper.load_vrp(self)
-      vrp[:configuration][:resolution][:solver] = true
+      vrp.resolution_solver = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert unassigned >= result[:unassigned].size
       assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
