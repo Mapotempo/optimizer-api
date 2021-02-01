@@ -273,13 +273,13 @@ module Models
 
       if resolution[:solver_parameter] == -1
         resolution[:solver] = false
-        resolution[:solver_parameter] = nil
+        resolution.delete(:solver_parameter)
       elsif resolution[:solver_parameter]
-          correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
-          hash[:configuration][:preprocessing] ||= {}
-          hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
-          resolution[:solver] = true
-          resolution[:solver_parameter] = nil
+        correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
+        hash[:configuration][:preprocessing] ||= {}
+        hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
+        resolution[:solver] = true
+        resolution.delete(:solver_parameter)
       end
     end
 
