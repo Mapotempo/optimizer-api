@@ -434,7 +434,7 @@ module Models
         current_index += 1
       }
       months_indices << current_indices
-      hash[:configuration][:schedule][:month_indices] = months_indices
+      hash[:configuration][:schedule][:months_indices] = months_indices
 
       # convert route dates into indices
       hash[:routes]&.each{ |route|
@@ -512,7 +512,7 @@ module Models
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
       self.schedule_unavailable_days = schedule[:unavailable_days]
-      self.schedule_months_indices = schedule[:month_indices]
+      self.schedule_months_indices = schedule[:months_indices]
     end
 
     def services_duration
