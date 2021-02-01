@@ -564,7 +564,8 @@ module OptimizerWrapper
             common = build_csv_activity(solution[:name], route, activity)
             timewindows = build_csv_timewindows(activity, max_timewindows_size)
             quantities = unit_ids.collect{ |unit_id|
-              activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id } && activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }[:value]
+              quantity = activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }
+              quantity[:value] if quantity
             }
             out_csv << (days_info + common + quantities + timewindows + [nil])
           }
@@ -743,9 +744,13 @@ module OptimizerWrapper
 
   def self.build_csv_timewindows(activity, max_timewindows_size)
     (0..max_timewindows_size - 1).collect{ |index|
-      if activity[:detail][:timewindows] && index < activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
-        timewindow = activity[:detail][:timewindows].select{ |tw| [tw[:start], tw[:end]] }.uniq.sort_by{ |t| t[:start] }[index]
-        [timewindow[:start] && formatted_duration(timewindow[:start]), timewindow[:end] && formatted_duration(timewindow[:end])]
+      timewindows = activity[:detail][:timewindows]&.collect{ |tw| { start: tw[:start], end: tw[:end] } }.to_a.uniq
+
+      if index < timewindows.size
+        timewindow = timewindows.sort_by{ |tw| tw[:start] || 0 }[index]
+
+        [timewindow[:start] && formatted_duration(timewindow[:start]),
+         timewindow[:end] && formatted_duration(timewindow[:end])]
       else
         [nil, nil]
       end
