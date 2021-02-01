@@ -2822,7 +2822,7 @@ class WrapperTest < Minitest::Test
       }
     end
 
-    assert_operator total_time, :<=, 1.5, 'check_distances function took longer than expected'
+    assert_operator total_time, :<=, 3.0, 'check_distances function took longer than expected'
   ensure
     OptimizerLogger.level = old_logger_level if old_logger_level
     OptimizerWrapper.config[:solve][:repetition] = old_config_solve_repetition if old_config_solve_repetition

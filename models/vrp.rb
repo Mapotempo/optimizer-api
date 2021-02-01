@@ -117,6 +117,7 @@ module Models
     has_many :routes, class_name: 'Models::Route'
     has_many :subtours, class_name: 'Models::Subtour'
     has_many :zones, class_name: 'Models::Zone'
+    belongs_to :config, class_name: 'Models::Configuration' # can be renamed to configuration after the transition if wanted
 
     def self.create(hash, delete = true)
       Models.delete_all if delete
@@ -477,6 +478,7 @@ module Models
     end
 
     def configuration=(configuration)
+      self.config = configuration
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
       self.resolution = configuration[:resolution] if configuration[:resolution]
       self.schedule = configuration[:schedule] if configuration[:schedule]
