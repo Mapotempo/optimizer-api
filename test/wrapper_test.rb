@@ -2976,22 +2976,6 @@ class WrapperTest < Minitest::Test
     assert_equal(2, result.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
   end
 
-  def test_impossible_lapse_advanced
-    vrp = VRP.scheduling
-    vrp[:services].first[:visits_number] = 2
-    vrp[:services].first[:minimum_lapse] = 1
-    vrp[:vehicles].first[:timewindow][:day_index] = 0
-    vrp[:vehicles] << {
-      id: 'fake vehicle',
-      timewindow: { day_index: 1 }
-    }
-    vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-
-    # we split by work_day, each vehicle will only drive one day in the schedule so it is not possible to affect service with two visits
-    assert_equal 2, OptimizerWrapper.config[:services][:ortools].detect_unfeasible_services(TestHelper.create(vrp)).size
-    assert_equal 1, OptimizerWrapper.config[:services][:ortools].detect_unfeasible_services(TestHelper.create(vrp)).uniq{ |un| un[:original_service_id] }.size
-  end
-
   def test_impossible_minimum_lapse_opened_days_real_case
     vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
@@ -3203,5 +3187,73 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
     assert_equal 2, result[:routes].size
+  end
+
+  def test_assert_inapplicable_for_vroom_if_vehicle_distance
+    problem = VRP.basic
+    problem[:vehicles].first[:distance] = 10
+
+    vrp = TestHelper.create(problem)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_distance_limitation
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_distance_limitation
+  end
+
+  def test_assert_inapplicable_vroom_with_periodic_heuristic
+    problem = VRP.scheduling
+    problem[:services].first[:visits_number] = 2
+
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)), :assert_only_one_visit
+  end
+
+  def test_assert_applicable_for_vroom_if_initial_routes
+    problem = VRP.basic
+    problem[:routes] = [{
+      mission_ids: ['service_1']
+    }]
+    vrp = TestHelper.create(problem)
+    assert_empty OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp)
+  end
+
+  def test_assert_inapplicable_relations
+    problem = VRP.basic
+    problem[:relations] = [{
+      type: 'vehicle_group_duration',
+      linked_ids: [],
+      linked_vehicle_ids: [],
+      lapse: nil
+    }]
+
+    vrp = TestHelper.create(problem)
+    refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_relations
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_relations
+
+    problem[:relations] = [{
+      type: 'vehicle_group_duration',
+      linked_ids: ['vehicle_0'],
+      linked_vehicle_ids: [],
+      lapse: nil
+    }]
+
+    vrp = TestHelper.create(problem)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_relations
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_relations
+  end
+
+  def test_solver_needed
+    problem = VRP.basic
+    problem[:configuration][:resolution][:solver] = false
+
+    vrp = TestHelper.create(problem)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_solver
+    assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_solver_if_not_periodic
+  end
+
+  def test_first_solution_acceptance_with_solvers
+    problem = VRP.basic
+    problem[:configuration][:preprocessing][:first_solution_strategy] = [1]
+
+    vrp = TestHelper.create(problem)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
   end
 end
