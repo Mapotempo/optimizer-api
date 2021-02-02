@@ -4,7 +4,7 @@
 
 ### Added
 
-- Implementation of `vehicle_trips` relation : these vehicles' routes are successive [#123] (https://github.com/Mapotempo/optimizer-api/pull/123)
+- Implementation of `vehicle_trips` relation: the routes can be successive or with a minimum duration `lapse` in between [#123] (https://github.com/Mapotempo/optimizer-api/pull/123)
 
 ### Changed
 

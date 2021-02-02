@@ -107,4 +107,18 @@ class MultiTripsTest < Minitest::Test
     second_route = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_1' }
     assert_operator first_route[:end_time], :<=, second_route[:start_time]
   end
+
+  def test_lapse_between_trips
+    vrp = VRP.lat_lon_two_vehicles
+    # ensure one vehicle only is not enough :
+    vrp[:vehicles].each{ |vehicle| vehicle[:distance] = 100000 }
+    vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+
+    vrp[:relations].first[:lapse] = 3600
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert(result[:routes].all?{ |route| route[:activities].size > 2 })
+    first_route_end = result[:routes][0][:activities].last[:begin_time]
+    last_route_start = result[:routes][1][:activities].first[:begin_time]
+    assert_operator first_route_end + 3600, :<=, last_route_start
+  end
 end
