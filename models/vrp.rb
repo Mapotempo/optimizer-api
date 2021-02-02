@@ -276,6 +276,15 @@ module Models
       preprocessing[:first_solution_strategy] = [preprocessing[:first_solution_strategy]].flatten
     end
 
+    def self.deduce_minimum_duration(hash)
+      resolution = hash[:configuration] && hash[:configuration][:resolution]
+      return unless resolution && resolution[:initial_time_out]
+
+      log 'initial_time_out and minimum_duration parameters are mutually_exclusive', level: :warn if resolution[:minimum_duration]
+      resolution[:minimum_duration] = resolution[:initial_time_out]
+      resolution.delete(:initial_time_out)
+    end
+
     def self.deduce_solver_parameter(hash)
       resolution = hash[:configuration] && hash[:configuration][:resolution]
       return unless resolution
@@ -305,6 +314,7 @@ module Models
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
       self.deduce_first_solution_strategy(hash)
+      self.deduce_minimum_duration(hash)
       self.deduce_solver_parameter(hash)
       self.convert_route_indice_into_index(hash)
     end
@@ -488,7 +498,7 @@ module Models
       self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
       self.resolution_stable_iterations = resolution[:stable_iterations]
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
-      self.resolution_minimum_duration = resolution[:initial_time_out] || resolution[:minimum_duration]
+      self.resolution_minimum_duration = resolution[:minimum_duration]
       self.resolution_init_duration = resolution[:init_duration]
       self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
