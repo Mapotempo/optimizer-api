@@ -110,12 +110,12 @@ module Models
       vrp = VRP.basic
       generated_vrp = TestHelper.create(vrp)
       assert generated_vrp.resolution_solver
-      assert_nil generated_vrp.preprocessing_first_solution_strategy
+      assert_empty generated_vrp.preprocessing_first_solution_strategy, 'first_solution_strategy'
 
       vrp[:configuration][:resolution][:solver_parameter] = -1
       generated_vrp = TestHelper.create(vrp)
       refute generated_vrp.resolution_solver
-      assert_nil generated_vrp.preprocessing_first_solution_strategy
+      assert_empty generated_vrp.preprocessing_first_solution_strategy, 'first_solution_strategy'
 
       ['path_cheapest_arc', 'global_cheapest_arc', 'local_cheapest_insertion', 'savings', 'parallel_cheapest_insertion', 'first_unbound', 'christofides'].each_with_index{ |heuristic, heuristic_reference|
         vrp = VRP.basic

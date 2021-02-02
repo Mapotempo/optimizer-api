@@ -127,10 +127,14 @@ module Interpreters
     def self.custom_heuristics(service, vrp, block = nil)
       service_vrp = { vrp: vrp, service: service }
 
-      return service_vrp if service == :vroom || vrp.preprocessing_first_solution_strategy.nil? || vrp.preprocessing_first_solution_strategy.include?('periodic') ||
-                            (!vrp.preprocessing_first_solution_strategy.include?('self_selection') && vrp.preprocessing_first_solution_strategy&.size.to_f <= 1)
+      preprocessing_fss = vrp.preprocessing_first_solution_strategy
 
-      block&.call(nil, nil, nil, "process heuristic choice : #{vrp.preprocessing_first_solution_strategy}", nil, nil, nil)
+      return service_vrp if service == :vroom ||
+                            preprocessing_fss.empty? ||
+                            preprocessing_fss.include?('periodic') ||
+                            (preprocessing_fss.size == 1 && preprocessing_fss != ['self_selection'])
+
+      block&.call(nil, nil, nil, "process heuristic choice : #{preprocessing_fss}", nil, nil, nil)
 
       find_best_heuristic(service_vrp)
     end

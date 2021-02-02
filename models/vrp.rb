@@ -38,7 +38,7 @@ module Models
     field :preprocessing_neighbourhood_size, default: nil
     field :preprocessing_heuristic_result, default: {}
     field :preprocessing_heuristic_synthesis, default: nil
-    field :preprocessing_first_solution_strategy, default: nil
+    field :preprocessing_first_solution_strategy, default: []
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
     # The following 7 variables are used for dicho development
@@ -267,6 +267,15 @@ module Models
       relations_to_remove.reverse_each{ |index| hash[:relations].delete_at(index) }
     end
 
+    def self.deduce_first_solution_strategy(hash)
+      preprocessing = hash[:configuration] && hash[:configuration][:preprocessing]
+      return unless preprocessing
+
+      # To make sure that internal vrp conforms with the Grape vrp.
+      preprocessing[:first_solution_strategy] ||= []
+      preprocessing[:first_solution_strategy] = [preprocessing[:first_solution_strategy]].flatten
+    end
+
     def self.deduce_solver_parameter(hash)
       resolution = hash[:configuration] && hash[:configuration][:resolution]
       return unless resolution
@@ -295,6 +304,7 @@ module Models
 
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
+      self.deduce_first_solution_strategy(hash)
       self.deduce_solver_parameter(hash)
       self.convert_route_indice_into_index(hash)
     end
@@ -505,7 +515,7 @@ module Models
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
-      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy].nil? ? nil : [preprocessing[:first_solution_strategy]].flatten # To make sure that internal vrp conforms with the Grape vrp.
+      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
       self.preprocessing_partitions = preprocessing[:partitions]
       self.preprocessing_heuristic_result = {}
     end

@@ -324,11 +324,11 @@ module Wrappers
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
-      vrp.preprocessing_first_solution_strategy.nil? || (!vrp.resolution_evaluate_only && !vrp.resolution_batch_heuristic)
+      vrp.preprocessing_first_solution_strategy.empty? || (!vrp.resolution_evaluate_only && !vrp.resolution_batch_heuristic)
     end
 
     def assert_first_solution_strategy_is_valid(vrp)
-      vrp.preprocessing_first_solution_strategy.nil? ||
+      vrp.preprocessing_first_solution_strategy.empty? ||
         (vrp.preprocessing_first_solution_strategy[0] != 'self_selection' && vrp.preprocessing_first_solution_strategy[0] != 'periodic' || vrp.preprocessing_first_solution_strategy.size == 1) &&
           vrp.preprocessing_first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || strategy == 'periodic' || OptimizerWrapper::HEURISTICS.include?(strategy) }
     end
@@ -408,7 +408,7 @@ module Wrappers
     end
 
     def assert_no_first_solution_strategy(vrp)
-      vrp.preprocessing_first_solution_strategy.nil? || vrp.preprocessing_first_solution_strategy.empty? || vrp.preprocessing_first_solution_strategy == ['self_selection']
+      vrp.preprocessing_first_solution_strategy.empty? || vrp.preprocessing_first_solution_strategy == ['self_selection']
     end
 
     def assert_solver(vrp)
