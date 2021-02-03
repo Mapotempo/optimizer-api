@@ -18,7 +18,6 @@
 
 require './lib/helper.rb'
 require './wrappers/wrapper.rb'
-require './lib/output_helper.rb'
 require './lib/heuristics/concerns/scheduling_data_initialisation'
 require './lib/heuristics/concerns/scheduling_end_phase'
 

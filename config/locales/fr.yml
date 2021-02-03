@@ -18,6 +18,7 @@
 
 fr:
   export_file:
+    comment: commentaire
     plan:
       name: plan
       ref: référence plan
@@ -29,7 +30,6 @@ fr:
       total_wait_time: temps d'attente total
     stop:
       additional_value: valeur additionnelle
-      comment: commentaire
       duration: durée visite
       end_time: fin de la mission
       lat: lat

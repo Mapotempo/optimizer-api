@@ -24,7 +24,6 @@ require 'balanced_vrp_clustering'
 require './lib/clusterers/average_tree_linkage.rb'
 require './lib/helper.rb'
 require './lib/interpreters/periodic_visits.rb'
-require './lib/output_helper.rb'
 
 module Interpreters
   class SplitClustering

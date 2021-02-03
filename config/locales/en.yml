@@ -18,6 +18,7 @@
 
 en:
   export_file:
+    comment: comment
     plan:
       name: plan
       ref: reference plan
@@ -29,7 +30,6 @@ en:
       total_wait_time: total waiting time
     stop:
       additional_value: additional_value
-      comment: comment
       duration: visit duration
       end_time: end time
       lat: lat
