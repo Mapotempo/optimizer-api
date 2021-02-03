@@ -18,6 +18,7 @@
 
 legacy:
   export_file:
+    comment: unassigned_reason
     plan:
       name: day_week_num
       ref: day_week
@@ -29,7 +30,6 @@ legacy:
       total_wait_time: total_waiting_time
     stop:
       additional_value: additional_value
-      comment: unassigned_reason
       duration: duration
       end_time: end_time
       lat: lat

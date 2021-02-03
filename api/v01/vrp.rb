@@ -117,7 +117,7 @@ module Api
               elsif ret.is_a?(Hash)
                 status 200
                 if vrp.restitution_csv
-                  present(OptimizerWrapper.build_csv([ret]), type: CSV)
+                  present(OutputHelper::Result.build_csv([ret]), type: CSV)
                 else
                   present({ solutions: [ret], job: { status: :completed }}, with: VrpResult)
                 end
@@ -172,7 +172,7 @@ module Api
             end
 
             if output_format == :csv && (job.nil? || job.completed?) # At this step, if the job is nil then it has already been retrieved into the result store
-              present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
+              present(OutputHelper::Result.build_csv(solution[:result]), type: CSV)
             else
               present({
                 solutions: solution[:result],
@@ -226,7 +226,7 @@ module Api
               if solution && !solution.empty?
                 output_format = params[:format]&.to_sym || (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
                 if output_format == :csv
-                  present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
+                  present(OutputHelper::Result.build_csv(solution[:result]), type: CSV)
                 else
                   present({
                     solutions: [solution[:result]],

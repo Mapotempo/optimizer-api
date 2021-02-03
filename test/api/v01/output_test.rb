@@ -230,7 +230,7 @@ class Api::V01::OutputTest < Minitest::Test
      ['fr', :fr],
      ['en', :en],
      ['de', :en]].each{ |provided, expected|
-      OptimizerWrapper.stub(
+      OutputHelper::Result.stub(
         :build_csv,
         lambda { |_solutions|
           assert_equal expected, I18n.locale
