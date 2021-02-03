@@ -38,10 +38,6 @@ module Wrappers
       (vrp.points.all?(&:location) || vrp.points.none?(&:location)) && (vrp.points.all?(&:matrix_index) || vrp.points.none?(&:matrix_index))
     end
 
-    def assert_units_only_one(vrp)
-      vrp.units.size <= 1
-    end
-
     def assert_vehicles_only_one(vrp)
       vrp.vehicles.size == 1 && !vrp.scheduling?
     end
@@ -58,30 +54,6 @@ module Wrappers
       }
     end
 
-    def assert_vehicles_no_timewindow(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        !vehicle.timewindow.nil?
-      }
-    end
-
-    def assert_vehicles_no_rests(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        !vehicle.rests.empty?
-      }
-    end
-
-    def assert_services_no_capacities(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        !vehicle.capacities.empty?
-      }
-    end
-
-    def assert_vehicles_capacities_only_one(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        vehicle.capacities.size > 1
-      }
-    end
-
     def assert_vehicles_no_capacity_initial(vrp)
       vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |c| c.initial&.positive? }
@@ -94,18 +66,8 @@ module Wrappers
       }
     end
 
-    def assert_no_shipments(vrp)
-      vrp.shipments.empty?
-    end
-
     def assert_no_direct_shipments(vrp)
       vrp.shipments.none?{ |shipment| shipment.direct }
-    end
-
-    def assert_no_shipments_with_multiple_timewindows(vrp)
-      vrp.shipments.empty? || vrp.shipments.none? { |shipment|
-        shipment.pickup.timewindows.size > 1 || shipment.delivery.timewindows.size > 1
-      }
     end
 
     def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
@@ -114,30 +76,6 @@ module Wrappers
         last_close = shipment.delivery.timewindows.max_by(&:end)
         first_open && last_close && (first_open.start || 0) + 86400 * (first_open.day_index || 0) >
           (last_close.end || 86399) + 86400 * (last_close.day_index || 0)
-      }
-    end
-
-    def assert_services_no_skills(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
-        !service.skills.empty?
-      }
-    end
-
-    def assert_services_no_timewindows(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
-        service.activity ? !service.activity.timewindows.empty? : service.activities.none?{ |activity| activity.timewindows.size.positive? }
-      }
-    end
-
-    def assert_services_no_multiple_timewindows(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
-        service.activity ? service.activity.timewindows.size > 1 : service.activities.none?{ |activity| activity.timewindows.size > 1 }
-      }
-    end
-
-    def assert_services_at_most_two_timewindows(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
-        service.activity ? service.activity.timewindows.size > 2 : service.activities.none?{ |activity| activity.timewindows.size > 2 }
       }
     end
 
@@ -208,12 +146,6 @@ module Wrappers
       assert_shipments_no_late_multiplier(vrp) && assert_services_no_late_multiplier(vrp)
     end
 
-    def assert_services_quantities_only_one(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
-        service.quantities.size > 1
-      }
-    end
-
     def assert_matrices_only_one(vrp)
       vrp.vehicles.group_by{ |vehicle|
         vehicle.matrix_id || [vehicle.router_mode.to_sym, vehicle.router_dimension, vehicle.speed_multiplier]
@@ -244,21 +176,8 @@ module Wrappers
       })
     end
 
-    def assert_one_vehicle_only_or_no_sticky_vehicle(vrp)
-      vrp.vehicles.size <= 1 ||
-        (vrp.services.empty? || vrp.services.all?{ |service|
-          service.sticky_vehicles.empty?
-        }) && (vrp.shipments.empty? || vrp.shipments.all?{ |shipment|
-          shipment.sticky_vehicles.empty?
-        })
-    end
-
     def assert_no_relations(vrp)
       vrp.relations.empty? || vrp.relations.all?{ |relation| relation.linked_ids.empty? && relation.linked_vehicle_ids.empty? }
-    end
-
-    def assert_no_zones(vrp)
-      vrp.zones.empty?
     end
 
     def assert_zones_only_size_one_alternative(vrp)
@@ -295,12 +214,6 @@ module Wrappers
 
     def assert_end_optimization(vrp)
       vrp.resolution_duration || vrp.resolution_iterations_without_improvment
-    end
-
-    def assert_vehicles_no_end_time_or_late_multiplier(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.all?{ |vehicle|
-        !vehicle.timewindow || vehicle.cost_late_multiplier&.positive?
-      }
     end
 
     def assert_no_distance_limitation(vrp)
