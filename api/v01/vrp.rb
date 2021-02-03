@@ -159,8 +159,8 @@ module Api
             env['api.format'] = output_format # To override json default format
 
             if job&.completed? # job can still be nil if we have the solution from the dump
-              OptimizerWrapper.job_remove(params[:api_key], id)
               APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
+              OptimizerWrapper.job_remove(params[:api_key], id)
             end
 
             status 200
