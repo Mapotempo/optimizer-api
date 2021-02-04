@@ -16,6 +16,13 @@ GIT
       color-generator
       geojson2image
 
+GIT
+  remote: https://github.com/senhalil/rack.git
+  revision: a23188bb32972dde155977655f57dea035eee6ea
+  branch: improved-asserts
+  specs:
+    rack (2.2.3)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -156,7 +163,6 @@ GEM
     polylines (0.3.0)
     puma (5.0.0)
       nio4r (~> 2.0)
-    rack (2.2.3)
     rack-accept (0.4.5)
       rack (>= 0.4)
     rack-contrib (2.3.0)
@@ -297,7 +303,7 @@ DEPENDENCIES
   oj
   polylines
   puma
-  rack
+  rack!
   rack-contrib
   rack-cors
   rack-test
