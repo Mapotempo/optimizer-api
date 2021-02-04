@@ -33,7 +33,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_submit_vrp_in_queue
-    TestHelper.solve_asynchronously do
+    asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
   ensure
@@ -141,7 +141,7 @@ class Api::V01::VrpTest < Minitest::Test
     assert_includes JSON.parse(last_response.body)['message'], 'is empty'
   end
 
-  def test_first_solution_strategie_param
+  def test_first_solution_strategy_param
     vrp = VRP.toy
     vrp[:configuration][:preprocessing] = { first_solution_strategy: 'a, b ' }
     OptimizerWrapper.stub(
@@ -156,7 +156,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_list_vrp
-    TestHelper.solve_asynchronously do
+    asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -168,7 +168,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_cannot_list_vrp
-    TestHelper.solve_asynchronously do
+    asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -180,7 +180,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_cannot_get_vrp
-    TestHelper.solve_asynchronously do
+    asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -192,7 +192,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_delete_vrp
-    TestHelper.solve_asynchronously do
+    asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -203,7 +203,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_cannot_delete_vrp
-    TestHelper.solve_asynchronously do
+    asynchronously do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
     end
 
@@ -217,7 +217,7 @@ class Api::V01::VrpTest < Minitest::Test
   def test_get_completed_job_with_solution_dump
     old_config_dump_solution = OptimizerWrapper.config[:dump][:solution]
     OptimizerWrapper.config[:dump][:solution] = true
-    TestHelper.solve_asynchronously do
+    asynchronously start_worker: true do
       @job_id = submit_vrp api_key: 'demo', vrp: VRP.toy
       wait_status @job_id, 'completed', api_key: 'demo'
     end
@@ -231,7 +231,7 @@ class Api::V01::VrpTest < Minitest::Test
 
   def test_block_call_under_clustering
     @job_ids = []
-    TestHelper.solve_asynchronously do
+    asynchronously start_worker: true do
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
@@ -268,7 +268,7 @@ class Api::V01::VrpTest < Minitest::Test
         ENV['LOG_DEVICE'] = output.path
         OptimizerWrapper.config[:solve][:repetition] = 2
 
-        TestHelper.solve_asynchronously do
+        asynchronously start_worker: true do
           vrp = VRP.lat_lon_scheduling_two_vehicles
           vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
           @job_id = submit_vrp(api_key: 'demo', vrp: vrp)

@@ -244,7 +244,7 @@ class Api::V01::OutputTest < Minitest::Test
   end
 
   def test_csv_configuration_asynchronously
-    TestHelper.solve_asynchronously do
+    asynchronously start_worker: true do
       vrp = VRP.lat_lon
       vrp[:configuration][:restitution] = { csv: true }
       @job_id = submit_csv api_key: 'demo', vrp: vrp
@@ -254,7 +254,7 @@ class Api::V01::OutputTest < Minitest::Test
   end
 
   def test_returned_ids
-    TestHelper.solve_asynchronously do
+    asynchronously start_worker: true do
       vrp = VRP.lat_lon
       vrp[:shipments] = [{
         id: 'shipment_0',

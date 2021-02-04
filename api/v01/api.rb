@@ -51,13 +51,14 @@ module Api
         end
 
         def count_base_key(operation, period = :daily)
-          count_date = if period == :daily
-            count_time.to_s[0..9]
-          elsif period == :monthly
-            count_time.to_s[0..6]
-          elsif period == :yearly
-            count_time.to_s[0..3]
-          end
+          count_date =
+            if period == :daily
+              count_time.to_s[0..9]
+            elsif period == :monthly
+              count_time.to_s[0..6]
+            elsif period == :yearly
+              count_time.to_s[0..3]
+            end
           [
             [:optimizer, operation, count_date].compact,
             [:key, params[:api_key]]
@@ -73,41 +74,51 @@ module Api
 
         def count(operation, raise_if_exceed = true, request_size = 1)
           return unless redis_count
+
           @count_val = redis_count.hgetall(count_key(operation)).symbolize_keys
           if @count_val.empty?
             @count_val = {hits: 0, transactions: 0}
             redis_count.mapped_hmset @count_key, @count_val
             redis_count.expire @count_key, 100.days
           end
+
+          return unless raise_if_exceed
+
           APIBase.profile(params[:api_key])[:quotas]&.each do |quota|
             op = quota[:operation]
             next unless op.nil? || op == operation
+
             quota.slice(:daily, :monthly, :yearly).each do |k, v|
               count = redis_count.get(count_base_key(op, k)).to_i
               raise QuotaExceeded.new("Too many #{k} requests", limit: v, remaining: v - count, reset: k) if count + request_size > v
             end
-          end if raise_if_exceed
+          end
         end
 
         def count_incr(operation, options)
           return unless redis_count
+
           count operation, false unless @count_val
           incr = {hits: @count_val[:hits].to_i + 1}
           incr[:transactions] = @count_val[:transactions].to_i + options[:transactions] if options[:transactions]
           redis_count.mapped_hmset @count_key, incr
+
+          return unless options[:transactions]
+
           APIBase.profile(params[:api_key])[:quotas]&.each do |quota|
             op = quota[:operation]
             next unless op.nil? || op == operation
-            quota.slice(:daily, :monthly, :yearly).each do |k, v|
+
+            quota.slice(:daily, :monthly, :yearly).each do |k, _v|
               redis_count.incrby count_base_key(op, k), options[:transactions]
               redis_count.expire count_base_key(op, k), 366.days
             end
-          end if options[:transactions]
+          end
         end
       end
 
       before do
-        if !params || !::OptimizerWrapper.access(true).has_key?(params[:api_key])
+        if !params || !::OptimizerWrapper.access(true).key?(params[:api_key])
           error!('401 Unauthorized', 401)
         elsif OptimizerWrapper.access[params[:api_key]][:expire_at]&.to_date&.send(:<, Date.today)
           error!('402 Subscription expired', 402)
@@ -138,12 +149,12 @@ module Api
                       'X-RateLimit-Limit' => e.data[:limit],
                       'X-RateLimit-Remaining' => e.data[:remaining],
                       'X-RateLimit-Reset' => if e.data[:reset] == :daily
-                                             count_time.to_date.next_day
-                                           elsif e.data[:reset] == :monthly
-                                             count_time.to_date.next_month
-                                           elsif e.data[:reset] == :yearly
-                                             count_time.to_date.next_year
-                                           end.to_time.to_i }
+                                               count_time.to_date.next_day
+                                             elsif e.data[:reset] == :monthly
+                                               count_time.to_date.next_month
+                                             elsif e.data[:reset] == :yearly
+                                               count_time.to_date.next_year
+                                             end.to_time.to_i }
           rack_response(format_message(response, nil), 429, headers)
         else
           rack_response(format_message(response, e.backtrace), 500)

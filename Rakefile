@@ -1,20 +1,19 @@
 require 'rubygems'
 require 'bundler/setup'
 require 'resque/tasks'
-require './environment.rb'
 
 # Clean the jobs which are interrupted by restarting queues which left in working status
 # TODO: eventually instead of removing these jobs, we can just re-queue them
 namespace :resque do
-  task :prune_dead_workers do
+  task prune_dead_workers: :environment do
     # Clear the resque workers who were killed off without unregistering
     Resque.workers.each(&:prune_dead_workers)
   end
 
-  task :clean_working_job_ids => :prune_dead_workers do
+  task clean_working_job_ids: :prune_dead_workers do
     puts "#{Time.now} Cleaning existing jobs with #{Resque::Plugins::Status::STATUS_WORKING} status..."
 
-    Resque::Plugins::Status::Hash.statuses().each{ |job|
+    Resque::Plugins::Status::Hash.statuses.each{ |job|
       next unless job.status == Resque::Plugins::Status::STATUS_WORKING
 
       # Protect the jobs running on other queues
@@ -29,7 +28,8 @@ namespace :resque do
     }
   end
 
-  task :workers => :clean_working_job_ids # add job cleaning as a pre-requisite
+  # Add job cleaning as a pre-requisite
+  task work: :clean_working_job_ids
 end
 
 require 'rake/testtask'
