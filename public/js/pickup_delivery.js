@@ -116,14 +116,15 @@ $(document).ready(function() {
   customers = [];
 
   var buildVRP = function() {
+    var correspondant = { 0: 'path_cheapest_arc', 1: 'global_cheapest_arc', 2: 'local_cheapest_insertion', 3: 'savings', 4: 'parallel_cheapest_insertion', 5: 'first_unbound', 6: 'christofides' }
     if (data.customers.length > 0 && data.vehicles.length > 0) {
       if (debug) console.log('Build json from csv: ', data);
       var vrp = {points: [], units: [], shipments: [], services: [], vehicles: [], configuration: {
         preprocessing: {
-          cluster_threshold: 0
+          cluster_threshold: 0,
+          first_solution_strategy: correspondant[parseInt($('#optim-solver-parameter').val())]
         },
         resolution: {
-          solver_parameter: parseInt($('#optim-solver-parameter').val()),
           duration: duration($('#optim-duration').val()) * 1000 || undefined,
           iterations: parseInt($('#optim-iterations').val()) || undefined,
           iterations_without_improvment: parseInt($('#optim-iterations-without-improvment').val()) || undefined
