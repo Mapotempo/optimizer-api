@@ -39,6 +39,7 @@ gem 'rgeo-geojson'
 
 gem 'google-protobuf', '>=3'
 
+gem 'oj'
 gem 'zlib'
 
 group :development, :test do

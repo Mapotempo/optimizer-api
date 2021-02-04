@@ -294,6 +294,7 @@ DEPENDENCIES
   minitest-reporters
   minitest-stub_any_instance
   nokogiri
+  oj
   polylines
   puma
   rack
