@@ -224,5 +224,23 @@ module Models
         TestHelper.create(problem)
       end
     end
+
+    def test_available_intervals_compatibility
+      vrp = VRP.scheduling
+      vrp[:services].first[:unavailable_date_ranges] = [{ start: Date.new(2021, 2, 6),
+                                                          end: Date.new(2021, 2, 8)}]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 2, 5),
+                                                       end: Date.new(2021, 2, 11)}}
+      vrp[:services].first[:unavailable_visit_day_indices] = [5]
+      vrp[:services].first[:unavailable_index_ranges] = [{ start: 0,
+                                                           end: 7 }]
+      vrp = TestHelper.create(vrp) # this should not raise
+      assert_equal (4..7).to_a, vrp.services.first.unavailable_visit_day_indices.sort
+    end
   end
 end

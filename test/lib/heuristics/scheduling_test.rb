@@ -867,5 +867,23 @@ class HeuristicTest < Minitest::Test
       end
       assert_equal 1 * 4, result[:routes].size
     end
+
+    def test_scheduling_with_unavailable_interval
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 10}
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+
+      filled_routes = result[:routes].collect.with_index{ |r, index|
+        [index, r[:activities].any?{ |a| a[:type] == 'service' }]
+      }.select{ |tab| tab[1] }.collect(&:first)
+      assert_equal [0, 1, 2], filled_routes
+
+      vrp[:services].first[:unavailable_visit_day_indices] = [0, 1, 2]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      filled_routes = result[:routes].collect.with_index{ |r, index|
+        [index, r[:activities].any?{ |a| a[:type] == 'service' }]
+      }.select{ |tab| tab[1] }.collect(&:first)
+      assert_equal [0, 1, 3], filled_routes
+    end
   end
 end

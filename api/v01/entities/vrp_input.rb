@@ -329,6 +329,16 @@ module VrpMissions
       use :vrp_request_quantity
     end
     mutually_exclusive :quantity_ids, :quantities
+
+    optional(:unavailable_index_ranges, type: Array, desc:
+      '(Scheduling only) Day index ranges where visits can not take place') do
+      use :vrp_request_indice_range
+    end
+    optional(:unavailable_date_ranges, type: Array, desc:
+      '(Scheduling only) Date ranges where visits can not take place') do
+      use :vrp_request_date_range
+    end
+    mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
   end
 
   params :vrp_request_shipment do
@@ -362,6 +372,16 @@ module VrpMissions
       use :vrp_request_quantity
     end
     mutually_exclusive :quantity_ids, :quantities
+
+    optional(:unavailable_index_ranges, type: Array, desc:
+      '(Scheduling only) Day index ranges where visits can not take place') do
+      use :vrp_request_indice_range
+    end
+    optional(:unavailable_date_ranges, type: Array, desc:
+      '(Scheduling only) Date ranges where visits can not take place') do
+      use :vrp_request_date_range
+    end
+    mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
   end
 end
 

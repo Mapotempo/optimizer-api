@@ -1517,4 +1517,43 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(vrp)
     assert_equal 10, expanded_vrp.rests.size, 'We are expecting ten rests because vehicle has rests everyday and there are ten days in schedule'
   end
+
+  def test_first_last_possible_days
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 6 }
+    vrp[:services].first[:visits_number] = 3
+    vrp[:services].first[:minimum_lapse] = 1
+
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 4, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:minimum_lapse] = 2
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:minimum_lapse] = 3
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 0, expanded_vrp.services.first.last_possible_days[0]
+
+    # with unavailable days
+    vrp[:services].first[:minimum_lapse] = 2
+
+    # possible combinations :
+    # 0 - 1 - 2 - 3 - 4 - 5 - 6
+    # X -   - X -   - X -   -
+    #   - X -   - X -   - X -
+    #   -   - X -   - X -   - X
+    vrp[:services].first[:unavailable_visit_day_indices] = [6]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 1, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:unavailable_visit_day_indices] = [3, 4, 5]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 0, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:unavailable_visit_day_indices] = [0, 1]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.services.first.first_possible_days[0]
+    assert_equal 2, expanded_vrp.services.first.last_possible_days[0]
+  end
 end

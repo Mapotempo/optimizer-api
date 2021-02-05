@@ -261,5 +261,16 @@ module Models
       assert vrp.routes.first.day_index
       assert_equal 10, vrp.routes.first.day_index
     end
+
+    def test_available_interval
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 2, 5),
+                                                       end: Date.new(2021, 2, 11)}}
+      vrp[:services].first[:unavailable_visit_day_indices] = [9]
+      vrp[:services].first[:unavailable_date_ranges] = [{ start: Date.new(2021, 2, 6),
+                                                          end: Date.new(2021, 2, 8)}]
+
+      assert_equal [5, 6, 7, 9], TestHelper.create(vrp).services.first.unavailable_visit_day_indices.sort
+    end
   end
 end
