@@ -376,7 +376,7 @@ module Interpreters
         raise OptimizerWrapper::ClusteringError, 'Usage of options[:entity] requires that number of clusters (nb_clusters) is equal to number of vehicles in the vrp.'
       end
 
-      default_options = { max_iterations: 300, restarts: 10, cut_symbol: :duration }
+      default_options = { max_iterations: 300, restarts: 10, cut_symbol: :duration, build_sub_vrps: true }
       options = default_options.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
@@ -415,13 +415,18 @@ module Interpreters
         log "Balanced K-Means (#{toc - tic}sec): split #{result_items.sum(&:size)} activities into #{result_items.map(&:size).join(' & ')}"
         log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} data_items into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
 
-        result_items.collect.with_index{ |result_item, result_index|
-          next if result_item.empty?
+        if options[:build_sub_vrps]
+          result_items.collect.with_index{ |result_item, result_index|
+            next if result_item.empty?
 
-          vehicles_indices = [result_index] if options[:entity] == :work_day || options[:entity] == :vehicle
-          # TODO: build_partial_service_vrp can work directly with the list of services instead of ids.
-          build_partial_service_vrp(service_vrp, result_item.collect(&:id), vehicles_indices, options[:entity])
-        }.compact
+            vehicles_indices = [result_index] if options[:entity] == :work_day || options[:entity] == :vehicle
+            # TODO: build_partial_service_vrp can work directly with the list of services instead of ids.
+            build_partial_service_vrp(service_vrp, result_item.collect(&:id), vehicles_indices, options[:entity])
+          }.compact
+        else
+          # list of services by vehicle
+          result_items
+        end
       else
         log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
 
