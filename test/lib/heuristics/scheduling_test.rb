@@ -868,7 +868,7 @@ class HeuristicTest < Minitest::Test
       assert_equal 1 * 4, result[:routes].size
     end
 
-    def test_scheduling_with_unavailable_interval
+    def test_scheduling_wiht_unavailable_interval
       vrp = VRP.scheduling
       vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 10}
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
@@ -884,6 +884,20 @@ class HeuristicTest < Minitest::Test
         [index, r[:activities].any?{ |a| a[:type] == 'service' }]
       }.select{ |tab| tab[1] }.collect(&:first)
       assert_equal [0, 1, 3], filled_routes
+
+      vrp = VRP.scheduling
+      vrp[:vehicles].first[:unavailable_index_ranges] = [{ start: 1, end: 2 }]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 2, result[:routes].size
+
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule].delete(:range_indices)
+      vrp[:configuration][:schedule][:range_date] = { start: Date.new(2021, 2, 1), end: Date.new(2021, 2, 11) }
+      vrp[:configuration][:schedule][:unavailable_date_ranges] =
+        [{ start: Date.new(2021, 2, 3), end: Date.new(2021, 2, 5) },
+         { start: Date.new(2021, 2, 8), end: Date.new(2021, 2, 10) }]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 5, result[:routes].size
     end
   end
 end
