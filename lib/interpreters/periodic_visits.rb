@@ -49,7 +49,7 @@ module Interpreters
       }
 
       if vrp.periodic_heuristic?
-        scheduling_heuristic = Heuristics::Scheduling.new(vrp, job)
+        scheduling_heuristic = Wrappers::SchedulingHeuristic.new(vrp, job)
         vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
       end
 

@@ -22,8 +22,8 @@ require './lib/output_helper.rb'
 require './lib/heuristics/concerns/scheduling_data_initialisation'
 require './lib/heuristics/concerns/scheduling_end_phase'
 
-module Heuristics
-  class Scheduling
+module Wrappers
+  class SchedulingHeuristic < Wrapper
     include SchedulingDataInitialization
     include SchedulingEndPhase
 
@@ -82,7 +82,7 @@ module Heuristics
     def compute_initial_solution(vrp, &block)
       if vrp.services.empty?
         # TODO : create and use result structure instead of using wrapper function
-        vrp[:preprocessing_heuristic_result] = Wrappers::Wrapper.new.empty_result('heuristic', vrp)
+        vrp[:preprocessing_heuristic_result] = empty_result('heuristic', vrp)
         return []
       end
 
@@ -923,10 +923,10 @@ module Heuristics
         original_service_id: service_in_vrp.id,
         service_id: custom_id,
         point_id: service_in_vrp.activity&.point_id,
-        detail: Wrappers::Wrapper.new.build_detail(service_in_vrp,
-                                                   service_in_vrp.activity,
-                                                   service_in_vrp.activity&.point,
-                                                   nil, nil, nil),
+        detail: build_detail(service_in_vrp,
+                             service_in_vrp.activity,
+                             service_in_vrp.activity&.point,
+                             nil, nil, nil),
         type: 'service',
         reason: reason
       }
@@ -993,12 +993,12 @@ module Heuristics
 
       stop_detail = case type
                     when 'service'
-                      Wrappers::Wrapper.new.build_detail(
+                      build_detail(
                         service_in_vrp, service_in_vrp.activity || service_in_vrp.activities[data[:activity]],
                         associated_point, day % 7, nil, vehicle
                       )
                     else
-                      Wrappers::Wrapper.new.build_detail(nil, nil, associated_point, nil, nil, vehicle)
+                      build_detail(nil, nil, associated_point, nil, nil, vehicle)
                     end
       stop_detail[:setup_duration] = data[:considered_setup_duration]
       {

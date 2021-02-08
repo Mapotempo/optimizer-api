@@ -179,7 +179,7 @@ class Api::V01::OutputTest < Minitest::Test
     vrp[:name] = name
     vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
 
-    Heuristics::Scheduling.stub_any_instance(
+    Wrappers::SchedulingHeuristic.stub_any_instance(
       :compute_initial_solution,
       lambda { |vrp_in|
         @starting_time = Time.now
