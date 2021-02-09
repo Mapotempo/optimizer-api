@@ -81,7 +81,7 @@ module Models
     field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil # extends schedule_range_date
-    field :schedule_unavailable_indices, default: [] # extends unavailable_date
+    field :schedule_unavailable_days, default: [] # extends unavailable_date and schedule_unavailable_indices
     field :schedule_months_indices, default: []
     field :schedule_expanded_vehicles, default: false
 
@@ -230,7 +230,7 @@ module Models
     def self.expand_data(vrp)
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.adapt_relations_between_shipments
-      vrp.expand_unavailable_indices
+      vrp.expand_unavailable_days
       vrp.provide_original_ids
     end
 
@@ -337,7 +337,7 @@ module Models
       hash[:shipments]&.map{ |s| (s[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
     end
 
-    def self.convert_availability_dates_into_indices(element, hash, start_index, type)
+    def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
       unavailable_indices_key, unavailable_dates_key =
         case type
         when :visit
@@ -351,8 +351,8 @@ module Models
       element[:unavailable_days] = (element[unavailable_indices_key] || []).to_set
       element.delete(unavailable_indices_key)
       element[unavailable_dates_key].to_a.each{ |unavailable_date|
-        element[:unavailable_days] |=
-          [(unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_index]
+        new_index = [(unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_index] # TODO : compute differntly
+        element[:unavailable_days] |= new_index if new_index.between(start_index, end_index)
       }
       element.delete(unavailable_dates_key)
 
@@ -378,7 +378,7 @@ module Models
     end
 
     def self.deduce_unavailable_days(hash, element, start_index, end_index, type)
-      convert_availability_dates_into_indices(element, hash, start_index, type)
+      convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
       collect_unavaible_day_indices(element, start_index, end_index)
     end
 
@@ -508,7 +508,7 @@ module Models
 
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
-      self.schedule_unavailable_indices = schedule[:unavailable_indices]
+      self.schedule_unavailable_days = schedule[:unavailable_days]
       self.schedule_months_indices = schedule[:month_indices]
     end
 
