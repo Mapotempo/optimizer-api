@@ -348,9 +348,10 @@ module Models
           [:unavailable_indices, :unavailable_date]
         end
 
-      element[unavailable_indices_key] ||= []
+      element[:unavailable_days] = (element[unavailable_indices_key] || []).to_set
+      element.delete(unavailable_indices_key)
       element[unavailable_dates_key].to_a.each{ |unavailable_date|
-        element[unavailable_indices_key] |=
+        element[:unavailable_days] |=
           [(unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_index]
       }
       element.delete(unavailable_dates_key)
@@ -367,20 +368,10 @@ module Models
       element.delete(:unavailable_date_ranges)
     end
 
-    def self.collect_unavaible_day_indices(element, type, start_index)
+    def self.collect_unavaible_day_indices(element, start_index)
       return [] unless element[:unavailable_index_ranges].to_a.size.positive?
 
-      unavailable_indices =
-        case type
-        when :visit
-          :unavailable_visit_day_indices
-        when :vehicle
-          :unavailable_work_day_indices
-        when :schedule
-          :unavailable_indices
-        end
-
-      element[unavailable_indices] += element[:unavailable_index_ranges].collect{ |range|
+      element[:unavailable_days] += element[:unavailable_index_ranges].collect{ |range|
         ([range[:start], start_index].max..range[:end]).to_a
       }.flatten.uniq
       element.delete(:unavailable_index_ranges)
@@ -388,7 +379,7 @@ module Models
 
     def self.deduce_unavailable_days(hash, element, start_index, type)
       convert_availability_dates_into_indices(element, hash, start_index, type)
-      collect_unavaible_day_indices(element, type, start_index)
+      collect_unavaible_day_indices(element, start_index)
     end
 
     def self.generate_schedule_indices_from_date(hash)

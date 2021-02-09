@@ -70,7 +70,7 @@ module ExpandData
     }
 
     self.vehicles.each{ |vehicle|
-      vehicle.unavailable_work_day_indices |= unavailable_indices
+      vehicle.unavailable_days |= unavailable_indices
     }
     [self.services + self.shipments].flatten.each{ |mission|
       mission.unavailable_visit_day_indices |= unavailable_indices

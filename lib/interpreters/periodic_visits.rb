@@ -240,7 +240,7 @@ module Interpreters
         @equivalent_vehicles[vehicle.id] = []
         @equivalent_vehicles[vehicle.original_id] = []
         vehicles = (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |vehicle_day_index|
-          next if vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
+          next if vehicle.unavailable_days.include?(vehicle_day_index)
 
           timewindows = [vehicle.timewindow || vehicle.sequence_timewindows].flatten
           if timewindows.empty?

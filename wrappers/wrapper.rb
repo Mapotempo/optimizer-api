@@ -618,7 +618,7 @@ module Wrappers
       last_day = vrp[:schedule][:range_indices] ? vrp[:schedule][:range_indices][:end] : vrp[:schedule][:range_date][:end]
       (first_day..last_day).any?{ |day|
         s_ok = t_day == day || !service.unavailable_visit_day_indices&.include?(day)
-        v_ok = !vehicle.unavailable_work_day_indices&.include?(day)
+        v_ok = !vehicle.unavailable_days.include?(day)
         s_ok && v_ok
       }
     end
@@ -635,7 +635,7 @@ module Wrappers
 
         days = vrp.scheduling? ? (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |day| day } : [0]
         days.any?{ |day|
-          vehicle_work_days.include?(day % 7) && !vehicle.unavailable_work_day_indices.include?(day) &&
+          vehicle_work_days.include?(day % 7) && !vehicle.unavailable_days.include?(day) &&
             !service.unavailable_visit_day_indices.include?(day) &&
             (service_timewindows.empty? || vehicle_timewindows.empty? ||
               service_timewindows.any?{ |tw|

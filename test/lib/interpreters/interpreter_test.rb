@@ -119,7 +119,7 @@ class InterpreterTest < Minitest::Test
     vrp = VRP.scheduling
     vrp[:vehicles][0][:unavailable_work_date] = [Date.new(2020, 1, 6)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
-    assert_equal [7], TestHelper.create(vrp).vehicles.first.unavailable_work_day_indices
+    assert_equal [7], TestHelper.create(vrp).vehicles.first.unavailable_days
     expanded_vehicles = periodic_expand(vrp).vehicles
     assert_equal 14, expanded_vehicles.size
     assert_nil expanded_vehicles.find{ |v| v.id == 'vehicle_0_7' }, 'There should be no vehicle generated for day index 7'
