@@ -240,7 +240,7 @@ module Models
       vrp[:services].first[:unavailable_index_ranges] = [{ start: 0,
                                                            end: 7 }]
       vrp = TestHelper.create(vrp) # this should not raise
-      assert_equal (4..7).to_a, vrp.services.first.unavailable_visit_day_indices.sort
+      assert_equal (4..7).to_a, vrp.services.first.unavailable_days.sort
     end
   end
 end

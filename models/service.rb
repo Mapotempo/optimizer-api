@@ -39,7 +39,7 @@ module Models
     # validates_numericality_of :visits_number
 
     field :unavailable_visit_indices, default: []
-    field :unavailable_visit_day_indices, default: [] # extends unavailable_visit_day_date
+    field :unavailable_days, default: Set[] # extends unavailable_visit_day_date and unavailable_visit_day_indices
 
     field :minimum_lapse, default: nil
     field :maximum_lapse, default: nil

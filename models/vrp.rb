@@ -368,18 +368,18 @@ module Models
       element.delete(:unavailable_date_ranges)
     end
 
-    def self.collect_unavaible_day_indices(element, start_index)
+    def self.collect_unavaible_day_indices(element, start_index, end_index)
       return [] unless element[:unavailable_index_ranges].to_a.size.positive?
 
       element[:unavailable_days] += element[:unavailable_index_ranges].collect{ |range|
-        ([range[:start], start_index].max..range[:end]).to_a
+        ([range[:start], start_index].max..[range[:end], end_index].min).to_a
       }.flatten.uniq
       element.delete(:unavailable_index_ranges)
     end
 
-    def self.deduce_unavailable_days(hash, element, start_index, type)
+    def self.deduce_unavailable_days(hash, element, start_index, end_index, type)
       convert_availability_dates_into_indices(element, hash, start_index, type)
-      collect_unavaible_day_indices(element, start_index)
+      collect_unavaible_day_indices(element, start_index, end_index)
     end
 
     def self.generate_schedule_indices_from_date(hash)
@@ -394,7 +394,8 @@ module Models
 
       start_index, end_index =
         if hash[:configuration][:schedule][:range_indices]
-          hash[:configuration][:schedule][:range_indices][:start]
+          [hash[:configuration][:schedule][:range_indices][:start],
+           hash[:configuration][:schedule][:range_indices][:end]]
         else
           start_ = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1
           end_ = (hash[:configuration][:schedule][:range_date][:end].to_date -
@@ -403,12 +404,12 @@ module Models
         end
 
       # remove unavailable dates and ranges :
-      hash[:vehicles].each{ |v| deduce_unavailable_days(hash, v, start_index, :vehicle) }
+      hash[:vehicles].each{ |v| deduce_unavailable_days(hash, v, start_index, end_index, :vehicle) }
       [hash[:services].to_a + hash[:shipments].to_a].flatten.each{ |element|
-        deduce_unavailable_days(hash, element, start_index, :visit)
+        deduce_unavailable_days(hash, element, start_index, end_index, :visit)
       }
       if hash[:configuration][:schedule]
-        deduce_unavailable_days(hash, hash[:configuration][:schedule], start_index, :schedule)
+        deduce_unavailable_days(hash, hash[:configuration][:schedule], start_index, end_index, :schedule)
       end
 
       return hash if hash[:configuration][:schedule][:range_indices]
