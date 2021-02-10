@@ -1201,6 +1201,7 @@ module Wrappers
 
       # configuration
       route_vrp.schedule_range_indices = nil
+      route_vrp.schedule_range_date = nil
 
       route_vrp.resolution_minimum_duration = 100
       route_vrp.resolution_time_out_multiplier = 5

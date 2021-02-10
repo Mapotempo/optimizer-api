@@ -84,6 +84,7 @@ module Models
 
   class Schedule < Base
     field :range_indices, default: nil # extends schedule_range_date
+    field :range_date, default: nil # should only be used to return consistent date in result. TODO: move to result structure
     field :unavailable_days, default: Set[] # extends unavailable_date
     field :months_indices, default: []
   end

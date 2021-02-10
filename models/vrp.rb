@@ -79,7 +79,8 @@ module Models
     field :restitution_csv, default: false
     field :restitution_allow_empty_result, default: false
 
-    field :schedule_range_indices, default: nil # extends schedule_range_date
+    field :schedule_range_indices, default: nil # extends schedule_range_date within algorithm
+    field :schedule_range_date, default: nil # should only be used to return consistent date in result. TODO: move to result structure
     field :schedule_unavailable_days, default: Set[] # extends unavailable_date and schedule_unavailable_indices
     field :schedule_months_indices, default: []
 
@@ -571,12 +572,10 @@ module Models
         route.delete(:date)
       }
 
-      # remove schedule_range_date
       hash[:configuration][:schedule][:range_indices] = {
         start: start_index,
         end: end_index
       }
-      hash[:configuration][:schedule].delete(:range_date)
 
       hash
     end
@@ -645,6 +644,7 @@ module Models
 
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
+      self.schedule_range_date = schedule[:range_date]
       self.schedule_unavailable_days = schedule[:unavailable_days]
       self.schedule_months_indices = schedule[:months_indices]
     end

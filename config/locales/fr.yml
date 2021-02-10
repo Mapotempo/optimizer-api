@@ -23,6 +23,7 @@ fr:
       name: plan
       ref: référence plan
     route:
+      day: jour
       id: tournée
       original_id: véhicule
       total_travel_distance: distance totale
@@ -47,5 +48,6 @@ fr:
       type_rest: pause
       type_store: dépôt
       type_visit: visite
+      visit_index: indice de la visite
       wait_time: attente
     tags: libellés
