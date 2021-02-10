@@ -34,7 +34,7 @@ services:
     image: registry.test.com/mapotempo/optimizer-api:latest
     hostname: travis-api
     environment:
-      APP_ENV: test
+      PASSENGER_APP_ENV: test
       REDIS_COUNT_HOST: redis-count
       REDIS_HOST: redis-cache
       REDIS_RESQUE_HOST: redis
