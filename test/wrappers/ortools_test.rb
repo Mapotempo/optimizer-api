@@ -5640,7 +5640,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       [0, 0, 0, 0]
     ]
     problem[:vehicles].each{ |vehicle|
-      vehicle[:unavailable_work_day_indices] = [5, 6]
       vehicle[:capacities] = [{ unit_id: 'visit', limit: 1 }]
     }
     problem[:services].each{ |service|
@@ -5653,7 +5652,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     tws_sets = [
       nil,
       [{ start: 0, end: 1000 }],
-      [{ start: 0, end: 1000, day_index: 0 }, { start: 0, end: 1000, day_index: 1 }, { start: 0, end: 1000, day_index: 2 }, { start: 0, end: 1000, day_index: 3 }, { start: 0, end: 1000, day_index: 4 }]
+      (0..4).collect{ |day_index| { start: 0, end: 1000, day_index: day_index } }
     ]
 
     tws_sets.each_with_index{ |tw_set, v_tw_i|
@@ -5663,6 +5662,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         problem[:services].each{ |s|
           s[:activity][:timewindows] = service_tw_set
         }
+        # this field is removed whenever we create vrp, so it should be added again at each loop
+        problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
 
         result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
         saturday_vehicle = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0_5' }

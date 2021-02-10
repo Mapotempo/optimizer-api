@@ -92,8 +92,8 @@ module Models
       vrp[:services][0][:unavailable_visit_day_date] = [Date.new(2020, 1, 1)]
       vrp[:services][1][:unavailable_visit_day_date] = [Date.new(2020, 1, 2)]
       created_vrp = TestHelper.create(vrp)
-      assert_equal [2], created_vrp.services[0].unavailable_visit_day_indices
-      assert_equal [3], created_vrp.services[1].unavailable_visit_day_indices
+      assert_equal Set[2], created_vrp.services[0].unavailable_days
+      assert_equal Set[3], created_vrp.services[1].unavailable_days
     end
 
     def test_deduce_sticky_vehicles_if_route_and_clustering
@@ -187,26 +187,31 @@ module Models
       problem[:configuration][:schedule] = { range_indices: { start: 0, end: 7 }}
 
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_days
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
 
       problem[:vehicles].first[:timewindow] = { start: 0, end: 1000 }
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_days
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
 
       problem[:vehicles].first.delete(:timewindow)
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000 }]
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_days
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
 
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000, day_index: 0 }]
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       vrp = TestHelper.create(problem)
-      assert_empty vrp.vehicles.first.unavailable_days, 'This vehicle is only available on mondays, we can ignore unavailable_work_days_indices that are week-end days'
+      assert_empty vrp.vehicles.first.unavailable_days,
+                   'This vehicle is only available on mondays, we can ignore weekd-end unavailable_days'
 
       problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       problem[:vehicles].first.delete(:timewindow)
-      problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000, day_index: 0 }, { start: 0, end: 1000, day_index: 5 }, { start: 0, end: 1000, day_index: 6 }]
+      problem[:vehicles].first[:sequence_timewindows] =
+        [0, 5, 6].collect{ |day_index| { start: 0, end: 1000, day_index: day_index } }
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_days
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
     end
 
     def test_remove_unecessary_units
@@ -270,7 +275,7 @@ module Models
       vrp[:services].first[:unavailable_date_ranges] = [{ start: Date.new(2021, 2, 6),
                                                           end: Date.new(2021, 2, 8)}]
 
-      assert_equal [5, 6, 7, 9], TestHelper.create(vrp).services.first.unavailable_visit_day_indices.sort
+      assert_equal [5, 6, 7, 9], TestHelper.create(vrp).services.first.unavailable_days.sort
     end
   end
 end

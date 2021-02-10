@@ -843,7 +843,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(VRP.scheduling)
       # 1 vehicle, 4 days
       vrp.services = []
-      vrp.vehicles.first.unavailable_days = [0]
+      vrp.vehicles.first.unavailable_days = Set[0]
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 1 * 3, result[:routes].size
 
