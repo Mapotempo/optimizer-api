@@ -350,9 +350,13 @@ module Models
 
       element[:unavailable_days] = (element[unavailable_indices_key] || []).to_set
       element.delete(unavailable_indices_key)
+
+      return unless hash[:configuration][:schedule][:range_date]
+
+      start_value = hash[:configuration][:schedule][:range_date][:start].to_date.ajd.to_i - start_index
       element[unavailable_dates_key].to_a.each{ |unavailable_date|
-        new_index = [(unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_index] # TODO : compute differntly
-        element[:unavailable_days] |= new_index if new_index.between(start_index, end_index)
+        new_index = unavailable_date.to_date.ajd.to_i - start_value
+        element[:unavailable_days] |= [new_index] if new_index.between?(start_index, end_index)
       }
       element.delete(unavailable_dates_key)
 
@@ -361,8 +365,8 @@ module Models
       element[:unavailable_index_ranges] ||= []
       element[:unavailable_index_ranges] += element[:unavailable_date_ranges].collect{ |range|
         {
-          start: (range[:start].to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_index,
-          end: (range[:end].to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_index,
+          start: range[:start].to_date.ajd.to_i - start_value,
+          end: range[:end].to_date.ajd.to_i - start_value,
         }
       }
       element.delete(:unavailable_date_ranges)
