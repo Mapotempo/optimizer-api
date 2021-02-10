@@ -513,7 +513,7 @@ module Interpreters
     private
 
     def get_original_values(original, options)
-      [original.attributes.keys + options.keys].flatten.each_with_object({}) { |key, data|
+      [original.attributes.keys + options.keys - [:unavailable_work_day_indices] + [:unavailable_days]].flatten.each_with_object({}) { |key, data|
         next if [:sticky_vehicle_ids, :quantity_ids,
                  :start_point_id, :end_point_id, :capacity_ids, :sequence_timewindow_ids, :timewindow_id].include?(key)
 
