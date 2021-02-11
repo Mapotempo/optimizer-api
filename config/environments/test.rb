@@ -22,7 +22,6 @@ require 'tmpdir'
 
 require './wrappers/demo'
 require './wrappers/vroom'
-require './wrappers/jsprit'
 require './wrappers/ortools'
 
 require './lib/cache_manager'
@@ -39,7 +38,6 @@ module OptimizerWrapper
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides].freeze
   DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR)
   VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR)
-  JSPRIT = Wrappers::Jsprit.new(tmp_dir: TMP_DIR)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS_EXEC = 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
@@ -69,14 +67,13 @@ module OptimizerWrapper
     services: {
       demo: DEMO,
       vroom: VROOM,
-      jsprit: JSPRIT,
       ortools: ORTOOLS,
     },
     profiles: {
       demo: {
         queue: 'DEFAULT',
         services: {
-          vrp: [:demo, :vroom, :jsprit, :ortools]
+          vrp: [:demo, :vroom, :ortools]
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
@@ -101,14 +98,6 @@ module OptimizerWrapper
         queue: 'DEFAULT',
         services: {
           vrp: [:ortools]
-        },
-        params_limit: PARAMS_LIMIT,
-        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
-      },
-      jsprit: {
-        queue: 'DEFAULT',
-        services: {
-          vrp: [:jsprit]
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT

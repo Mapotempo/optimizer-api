@@ -166,10 +166,10 @@ module VrpConfiguration
 
   params :vrp_request_resolution do
     optional(:duration, type: Integer, allow_blank: false, desc: 'Maximum duration of resolution')
-    optional(:iterations, type: Integer, allow_blank: false, desc: 'Maximum number of iterations (Jsprit only)')
+    optional(:iterations, type: Integer, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvment from the best solution already found')
-    optional(:stable_iterations, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without variation in the solve bigger than the defined coefficient (Jsprit only)')
-    optional(:stable_coefficient, type: Float, allow_blank: false, desc: 'Variation coefficient related to stable_iterations (Jsprit only)')
+    optional(:stable_iterations, type: Integer, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:stable_coefficient, type: Float, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:initial_time_out, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: '[ DEPRECATED : use minimum_duration instead]')
     optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
@@ -505,11 +505,11 @@ module VrpVehicles
     optional(:cost_fixed, type: Float, desc: 'Cost applied if the vehicle is used')
     optional(:cost_distance_multiplier, type: Float, desc: 'Cost applied to the distance performed')
 
-    optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total amount of time of travel (Jsprit) or to the total time of route (ORtools). Not taken into account within periodic heuristic.')
+    optional(:cost_time_multiplier, type: Float, desc: 'Cost applied to the total time of route (ORtools). Not taken into account within periodic heuristic.')
     optional(:cost_value_multiplier, type: Float, desc: 'Multiplier applied to the value matrix and additional activity value. Not taken into account within periodic heuristic.')
     optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route. Not taken into account within periodic heuristic.')
     optional(:cost_late_multiplier, type: Float, desc: 'Cost applied if a point is delivered late (ORtools only). Not taken into account within periodic heuristic.')
-    optional(:cost_setup_time_multiplier, type: Float, desc: 'Cost applied on the setup duration (Jsprit only). Not taken into account within periodic heuristic.')
+    optional(:cost_setup_time_multiplier, type: Float, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
   end
 
   params :vehicle_model_related do
