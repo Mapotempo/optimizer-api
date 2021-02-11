@@ -31,7 +31,7 @@ case "$1" in
 esac
 
 max_time=60 # Time in secondes
-total_dockercompose_services=4
+total_dockercompose_services=5
 for ((cpt=1;cpt<=$max_time;cpt++));
 do
   if [ $cpt == ${max_time} ];
