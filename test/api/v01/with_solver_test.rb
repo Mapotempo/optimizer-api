@@ -31,11 +31,11 @@ class Api::V01::WithSolverTest < Minitest::Test
     asynchronously start_worker: true do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
       wait_status @job_id, 'working', api_key: 'ortools'
-      puts JSON.parse(last_response.body) if JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-      delete_job @job_id, api_key: 'ortools'
-      puts JSON.parse(last_response.body) if JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+      sleep 0.1 # get again to make sure that the solver is called and there is a result
+      response = wait_status @job_id, 'working', api_key: 'ortools'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
+      response = delete_job @job_id, api_key: 'ortools'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
     end
     delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end

@@ -97,6 +97,7 @@ module TestHelper
     delete "0.1/vrp/jobs/#{job_id}.json", params
     assert_equal 202, last_response.status, last_response.body
     puts "#{job_id} #{Time.now} delete done"
+    JSON.parse(last_response.body)
   end
 
   def delete_completed_job(job_id, params)
@@ -104,6 +105,7 @@ module TestHelper
     delete "0.1/vrp/jobs/#{job_id}.json", params
     assert_equal 404, last_response.status, last_response.body
     puts "#{job_id} #{Time.now} delete_completed done"
+    JSON.parse(last_response.body)
   end
 
   def asynchronously(options = {start_worker: false})

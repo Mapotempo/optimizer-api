@@ -247,8 +247,8 @@ class Api::V01::VrpTest < Minitest::Test
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+      response = wait_status @job_ids.last, 'completed', api_key: 'demo'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
 
       vrp = VRP.independent_skills
       vrp[:points] = VRP.lat_lon_scheduling[:points]
@@ -260,8 +260,8 @@ class Api::V01::VrpTest < Minitest::Test
         ]
       }
       @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+      response = wait_status @job_ids.last, 'completed', api_key: 'demo'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
     end
 
     @job_ids.each{ |job_id|
