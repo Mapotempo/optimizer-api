@@ -23,7 +23,6 @@ module TestHelper
   def wait_status(job_id, status, options)
     puts "#{job_id} #{Time.now} waiting #{status} status"
     loop do
-      sleep 0.5
       get "0.1/vrp/jobs/#{job_id}.json", options
 
       assert_equal 200, last_response.status, last_response.body
@@ -31,16 +30,16 @@ module TestHelper
       puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
 
       break if JSON.parse(last_response.body)['job']['status'] == status
+
+      sleep 0.1
     end
     puts "#{job_id} #{Time.now} got #{status} status"
-    sleep 0.5
     JSON.parse(last_response.body)
   end
 
   def wait_status_csv(job_id, status, options)
     puts "#{job_id} #{Time.now} waiting #{status} status_csv"
     loop do
-      sleep 0.5
       get "0.1/vrp/jobs/#{job_id}", options
 
       assert_equal 200, last_response.status, last_response.body
@@ -50,9 +49,10 @@ module TestHelper
       puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
 
       break if JSON.parse(last_response.body)['job']['status'] == status
+
+      sleep 0.1
     end
     puts "#{job_id} #{Time.now} got #{status} status_csv"
-    sleep 0.5
     last_response.body
   end
 
