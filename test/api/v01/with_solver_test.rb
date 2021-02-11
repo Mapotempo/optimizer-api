@@ -40,14 +40,6 @@ class Api::V01::WithSolverTest < Minitest::Test
     delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end
 
-  def test_delete_completed_job
-    asynchronously start_worker: true do
-      @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
-      wait_status @job_id, 'completed', api_key: 'ortools'
-    end
-    delete_completed_job @job_id, api_key: 'ortools' if @job_id
-  end
-
   def test_using_two_solver
     asynchronously start_worker: true do
       problem = VRP.lat_lon

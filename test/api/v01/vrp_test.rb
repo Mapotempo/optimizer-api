@@ -229,6 +229,18 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.config[:dump][:solution] = old_config_dump_solution
   end
 
+  def test_get_deletes_completed_job
+    # create a "completed" job with an unused uuid
+    uuid = Resque::Plugins::Status::Hash.generate_uuid until !uuid.nil? && Resque::Plugins::Status::Hash.get(uuid).nil?
+    Resque::Plugins::Status::Hash.create(uuid, { 'status' => 'completed', 'options' => { 'api_key' => 'demo' } })
+
+    wait_status uuid, 'completed', api_key: 'demo'
+
+    delete_completed_job uuid, api_key: 'demo'
+  ensure
+    Resque::Plugins::Status::Hash.remove(uuid)
+  end
+
   def test_block_call_under_clustering
     @job_ids = []
     asynchronously start_worker: true do
