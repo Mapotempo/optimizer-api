@@ -512,7 +512,7 @@ module Heuristics
         ((@same_point_day && @services_data[service_id][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
           (!@same_point_day && @services_data[service_id][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
           # service is available at this day
-          !@services_data[service_id][:raw].unavailable_visit_day_indices.include?(day) &&
+          !@services_data[service_id][:raw].unavailable_days.include?(day) &&
           (@services_data[service_id][:sticky_vehicles_ids].empty? || @services_data[service_id][:sticky_vehicles_ids].include?(vehicle_id))
       }.each{ |service_id|
         next if @services_data[service_id][:used_days] && !days_respecting_lapse(service_id, vehicle_id).include?(day)

@@ -66,7 +66,7 @@ module Models
     field :matrix_id, default: nil
     field :value_matrix_id, default: nil
 
-    field :unavailable_work_day_indices, default: [] # extends unavailable_work_date
+    field :unavailable_days, default: Set[] # extends unavailable_work_date and unavailable_work_day_indices
     field :global_day_index, default: nil
 
     has_many :skills, class_name: 'Array' # Vehicles can have multiple alternative skillsets
@@ -107,9 +107,9 @@ module Models
     has_many :rests, class_name: 'Models::Rest'
 
     def self.create(hash)
-      if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_work_day_indices]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
+      if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_days]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
         work_day_indices = hash[:sequence_timewindows].collect{ |tw| tw[:day_index] || (0..6).to_a }.flatten.uniq
-        hash[:unavailable_work_day_indices].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
+        hash[:unavailable_days].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
       end
 
       hash[:skills] = [[]] unless hash.has_key?(:skills) # If vehicle has no skills, it has the empty skillset
@@ -253,7 +253,7 @@ module Models
     def available_at(day)
       return false unless working_week_days.include?(day % 7)
 
-      return false if self.unavailable_work_day_indices.to_a.include?(day)
+      return false if self.unavailable_days.include?(day)
 
       true
     end
@@ -276,8 +276,11 @@ module Models
 
       if @working_range_indices[[range_start, range_end]].nil? # if info for this range is not already calculated, calculate
         range = (range_start..range_end).to_a
-        unavail_work_day_indices = self.unavailable_work_day_indices || [] # We do this because unavailable_work_day_indices can be nil instead of []. Normally create function should handle this
-        @working_range_indices[[range_start, range_end]] = (range - unavail_work_day_indices).delete_if{ |range_day| !working_week_days.include?(range_day.modulo(7)) }
+        unavail_work_day_indices = self.unavailable_days
+        @working_range_indices[[range_start, range_end]] =
+          (range - unavail_work_day_indices.to_a).delete_if{ |range_day|
+            !working_week_days.include?(range_day.modulo(7))
+          }
       end
 
       @working_range_indices[[range_start, range_end]]

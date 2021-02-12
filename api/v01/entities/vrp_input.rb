@@ -211,6 +211,16 @@ module VrpConfiguration
     optional(:unavailable_indices, type: Array[Integer], desc: '(Scheduling only) Exclude some days indices from the resolution')
     optional(:unavailable_date, type: Array[Date], desc: '(Scheduling only) Exclude some days from the resolution')
     mutually_exclusive :unavailable_indices, :unavailable_date
+
+    optional(:unavailable_index_ranges, type: Array, desc:
+      '(Scheduling only) Day index ranges where no routes should be generated') do
+      use :vrp_request_indice_range
+    end
+    optional(:unavailable_date_ranges, type: Array, desc:
+      '(Scheduling only) Date ranges where no routes should be generated') do
+      use :vrp_request_date_range
+    end
+    mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
   end
 
   params :vrp_request_indice_range do
@@ -329,6 +339,16 @@ module VrpMissions
       use :vrp_request_quantity
     end
     mutually_exclusive :quantity_ids, :quantities
+
+    optional(:unavailable_index_ranges, type: Array, desc:
+      '(Scheduling only) Day index ranges where visits can not take place') do
+      use :vrp_request_indice_range
+    end
+    optional(:unavailable_date_ranges, type: Array, desc:
+      '(Scheduling only) Date ranges where visits can not take place') do
+      use :vrp_request_date_range
+    end
+    mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
   end
 
   params :vrp_request_shipment do
@@ -362,6 +382,16 @@ module VrpMissions
       use :vrp_request_quantity
     end
     mutually_exclusive :quantity_ids, :quantities
+
+    optional(:unavailable_index_ranges, type: Array, desc:
+      '(Scheduling only) Day index ranges where visits can not take place') do
+      use :vrp_request_indice_range
+    end
+    optional(:unavailable_date_ranges, type: Array, desc:
+      '(Scheduling only) Date ranges where visits can not take place') do
+      use :vrp_request_date_range
+    end
+    mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
   end
 end
 
@@ -456,6 +486,16 @@ module VrpVehicles
     optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals indices of unavailabilty')
     optional(:unavailable_work_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
     mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
+
+    optional(:unavailable_index_ranges, type: Array, desc:
+      '(Scheduling only) Day index ranges where vehicle is not available') do
+      use :vrp_request_indice_range
+    end
+    optional(:unavailable_date_ranges, type: Array, desc:
+      '(Scheduling only) Date ranges where vehicle is not available') do
+      use :vrp_request_date_range
+    end
+    mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
 
     optional(:free_approach, type: Boolean, desc: 'Do not take into account the route leaving the depot in the objective. Not available with periodic heuristic.')
     optional(:free_return, type: Boolean, desc: 'Do not take into account the route arriving at the depot in the objective. Not available with periodic heuristic.')

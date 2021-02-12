@@ -119,8 +119,11 @@ class InterpreterTest < Minitest::Test
     vrp = VRP.scheduling
     vrp[:vehicles][0][:unavailable_work_date] = [Date.new(2020, 1, 6)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
-    assert_equal [7], TestHelper.create(vrp).vehicles.first.unavailable_work_day_indices
-    expanded_vehicles = periodic_expand(vrp).vehicles
+    vrp = TestHelper.create(vrp)
+    assert_equal Set[7], vrp.vehicles.first.unavailable_days
+
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vehicles = periodic.send(:expand, vrp, nil).vehicles
     assert_equal 14, expanded_vehicles.size
     assert_nil expanded_vehicles.find{ |v| v.id == 'vehicle_0_7' }, 'There should be no vehicle generated for day index 7'
   end
@@ -1516,5 +1519,44 @@ class InterpreterTest < Minitest::Test
     vrp[:rests].first[:timewindows].each{ |tw| tw.delete(:day_index) }
     expanded_vrp = periodic_expand(vrp)
     assert_equal 10, expanded_vrp.rests.size, 'We are expecting ten rests because vehicle has rests everyday and there are ten days in schedule'
+  end
+
+  def test_first_last_possible_days
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 6 }
+    vrp[:services].first[:visits_number] = 3
+    vrp[:services].first[:minimum_lapse] = 1
+
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 4, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:minimum_lapse] = 2
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:minimum_lapse] = 3
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 0, expanded_vrp.services.first.last_possible_days[0]
+
+    # with unavailable days
+    vrp[:services].first[:minimum_lapse] = 2
+
+    # possible combinations :
+    # 0 - 1 - 2 - 3 - 4 - 5 - 6
+    # X -   - X -   - X -   -
+    #   - X -   - X -   - X -
+    #   -   - X -   - X -   - X
+    vrp[:services].first[:unavailable_visit_day_indices] = [6]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 1, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:unavailable_visit_day_indices] = [3, 4, 5]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 0, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:unavailable_visit_day_indices] = [0, 1]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.services.first.first_possible_days[0]
+    assert_equal 2, expanded_vrp.services.first.last_possible_days[0]
   end
 end

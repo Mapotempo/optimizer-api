@@ -117,16 +117,20 @@ module Wrappers
       services = []
       services_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
       vrp.services.each_with_index{ |service, service_index|
-        vehicles_indices = if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) && service[:unavailable_visit_day_indices].empty?
-          []
-        else
-          vrp.vehicles.collect.with_index{ |vehicle, index|
-            if (service.skills.empty? || !vehicle.skills.empty? && ((vehicle.skills[0] & service.skills).size == service.skills.size) &&
-            check_services_compatible_days(vrp, vehicle, service)) && (service.unavailable_visit_day_indices.empty? || !service.unavailable_visit_day_indices.include?(vehicle.global_day_index))
-              index
-            end
-          }.compact
-        end
+        vehicles_indices =
+          if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) &&
+             service.unavailable_days.empty?
+            []
+          else
+            vrp.vehicles.collect.with_index{ |vehicle, index|
+              if (service.skills.empty? || !vehicle.skills.empty? &&
+                 ((vehicle.skills[0] & service.skills).size == service.skills.size) &&
+                 check_services_compatible_days(vrp, vehicle, service)) &&
+                 (service.unavailable_days.empty? || !service.unavailable_days.include?(vehicle.global_day_index))
+                index
+              end
+            }.compact
+          end
 
         if service.activity
           services << OrtoolsVrp::Service.new(
@@ -202,8 +206,9 @@ module Wrappers
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
             if shipment.skills.empty? ||
-               !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size) && (shipment.unavailable_visit_day_indices.empty? ||
-               !shipment.unavailable_visit_day_indices.include(vehicle.global_day_index))
+               !vehicle.skills.empty? && ((vehicle.skills[0] & shipment.skills).size == shipment.skills.size) &&
+               (shipment.unavailable_days.empty? ||
+               !shipment.unavailable_days.include(vehicle.global_day_index))
               index
             end
           }.compact

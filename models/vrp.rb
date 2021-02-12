@@ -81,7 +81,7 @@ module Models
     field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil # extends schedule_range_date
-    field :schedule_unavailable_indices, default: [] # extends unavailable_date
+    field :schedule_unavailable_days, default: Set[] # extends unavailable_date and schedule_unavailable_indices
     field :schedule_months_indices, default: []
     field :schedule_expanded_vehicles, default: false
 
@@ -230,7 +230,7 @@ module Models
     def self.expand_data(vrp)
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.adapt_relations_between_shipments
-      vrp.expand_unavailable_indices
+      vrp.expand_unavailable_days
       vrp.provide_original_ids
     end
 
@@ -337,49 +337,92 @@ module Models
       hash[:shipments]&.map{ |s| (s[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
     end
 
+    def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
+      unavailable_indices_key, unavailable_dates_key =
+        case type
+        when :visit
+          [:unavailable_visit_day_indices, :unavailable_visit_day_date]
+        when :vehicle
+          [:unavailable_work_day_indices, :unavailable_work_date]
+        when :schedule
+          [:unavailable_indices, :unavailable_date]
+        end
+
+      element[:unavailable_days] = (element[unavailable_indices_key] || []).to_set
+      element.delete(unavailable_indices_key)
+
+      return unless hash[:configuration][:schedule][:range_date]
+
+      start_value = hash[:configuration][:schedule][:range_date][:start].to_date.ajd.to_i - start_index
+      element[unavailable_dates_key].to_a.each{ |unavailable_date|
+        new_index = unavailable_date.to_date.ajd.to_i - start_value
+        element[:unavailable_days] |= [new_index] if new_index.between?(start_index, end_index)
+      }
+      element.delete(unavailable_dates_key)
+
+      return unless element[:unavailable_date_ranges]
+
+      element[:unavailable_index_ranges] ||= []
+      element[:unavailable_index_ranges] += element[:unavailable_date_ranges].collect{ |range|
+        {
+          start: range[:start].to_date.ajd.to_i - start_value,
+          end: range[:end].to_date.ajd.to_i - start_value,
+        }
+      }
+      element.delete(:unavailable_date_ranges)
+    end
+
+    def self.collect_unavaible_day_indices(element, start_index, end_index)
+      return [] unless element[:unavailable_index_ranges].to_a.size.positive?
+
+      element[:unavailable_days] += element[:unavailable_index_ranges].collect{ |range|
+        ([range[:start], start_index].max..[range[:end], end_index].min).to_a
+      }.flatten.uniq
+      element.delete(:unavailable_index_ranges)
+    end
+
+    def self.deduce_unavailable_days(hash, element, start_index, end_index, type)
+      convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
+      collect_unavaible_day_indices(element, start_index, end_index)
+    end
+
     def self.generate_schedule_indices_from_date(hash)
-      return hash if !hash[:configuration] || !hash[:configuration][:schedule] ||
-                     hash[:configuration][:schedule][:range_indices]
+      return hash if !hash[:configuration] || !hash[:configuration][:schedule]
 
-      start_indice = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1
-      end_indice = (hash[:configuration][:schedule][:range_date][:end].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
-
-      # remove service unavailable_visit_day_date
-      [hash[:services].to_a + hash[:shipments].to_a].flatten.each{ |s|
-        next if s[:unavailable_visit_day_date].to_a.empty?
-
-        s[:unavailable_visit_day_indices] = [] unless s[:unavailable_visit_day_indices]
-        s[:unavailable_visit_day_indices] += s[:unavailable_visit_day_date].to_a.collect{ |unavailable_date|
-          (unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
-        }.compact
-        s.delete(:unavailable_visit_day_date)
-      }
-
-      # remove vehicle unavailable_work_date
-      hash[:vehicles].each{ |vehicle|
-        next if vehicle[:unavailable_work_date].to_a.empty?
-
-        vehicle[:unavailable_work_day_indices] = [] unless vehicle[:unavailable_work_day_indices]
-        vehicle[:unavailable_work_day_indices] += vehicle[:unavailable_work_date].collect{ |unavailable_date|
-          (unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
-        }.compact
-        vehicle.delete(:unavailable_work_date)
-      }
-
-      # remove schedule unavailable_date
-      if hash[:configuration][:schedule]
-        hash[:configuration][:schedule][:unavailable_indices] = [] unless hash[:configuration][:schedule][:unavailable_indices]
-        hash[:configuration][:schedule][:unavailable_indices] += hash[:configuration][:schedule][:unavailable_date].to_a.collect{ |date|
-          (date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
-        }.compact
-        hash[:configuration][:schedule].delete(:unavailable_date)
+      if hash[:configuration][:schedule][:range_indices] &&
+         (hash[:services]&.any?{ |s| s[:unavailable_date_ranges] || s[:unavailable_visit_day_date] })
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          'Date intervals are not compatible with schedule range indices'
+        )
       end
+
+      start_index, end_index =
+        if hash[:configuration][:schedule][:range_indices]
+          [hash[:configuration][:schedule][:range_indices][:start],
+           hash[:configuration][:schedule][:range_indices][:end]]
+        else
+          start_ = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1
+          end_ = (hash[:configuration][:schedule][:range_date][:end].to_date -
+                  hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_
+          [start_, end_]
+        end
+
+      # remove unavailable dates and ranges :
+      hash[:vehicles].each{ |v| deduce_unavailable_days(hash, v, start_index, end_index, :vehicle) }
+      [hash[:services].to_a + hash[:shipments].to_a].flatten.each{ |element|
+        deduce_unavailable_days(hash, element, start_index, end_index, :visit)
+      }
+      if hash[:configuration][:schedule]
+        deduce_unavailable_days(hash, hash[:configuration][:schedule], start_index, end_index, :schedule)
+      end
+
+      return hash if hash[:configuration][:schedule][:range_indices]
 
       # provide months
       months_indices = []
       current_month = hash[:configuration][:schedule][:range_date][:start].to_date.month
       current_indices = []
-      current_index = start_indice
+      current_index = start_index
       (hash[:configuration][:schedule][:range_date][:start].to_date..hash[:configuration][:schedule][:range_date][:end].to_date).each{ |date|
         if date.month == current_month
           current_indices << current_index
@@ -398,14 +441,15 @@ module Models
       hash[:routes]&.each{ |route|
         next if route[:day_index]
 
-        route[:day_index] = (route[:date].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
+        route[:day_index] = (route[:date].to_date -
+                            hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_index
         route.delete(:date)
       }
 
       # remove schedule_range_date
       hash[:configuration][:schedule][:range_indices] = {
-        start: start_indice,
-        end: end_indice
+        start: start_index,
+        end: end_index
       }
       hash[:configuration][:schedule].delete(:range_date)
 
@@ -468,7 +512,7 @@ module Models
 
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
-      self.schedule_unavailable_indices = schedule[:unavailable_indices]
+      self.schedule_unavailable_days = schedule[:unavailable_days]
       self.schedule_months_indices = schedule[:month_indices]
     end
 

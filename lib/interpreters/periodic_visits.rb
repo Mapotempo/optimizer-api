@@ -152,10 +152,6 @@ module Interpreters
     def generate_services(vrp)
       vrp.services.collect{ |service|
         # transform service data into periodic data
-        service.unavailable_visit_day_indices.delete_if{ |unavailable_index|
-          unavailable_index.negative? || unavailable_index > vrp.schedule_range_indices[:end]
-        }.compact
-
         (service.activity ? [service.activity] : service.activities).each{ |activity|
           activity.timewindows = generate_timewindows(activity.timewindows)
         }
@@ -185,10 +181,6 @@ module Interpreters
     def generate_shipments(vrp)
       vrp.shipments.collect{ |shipment|
         # transform shipment data into periodic data
-        shipment.unavailable_visit_day_indices.delete_if{ |unavailable_index|
-          unavailable_index.negative? || unavailable_index > vrp.schedule_range_indices[:end]
-        }.compact
-
         shipment.pickup.timewindows = generate_timewindows(shipment.pickup.timewindows)
         shipment.delivery.timewindows = generate_timewindows(shipment.delivery.timewindows)
 
@@ -240,7 +232,7 @@ module Interpreters
         @equivalent_vehicles[vehicle.id] = []
         @equivalent_vehicles[vehicle.original_id] = []
         vehicles = (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |vehicle_day_index|
-          next if vehicle.unavailable_work_day_indices.include?(vehicle_day_index)
+          next if vehicle.unavailable_days.include?(vehicle_day_index)
 
           timewindows = [vehicle.timewindow || vehicle.sequence_timewindows].flatten
           if timewindows.empty?
@@ -381,7 +373,7 @@ module Interpreters
         candidate_route = routes.find{ |route|
           # looking for the first vehicle possible
           # days are compatible
-          (service.unavailable_visit_day_indices.nil? || !service.unavailable_visit_day_indices.include?(route[:vehicle].global_day_index)) &&
+          !service.unavailable_days.include?(route[:vehicle].global_day_index) &&
             (current_index == 1 || current_index > 1 && service.minimum_lapse &&
             previous_service_index && previous_service_route && route[:vehicle].global_day_index >= previous_service_route[:vehicle].global_day_index + (gap_with_previous * service.minimum_lapse).truncate ||
             !service.minimum_lapse && (route[:vehicle].skills & service.skills).size == service.skills.size) &&
@@ -430,7 +422,7 @@ module Interpreters
 
         # first possible day
         while day <= @schedule_end && nb_services_seen < service.visits_number
-          if service.unavailable_visit_day_indices.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
+          if service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
             day += 1
           else
             service.first_possible_days += [day]
@@ -443,7 +435,7 @@ module Interpreters
         day = @schedule_end
         nb_services_seen = 0
         while day >= @schedule_start && nb_services_seen < service.visits_number
-          if service.unavailable_visit_day_indices.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
+          if service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
             day -= 1
           else
             service.last_possible_days += [day]
@@ -521,7 +513,7 @@ module Interpreters
     private
 
     def get_original_values(original, options)
-      [original.attributes.keys + options.keys].flatten.each_with_object({}) { |key, data|
+      [original.attributes.keys + options.keys - [:unavailable_work_day_indices] + [:unavailable_days]].flatten.each_with_object({}) { |key, data|
         next if [:sticky_vehicle_ids, :quantity_ids,
                  :start_point_id, :end_point_id, :capacity_ids, :sequence_timewindow_ids, :timewindow_id].include?(key)
 
