@@ -72,7 +72,10 @@ module DistanceMatrix
           distance: (router_matrices[dimensions.index(:distance)] if dimensions.index(:distance)),
           value: (router_matrices[dimensions.index(:value)] if dimensions.index(:value))
         )
-        raise RouterError, 'Negative value provided by router' if [m.time, m.distance, m.value].any?{ |matrix| matrix&.any?{ |row| row.any?(&:negative?) } }
+        if [m.time, m.distance, m.value].any?{ |matrix| matrix&.any?{ |row| row.any?(&:negative?) } }
+          log 'Negative value provided by router', level: :warn
+          [m.time, m.distance, m.value].each{ |matrix| matrix&.each{ |row| row.collect!(&:abs) } }
+        end
 
         self.matrices += [m]
         [[mode, dimensions, options], m]
