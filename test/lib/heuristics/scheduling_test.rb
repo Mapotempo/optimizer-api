@@ -859,7 +859,7 @@ class HeuristicTest < Minitest::Test
       result = Heuristics::Scheduling.stub_any_instance(
         :compute_initial_solution,
         lambda { |vrp_in|
-          vrp.preprocessing_heuristic_result = Wrappers::Wrapper.new.empty_result('heuristic', vrp_in)
+          vrp.preprocessing_heuristic_result = OptimizerWrapper.config[:services][:ortools].empty_result('heuristic', vrp_in, nil, true)
           return []
         }
       ) do

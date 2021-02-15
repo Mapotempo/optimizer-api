@@ -200,7 +200,8 @@ module OptimizerWrapper
       multi_modal = Interpreters::MultiModal.new(vrp, service)
       optim_result = multi_modal.multimodal_routes
     elsif vrp.vehicles.empty? || (vrp.services.empty? && vrp.shipments.empty?)
-      optim_result = Wrappers::Wrapper.new.empty_result(service.to_s, vrp, 'No vehicle available for this service')
+      optim_result = config[:services][service].empty_result(
+        service.to_s, vrp, 'No vehicle available for this service', false)
     else
       services_to_reinject = []
       sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)

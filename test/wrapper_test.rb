@@ -3185,8 +3185,14 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(VRP.lat_lon_two_vehicles)
     vrp.services = []
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-
     assert_equal 2, result[:routes].size
+
+    vrp = TestHelper.create(VRP.scheduling)
+    vrp.services = []
+    expected_days = vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1
+    nb_vehicles = vrp.vehicles.size
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal expected_days * nb_vehicles, result[:routes].size
   end
 
   def test_assert_inapplicable_for_vroom_if_vehicle_distance

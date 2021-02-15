@@ -225,8 +225,6 @@ module Interpreters
     end
 
     def generate_vehicles(vrp)
-      return vrp.vehicles if vrp.schedule_expanded_vehicles
-
       rests_durations = Array.new(vrp.vehicles.size, 0)
       new_vehicles = vrp.vehicles.collect{ |vehicle|
         @equivalent_vehicles[vehicle.id] = []
@@ -264,7 +262,6 @@ module Interpreters
         vehicles
       }.flatten
 
-      vrp.schedule_expanded_vehicles = true
       new_vehicles
     end
 
