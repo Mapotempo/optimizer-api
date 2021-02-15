@@ -931,23 +931,21 @@ module Wrappers
     end
 
     def expand_vehicles_for_consistent_empty_result(vrp)
-      if vrp.scheduling? && !vrp.schedule_expanded_vehicles
-        periodic = Interpreters::PeriodicVisits.new(vrp)
-        periodic.generate_vehicles(vrp)
-      else
-        vrp.vehicles
-      end
+      periodic = Interpreters::PeriodicVisits.new(vrp)
+      periodic.generate_vehicles(vrp)
     end
 
-    def empty_result(solver, vrp, unassigned_reason = nil)
-      vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp)
+    def empty_result(solver, vrp, unassigned_reason = nil, already_expanded = true)
+      vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp) if vrp.scheduling? && !already_expanded
       {
         solvers: [solver],
         cost: nil,
         cost_details: Models::CostDetails.new({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle| { vehicle_id: vehicle.id, activities: [] } },
-        unassigned: (unassigned_services(vrp, unassigned_reason) + unassigned_shipments(vrp, unassigned_reason) + unassigned_rests(vrp)).flatten,
+        unassigned: (unassigned_services(vrp, unassigned_reason) +
+                     unassigned_shipments(vrp, unassigned_reason) +
+                     unassigned_rests(vrp)).flatten,
         elapsed: 0,
         total_distance: nil
       }

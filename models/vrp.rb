@@ -83,7 +83,6 @@ module Models
     field :schedule_range_indices, default: nil # extends schedule_range_date
     field :schedule_unavailable_days, default: Set[] # extends unavailable_date and schedule_unavailable_indices
     field :schedule_months_indices, default: []
-    field :schedule_expanded_vehicles, default: false
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
