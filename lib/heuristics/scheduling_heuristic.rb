@@ -994,12 +994,13 @@ module Heuristics
       stop_detail = case type
                     when 'service'
                       Wrappers::Wrapper.new.build_detail(
-                        service_in_vrp, service_in_vrp.activities[data[:activity]], associated_point,
-                        day % 7, nil, vehicle
+                        service_in_vrp, service_in_vrp.activity || service_in_vrp.activities[data[:activity]],
+                        associated_point, day % 7, nil, vehicle
                       )
                     else
                       Wrappers::Wrapper.new.build_detail(nil, nil, associated_point, nil, nil, vehicle)
                     end
+      stop_detail[:setup_duration] = data[:considered_setup_duration]
       {
         day_week_num: "#{day % 7}_#{week}",
         day_week: "#{day_name}_#{week}",
