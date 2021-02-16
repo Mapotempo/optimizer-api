@@ -33,11 +33,56 @@ namespace :resque do
 end
 
 require 'rake/testtask'
+
 Rake::TestTask.new do |t|
   $stdout.sync = true
   $stderr.sync = true
   ENV['APP_ENV'] ||= 'test'
   t.pattern = 'test/**/*_test.rb'
+end
+
+Rake::TestTask.new(:test_structure) do |t|
+  $stdout.sync = true
+  $stderr.sync = true
+  ENV['APP_ENV'] ||= 'test'
+  t.test_files = ['test/api/**/*_test.rb', 'test/models/**/*_test.rb']
+end
+
+namespace :test do
+  task :api do
+    ENV['COV'] = 'false'
+    ENV['TEST'] ||= 'test/api/**/*_test.rb'
+    Rake::Task['test'].invoke
+  end
+
+  task :models do
+    ENV['COV'] = 'false'
+    ENV['TEST'] ||= 'test/models/**/*_test.rb'
+    Rake::Task['test'].invoke
+  end
+
+  task :structure do
+    ENV['COV'] = 'false'
+    Rake::Task['test_structure'].invoke
+  end
+
+  task :lib do
+    ENV['COV'] = 'false'
+    ENV['TEST'] ||= 'test/lib/**/*_test.rb'
+    Rake::Task['test'].invoke
+  end
+
+  task :clustering do
+    ENV['COV'] = 'false'
+    ENV['TEST'] ||= 'test/**/*clustering*_test.rb'
+    Rake::Task['test'].invoke
+  end
+
+  task :periodic do
+    ENV['COV'] = 'false'
+    ENV['TEST'] ||= 'test/**/*scheduling*_test.rb'
+    Rake::Task['test'].invoke
+  end
 end
 
 task clean_tmp_dir: :environment do
