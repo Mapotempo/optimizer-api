@@ -175,7 +175,7 @@ module VrpConfiguration
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
     optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
     optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
-    optional(:solver, type: Boolean, default: true, desc: 'Defines if solver should be called')
+    optional(:solver, type: Boolean, desc: 'Defines if solver should be called')
     optional(:minimize_days_worked, type: Boolean, default: false, desc: '(Scheduling heuristic only) Starts filling earlier days of the period first and minimizes the total number of days worked. Available only if first_solution_strategy is \'periodic\'. Not available with ORtools.')
     optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Available only if first_solution_strategy is \'periodic\'. Not available ORtools.')
     optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling heuristic only) Considers a solution as valid even if only a subset of the visits of a service is performed. If disabled, a service can only appear fully assigned or fully unassigned in the solution. Not available with ORtools.')
