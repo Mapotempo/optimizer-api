@@ -38,7 +38,7 @@ module Models
     field :preprocessing_neighbourhood_size, default: nil
     field :preprocessing_heuristic_result, default: {}
     field :preprocessing_heuristic_synthesis, default: nil
-    field :preprocessing_first_solution_strategy, default: nil
+    field :preprocessing_first_solution_strategy, default: []
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
     # The following 7 variables are used for dicho development
@@ -117,6 +117,7 @@ module Models
     has_many :routes, class_name: 'Models::Route'
     has_many :subtours, class_name: 'Models::Subtour'
     has_many :zones, class_name: 'Models::Zone'
+    belongs_to :config, class_name: 'Models::Configuration' # can be renamed to configuration after the transition if wanted
 
     def self.create(hash, delete = true)
       Models.delete_all if delete
@@ -267,19 +268,37 @@ module Models
       relations_to_remove.reverse_each{ |index| hash[:relations].delete_at(index) }
     end
 
+    def self.deduce_first_solution_strategy(hash)
+      preprocessing = hash[:configuration] && hash[:configuration][:preprocessing]
+      return unless preprocessing
+
+      # To make sure that internal vrp conforms with the Grape vrp.
+      preprocessing[:first_solution_strategy] ||= []
+      preprocessing[:first_solution_strategy] = [preprocessing[:first_solution_strategy]].flatten
+    end
+
+    def self.deduce_minimum_duration(hash)
+      resolution = hash[:configuration] && hash[:configuration][:resolution]
+      return unless resolution && resolution[:initial_time_out]
+
+      log 'initial_time_out and minimum_duration parameters are mutually_exclusive', level: :warn if resolution[:minimum_duration]
+      resolution[:minimum_duration] = resolution[:initial_time_out]
+      resolution.delete(:initial_time_out)
+    end
+
     def self.deduce_solver_parameter(hash)
       resolution = hash[:configuration] && hash[:configuration][:resolution]
       return unless resolution
 
       if resolution[:solver_parameter] == -1
         resolution[:solver] = false
-        resolution[:solver_parameter] = nil
+        resolution.delete(:solver_parameter)
       elsif resolution[:solver_parameter]
-          correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
-          hash[:configuration][:preprocessing] ||= {}
-          hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
-          resolution[:solver] = true
-          resolution[:solver_parameter] = nil
+        correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
+        hash[:configuration][:preprocessing] ||= {}
+        hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
+        resolution[:solver] = true
+        resolution.delete(:solver_parameter)
       end
     end
 
@@ -295,6 +314,8 @@ module Models
 
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
+      self.deduce_first_solution_strategy(hash)
+      self.deduce_minimum_duration(hash)
       self.deduce_solver_parameter(hash)
       self.convert_route_indice_into_index(hash)
     end
@@ -309,31 +330,32 @@ module Models
     def self.remove_unecessary_units(hash)
       return hash if !hash[:units] || !hash[:vehicles] || (!hash[:services] && !hash[:shipments])
 
-      vehicle_capacities = hash[:vehicles]&.map{ |v| v[:capacities] || [] }&.flatten&.uniq
-      service_quantities = hash[:services]&.map{ |s| s[:quantities] || [] }&.flatten&.uniq
-      shipment_quantities = hash[:shipments]&.map{ |s| s[:quantities] || [] }&.flatten&.uniq
+      vehicle_units = hash[:vehicles]&.flat_map{ |v| v[:capacities]&.map{ |c| c[:unit_id] } || [] } || []
+      subtour_units = hash[:subtours]&.flat_map{ |v| v[:capacities]&.map{ |c| c[:unit_id] } || [] } || []
+      service_units = hash[:services]&.flat_map{ |s| s[:quantities]&.map{ |c| c[:unit_id] } || [] } || []
+      shipment_units = hash[:shipments]&.flat_map{ |s| s[:quantities]&.map{ |c| c[:unit_id] } || [] } || []
 
-      capacities_units = hash[:capacities]&.map{ |c| c[:unit_id] } || vehicle_capacities&.map{ |c| c[:unit_id] }
-      quantities_units = (hash[:quantities]&.map{ |q| q[:unit_id] } || []) +
-                         (service_quantities&.map{ |q| q[:unit_id] } || []) +
-                         (shipment_quantities&.map{ |q| q[:unit_id] } || [])
+      capacity_units = (hash[:capacities]&.map{ |c| c[:unit_id] } || []) | vehicle_units | subtour_units
+      quantity_units = (hash[:quantities]&.map{ |q| q[:unit_id] } || []) | service_units | shipment_units
+      needed_units = capacity_units & quantity_units
 
-      needed_units = capacities_units & quantities_units.uniq
       hash[:units].delete_if{ |u| needed_units.exclude? u[:id] }
 
       rejected_capacities = hash[:capacities]&.select{ |capacity| needed_units.exclude? capacity[:unit_id] }&.map{ |capacity| capacity[:id] } || []
       rejected_quantities = hash[:quantities]&.select{ |quantity| needed_units.exclude? quantity[:unit_id] }&.map{ |quantity| quantity[:id] } || []
 
-      hash[:vehicles]&.map{ |v| rejected_capacities.each { |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
-      hash[:services]&.map{ |s| rejected_quantities.each { |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
-      hash[:shipments]&.map{ |s| rejected_quantities.each { |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
+      hash[:vehicles]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
+      hash[:subtours]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
+      hash[:services]&.each{ |s| rejected_quantities.each{ |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
+      hash[:shipments]&.each{ |s| rejected_quantities.each{ |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
 
       hash[:capacities]&.delete_if{ |capacity| rejected_capacities.include? capacity[:id] }
       hash[:quantities]&.delete_if{ |quantity| rejected_quantities.include? quantity[:id] }
 
-      hash[:vehicles]&.map{ |v| (v[:capacities] || []).delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
-      hash[:services]&.map{ |v| (v[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
-      hash[:shipments]&.map{ |s| (s[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
+      hash[:vehicles]&.each{ |v| v[:capacities]&.delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
+      hash[:subtours]&.each{ |v| v[:capacities]&.delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
+      hash[:services]&.each{ |v| v[:quantities]&.delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
+      hash[:shipments]&.each{ |s| s[:quantities]&.delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
     end
 
     def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
@@ -434,7 +456,7 @@ module Models
         current_index += 1
       }
       months_indices << current_indices
-      hash[:configuration][:schedule][:month_indices] = months_indices
+      hash[:configuration][:schedule][:months_indices] = months_indices
 
       # convert route dates into indices
       hash[:routes]&.each{ |route|
@@ -456,6 +478,7 @@ module Models
     end
 
     def configuration=(configuration)
+      self.config = configuration
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
       self.resolution = configuration[:resolution] if configuration[:resolution]
       self.schedule = configuration[:schedule] if configuration[:schedule]
@@ -477,7 +500,7 @@ module Models
       self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
       self.resolution_stable_iterations = resolution[:stable_iterations]
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
-      self.resolution_minimum_duration = resolution[:initial_time_out] || resolution[:minimum_duration]
+      self.resolution_minimum_duration = resolution[:minimum_duration]
       self.resolution_init_duration = resolution[:init_duration]
       self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
@@ -504,7 +527,7 @@ module Models
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
-      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy].nil? ? nil : [preprocessing[:first_solution_strategy]].flatten # To make sure that internal vrp conforms with the Grape vrp.
+      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
       self.preprocessing_partitions = preprocessing[:partitions]
       self.preprocessing_heuristic_result = {}
     end
@@ -512,7 +535,7 @@ module Models
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
       self.schedule_unavailable_days = schedule[:unavailable_days]
-      self.schedule_months_indices = schedule[:month_indices]
+      self.schedule_months_indices = schedule[:months_indices]
     end
 
     def services_duration

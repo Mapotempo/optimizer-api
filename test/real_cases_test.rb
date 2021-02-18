@@ -18,8 +18,6 @@
 require './test/test_helper'
 
 class RealCasesTest < Minitest::Test
-  include Hashie::Extensions::SymbolizeKeys
-
   if !ENV['SKIP_REAL_CASES']
     # ##################################
     # ########## TEST PATTERN
@@ -137,7 +135,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, result[:routes].size
 
       # Check total travel time
-      assert result[:routes].sum{ |r| r[:total_travel_time] } < 5000, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 5289, 'Too long travel time'
       # Check activities
       assert_equal check_vrp_services_size + 2 + 1, result[:routes][0][:activities].size
       # Check elapsed time
@@ -163,7 +161,7 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
       # Check total travel time
-      assert result[:routes].sum{ |r| r[:total_travel_time] } < 42300, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 42587, 'Too long travel time'
 
       # Check elapsed time
       assert result[:elapsed] < 420000, "Too long elapsed time: #{result[:elapsed]}"
@@ -182,10 +180,10 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
       # Check total travel time
-      assert result[:routes].sum{ |r| r[:total_travel_time] } < 40500, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 42587, 'Too long travel time'
 
       # Check elapsed time
-      assert result[:elapsed] < 4500, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 6000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Lille - 141 services with time window and quantity - no late for services
@@ -198,14 +196,14 @@ class RealCasesTest < Minitest::Test
       assert_equal vrp.vehicles.size, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
       # Check total travel time
-      assert result[:routes].sum{ |r| r[:total_travel_time] } <= 59180, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 59959, 'Too long travel time'
 
       # Check activities
       activities = result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }
       assert activities > 140, "Not enough activities: #{activities}"
 
       # Check elapsed time
-      assert result[:elapsed] < 20000, "Too long elapsed time: #{result[:elapsed]}"
+      assert_operator result[:elapsed], :<=, 26500, 'Too long elapsed time'
     end
 
     # Bordeaux - 81 services with time window - late for services & vehicles
@@ -248,8 +246,8 @@ class RealCasesTest < Minitest::Test
       assert_equal 29, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
       # Check total times
-      assert result[:routes].sum{ |r| r[:total_travel_time] } < 178200, "Too long travel time:#{result[:routes].sum{ |r| r[:total_travel_time] }}"
-      assert result[:routes].sum{ |r| r[:total_time] } < 423500, "Too long total time:#{result[:routes].sum{ |r| r[:total_time] }}"
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 183688, 'Too long travel time'
+      assert_operator result[:routes].sum{ |r| r[:total_time] }, :<=, 427004, 'Too long total time'
 
       # Check elapsed time
       assert result[:elapsed] < 8000, "Too long elapsed time: #{result[:elapsed]}"
@@ -266,7 +264,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, (result[:unassigned].count{ |u| !u[:reason].nil? })
 
       # Check total travel time
-      assert result[:routes].sum{ |r| r[:total_travel_time] } <= 6305, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 6381, 'Too long travel time'
 
       # Check elapsed time
       assert result[:elapsed] < 7000, "Too long elapsed time: #{result[:elapsed]}"
@@ -426,7 +424,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_g1g2
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self)
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -440,7 +438,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_hv11
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self)
       vrp.resolution_minimum_duration = 40000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -454,7 +452,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_tv1
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-1] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self)
       vrp.resolution_minimum_duration = 30000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false
@@ -467,7 +465,7 @@ class RealCasesTest < Minitest::Test
 
     # North West of France - at the fastest with distance minimization with vehicle returning at the depot
     def test_instance_fr_tv11
-      vrp = TestHelper.create(Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + self.name[5..-2] + '.json').to_a.join)['vrp']))
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_fr_tv1')
       vrp.resolution_minimum_duration = 8000
       vrp.resolution_duration = 600000
       vrp.restitution_intermediate_solutions = false

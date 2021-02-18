@@ -35,7 +35,6 @@ Minitest::Reporters.use! [
 ].compact
 
 require 'grape'
-require 'hashie'
 require 'grape-swagger'
 require 'grape-entity'
 
@@ -45,6 +44,8 @@ require 'minitest/focus'
 require 'byebug'
 require 'rack/test'
 require 'find'
+
+require 'zlib'
 
 module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDisableDirective, Metrics/ModuleLength
   def self.coerce(vrp)
@@ -65,16 +66,18 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       }
     }
 
-    [vrp[:services], vrp[:shipments]].flatten.each{ |s|
-      next if s.nil?
-      next if vrp.is_a?(Hash) && !s.has_key?(:visits_number)
+    [vrp[:services], vrp[:shipments]].each{ |group|
+      group&.each{ |s|
+        next if s.nil?
+        next if vrp.is_a?(Hash) && !s.key?(:visits_number)
 
-      raise StandardError, "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid." unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
+        raise StandardError, "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid." unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
 
-      [s[:activity] || s[:activities] || s[:pickup] || s[:delivery]].flatten.each{ |activity|
-        next unless activity[:position]
+        [s[:activity] || s[:activities] || s[:pickup] || s[:delivery]].flatten.each{ |activity|
+          next unless activity[:position]
 
-        activity[:position] = activity[:position].to_sym
+          activity[:position] = activity[:position].to_sym
+        }
       }
     }
 
@@ -101,30 +104,33 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   end
 
   def self.matrix_required(vrp)
-    if ENV['TEST_DUMP_VRP'].to_s == 'true' && vrp.name
-      vrp.compute_matrix
-      File.binwrite('test/fixtures/' + vrp.name + '.dump', Marshal.dump(vrp))
-    end
+    return unless ENV['TEST_DUMP_VRP'].to_s == 'true' && vrp.name
+
+    vrp.compute_matrix
+    File.write("test/fixtures/#{vrp.name}.dump", Zlib.deflate(Marshal.dump(vrp)))
   end
 
-  def self.multipe_matrices_required(vrps, test)
-    if ENV['TEST_DUMP_VRP'].to_s == 'true'
-      vrps.each(&:compute_matrix)
-      File.binwrite('test/fixtures/' + test.name[5..-1] + '.dump', Marshal.dump(vrps))
-    end
+  def self.multipe_matrices_required(vrps, filename)
+    return unless ENV['TEST_DUMP_VRP'].to_s == 'true'
+
+    vrps.each(&:compute_matrix)
+    File.write("test/fixtures/#{filename}.dump", Zlib.deflate(Marshal.dump(vrps)))
   end
 
   def self.load_vrp(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
-    dump_file = 'test/fixtures/' + filename + '.dump'
+    dump_file = "test/fixtures/#{filename}.dump"
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrp = Marshal.load(File.binread(dump_file)) # rubocop: disable Security/MarshalLoad
+      vrp = Marshal.load(Zlib.inflate(File.read(dump_file))) # rubocop: disable Security/MarshalLoad
       coerce(vrp)
     else
-      vrp = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
+      json_file = "test/fixtures/#{filename}.json"
+      vrp = options[:problem] || JSON.parse(File.read(json_file), symbolize_names: true)[:vrp]
       vrp = create(vrp)
 
-      if vrp.matrices.empty?
+      # To automaticly generate a dump file with TEST_DUMP_VRP
+      # json file should have neither matrix nor name!
+      if vrp.matrices.empty? && vrp.name.nil?
         vrp.name = filename
         matrix_required(vrp)
       end
@@ -135,18 +141,19 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
   def self.load_vrps(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
-    dump_file = 'test/fixtures/' + filename + '.dump'
+    dump_file = "test/fixtures/#{filename}.dump"
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrps = Marshal.load(File.binread(dump_file)) # rubocop: disable Security/MarshalLoad
+      vrps = Marshal.load(Zlib.inflate(File.read(dump_file))) # rubocop: disable Security/MarshalLoad
       vrps.map!{ |vrp| coerce(vrp) }
     else
-      vrps = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
+      json_file = "test/fixtures/#{filename}.json"
+      vrps = options[:problem] || JSON.parse(File.read(json_file), symbolize_names: true).map{ |vrp| vrp[:vrp] }
 
       vrps.map!{ |vrp|
         create(vrp)
       }
 
-      multipe_matrices_required(vrps, test)
+      multipe_matrices_required(vrps, filename)
 
       vrps
     end

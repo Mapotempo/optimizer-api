@@ -28,7 +28,7 @@ class HeuristicTest < Minitest::Test
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
       result[:routes].each{ |route|
-        assert_operator route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] }, :<=, vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] + 1e-5
+        assert_operator route[:activities].sum{ |stop| stop[:detail][:quantities].to_a.empty? ? 0 : stop[:detail][:quantities][0][:value] }, :<=, vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] + 1e-5
       }
       service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
       service_ids.flatten!
@@ -45,7 +45,7 @@ class HeuristicTest < Minitest::Test
       assert(result[:unassigned].none?{ |service| service[:service_id].include?('0110') })
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
-      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
+      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].to_a.empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
       service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
       service_ids.flatten!
       service_ids.compact!
@@ -57,10 +57,11 @@ class HeuristicTest < Minitest::Test
       vrp.resolution_minimize_days_worked = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
-      assert_equal 30, result[:unassigned].size
+      # voluntarily equal to watch evolution of scheduling algorithm performance
+      assert_equal 25, result[:unassigned].size, 'Do not have the expected number of unassigned visits'
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
-      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
+      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].to_a.empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
       service_ids = (result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } } + result[:unassigned].collect{ |unassigned| unassigned[:service_id] })
       service_ids.flatten!
       service_ids.compact!
@@ -75,7 +76,7 @@ class HeuristicTest < Minitest::Test
       assert_equal 0, result[:unassigned].size
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       assert_equal vrp.services.sum{ |service| service[:quantities][0] ? service[:quantities][0][:value] : 0 }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] && activity[:detail][:quantities][0] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0] ? unassigned[:detail][:quantities][0][:value] : 0 }
-      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
+      assert(result[:routes].none?{ |route| route[:activities].sum{ |stop| stop[:detail][:quantities].to_a.empty? ? 0 : stop[:detail][:quantities][0][:value] } > vrp.vehicles.find{ |vehicle| vehicle[:id] == route[:vehicle_id] }[:capacities][0][:limit] })
       service_ids = result[:routes].collect{ |route| route[:activities].collect{ |activity| activity[:service_id] } }
       service_ids.flatten!
       service_ids.compact!
@@ -85,14 +86,14 @@ class HeuristicTest < Minitest::Test
     def test_without_same_point_day
       vrp = TestHelper.load_vrp(self)
       expecting = vrp.visits
-      vrp[:configuration][:resolution][:solver] = false
+      vrp.resolution_solver = false
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       unassigned = result[:unassigned].size
       assert_equal 46, unassigned
 
       vrp = TestHelper.load_vrp(self)
-      vrp[:configuration][:resolution][:solver] = true
+      vrp.resolution_solver = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert unassigned >= result[:unassigned].size
       assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
@@ -257,8 +258,8 @@ class HeuristicTest < Minitest::Test
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 244, unassigned_visits.sum, "Expecting 244 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal expected, seen, 'Do not have the expected number of total visits'
+      assert_equal 280, unassigned_visits.sum, 'Do not have the expected number of unassigned visits'
     end
 
     def test_minimum_stop_in_route
@@ -299,8 +300,8 @@ class HeuristicTest < Minitest::Test
       }
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
-      assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 278, unassigned_visits.sum, "Expecting 278 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal expected, seen, 'Do not have the expected number of total visits'
+      assert_equal 294, unassigned_visits.sum, 'Do not have the expected number of unassigned visits'
     end
 
     def test_fill_days_and_post_processing
@@ -309,9 +310,11 @@ class HeuristicTest < Minitest::Test
       vrp.resolution_minimize_days_worked = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
-      assert_equal 62, result[:unassigned].size
-      assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
-                   "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"
+      # voluntarily equal to watch evolution of scheduling algorithm performance
+      assert_equal vrp.visits,
+                   result[:routes].sum{ |r| r[:activities].count{ |s| s[:service_id] } } + result[:unassigned].size,
+                   'Do not have the expected number of total visits'
+      assert_equal 74, result[:unassigned].size, 'Do not have the expected number of unassigned visits'
     end
 
     def test_treatment_site

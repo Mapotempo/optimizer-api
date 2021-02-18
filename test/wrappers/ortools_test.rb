@@ -5729,7 +5729,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     ]
 
     vrp[:configuration][:resolution][:duration] = 20
-    vrp[:configuration][:resolution][:first_solution_strategy] = 1
+    vrp[:configuration][:preprocessing][:first_solution_strategy] = ['global_cheapest_arc']
 
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
@@ -5767,7 +5767,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     ]
 
     vrp[:configuration][:resolution][:duration] = 50
-    vrp[:configuration][:resolution][:first_solution_strategy] = 1 # don't waste time with heuristic selector
+    vrp[:configuration][:preprocessing][:first_solution_strategy] = ['global_cheapest_arc'] # don't waste time with heuristic selector
 
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 

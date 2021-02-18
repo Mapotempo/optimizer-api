@@ -1,1 +1,1406 @@
-{"vrp":{"points":[{"id":"point_0","location":{"lat":44.7394,"lon":-1.0935}},{"id":"point_1","location":{"lat":44.654,"lon":-1.1476}},{"id":"point_2","location":{"lat":44.7568,"lon":-1.1198}},{"id":"point_3","location":{"lat":44.6841,"lon":-1.0163}},{"id":"point_4","location":{"lat":44.8658,"lon":-0.5524}},{"id":"point_5","location":{"lat":44.8553,"lon":-0.5712}},{"id":"point_6","location":{"lat":44.6356,"lon":-0.9744}},{"id":"point_7","location":{"lat":44.9093,"lon":-0.639}},{"id":"point_8","location":{"lat":44.8509,"lon":-0.6436}},{"id":"point_9","location":{"lat":45.0262,"lon":-0.8017}},{"id":"point_10","location":{"lat":44.78,"lon":-0.6089}},{"id":"point_11","location":{"lat":44.9782,"lon":-1.0787}},{"id":"point_12","location":{"lat":44.9073,"lon":-0.669}},{"id":"point_13","location":{"lat":44.8174,"lon":-0.68}},{"id":"point_14","location":{"lat":44.9445,"lon":-0.6066}},{"id":"point_15","location":{"lat":44.8462,"lon":-0.6318}},{"id":"point_16","location":{"lat":44.7905,"lon":-0.6325}},{"id":"point_17","location":{"lat":44.8098,"lon":-0.6222}},{"id":"point_18","location":{"lat":44.8306,"lon":-0.6034}},{"id":"point_19","location":{"lat":44.8404,"lon":-0.5823}},{"id":"point_20","location":{"lat":44.9046,"lon":-0.7448}},{"id":"point_21","location":{"lat":44.8132,"lon":-0.5722}},{"id":"point_22","location":{"lat":44.7816,"lon":-0.5675}},{"id":"point_23","location":{"lat":44.8173,"lon":-0.5853}},{"id":"point_24","location":{"lat":44.7985,"lon":-0.5822}},{"id":"point_25","location":{"lat":44.9564,"lon":-0.6287}},{"id":"point_26","location":{"lat":45.0427,"lon":-0.6776}},{"id":"point_27","location":{"lat":44.8397,"lon":-0.6062}},{"id":"point_28","location":{"lat":44.9363,"lon":-0.8307}},{"id":"point_29","location":{"lat":44.9698,"lon":-0.89}},{"id":"point_30","location":{"lat":44.8682,"lon":-1.0899}},{"id":"point_31","location":{"lat":44.6549,"lon":-1.2408}},{"id":"point_32","location":{"lat":44.796,"lon":-1.1466}},{"id":"point_33","location":{"lat":44.7189,"lon":-1.071}},{"id":"point_34","location":{"lat":44.7495,"lon":-1.0965}},{"id":"point_35","location":{"lat":44.8755,"lon":-1.0803}},{"id":"point_36","location":{"lat":44.7459,"lon":-1.0887}},{"id":"point_37","location":{"lat":44.7244,"lon":-1.2029}},{"id":"point_38","location":{"lat":44.7015,"lon":-1.2294}},{"id":"point_39","location":{"lat":44.6549,"lon":-1.2408}},{"id":"point_40","location":{"lat":45.0085,"lon":-0.6126}},{"id":"point_41","location":{"lat":45.096,"lon":-0.7179}},{"id":"point_42","location":{"lat":45.0343,"lon":-0.758}},{"id":"point_43","location":{"lat":45.0381,"lon":-0.6948}},{"id":"point_44","location":{"lat":44.9971,"lon":-0.6889}},{"id":"point_45","location":{"lat":44.9564,"lon":-0.6698}},{"id":"point_46","location":{"lat":45.0784,"lon":-1.0451}},{"id":"point_47","location":{"lat":44.9333,"lon":-0.6209}},{"id":"point_48","location":{"lat":44.906,"lon":-0.6369}},{"id":"point_49","location":{"lat":45.0786,"lon":-1.0438}},{"id":"point_50","location":{"lat":44.9933,"lon":-0.6956}},{"id":"point_51","location":{"lat":45.0964,"lon":-0.7259}},{"id":"point_52","location":{"lat":44.8562,"lon":-0.6501}},{"id":"point_53","location":{"lat":44.5068,"lon":-0.797}},{"id":"point_54","location":{"lat":44.5068,"lon":-0.7888}},{"id":"point_55","location":{"lat":44.6038,"lon":-0.9371}},{"id":"point_56","location":{"lat":45.0409,"lon":-0.6747}},{"id":"point_57","location":{"lat":44.9045,"lon":-0.6715}},{"id":"point_58","location":{"lat":44.7394,"lon":-1.0935}},{"id":"point_59","location":{"lat":44.9093,"lon":-0.639}},{"id":"point_60","location":{"lat":44.6356,"lon":-0.9744}},{"id":"point_61","location":{"lat":44.8174,"lon":-0.68}},{"id":"point_62","location":{"lat":44.9046,"lon":-0.7448}},{"id":"point_63","location":{"lat":44.8462,"lon":-0.6318}},{"id":"point_64","location":{"lat":44.8132,"lon":-0.5722}}],"vehicles":[{"id":"vehicle_0","start_point_id":"point_58","end_point_id":"point_58","router_mode":"car","router_dimension":"distance","timewindow":{"start":28800,"end":48600}},{"id":"vehicle_1","start_point_id":"point_60","end_point_id":"point_60","router_mode":"car","router_dimension":"distance","timewindow":{"start":28800,"end":48600}},{"id":"vehicle_2","start_point_id":"point_59","end_point_id":"point_59","router_mode":"car","router_dimension":"distance","timewindow":{"start":28800,"end":48600}},{"id":"vehicle_3","start_point_id":"point_59","end_point_id":"point_59","router_mode":"car","router_dimension":"distance","timewindow":{"start":28800,"end":48600}},{"id":"vehicle_4","start_point_id":"point_61","end_point_id":"point_61","router_mode":"car","router_dimension":"distance","timewindow":{"start":28800,"end":48600}},{"id":"vehicle_5","start_point_id":"point_62","end_point_id":"point_62","router_mode":"car","router_dimension":"distance","timewindow":{"start":28800,"end":48600}},{"id":"vehicle_6","start_point_id":"point_64","end_point_id":"point_64","router_mode":"car","router_dimension":"distance","timewindow":{"start":28800,"end":48600}}],"services":[{"id":"service_0","activity":{"duration":120,"point_id":"point_27"},"sticky_vehicle_ids":[null]},{"id":"service_1","position":"always_last","activity":{"setup_duration":300,"point_id":"point_13"},"sticky_vehicle_ids":[null]},{"id":"service_2","position":"always_last","priority":0,"sticky_vehicle_ids":["vehicle_0"],"activity":{"setup_duration":300,"point_id":"point_13"}},{"id":"service_3","position":"always_last","priority":0,"sticky_vehicle_ids":["vehicle_1"],"activity":{"setup_duration":300,"point_id":"point_13"}},{"id":"service_4","position":"always_last","priority":0,"sticky_vehicle_ids":["vehicle_2"],"activity":{"setup_duration":300,"point_id":"point_13"}},{"id":"service_5","position":"always_last","priority":0,"sticky_vehicle_ids":["vehicle_3"],"activity":{"setup_duration":300,"point_id":"point_13"}},{"id":"service_6","position":"always_last","priority":0,"sticky_vehicle_ids":["vehicle_4"],"activity":{"setup_duration":300,"point_id":"point_13"}},{"id":"service_7","position":"always_last","priority":0,"sticky_vehicle_ids":["vehicle_5"],"activity":{"setup_duration":300,"point_id":"point_13"}},{"id":"service_8","position":"always_last","priority":0,"sticky_vehicle_ids":["vehicle_6"],"activity":{"setup_duration":300,"point_id":"point_13"}}],"shipments":[{"id":"shipment_0","pickup":{"point_id":"point_26","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_1","pickup":{"point_id":"point_28","duration":120,"timewindows":[{"start":39000,"end":43200}]},"delivery":{"point_id":"point_13","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_2","pickup":{"point_id":"point_29","duration":120,"timewindows":[{"start":39000,"end":43200}]},"delivery":{"point_id":"point_13","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_3","pickup":{"point_id":"point_30","duration":120,"timewindows":[{"start":41400,"end":45900}]},"delivery":{"point_id":"point_13","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_4","pickup":{"point_id":"point_31","duration":120,"timewindows":[{"start":35100,"end":36900}]},"delivery":{"point_id":"point_2","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_5","pickup":{"point_id":"point_32","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_2","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_6","pickup":{"point_id":"point_33","duration":120,"timewindows":[{"start":37800,"end":43200}]},"delivery":{"point_id":"point_0","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_7","pickup":{"point_id":"point_34","duration":120,"timewindows":[{"start":36600,"end":43200}]},"delivery":{"point_id":"point_0","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_8","pickup":{"point_id":"point_35","duration":120,"timewindows":[{"start":41400,"end":45900}]},"delivery":{"point_id":"point_13","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_9","pickup":{"point_id":"point_36","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_0","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_10","pickup":{"point_id":"point_37","duration":120,"timewindows":[{"start":36000,"end":41400}]},"delivery":{"point_id":"point_2","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_11","pickup":{"point_id":"point_38","duration":120,"timewindows":[{"start":36000,"end":41400}]},"delivery":{"point_id":"point_2","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_12","pickup":{"point_id":"point_39","duration":120,"timewindows":[{"start":35100,"end":36900}]},"delivery":{"point_id":"point_2","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_13","pickup":{"point_id":"point_40","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_14","pickup":{"point_id":"point_41","duration":120,"timewindows":[{"start":37800,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_15","pickup":{"point_id":"point_42","duration":120,"timewindows":[{"start":37800,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_16","pickup":{"point_id":"point_43","duration":120,"timewindows":[{"start":39000,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_17","pickup":{"point_id":"point_44","duration":120,"timewindows":[{"start":39300,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_18","pickup":{"point_id":"point_45","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_19","pickup":{"point_id":"point_46","duration":120,"timewindows":[{"start":39000,"end":43200}]},"delivery":{"point_id":"point_13","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_20","pickup":{"point_id":"point_47","duration":120,"timewindows":[{"start":37800,"end":45000}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_21","pickup":{"point_id":"point_48","duration":120,"timewindows":[{"start":37800,"end":45000}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_22","pickup":{"point_id":"point_49","duration":120,"timewindows":[{"start":39000,"end":43200}]},"delivery":{"point_id":"point_13","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_23","pickup":{"point_id":"point_50","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_24","pickup":{"point_id":"point_51","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_25","pickup":{"point_id":"point_52","duration":120,"timewindows":[{"start":43200,"end":48600}]},"delivery":{"point_id":"point_13","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_26","pickup":{"point_id":"point_53","duration":120,"timewindows":[{"start":37800,"end":43200}]},"delivery":{"point_id":"point_6","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_27","pickup":{"point_id":"point_54","duration":120,"timewindows":[{"start":37800,"end":43200}]},"delivery":{"point_id":"point_6","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_28","pickup":{"point_id":"point_55","duration":120,"timewindows":[{"start":37800,"end":43200}]},"delivery":{"point_id":"point_6","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_29","pickup":{"point_id":"point_56","duration":120,"timewindows":[{"start":36000,"end":43200}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]},{"id":"shipment_30","pickup":{"point_id":"point_57","duration":120,"timewindows":[{"start":39600,"end":46800}]},"delivery":{"point_id":"point_7","setup_duration":2700},"maximum_inroute_duration":6300,"skills":["external"]}],"relations":[{"id":"bel_air_relation","type":"sequence","linked_ids":["Clinique Bel Air","Mérignac_Bel_Air"]}],"routes":[{"vehicle_id":"vehicle_0","mission_ids":["shipment_6","shipment_7","shipment_9","shipment_7","shipment_6","shipment_9","service_2"]},{"vehicle_id":"vehicle_6","mission_ids":["shipment_30","shipment_21","shipment_21","shipment_30","service_0","service_1","service_8"]},{"vehicle_id":"vehicle_1","mission_ids":["shipment_27","shipment_28","shipment_28","shipment_27","service_3"]},{"vehicle_id":"vehicle_2","mission_ids":["shipment_18","shipment_23","shipment_17","shipment_13","shipment_20","shipment_20","shipment_13","shipment_17","shipment_23","shipment_18","service_4"]},{"vehicle_id":"vehicle_3","mission_ids":["shipment_14","shipment_24","shipment_15","shipment_16","shipment_0","shipment_29","shipment_14","shipment_15","shipment_16","shipment_0","shipment_24","shipment_29","service_5"]},{"vehicle_id":"vehicle_4","mission_ids":["shipment_4","shipment_12","shipment_11","shipment_10","shipment_5","shipment_4","shipment_12","shipment_10","shipment_5","shipment_11","shipment_3","shipment_8","shipment_8","shipment_3","service_6"]},{"vehicle_id":"vehicle_5","mission_ids":["shipment_2","shipment_1","shipment_25","shipment_25","shipment_2","shipment_1","service_7"]}],"configuration":{"resolution":{"minimum_duration":60000,"duration":120000}},"name":null}}
+{
+  "vrp": {
+    "points": [
+      {
+        "id": "point_0",
+        "location": {
+          "lat": 44.7394,
+          "lon": -1.0935
+        }
+      },
+      {
+        "id": "point_1",
+        "location": {
+          "lat": 44.654,
+          "lon": -1.1476
+        }
+      },
+      {
+        "id": "point_2",
+        "location": {
+          "lat": 44.7568,
+          "lon": -1.1198
+        }
+      },
+      {
+        "id": "point_3",
+        "location": {
+          "lat": 44.6841,
+          "lon": -1.0163
+        }
+      },
+      {
+        "id": "point_4",
+        "location": {
+          "lat": 44.8658,
+          "lon": -0.5524
+        }
+      },
+      {
+        "id": "point_5",
+        "location": {
+          "lat": 44.8553,
+          "lon": -0.5712
+        }
+      },
+      {
+        "id": "point_6",
+        "location": {
+          "lat": 44.6356,
+          "lon": -0.9744
+        }
+      },
+      {
+        "id": "point_7",
+        "location": {
+          "lat": 44.9093,
+          "lon": -0.639
+        }
+      },
+      {
+        "id": "point_8",
+        "location": {
+          "lat": 44.8509,
+          "lon": -0.6436
+        }
+      },
+      {
+        "id": "point_9",
+        "location": {
+          "lat": 45.0262,
+          "lon": -0.8017
+        }
+      },
+      {
+        "id": "point_10",
+        "location": {
+          "lat": 44.78,
+          "lon": -0.6089
+        }
+      },
+      {
+        "id": "point_11",
+        "location": {
+          "lat": 44.9782,
+          "lon": -1.0787
+        }
+      },
+      {
+        "id": "point_12",
+        "location": {
+          "lat": 44.9073,
+          "lon": -0.669
+        }
+      },
+      {
+        "id": "point_13",
+        "location": {
+          "lat": 44.8174,
+          "lon": -0.68
+        }
+      },
+      {
+        "id": "point_14",
+        "location": {
+          "lat": 44.9445,
+          "lon": -0.6066
+        }
+      },
+      {
+        "id": "point_15",
+        "location": {
+          "lat": 44.8462,
+          "lon": -0.6318
+        }
+      },
+      {
+        "id": "point_16",
+        "location": {
+          "lat": 44.7905,
+          "lon": -0.6325
+        }
+      },
+      {
+        "id": "point_17",
+        "location": {
+          "lat": 44.8098,
+          "lon": -0.6222
+        }
+      },
+      {
+        "id": "point_18",
+        "location": {
+          "lat": 44.8306,
+          "lon": -0.6034
+        }
+      },
+      {
+        "id": "point_19",
+        "location": {
+          "lat": 44.8404,
+          "lon": -0.5823
+        }
+      },
+      {
+        "id": "point_20",
+        "location": {
+          "lat": 44.9046,
+          "lon": -0.7448
+        }
+      },
+      {
+        "id": "point_21",
+        "location": {
+          "lat": 44.8132,
+          "lon": -0.5722
+        }
+      },
+      {
+        "id": "point_22",
+        "location": {
+          "lat": 44.7816,
+          "lon": -0.5675
+        }
+      },
+      {
+        "id": "point_23",
+        "location": {
+          "lat": 44.8173,
+          "lon": -0.5853
+        }
+      },
+      {
+        "id": "point_24",
+        "location": {
+          "lat": 44.7985,
+          "lon": -0.5822
+        }
+      },
+      {
+        "id": "point_25",
+        "location": {
+          "lat": 44.9564,
+          "lon": -0.6287
+        }
+      },
+      {
+        "id": "point_26",
+        "location": {
+          "lat": 45.0427,
+          "lon": -0.6776
+        }
+      },
+      {
+        "id": "point_27",
+        "location": {
+          "lat": 44.8397,
+          "lon": -0.6062
+        }
+      },
+      {
+        "id": "point_28",
+        "location": {
+          "lat": 44.9363,
+          "lon": -0.8307
+        }
+      },
+      {
+        "id": "point_29",
+        "location": {
+          "lat": 44.9698,
+          "lon": -0.89
+        }
+      },
+      {
+        "id": "point_30",
+        "location": {
+          "lat": 44.8682,
+          "lon": -1.0899
+        }
+      },
+      {
+        "id": "point_31",
+        "location": {
+          "lat": 44.6549,
+          "lon": -1.2408
+        }
+      },
+      {
+        "id": "point_32",
+        "location": {
+          "lat": 44.796,
+          "lon": -1.1466
+        }
+      },
+      {
+        "id": "point_33",
+        "location": {
+          "lat": 44.7189,
+          "lon": -1.071
+        }
+      },
+      {
+        "id": "point_34",
+        "location": {
+          "lat": 44.7495,
+          "lon": -1.0965
+        }
+      },
+      {
+        "id": "point_35",
+        "location": {
+          "lat": 44.8755,
+          "lon": -1.0803
+        }
+      },
+      {
+        "id": "point_36",
+        "location": {
+          "lat": 44.7459,
+          "lon": -1.0887
+        }
+      },
+      {
+        "id": "point_37",
+        "location": {
+          "lat": 44.7244,
+          "lon": -1.2029
+        }
+      },
+      {
+        "id": "point_38",
+        "location": {
+          "lat": 44.7015,
+          "lon": -1.2294
+        }
+      },
+      {
+        "id": "point_39",
+        "location": {
+          "lat": 44.6549,
+          "lon": -1.2408
+        }
+      },
+      {
+        "id": "point_40",
+        "location": {
+          "lat": 45.0085,
+          "lon": -0.6126
+        }
+      },
+      {
+        "id": "point_41",
+        "location": {
+          "lat": 45.096,
+          "lon": -0.7179
+        }
+      },
+      {
+        "id": "point_42",
+        "location": {
+          "lat": 45.0343,
+          "lon": -0.758
+        }
+      },
+      {
+        "id": "point_43",
+        "location": {
+          "lat": 45.0381,
+          "lon": -0.6948
+        }
+      },
+      {
+        "id": "point_44",
+        "location": {
+          "lat": 44.9971,
+          "lon": -0.6889
+        }
+      },
+      {
+        "id": "point_45",
+        "location": {
+          "lat": 44.9564,
+          "lon": -0.6698
+        }
+      },
+      {
+        "id": "point_46",
+        "location": {
+          "lat": 45.0784,
+          "lon": -1.0451
+        }
+      },
+      {
+        "id": "point_47",
+        "location": {
+          "lat": 44.9333,
+          "lon": -0.6209
+        }
+      },
+      {
+        "id": "point_48",
+        "location": {
+          "lat": 44.906,
+          "lon": -0.6369
+        }
+      },
+      {
+        "id": "point_49",
+        "location": {
+          "lat": 45.0786,
+          "lon": -1.0438
+        }
+      },
+      {
+        "id": "point_50",
+        "location": {
+          "lat": 44.9933,
+          "lon": -0.6956
+        }
+      },
+      {
+        "id": "point_51",
+        "location": {
+          "lat": 45.0964,
+          "lon": -0.7259
+        }
+      },
+      {
+        "id": "point_52",
+        "location": {
+          "lat": 44.8562,
+          "lon": -0.6501
+        }
+      },
+      {
+        "id": "point_53",
+        "location": {
+          "lat": 44.5068,
+          "lon": -0.797
+        }
+      },
+      {
+        "id": "point_54",
+        "location": {
+          "lat": 44.5068,
+          "lon": -0.7888
+        }
+      },
+      {
+        "id": "point_55",
+        "location": {
+          "lat": 44.6038,
+          "lon": -0.9371
+        }
+      },
+      {
+        "id": "point_56",
+        "location": {
+          "lat": 45.0409,
+          "lon": -0.6747
+        }
+      },
+      {
+        "id": "point_57",
+        "location": {
+          "lat": 44.9045,
+          "lon": -0.6715
+        }
+      },
+      {
+        "id": "point_58",
+        "location": {
+          "lat": 44.7394,
+          "lon": -1.0935
+        }
+      },
+      {
+        "id": "point_59",
+        "location": {
+          "lat": 44.9093,
+          "lon": -0.639
+        }
+      },
+      {
+        "id": "point_60",
+        "location": {
+          "lat": 44.6356,
+          "lon": -0.9744
+        }
+      },
+      {
+        "id": "point_61",
+        "location": {
+          "lat": 44.8174,
+          "lon": -0.68
+        }
+      },
+      {
+        "id": "point_62",
+        "location": {
+          "lat": 44.9046,
+          "lon": -0.7448
+        }
+      },
+      {
+        "id": "point_63",
+        "location": {
+          "lat": 44.8462,
+          "lon": -0.6318
+        }
+      },
+      {
+        "id": "point_64",
+        "location": {
+          "lat": 44.8132,
+          "lon": -0.5722
+        }
+      }
+    ],
+    "vehicles": [
+      {
+        "id": "vehicle_0",
+        "start_point_id": "point_58",
+        "end_point_id": "point_58",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "timewindow": {
+          "start": 28800,
+          "end": 48600
+        }
+      },
+      {
+        "id": "vehicle_1",
+        "start_point_id": "point_60",
+        "end_point_id": "point_60",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "timewindow": {
+          "start": 28800,
+          "end": 48600
+        }
+      },
+      {
+        "id": "vehicle_2",
+        "start_point_id": "point_59",
+        "end_point_id": "point_59",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "timewindow": {
+          "start": 28800,
+          "end": 48600
+        }
+      },
+      {
+        "id": "vehicle_3",
+        "start_point_id": "point_59",
+        "end_point_id": "point_59",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "timewindow": {
+          "start": 28800,
+          "end": 48600
+        }
+      },
+      {
+        "id": "vehicle_4",
+        "start_point_id": "point_61",
+        "end_point_id": "point_61",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "timewindow": {
+          "start": 28800,
+          "end": 48600
+        }
+      },
+      {
+        "id": "vehicle_5",
+        "start_point_id": "point_62",
+        "end_point_id": "point_62",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "timewindow": {
+          "start": 28800,
+          "end": 48600
+        }
+      },
+      {
+        "id": "vehicle_6",
+        "start_point_id": "point_64",
+        "end_point_id": "point_64",
+        "router_mode": "car",
+        "router_dimension": "distance",
+        "timewindow": {
+          "start": 28800,
+          "end": 48600
+        }
+      }
+    ],
+    "services": [
+      {
+        "id": "service_0",
+        "activity": {
+          "duration": 120,
+          "point_id": "point_27"
+        },
+        "sticky_vehicle_ids": []
+      },
+      {
+        "id": "service_1",
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        },
+        "sticky_vehicle_ids": []
+      },
+      {
+        "id": "service_2",
+        "priority": 0,
+        "sticky_vehicle_ids": [
+          "vehicle_0"
+        ],
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        }
+      },
+      {
+        "id": "service_3",
+        "priority": 0,
+        "sticky_vehicle_ids": [
+          "vehicle_1"
+        ],
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        }
+      },
+      {
+        "id": "service_4",
+        "priority": 0,
+        "sticky_vehicle_ids": [
+          "vehicle_2"
+        ],
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        }
+      },
+      {
+        "id": "service_5",
+        "priority": 0,
+        "sticky_vehicle_ids": [
+          "vehicle_3"
+        ],
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        }
+      },
+      {
+        "id": "service_6",
+        "priority": 0,
+        "sticky_vehicle_ids": [
+          "vehicle_4"
+        ],
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        }
+      },
+      {
+        "id": "service_7",
+        "priority": 0,
+        "sticky_vehicle_ids": [
+          "vehicle_5"
+        ],
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        }
+      },
+      {
+        "id": "service_8",
+        "priority": 0,
+        "sticky_vehicle_ids": [
+          "vehicle_6"
+        ],
+        "activity": {
+          "position": "always_last",
+          "setup_duration": 300,
+          "point_id": "point_13"
+        }
+      }
+    ],
+    "shipments": [
+      {
+        "id": "shipment_0",
+        "pickup": {
+          "point_id": "point_26",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_1",
+        "pickup": {
+          "point_id": "point_28",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 39000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_2",
+        "pickup": {
+          "point_id": "point_29",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 39000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_3",
+        "pickup": {
+          "point_id": "point_30",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 41400,
+              "end": 45900
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_4",
+        "pickup": {
+          "point_id": "point_31",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 35100,
+              "end": 36900
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_5",
+        "pickup": {
+          "point_id": "point_32",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_6",
+        "pickup": {
+          "point_id": "point_33",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_0",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_7",
+        "pickup": {
+          "point_id": "point_34",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36600,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_0",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_8",
+        "pickup": {
+          "point_id": "point_35",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 41400,
+              "end": 45900
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_9",
+        "pickup": {
+          "point_id": "point_36",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_0",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_10",
+        "pickup": {
+          "point_id": "point_37",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 41400
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_11",
+        "pickup": {
+          "point_id": "point_38",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 41400
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_12",
+        "pickup": {
+          "point_id": "point_39",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 35100,
+              "end": 36900
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_2",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_13",
+        "pickup": {
+          "point_id": "point_40",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_14",
+        "pickup": {
+          "point_id": "point_41",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_15",
+        "pickup": {
+          "point_id": "point_42",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_16",
+        "pickup": {
+          "point_id": "point_43",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 39000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_17",
+        "pickup": {
+          "point_id": "point_44",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 39300,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_18",
+        "pickup": {
+          "point_id": "point_45",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_19",
+        "pickup": {
+          "point_id": "point_46",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 39000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_20",
+        "pickup": {
+          "point_id": "point_47",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 45000
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_21",
+        "pickup": {
+          "point_id": "point_48",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 45000
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_22",
+        "pickup": {
+          "point_id": "point_49",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 39000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_23",
+        "pickup": {
+          "point_id": "point_50",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_24",
+        "pickup": {
+          "point_id": "point_51",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_25",
+        "pickup": {
+          "point_id": "point_52",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 43200,
+              "end": 48600
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_13",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_26",
+        "pickup": {
+          "point_id": "point_53",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_6",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_27",
+        "pickup": {
+          "point_id": "point_54",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_6",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_28",
+        "pickup": {
+          "point_id": "point_55",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 37800,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_6",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_29",
+        "pickup": {
+          "point_id": "point_56",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 36000,
+              "end": 43200
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      },
+      {
+        "id": "shipment_30",
+        "pickup": {
+          "point_id": "point_57",
+          "duration": 120,
+          "timewindows": [
+            {
+              "start": 39600,
+              "end": 46800
+            }
+          ]
+        },
+        "delivery": {
+          "point_id": "point_7",
+          "setup_duration": 2700
+        },
+        "maximum_inroute_duration": 6300,
+        "skills": [
+          "external"
+        ]
+      }
+    ],
+    "relations": [],
+    "routes": [
+      {
+        "vehicle_id": "vehicle_0",
+        "mission_ids": [
+          "shipment_6",
+          "shipment_7",
+          "shipment_9",
+          "shipment_7",
+          "shipment_6",
+          "shipment_9",
+          "service_2"
+        ]
+      },
+      {
+        "vehicle_id": "vehicle_6",
+        "mission_ids": [
+          "shipment_30",
+          "shipment_21",
+          "shipment_21",
+          "shipment_30",
+          "service_0",
+          "service_1",
+          "service_8"
+        ]
+      },
+      {
+        "vehicle_id": "vehicle_1",
+        "mission_ids": [
+          "shipment_27",
+          "shipment_28",
+          "shipment_28",
+          "shipment_27",
+          "service_3"
+        ]
+      },
+      {
+        "vehicle_id": "vehicle_2",
+        "mission_ids": [
+          "shipment_18",
+          "shipment_23",
+          "shipment_17",
+          "shipment_13",
+          "shipment_20",
+          "shipment_20",
+          "shipment_13",
+          "shipment_17",
+          "shipment_23",
+          "shipment_18",
+          "service_4"
+        ]
+      },
+      {
+        "vehicle_id": "vehicle_3",
+        "mission_ids": [
+          "shipment_14",
+          "shipment_24",
+          "shipment_15",
+          "shipment_16",
+          "shipment_0",
+          "shipment_29",
+          "shipment_14",
+          "shipment_15",
+          "shipment_16",
+          "shipment_0",
+          "shipment_24",
+          "shipment_29",
+          "service_5"
+        ]
+      },
+      {
+        "vehicle_id": "vehicle_4",
+        "mission_ids": [
+          "shipment_4",
+          "shipment_12",
+          "shipment_11",
+          "shipment_10",
+          "shipment_5",
+          "shipment_4",
+          "shipment_12",
+          "shipment_10",
+          "shipment_5",
+          "shipment_11",
+          "shipment_3",
+          "shipment_8",
+          "shipment_8",
+          "shipment_3",
+          "service_6"
+        ]
+      },
+      {
+        "vehicle_id": "vehicle_5",
+        "mission_ids": [
+          "shipment_2",
+          "shipment_1",
+          "shipment_25",
+          "shipment_25",
+          "shipment_2",
+          "shipment_1",
+          "service_7"
+        ]
+      }
+    ],
+    "configuration": {
+      "resolution": {
+        "minimum_duration": 60000,
+        "duration": 120000
+      }
+    },
+    "name": null
+  }
+}
