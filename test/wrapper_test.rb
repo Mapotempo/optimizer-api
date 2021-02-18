@@ -642,7 +642,7 @@ class WrapperTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    [:ortools, ENV['SKIP_JSPRIT'] ? nil : :jsprit, :vroom].compact.each{ |o|
+    [:ortools, :vroom].compact.each{ |o|
       result = OptimizerWrapper.solve(service: o, vrp: vrp)
       assert_equal size - 1 + 1, result[:routes][0][:activities].size, "[#{o}] "
       services = result[:routes][0][:activities].collect{ |a| a[:service_id] }
@@ -1425,15 +1425,6 @@ class WrapperTest < Minitest::Test
 
     refute result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
     assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
-
-    if !ENV['SKIP_JSPRIT']
-      result = OptimizerWrapper.solve(service: :jsprit, vrp: TestHelper.create(problem))
-      assert result[:routes][0][:activities][1].has_key?(:pickup_shipment_id)
-      refute result[:routes][0][:activities][1].has_key?(:delivery_shipment_id)
-
-      refute result[:routes][0][:activities][2].has_key?(:pickup_shipment_id)
-      assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
-    end
   end
 
   def test_split_vrps_using_two_solver
@@ -3059,7 +3050,6 @@ class WrapperTest < Minitest::Test
     problem[:shipments].first[:direct] = true
 
     generated_vrp = TestHelper.create(problem)
-    assert_includes OptimizerWrapper.config[:services][:jsprit].inapplicable_solve?(generated_vrp), :assert_no_direct_shipments
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(generated_vrp), :assert_no_direct_shipments
     assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(generated_vrp)
   end

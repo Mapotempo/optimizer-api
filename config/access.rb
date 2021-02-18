@@ -24,6 +24,5 @@ module OptimizerWrapper
     'solvers' => { profile: :solvers },
     'vroom' => { profile: :vroom },
     'ortools' => { profile: :ortools },
-    'jsprit' => { profile: :jsprit },
   }
 end
