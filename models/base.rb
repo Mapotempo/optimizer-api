@@ -53,7 +53,7 @@ module Models
       super
 
       define_method(name) do
-        self[name] || []
+        self[name] ||= []
       end
 
       define_method("#{name}=") do |vals|
