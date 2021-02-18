@@ -323,11 +323,12 @@ module Models
     def self.filter(hash)
       return hash if hash.empty?
 
-      self.remove_unecessary_units(hash)
+      self.remove_unnecessary_units(hash)
+      self.remove_unnecessary_relations(hash)
       self.generate_schedule_indices_from_date(hash)
     end
 
-    def self.remove_unecessary_units(hash)
+    def self.remove_unnecessary_units(hash)
       return hash if !hash[:units] || !hash[:vehicles] || (!hash[:services] && !hash[:shipments])
 
       vehicle_units = hash[:vehicles]&.flat_map{ |v| v[:capacities]&.map{ |c| c[:unit_id] } || [] } || []
@@ -356,6 +357,18 @@ module Models
       hash[:subtours]&.each{ |v| v[:capacities]&.delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
       hash[:services]&.each{ |v| v[:quantities]&.delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
       hash[:shipments]&.each{ |s| s[:quantities]&.delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
+    end
+
+    def self.remove_unnecessary_relations(hash)
+      return hash unless hash[:relations]&.any?
+
+      types_with_duration =
+        %w[minimum_day_lapse maximum_day_lapse
+           minimum_duration_lapse maximum_duration_lapse
+           vehicle_group_duration vehicle_group_duration_on_weeks
+           vehicle_group_duration_on_months vehicle_group_number]
+
+      hash[:relations].delete_if{ |r| r[:lapse].nil? && types_with_duration.include?(r[:type]) }
     end
 
     def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)

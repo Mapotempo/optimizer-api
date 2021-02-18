@@ -416,7 +416,7 @@ module Wrappers
           type: relation.type.to_s,
           linked_ids: current_linked_ids,
           linked_vehicle_ids: current_linked_vehicles,
-          lapse: relation.lapse || -1
+          lapse: relation.lapse
         )
       }.compact
 
