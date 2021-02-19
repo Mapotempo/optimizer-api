@@ -139,7 +139,7 @@ class SplitClusteringTest < Minitest::Test
         end
         mock.verify # check if it is called
 
-        data_items, _cumulated_metrics, _linked_objects = Interpreters::SplitClustering.send(:collect_data_items_metrics, TestHelper.create(problem), Hash.new(0), { basic_split: false, group_points: true})
+        data_items, _cumulated_metrics, _grouped_objects = Interpreters::SplitClustering.send(:collect_data_items_metrics, TestHelper.create(problem), Hash.new(0), { basic_split: false, group_points: true})
         assert_equal [200.0, 300.0, 400.0, 500.0], (data_items.flat_map{ |d_i| d_i[4][:duration_from_and_to_depot].uniq }) # check the values are correct
       end
     end

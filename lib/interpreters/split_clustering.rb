@@ -623,7 +623,7 @@ module Interpreters
           options[:distance_matrix] = vrp.matrices[0][:time]
         end
 
-        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, cumulated_metrics, options)
+        data_items, cumulated_metrics, grouped_objects = collect_data_items_metrics(vrp, cumulated_metrics, options)
 
         limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
 
@@ -641,7 +641,7 @@ module Interpreters
 
         result_items = clusters.collect{ |cluster|
           cluster.data_items.flat_map{ |i|
-            linked_objects[i[2]]
+            grouped_objects[i[2]]
           }
         }
         log "Balanced K-Means (#{toc - tic}sec): split #{result_items.sum(&:size)} activities into #{result_items.map(&:size).join(' & ')}"
@@ -676,7 +676,7 @@ module Interpreters
         max_cut_metrics = Hash.new(0)
         cumulated_metrics = Hash.new(0)
 
-        data_items, cumulated_metrics, linked_objects = collect_data_items_metrics(vrp, cumulated_metrics)
+        data_items, cumulated_metrics, grouped_objects = collect_data_items_metrics(vrp, cumulated_metrics)
 
         c = AverageTreeLinkage.new
         start_timer = Time.now
@@ -721,7 +721,7 @@ module Interpreters
 
         clusters.delete([])
         result_items = clusters.delete_if{ |cluster| cluster.data_items.empty? }.collect{ |i|
-          linked_objects[i[2]]
+          grouped_objects[i[2]]
         }.flatten
 
         log "Hierarchical Tree (#{end_timer - start_timer}sec): split #{data_items.size} into #{clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')}"
@@ -902,7 +902,7 @@ module Interpreters
       def collect_data_items_metrics(vrp, cumulated_metrics, options)
         infeasible_data_items = false
         data_items = []
-        linked_objects = {}
+        grouped_objects = {}
 
         vehicle_units = vrp.vehicles.collect{ |v| v.capacities.to_a.collect{ |capacity| capacity.unit.id } }.flatten.uniq
         depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
@@ -961,7 +961,7 @@ module Interpreters
 
           point = sub_set[0].activity.point
           characteristics[:matrix_index] = point[:matrix_index] if !vrp.matrices.empty?
-          linked_objects["#{point.id}_#{sub_set_index}"] = sub_set
+          grouped_objects["#{point.id}_#{sub_set_index}"] = sub_set
           # TODO : group sticky and skills (in expected characteristics too)
           characteristics[:duration_from_and_to_depot] = [0, 0] if options[:basic_split]
           data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, characteristics, nil]
@@ -969,14 +969,14 @@ module Interpreters
 
         log 'There are services in clustering which cannot be served by any vehicles.', level: :warn if infeasible_data_items
 
-        zip_dataitems(vrp, data_items, linked_objects) if options[:group_points] && vrp.matrices.any? && vrp.matrices[0][:distance]&.any?
+        zip_dataitems(vrp, data_items, grouped_objects) if options[:group_points] && vrp.matrices.any? && vrp.matrices[0][:distance]&.any?
 
         add_duration_from_and_to_depot(vrp, data_items) if !options[:basic_split]
 
-        [data_items, cumulated_metrics, linked_objects]
+        [data_items, cumulated_metrics, grouped_objects]
       end
 
-      def zip_dataitems(vrp, items, linked_objects)
+      def zip_dataitems(vrp, items, grouped_objects)
         vehicle_characteristics = generate_expected_characteristics(vrp.vehicles)
 
         compatible_vehicles = Hash.new{}
@@ -1001,15 +1001,15 @@ module Interpreters
         # Cluster points closer than max_distance to eachother
         clusterer = c.build(DataSet.new(data_items: items), max_distance)
 
-        # Correct items and linked_objects
+        # Correct items and grouped_objects
         clusterer.clusters.each{ |cluster|
           next unless cluster.data_items.size > 1 # Didn't merge any items
 
           item0 = items[items.index(cluster.data_items[0])]
 
           cluster.data_items[1..-1].each{ |d_i|
-            # Merge linked_objects
-            linked_objects[item0[2]].concat(linked_objects.delete(d_i[2]))
+            # Merge grouped_objects
+            grouped_objects[item0[2]].concat(grouped_objects.delete(d_i[2]))
 
             # Merge items
             index_i = items.index(d_i)
