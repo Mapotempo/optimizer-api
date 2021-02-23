@@ -260,7 +260,7 @@ module Wrappers
           id: index,
           location_index: @points[service.activity.point_id].matrix_index,
           service: service.activity.duration.to_i,
-          skills: service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
+          skills: [vrp_skills.size] + service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
             service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
           time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] },
@@ -278,7 +278,7 @@ module Wrappers
       vrp.shipments.map.with_index{ |shipment, index|
         {
           amount: vrp_units.map{ |unit| shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }&.value&.to_i || 0 },
-          skills: shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
+          skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
             shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
           priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
           pickup: {
@@ -309,7 +309,9 @@ module Wrappers
           capacity: vrp_units.map{ |unit| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit&.to_i || 0 },
           # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
           time_window: [vehicle.timewindow&.start || 0, tw_end],
-          skills: ([vrp_skills.find_index{ |sk| sk == vehicle.id }] + (vehicle.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || [])).compact,
+          # VROOM expects a default skill
+          skills: [vrp_skills.size] + ([vrp_skills.find_index{ |sk| sk == vehicle.id }] +
+            (vehicle.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || [])).compact,
           breaks: vehicle.rests.map{ |rest|
             rest_index = @rest_hash["#{vehicle.id}_#{rest.id}"][:index]
             {
