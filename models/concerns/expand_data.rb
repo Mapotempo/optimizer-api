@@ -45,6 +45,14 @@ module ExpandData
     }
   end
 
+  def add_relation_references
+    self.relations.each{ |relation|
+      relation.linked_services.each{ |service|
+        service.relations << relation
+      }
+    }
+  end
+
   def add_sticky_vehicle_if_routes_and_partitions
     return if self.preprocessing_partitions.empty?
 

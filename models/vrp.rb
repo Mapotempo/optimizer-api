@@ -228,6 +228,7 @@ module Models
     end
 
     def self.expand_data(vrp)
+      vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
@@ -325,6 +326,7 @@ module Models
 
       self.remove_unecessary_units(hash)
       self.generate_schedule_indices_from_date(hash)
+      self.generate_linked_service_ids_for_relations(hash)
     end
 
     def self.remove_unecessary_units(hash)
@@ -475,6 +477,14 @@ module Models
       hash[:configuration][:schedule].delete(:range_date)
 
       hash
+    end
+
+    def self.generate_linked_service_ids_for_relations(hash)
+      hash[:relations]&.each{ |relation|
+        next unless relation[:linked_ids]&.any?
+
+        relation[:linked_service_ids] = relation[:linked_ids].select{ |id| hash[:services]&.any?{ |s| s[:id] == id } }
+      }
     end
 
     def configuration=(configuration)
