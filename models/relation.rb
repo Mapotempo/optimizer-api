@@ -24,6 +24,7 @@ module Models
     field :linked_ids, default: []
     has_many :linked_services, class_name: 'Models::Service'
     field :linked_vehicle_ids, default: []
+    has_many :linked_vehicles, class_name: 'Models::Vehicle'
     field :periodicity, default: 1
 
     # ActiveHash doesn't validate the validator of the associated objects

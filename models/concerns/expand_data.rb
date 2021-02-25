@@ -50,6 +50,9 @@ module ExpandData
       relation.linked_services.each{ |service|
         service.relations << relation
       }
+      relation.linked_vehicles.each{ |vehicle|
+        vehicle.relations << relation
+      }
     }
   end
 
