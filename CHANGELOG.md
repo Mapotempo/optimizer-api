@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v1.7.0-rc] - Unreleased
 
 ### Added
 
@@ -26,7 +26,7 @@
 - Infeasibility detection of services with negative quantity [#111](https://github.com/Mapotempo/optimizer-api/pull/111)
 
 
-## [v0.1.5] - 2021-01-05
+## [v1.6.0] - 2021-02-10
 
 ### Added
 
