@@ -554,7 +554,7 @@ module OptimizerWrapper
               common = build_csv_activity(solution['name'], route, activity)
               timewindows = build_csv_timewindows(activity, max_timewindows_size)
               quantities = unit_ids.collect{ |unit_id|
-                activity['detail']['quantities'].find{ |quantity| quantity['unit'] == unit_id } && activity['detail']['quantities'].find{ |quantity| quantity['unit'] == unit_id }['value']
+                activity['detail']['quantities']&.find{ |quantity| quantity['unit'] == unit_id } && activity['detail']['quantities']&.find{ |quantity| quantity['unit'] == unit_id }['value']
               }
               out_csv << (days_info + common + quantities + timewindows + [nil])
             }
@@ -564,7 +564,7 @@ module OptimizerWrapper
             common = build_csv_activity(solution['name'], nil, activity)
             timewindows = build_csv_timewindows(activity, max_timewindows_size)
             quantities = unit_ids.collect{ |unit_id|
-              activity['detail']['quantities'].find{ |quantity| quantity['unit'] == unit_id } && activity['detail']['quantities'].find{ |quantity| quantity['unit'] == unit_id }['value']
+              activity['detail']['quantities']&.find{ |quantity| quantity['unit'] == unit_id } && activity['detail']['quantities']&.find{ |quantity| quantity['unit'] == unit_id }['value']
             }
             out_csv << (days_info + common + quantities + timewindows + [activity['reason']])
           }

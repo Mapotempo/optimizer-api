@@ -602,7 +602,7 @@ class SplitClusteringTest < Minitest::Test
       Interpreters::SplitClustering.stub(:split_solve_core, lambda{ |service_vrp, _job|
         refute_nil service_vrp[:split_level], 'split_level should have been defined before split_solve_core'
         assert_operator service_vrp[:split_level], :<, 3, "split_level shouldn't reach 3. Grouping of vehicle points might be the reason"
-        assert service_vrp[:split_solve_data][:split_vrp].points.none?{ |p| p.location.lat.nan? }, "Empty vehicles shouldn't reach split_solve_core"
+        assert service_vrp[:split_solve_data][:representative_vrp].points.none?{ |p| p.location.lat.nan? }, "Empty vehicles shouldn't reach split_solve_core"
         called = true
         Interpreters::SplitClustering.send(:__minitest_stub__split_solve_core, service_vrp) # call original function
       }) do
