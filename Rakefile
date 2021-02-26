@@ -63,12 +63,10 @@ ensure
 end
 
 task clean_tmp_dir: :environment do
-  require './environment'
   OptimizerWrapper.tmp_vrp_dir.cleanup
 end
 
 task clean_dump_dir: :environment do
-  require './environment'
   OptimizerWrapper.dump_vrp_dir.cleanup
 end
 
