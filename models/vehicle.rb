@@ -166,7 +166,7 @@ module Models
     def dimensions
       d = [:time, :distance]
       dimensions = [d.delete(router_dimension.to_sym)]
-      dimensions << d[0] if send('need_matrix_' + d[0].to_s + '?')
+      dimensions << d[0] if send("need_matrix_#{d[0]}?")
       dimensions
     end
 

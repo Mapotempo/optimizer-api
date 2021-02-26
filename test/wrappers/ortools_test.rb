@@ -5773,4 +5773,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     assert result[:routes][0][:activities][-2][:rest_id], 'Pause should be at the last spot'
   end
+
+  def test_no_nil_in_corresponding_mission_ids
+    assert_empty OptimizerWrapper.config[:services][:ortools].send(:corresponding_mission_ids, ['only_id'], ['non_id'])
+  end
 end

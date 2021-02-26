@@ -103,6 +103,7 @@ GEM
     grape_logging (1.8.4)
       grape
       rack
+    heap-profiler (0.4.0)
     http-accept (1.7.0)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
@@ -116,6 +117,7 @@ GEM
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
     maruku (0.7.3)
+    memory_profiler (1.0.0)
     mime-types (3.3.1)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2020.0512)
@@ -281,8 +283,10 @@ DEPENDENCIES
   grape-swagger
   grape-swagger-entity
   grape_logging
+  heap-profiler
   http_accept_language
   i18n
+  memory_profiler
   minitest
   minitest-around
   minitest-bisect

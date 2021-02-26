@@ -229,14 +229,26 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.config[:dump][:solution] = old_config_dump_solution
   end
 
+  def test_get_deletes_completed_job
+    # create a "completed" job with an unused uuid
+    uuid = Resque::Plugins::Status::Hash.generate_uuid until !uuid.nil? && Resque::Plugins::Status::Hash.get(uuid).nil?
+    Resque::Plugins::Status::Hash.create(uuid, { 'status' => 'completed', 'options' => { 'api_key' => 'demo' } })
+
+    wait_status uuid, 'completed', api_key: 'demo'
+
+    delete_completed_job uuid, api_key: 'demo'
+  ensure
+    Resque::Plugins::Status::Hash.remove(uuid)
+  end
+
   def test_block_call_under_clustering
     @job_ids = []
     asynchronously start_worker: true do
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+      response = wait_status @job_ids.last, 'completed', api_key: 'demo'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
 
       vrp = VRP.independent_skills
       vrp[:points] = VRP.lat_lon_scheduling[:points]
@@ -248,8 +260,8 @@ class Api::V01::VrpTest < Minitest::Test
         ]
       }
       @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+      response = wait_status @job_ids.last, 'completed', api_key: 'demo'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
     end
 
     @job_ids.each{ |job_id|

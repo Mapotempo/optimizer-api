@@ -423,9 +423,12 @@ module Wrappers
       routes = vrp.routes.collect{ |route|
         next if route.vehicle.nil? || route.mission_ids.empty?
 
+        service_ids = corresponding_mission_ids(services.collect(&:id), route.mission_ids)
+        next if service_ids.empty?
+
         OrtoolsVrp::Route.new(
           vehicle_id: route.vehicle.id,
-          service_ids: corresponding_mission_ids(services.collect(&:id), route.mission_ids)
+          service_ids: service_ids
         )
       }
 
@@ -844,7 +847,7 @@ module Wrappers
 
         available_ids.delete(correct_id)
         correct_id
-      }
+      }.compact
     end
   end
 end
