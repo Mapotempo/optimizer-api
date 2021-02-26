@@ -36,7 +36,6 @@ require 'rake/testtask'
 Rake::TestTask.new do |t|
   $stdout.sync = true
   $stderr.sync = true
-  ENV['APP_ENV'] ||= 'test'
   t.pattern = 'test/**/*_test.rb'
 end
 
