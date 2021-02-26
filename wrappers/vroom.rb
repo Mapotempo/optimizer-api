@@ -63,6 +63,7 @@ module Wrappers
         # Solver
         :assert_no_first_solution_strategy,
         :assert_no_free_approach_or_return,
+        :assert_no_planning_heuristic,
         :assert_small_minimum_duration,
         :assert_solver,
       ]
