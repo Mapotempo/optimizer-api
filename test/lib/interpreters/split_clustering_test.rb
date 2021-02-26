@@ -127,18 +127,18 @@ class SplitClusteringTest < Minitest::Test
       problem[:vehicles][0].delete(:matrix_id)
       problem[:vehicles] << problem[:vehicles].first.dup
 
-      mock = MiniTest::Mock.new
-      mock.expect(:call, nil, [])
-      Interpreters::SplitClustering.stub(:add_duration_from_and_to_depot, lambda{ |vrp, data_items|
-        mock.call
-        Interpreters::SplitClustering.send(:__minitest_stub__add_duration_from_and_to_depot, vrp, data_items)
-      }) do
-        Interpreters::SplitClustering.split_balanced_kmeans({ vrp: TestHelper.create(problem), service: :demo }, problem[:vehicles].size, cut_symbol: :duration, entity: :vehicle, restarts: 1)
-      end
-      mock.verify # check if it is called
-
       OptimizerWrapper.router.stub(:matrix, ->(_url, _router_mode, _router_dimension, src, dst){ return [Array.new(src.size){ |i| Array.new(dst.size){ (i + 1) * 100 } }] }) do
-        data_items, _cumulated_metrics, _linked_objects = Interpreters::SplitClustering.send(:collect_data_items_metrics, TestHelper.create(problem), Hash.new(0), false)
+        mock = MiniTest::Mock.new
+        mock.expect(:call, nil, [])
+        Interpreters::SplitClustering.stub(:add_duration_from_and_to_depot, lambda{ |vrp, data_items|
+          mock.call
+          Interpreters::SplitClustering.send(:__minitest_stub__add_duration_from_and_to_depot, vrp, data_items)
+        }) do
+          assert Interpreters::SplitClustering.split_balanced_kmeans({ vrp: TestHelper.create(problem), service: :demo }, problem[:vehicles].size, cut_symbol: :duration, entity: :vehicle, restarts: 1)
+        end
+        mock.verify # check if it is called
+
+        data_items, _cumulated_metrics, _linked_objects = Interpreters::SplitClustering.send(:collect_data_items_metrics, TestHelper.create(problem), Hash.new(0), { basic_split: false, group_points: true})
         assert_equal [200.0, 300.0, 400.0, 500.0], (data_items.flat_map{ |d_i| d_i[4][:duration_from_and_to_depot].uniq }) # check the values are correct
       end
     end
@@ -467,31 +467,6 @@ class SplitClusteringTest < Minitest::Test
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     end
 
-    def test_max_split_size
-      vrp = VRP.lat_lon
-      vrp[:vehicles][0][:router_dimension] = 'time'
-      vrp[:vehicles][1] = {
-        id: 'vehicle_1',
-        matrix_id: 'm1',
-        start_point_id: 'point_0',
-        router_dimension: 'time'
-      }
-      vrp[:vehicles][2] = {
-        id: 'vehicle_2',
-        matrix_id: 'm1',
-        start_point_id: 'point_0',
-        router_dimension: 'time'
-      }
-      vrp[:configuration][:preprocessing][:max_split_size] = 2
-
-      results = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-
-      assert  results[:solvers].size >= 2
-      results[:routes].each{ |route|
-        assert route[:activities].count{ |activity| activity[:service_id] } <= 2
-      }
-    end
-
     def test_avoid_capacities_overlap
       vrp = TestHelper.load_vrp(self, fixture_file: 'results_regularity')
       vrp.vehicles.first.capacities.delete_if{ |cap| cap[:unit_id] == 'l' }
@@ -582,6 +557,66 @@ class SplitClusteringTest < Minitest::Test
         assert_equal [], result[:unassigned], 'There should be no unassigned services.'
         return
       end
+    end
+
+    def test_max_split_respects_initial_solutions
+      problem = VRP.lat_lon
+      problem[:vehicles] << problem[:vehicles].first.dup
+      problem[:vehicles].last[:id] = 'vehicle_1'
+      problem[:routes] = [
+        # (1, 2) and (4, 5) are at the same locations without initial routes, they would be in the same vehicles
+        # we are forcing them apart with initial routes and check if they stay as such after the split
+        { vehicle_id: 'vehicle_0', mission_ids: [1, 4].map{ |s| "service_#{s}" } },
+        { vehicle_id: 'vehicle_1', mission_ids: [2, 5].map{ |s| "service_#{s}" } }
+      ]
+      problem[:configuration][:preprocessing][:max_split_size] = 1
+
+      called = false
+      Interpreters::SplitClustering.stub(:split_solve_core, lambda{ |service_vrp, _job|
+        split = service_vrp[:split_solve_data][:service_vehicle_assignments].transform_values!{ |v| v.collect(&:id) }
+        [1, 4].each{ |s| assert_includes split['vehicle_0'], "service_#{s}", "service_#{s} should stay on vehicle_0" }
+        [2, 5].each{ |s| assert_includes split['vehicle_1'], "service_#{s}", "service_#{s} should stay on vehicle_1" }
+        called = true
+        return
+      }) do
+        vrp = TestHelper.create(problem)
+        Interpreters::SplitClustering.split_solve({ service: :ortools, vrp: vrp, dicho_level: 0 })
+      end
+      assert called, 'split_solve_core should have been called'
+    end
+
+    def test_max_split_can_handle_empty_vehicles
+      # Due to initial solutions, 4 services are on 2 vehicles which leaves 2 services to the remaining 3 vehicles.
+      problem = VRP.lat_lon
+      (1..4).each{ |i|
+        problem[:vehicles] << problem[:vehicles].first.dup
+        problem[:vehicles].last[:id] = "vehicle_#{i}"
+      }
+      problem[:routes] = [
+        { vehicle_id: 'vehicle_0', mission_ids: [1, 4].map{ |s| "service_#{s}" } },
+        { vehicle_id: 'vehicle_1', mission_ids: [2, 5].map{ |s| "service_#{s}" } }
+      ]
+      problem[:configuration][:preprocessing][:max_split_size] = 1
+
+      called = false
+      Interpreters::SplitClustering.stub(:split_solve_core, lambda{ |service_vrp, _job|
+        refute_nil service_vrp[:split_level], 'split_level should have been defined before split_solve_core'
+        assert_operator service_vrp[:split_level], :<, 3, "split_level shouldn't reach 3. Grouping of vehicle points might be the reason"
+        assert service_vrp[:split_solve_data][:split_vrp].points.none?{ |p| p.location.lat.nan? }, "Empty vehicles shouldn't reach split_solve_core"
+        called = true
+        Interpreters::SplitClustering.send(:__minitest_stub__split_solve_core, service_vrp) # call original function
+      }) do
+        OptimizerWrapper.stub(:solve, lambda{ |service_vrp, _job, _block| # stub with empty solution
+          vrp = service_vrp[:vrp]
+          service = service_vrp[:service]
+          OptimizerWrapper.config[:services][service].detect_unfeasible_services(vrp)
+          OptimizerWrapper.config[:services][service].empty_result(service.to_s, vrp)
+        }) do
+          vrp = TestHelper.create(problem)
+          Interpreters::SplitClustering.split_solve({ service: :ortools, vrp: vrp, dicho_level: 0 })
+        end
+      end
+      assert called, 'split_solve_core should have been called'
     end
 
     def test_ignore_debug_parameter_if_no_coordinates

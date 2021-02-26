@@ -156,6 +156,13 @@ module OptimizerWrapper
 
     check_result_consistency(expected_activity_count, several_results) if services_vrps.collect{ |sv| sv[:service] } != [:demo] # demo solver returns a fixed solution
 
+    nb_routes = several_results.sum{ |result| result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:original_shipment_id] } } }
+    nb_unassigned = several_results.sum{ |result| result[:unassigned].size }
+    percent_unassigned = (100.0 * nb_unassigned / expected_activity_count).round(1)
+
+    log "result - #{nb_unassigned} of #{expected_activity_count} (#{percent_unassigned}%) unassigned activities"
+    log "result - #{nb_routes} of #{services_vrps.sum{ |sv| sv[:vrp].vehicles.size }} vehicles used"
+
     several_results
   ensure
     log "<-- define_main_process elapsed: #{(Time.now - tic).round(2)} sec", level: :info
@@ -164,7 +171,9 @@ module OptimizerWrapper
   # Mutually recursive method
   def self.define_process(service_vrp, job = nil, &block)
     vrp = service_vrp[:vrp]
-    log "--> define_process VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size} vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with level #{service_vrp[:dicho_level]}", level: :info
+    dicho_level = service_vrp[:dicho_level].to_i
+    split_level = service_vrp[:split_level].to_i
+    log "--> define_process VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size}, vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.resolution_vehicle_limit}) with levels (dicho: #{dicho_level}, split: #{split_level})", level: :info
     log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}", level: :info
 
     tic = Time.now
@@ -178,7 +187,7 @@ module OptimizerWrapper
 
     check_result_consistency(expected_activity_count, result) if service_vrp[:service] != :demo # demo solver returns a fixed solution
 
-    log "<-- define_process level #{service_vrp[:dicho_level]} elapsed: #{(Time.now - tic).round(2)} sec", level: :info
+    log "<-- define_process levels (dicho: #{dicho_level}, split: #{split_level}) elapsed: #{(Time.now - tic).round(2)} sec", level: :info
     result
   end
 
@@ -186,7 +195,7 @@ module OptimizerWrapper
     vrp = service_vrp[:vrp]
     service = service_vrp[:service]
     dicho_level = service_vrp[:dicho_level]
-    log "--> optim_wrap::solve VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size} vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with level #{dicho_level}", level: :debug
+    log "--> optim_wrap::solve VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size} vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with levels (dicho: #{service_vrp[:dicho_level]}, split: #{service_vrp[:split_level].to_i})", level: :debug
 
     tic = Time.now
 
@@ -568,7 +577,7 @@ module OptimizerWrapper
 
   def self.check_result_consistency(expected_value, results)
     [results].flatten(1).each{ |result|
-      nb_assigned = result[:routes].collect{ |route| route[:activities].select{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.size }.sum
+      nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }
       nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:pickup_shipment_id] || unassigned[:delivery_shipment_id] }
 
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
@@ -580,7 +589,7 @@ module OptimizerWrapper
   end
 
   def self.adjust_vehicles_duration(vrp)
-      vrp.vehicles.select{ |v| v.duration? && v.rests.size > 0 }.each{ |v|
+      vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
         v.rests.each{ |r|
           v.duration += r.duration
         }

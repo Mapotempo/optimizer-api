@@ -2117,9 +2117,6 @@ class WrapperTest < Minitest::Test
         }
       }],
       configuration: {
-        preprocessing: {
-          max_split_size: 500,
-        },
         resolution: {
           duration: 100,
         }

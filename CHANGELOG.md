@@ -5,6 +5,7 @@
 ### Added
 
 - Corresponding vehicle_id is returned within each service's skills if problem is partitioned with vehicle entity [#110](https://github.com/Mapotempo/optimizer-api/pull/110)
+- Support initial routes and skills in split_solve (`max_split_size`) algorithm [#140](https://github.com/Mapotempo/optimizer-api/pull/140)
 
 ### Changed
 
