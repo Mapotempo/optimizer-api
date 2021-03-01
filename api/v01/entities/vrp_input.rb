@@ -254,7 +254,9 @@ module VrpMisc
                     desc: 'Relations allow to define constraints explicitly between activities and/or vehicles.
                            It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse,
                            shipment, meetup, minimum_duration_lapse, maximum_duration_lapse')
-    optional(:lapse, type: Integer, desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
+    optional(:lapse,
+             type: Integer, values: ->(v) { v.positive? },
+             desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
     optional(:linked_ids, type: Array[String], allow_blank: false, desc: 'List of activities involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:linked_vehicle_ids, type: Array[String], allow_blank: false, desc: 'List of vehicles involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:periodicity, type: Integer, documentation: { hidden: true }, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')
