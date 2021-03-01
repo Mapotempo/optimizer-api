@@ -420,15 +420,22 @@ module Models
       collect_unavaible_day_indices(element, start_index, end_index)
     end
 
-    def self.generate_schedule_indices_from_date(hash)
-      return hash if !hash[:configuration] || !hash[:configuration][:schedule]
-
-      if hash[:configuration][:schedule][:range_indices] &&
-         (hash[:services]&.any?{ |s| s[:unavailable_date_ranges] || s[:unavailable_visit_day_date] })
+    def self.detect_date_indices_inconsistency(hash)
+      missions_and_vehicles = hash[:services].to_a + hash[:shipments].to_a + hash[:vehicles].to_a
+      has_date = missions_and_vehicles.any?{ |m| m[:unavailable_date_ranges] || m[:unavailable_work_date] }
+      has_index = missions_and_vehicles.any?{ |m| m[:unavailable_index_ranges] || m[:unavailable_work_day_indices] }
+      if (hash[:configuration][:schedule][:range_indices] && has_date) ||
+         (hash[:configuration][:schedule][:range_date] && has_index)
         raise OptimizerWrapper::DiscordantProblemError.new(
           'Date intervals are not compatible with schedule range indices'
         )
       end
+    end
+
+    def self.generate_schedule_indices_from_date(hash)
+      return hash if !hash[:configuration] || !hash[:configuration][:schedule]
+
+      detect_date_indices_inconsistency(hash)
 
       start_index, end_index =
         if hash[:configuration][:schedule][:range_indices]
