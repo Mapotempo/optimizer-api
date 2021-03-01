@@ -900,7 +900,6 @@ module Interpreters
       end
 
       def collect_data_items_metrics(vrp, cumulated_metrics, options)
-        infeasible_data_items = false
         data_items = []
         grouped_objects = {}
 
@@ -966,8 +965,6 @@ module Interpreters
           characteristics[:duration_from_and_to_depot] = [0, 0] if options[:basic_split]
           data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, characteristics, nil]
         }
-
-        log 'There are services in clustering which cannot be served by any vehicles.', level: :warn if infeasible_data_items
 
         zip_dataitems(vrp, data_items, grouped_objects) if options[:group_points] && vrp.matrices.any? && vrp.matrices[0][:distance]&.any?
 
