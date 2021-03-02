@@ -47,6 +47,7 @@ module OptimizerWrapper
       Raven.user_context(api_key: options['api_key']) # Filtered in sentry if user_context
 
       services_vrps = Marshal.load(Base64.decode64(self.options['services_vrps'])) # Get the vrp
+      Raven.extra_context(vrp_names: services_vrps.map{ |sv| sv[:vrp].name })
       self.options['services_vrps'] = nil # The worker is about to launch the optimization, we can delete the vrp from the job
 
       # Re-set the job on Redis

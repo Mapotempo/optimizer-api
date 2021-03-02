@@ -115,6 +115,8 @@ module Api
             vrp_params = d_params[:points] ? d_params : d_params[:vrp]
             APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
 
+            Raven.extra_context(vrp_name: vrp_params[:name])
+
             params_limit = profile[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
             params_limit.each{ |key, value|
               next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value
