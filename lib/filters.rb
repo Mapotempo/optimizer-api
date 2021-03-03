@@ -175,7 +175,7 @@ module Filters
 
       service.activity.timewindows.each{ |timewindow|
         unified_timewindows[timewindow.id] = {
-          start: timewindow.start && ((timewindow.day_index || 0) * 86400 + timewindow.start) || (0 + (timewindow.day_index || 0) * 86400),
+          start: (timewindow.day_index || 0) * 86400 + timewindow.start,
           end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end) || (0 + (1 + (timewindow.day_index || 6)) * 86400)
         }
         inter[timewindow.id] = []

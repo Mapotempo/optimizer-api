@@ -74,7 +74,7 @@ module Wrappers
       vrp.shipments.empty? || vrp.shipments.none? { |shipment|
         first_open = shipment.pickup.timewindows.min_by(&:start)
         last_close = shipment.delivery.timewindows.max_by(&:end)
-        first_open && last_close && (first_open.start || 0) + 86400 * (first_open.day_index || 0) >
+        first_open && last_close && first_open.start + 86400 * (first_open.day_index || 0) >
           (last_close.end || 86399) + 86400 * (last_close.day_index || 0)
       }
     end
@@ -223,8 +223,7 @@ module Wrappers
     def assert_vehicle_tw_if_schedule(vrp)
       vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' ||
         vrp.vehicles.all?{ |vehicle|
-          vehicle.timewindow && (vehicle.timewindow.start || vehicle.timewindow.end) ||
-            vehicle.sequence_timewindows&.any?{ |tw| (tw.start || tw.end) }
+          vehicle.timewindow || vehicle.sequence_timewindows&.size&.positive?
         }
     end
 
@@ -558,8 +557,8 @@ module Wrappers
                   vehicle_timewindows.any?{ |v_tw|
                     days_compatible = !v_tw.day_index || !tw.day_index || v_tw.day_index == tw.day_index
                     days_compatible &&
-                      (v_tw.start.nil? || tw.end.nil? || v_tw.start < tw.end) &&
-                      (v_tw.end.nil? || tw.start.nil? || v_tw.end > tw.start)
+                      (tw.end.nil? || v_tw.start < tw.end) &&
+                      (v_tw.end.nil? || v_tw.end > tw.start)
                   }
               })
         }
@@ -634,7 +633,7 @@ module Wrappers
 
         if vehicle.timewindow&.start && vehicle.timewindow&.end
           vehicle.timewindow.end - vehicle.timewindow.start
-        elsif vehicle.sequence_timewindows.all?{ |tw| tw.start && tw.end }
+        elsif vehicle.sequence_timewindows.all?(&:end)
           vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max
         end
       }
@@ -768,7 +767,7 @@ module Wrappers
                 latest_arrival = vehicle_end - activity.duration
                 latest_arrival -= matrix[:time][index][vehicle.end_point.matrix_index] if vehicle.end_point_id
                 timely_return_not_possible = activity.timewindows.all?{ |tw|
-                  tw.start && latest_arrival && latest_arrival < tw.start
+                  latest_arrival && latest_arrival < tw.start
                 }
               end
               timely_arrival_not_possible || timely_return_not_possible

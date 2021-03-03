@@ -38,7 +38,7 @@ module Models
       assert_equal 2**32, vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.timewindow = { end: 10 }
-      assert_equal 2**32, vrp.vehicles.first.work_duration
+      assert_equal 10, vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.timewindow = { start: 10, end: 20 }
       assert_equal 10, vrp.vehicles.first.work_duration

@@ -443,9 +443,16 @@ module VrpShared
 
   params :vrp_request_timewindow do
     optional(:id, type: String)
-    optional(:start, type: Integer, desc: 'Beginning of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.type_cast(value) })
-    optional(:end, type: Integer, desc: 'End of the current timewindow in seconds', coerce_with: ->(value) { ScheduleType.type_cast(value) })
-    optional(:day_index, type: Integer, values: 0..6, desc: '(Scheduling only) Day index of the current timewindow within the periodic week, (monday = 0, ..., sunday = 6)')
+    optional(:start,
+             type: Integer, coerce_with: ->(value) { ScheduleType.type_cast(value || 0) },
+             desc: 'Beginning of the current timewindow in seconds')
+    optional(:end,
+             type: Integer, coerce_with: ->(value) { ScheduleType.type_cast(value) },
+             desc: 'End of the current timewindow in seconds')
+    optional(:day_index,
+             type: Integer, values: 0..6,
+             desc: '(Scheduling only) Day index of the current timewindow within the periodic week,
+                    (monday = 0, ..., sunday = 6)')
     at_least_one_of :start, :end, :day_index
   end
 

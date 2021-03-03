@@ -264,7 +264,7 @@ module Wrappers
           skills: [vrp_skills.size] + service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
             service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
-          time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] },
+          time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] },
           delivery: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }&.value&.to_i || 0 },
           pickup: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }&.value&.to_i || 0 }
         }.delete_if{ |k, v|
@@ -286,13 +286,13 @@ module Wrappers
             id: vrp.services.size + index * 2,
             service: shipment.pickup.duration,
             location_index: @points[shipment.pickup.point_id].matrix_index,
-            time_windows: shipment.pickup.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
+            time_windows: shipment.pickup.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
           }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
           delivery: {
             id: vrp.services.size + index * 2 + 1,
             service: shipment.delivery.duration,
             location_index: @points[shipment.delivery.point_id].matrix_index,
-            time_windows: shipment.delivery.timewindows.map{ |timewindow| [timewindow.start || 0, timewindow.end || 2**30] }
+            time_windows: shipment.delivery.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
           }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
         }.delete_if{ |_k, v|
           v.nil? || v.is_a?(Array) && v.empty?

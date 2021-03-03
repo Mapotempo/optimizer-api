@@ -441,7 +441,7 @@ module Interpreters
           current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
           current_load[:current_load] / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
         }
-        vehicle_worktime = vehicle.duration || vehicle.timewindow&.start && vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start) # can be nil!
+        vehicle_worktime = vehicle.duration || vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start) # can be nil!
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
 
         log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime} percent: #{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :info

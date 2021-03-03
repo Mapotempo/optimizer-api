@@ -135,7 +135,7 @@ module Wrappers
         if service.activity
           services << OrtoolsVrp::Service.new(
             time_windows: service.activity.timewindows.collect{ |tw|
-              OrtoolsVrp::TimeWindow.new(start: tw.start || -2**56, end: tw.end || 2**56)
+              OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
             },
             quantities: vrp.units.collect{ |unit|
               is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -168,7 +168,7 @@ module Wrappers
           service.activities.each_with_index{ |possible_activity, activity_index|
             services << OrtoolsVrp::Service.new(
               time_windows: possible_activity.timewindows.collect{ |tw|
-                OrtoolsVrp::TimeWindow.new(start: tw.start || -2**56, end: tw.end || 2**56)
+                OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
               },
               quantities: vrp.units.collect{ |unit|
                 is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -233,7 +233,7 @@ module Wrappers
         end
         services << OrtoolsVrp::Service.new(
           time_windows: shipment.pickup.timewindows.collect{ |tw|
-            OrtoolsVrp::TimeWindow.new(start: tw.start || -2**56, end: tw.end || 2**56)
+            OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
           },
           quantities: vrp.units.collect{ |unit|
             is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -254,7 +254,7 @@ module Wrappers
         )
         services << OrtoolsVrp::Service.new(
           time_windows: shipment.delivery.timewindows.collect{ |tw|
-            OrtoolsVrp::TimeWindow.new(start: tw.start || -2**56, end: tw.end || 2**56)
+            OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
           },
           quantities: vrp.units.collect{ |unit|
             is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -318,8 +318,8 @@ module Wrappers
             [
               rest.timewindows.collect{ |tw|
                 [
-                  tw.start || -2**56,
-                  end: tw.end || 2**56,
+                  tw.start,
+                  tw.end || 2**56,
                 ]
               },
               rest.duration,
@@ -371,13 +371,13 @@ module Wrappers
             )
           },
           time_window: OrtoolsVrp::TimeWindow.new(
-            start: (vehicle.timewindow && vehicle.timewindow.start) || 0,
-            end: (vehicle.timewindow && vehicle.timewindow.end) || 2147483647,
+            start: vehicle.timewindow&.start || 0,
+            end: vehicle.timewindow&.end || 2147483647,
           ),
           rests: vehicle.rests.collect{ |rest|
             OrtoolsVrp::Rest.new(
               time_windows: rest.timewindows.collect{ |tw|
-                OrtoolsVrp::TimeWindow.new(start: tw.start || -2**56, end: tw.end || 2**56)
+                OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
               },
               duration: rest.duration,
               id: rest.id,
@@ -534,7 +534,7 @@ module Wrappers
               current_load: 0
             }
           }
-          route_start = (vehicle.timewindow && vehicle.timewindow[:start]) ? vehicle.timewindow[:start] : 0
+          route_start = vehicle.timewindow&.start || 0
           earliest_start = route_start
           {
             vehicle_id: vehicle.id,

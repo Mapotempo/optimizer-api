@@ -874,7 +874,10 @@ module OptimizerWrapper
       lambda do |a, b|
         aa = vrp.services[a[0]]
         bb = vrp.services[b[0]]
-        (aa.activity.timewindows.empty? && bb.activity.timewindows.empty? || aa.activity.timewindows.any?{ |twa| bb.activity.timewindows.any?{ |twb| twa[:start] <= twb[:end] && twb[:start] <= twa[:end] } }) ?
+        aa.activity.timewindows.empty? && bb.activity.timewindows.empty? ||
+          aa.activity.timewindows.any?{ |twa|
+            bb.activity.timewindows.any?{ |twb| twa.start <= twb.end && twb.start <= twa.end }
+          } ?
           matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
           Float::INFINITY
       end
@@ -882,10 +885,10 @@ module OptimizerWrapper
       lambda do |a, b|
         aa = vrp.services[a[0]]
         bb = vrp.services[b[0]]
-        (aa.activity.timewindows.collect{ |t| [t[:start], t[:end]] } == bb.activity.timewindows.collect{ |t| [t[:start], t[:end]] } &&
+        aa.activity.timewindows.collect{ |t| [t.start, t.end] } == bb.activity.timewindows.collect{ |t| [t.start, t.end] } &&
           ((cost_late_multiplier && aa.activity.late_multiplier.to_f.positive? && bb.activity.late_multiplier.to_f.positive?) || (aa.activity.duration&.zero? && bb.activity.duration&.zero?)) &&
           (no_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) &&
-          aa.skills == bb.skills) ?
+          aa.skills == bb.skills ?
           matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
           Float::INFINITY
       end
@@ -935,22 +938,24 @@ module OptimizerWrapper
           new_tws.each{ |new_tw|
             # find intersection with tw of service_tw
             compatible_tws = service_tw.select{ |tw|
-              tw[:day_index].nil? || new_tw[:day_index].nil? || tw[:day_index] == new_tw[:day_index] &&
-                (tw[:start].nil? || new_tw[:end].nil? || tw[:start] <= new_tw[:end]) &&
-                (tw[:end].nil? || new_tw[:start].nil? || tw[:end] >= new_tw[:start])
+              tw.day_index.nil? || new_tw.day_index.nil? || tw.day_index == new_tw.day_index &&
+                (new_tw.end.nil? || tw.start <= new_tw.end) &&
+                (tw.end.nil? || tw.end >= new_tw.start)
             }
             if compatible_tws.empty?
               to_remove_tws << new_tws
             else
-              compatible_start = compatible_tws.collect{ |tw| tw[:start] }.compact.max
-              compatible_end = compatible_tws.collect{ |tw| tw[:end] }.compact.min
-              new_tw[:start] = [new_tw[:start], compatible_start].max if compatible_start
-              new_tw[:end] = [new_tw[:end], compatible_end].min if compatible_end
+              compatible_start = compatible_tws.collect(&:start).max
+              compatible_end = compatible_tws.collect(&:end).compact.min
+              new_tw.start = [new_tw.start, compatible_start].max
+              new_tw.end = [new_tw.end, compatible_end].min if compatible_end
             end
           }
         end
       }
-      raise OptimizerWrapper::DiscordantProblemError, 'Zip cluster : no intersecting tw could be found' if !new_tws.empty? && (new_tws - to_remove_tws).empty?
+      if !new_tws.empty? && (new_tws - to_remove_tws).empty?
+        raise OptimizerWrapper::DiscordantProblemError.new('Zip cluster: no intersecting tw could be found')
+      end
 
       new_services[i].activity.timewindows = (new_tws - to_remove_tws).compact
     end

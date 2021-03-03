@@ -248,8 +248,8 @@ module SchedulingDataInitialization
         group_tw.delete_if{ |tw1|
           data[:tws_sets].first.none?{ |tw2|
             (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
-              (tw1[:start].nil? || tw2[:end].nil? || tw1[:start] <= tw2[:end]) &&
-              (tw1[:end].nil? || tw2[:start].nil? || tw1[:end] >= tw2[:start])
+              (tw2[:end].nil? || tw1[:start] <= tw2[:end]) &&
+              (tw1[:end].nil? || tw1[:end] >= tw2[:start])
           }
         }
 
@@ -259,8 +259,8 @@ module SchedulingDataInitialization
         data[:tws_sets].first.each{ |tw1|
           intersecting_tws = group_tw.select{ |tw2|
             (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
-              (tw2[:start].nil? || tw2[:start].between?(tw1[:start], tw1[:end]) || tw2[:start] <= tw1[:start]) &&
-              (tw2[:end].nil? || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
+              (tw2[:start] <= tw1[:start] || tw1[:end].nil? || tw2[:start].between?(tw1[:start], tw1[:end])) &&
+              (tw2[:end].nil? || tw1[:end].nil? || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
           }
           next if intersecting_tws.empty?
 
@@ -271,7 +271,7 @@ module SchedulingDataInitialization
         }
       }
 
-      group_tw.delete_if{ |tw| tw[:start] && tw[:end] && tw[:start] == tw[:end] }
+      group_tw.delete_if{ |tw| tw[:start] == tw[:end] }
       group_tw
     else
       []

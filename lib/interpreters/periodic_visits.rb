@@ -74,7 +74,7 @@ module Interpreters
         if @have_day_index
           first_day = timewindow.day_index ? (@schedule_start..@schedule_end).find{ |day| day % 7 == timewindow.day_index } : @schedule_start
           (first_day..@schedule_end).step(timewindow.day_index ? 7 : 1).collect{ |day_index|
-            Models::Timewindow.new(start: (timewindow.start || 0) + day_index * 86400,
+            Models::Timewindow.new(start: timewindow.start + day_index * 86400,
                                    end: (timewindow.end || 86400) + day_index * 86400)
           }
         else
