@@ -191,8 +191,8 @@ module Interpreters
       # (don't generate any sub-VRP yet)
       split_solve_core(service_vrp, job, &block) # self-recursive method
     ensure
-      service_vrp[:vrp] = service_vrp[:split_solve_data][:original_vrp]
-      service_vrp[:vrp].services.concat empties_or_fills
+      service_vrp[:vrp] = service_vrp[:split_solve_data][:original_vrp] if service_vrp[:split_solve_data]
+      service_vrp[:vrp]&.services&.concat empties_or_fills
       log '<-- split_solve (clustering by max_split)'
     end
 
