@@ -82,15 +82,16 @@ module Interpreters
       if first_solution_strategy.first == 'self_selection'
         mandatory_heuristic = select_best_heuristic(vrp)
 
-        heuristic_list = if vrp[:vehicles].any?{ |vehicle| vehicle[:force_start] || vehicle[:shift_preference] && vehicle[:shift_preference] == 'force_start' }
-          [mandatory_heuristic, verified('local_cheapest_insertion'), verified('global_cheapest_arc')]
-        elsif mandatory_heuristic == 'savings'
-          [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
-        elsif mandatory_heuristic == 'parallel_cheapest_insertion'
-          [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
-        else
-          [mandatory_heuristic]
-        end
+        heuristic_list =
+          if vrp[:vehicles].any?{ |vehicle| vehicle[:force_start] || vehicle[:shift_preference].to_s == 'force_start' }
+            [mandatory_heuristic, verified('local_cheapest_insertion'), verified('global_cheapest_arc')]
+          elsif mandatory_heuristic == 'savings'
+            [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
+          elsif mandatory_heuristic == 'parallel_cheapest_insertion'
+            [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
+          else
+            [mandatory_heuristic]
+          end
 
         heuristic_list |= ['savings'] if vrp.vehicles.collect{ |vehicle| vehicle[:rests].to_a.size }.sum.positive? # while waiting for self_selection improve
         heuristic_list
@@ -161,20 +162,23 @@ module Interpreters
 
     def self.find_best_heuristic(service_vrp)
       vrp = service_vrp[:vrp]
-      strategies = vrp.preprocessing_first_solution_strategy
-      custom_heuristics = collect_heuristics(vrp, strategies)
+      custom_heuristics = collect_heuristics(vrp, vrp.preprocessing_first_solution_strategy)
       if custom_heuristics.size > 1
         log '---> find_best_heuristic'
         tic = Time.now
         percent_allocated_to_heur_selection = 0.3 # spend at most 30% of the total time for heuristic selection
         total_time_allocated_for_heuristic_selection = service_vrp[:vrp].resolution_duration.to_f * percent_allocated_to_heur_selection
-        batched_service_vrps = batch_heuristic([service_vrp], custom_heuristics).flatten(1)
+        time_for_each_heuristic = (total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i
+
         times = []
-        first_results = batched_service_vrps.collect{ |s_vrp|
+        first_results = custom_heuristics.collect{ |heuristic|
+          s_vrp = Marshal.load(Marshal.dump(service_vrp))
+          s_vrp[:vrp].preprocessing_first_solution_strategy = [verified(heuristic)]
+          s_vrp[:vrp].restitution_allow_empty_result = true
           s_vrp[:vrp].resolution_batch_heuristic = true
           s_vrp[:vrp].resolution_initial_time_out = nil
           s_vrp[:vrp].resolution_minimum_duration = nil
-          s_vrp[:vrp].resolution_duration = [(total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i, 300000].min # do not spend more than 5 min for a single heuristic
+          s_vrp[:vrp].resolution_duration = [time_for_each_heuristic, 300000].min # no more than 5 min for single heur
           heuristic_solution = OptimizerWrapper.solve(s_vrp)
           times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
@@ -185,7 +189,7 @@ module Interpreters
         synthesis = []
         first_results.each_with_index{ |result, i|
           synthesis << {
-            heuristic: batched_service_vrps[i][:vrp].preprocessing_first_solution_strategy.first,
+            heuristic: custom_heuristics[i],
             quality: result.nil? ? nil : result[:cost].to_i + (times[i] / 1000).to_i,
             used: false,
             cost: result ? result[:cost] : nil,
