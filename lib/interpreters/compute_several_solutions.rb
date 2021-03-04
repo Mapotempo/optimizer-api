@@ -197,33 +197,31 @@ module Interpreters
         first_results.each_with_index{ |result, i|
           synthesis << {
             heuristic: custom_heuristics[i],
-            quality: result.nil? ? nil : result[:cost].to_i + (times[i] / 1000).to_i,
+            quality: result.nil? ? Float::MAX : result[:cost].to_i + (times[i] / 1000).to_i,
             used: false,
             cost: result ? result[:cost] : nil,
             time_spent: times[i],
             solution: result
           }
         }
-        sorted_heuristics = synthesis.sort_by{ |element| element[:quality].nil? ? synthesis.collect{ |data| data[:quality] }.compact.max * 10 : element[:quality] }
+        best = synthesis.min_by{ |element| element[:quality] }
 
-        best_heuristic = sorted_heuristics[0][:heuristic]
-
-        if best_heuristic != 'supplied_initial_routes'
+        if best[:heuristic] != 'supplied_initial_routes'
           vrp.routes = [] # if another heuristic is better ignore the supplied routes
         end
 
-        synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:used] = true
+        best[:used] = true
 
-        vrp.preprocessing_heuristic_result = synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:solution]
+        vrp.preprocessing_heuristic_result = best[:solution]
         vrp.preprocessing_heuristic_result[:solvers].each{ |solver|
           solver = 'preprocessing_' + solver
         }
         synthesis.each{ |synth| synth.delete(:solution) }
         vrp.resolution_batch_heuristic = nil
-        vrp.preprocessing_first_solution_strategy = [best_heuristic]
+        vrp.preprocessing_first_solution_strategy = [best[:heuristic]]
         vrp.preprocessing_heuristic_synthesis = synthesis
         vrp.resolution_duration = vrp.resolution_duration ? [(vrp.resolution_duration.to_f * (1 - percent_allocated_to_heur_selection)).round, 1000].max : nil
-        log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec selected heuristic: #{best_heuristic}"
+        log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec selected heuristic: #{best[:heuristic]}"
       else
         vrp.preprocessing_first_solution_strategy = custom_heuristics
       end
