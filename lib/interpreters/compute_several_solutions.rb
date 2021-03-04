@@ -170,10 +170,17 @@ module Interpreters
         total_time_allocated_for_heuristic_selection = service_vrp[:vrp].resolution_duration.to_f * percent_allocated_to_heur_selection
         time_for_each_heuristic = (total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i
 
+        custom_heuristics << 'supplied_initial_routes' if vrp.routes.any?
+
         times = []
         first_results = custom_heuristics.collect{ |heuristic|
           s_vrp = Marshal.load(Marshal.dump(service_vrp))
-          s_vrp[:vrp].preprocessing_first_solution_strategy = [verified(heuristic)]
+          if heuristic == 'supplied_initial_routes'
+            s_vrp[:vrp].preprocessing_first_solution_strategy = [verified('global_cheapest_arc')] # fastest for fallback
+          else
+            s_vrp[:vrp].routes = []
+            s_vrp[:vrp].preprocessing_first_solution_strategy = [verified(heuristic)]
+          end
           s_vrp[:vrp].restitution_allow_empty_result = true
           s_vrp[:vrp].resolution_batch_heuristic = true
           s_vrp[:vrp].resolution_initial_time_out = nil
@@ -200,6 +207,10 @@ module Interpreters
         sorted_heuristics = synthesis.sort_by{ |element| element[:quality].nil? ? synthesis.collect{ |data| data[:quality] }.compact.max * 10 : element[:quality] }
 
         best_heuristic = sorted_heuristics[0][:heuristic]
+
+        if best_heuristic != 'supplied_initial_routes'
+          vrp.routes = [] # if another heuristic is better ignore the supplied routes
+        end
 
         synthesis.find{ |heur| heur[:heuristic] == best_heuristic }[:used] = true
 
