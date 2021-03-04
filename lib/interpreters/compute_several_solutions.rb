@@ -207,7 +207,15 @@ module Interpreters
         best = synthesis.min_by{ |element| element[:quality] }
 
         if best[:heuristic] != 'supplied_initial_routes'
-          vrp.routes = [] # if another heuristic is better ignore the supplied routes
+          # if another heuristic is the best, use its solution as the initial route
+          vrp.routes = best[:solution][:routes].collect{ |route|
+            mission_ids = route[:activities].collect{ |a|
+              a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id]
+            }.compact
+            next if mission_ids.empty?
+
+            Models::Route.new(vehicle: vrp.vehicles.find{ |v| v[:id] = route[:vehicle_id] }, mission_ids: mission_ids)
+          }.compact
         end
 
         best[:used] = true
