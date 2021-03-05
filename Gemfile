@@ -4,7 +4,7 @@ ruby '~> 2.5'
 gem 'require_all'
 
 gem 'puma'
-gem 'rack'
+gem 'rack', github: 'senhalil/rack', branch: 'improved-asserts' # remove the custom github definition after the following PR commit is on the stable branch https://github.com/rack/rack/commit/1970771c7e01d54cb631dae0bc7618e2561ad1c7
 gem 'rack-cors'
 gem 'rake'
 gem 'thin'
@@ -39,6 +39,7 @@ gem 'rgeo-geojson'
 
 gem 'google-protobuf', '>=3'
 
+gem 'oj'
 gem 'zlib'
 
 group :development, :test do

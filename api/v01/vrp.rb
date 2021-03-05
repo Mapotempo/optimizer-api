@@ -147,7 +147,7 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             stored_result = APIBase.dump_vrp_dir.read([id, params[:api_key], 'solution'].join('_'))
-            solution = stored_result && Marshal.load(stored_result) # rubocop:disable Security/MarshalLoad
+            solution = stored_result && Oj.load(stored_result) rescue Marshal.load(stored_result) # rubocop:disable Security/MarshalLoad, Style/RescueModifier
 
             if solution.nil? && (job.nil? || job.killed? || Resque::Plugins::Status::Hash.should_kill?(id) || job['options']['api_key'] != params[:api_key])
               status 404
@@ -159,8 +159,8 @@ module Api
             env['api.format'] = output_format # To override json default format
 
             if job&.completed? # job can still be nil if we have the solution from the dump
+              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Oj.dump(solution)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
               OptimizerWrapper.job_remove(params[:api_key], id)
-              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
             end
 
             status 200
@@ -178,6 +178,9 @@ module Api
                 }
               }, with: Grape::Presenters::Presenter)
             end
+            # set nil to release memory because puma keeps the grape api endpoint object alive
+            stored_result = nil # rubocop:disable Lint/UselessAssignment
+            solution = nil # rubocop:disable Lint/UselessAssignment
           end
 
           desc 'List vrp jobs', {
