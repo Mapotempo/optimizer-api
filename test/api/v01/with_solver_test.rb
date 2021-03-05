@@ -62,4 +62,14 @@ class Api::V01::WithSolverTest < Minitest::Test
     end
     delete_completed_job @job_id, api_key: 'solvers' if @job_id
   end
+
+  def test_returned_graph
+    # using ORtools to make sure that optimization generates graph
+    asynchronously start_worker: true do
+      @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
+      result = wait_status @job_id, 'completed', api_key: 'ortools'
+      assert_operator result['job']['graph'].size, :>, 1, 'Graph seems to have been overwritten at each call to blockcall'
+    end
+    delete_completed_job @job_id, api_key: 'ortools' if @job_id
+  end
 end

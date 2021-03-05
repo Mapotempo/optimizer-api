@@ -254,16 +254,14 @@ module OptimizerWrapper
             proc{ |pids|
               next unless job
 
-              current_result = Result.get(job) || { 'pids' => nil }
-
+              current_result = Result.get(job) || { pids: nil }
               current_result[:csv] = true if cliqued_vrp[:restitution_csv]
-
-              current_result['pids'] = pids
+              current_result[:pids] = pids
 
               Result.set(job, current_result)
             }
           ) { |wrapper, avancement, total, _message, cost, _time, solution|
-            block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' && solution) if dicho_level.nil? || dicho_level.zero?
+            block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' ? solution : nil) if dicho_level.nil? || dicho_level.zero?
           }
 
           if cliqued_result.is_a?(Hash)
@@ -465,8 +463,8 @@ module OptimizerWrapper
     Resque::Plugins::Status::Hash.kill(id) # Worker will be killed at the next call of at() method
 
     # Only kill the solver process if a pid has been set
-    if res && res['pids'] && !res['pids'].empty?
-      res['pids'].each{ |pid|
+    if res && res[:pids] && !res[:pids].empty?
+      res[:pids].each{ |pid|
         begin
           Process.kill('KILL', pid)
         rescue Errno::ESRCH
