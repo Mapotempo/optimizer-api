@@ -56,5 +56,6 @@ module Models
     has_many :activities, class_name: 'Models::Activity'
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
+    has_many :relations, class_name: 'Models::Relation'
   end
 end

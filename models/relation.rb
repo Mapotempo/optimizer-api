@@ -22,6 +22,7 @@ module Models
     field :type, default: :same_route
     field :lapse, default: nil
     field :linked_ids, default: []
+    has_many :linked_services, class_name: 'Models::Service'
     field :linked_vehicle_ids, default: []
     field :periodicity, default: 1
 
