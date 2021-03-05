@@ -34,7 +34,7 @@ require 'minitest/reporters'
 Minitest::Reporters.use! [
   !ENV['TIME'] ? Minitest::Reporters::ProgressReporter.new : nil,
   ENV['HTML'] && Minitest::Reporters::HtmlReporter.new, # Create an HTML report with more information
-  ENV['TIME'] && Minitest::Reporters::SpecReporter.new, # Generate a report to find slowest tests
+  ENV['TIME'] ? Minitest::Reporters::SpecReporter.new : Minitest::Reporters::ProgressReporter.new , # Generate a report to find slowest tests
 ].compact
 
 require 'grape'
