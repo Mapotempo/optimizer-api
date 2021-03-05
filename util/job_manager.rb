@@ -58,22 +58,22 @@ module OptimizerWrapper
         @wrapper = wrapper
         log "avancement: #{message} #{avancement}"
         if avancement && cost
-          p = Result.get(self.uuid) || { 'graph' => [] }
-          p['graph'] = [] if !p.has_key?('graph')
-          p['csv'] = true if ask_restitution_csv
-          p['graph'] << { iteration: avancement, cost: cost, time: time }
-          p['result'] = solution if solution
+          p = Result.get(self.uuid) || { graph: [] }
+          p[:graph] ||= []
+          p[:csv] = true if ask_restitution_csv
+          p[:graph] << { iteration: avancement, cost: cost, time: time }
+          p[:result] = solution if solution
           Result.set(self.uuid, p)
         end
       }
 
       # Add values related to the current solve status
       p = Result.get(self.uuid) || {}
-      p['csv'] = true if ask_restitution_csv
-      p['result'] = result
-      if services_vrps.size == 1 && p && !p['result'].empty? && p['graph'] && !p['graph'].empty?
-        p['result'].first['iterations'] = p['graph'].last['iteration']
-        p['result'].first['elapsed'] = p['graph'].last['time']
+      p[:csv] = true if ask_restitution_csv
+      p[:result] = result
+      if services_vrps.size == 1 && p && !p[:result].empty? && p[:graph] && !p[:graph].empty?
+        p[:result].first[:iterations] = p[:graph].last[:iteration]
+        p[:result].first[:elapsed] = p[:graph].last[:time]
       end
       Result.set(self.uuid, p)
     rescue Resque::Plugins::Status::Killed, JobKilledError
@@ -121,9 +121,9 @@ module OptimizerWrapper
 
     def self.get(key)
       result = OptimizerWrapper::REDIS.get(key)
-      if result
-        JSON.parse(result.force_encoding(Encoding::UTF_8)) # On some env string is encoded as ASCII
-      end
+      return unless result
+
+      JSON.parse(result.force_encoding(Encoding::UTF_8), symbolize_names: true)
     end
 
     def self.exist(key)
