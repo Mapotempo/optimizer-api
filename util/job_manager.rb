@@ -71,7 +71,7 @@ module OptimizerWrapper
       p = Result.get(self.uuid) || {}
       p[:csv] = true if ask_restitution_csv
       p[:result] = result
-      if services_vrps.size == 1 && p && !p[:result].empty? && p[:graph] && !p[:graph].empty?
+      if services_vrps.size == 1 && p && p[:result].any? && p[:graph]&.any?
         p[:result].first[:iterations] = p[:graph].last[:iteration]
         p[:result].first[:elapsed] = p[:graph].last[:time]
       end
