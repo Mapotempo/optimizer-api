@@ -235,11 +235,9 @@ module Models
       end
 
       vrp = VRP.scheduling
-      vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 2, 5),
-                                                       end: Date.new(2021, 2, 11)}}
+      vrp[:configuration][:schedule] = { range_indices: { start: 4, end: 7 } }
       vrp[:services].first[:unavailable_visit_day_indices] = [5]
-      vrp[:services].first[:unavailable_index_ranges] = [{ start: 0,
-                                                           end: 7 }]
+      vrp[:services].first[:unavailable_index_ranges] = [{ start: 0, end: 7 }]
       vrp = TestHelper.create(vrp) # this should not raise
       assert_equal (4..7).to_a, vrp.services.first.unavailable_days.sort
     end

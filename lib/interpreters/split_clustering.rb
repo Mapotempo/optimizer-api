@@ -1190,7 +1190,7 @@ module Interpreters
       def centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
         limits = []
 
-        if entity == :vehicle && vrp.vehicles.all?{ |vehicle| vehicle[:sequence_timewindows] }
+        if entity == :vehicle && vrp.schedule_range_indices
           r_start = vrp.schedule_range_indices[:start]
           r_end = vrp.schedule_range_indices[:end]
 

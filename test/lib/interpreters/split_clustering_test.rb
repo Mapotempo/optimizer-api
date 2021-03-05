@@ -126,6 +126,7 @@ class SplitClusteringTest < Minitest::Test
       problem[:points].each{ |p| p.delete(:matrix_index) }
       problem[:vehicles][0].delete(:matrix_id)
       problem[:vehicles] << problem[:vehicles].first.dup
+      problem[:vehicles].last[:id] += '_dup'
 
       OptimizerWrapper.router.stub(:matrix, ->(_url, _router_mode, _router_dimension, src, dst){ return [Array.new(src.size){ |i| Array.new(dst.size){ (i + 1) * 100 } }] }) do
         mock = MiniTest::Mock.new
