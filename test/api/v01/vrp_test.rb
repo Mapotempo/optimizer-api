@@ -59,7 +59,9 @@ class Api::V01::VrpTest < Minitest::Test
     ) do
       vrp = VRP.toy
       vrp[:vehicles] << vrp[:vehicles][0].dup
+      vrp[:vehicles].last[:id] += '_bis'
       vrp[:services] << vrp[:services][0].dup
+      vrp[:services].last[:id] += '_bis'
       vrp[:vehicles][0][:skills] = [['skill']]
       vrp[:services][0][:skills] = ['skill']
       submit_vrp api_key: 'demo', vrp: vrp

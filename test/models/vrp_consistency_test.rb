@@ -242,5 +242,66 @@ module Models
       vrp = TestHelper.create(vrp) # this should not raise
       assert_equal (4..7).to_a, vrp.services.first.unavailable_days.sort
     end
+
+    def test_duplicated_ids_are_not_allowed
+      assert TestHelper.create(VRP.basic) # this should not produce any error
+
+      vrp = VRP.basic
+      vrp[:vehicles] << vrp[:vehicles].first
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.basic
+      vrp[:services] << vrp[:services].first
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.basic
+      vrp[:matrices] << vrp[:matrices].first
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.basic
+      vrp[:points] << vrp[:points].first
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.basic
+      vrp[:rests] = Array.new(2){ |_rest| { id: 'same_id', timewindows: [{ start: 1, end: 2 }], duration: 1 } }
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      assert TestHelper.create(VRP.pud) # this should not produce any error
+      vrp = VRP.pud
+      vrp[:shipments] << vrp[:shipments].first
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.pud
+      vrp[:vehicles].first[:capacities] = [{ unit_id: 'unit_0', value: 10 }]
+      vrp[:shipments].first[:quantities] = [{ unit_id: 'unit_0', value: -5 }]
+      vrp[:units] << vrp[:units].first
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.pud
+      vrp[:zones] = Array.new(2){ |_zone| { id: 'same_zone', polygon: { type: 'Polygon', coordinates: [[[0.5, 48.5], [1.5, 48.5]]] }} }
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+
+      vrp = VRP.pud
+      vrp[:subtours] = Array.new(2){ |_tour| { id: 'same_tour', time_bouds: 180 } }
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        TestHelper.create(vrp)
+      end
+    end
   end
 end

@@ -143,6 +143,17 @@ module Models
         raise OptimizerWrapper::DiscordantProblemError, 'cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
       end
 
+      # ensure IDs are unique
+      # TODO: Active Hash should be checking this
+      [:matrices, :units, :points, :rests, :zones, :timewindows,
+       :vehicles, :services, :shipments, :subtours].each{ |key|
+        next if hash[key].to_a.collect{ |v| v[:id] }.uniq!.nil?
+
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          "#{key} IDs should be unique"
+        )
+      }
+
       # matrix_id consistency
       hash[:vehicles]&.each{ |v|
         if v[:matrix_id] && (hash[:matrices].nil? || hash[:matrices].none?{ |m| m[:id] == v[:matrix_id] })
