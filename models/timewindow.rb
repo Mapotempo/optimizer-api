@@ -19,7 +19,7 @@ require './models/base'
 
 module Models
   class Timewindow < Base
-    field :start, default: nil
+    field :start, default: 0
     field :end, default: nil
     field :day_index, default: nil
 

@@ -214,7 +214,7 @@ module Models
               timewindow.day_index.nil? || timewindow.day_index == week_day_index
             }.each{ |timewindow|
               timewindow_duration =
-                if timewindow.start && timewindow.end
+                if timewindow.end
                   timewindow.end - timewindow.start
                 else
                   2**32
@@ -235,11 +235,12 @@ module Models
     def work_duration
       raise OptimizerWrapper::DiscordantProblemError, 'Vehicle should not have sequence timewindow if there is no schedule' unless self.sequence_timewindows.empty?
 
-      timewindow_duration = if self.timewindow.nil? || self.timewindow.start.nil? || self.timewindow.end.nil?
-        2**32
-      else
-        self.timewindow.end - self.timewindow.start
-      end
+      timewindow_duration =
+        if self.timewindow&.end
+          self.timewindow.end - self.timewindow.start
+        else
+          2**32
+        end
 
       [timewindow_duration, self.duration].compact.min
     end

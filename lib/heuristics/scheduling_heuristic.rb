@@ -602,7 +602,7 @@ module Heuristics
       setup_duration = dist_from_inserted.zero? ? 0 : @services_data[route_next[:id]][:setup_durations][route_next[:activity]]
       if !route_next[:tw].empty?
         tw = find_corresponding_timewindow(current_day, route_next[:arrival], @services_data[route_next[:id]][:tws_sets][route_next[:activity]], route_next[:end] - route_next[:arrival])
-        sooner_start = tw[:start] - dist_from_inserted - setup_duration if tw && tw[:start]
+        sooner_start = tw[:start] - dist_from_inserted - setup_duration if tw
       end
       new_start = [sooner_start, inserted_final_time].max
       new_arrival = new_start + dist_from_inserted + setup_duration
@@ -897,7 +897,7 @@ module Heuristics
         }
       else
         inserted_service[:tw].select{ |tw| tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index] % 7 }.each{ |tw|
-          start = tw[:start] ? [previous[:end], tw[:start] - route_time - setup_duration].max : previous[:end]
+          start = [previous[:end], tw[:start] - route_time - setup_duration].max
           arrival = start + route_time + setup_duration
           final = arrival + inserted_service[:duration]
 
@@ -1163,10 +1163,9 @@ module Heuristics
 
     def find_corresponding_timewindow(day, arrival_time, timewindows, duration)
       timewindows.select{ |tw|
-        (tw[:day_index].nil? || tw[:day_index] == day % 7) && # compatible days
-          (tw[:start].nil? && tw[:end].nil? ||
-            (arrival_time.between?(tw[:start], tw[:end]) || arrival_time <= tw[:start]) && # arrival_time is accepted
-            (!@duration_in_tw || ([tw[:start], arrival_time].max + duration <= tw[:end]))) # duration accepted in tw
+        (tw[:day_index].nil? || tw[:day_index] == day % 7) &&
+          (tw[:end].nil? || arrival_time <= tw[:end]) &&
+          (!@duration_in_tw || [tw[:start], arrival_time].max + duration <= tw[:end])
       }.min_by{ |tw| tw[:start] }
     end
 
