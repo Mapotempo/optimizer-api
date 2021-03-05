@@ -26,6 +26,7 @@ module Api
 
     class VrpResultDetailQuantities < Grape::Entity
       expose :unit, documentation: { type: String, desc: '' }
+      expose :label, documentation: { type: String, desc: '' }
       expose :value, documentation: { type: Float, desc: '' }
       expose :setup_value, documentation: { type: Float, desc: '' }
       expose :current_load, documentation: { type: Float, desc: '' }
@@ -45,16 +46,18 @@ module Api
     end
 
     class VRPResultDetailedCosts < Grape::Entity
-      expose :total, documentation: { type: String, desc: 'Cumulated cost' }
-      expose :fixed, documentation: { type: String, desc: 'Cost associated to the use of the vehicle' }
-      expose :time, documentation: { type: String, desc: 'Cost associated to the time dimension' }
-      expose :distance, documentation: { type: String, desc: 'Cost associated to the distance dimension' }
-      expose :value, documentation: { type: String, desc: 'Cost associated to the value dimension' }
-      expose :lateness, documentation: { type: String, desc: 'Cost associated to late arrival' }
-      expose :overload, documentation: { type: String, desc: 'Cost associated to quantities overload' }
+      expose :total, documentation: { type: Float, desc: 'Cumulated cost' }
+      expose :fixed, documentation: { type: Float, desc: 'Cost associated to the use of the vehicle' }
+      expose :time, documentation: { type: Float, desc: 'Cost associated to the time dimension' }
+      expose :distance, documentation: { type: Float, desc: 'Cost associated to the distance dimension' }
+      expose :value, documentation: { type: Float, desc: 'Cost associated to the value dimension' }
+      expose :lateness, documentation: { type: Float, desc: 'Cost associated to late arrival' }
+      expose :overload, documentation: { type: Float, desc: 'Cost associated to quantities overload' }
     end
 
     class VrpResultSolutionRouteActivities < Grape::Entity
+      expose :day_week_num, expose_nil: false, documentation: { type: String, desc: '' }
+      expose :day_week, expose_nil: false, documentation: { type: String, desc: '' }
       expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
       expose :travel_distance, documentation: { type: Integer, desc: 'Travel distance from previous point' }
       expose :travel_time, documentation: { type: Integer, desc: 'Travel time from previous point' }
@@ -63,9 +66,11 @@ module Api
       expose :begin_time, documentation: { type: Integer, desc: 'Time visit starts' }
       expose :end_time, documentation: { type: Integer, desc: 'Time visit ends' }
       expose :departure_time, documentation: { type: Integer, desc: '' }
-      expose :service_id, documentation: { type: String, desc: 'Internal reference of the service' }
-      expose :pickup_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
-      expose :delivery_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      # TODO : v2 will provide an :id which will be equivalent to ID sent by used and :internal_id which will be equivalent to our current service_id/rest_id/pickup_shipment_id/delivery_shipment_id (https://gitlab.com/mapotempo/optimizer-api/-/issues/537)
+      expose :service_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the service' }
+      expose :pickup_shipment_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      expose :delivery_shipment_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      expose :rest_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the rest' }
       expose :detail, using: VrpResultSolutionRouteActivityDetails, documentation: { desc: '' }
       expose :type, documentation: { type: String, desc: 'depot, rest, service, pickup or delivery' }
       expose :current_distance, documentation: { type: Integer, desc: 'Travel distance from route start to current point' }
@@ -73,6 +78,7 @@ module Api
     end
 
     class VrpResultSolutionRoute < Grape::Entity
+      # TODO : v2 will provide an :vehicle_id which will be equivalent to ID sent by used + :internal_vehicle_id which will be equivalent to our current vehicle_id (https://gitlab.com/mapotempo/optimizer-api/-/issues/537)
       expose :vehicle_id, documentation: { type: String, desc: 'Internal reference of the vehicule used for the current route' }
       expose :activities, using: VrpResultSolutionRouteActivities, documentation: { is_array: true, desc: 'Every step of the route' }
       expose :total_travel_time, documentation: { type: Integer, desc: 'Sum of every travel time within the route' }
@@ -88,9 +94,10 @@ module Api
 
     class VrpResultSolutionUnassigned < Grape::Entity
       expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
-      expose :service_id, documentation: { type: String, desc: 'Internal reference of the service' }
-      expose :pickup_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
-      expose :delivery_shipment_id, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      expose :service_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the service' }
+      expose :pickup_shipment_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      expose :delivery_shipment_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the shipment' }
+      expose :rest_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the rest' }
       expose :detail, using: VrpResultSolutionRouteActivityDetails, documentation: { desc: '' }
       expose :type, documentation: { type: String, desc: 'depot, rest, service, pickup or delivery' }
       expose :reason, documentation: { type: String, desc: 'Unassigned reason. Only available when activity was rejected within preprocessing fase or periodic first_solution_strategy.' }
@@ -104,6 +111,8 @@ module Api
       expose :iterations, documentation: { type: Integer, desc: 'Total number of iteration performed to obtain the current result' }
       expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }
       expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route' }
+      expose :total_travel_time, documentation: { type: Integer, type: 'Cumulated travel time of every route'}
+      expose :total_waiting_time, documentation: { type: Integer, type: 'Cumulated idle time of every route' }
       expose :routes, using: VrpResultSolutionRoute, documentation: { is_array: true, desc: 'All the route calculated' }
       expose :unassigned, using: VrpResultSolutionUnassigned, documentation: { is_array: true, desc: 'Jobs which are not part of the solution' }
       expose :elapsed, documentation: { type: Integer, desc: 'Elapsed time within solver in ms' }
