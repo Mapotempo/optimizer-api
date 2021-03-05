@@ -214,14 +214,14 @@ module Models
       assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
     end
 
-    def test_remove_unecessary_units
+    def test_remove_unnecessary_units
       vrp = TestHelper.load_vrp(self)
       assert_empty vrp.units
       vrp.vehicles.all?{ |v| v.capacities.empty? }
       vrp.services.all?{ |s| s.quantities.empty? }
     end
 
-    def test_remove_unecessary_units_one_needed
+    def test_remove_unnecessary_units_one_needed
       vrp = TestHelper.load_vrp(self)
       assert_equal 1, vrp.units.size
       assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten!.uniq!,
@@ -276,6 +276,33 @@ module Models
                                                           end: Date.new(2021, 2, 8)}]
 
       assert_equal [5, 6, 7, 9], TestHelper.create(vrp).services.first.unavailable_days.sort
+    end
+
+    def test_no_lapse_in_relation
+      vrp = VRP.basic
+      vrp[:relations] = [{
+        type: 'vehicle_group_duration_on_months',
+        linked_vehicle_ids: ['vehicle_0']
+      }]
+
+      Models::Vrp.filter(vrp)
+      assert_empty vrp[:relations] # reject relation because lapse is mandatory
+
+      vrp[:relations] = [{
+        type: 'vehicle_group_duration_on_months',
+        linked_vehicle_ids: ['vehicle_0'],
+        lapse: 2
+      }]
+      Models::Vrp.filter(vrp)
+      refute_empty vrp[:relations]
+
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [{
+        type: 'vehicle_trips',
+        linked_vehicle_ids: vrp[:vehicles].collect{ |v| v[:id] }
+      }]
+      Models::Vrp.filter(vrp)
+      refute_empty vrp[:relations] # do not reject even if no lapse, lapse is not mandatory
     end
   end
 end

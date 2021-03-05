@@ -44,6 +44,7 @@ module Models
        'vehicle_group_duration', 'vehicle_group_duration_on_weeks', 'vehicle_group_duration_on_months'].each{ |relation_type|
         vrp[:relations] = [{
             type: relation_type,
+            lapse: 1,
             linked_ids: ['service_1', 'service_2']
         }]
 

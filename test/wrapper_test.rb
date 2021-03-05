@@ -3013,7 +3013,7 @@ class WrapperTest < Minitest::Test
       type: 'vehicle_group_duration',
       linked_ids: [],
       linked_vehicle_ids: [],
-      lapse: nil
+      lapse: 1
     }]
 
     vrp = TestHelper.create(problem)
@@ -3024,7 +3024,7 @@ class WrapperTest < Minitest::Test
       type: 'vehicle_group_duration',
       linked_ids: ['vehicle_0'],
       linked_vehicle_ids: [],
-      lapse: nil
+      lapse: 1
     }]
 
     vrp = TestHelper.create(problem)
