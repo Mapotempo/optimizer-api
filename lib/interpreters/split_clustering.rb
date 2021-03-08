@@ -28,6 +28,14 @@ require './lib/output_helper.rb'
 
 module Interpreters
   class SplitClustering
+    # Relations that link multiple services to on the same route
+    LINKING_RELATIONS = %i[
+      order
+      same_route
+      sequence
+      shipment
+    ].freeze
+
     # TODO: private method
     def self.split_clusters(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
@@ -124,14 +132,13 @@ module Interpreters
       vrp = service_vrp[:vrp]
       if service_vrp[:split_level].nil?
         empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
-        depot_ids = vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id].compact }.uniq
 
         !vrp.scheduling? &&
           vrp.preprocessing_max_split_size &&
           vrp.vehicles.size > 1 &&
           (vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit > 1) &&
-          (vrp.shipments.size + vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size &&
-          vrp.shipments.all?{ |s| depot_ids.include?(s.pickup.point_id) || depot_ids.include?(s.delivery.point_id) }
+          (vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size &&
+          vrp.shipments.empty? # Clustering supports Shipment only as Relation  TODO: delete this check when Model::Shipment is removed
       else
         ss_data = service_vrp[:split_solve_data]
         current_vehicles = ss_data[:current_vehicles]
@@ -160,9 +167,6 @@ module Interpreters
       # Initialize by first split_by_vehicle and keep the assignment info (don't generate the sub-VRPs yet)
       empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
       vrp.services -= empties_or_fills
-      # TODO: 0- relations needs to be taken into account inside clustering during this split
-      #          - the services need to be in the same route (and by extension, in the same sub-vrp) for the following relations:
-      #            => same_route, order, sequence, shipment
       split_by_vehicle = split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: :duration, restarts: 2, build_sub_vrps: false)
 
       # ss_data
@@ -270,14 +274,8 @@ module Interpreters
       sub_vrp.services = ss_data[:current_vehicles].flat_map{ |v| ss_data[:service_vehicle_assignments][v.id] }
       sub_vrp.services.concat ss_data[:transferred_empties_or_fills]
 
-      # fake-shipments are still inside service_vehicle_assignments as services should convert them back
-      # TODO: 0 - With P&D-clustering implementation - Stop treating the "fake-shipments" specially when we support
-      #           shipments in a generic way. The mix of "fake" and "real" shipments will be hard to keep track
-      sub_vrp.shipments = o_vrp.shipments.select{ |ship| sub_vrp.services.reject!{ |ser| ser.id == ship.id } }
-
       # only necessary points -- because compute_matrix doesn't check the difference
       sub_vrp.points = sub_vrp.services.map{ |s| s.activity.point } |
-                       sub_vrp.shipments.flat_map{ |s| [s.pickup.point, s.delivery.point] } |
                        sub_vrp.vehicles.flat_map{ |v| [v.start_point, v.end_point].compact }
 
       # only necessary relations
@@ -298,7 +296,7 @@ module Interpreters
       sub_vrp.configuration = Oj.load(Oj.dump(o_vrp.config)) # time and other limits are correct below
       # split the limits
       sub_vrp.resolution_vehicle_limit = ss_data[:current_vehicle_limit] + ss_data[:transferred_vehicle_limit] if ss_data[:current_vehicle_limit]
-      ratio = (sub_vrp.services.size + 2 * sub_vrp.shipments.size).to_f / (o_vrp.services.size + 2 * o_vrp.shipments.size)
+      ratio = sub_vrp.services.size.to_f / o_vrp.services.size
       sub_vrp.resolution_duration = (o_vrp.resolution_duration * ratio + ss_data[:transferred_time_limit]).ceil if o_vrp.resolution_duration
       sub_vrp.resolution_minimum_duration = (o_vrp.resolution_minimum_duration || o_vrp.resolution_initial_time_out)&.*(ratio)&.ceil
       sub_vrp.resolution_iterations_without_improvment = o_vrp.resolution_iterations_without_improvment&.*(ratio)&.ceil
@@ -378,16 +376,10 @@ module Interpreters
 
         (
           relation.linked_vehicle_ids.empty? ||
-            relation.linked_vehicle_ids.any?{ |linked_v_id|
-              vrp.vehicles.any?{ |v| v.id == linked_v_id }
-            }
+            relation.linked_vehicle_ids.any?{ |id| vrp.vehicles.any?{ |v| v.id == id } }
         ) && (
           relation.linked_ids.empty? ||
-            relation.linked_ids.any?{ |linked_s_id|
-              vrp.services.any?{ |s| linked_s_id == s.id } ||
-              vrp.shipments.any? { |s| linked_s_id == "#{s.id}delivery" } ||
-              vrp.shipments.any? { |s| linked_s_id == "#{s.id}pickup" }
-            }
+            relation.linked_ids.any?{ |id| vrp.services.any?{ |s| s.id == id } }
         )
       }
     end
@@ -623,7 +615,7 @@ module Interpreters
           options[:distance_matrix] = vrp.matrices[0][:time]
         end
 
-        data_items, cumulated_metrics, grouped_objects = collect_data_items_metrics(vrp, cumulated_metrics, options)
+        data_items, cumulated_metrics, grouped_objects, related_item_indices = collect_data_items_metrics(vrp, cumulated_metrics, options)
 
         limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
 
@@ -879,32 +871,11 @@ module Interpreters
         true # if not, they are compatible
       end
 
-      def build_service_like(shipment, activity)
-        Models::Service.new(id: shipment.id,
-                            priority: shipment.priority,
-                            exclusion_cost: shipment.exclusion_cost,
-                            skills: shipment.skills,
-                            activity: activity,
-                            sticky_vehicles: shipment.sticky_vehicles,
-                            quantities: shipment.quantities)
-      end
-
-      def build_services_from_shipments(depot_ids, shipments)
-        shipments.map{ |shipment|
-          if depot_ids.include?(shipment.pickup.point.id)
-            build_service_like(shipment, shipment.delivery)
-          elsif depot_ids.include?(shipment.delivery.point.id)
-            build_service_like(shipment, shipment.pickup)
-          end
-        }.compact
-      end
-
       def collect_data_items_metrics(vrp, cumulated_metrics, options)
         data_items = []
         grouped_objects = {}
 
         vehicle_units = vrp.vehicles.collect{ |v| v.capacities.to_a.collect{ |capacity| capacity.unit.id } }.flatten.uniq
-        depot_ids = vrp.vehicles.collect{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.flatten.compact.uniq
 
         decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
                     {
@@ -918,26 +889,26 @@ module Interpreters
                     }
                   end
 
-        # TODO: 0- this part needs to be able to handle real shipments
-        custom_shipments = build_services_from_shipments(depot_ids, vrp.shipments)
+        # TODO: this raise can be deleted once the Models::Shipment is replaced with Relations
+        raise UnsupportedProblemError.new('Clustering supports `Shipments` only as `Relations`') if vrp.shipments.any?
 
-        (vrp.services + custom_shipments).group_by{ |s|
+        vrp.services.group_by{ |s|
           location =
             if s.activity
               s.activity.point.location
             elsif s.activities.size.positive?
-              raise UnsupportedProblemError, 'Clustering is not supported yet if one service has serveral activities.'
+              raise UnsupportedProblemError, 'Clustering does not support services with multiple activities.'
             end
 
-          # TODO: 0- this part needs to be able to handle shipment as a relation
+          can_be_grouped = options[:group_points] && s.relations.none?{ |r| LINKING_RELATIONS.include?(r.type) }
           {
             lat: location.lat.round_with_steps(decimal[:digits], decimal[:steps]),
             lon: location.lon.round_with_steps(decimal[:digits], decimal[:steps]),
             v_id: s[:sticky_vehicle_ids].to_a |
-              [vrp.routes.find{ |r| r.mission_ids.include? s.id }&.vehicle_id].compact,
+              [vrp.routes.find{ |r| r.mission_ids.include? s.id }&.vehicle_id].compact, # split respects initial routes
             skills: s.skills.to_a.dup,
             day_skills: compute_day_skills(s.activity&.timewindows),
-            id: options[:group_points] ? nil : s.id
+            do_not_group: can_be_grouped ? nil : s.id, # use the ID to prevent grouping
           }
         }.each_with_index{ |(characteristics, sub_set), sub_set_index|
           unit_quantities = Hash.new(0)
@@ -970,7 +941,22 @@ module Interpreters
 
         add_duration_from_and_to_depot(vrp, data_items) if !options[:basic_split]
 
-        [data_items, cumulated_metrics, grouped_objects]
+        [data_items, cumulated_metrics, grouped_objects, collect_related_item_indices(data_items, grouped_objects)]
+      end
+
+      def collect_related_item_indices(data_items, grouped_objects)
+        related_item_indices = Hash.new { |h, k| h[k] = [] }
+
+        data_items.each_with_index{ |data_item, index|
+          sub_set = grouped_objects[data_item[2]]
+          next unless sub_set.size == 1 # linking_relations are not grouped with others
+
+          sub_set.first.relations.select{ |r| LINKING_RELATIONS.include?(r.type) }.each{ |relation|
+            related_item_indices[relation] << index
+          }
+        }
+
+        related_item_indices.group_by{ |k, _v| k.type }.transform_values!{ |v| v.collect!{ |i| i[1] } }
       end
 
       def zip_dataitems(vrp, items, grouped_objects)
@@ -987,7 +973,10 @@ module Interpreters
 
         c.distance_function = lambda do |data_item_a, data_item_b|
           # If there is no vehicle that can serve both points at the same time, make sure they are not merged
-          return max_distance + 1 if (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty?
+          if data_item_a[4][:do_not_group] || data_item_b[4][:do_not_group] ||
+             (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty?
+            return max_distance + 1
+          end
 
           [
             vrp.matrices[0][:distance][data_item_a[4][:matrix_index]][data_item_b[4][:matrix_index]],

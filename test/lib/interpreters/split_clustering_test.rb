@@ -602,8 +602,10 @@ class SplitClusteringTest < Minitest::Test
       called = false
       Interpreters::SplitClustering.stub(:split_solve_core, lambda{ |service_vrp, _job|
         refute_nil service_vrp[:split_level], 'split_level should have been defined before split_solve_core'
-        assert_operator service_vrp[:split_level], :<, 3, "split_level shouldn't reach 3. Grouping of vehicle points might be the reason"
-        assert service_vrp[:split_solve_data][:representative_vrp].points.none?{ |p| p.location.lat.nan? }, "Empty vehicles shouldn't reach split_solve_core"
+        assert_operator service_vrp[:split_level], :<, 3,
+                        'split_level should not reach 3. Grouping of vehicle points might be the reason'
+        assert service_vrp[:split_solve_data][:representative_vrp].points.none?{ |p| p.location.lat.nan? },
+               'Empty vehicles should not reach split_solve_core'
         called = true
         Interpreters::SplitClustering.send(:__minitest_stub__split_solve_core, service_vrp) # call original function
       }) do
@@ -618,6 +620,43 @@ class SplitClusteringTest < Minitest::Test
         end
       end
       assert called, 'split_solve_core should have been called'
+    end
+
+    def test_which_relations_are_linking
+      assert_equal %i[
+        order
+        same_route
+        sequence
+        shipment
+      ], Interpreters::SplitClustering::LINKING_RELATIONS, 'Linking relation constant has changed'
+    end
+
+    def test_collect_data_items_respects_linking_relations
+      problem = VRP.lat_lon
+      dummy_service = problem[:services].first
+      problem[:services] = []
+      problem[:relations] = []
+      expected_linked_items = Hash.new{ |h, k| h[k] = [] }
+      n_service_per_relation = 2
+      # create all types of linking relation, all at the same location, and check if they are merged
+      Interpreters::SplitClustering::LINKING_RELATIONS.each_with_index{ |relation, index|
+        problem[:relations] << { type: relation, linked_ids: [] }
+        n_service_per_relation.times.each{ |i|
+          problem[:services] << dummy_service.dup
+          problem[:services].last[:id] = "service_#{relation}_#{i}"
+          problem[:relations].last[:linked_ids] << problem[:services].last[:id]
+        }
+        expected_linked_items[relation] << Array.new(n_service_per_relation){ |i| index * n_service_per_relation + i }
+      }
+
+      vrp = TestHelper.create(problem)
+
+      data_items, _, _, linked_items = Interpreters::SplitClustering.send(:collect_data_items_metrics,
+                                                                          vrp,
+                                                                          Hash.new(0),
+                                                                          { group_points: true, basic_split: false })
+      assert_equal 8, data_items.size, 'Services with linking relations should not be grouped with others'
+      assert_equal expected_linked_items, linked_items, 'Linking relations should link data_items together'
     end
 
     def test_ignore_debug_parameter_if_no_coordinates
