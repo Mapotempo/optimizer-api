@@ -654,7 +654,7 @@ module OptimizerWrapper
                          else
                            (first_service_seen || route[:activities][seen][:travel_time].positive?) ? (route[:activities][seen][:detail][:setup_duration] || 0) : 0
                          end
-      first_service_seen = false if %(w[service pickup delivery]).include?(route[:activities][seen][:type])
+      first_service_seen = false if %w[service pickup delivery].include?(route[:activities][seen][:type])
       route[:activities][seen][:waiting_time] = route[:activities][seen][:begin_time] - (previous_end + considered_setup + (route[:activities][seen][:travel_time] || 0))
       previous_end = route[:activities][seen][:end_time]
       seen += 1
