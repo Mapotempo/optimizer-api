@@ -703,7 +703,7 @@ class InterpreterTest < Minitest::Test
       }],
       relations: [{
         id: 'id_rel',
-        type: 'meetup',
+        type: :meetup,
         linked_ids: ['shipment_0delivery', 'shipment_1delivery']
       }],
       configuration: {
@@ -1396,7 +1396,7 @@ class InterpreterTest < Minitest::Test
     problem = VRP.basic
     problem[:vehicles] << { id: 'vehicle_1' }
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
       lapse: 10,
       periodicity: 1
@@ -1407,12 +1407,12 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
 
-    problem[:relations].first[:type] = 'vehicle_group_duration'
+    problem[:relations].first[:type] = :vehicle_group_duration
     expanded_vrp = periodic_expand(vrp)
     assert_equal 1,  expanded_vrp.relations.size
     assert_equal 4,  expanded_vrp.relations.first[:linked_vehicle_ids].size
 
-    problem[:relations].first[:type] = 'vehicle_group_duration_on_months'
+    problem[:relations].first[:type] = :vehicle_group_duration_on_months
     problem[:configuration][:schedule] = {
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
@@ -1426,7 +1426,7 @@ class InterpreterTest < Minitest::Test
     problem = VRP.basic
     problem[:vehicles] << { id: 'vehicle_1' }
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
       lapse: 10,
       periodicity: 2
@@ -1437,7 +1437,7 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
 
-    problem[:relations].first[:type] = 'vehicle_group_duration_on_months'
+    problem[:relations].first[:type] = :vehicle_group_duration_on_months
     problem[:configuration][:schedule] = {
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
@@ -1450,7 +1450,7 @@ class InterpreterTest < Minitest::Test
   def test_expand_relations_of_one_week_and_one_day
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 10
     }]
@@ -1474,7 +1474,7 @@ class InterpreterTest < Minitest::Test
   def test_expand_relations_of_one_month_and_one_day
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_months',
+      type: :vehicle_group_duration_on_months,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 10
     }]

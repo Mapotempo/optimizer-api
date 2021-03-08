@@ -239,11 +239,11 @@ module Models
       return unless periodic
 
       if hash[:relations]
-        incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - ['force_first', 'never_first', 'force_end']
+        incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end]
         raise OptimizerWrapper::DiscordantProblemError, "#{incompatible_relation_types} relations not available with specified first_solution_strategy" unless incompatible_relation_types.empty?
       end
 
-      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
+      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == :vehicle_group_duration_on_months } &&
                                                                                                                                                 (!configuration[:schedule] || configuration[:schedule][:range_indice])
 
       raise OptimizerWrapper::DiscordantProblemError, 'Shipments are not available with periodic heuristic.' unless hash[:shipments].empty?
@@ -267,7 +267,7 @@ module Models
       relations_to_remove = []
       hash[:relations]&.each_with_index{ |r, r_i|
         case r[:type]
-        when 'force_first'
+        when :force_first
           r[:linked_ids].each{ |id|
             to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force first relation with service with activities. Use position field instead.' unless to_modify[:activity]
@@ -275,7 +275,7 @@ module Models
             to_modify[:activity][:position] = :always_first
           }
           relations_to_remove << r_i
-        when 'never_first'
+        when :never_first
           r[:linked_ids].each{ |id|
             to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Never first relation with service with activities. Use position field instead.' unless to_modify[:activity]
@@ -283,7 +283,7 @@ module Models
             to_modify[:activity][:position] = :never_first
           }
           relations_to_remove << r_i
-        when 'force_end'
+        when :force_end
           r[:linked_ids].each{ |id|
             to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force end relation with service with activities. Use position field instead.' unless to_modify[:activity]
@@ -393,7 +393,7 @@ module Models
       return hash unless hash[:relations]&.any?
 
       types_with_duration =
-        %w[minimum_day_lapse maximum_day_lapse
+        %i[minimum_day_lapse maximum_day_lapse
            minimum_duration_lapse maximum_duration_lapse
            vehicle_group_duration vehicle_group_duration_on_weeks
            vehicle_group_duration_on_months vehicle_group_number]

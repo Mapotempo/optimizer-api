@@ -245,7 +245,7 @@ module VrpMisc
   end
 
   params :vrp_request_relation do
-    requires(:type, type: String, allow_blank: false, values: %w[same_route sequence order minimum_day_lapse maximum_day_lapse
+    requires(:type, type: Symbol, allow_blank: false, values: %i[same_route sequence order minimum_day_lapse maximum_day_lapse
                                                                  shipment meetup
                                                                  minimum_duration_lapse maximum_duration_lapse
                                                                  force_first never_first force_end

@@ -72,7 +72,7 @@ module Models
     def test_month_indice_generation
       problem = VRP.basic
       problem[:relations] = [{
-        type: 'vehicle_group_duration_on_months',
+        type: :vehicle_group_duration_on_months,
         linked_vehicle_ids: ['vehicle_0'],
         lapse: 2,
         periodicity: 1
@@ -129,7 +129,7 @@ module Models
     def test_deduce_consistent_relations
       vrp = VRP.pud
 
-      ['minimum_duration_lapse', 'maximum_duration_lapse'].each{ |relation_type|
+      %i[minimum_duration_lapse maximum_duration_lapse].each{ |relation_type|
         vrp[:relations] = [{
           type: relation_type,
           linked_ids: ['shipment_0', 'shipment_1'],
@@ -148,7 +148,7 @@ module Models
         activity: { point_id: 'point_1' }
       }]
       vrp[:relations] = [{
-        type: 'minimum_duration_lapse',
+        type: :minimum_duration_lapse,
         linked_ids: ['service', 'shipment_1'],
         lapse: 3
       }]
@@ -157,7 +157,7 @@ module Models
       assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
 
       vrp[:relations] = [{
-        type: 'same_route',
+        type: :same_route,
         linked_ids: ['service', 'shipment_0', 'shipment_1'],
         lapse: 3
       }]
@@ -166,7 +166,7 @@ module Models
       assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0pickup'
       assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
 
-      %w[sequence order].each{ |relation_type|
+      %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
         vrp[:relations].first[:linked_ids] = ['service', 'shipment_1']
         assert_raises OptimizerWrapper::DiscordantProblemError do
@@ -175,7 +175,7 @@ module Models
       }
 
       vrp[:relations].first[:linked_ids] = ['service']
-      %w[sequence order].each{ |relation_type|
+      %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
         TestHelper.create(vrp) # check no error provided
       }

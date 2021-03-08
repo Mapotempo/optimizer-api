@@ -282,9 +282,9 @@ module Wrappers
     end
 
     def assert_no_overall_duration(vrp)
-      relation_array = %w[vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months]
+      relation_array = %i[vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months]
       vrp.vehicles.none?(&:overall_duration) &&
-        vrp.relations.none?{ |relation| relation_array.include?(relation.type) }
+        vrp.relations.none?{ |relation| relation_array.include?(relation.type&.to_sym) }
     end
 
     def assert_no_vehicle_distance_if_heuristic(vrp)

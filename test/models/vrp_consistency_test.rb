@@ -27,7 +27,7 @@ module Models
       vrp[:services].first.delete(:activity)
       vrp[:relations] = [{
           id: 'force_first',
-          type: 'force_first',
+          type: :force_first,
           linked_ids: [vrp[:services].first[:id]]
       }]
 
@@ -38,10 +38,9 @@ module Models
 
     def test_reject_if_periodic_with_any_relation
       vrp = VRP.scheduling
-      ['shipment', 'meetup',
-       'same_route', 'sequence', 'order',
-       'minimum_day_lapse', 'maximum_day_lapse', 'minimum_duration_lapse', 'maximum_duration_lapse',
-       'vehicle_group_duration', 'vehicle_group_duration_on_weeks', 'vehicle_group_duration_on_months'].each{ |relation_type|
+      %i[shipment meetup same_route sequence order
+         minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse
+         vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].each{ |relation_type|
         vrp[:relations] = [{
             type: relation_type,
             lapse: 1,
@@ -49,7 +48,7 @@ module Models
         }]
 
         assert_raises OptimizerWrapper::DiscordantProblemError do
-            TestHelper.create(vrp)
+          TestHelper.create(vrp)
         end
       }
     end

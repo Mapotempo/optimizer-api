@@ -79,7 +79,7 @@ module Wrappers
 
     def solve(vrp, job, thread_proc = nil, &block)
       tic = Time.now
-      order_relations = vrp.relations.select{ |relation| relation.type == 'order' }
+      order_relations = vrp.relations.select{ |relation| relation.type == :order }
       already_begin = order_relations.collect{ |relation| relation.linked_ids[0..-2] }.flatten
       duplicated_begins = already_begin.uniq.select{ |linked_id| already_begin.select{ |link| link == linked_id }.size > 1 }
       already_end = order_relations.collect{ |relation| relation.linked_ids[1..-1] }.flatten
@@ -214,20 +214,20 @@ module Wrappers
           }.compact
         end
         relations << OrtoolsVrp::Relation.new(
-          type: 'shipment',
+          type: :shipment,
           linked_ids: [shipment.id + 'pickup', shipment.id + 'delivery'],
           lapse: -1
         )
         if shipment.maximum_inroute_duration&.positive?
           relations << OrtoolsVrp::Relation.new(
-            type: 'maximum_duration_lapse',
+            type: :maximum_duration_lapse,
             linked_ids: [shipment.id + 'pickup', shipment.id + 'delivery'],
             lapse: shipment.maximum_inroute_duration
           )
         end
         if shipment.direct
           relations << OrtoolsVrp::Relation.new(
-            type: 'sequence',
+            type: :sequence,
             linked_ids: [shipment.id + 'pickup', shipment.id + 'delivery']
           )
         end
@@ -413,7 +413,7 @@ module Wrappers
         next if current_linked_ids.empty? && current_linked_vehicles.empty?
 
         OrtoolsVrp::Relation.new(
-          type: relation.type.to_s,
+          type: relation.type,
           linked_ids: current_linked_ids,
           linked_vehicle_ids: current_linked_vehicles,
           lapse: relation.lapse
@@ -432,10 +432,10 @@ module Wrappers
         )
       }
 
-      relations << OrtoolsVrp::Relation.new(type: 'force_first', linked_ids: services_positions[:always_first], lapse: -1) unless services_positions[:always_first].empty?
-      relations << OrtoolsVrp::Relation.new(type: 'never_first', linked_ids: services_positions[:never_first], lapse: -1) unless services_positions[:never_first].empty?
-      relations << OrtoolsVrp::Relation.new(type: 'never_last', linked_ids: services_positions[:never_last], lapse: -1) unless services_positions[:never_last].empty?
-      relations << OrtoolsVrp::Relation.new(type: 'force_end', linked_ids: services_positions[:always_last], lapse: -1) unless services_positions[:always_last].empty?
+      relations << OrtoolsVrp::Relation.new(type: :force_first, linked_ids: services_positions[:always_first], lapse: -1) unless services_positions[:always_first].empty?
+      relations << OrtoolsVrp::Relation.new(type: :never_first, linked_ids: services_positions[:never_first], lapse: -1) unless services_positions[:never_first].empty?
+      relations << OrtoolsVrp::Relation.new(type: :never_last, linked_ids: services_positions[:never_last], lapse: -1) unless services_positions[:never_last].empty?
+      relations << OrtoolsVrp::Relation.new(type: :force_end, linked_ids: services_positions[:always_last], lapse: -1) unless services_positions[:always_last].empty?
 
       problem = OrtoolsVrp::Problem.new(
         vehicles: vehicles,

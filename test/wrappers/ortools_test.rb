@@ -117,7 +117,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }],
       relations: [{
-        type: 'vehicle_group_duration',
+        type: :vehicle_group_duration,
         linked_vehicle_ids: ['vehicle_0', 'vehicle_2'],
         lapse: 2
       }],
@@ -159,7 +159,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }]
     }]
     problem[:relations] = [{
-        type: 'vehicle_group_number',
+        type: :vehicle_group_number,
         linked_vehicle_ids: ['vehicle_0', 'vehicle_1', 'vehicle_2'],
         lapse: 2
       }]
@@ -297,7 +297,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }],
       relations: [{
-        type: 'vehicle_group_duration',
+        type: :vehicle_group_duration,
         linked_vehicle_ids: ['vehicle_1', 'vehicle_2'],
         lapse: 1
       }],
@@ -540,7 +540,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_months',
+      type: :vehicle_group_duration_on_months,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 100,
       periodicity: 1
@@ -554,7 +554,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_months',
+      type: :vehicle_group_duration_on_months,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 6,
       periodicity: 1
@@ -570,7 +570,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 100,
       periodicity: 1
@@ -583,7 +583,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 6,
       periodicity: 1
@@ -599,7 +599,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     skip 'Requires an entire review of the :overall_duration feature'
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 100,
       periodicity: 1
@@ -612,7 +612,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 6,
       periodicity: 1
@@ -2980,7 +2980,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'minimum_lapse_1',
-        type: 'minimum_day_lapse',
+        type: :minimum_day_lapse,
         lapse: 2,
         linked_ids: ['service_1', 'service_2', 'service_3']
       }],
@@ -3097,12 +3097,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'maximum_lapse_1',
-        type: 'maximum_day_lapse',
+        type: :maximum_day_lapse,
         lapse: 1,
         linked_ids: ['service_1', 'service_2']
       }, {
         id: 'maximum_lapse_2',
-        type: 'maximum_day_lapse',
+        type: :maximum_day_lapse,
         lapse: 1,
         linked_ids: ['service_1', 'service_3']
       }],
@@ -3463,11 +3463,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:shipments][0][:delivery][:timewindows] = [{ start: 300, end: 400 }]
     problem[:shipments][1][:delivery][:timewindows] = [{ start: 100, end: 200 }]
     problem[:relations] = [{
-      type: 'maximum_duration_lapse',
+      type: :maximum_duration_lapse,
       lapse: 100,
       linked_ids: ['shipment_0pickup', 'shipment_0delivery']
     }, {
-      type: 'maximum_duration_lapse',
+      type: :maximum_duration_lapse,
       lapse: 100,
       linked_ids: ['shipment_1pickup', 'shipment_1delivery']
     }]
@@ -3697,7 +3697,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'sequence_1',
-        type: 'sequence',
+        type: :sequence,
         linked_ids: ['service_1', 'service_3', 'service_2']
       }],
       configuration: {
@@ -3906,7 +3906,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:vehicles].each{ |v| v[:start_point_id] = nil }
     problem[:relations] = [{
       id: 'force_first',
-      type: 'force_first',
+      type: :force_first,
       linked_ids: ['service_1', 'service_3']
     }]
 
@@ -3929,11 +3929,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:vehicles].each{ |v| v[:start_point_id] = nil }
     problem[:relations] = [{
       id: 'force_end',
-      type: 'force_end',
+      type: :force_end,
       linked_ids: ['service_1']
     }, {
       id: 'force_end2',
-      type: 'force_end',
+      type: :force_end,
       linked_ids: ['service_3']
     }]
 
@@ -3956,7 +3956,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:vehicles].each{ |v| v[:start_point_id] = nil }
     problem[:relations] = [{
       id: 'never_first',
-      type: 'never_first',
+      type: :never_first,
       linked_ids: ['service_1', 'service_3']
     }]
 
@@ -4063,7 +4063,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 'never_first',
-        type: 'never_first',
+        type: :never_first,
         linked_ids: ['service_1', 'service_3']
       }],
       configuration: {
@@ -5339,11 +5339,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       relations: [{
         id: 1,
-        type: 'order',
+        type: :order,
         linked_ids: ['service_1', 'service_2', 'service_3']
       }, {
         id: 2,
-        type: 'order',
+        type: :order,
         linked_ids: ['service_4', 'service_5']
       }],
       configuration: {
@@ -5553,7 +5553,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal result[:routes].first[:activities][first_index][:begin_time], result[:routes].first[:activities][second_index][:begin_time]
 
     vrp[:relations] = [{
-      type: 'minimum_duration_lapse',
+      type: :minimum_duration_lapse,
       linked_ids: ['service_1', 'service_2'],
       lapse: 10
     }]
@@ -5574,7 +5574,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     current_order.compact!
 
     # add consecutivity :
-    relation = Models::Relation.new(type: 'minimum_duration_lapse', linked_ids: [current_order[1], current_order[0]], lapse: 1800)
+    relation = Models::Relation.new(type: :minimum_duration_lapse, linked_ids: [current_order[1], current_order[0]], lapse: 1800)
     vrp.relations = [relation]
     vrp.adapt_relations_between_shipments
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
