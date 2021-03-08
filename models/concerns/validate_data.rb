@@ -140,8 +140,108 @@ module ValidateData
     }
   end
 
+  def calculate_day_availabilities(vehicles, timewindow_arrays)
+    vehicles_days = timewindow_arrays.collect{ |timewindows|
+      if timewindows.empty?
+        []
+      else
+        days = timewindows.flat_map{ |tw| tw[:day_index] }
+        days.compact!
+        days.uniq
+      end
+    }.delete_if(&:empty?)
+
+    vehicles_unavailable_indices = vehicles.collect{ |v| v[:unavailable_work_day_indices] }
+    vehicles_unavailable_indices.compact!
+
+    [vehicles_days, vehicles_unavailable_indices]
+  end
+
+  def check_vehicle_trips_stores_consistency(relation_vehicles)
+    relation_vehicles.each_with_index{ |vehicle_trip, v_i|
+      case v_i
+      when 0
+        unless vehicle_trip[:end_point_id]
+          raise OptimizerWrapper::DiscordantProblemError.new('First trip should at least have an end point id')
+        end
+      when relation_vehicles.size - 1
+        unless vehicle_trip[:start_point_id]
+          raise OptimizerWrapper::DiscordantProblemError.new('Last trip should at least have a start point id')
+        end
+      else
+        unless vehicle_trip[:start_point_id] && vehicle_trip[:end_point_id]
+          raise OptimizerWrapper::DiscordantProblemError.new(
+            'Intermediary trips should have a start and an end point ids'
+          )
+        end
+      end
+
+      next if v_i.zero? ||
+              vehicle_trip[:start_point_id] == relation_vehicles[v_i - 1][:end_point_id] ||
+              (@hash[:points].find{ |pt| pt[:id] == vehicle_trip[:start_point_id] }[:location] ==
+                @hash[:points].find{ |pt| pt[:id] == relation_vehicles[v_i - 1][:end_point_id] }[:location])
+
+      raise OptimizerWrapper::DiscordantProblemError.new('One trip should start where the previous trip ended')
+    }
+  end
+
+  def check_trip_timewindows_consistency(relation_vehicles)
+    vehicles_timewindows =
+      relation_vehicles.collect{ |v| v[:timewindow] ? [v[:timewindow]] : v[:sequence_timewindows].to_a }
+
+    return if vehicles_timewindows.all?(&:empty?)
+
+    week_days, unavailable_indices = calculate_day_availabilities(relation_vehicles, vehicles_timewindows)
+    if week_days.uniq.size > 1 || unavailable_indices.uniq.size > 1
+      raise OptimizerWrapper::UnsupportedProblemError.new(
+        'Vehicles in vehicle_trips relation should have the same available days'
+      )
+    end
+
+    vehicles_timewindows.each_with_index{ |v_tw, v_i|
+      next if v_i.zero?
+
+      v_tw.each{ |tw|
+        day = tw[:day_index]
+        previous_tw =
+          vehicles_timewindows[v_i - 1].select{ |ptw|
+            ptw[:day_index].nil? ||
+              ptw[:day_index] == day
+          }.min_by{ |ptw| ptw[:start] }
+
+        unless previous_tw.nil? || tw[:end] > previous_tw[:start]
+          raise OptimizerWrapper::DiscordantProblemError.new('Timewindows do not allow vehicle trips')
+        end
+      }
+    }
+  end
+
   def check_relations(periodic_heuristic)
     return unless @hash[:relations].to_a.any?
+
+    @hash[:relations].group_by{ |relation| relation[:type] }.each{ |type, relations|
+      case type
+      when 'vehicle_trips'
+        relations.each{ |relation|
+          relation_vehicles =
+            relation[:linked_vehicle_ids].to_a.collect{ |v_id| @hash[:vehicles].find{ |v| v[:id] == v_id } }
+
+          if relation_vehicles.empty?
+            raise OptimizerWrapper::DiscordantProblemError.new(
+              'A non empty list of vehicles IDs should be provided for vehicle_trips relations'
+            )
+          elsif relation_vehicles.any?(&:nil?)
+            # FIXME: linked_vehicle_ids should be directly related to vehicle objects of the model
+            raise OptimizerWrapper::DiscordantProblemError.new(
+              'At least one vehicle ID in relations does not match with any provided vehicle'
+            )
+          end
+
+          check_vehicle_trips_stores_consistency(relation_vehicles)
+          check_trip_timewindows_consistency(relation_vehicles)
+        }
+      end
+    }
 
     # shipment relation consistency
     if @hash[:relations]&.any?{ |r| r[:type] == :shipment }

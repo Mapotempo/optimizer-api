@@ -4,6 +4,8 @@
 
 ### Added
 
+- Implementation of `vehicle_trips` relation : these vehicles' routes are successive [#123] (https://github.com/Mapotempo/optimizer-api/pull/123)
+
 ### Changed
 
 ### Removed
