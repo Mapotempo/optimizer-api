@@ -384,7 +384,7 @@ module Interpreters
         ) && (
           relation.linked_ids.empty? ||
             relation.linked_ids.any?{ |linked_s_id|
-              vrp.services.any?{ |s| linked_s_id = s.id } ||
+              vrp.services.any?{ |s| linked_s_id == s.id } ||
               vrp.shipments.any? { |s| linked_s_id == "#{s.id}delivery" } ||
               vrp.shipments.any? { |s| linked_s_id == "#{s.id}pickup" }
             }

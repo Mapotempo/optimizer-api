@@ -840,4 +840,16 @@ class SplitClusteringTest < Minitest::Test
       assert_equal 5, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 4 }, vrp.vehicles, :work_day).size
     end
   end
+
+  def test_select_existing_relations
+    problem = VRP.basic
+    problem[:relations] = [
+      { type: :same_route, linked_ids: ['service_1', 'service_2'] },
+      { type: :same_route, linked_ids: ['service_3'] }
+    ]
+    vrp = TestHelper.create(problem)
+    vrp.services.delete_if{ |s| problem[:relations].first[:linked_ids].include?(s.id) }
+    selected_relations = Interpreters::SplitClustering.select_existing_relations(vrp.relations, vrp)
+    assert_equal 1, selected_relations.size, 'Only the relations of existing services should be selected'
+  end
 end
