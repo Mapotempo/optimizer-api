@@ -311,5 +311,21 @@ module Models
         Models::Vrp.filter(vrp)
       end
     end
+
+    def test_switched_lapses_are_rejected
+      vrp = VRP.scheduling
+      vrp[:services].first[:minimum_lapse] = 7
+      vrp[:services].first[:maximum_lapse] = 14
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
+      Models::Vrp.check_consistency(vrp) # no raise
+
+      vrp[:services].first[:visits_number] = 3
+      vrp[:services].first[:minimum_lapse] = 14
+      vrp[:services].first[:maximum_lapse] = 7
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.check_consistency(vrp)
+      end
+      assert_equal 'Minimum lapse can not be bigger than maximum lapse', error.message
+    end
   end
 end
