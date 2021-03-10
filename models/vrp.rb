@@ -141,6 +141,16 @@ module Models
       hash[:services] ||= []
       hash[:shipments] ||= []
 
+      # shipment relation consistency
+      shipment_relations = hash[:relations]&.select{ |r| r[:type] == :shipment }&.flat_map{ |r| r[:linked_ids] }.to_a
+      unless shipment_relations.size == shipment_relations.uniq.size
+        raise OptimizerWrapper::UnsupportedProblemError.new(
+          'Services can appear in at most one shipment relation. '\
+          'Following services appear in multiple shipment relations',
+          shipment_relations.detect{ |id| shipment_relations.count(id) > 1 }
+        )
+      end
+
       # vehicle time cost consistency
       if hash[:vehicles]&.any?{ |v| v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1) }
         raise OptimizerWrapper::DiscordantProblemError, 'cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
@@ -150,11 +160,9 @@ module Models
       # TODO: Active Hash should be checking this
       [:matrices, :units, :points, :rests, :zones, :timewindows,
        :vehicles, :services, :shipments, :subtours].each{ |key|
-        next if hash[key].to_a.collect{ |v| v[:id] }.uniq!.nil?
+        next if hash[key]&.collect{ |v| v[:id] }&.uniq!.nil?
 
-        raise OptimizerWrapper::DiscordantProblemError.new(
-          "#{key} IDs should be unique"
-        )
+        raise OptimizerWrapper::DiscordantProblemError.new("#{key} IDs should be unique")
       }
 
       # matrix_id consistency

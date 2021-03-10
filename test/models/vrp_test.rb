@@ -281,7 +281,7 @@ module Models
     def test_no_lapse_in_relation
       vrp = VRP.basic
       vrp[:relations] = [{
-        type: 'vehicle_group_duration_on_months',
+        type: :vehicle_group_duration_on_months,
         linked_vehicle_ids: ['vehicle_0']
       }]
 
@@ -289,7 +289,7 @@ module Models
       assert_empty vrp[:relations] # reject relation because lapse is mandatory
 
       vrp[:relations] = [{
-        type: 'vehicle_group_duration_on_months',
+        type: :vehicle_group_duration_on_months,
         linked_vehicle_ids: ['vehicle_0'],
         lapse: 2
       }]
@@ -298,7 +298,7 @@ module Models
 
       vrp = VRP.lat_lon_two_vehicles
       vrp[:relations] = [{
-        type: 'vehicle_trips',
+        type: :vehicle_trips,
         linked_vehicle_ids: vrp[:vehicles].collect{ |v| v[:id] }
       }]
       Models::Vrp.filter(vrp)

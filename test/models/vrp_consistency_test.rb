@@ -344,5 +344,20 @@ module Models
         Models::Vrp.check_consistency(vrp)
       end
     end
+
+    def test_services_cannot_appear_in_more_than_one_shipment_relation
+      vrp = VRP.basic
+      vrp[:relations] = [
+        { type: :shipment, linked_ids: %w[service_1 service_2] },
+        { type: :shipment, linked_ids: %w[service_1 service_3] }
+      ]
+      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
+        Models::Vrp.check_consistency(TestHelper.coerce(vrp))
+      end
+
+      assert_equal 'Services can appear in at most one shipment relation. '\
+                 'Following services appear in multiple shipment relations',
+                   error.message, 'Error message does not match'
+    end
   end
 end
