@@ -117,7 +117,7 @@ module Api
               elsif ret.is_a?(Hash)
                 status 200
                 if vrp.restitution_csv
-                  present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
+                  present(OptimizerWrapper.build_csv(ret), type: CSV)
                 else
                   present({ solutions: [ret], job: { status: :completed }}, with: VrpResult)
                 end
@@ -165,7 +165,7 @@ module Api
             status 200
 
             if output_format == :csv && (job.nil? || job.completed?) # At this step, if the job is nil then it has already been retrieved into the result store
-              present(OptimizerWrapper.build_csv(solution[:result]&.collect{ |r| r.deep_stringify_keys }), type: CSV) # TODO : edit build_csv function to consider symbolized keys
+              present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
             else
               present({
                 solutions: [solution[:result]].flatten(1),
@@ -218,7 +218,7 @@ module Api
               if solution && !solution.empty?
                 output_format = params[:format]&.to_sym || (solution[:csv] ? :csv : env['api.format'])
                 if output_format == :csv
-                  present(OptimizerWrapper.build_csv(solution[:result]&.collect{ |r| r.deep_stringify_keys }), type: CSV) # TODO : edit build_csv function to consider symbolized keys
+                  present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
                 else
                   present({
                     solutions: [solution[:result]],
