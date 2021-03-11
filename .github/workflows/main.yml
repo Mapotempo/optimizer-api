@@ -1,0 +1,145 @@
+name: Docker Image CI
+
+on:
+  push:
+
+env:
+  NB_SERVICES: ${{ secrets.NB_SERVICES }}
+  OPTIMIZER_ORTOOLS_VERSION: ${{ secrets.OPTIMIZER_ORTOOLS_VERSION }}
+  PROJECT: optimizer
+  REGISTRY: ${{ secrets.REGISTRY }}
+  VROOM_VERSION: ${{ secrets.VROOM_VERSION }}
+
+jobs:
+  test_basis:
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "COV=false LOG_LEVEL=info SKIP_DICHO=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true SKIP_SPLIT_CLUSTERING=true"
+    steps:
+      - uses: actions/checkout@v1
+      - name: Cache
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}
+      - name: Build image
+        run: ./.github/actions/build.sh
+        shell: bash
+      - name: Starting tests
+        run: ./.github/actions/tests.sh
+        shell: bash
+
+  test_dicho:
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/dichotomious_test.rb"
+    steps:
+      - uses: actions/checkout@v1
+      - name: Cache
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}
+      - name: Build image
+        run: ./.github/actions/build.sh
+        shell: bash
+      - name: Starting tests
+        run: ./.github/actions/tests.sh
+        shell: bash
+
+  test_real:
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_test.rb"
+    steps:
+      - uses: actions/checkout@v1
+      - name: Cache
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}
+      - name: Build image
+        run: ./.github/actions/build.sh
+        shell: bash
+      - name: Starting tests
+        run: ./.github/actions/tests.sh
+        shell: bash
+
+  test_real_scheduling:
+      runs-on: ubuntu-latest
+      env:
+        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_scheduling_test.rb"
+      steps:
+        - uses: actions/checkout@v1
+        - name: Cache
+          id: cache
+          uses: actions/cache@v2
+          with:
+            path: vendor/bundle
+            key: ${{ runner.os }}
+        - name: Build image
+          run: ./.github/actions/build.sh
+          shell: bash
+        - name: Starting tests
+          run: ./.github/actions/tests.sh
+          shell: bash
+
+  test_real_scheduling_solver:
+      runs-on: ubuntu-latest
+      env:
+        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_scheduling_solver_test.rb"
+      steps:
+        - uses: actions/checkout@v1
+        - name: Cache
+          id: cache
+          uses: actions/cache@v2
+          with:
+            path: vendor/bundle
+            key: ${{ runner.os }}
+        - name: Build image
+          run: ./.github/actions/build.sh
+          shell: bash
+        - name: Starting tests
+          run: ./.github/actions/tests.sh
+          shell: bash
+
+  test_scheduling:
+      runs-on: ubuntu-latest
+      env:
+        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/scheduling_*"
+      steps:
+        - uses: actions/checkout@v1
+        - name: Cache
+          id: cache
+          uses: actions/cache@v2
+          with:
+            path: vendor/bundle
+            key: ${{ runner.os }}
+        - name: Build image
+          run: ./.github/actions/build.sh
+          shell: bash
+        - name: Starting tests
+          run: ./.github/actions/tests.sh
+          shell: bash
+
+  test_split_clustering:
+      runs-on: ubuntu-latest
+      env:
+        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/interpreters/split_clustering_test.rb"
+      steps:
+        - uses: actions/checkout@v1
+        - name: Cache
+          id: cache
+          uses: actions/cache@v2
+          with:
+            path: vendor/bundle
+            key: ${{ runner.os }}
+        - name: Build image
+          run: ./.github/actions/build.sh
+          shell: bash
+        - name: Starting tests
+          run: ./.github/actions/tests.sh
+          shell: bash
