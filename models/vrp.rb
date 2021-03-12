@@ -138,6 +138,9 @@ module Models
     end
 
     def self.check_consistency(hash)
+      hash[:services] ||= []
+      hash[:shipments] ||= []
+
       # vehicle time cost consistency
       if hash[:vehicles]&.any?{ |v| v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1) }
         raise OptimizerWrapper::DiscordantProblemError, 'cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
@@ -174,9 +177,14 @@ module Models
         raise OptimizerWrapper::DiscordantProblemError, 'All matrices should have at least maximum(point[:matrix_index]) number of rows and columns' if matrix_not_big_enough
       end
 
+      # services consistency
+      if (hash[:services] + hash[:shipments]).any?{ |s| (s[:minimum_lapse] || 0) > (s[:maximum_lapse] || 2**32) }
+        raise OptimizerWrapper::DiscordantProblemError.new('Minimum lapse can not be bigger than maximum lapse')
+      end
+
       # shipment position consistency
       forbidden_position_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
-      hash[:shipments]&.each{ |shipment|
+      hash[:shipments].each{ |shipment|
         raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_position_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
       }
 
@@ -184,7 +192,7 @@ module Models
       periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
       hash[:routes]&.each{ |route|
         route[:mission_ids].each{ |id|
-          corresponding_service = hash[:services]&.find{ |s| s[:id] == id } || hash[:shipments]&.find{ |s| s[:id] == id }
+          corresponding_service = hash[:services]&.find{ |s| s[:id] == id } || hash[:shipments].find{ |s| s[:id] == id }
 
           raise OptimizerWrapper::DiscordantProblemError, 'Each mission_ids should refer to an existant service or shipment' if corresponding_service.nil?
           raise OptimizerWrapper::UnsupportedProblemError, 'Services in initialize routes should have only one activity' if corresponding_service[:activities] && periodic
@@ -213,7 +221,7 @@ module Models
 
       # number of visits consistency
       if !configuration[:schedule]
-        (hash[:services].to_a + hash[:shipments].to_a).each{ |s|
+        (hash[:services] + hash[:shipments]).each{ |s|
           raise OptimizerWrapper::DiscordantProblemError, 'There can not be more than one visit if no schedule is provided' unless s[:visits_number].to_i <= 1
         }
       end
@@ -229,7 +237,7 @@ module Models
       raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
                                                                                                                                                 (!configuration[:schedule] || configuration[:schedule][:range_indice])
 
-      raise OptimizerWrapper::DiscordantProblemError, 'Shipments are not available with periodic heuristic.' unless hash[:shipments].to_a.empty?
+      raise OptimizerWrapper::DiscordantProblemError, 'Shipments are not available with periodic heuristic.' unless hash[:shipments].empty?
 
       raise OptimizerWrapper::DiscordantProblemError, 'Rests are not available with periodic heuristic.' unless hash[:vehicles].all?{ |vehicle| vehicle[:rests].to_a.empty? }
 
