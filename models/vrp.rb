@@ -129,9 +129,12 @@ module Models
       self.filter(hash) # TODO : add filters.rb here
       # moved filter here to make sure we do have schedule_indices (not date) to do work_day check with lapses
       vrp.check_consistency(hash)
+      # TODO: check_consistency has checks written for hash[:shipment] when removing Model::Shipment, move that logic to
+      # relations and move the convert_shipments_to_services higher so that all logic is implemented with relations
+      self.convert_shipments_to_services(hash)
       self.ensure_retrocompatibility(hash)
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
-       :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
+       :vehicles, :services, :relations, :subtours, :routes, :configuration].each{ |key|
         vrp.send("#{key}=", hash[key]) if hash[key]
       }
 
@@ -140,10 +143,55 @@ module Models
       vrp
     end
 
+    def self.convert_shipments_to_services(hash)
+      hash[:services] ||= []
+      hash[:relations] ||= []
+      hash[:shipments]&.each{ |shipment|
+        linked_ids = []
+        %i[pickup delivery].each{ |part|
+          service = Oj.load(Oj.dump(shipment))
+          service[:id] += part.to_s
+          service[:id] += '_conv' while hash[:services].any?{ |s| s[:id] == service[:id] } # protect against id clash
+          linked_ids << service[:id]
+          service[:type] = part.to_s # (QUESTION !!!!! Do we want this to be 'service' and multiply the quantity on our own with (+1/-1) or keep 'pickup' and 'delivery'?) TODO: :type should be symbol
+          service[:activity] = service[part]
+          %i[pickup delivery direct maximum_inroute_duration].each{ |key| service.delete(key) }
+          hash[:services] << service
+        }
+        convert_relations_of_shipment_to_services(hash, shipment[:id], linked_ids[0], linked_ids[1])
+        hash[:relations] << { type: :shipment, linked_ids: linked_ids }
+        hash[:relations] << { type: :sequence, linked_ids: linked_ids } if shipment[:direct]
+        max_lapse = shipment[:maximum_inroute_duration]
+        hash[:relations] << { type: :maximum_duration_lapse, linked_ids: linked_ids, lapse: max_lapse } if max_lapse
+      }
+      hash.delete(:shipments)
+    end
+
+    def self.convert_relations_of_shipment_to_services(hash, shipment_id, pickup_service_id, delivery_service_id)
+      hash[:relations]&.each{ |relation|
+        case relation[:type]
+        when :minimum_duration_lapse, :maximum_duration_lapse
+          relation[:linked_ids][0] = delivery_service_id if relation[:linked_ids][0] == shipment_id
+          relation[:linked_ids][1] = pickup_service_id if relation[:linked_ids][1] == shipment_id
+          relation[:lapse] ||= 0
+        when :same_route
+          relation[:linked_ids].each_with_index{ |id, id_i|
+            next unless id == shipment_id
+
+            relation[:linked_ids][id_i] = pickup_service_id # which will be in same_route as delivery
+          }
+        when :sequence, :order
+          if relation[:linked_ids].any?{ |id| id == shipment_id }
+            msg = 'Relation between shipment pickup and delivery should be explicitly specified for `:sequence` and `:order` relations.'
+            raise OptimizerWrapper::DiscordantProblemError.new(msg)
+          end
+        end
+      }
+    end
+
     def self.expand_data(vrp)
       vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
-      vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
       vrp.provide_original_info
     end

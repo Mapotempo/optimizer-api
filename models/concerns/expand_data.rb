@@ -21,30 +21,6 @@ require 'active_support/concern'
 module ExpandData
   extend ActiveSupport::Concern
 
-  def adapt_relations_between_shipments
-    services_ids = self.services.collect(&:id)
-    self.shipments.each{ |shipment|
-      services_ids << "#{shipment.id}pickup"
-      services_ids << "#{shipment.id}delivery"
-    }
-    self.relations.each{ |relation|
-      if %i[minimum_duration_lapse maximum_duration_lapse].include?(relation.type)
-        relation.linked_ids[0] = "#{relation.linked_ids[0]}delivery" unless services_ids.include?(relation.linked_ids[0])
-        relation.linked_ids[1] = "#{relation.linked_ids[1]}pickup" unless services_ids.include?(relation.linked_ids[1])
-
-        relation.lapse ||= 0
-      elsif relation.type == :same_route
-        relation.linked_ids.each_with_index{ |id, id_i|
-          next if services_ids.include?(id)
-
-          relation.linked_ids[id_i] = "#{id}pickup" # which will be in same_route as id_delivery
-        }
-      elsif %i[sequence order].include?(relation.type)
-        raise OptimizerWrapper::DiscordantProblemError, 'Relation between shipment pickup and delivery should be explicitly specified for relation.' unless (relation.linked_ids - services_ids).empty?
-      end
-    }
-  end
-
   def add_relation_references
     self.relations.each{ |relation|
       relation.linked_services.each{ |service|
