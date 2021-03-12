@@ -9,8 +9,7 @@ gem 'rack-cors'
 gem 'rake'
 gem 'thin'
 
-# Waiting for PR2164 to be integrated on ruby-grape project :
-gem 'grape', '>=1.5.1', github: 'braktar/grape', branch: 'main' # Important fixes are introduced in v1.5.1 (see PRs #2013, #2096 & #2098)
+gem 'grape', '>=1.5.3' # Important fix introduced v1.5.3 (see PR #PR2164)
 gem 'grape-entity'
 gem 'grape-swagger'
 gem 'grape-swagger-entity'
