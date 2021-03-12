@@ -1215,17 +1215,17 @@ module Interpreters
         case entity
         when :vehicle
           vrp.services.each{ |service|
-            service.skills.insert(0, vrp.vehicles.first.id)
+            service.skills.insert(0, ('vehicle_cluster_' + vrp.vehicles.first.id))
           }
-          vrp.vehicles.first.skills.first << vrp.vehicles.first.id
+          vrp.vehicles.first.skills.first << ('vehicle_cluster_' + vrp.vehicles.first.id)
         when :work_day
           vehicle_id_in_skills = vrp.services.any?{ |s| s.skills.include?(vrp.vehicles.first.id) }
           cluster_day = (vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows.first).day_index
           day_skill = %w[mon tue wed thu fri sat sun][cluster_day]
           vrp.services.each{ |service|
-            service.skills.insert(vehicle_id_in_skills ? 1 : 0, day_skill)
+            service.skills.insert(vehicle_id_in_skills ? 1 : 0, ('work_day_cluster_' + day_skill))
           }
-          vrp.vehicles.first.skills.first << day_skill
+          vrp.vehicles.first.skills.first << ('work_day_cluster_' + day_skill)
         end
 
         vrp

@@ -90,4 +90,10 @@ module ExpandData
       element.original_id = element.id
     }
   end
+
+  def provide_original_skills
+    (self.services + self.shipments).each{ |element|
+      element.original_skills = element.skills
+    }
+  end
 end

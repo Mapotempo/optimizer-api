@@ -304,5 +304,15 @@ module Models
       Models::Vrp.filter(vrp)
       refute_empty vrp[:relations] # do not reject even if no lapse, lapse is not mandatory
     end
+
+    def test_original_skills_and_skills_are_equal_after_create
+      vrp = VRP.basic
+      vrp[:vehicles].first[:skills] = [['skill_to_output']]
+      vrp[:services].first[:skills] = ['skill_to_output']
+
+      created_vrp = Models::Vrp.create(vrp)
+      assert_equal 1, created_vrp.services.first.skills.size
+      assert_equal created_vrp.services.first.original_skills.size, created_vrp.services.first.skills.size
+    end
   end
 end

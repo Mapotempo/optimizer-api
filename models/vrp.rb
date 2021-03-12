@@ -252,6 +252,7 @@ module Models
       vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
       vrp.provide_original_ids
+      vrp.provide_original_skills
     end
 
     def self.convert_position_relations(hash)
