@@ -142,7 +142,6 @@ module SchedulingDataInitialization
         used_days: [],
         used_vehicles: [],
         priority: service.priority,
-        sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
         positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),
         nb_activities: service.activity ? 1 : service.activities.size,
       }

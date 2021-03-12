@@ -83,6 +83,13 @@ class Api::V01::OutputTest < Minitest::Test
     result = JSON.parse(response.body)['solutions'].first
     activities = result['routes'].collect{ |r| r['activities'] }.flatten
     assert(activities.any?{ |a| a['detail'] && a['detail']['skills'].to_a.include?('skill_to_output') })
+
+    # sticky vehicles generate internal skills but they should not be returned :
+    vrp[:services].first[:sticky_vehicle_ids] = [vrp[:vehicles].first[:id]]
+    response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)['solutions'].first
+    activities = result['routes'].collect{ |r| r['activities'] }.flatten
+    assert_equal [['skill_to_output'], []], activities.collect{ |a| a['detail'] && a['detail']['skills'] }.compact.uniq
   end
 
   def test_skill_when_partitions

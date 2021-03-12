@@ -215,12 +215,6 @@ module Interpreters
       )
       @equivalent_vehicles[vehicle.id] << new_vehicle.id
       vrp.rests += new_vehicle.rests
-      vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |service|
-        service.sticky_vehicles.insert(-1, new_vehicle)
-      }
-      vrp.shipments.select{ |shipment| shipment.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |shipment|
-        shipment.sticky_vehicles.insert(-1, new_vehicle)
-      }
       new_vehicle
     end
 
@@ -511,7 +505,7 @@ module Interpreters
 
     def get_original_values(original, options)
       [original.attributes.keys + options.keys - [:unavailable_work_day_indices] + [:unavailable_days]].flatten.each_with_object({}) { |key, data|
-        next if [:sticky_vehicle_ids, :quantity_ids,
+        next if [:quantity_ids,
                  :start_point_id, :end_point_id, :capacity_ids, :sequence_timewindow_ids, :timewindow_id].include?(key)
 
         data[key] = options[key] || original[key]

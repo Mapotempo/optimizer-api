@@ -390,9 +390,13 @@ module OptimizerWrapper
 
   def self.split_independent_vrp_by_sticky_vehicle(vrp)
     vrp.vehicles.map.with_index{ |vehicle, v_i|
-      vehicle_id = vehicle.id
-      service_ids = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
-      shipment_ids = vrp.shipments.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
+      v_skill = "internal_sticky_vehicle_skill_#{vehicle.id}"
+      service_ids = vrp.services.select{ |s|
+        s.count_sticky_vehicles == 1 && s.skills.include?(v_skill)
+      }.map(&:id)
+      shipment_ids = vrp.shipments.select{ |s|
+        s.count_sticky_vehicles == 1 && s.skills.include?(v_skill)
+      }.map(&:id)
 
       service_vrp = {
         service: nil,
@@ -807,8 +811,9 @@ module OptimizerWrapper
 
         next unless zone.inside(activity_loc.lat, activity_loc.lon)
 
-        service.sticky_vehicles += zone.vehicles
-        service.sticky_vehicles.uniq!
+        zone.vehicles.each{ |vehicle|
+          service.skills |= "internal_sticky_vehicle_skill_#{vehicle.id}"
+        }
         service.skills += [zone[:id]]
         service.id
       }.compact
@@ -819,8 +824,9 @@ module OptimizerWrapper
         delivery_loc = shipment.delivery.point.location
 
         if zone.inside(pickup_loc[:lat], pickup_loc[:lon]) && zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          shipment.sticky_vehicles += zone.vehicles
-          shipment.sticky_vehicles.uniq!
+          zone.vehicles.each{ |vehicle|
+            service.skills |= "internal_sticky_vehicle_skill_#{vehicle.id}"
+          }
         end
         if zone.inside(pickup_loc[:lat], pickup_loc[:lon])
           shipment.skills += [zone[:id]]

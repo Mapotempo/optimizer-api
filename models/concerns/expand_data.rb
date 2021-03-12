@@ -53,17 +53,6 @@ module ExpandData
     }
   end
 
-  def add_sticky_vehicle_if_routes_and_partitions
-    return if self.preprocessing_partitions.empty?
-
-    self.routes.each{ |route|
-      route.mission_ids.each{ |id|
-        corresponding = [self.services, self.shipments].compact.flatten.find{ |s| s.id == id }
-        corresponding.sticky_vehicle_ids = [route.vehicle_id]
-      }
-    }
-  end
-
   def clean_according_to(unfeasible_services)
     unfeasible_services.each{ |unfeasible_service|
       self.routes.each{ |route|

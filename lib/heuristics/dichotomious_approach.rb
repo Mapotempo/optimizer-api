@@ -262,18 +262,14 @@ module Interpreters
       unassigned_services_by_skills.each{ |skills, services|
         next if result[:unassigned].empty?
 
-        vehicles_with_skills = if skills.empty?
-          (0..vrp.vehicles.size - 1).to_a
-        else
-          vrp.vehicles.collect.with_index{ |v, v_i|
-            v_i if v.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
-          }.compact
-        end
-        sticky_vehicle_ids = unassigned_services.flat_map(&:sticky_vehicles).compact.map(&:id)
-        # In case services has incoherent sticky and skills, sticky is the winner
-        unless sticky_vehicle_ids.empty?
-          vehicles_with_skills = vrp.vehicles.collect.with_index{ |v, v_i| v_i if sticky_vehicle_ids.include?(v.id) }.compact
-        end
+        vehicles_with_skills =
+          if skills.empty?
+            (0..vrp.vehicles.size - 1).to_a
+          else
+            vrp.vehicles.collect.with_index{ |v, v_i|
+              v_i if v.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
+            }.compact
+          end
 
         # Shuffle so that existing routes will be distributed randomly
         # Otherwise we might have a sub_vrp with 6 existing routes (no empty routes) and

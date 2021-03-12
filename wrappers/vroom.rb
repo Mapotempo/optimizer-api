@@ -261,8 +261,7 @@ module Wrappers
           id: index,
           location_index: @points[service.activity.point_id].matrix_index,
           service: service.activity.duration.to_i,
-          skills: [vrp_skills.size] + service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          skills: [vrp_skills.size] + service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact, # undefined skills are ignored
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
           time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] },
           delivery: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }&.value&.to_i || 0 },
@@ -279,8 +278,7 @@ module Wrappers
       vrp.shipments.map.with_index{ |shipment, index|
         {
           amount: vrp_units.map{ |unit| shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }&.value&.to_i || 0 },
-          skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact, # undefined skills are ignored
           priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
           pickup: {
             id: vrp.services.size + index * 2,
@@ -333,7 +331,7 @@ module Wrappers
       problem = { vehicles: [], jobs: [], matrix: [] }
 
       # WARNING: only first alternative set of skills is used
-      vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq + vrp.services.flat_map{ |service| service.sticky_vehicles.map(&:id) }.uniq
+      vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq
       vrp_units = vrp.units.select{ |unit| vrp.vehicles.map{ |vehicle| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit }&.max&.positive? }
       problem[:vehicles] = collect_vehicles(vrp, vrp_skills, vrp_units)
       problem[:jobs] = collect_jobs(vrp, vrp_skills, vrp_units)

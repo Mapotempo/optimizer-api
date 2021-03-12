@@ -50,7 +50,10 @@ module Models
 
     belongs_to :pickup, class_name: 'Models::Activity'
     belongs_to :delivery, class_name: 'Models::Activity'
-    has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
+
+    def sticky_vehicles
+      self.skills.select{ |skill| skill.include?('internal_sticky_vehicle_skill_') }.map(&:id)
+    end
   end
 end

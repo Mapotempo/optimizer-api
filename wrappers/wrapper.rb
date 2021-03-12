@@ -689,13 +689,9 @@ module Wrappers
           end
         }
 
-        if !service.skills.empty?
-          if service.sticky_vehicles.empty?
-            if available_vehicle_skillsets.none?{ |skillset| (service.skills - skillset).empty? }
-              add_unassigned(unfeasible, vrp, service, 'Service skill combination is not available on any vehicle')
-            end
-          elsif service.sticky_vehicles.all?{ |vehicle| vehicle.skills.none?{ |skillset| (service.skills - skillset).empty? } }
-            add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky vehicles')
+        unless service.skills.empty?
+          if available_vehicle_skillsets.none?{ |skillset| (service.skills - skillset).empty? }
+            add_unassigned(unfeasible, vrp, service, 'Service skill combination is not available on any vehicle')
           end
         end
 

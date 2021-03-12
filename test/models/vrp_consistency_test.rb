@@ -327,5 +327,14 @@ module Models
       end
       assert_equal 'Minimum lapse can not be bigger than maximum lapse', error.message
     end
+
+    def test_ensure_no_skill_matches_with_internal_skills_format
+      vrp = VRP.basic
+      vrp[:services].first[:skills] = ['vehicle_cluster_for_test']
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.filter(vrp)
+      end
+      assert_equal 'Skills match with internal skills format, this might produce an error', error.message
+    end
   end
 end

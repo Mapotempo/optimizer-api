@@ -248,11 +248,9 @@ module Models
 
     def self.expand_data(vrp)
       vrp.add_relation_references
-      vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
       vrp.provide_original_ids
-      vrp.provide_original_skills
     end
 
     def self.convert_position_relations(hash)
@@ -348,6 +346,7 @@ module Models
       self.remove_unnecessary_relations(hash)
       self.generate_schedule_indices_from_date(hash)
       self.generate_linked_service_ids_for_relations(hash)
+      self.deduce_full_skills_from_data(hash)
     end
 
     def self.remove_unnecessary_units(hash)
@@ -391,6 +390,69 @@ module Models
            vehicle_group_duration_on_months vehicle_group_number]
 
       hash[:relations].delete_if{ |r| r[:lapse].nil? && types_with_duration.include?(r[:type]) }
+    end
+
+    def self.add_vehicle_sticky_skill(hash, vehicle_id)
+      vehicle = hash[:vehicles].find{ |v| v[:id] == vehicle_id }
+      raise OptimizerWrapper::DiscordantProblemError.new('No vehicle matching with sticky vehicle') unless vehicle
+
+      vehicle[:skills] ||= [[]]
+      vehicle[:skills][0] |= ["internal_sticky_vehicle_skill_#{vehicle_id}"]
+    end
+
+    def self.provide_original_skills(hash)
+      [hash[:services], hash[:shipments]].flatten.compact.each{ |mission|
+        mission[:original_skills] = mission[:skills]
+      }
+    end
+
+    def self.ensure_no_conflictiong_skills(hash)
+      all_skills = [hash[:services], hash[:shipments]].flatten.compact.collect{ |mission|
+        mission[:skills]
+      }.compact.flatten.uniq
+
+      return unless ['vehicle_cluster_', 'work_day_cluster_', 'internal_sticky_vehicle_skill_'].any?{ |str|
+        all_skills.any?{ |skill| skill.include?(str) }
+      }
+
+      raise OptimizerWrapper::DiscordantProblemError.new(
+        'Skills match with internal skills format, this might produce an error')
+    end
+
+    def self.deduce_full_skills_from_data(hash)
+      provide_original_skills(hash)
+      ensure_no_conflictiong_skills(hash)
+
+      [hash[:services], hash[:shipments]].flatten.compact.group_by{ |mission|
+        mission[:sticky_vehicle_ids]
+      }.each{ |sticky_vehicles, set|
+        next unless sticky_vehicles.to_a.size.positive?
+
+        sticky_vehicles.each{ |vehicle_id|
+          v_skill = "internal_sticky_vehicle_skill_#{vehicle_id}"
+
+          add_vehicle_sticky_skill(hash, vehicle_id)
+
+          set.each{ |mission|
+            mission[:skills] ||= []
+            mission[:skills] |= [v_skill]
+            mission.delete(:sticky_vehicle_ids)
+          }
+        }
+      }
+
+      return unless hash[:routes]
+
+      hash[:routes].each{ |route|
+        route_vehicle_hash = "internal_sticky_vehicle_skill_#{route[:vehicle_id]}"
+
+        add_vehicle_sticky_skill(hash, route[:vehicle_id])
+
+        route[:mission_ids].each{ |mission|
+          mission[:skills] ||= []
+          mission[:skills] |= [route_vehicle_hash]
+        }
+      }
     end
 
     def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
@@ -692,6 +754,12 @@ module Models
 
     def periodic_heuristic?
       self.preprocessing_first_solution_strategy.to_a.include?('periodic')
+    end
+
+    def vehicle_indices(vehicle_ids)
+      vehicle_ids.collect{ |vehicle_id|
+        self.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
+      }
     end
   end
 end

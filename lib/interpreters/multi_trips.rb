@@ -41,11 +41,6 @@ module Interpreters
           # vrp.relations += [Models::Relation.new(type: 'vehicle_group_duration', linked_vehicle_ids: new_ids, lapse: vehicle.duration)] if vehicle.duration # TODO: Requires a complete rework of overall_duration
           # vrp.relations += [Models::Relation.new(type: 'vehicle_group_duration', linked_vehicle_ids: new_ids, lapse: vehicle.overall_duration)] if vehicle.overall_duration # TODO: Requires a complete rework of overall_duration
 
-          vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle.id == vehicle.id } }.each{ |service|
-            service.sticky_vehicles -= [vehicle.id]
-            service.sticky_vehicles += new_ids
-          }
-
           new_vehicles
         else
           vehicle

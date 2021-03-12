@@ -146,8 +146,12 @@ module Wrappers
             additional_value: service.activity.additional_value,
             priority: service.priority,
             matrix_index: points[service.activity.point_id].matrix_index,
-            vehicle_indices: (service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0) ?
-              service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
+            vehicle_indices:
+              if service.sticky_vehicles.empty?
+                vehicles_indices
+              else
+                vrp.vehicles_indices(service.sticky_vehicles).compact
+              end,
             setup_duration: service.activity.setup_duration,
             id: service.id,
             late_multiplier: service.activity.late_multiplier || 0,
@@ -179,8 +183,12 @@ module Wrappers
               additional_value: possible_activity.additional_value,
               priority: service.priority,
               matrix_index: points[possible_activity.point_id].matrix_index,
-              vehicle_indices: (service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0) ?
-                service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
+              vehicle_indices:
+                if service.sticky_vehicles.empty?
+                  vehicles_indices
+                else
+                  vrp.vehicles_indices(service.sticky_vehicles).compact
+                end,
               setup_duration: possible_activity.setup_duration,
               id: "#{service.id}_activity#{activity_index}",
               late_multiplier: possible_activity.late_multiplier || 0,
@@ -244,7 +252,12 @@ module Wrappers
           additional_value: shipment.pickup.additional_value,
           priority: shipment.priority,
           matrix_index: points[shipment.pickup.point_id].matrix_index,
-          vehicle_indices: (shipment.sticky_vehicles.size > 0) ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
+          vehicle_indices:
+            if shipment.sticky_vehicles.empty?
+              vehicles_indices
+            else
+              vrp.vehicles_indices(shipment.sticky_vehicles).compact
+            end,
           setup_duration: shipment.pickup.setup_duration,
           id: shipment.id + 'pickup',
           late_multiplier: shipment.pickup.late_multiplier || 0,
@@ -265,7 +278,12 @@ module Wrappers
           additional_value: shipment.delivery.additional_value,
           priority: shipment.priority,
           matrix_index: points[shipment.delivery.point_id].matrix_index,
-          vehicle_indices: (!shipment.sticky_vehicles.empty?) ? shipment.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
+          vehicle_indices:
+            if shipment.sticky_vehicles.empty?
+              vehicles_indices
+            else
+              vrp.vehicles_indices(shipment.sticky_vehicles).compact
+            end,
           setup_duration: shipment.delivery.setup_duration,
           id: shipment.id + 'delivery',
           late_multiplier: shipment.delivery.late_multiplier || 0,

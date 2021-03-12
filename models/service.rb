@@ -55,8 +55,11 @@ module Models
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :activities, class_name: 'Models::Activity'
-    has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation'
+
+    def sticky_vehicles
+      self.skills.select{ |skill| skill.include?('internal_sticky_vehicle_skill_') }.map(&:id)
+    end
   end
 end

@@ -314,5 +314,23 @@ module Models
       assert_equal 1, created_vrp.services.first.skills.size
       assert_equal created_vrp.services.first.original_skills.size, created_vrp.services.first.skills.size
     end
+
+    def test_sticky_vehicles_generates_skill
+      vrp = VRP.basic
+      vrp[:services][0][:sticky_vehicle_ids] = [vrp[:vehicles].first[:id]]
+      vrp[:services][1][:sticky_vehicle_ids] = [vrp[:vehicles].first[:id]]
+
+      Models::Vrp.filter(vrp)
+      assert(vrp[:services].none?{ |s| s[:sticky_vehicle_ids] })
+      assert_equal 1, vrp[:services][0][:skills].size
+      assert_equal vrp[:services][0][:skills], vrp[:services][1][:skills]
+
+      # sticky vehicle should correspond to any existant vehicle
+      vrp[:services][0][:sticky_vehicle_ids] = ['id_with_no_correspondance']
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.filter(vrp)
+      end
+      assert_equal 'No vehicle matching with sticky vehicle', error.message
+    end
   end
 end

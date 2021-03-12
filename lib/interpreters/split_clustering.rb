@@ -856,9 +856,6 @@ module Interpreters
 
       def compatible_characteristics?(service_chars, vehicle_chars)
         # Incompatile service and vehicle
-        # if the vehicle cannot serve the service due to sticky_vehicle_id
-        return false if !service_chars[:v_id].empty? && (service_chars[:v_id] & vehicle_chars[:id]).empty?
-
         # if the service needs a skill that the vehicle doesn't have
         return false if !(service_chars[:skills] - vehicle_chars[:skills]).empty?
 
@@ -874,7 +871,6 @@ module Interpreters
                             exclusion_cost: shipment.exclusion_cost,
                             skills: shipment.skills,
                             activity: activity,
-                            sticky_vehicles: shipment.sticky_vehicles,
                             quantities: shipment.quantities)
       end
 
@@ -923,8 +919,6 @@ module Interpreters
           {
             lat: location.lat.round_with_steps(decimal[:digits], decimal[:steps]),
             lon: location.lon.round_with_steps(decimal[:digits], decimal[:steps]),
-            v_id: s[:sticky_vehicle_ids].to_a |
-              [vrp.routes.find{ |r| r.mission_ids.include? s.id }&.vehicle_id].compact,
             skills: s.skills.to_a.dup,
             day_skills: compute_day_skills(s.activity&.timewindows),
             id: options[:group_points] ? nil : s.id
@@ -1011,8 +1005,7 @@ module Interpreters
               item0[3][key] += val
             }
 
-            # Merge the characteristics (sticky, skills, days)
-            item0[4][:v_id] &= item_i[4][:v_id]
+            # Merge the characteristics (skills, days)
             item0[4][:day_skills] &= item_i[4][:day_skills]
             item0[4][:skills].concat item_i[4][:skills]
             item0[4][:skills].uniq!
