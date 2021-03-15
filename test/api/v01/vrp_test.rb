@@ -50,8 +50,8 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.stub(
       :define_main_process,
       lambda { |services_vrps, _job|
-        assert_equal [['skill']], services_vrps[0][:vrp][:vehicles][0][:skills]
-        assert_equal ['skill'], services_vrps[0][:vrp][:services][0][:skills]
+        assert_equal [[:skill]], services_vrps[0][:vrp][:vehicles][0][:skills]
+        assert_equal [:skill], services_vrps[0][:vrp][:services][0][:skills]
         assert_equal [[]], services_vrps[0][:vrp][:vehicles][1][:skills]
         assert_equal [], services_vrps[0][:vrp][:services][1][:skills]
         {}

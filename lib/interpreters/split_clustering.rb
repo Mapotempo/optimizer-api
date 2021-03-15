@@ -821,6 +821,12 @@ module Interpreters
       vehicles
     end
 
+    def self.provide_work_day_skill(vehicle, day)
+      vehicle.skills.each{ |sk_set|
+        sk_set << "work_day_partition_#{OptimizerWrapper::WEEKDAYS[day]}".to_sym
+      }
+    end
+
     def self.duplicate_vehicle(vehicle, timewindow, schedule)
       available_days = timewindow&.day_index ? [timewindow.day_index] : (0..6).to_a
       available_days.collect{ |day|
@@ -828,9 +834,7 @@ module Interpreters
 
         tw = timewindow ? Marshal.load(Marshal.dump(timewindow)) : Models::Timewindow.new({})
         tw.day_index = day
-        vehicle.skills = vehicle.skills.collect{ |sk_set|
-          sk_set | [%w[mon tue wed thu fri sat sun][day]]
-        }
+        provide_work_day_skill(vehicle, day)
         new_vehicle = Marshal.load(Marshal.dump(vehicle))
         new_vehicle.timewindow = tw
         new_vehicle.sequence_timewindows = nil
@@ -1228,15 +1232,17 @@ module Interpreters
         case entity
         when :vehicle
           vrp.services.each{ |service|
-            service.skills.insert(0, vrp.vehicles.first.id)
+            service.skills.insert(0, "vehicle_partition_#{vrp.vehicles.first.id}".to_sym)
           }
-          vrp.vehicles.first.skills.first << vrp.vehicles.first.id
+          vrp.vehicles.each{ |v|
+            v.skills.each{ |set| set << "vehicle_partition_#{vrp.vehicles.first.id}".to_sym }
+          }
         when :work_day
           vehicle_id_in_skills = vrp.services.any?{ |s| s.skills.include?(vrp.vehicles.first.id) }
           cluster_day = (vrp.vehicles.first.timewindow || vrp.vehicles.first.sequence_timewindows.first).day_index
-          day_skill = %w[mon tue wed thu fri sat sun][cluster_day]
+          day_skill = OptimizerWrapper::WEEKDAYS[cluster_day]
           vrp.services.each{ |service|
-            service.skills.insert(vehicle_id_in_skills ? 1 : 0, day_skill)
+            service.skills.insert(vehicle_id_in_skills ? 1 : 0, "work_day_partition_#{day_skill}".to_sym)
           }
         end
 

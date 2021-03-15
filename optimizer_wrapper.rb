@@ -832,7 +832,7 @@ module OptimizerWrapper
       next if zone.vehicles.compact.empty?
 
       zone.vehicles.each{ |vehicle|
-        vehicle.skills.each{ |skillset| skillset << zone[:id] }
+        vehicle.skills.each{ |skillset| skillset << zone[:id].to_sym }
       }
     }
 
@@ -844,9 +844,7 @@ module OptimizerWrapper
 
         next unless zone.inside(activity_loc.lat, activity_loc.lon)
 
-        service.sticky_vehicles += zone.vehicles
-        service.sticky_vehicles.uniq!
-        service.skills += [zone[:id]]
+        service.skills += [zone[:id].to_sym]
         service.id
       }.compact
 
@@ -855,16 +853,12 @@ module OptimizerWrapper
         pickup_loc = shipment.pickup.point.location
         delivery_loc = shipment.delivery.point.location
 
-        if zone.inside(pickup_loc[:lat], pickup_loc[:lon]) && zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          shipment.sticky_vehicles += zone.vehicles
-          shipment.sticky_vehicles.uniq!
-        end
         if zone.inside(pickup_loc[:lat], pickup_loc[:lon])
-          shipment.skills += [zone[:id]]
+          shipment.skills += [zone[:id].to_sym]
           shipments_ids << shipment.id + 'pickup'
         end
         if zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          shipment.skills += [zone[:id]]
+          shipment.skills += [zone[:id].to_sym]
           shipments_ids << shipment.id + 'delivery'
         end
         shipments_ids.uniq

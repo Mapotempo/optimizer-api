@@ -984,7 +984,6 @@ module Wrappers
     end
 
     def get_stop(day, vrp, type, vehicle, data = {})
-      day_name = { 0 => 'mon', 1 => 'tue', 2 => 'wed', 3 => 'thu', 4 => 'fri', 5 => 'sat', 6 => 'sun' }[day % 7]
       size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
       week = Helper.string_padding(day / 7 + 1, size_weeks)
 
@@ -1003,7 +1002,7 @@ module Wrappers
       stop_detail[:setup_duration] = data[:considered_setup_duration]
       {
         day_week_num: "#{day % 7}_#{week}",
-        day_week: "#{day_name}_#{week}",
+        day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}",
         point_id: data[:point_id],
         service_id: ("#{data[:id]}_#{data[:number_in_sequence]}_#{service_in_vrp.visits_number}" if type == 'service'),
         original_service_id: service_in_vrp&.id,

@@ -141,6 +141,8 @@ module Models
       hash[:services] ||= []
       hash[:shipments] ||= []
 
+      ensure_no_conflicting_skills(hash)
+
       # shipment relation consistency
       shipment_relations = hash[:relations]&.select{ |r| r[:type] == :shipment }&.flat_map{ |r| r[:linked_ids] }.to_a
       unless shipment_relations.size == shipment_relations.uniq.size
@@ -263,12 +265,26 @@ module Models
       end
     end
 
+    def self.ensure_no_conflicting_skills(hash)
+      all_skills = [hash[:vehicles], hash[:services], hash[:shipments]].compact.flatten.collect{ |mission|
+        mission[:skills]
+      }.compact.flatten.uniq
+
+      return unless ['vehicle_partition_', 'work_day_partition_'].any?{ |str|
+        all_skills.any?{ |skill| skill.to_s.include?(str) }
+      }
+
+      raise OptimizerWrapper::DiscordantProblemError.new(
+        'Skills match with internal skills format, this might produce an error')
+    end
+
     def self.expand_data(vrp)
       vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
       vrp.provide_original_ids
+      vrp.provide_original_skills
     end
 
     def self.convert_position_relations(hash)

@@ -359,5 +359,14 @@ module Models
                  'Following services appear in multiple shipment relations',
                    error.message, 'Error message does not match'
     end
+
+    def test_ensure_no_skill_matches_with_internal_skills_format
+      vrp = VRP.basic
+      vrp[:services].first[:skills] = ['vehicle_partition_for_test']
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.check_consistency(vrp)
+      end
+      assert_equal 'Skills match with internal skills format, this might produce an error', error.message
+    end
   end
 end

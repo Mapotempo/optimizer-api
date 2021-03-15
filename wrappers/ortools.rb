@@ -118,7 +118,7 @@ module Wrappers
       services_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
       vrp.services.each_with_index{ |service, service_index|
         vehicles_indices =
-          if !service[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) &&
+          if service.skills.any? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }) &&
              service.unavailable_days.empty?
             []
           else
@@ -201,7 +201,7 @@ module Wrappers
         end
       }
       vrp.shipments.each_with_index{ |shipment, shipment_index|
-        vehicles_indices = if !shipment[:skills].empty? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
+        vehicles_indices = if shipment.skills.any? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
           []
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|
