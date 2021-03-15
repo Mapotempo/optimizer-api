@@ -327,5 +327,23 @@ module Models
       end
       assert_equal 'Minimum lapse can not be bigger than maximum lapse', error.message
     end
+
+    def test_consistent_schedule
+      vrp = VRP.scheduling
+      vrp[:configuration][:schedule] = {}
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.filter(vrp)
+      end
+
+      vrp[:configuration][:schedule] = { range_indices: { start: 3, end: 0 } }
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.check_consistency(vrp)
+      end
+
+      vrp[:configuration][:schedule] = { range_indices: { start: 7, end: 14 } }
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.check_consistency(vrp)
+      end
+    end
   end
 end

@@ -219,10 +219,19 @@ module Models
         end
       end
 
-      # number of visits consistency
-      if !configuration[:schedule]
+      if configuration[:schedule]
+        if configuration[:schedule][:range_indices][:start] > 6
+          raise OptimizerWrapper::DiscordantProblemError.new('Api does not support schedule start index bigger than 6 yet')
+          # TODO : allow start bigger than 6 and make code consistent with this
+        end
+
+        if configuration[:schedule][:range_indices][:start] > configuration[:schedule][:range_indices][:end]
+          raise OptimizerWrapper::DiscordantProblemError.new('Schedule start index should be less than or equal to end')
+        end
+      else
         (hash[:services] + hash[:shipments]).each{ |s|
-          raise OptimizerWrapper::DiscordantProblemError, 'There can not be more than one visit if no schedule is provided' unless s[:visits_number].to_i <= 1
+          raise OptimizerWrapper::DiscordantProblemError.new(
+            'There can not be more than one visit if no schedule is provided') unless s[:visits_number].to_i <= 1
         }
       end
 
@@ -455,6 +464,12 @@ module Models
 
     def self.generate_schedule_indices_from_date(hash)
       return hash if !hash[:configuration] || !hash[:configuration][:schedule]
+
+      schedule = hash[:configuration][:schedule]
+      if (!schedule[:range_indices] || schedule[:range_indices][:start].nil? || schedule[:range_indices][:end].nil?) &&
+         (!schedule[:range_date] || schedule[:range_date][:start].nil? || schedule[:range_date][:end].nil?)
+        raise OptimizerWrapper::DiscordantProblemError.new('Schedule need range indices or range dates')
+      end
 
       detect_date_indices_inconsistency(hash)
 

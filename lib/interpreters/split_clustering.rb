@@ -792,7 +792,9 @@ module Interpreters
 
     def self.duplicate_vehicle(vehicle, timewindow, schedule)
       if timewindow.nil?
-        (schedule[:start]..[schedule[:end], 6].min).collect{ |day|
+        (0..6).flat_map{ |day|
+          next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
+
           vehicle.skills = vehicle.skills.collect{ |sk_set|
             sk_set | [%w[mon tue wed thu fri sat sun][day]]
           }
