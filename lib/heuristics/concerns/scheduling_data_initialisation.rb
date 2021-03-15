@@ -26,6 +26,7 @@ module SchedulingDataInitialization
       capacity = compute_capacities(vehicle[:capacities], true)
       vrp.units.reject{ |unit| capacity.has_key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
       @candidate_routes[vehicle.original_id][vehicle.global_day_index] = {
+        vehicle: vehicle, # TODO : use this field to find id, global_index ... instead of generating a key in route_structure
         vehicle_id: vehicle.id,
         global_day_index: vehicle.global_day_index,
         tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - vehicle.global_day_index * 86400,

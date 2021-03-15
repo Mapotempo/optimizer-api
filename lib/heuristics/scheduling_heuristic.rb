@@ -514,6 +514,11 @@ module Heuristics
           # service is available at this day
           !@services_data[service_id][:raw].unavailable_days.include?(day)
       }.each{ |service_id|
+        next unless @services_data[service_id][:raw].skills.empty? ||
+                    route_data[:vehicle].skills.any?{ |skill_set|
+                      (@services_data[service_id][:raw].skills - skill_set).empty?
+                    }
+
         next if @services_data[service_id][:used_days] && !days_respecting_lapse(service_id, vehicle_id).include?(day)
 
         point = @services_data[service_id][:points_ids].first if @same_point_day || @relaxed_same_point_day # there can be only on point in points_ids

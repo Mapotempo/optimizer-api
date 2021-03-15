@@ -542,6 +542,16 @@ class HeuristicTest < Minitest::Test
       assert_equal 36, result[:unassigned].size
     end
 
+    def test_skills_in_scheduling
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:vehicles][1][:skills] = [['skill']]
+      vrp[:services].find{ |s| s[:id] == 'service_9' }[:skills] = ['skill']
+
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      seconde_vehicle_routes = result[:routes].select{ |r| r[:vehicle_id].include?('vehicle_1') }
+      assert(seconde_vehicle_routes.any?{ |r| r[:activities].any?{ |a| a[:service_id]&.include?('service_9') } })
+    end
+
     def test_sticky_in_scheduling
       vrp = VRP.lat_lon_scheduling_two_vehicles
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)

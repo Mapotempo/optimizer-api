@@ -64,14 +64,6 @@ class InstanceValidityTest < Minitest::Test
       assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_vehicle_distance_if_heuristic
     end
 
-    def test_reject_if_vehicle_skills
-      problem = VRP.scheduling
-      problem[:vehicles].first[:skills] = [['skill']]
-      problem[:services].first[:skills] = ['skill']
-
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_skills_if_heuristic
-    end
-
     def test_reject_if_vehicle_free_approach_return
       problem = VRP.scheduling
       problem[:vehicles].first[:free_approach] = true
