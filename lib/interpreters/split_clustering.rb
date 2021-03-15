@@ -793,6 +793,9 @@ module Interpreters
     def self.duplicate_vehicle(vehicle, timewindow, schedule)
       if timewindow.nil?
         (schedule[:start]..[schedule[:end], 6].min).collect{ |day|
+          vehicle.skills = vehicle.skills.collect{ |sk_set|
+            sk_set | [%w[mon tue wed thu fri sat sun][day]]
+          }
           new_vehicle = Marshal.load(Marshal.dump(vehicle))
           new_vehicle.timewindow = Models::Timewindow.new(day_index: day)
           new_vehicle
@@ -800,6 +803,9 @@ module Interpreters
       elsif timewindow.day_index
         return [] unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == timewindow.day_index }
 
+        vehicle.skills = vehicle.skills.collect{ |sk_set|
+          sk_set | [%w[mon tue wed thu fri sat sun][timewindow.day_index]]
+        }
         new_vehicle = Marshal.load(Marshal.dump(vehicle))
         new_vehicle.timewindow = timewindow
         new_vehicle.sequence_timewindows = nil
@@ -810,6 +816,9 @@ module Interpreters
 
           tw = Marshal.load(Marshal.dump(timewindow))
           tw.day_index = day
+          vehicle.skills = vehicle.skills.collect{ |sk_set|
+            sk_set | [%w[mon tue wed thu fri sat sun][day]]
+          }
           new_vehicle = Marshal.load(Marshal.dump(vehicle))
           new_vehicle.timewindow = tw
           new_vehicle.sequence_timewindows = nil
@@ -1225,7 +1234,6 @@ module Interpreters
           vrp.services.each{ |service|
             service.skills.insert(vehicle_id_in_skills ? 1 : 0, day_skill)
           }
-          vrp.vehicles.first.skills.first << day_skill
         end
 
         vrp
