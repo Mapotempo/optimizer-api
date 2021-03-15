@@ -493,7 +493,7 @@ module Wrappers
     end
 
     def build_skills(job)
-      return [] unless job
+      return nil unless job
 
       all_skills = job.skills - job.original_skills
       skills_to_output = []

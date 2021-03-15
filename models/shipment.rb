@@ -53,7 +53,7 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
 
     def sticky_vehicles
-      self.skills.select{ |skill| skill.include?('internal_sticky_vehicle_skill_') }.map(&:id)
+      self.skills.select{ |skill| skill.include?('internal_sticky_vehicle_skill_') }
     end
   end
 end

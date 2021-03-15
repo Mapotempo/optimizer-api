@@ -53,6 +53,18 @@ module ExpandData
     }
   end
 
+  def add_sticky_vehicle_if_routes
+    return unless self.routes.any?
+
+    self.routes.each{ |route|
+      skill = self.add_vehicle_sticky_skill('route', route.vehicle)
+      route.mission_ids.each{ |id|
+        corresponding = [self.services, self.shipments].compact.flatten.find{ |s| s.id == id }
+        corresponding.skills |= [skill]
+      }
+    }
+  end
+
   def clean_according_to(unfeasible_services)
     unfeasible_services.each{ |unfeasible_service|
       self.routes.each{ |route|

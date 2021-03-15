@@ -4327,7 +4327,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, result[:unassigned].size
   end
 
-  def test_initial_routes
+  def test_initial_routes # fail
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
@@ -4596,7 +4596,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, result[:unassigned].size
   end
 
-  def test_evaluate_only
+  def test_evaluate_only # fail
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
@@ -4653,7 +4653,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:iterations]
   end
 
-  def test_evaluate_only_not_every_service_has_route
+  def test_evaluate_only_not_every_service_has_route # fail
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
@@ -4709,7 +4709,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:iterations]
   end
 
-  def test_evaluate_only_not_every_vehicle_has_route
+  def test_evaluate_only_not_every_vehicle_has_route # fail
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{
@@ -4770,7 +4770,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 1, result[:iterations]
   end
 
-  def test_evaluate_only_with_computed_solution
+  def test_evaluate_only_with_computed_solution # fail
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -5610,7 +5610,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
   end
 
-  def test_force_start_when_there_is_a_service_with_late_tw_begin
+  def test_force_start_when_there_is_a_service_with_late_tw_begin # fail
     # ortools should return a sensible order for services
     # even if the begining and end of the route is fixed
     # by the force_start and a service with a very late TW
@@ -5673,7 +5673,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal (0..size).to_a + [0], visit_order, 'Services are not visited in the expected order'
   end
 
-  def test_pause_should_be_last_if_possible
+  def test_pause_should_be_last_if_possible # fail
     vrp = VRP.basic
 
     vrp[:services].each{ |s|

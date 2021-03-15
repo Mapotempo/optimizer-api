@@ -586,7 +586,7 @@ class SplitClusteringTest < Minitest::Test
       assert called, 'split_solve_core should have been called'
     end
 
-    def test_max_split_can_handle_empty_vehicles
+    def test_max_split_can_handle_empty_vehicles # fail
       # Due to initial solutions, 4 services are on 2 vehicles which leaves 2 services to the remaining 3 vehicles.
       problem = VRP.lat_lon
       (1..4).each{ |i|
@@ -772,7 +772,7 @@ class SplitClusteringTest < Minitest::Test
       end
     end
 
-    def test_clustering_with_sticky_vehicles
+    def test_clustering_with_sticky_vehicles # fail
       vrp = VRP.lat_lon_two_vehicles
       vrp[:services].find{ |s| s[:id] == 'service_1' }[:sticky_vehicle_ids] = ['vehicle_0']
       vrp[:services].find{ |s| s[:id] == 'service_5' }[:sticky_vehicle_ids] = ['vehicle_0']

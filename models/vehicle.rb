@@ -286,5 +286,11 @@ module Models
 
       @working_range_indices[[range_start, range_end]]
     end
+
+    def add_sticky_skill(skill)
+      self.skills.each{ |sk_set|
+        sk_set << skill
+      }
+    end
   end
 end

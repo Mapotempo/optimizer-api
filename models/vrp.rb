@@ -248,6 +248,7 @@ module Models
 
     def self.expand_data(vrp)
       vrp.add_relation_references
+      vrp.add_sticky_vehicle_if_routes
       vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
       vrp.provide_original_ids
@@ -346,7 +347,8 @@ module Models
       self.remove_unnecessary_relations(hash)
       self.generate_schedule_indices_from_date(hash)
       self.generate_linked_service_ids_for_relations(hash)
-      self.deduce_full_skills_from_data(hash)
+      self.provide_original_skills(hash)
+      self.sticky_vehicles_become_skills(hash)
     end
 
     def self.remove_unnecessary_units(hash)
@@ -396,8 +398,19 @@ module Models
       vehicle = hash[:vehicles].find{ |v| v[:id] == vehicle_id }
       raise OptimizerWrapper::DiscordantProblemError.new('No vehicle matching with sticky vehicle') unless vehicle
 
+      skill = "internal_sticky_vehicle_skill_#{vehicle_id}"
+      while [hash[:services], hash[:shipments], hash[:vehicles]].compact.flatten.any?{ |element|
+              element[:skills].to_a.flatten.include?(skill)
+            }
+        skill += (rand * 10).to_i.to_s
+      end
+
       vehicle[:skills] ||= [[]]
-      vehicle[:skills][0] |= ["internal_sticky_vehicle_skill_#{vehicle_id}"]
+      vehicle[:skills].each_with_index{ |_skill_set, set_index|
+        vehicle[:skills][set_index] |= [skill]
+      }
+
+      skill
     end
 
     def self.provide_original_skills(hash)
@@ -411,7 +424,7 @@ module Models
         mission[:skills]
       }.compact.flatten.uniq
 
-      return unless ['vehicle_cluster_', 'work_day_cluster_', 'internal_sticky_vehicle_skill_'].any?{ |str|
+      return unless ['vehicle_cluster_', 'work_day_cluster_'].any?{ |str|
         all_skills.any?{ |skill| skill.include?(str) }
       }
 
@@ -419,8 +432,7 @@ module Models
         'Skills match with internal skills format, this might produce an error')
     end
 
-    def self.deduce_full_skills_from_data(hash)
-      provide_original_skills(hash)
+    def self.sticky_vehicles_become_skills(hash)
       ensure_no_conflictiong_skills(hash)
 
       [hash[:services], hash[:shipments]].flatten.compact.group_by{ |mission|
@@ -429,28 +441,13 @@ module Models
         next unless sticky_vehicles.to_a.size.positive?
 
         sticky_vehicles.each{ |vehicle_id|
-          v_skill = "internal_sticky_vehicle_skill_#{vehicle_id}"
-
-          add_vehicle_sticky_skill(hash, vehicle_id)
+          v_skill = add_vehicle_sticky_skill(hash, vehicle_id)
 
           set.each{ |mission|
             mission[:skills] ||= []
             mission[:skills] |= [v_skill]
             mission.delete(:sticky_vehicle_ids)
           }
-        }
-      }
-
-      return unless hash[:routes]
-
-      hash[:routes].each{ |route|
-        route_vehicle_hash = "internal_sticky_vehicle_skill_#{route[:vehicle_id]}"
-
-        add_vehicle_sticky_skill(hash, route[:vehicle_id])
-
-        route[:mission_ids].each{ |mission|
-          mission[:skills] ||= []
-          mission[:skills] |= [route_vehicle_hash]
         }
       }
     end
@@ -760,6 +757,18 @@ module Models
       vehicle_ids.collect{ |vehicle_id|
         self.vehicles.find_index{ |vehicle| vehicle.id == vehicle_id }
       }
+    end
+
+    def add_vehicle_sticky_skill(context, vehicle)
+      skill = 'internal_sticky_vehicle_skill_' + (context ? "#{context}_" : '') + vehicle.id
+      while [self.services, self.shipments, self.vehicles].flatten.any?{ |element|
+              element.skills.flatten.include?(skill)
+            }
+        skill += (rand * 10).to_i.to_s
+      end
+
+      vehicle.add_sticky_skill(skill)
+      skill
     end
   end
 end

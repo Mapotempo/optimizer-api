@@ -731,7 +731,7 @@ class HeuristicTest < Minitest::Test
       assert_empty vrp.services.collect{ |s| s[:id].split('_').slice(0..-3).join('_') } - original_ids, 'Scheduling IDs structure has changed. We can not find original ID from expanded ID with current formula (used in scheduling heuristic mainly)'
     end
 
-    def test_correct_detailed_costs_merge_with_empty_subproblem
+    def test_correct_detailed_costs_merge_with_empty_subproblem # focus
       vrp = VRP.scheduling
       vrp[:vehicles] << {
         id: 'vehicle_1',

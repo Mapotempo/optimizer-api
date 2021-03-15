@@ -106,7 +106,7 @@ class InstanceValidityTest < Minitest::Test
       assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_scheduling_if_evaluation
     end
 
-    def test_assert_route_date_or_indice_if_periodic
+    def test_assert_route_date_or_indice_if_periodic # fail
       problem = VRP.scheduling
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
@@ -122,7 +122,7 @@ class InstanceValidityTest < Minitest::Test
       refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_route_date_or_indice_if_periodic
     end
 
-    def test_not_too_many_visits_provided_in_route
+    def test_not_too_many_visits_provided_in_route # fail
       problem = VRP.scheduling
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
@@ -146,10 +146,14 @@ class InstanceValidityTest < Minitest::Test
         indice: 0,
         mission_ids: ['service_1']
       }]
-      refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_route_if_schedule_without_periodic_heuristic
+      refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_route_if_schedule_without_periodic_heuristic
 
+      problem[:vehicles].each{ |v| v.delete(:skills) }
+      problem[:services].each{ |s| s.delete(:skills) }
       problem[:configuration][:preprocessing][:first_solution_strategy] = []
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_route_if_schedule_without_periodic_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_route_if_schedule_without_periodic_heuristic
     end
   end
 end

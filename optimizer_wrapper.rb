@@ -392,10 +392,10 @@ module OptimizerWrapper
     vrp.vehicles.map.with_index{ |vehicle, v_i|
       v_skill = "internal_sticky_vehicle_skill_#{vehicle.id}"
       service_ids = vrp.services.select{ |s|
-        s.count_sticky_vehicles == 1 && s.skills.include?(v_skill)
+        s.sticky_vehicles.size == 1 && s.skills.include?(v_skill)
       }.map(&:id)
       shipment_ids = vrp.shipments.select{ |s|
-        s.count_sticky_vehicles == 1 && s.skills.include?(v_skill)
+        s.sticky_vehicles.size == 1 && s.skills.include?(v_skill)
       }.map(&:id)
 
       service_vrp = {
@@ -799,7 +799,7 @@ module OptimizerWrapper
       next if zone.vehicles.compact.empty?
 
       zone.vehicles.each{ |vehicle|
-        vehicle.skills.each{ |skillset| skillset << zone[:id] }
+        vehicle.skills.each{ |skillset| skillset << zone.id }
       }
     }
 
@@ -811,10 +811,7 @@ module OptimizerWrapper
 
         next unless zone.inside(activity_loc.lat, activity_loc.lon)
 
-        zone.vehicles.each{ |vehicle|
-          service.skills |= "internal_sticky_vehicle_skill_#{vehicle.id}"
-        }
-        service.skills += [zone[:id]]
+        service.skills |= [zone.id]
         service.id
       }.compact
 
@@ -823,17 +820,12 @@ module OptimizerWrapper
         pickup_loc = shipment.pickup.point.location
         delivery_loc = shipment.delivery.point.location
 
-        if zone.inside(pickup_loc[:lat], pickup_loc[:lon]) && zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          zone.vehicles.each{ |vehicle|
-            service.skills |= "internal_sticky_vehicle_skill_#{vehicle.id}"
-          }
-        end
         if zone.inside(pickup_loc[:lat], pickup_loc[:lon])
-          shipment.skills += [zone[:id]]
+          shipment.skills |= [zone.id]
           shipments_ids << shipment.id + 'pickup'
         end
         if zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          shipment.skills += [zone[:id]]
+          shipment.skills += [zone.id]
           shipments_ids << shipment.id + 'delivery'
         end
         shipments_ids.uniq

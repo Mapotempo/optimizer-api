@@ -1031,7 +1031,7 @@ class WrapperTest < Minitest::Test
     end
   end
 
-  def test_input_zones
+  def test_input_zones # fail
     problem = {
       matrices: [{
         id: 'm1',
@@ -1094,7 +1094,7 @@ class WrapperTest < Minitest::Test
     assert_equal 2, result[:routes][1][:activities].size
   end
 
-  def test_input_zones_shipment
+  def test_input_zones_shipment # fail
     problem = {
       matrices: [{
         id: 'm1',
@@ -1225,7 +1225,7 @@ class WrapperTest < Minitest::Test
     assert result[:routes][0][:activities][2].has_key?(:delivery_shipment_id)
   end
 
-  def test_split_vrps_using_two_solver
+  def test_split_vrps_using_two_solver # fail
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -1337,75 +1337,20 @@ class WrapperTest < Minitest::Test
   end
 
   def test_skills_sticky_compatibility
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 10, 1],
-          [10, 0, 10],
-          [6, 1, 0]
-        ],
-        distance: [
-          [0, 10, 1],
-          [10, 0, 10],
-          [6, 1, 0]
-        ]
-      }],
-      points: [{
-          id: 'point_0',
-          matrix_index: 0,
-        }, {
-          id: 'point_1',
-          matrix_index: 1,
-        }, {
-          id: 'point_2',
-          matrix_index: 2,
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0',
-        speed_multiplier: 1.0,
-        start_point_id: 'point_0',
-        cost_time_multiplier: 1.0,
-        cost_waiting_time_multiplier: 1.0
-      }, {
-        id: 'vehicle_1',
-        matrix_id: 'matrix_0',
-        speed_multiplier: 1.0,
-        cost_time_multiplier: 1.0,
-        cost_waiting_time_multiplier: 1.0
-      }],
-      services: [{
-        id: 'service_1',
-        sticky_vehicle_ids: ['vehicle_0'],
-        activity: {
-          point_id: 'point_1',
-          duration: 600.0
-        }
-      }, {
-        id: 'service_2',
-        sticky_vehicle_ids: ['vehicle_1'],
-        activity: {
-          point_id: 'point_2',
-          duration: 600.0
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 100,
-        }
-      }
-    }
+    problem = JSON.parse(File.read('test/fixtures/skills_sticky_compatibility.json'), symbolize_names: true)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 0, result[:unassigned].size
 
+    problem = JSON.parse(File.read('test/fixtures/skills_sticky_compatibility.json'), symbolize_names: true)
     problem[:services][0][:sticky_vehicle_ids] << 'vehicle_1'
     problem[:services].each{ |service|
       service[:skills] = ['A']
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    byebug
     assert_equal 0, result[:unassigned].size # no vehicle has the skill, so there is no problem
 
+    problem = JSON.parse(File.read('test/fixtures/skills_sticky_compatibility.json'), symbolize_names: true)
     problem[:vehicles][0][:skills] = [['A']]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 1, (result[:unassigned].count{ |un| un[:reason] == 'Incompatibility between service skills and sticky vehicles' })
@@ -2818,7 +2763,7 @@ class WrapperTest < Minitest::Test
     OptimizerWrapper.config[:solve][:repetition] = old_config_solve_repetition if old_config_solve_repetition
   end
 
-  def test_initial_route_with_infeasible_service
+  def test_initial_route_with_infeasible_service # fail
     # service_1 is eliminated due to
     # "Incompatibility between service skills and sticky vehicles"
     # but it is referenced inside an initial route which should not cause an issue
@@ -2898,7 +2843,7 @@ class WrapperTest < Minitest::Test
     assert_equal vrp.vehicles.size, result[:routes].size, 'All vehicles should appear in result, even though they can serve no service'
   end
 
-  def test_split_independent_vrp_by_sticky_vehicle_with_useless_vehicle
+  def test_split_independent_vrp_by_sticky_vehicle_with_useless_vehicle # fail
     vrp = TestHelper.create(VRP.independent)
     vrp.vehicles << Models::Vehicle.new(id: 'useless_vehicle')
     expected_number_of_vehicles = vrp.vehicles.size

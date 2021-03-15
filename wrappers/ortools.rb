@@ -149,7 +149,7 @@ module Wrappers
               if service.sticky_vehicles.empty?
                 vehicles_indices
               else
-                vrp.vehicles_indices(service.sticky_vehicles).compact
+                service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index{ |v| v.skills.flatten.include?(sticky_vehicle) } }
               end,
             setup_duration: service.activity.setup_duration,
             id: service.id,
