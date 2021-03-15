@@ -28,12 +28,21 @@ require './lib/output_helper.rb'
 
 module Interpreters
   class SplitClustering
-    # Relations that link multiple services to on the same route
+    # Relations that link multiple services to be on the same route
     LINKING_RELATIONS = %i[
       order
       same_route
       sequence
       shipment
+    ].freeze
+    # Relations that force multiple services/vehicles to stay in the same VRP
+    FORCING_RELATIONS = %i[
+      maximum_day_lapse
+      maximum_duration_lapse
+      meetup
+      minimum_day_lapse
+      minimum_duration_lapse
+      vehicle_trips
     ].freeze
 
     # TODO: private method
@@ -141,17 +150,24 @@ module Interpreters
           vrp.shipments.empty? # Clustering supports Shipment only as Relation  TODO: delete this check when Model::Shipment is removed
       else
         ss_data = service_vrp[:split_solve_data]
-        current_vehicles = ss_data[:current_vehicles]
-        service_vehicle_assignments = ss_data[:service_vehicle_assignments] # no empties_or_fills in here
+        return false if ss_data[:cannot_split_further]
 
-        current_vehicles.size > 1 &&
-          (ss_data[:current_vehicle_limit].nil? || ss_data[:current_vehicle_limit] > 1) &&
-          current_vehicles.sum{ |v| service_vehicle_assignments[v.id].size } > vrp.preprocessing_max_split_size
+        # filter the vehicles that are forced to be on the same side
+        current_vehicle_ids = ss_data[:current_vehicles].map(&:id)
+        ss_data[:representative_vrp].relations.each{ |rel|
+          raise 'There should be only :same_route relations inside the representative_vrp.' if rel.type != :same_route
+
+          current_vehicle_ids << rel.linked_ids.join if current_vehicle_ids.reject!{ |id| rel.linked_ids.include?(id) }
+        }
+
+        current_vehicle_ids.size > 1 && (ss_data[:current_vehicle_limit] || Helper.fixnum_max) > 1 &&
+          ss_data[:current_vehicles].sum{ |vehicle|
+            ss_data[:service_vehicle_assignments][vehicle.id].size
+          } > vrp.preprocessing_max_split_size
       end
     end
 
-    # TODO: 0- see below, there are multiple
-    # TODO: 1- implement a notion of "same_vehicle" relation inside balanced_vrp_clustering gem
+    # TODO: Following are ways to improve split_solve performance (2, 3, 4 cpu time) (5 solution quality)
     # TODO: 2- decrease iteration-complexity by "relaxing" the convergence limits (movement, balance-violation) of k-means for max_split?
     # TODO: 3- decrease point-complexity by "grouping" by lat/lon more aggressively for this split
     # TODO: 4- decrease vehicle-complexity by improving balanced_vrp_clustering
@@ -213,10 +229,18 @@ module Interpreters
         sides = split_balanced_kmeans(
           { vrp: create_representative_sub_vrp(ss_data) }, 2,
           cut_symbol: :duration, restarts: 3, build_sub_vrps: false, basic_split: true, group_points: false
-        ).sort_by!{ |side| [side.size, side.sum(&:visits_number)] }.reverse!
-        sides.collect!{ |side| enum_current_vehicles.select{ |v| side.any?{ |s| s.id == v.id } } }
+        ).sort_by!{ |side|
+          [side.size, side.sum(&:visits_number)] # [number_of_vehicles, number_of_visits]
+        }.reverse!.collect!{ |side|
+          enum_current_vehicles.select{ |v| side.any?{ |s| s.id == v.id } }
+        }
 
-        log 'There should be exactly two clusters in split_solve_core!', level: :warn unless sides.size == 2 && sides.none?(&:empty?)
+        unless sides.size == 2 && sides.none?(&:empty?)
+          # this might happen under certain cases (skills etc can force all points to be on one side)
+          # and not necessarily a problem but it should happen very rarely (in real instances)
+          log 'There should be exactly two clusters in split_solve_core!', level: :warn
+          ss_data[:cannot_split_further] = true
+        end
 
         split_service_counts = sides.collect{ |current_vehicles|
           current_vehicles.sum{ |v| ss_data[:service_vehicle_assignments][v.id].size }
@@ -229,13 +253,13 @@ module Interpreters
 
           ss_data[:current_vehicles] = side
 
-          vehicle_limit_ratio = current_vehicle_limit.to_f * side.size / enum_current_vehicles.size
+          v_limit = current_vehicle_limit.to_f * side.size / enum_current_vehicles.size
           # Warning: round does not work if there is an even "half" split
-          ss_data[:current_vehicle_limit] = current_vehicle_limit &&
-            (index.zero? ? vehicle_limit_ratio.ceil : vehicle_limit_ratio.floor)
+          ss_data[:current_vehicle_limit] = current_vehicle_limit && (index.zero? ? v_limit.ceil : v_limit.floor)
 
           split_solve_core(service_vrp, job = nil, &block)
         }
+        ss_data[:cannot_split_further] = false
         log "<-- split_solve_core level: #{split_level}"
 
         Helper.merge_results(results)
@@ -307,24 +331,16 @@ module Interpreters
     end
 
     def self.create_representative_vrp(split_solve_data)
-      # This VRP represent the original VRP only `m` number of points by reducing the services belonging to the
+      # This VRP represent the original VRP with only `m` number of points by reducing the services belonging to the
       # same vehicle-zone to a single point (with average lat/lon and total duration/visits). Where `m` is the
-      # number of non-empty vehicle-zones coming from the very first split_by_vehicle.
+      # number of non-empty vehicle-zones generated by the very first split_by_vehicle.
+
       points = []
       services = []
-      # TODO: 0- relations needs to be taken into account inside clustering during this split
-      #          - the vehicles need to be in the same sub-vrp for the following relations:
-      #            => vehicle_trips
-      #          - the services need to be in the same sub-vrp for the following relations:
-      #            => meetup, minimum_duration_lapse, maximum_duration_lapse, minimum_day_lapse, maximum_day_lapse
-      #            (we need to go thorugh the original relations and "connect" the "vehicle_id"s below with "same_route")
-      relations = []
-
       split_solve_data[:service_vehicle_assignments].each{ |vehicle_id, vehicle_services|
-        # TODO: After relations are taken into account inside clustering, we don't have to
-        #       decrease the number of points to 1. We can represent each group with multiple
+        # TODO: We don't have to represent each group with only 1 point. We can represent each group with multiple
         #       points, carefully selected to represent the mean, median and extremes of the group
-        #       and "relate" these points so that they will stay on the same "side" in the 2-split
+        #       and "relate" these points with :same_route so that they will stay on the same "side" in the 2-split
         average_lat = vehicle_services.sum{ |s| s.activity.point.location.lat } / vehicle_services.size.to_f
         average_lon = vehicle_services.sum{ |s| s.activity.point.location.lon } / vehicle_services.size.to_f
         points << { id: "p#{vehicle_id}", location: { lat: average_lat, lon: average_lon }}
@@ -336,6 +352,26 @@ module Interpreters
             duration: vehicle_services.sum{ |s| s.activity.duration.to_f } / Math.sqrt(vehicle_services.size)
           }
         }
+      }
+
+      relations = []
+      # go through the original relations and force the services and vehicles to stay in the same sub-vrp if necessary
+      split_solve_data[:original_vrp].relations.select{ |r| FORCING_RELATIONS.include?(r.type) }.each{ |relation|
+        if relation.linked_vehicle_ids.any? && relation.linked_services.none?
+          relations << { type: :same_route, linked_ids: relation.linked_vehicle_ids }
+        elsif relation.linked_vehicle_ids.none? && relation.linked_services.any?
+          linked_ids = []
+          relation.linked_services.each{ |linked_service|
+            split_solve_data[:service_vehicle_assignments].any?{ |v_id, v_services|
+              linked_ids << v_id if v_services.include?(linked_service)
+            }
+          }
+          linked_ids.uniq!
+          relations << { type: :same_route, linked_ids: linked_ids } if linked_ids.size > 1
+        else
+          # This shouldn't be possible
+          raise 'Unknown relation case in create_representative_vrp. If there is a new relation, update this function'
+        end
       }
 
       # TODO: The following two "fake" vehicles can have carefully selected start and end points!
@@ -521,7 +557,7 @@ module Interpreters
     end
 
     # TODO: private method, reduce params
-    def self.kmeans_process(nb_clusters, data_items, unit_symbols, limits, options = {}, &block)
+    def self.kmeans_process(nb_clusters, data_items, related_item_indices, limits, options = {}, &block)
       biggest_cluster_size = 0
       clusters = []
       restart = 0
@@ -544,7 +580,11 @@ module Interpreters
         # TODO: move the creation of data_set to the gem side GEM should create it if necessary
         options[:seed] = rand(1234567890) # gem does not initialise the seed randomly
         log "BalancedVRPClustering is launched with seed #{options[:seed]}"
-        c.build(DataSet.new(data_items: c.centroid_indices.empty? ? data_items : data_items.dup), options[:cut_symbol], ratio, options)
+        c.build(DataSet.new(data_items: Marshal.load(Marshal.dump(data_items))),
+                options[:cut_symbol],
+                Oj.load(Oj.dump(related_item_indices)),
+                ratio,
+                options)
 
         c.clusters.delete([])
         values = c.clusters.collect{ |cluster| cluster.data_items.collect{ |i| i[3][options[:cut_symbol]] }.sum.to_i }
@@ -607,7 +647,6 @@ module Interpreters
       if vrp.shipments.all?{ |shipment| shipment&.pickup&.point&.location && shipment&.delivery&.point&.location } &&
          vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
-        unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
 
         if options[:entity] == :work_day || !vrp.matrices.empty?
           vrp.compute_matrix if vrp.matrices.empty?
@@ -627,7 +666,7 @@ module Interpreters
 
         options[:clusters_infos] = collect_cluster_data(vrp, nb_clusters)
 
-        clusters = kmeans_process(nb_clusters, data_items, unit_symbols, limits, options, &block)
+        clusters = kmeans_process(nb_clusters, data_items, related_item_indices, limits, options, &block)
 
         toc = Time.now
 

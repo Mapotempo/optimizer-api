@@ -565,7 +565,7 @@ class SplitClusteringTest < Minitest::Test
       problem[:vehicles] << problem[:vehicles].first.dup
       problem[:vehicles].last[:id] = 'vehicle_1'
       problem[:routes] = [
-        # (1, 2) and (4, 5) are at the same locations without initial routes, they would be in the same vehicles
+        # (1, 2) and (4, 5) are at the same locations; without initial routes, they would end up in the same vehicles,
         # we are forcing them apart with initial routes and check if they stay as such after the split
         { vehicle_id: 'vehicle_0', mission_ids: [1, 4].map{ |s| "service_#{s}" } },
         { vehicle_id: 'vehicle_1', mission_ids: [2, 5].map{ |s| "service_#{s}" } }
@@ -589,9 +589,9 @@ class SplitClusteringTest < Minitest::Test
     def test_max_split_can_handle_empty_vehicles
       # Due to initial solutions, 4 services are on 2 vehicles which leaves 2 services to the remaining 3 vehicles.
       problem = VRP.lat_lon
-      (1..4).each{ |i|
+      4.times{ |i|
         problem[:vehicles] << problem[:vehicles].first.dup
-        problem[:vehicles].last[:id] = "vehicle_#{i}"
+        problem[:vehicles].last[:id] = "vehicle_#{i + 1}"
       }
       problem[:routes] = [
         { vehicle_id: 'vehicle_0', mission_ids: [1, 4].map{ |s| "service_#{s}" } },
@@ -603,7 +603,7 @@ class SplitClusteringTest < Minitest::Test
       Interpreters::SplitClustering.stub(:split_solve_core, lambda{ |service_vrp, _job|
         refute_nil service_vrp[:split_level], 'split_level should have been defined before split_solve_core'
         assert_operator service_vrp[:split_level], :<, 3,
-                        'split_level should not reach 3. Grouping of vehicle points might be the reason'
+                        'Infinite loop?: split_level should not reach 3. Grouping of vehicle points might be the reason'
         assert service_vrp[:split_solve_data][:representative_vrp].points.none?{ |p| p.location.lat.nan? },
                'Empty vehicles should not reach split_solve_core'
         called = true
@@ -622,13 +622,22 @@ class SplitClusteringTest < Minitest::Test
       assert called, 'split_solve_core should have been called'
     end
 
-    def test_which_relations_are_linking
+    def test_which_relations_are_linking_and_forcing
       assert_equal %i[
         order
         same_route
         sequence
         shipment
       ], Interpreters::SplitClustering::LINKING_RELATIONS, 'Linking relation constant has changed'
+
+      assert_equal %i[
+        maximum_day_lapse
+        maximum_duration_lapse
+        meetup
+        minimum_day_lapse
+        minimum_duration_lapse
+        vehicle_trips
+      ], Interpreters::SplitClustering::FORCING_RELATIONS, 'Forcing relation constant has changed'
     end
 
     def test_collect_data_items_respects_linking_relations
@@ -657,6 +666,65 @@ class SplitClusteringTest < Minitest::Test
                                                                           { group_points: true, basic_split: false })
       assert_equal 8, data_items.size, 'Services with linking relations should not be grouped with others'
       assert_equal expected_linked_items, linked_items, 'Linking relations should link data_items together'
+    end
+
+    def test_max_split_can_handle_pud_and_same_route_relations
+      # Services 1 and 2 are at the same location, as Services 4 and 5. And Services 3 and 6 are far away from tjh
+      # With Shipments s1{p:1, d:3}, s2{p:2, d:5}, s3{p:4, d:6}, we test that split does the "right" thing; even if,
+      # it is the "hardest" -- i.e., creating a "costly" split and forcing close points to be on different vehicles.
+      problem = VRP.lat_lon
+      6.times{ |i| # have enough vehicles to see if the relations are respected
+        problem[:vehicles] << problem[:vehicles].first.dup
+        problem[:vehicles].last[:id] = "vehicle_#{i + 1}"
+      }
+
+      # Shipments are only supported as relations
+      problem[:relations] = [
+        { type: :shipment, linked_ids: [1, 3].collect{ |i| "service_#{i}" } },
+        { type: :shipment, linked_ids: [2, 5].collect{ |i| "service_#{i}" } },
+        { type: :same_route, linked_ids: [4, 6].collect{ |i| "service_#{i}" } },
+        { type: :meetup, linked_ids: %w[service_1 service_2] },
+        # { type: :same_route, linked_ids: [1, 2, 4].collect{ |i| "service_#{i}" } }
+        # { type: :vehicle_trips, linked_vehicle_ids: Array.new(7){ |i| "vehicle_#{i}" } },
+      ]
+      needs_to_stay_in_the_same_side = %w[service_1 service_2 service_3 service_5] # shipment + meet_up
+
+      # the split should stop even if there are "two services" (which is actually one shipment)
+      problem[:configuration][:preprocessing][:max_split_size] = 1
+
+      called = false
+      Interpreters::SplitClustering.stub(:split_solve_core, lambda{ |service_vrp, _job|
+        assert_operator service_vrp[:split_level], :<, 3, # infinite loop
+                        'Infinite loop?: split_level should not reach 3. Split should handle linking relations!'
+        called = true
+        Interpreters::SplitClustering.send(:__minitest_stub__split_solve_core, service_vrp) # call original function
+      }) do
+        OptimizerWrapper.stub(:solve, lambda{ |service_vrp, _job, _block| # stub with empty solution
+          vrp = service_vrp[:vrp]
+          # check that only necessary relations are present with all its services
+          assert_equal problem[:relations].count{ |r|
+                         r[:linked_ids]&.any?{ |id| vrp.services.any?{ |s| s.id == id } } ||
+                         r[:linked_vehicle_ids]&.any?{ |id| vrp.vehicles.any?{ |v| v.id == id } }
+                       },
+                       vrp.relations.size,
+                       'Split does not respect relations: missing/extra relations'
+
+          assert_empty vrp.relations.flat_map(&:linked_ids) - vrp.services.collect(&:id),
+                       'Split does not respect relations: missing/extra services'
+
+          assert needs_to_stay_in_the_same_side.all?{ |id| vrp.services.any?{ |s| s.id == id } } ||
+                   needs_to_stay_in_the_same_side.none?{ |id| vrp.services.any?{ |s| s.id == id } },
+                 "#{needs_to_stay_in_the_same_side} should stay on the same subproblem due to relations"
+
+          service = service_vrp[:service]
+          OptimizerWrapper.config[:services][service].detect_unfeasible_services(vrp)
+          OptimizerWrapper.config[:services][service].empty_result(service.to_s, vrp)
+        }) do
+          vrp = TestHelper.create(problem)
+          Interpreters::SplitClustering.split_solve({ service: :ortools, vrp: vrp, dicho_level: 0 })
+        end
+      end
+      assert called, 'split_solve_core should have been called'
     end
 
     def test_ignore_debug_parameter_if_no_coordinates
