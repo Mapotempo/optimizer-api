@@ -2690,50 +2690,26 @@ class WrapperTest < Minitest::Test
     assert_equal 5, unfeasible.size
   end
 
-  def test_repetition
-    solve_call = 0
-    vrp = TestHelper.create(VRP.scheduling)
-    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
-      solve_call += 1
-      { routes: [], unassigned: vrp.services.collect{ |s| s }}
-    }) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-    end
-    assert_equal 1, solve_call # 1 repetition if only periodic
+  def test_default_repetition
+    [[VRP.scheduling, nil, 1],
+     [VRP.scheduling, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 3],
+     [VRP.basic, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 1],
+     [VRP.basic, nil, 1]
+    ].each{ |problem_set|
+      vrp, partition, expected_repetitions = problem_set
 
-    solve_call = 0
-    vrp = TestHelper.create(VRP.scheduling)
-    vrp.preprocessing_partitions = [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }]
-    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
-      solve_call += 1
-      { routes: [], unassigned: vrp.services.collect{ |s| s }}
-    }) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-    end
-    assert_equal 3, solve_call # 3 repetitions if periodic + clustering
-
-    solve_call = 0
-    vrp = TestHelper.create(VRP.scheduling)
-    vrp.preprocessing_partitions = [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }]
-    vrp.preprocessing_first_solution_strategy = nil
-    vrp.resolution_solver = true
-    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
-      solve_call += 1
-      { routes: [], unassigned: vrp.services.collect{ |s| s }}
-    }) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-    end
-    assert_equal 1, solve_call # 1 repetition if only clustering
-
-    solve_call = 0
-    vrp = TestHelper.create(VRP.basic)
-    OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
-      solve_call += 1
-      { routes: [], unassigned: vrp.services.collect{ |s| s }}
-    }) do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-    end
-    assert_equal 1, solve_call # 1 repetition if basic instance
+      solve_call = 0
+      vrp = TestHelper.create(vrp)
+      vrp.preprocessing_partitions = partition
+      OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
+        solve_call += 1
+        { routes: [], unassigned: vrp.services.collect{ |s| s }}
+      }) do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
+      end
+      assert_equal expected_repetitions, solve_call,
+        "#{expected_repetitions} repetitions expected, with#{vrp.preprocessing_partitions ? '' : 'no'} partitions and#{vrp.scheduling? ? '' : 'no'} scheduling"
+    }
   end
 
   def test_skills_independent
@@ -2907,26 +2883,29 @@ class WrapperTest < Minitest::Test
   end
 
   def test_ensure_original_id_provided_if_scheduling_optimization
-    # with scheduling heuristic
-    vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia2')
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    refute_empty result[:unassigned]
-    assert(result[:unassigned].all?{ |un| un[:original_service_id] })
-    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] } })
-    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] != a[:service_id] } })
-    assert(result[:routes].all?{ |route| route[:vehicle_id] && route[:original_vehicle_id] && route[:vehicle_id] != route[:original_vehicle_id] })
+    [['periodic', false], ['savings', true]].each{ |parameters|
+      strategy, solver = parameters
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia2')
+      vrp.preprocessing_first_solution_strategy = [strategy]
+      vrp.resolution_duration = 6000
+      vrp.resolution_solver = solver
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      refute_empty result[:unassigned]
+      assert(result[:unassigned].all?{ |un| un[:original_service_id] })
+      result[:routes].each{ |route|
+        route[:activities].each{ |a|
+          next unless a[:service_id]
 
-    # with ORtools
-    vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia2')
-    vrp.preprocessing_first_solution_strategy = ['savings']
-    vrp.resolution_duration = 6000
-    vrp.resolution_solver = true
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    refute_empty result[:unassigned]
-    assert(result[:unassigned].all?{ |un| un[:original_service_id] })
-    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] } })
-    assert(result[:routes].all?{ |route| route[:activities].all?{ |a| a[:service_id].nil? || a[:original_service_id] != a[:service_id] } })
-    assert(result[:routes].all?{ |route| route[:vehicle_id] && route[:original_vehicle_id] && route[:vehicle_id] != route[:original_vehicle_id] })
+          assert a[:original_service_id], 'Original ID is missing for service'
+          refute_equal(a[:original_service_id], a[:service_id], 'Original ID should not be equal to internal ID')
+        }
+      }
+      result[:routes].each{ |route|
+        assert route[:vehicle_id]
+        assert route[:original_vehicle_id]
+        refute_equal(route[:vehicle_id], route[:original_vehicle_id], 'Original ID should not be equal to internal ID')
+      }
+    }
   end
 
   def test_consistency_between_current_and_total_route_distance
