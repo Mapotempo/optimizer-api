@@ -2936,36 +2936,26 @@ class WrapperTest < Minitest::Test
   end
 
   def test_empty_result_when_no_vehicle
-    vrp = TestHelper.create(VRP.toy)
-    vrp.vehicles = []
-    expected = vrp.visits
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    [VRP.toy, VRP.pud].each{ |vrp|
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = []
+      expected = vrp.visits
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
-    assert_equal expected, result[:unassigned].size # automatically checked within define_process call
+      assert_equal expected, result[:unassigned].size # automatically checked within define_process call
+    }
 
-    vrp = TestHelper.create(VRP.pud)
-    vrp.vehicles = []
-    expected = vrp.visits
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-
-    assert_equal expected, result[:unassigned].size # automatically checked within define_process call
-
-    vrp = VRP.lat_lon_two_vehicles
-    vrp[:services] = []
-    vrp[:rests] = [{
-      id: 'rest_v1'
-    }, {
-      id: 'rest_v2'
-    }]
-    vrp[:vehicles][0][:rest_ids] = 'rest_v1'
-    vrp[:vehicles][1][:rest_ids] = 'rest_v2'
-    expected = vrp[:vehicles].size
+    # ensure timewindows are returned even if they have work day
+    vrp = VRP.scheduling
+    vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
+    vrp[:services][1][:activity][:timewindows] = [{ start: 30, end: 40, day_index: 5 }]
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal expected, result[:unassigned].size
-
-    vrp[:vehicles][0][:rest_ids] = []
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal expected - 1, result[:unassigned].size
+    corresponding_in_route = result[:routes].collect{ |r|
+      r[:activities].find{ |a| a[:original_service_id] == vrp[:services][0][:id] }
+    }.first
+    assert_equal [{ start: 0, end: 10, day_index: 0 }], corresponding_in_route[:detail][:timewindows]
+    corresponding_unassigned = result[:unassigned].find{ |un| un[:original_service_id] == vrp[:services][1][:id] }
+    assert_equal [{ start: 30, end: 40, day_index: 5 }], corresponding_unassigned[:detail][:timewindows]
   end
 
   def test_empty_result_when_no_mission

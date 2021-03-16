@@ -454,10 +454,15 @@ module Wrappers
     end
 
     def build_timewindows(activity, day_index)
-      activity.timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index }.collect{ |timewindow|
+      activity.timewindows.select{ |timewindow|
+        day_index.nil? ||
+          timewindow.day_index.nil? ||
+          timewindow.day_index == day_index
+      }.collect{ |timewindow|
         {
           start: timewindow.start,
-          end: timewindow.end
+          end: timewindow.end,
+          day_index: timewindow.day_index
         }
       }
     end
