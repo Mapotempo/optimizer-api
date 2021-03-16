@@ -305,7 +305,7 @@ module Models
 
     def test_dates_cannot_be_mixed_with_indices
       vrp = VRP.scheduling # contains schedule[:range_indices]
-      vrp[:vehicles].first[:unavailable_work_date] = Date.new(2021, 2, 11)
+      vrp[:vehicles].first[:unavailable_work_date] = [Date.new(2021, 2, 11)]
 
       assert_raises OptimizerWrapper::DiscordantProblemError do
         Models::Vrp.filter(vrp)
