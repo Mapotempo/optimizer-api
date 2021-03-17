@@ -791,43 +791,19 @@ module Interpreters
     end
 
     def self.duplicate_vehicle(vehicle, timewindow, schedule)
-      if timewindow.nil?
-        (0..6).flat_map{ |day|
-          next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
+      (timewindow&.day_index || 0..6).collect{ |day|
+        next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
 
-          vehicle.skills = vehicle.skills.collect{ |sk_set|
-            sk_set | [%w[mon tue wed thu fri sat sun][day]]
-          }
-          new_vehicle = Marshal.load(Marshal.dump(vehicle))
-          new_vehicle.timewindow = Models::Timewindow.new(day_index: day)
-          new_vehicle
-        }
-      elsif timewindow.day_index
-        return [] unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == timewindow.day_index }
-
+        tw = timewindow ? Marshal.load(Marshal.dump(timewindow)) : Models::Timewindow.new({})
+        tw.day_index = day
         vehicle.skills = vehicle.skills.collect{ |sk_set|
-          sk_set | [%w[mon tue wed thu fri sat sun][timewindow.day_index]]
+          sk_set | [%w[mon tue wed thu fri sat sun][day]]
         }
         new_vehicle = Marshal.load(Marshal.dump(vehicle))
-        new_vehicle.timewindow = timewindow
+        new_vehicle.timewindow = tw
         new_vehicle.sequence_timewindows = nil
-        [new_vehicle]
-      elsif timewindow
-        new_vehicles = (0..6).collect{ |day|
-          next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
-
-          tw = Marshal.load(Marshal.dump(timewindow))
-          tw.day_index = day
-          vehicle.skills = vehicle.skills.collect{ |sk_set|
-            sk_set | [%w[mon tue wed thu fri sat sun][day]]
-          }
-          new_vehicle = Marshal.load(Marshal.dump(vehicle))
-          new_vehicle.timewindow = tw
-          new_vehicle.sequence_timewindows = nil
-          new_vehicle
-        }
-        new_vehicles.compact
-      end
+        new_vehicle
+      }.compact
     end
 
     def self.list_vehicles(schedule, vehicles, entity)
