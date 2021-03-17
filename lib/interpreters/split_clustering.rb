@@ -660,7 +660,10 @@ module Interpreters
 
         options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
 
-        raise OptimizerWrapper::UnsupportedProblemError, 'Cannot use balanced kmeans if there are vehicles with alternative skills' if vrp.vehicles.any?{ |v| v[:skills].any?{ |skill| skill.is_a?(Array) } && v[:skills].size > 1 }
+        if vrp.vehicles.any?{ |v| v.skills.count{ |skill| skill.is_a?(Array) && !skill.empty? } > 1 }
+          raise OptimizerWrapper::UnsupportedProblemError.new(
+            'Cannot use balanced kmeans if there are vehicles with alternative skills')
+        end
 
         tic = Time.now
 
