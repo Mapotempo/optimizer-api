@@ -453,10 +453,10 @@ module Models
     def self.detect_date_indices_inconsistency(hash)
       missions_and_vehicles = hash[:services].to_a + hash[:shipments].to_a + hash[:vehicles].to_a
       has_date = missions_and_vehicles.any?{ |m|
-        !(m[:unavailable_date_ranges] || m[:unavailable_work_date]).to_a.empty?
+        (m[:unavailable_date_ranges] || m[:unavailable_work_date])&.any?
       }
       has_index = missions_and_vehicles.any?{ |m|
-        !(m[:unavailable_index_ranges] || m[:unavailable_work_day_indices]).to_a.empty?
+        (m[:unavailable_index_ranges] || m[:unavailable_work_day_indices])&.any?
       }
       if (hash[:configuration][:schedule][:range_indices] && has_date) ||
          (hash[:configuration][:schedule][:range_date] && has_index)
