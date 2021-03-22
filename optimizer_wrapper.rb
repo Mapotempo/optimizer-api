@@ -653,13 +653,17 @@ module OptimizerWrapper
     end
   end
 
-  def self.compute_result_total_dimensions(result)
+  def self.compute_result_total_dimensions_and_round_route_stats(result)
     [:total_time, :total_travel_time, :total_travel_value, :total_distance, :total_waiting_time].each{ |stat_symbol|
       next unless result[:routes].all?{ |r| r[stat_symbol] }
 
       result[stat_symbol] = result[:routes].collect{ |r|
         r[stat_symbol]
       }.reduce(:+)
+    }
+
+    result[:routes].each{ |r|
+      round_route_stats(r)
     }
   end
 
@@ -800,10 +804,8 @@ module OptimizerWrapper
         details = route_details(vrp, r, v) if details.nil?
         r[:geometry] = details.map(&:last) if details
       end
-
-      round_route_stats(r)
     }
-    compute_result_total_dimensions(result)
+    compute_result_total_dimensions_and_round_route_stats(result)
 
     log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.visits}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.visits + 2 * vrp.shipments.size) * 100).round(1)}%)"
     used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }
