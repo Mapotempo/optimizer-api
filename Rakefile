@@ -41,48 +41,18 @@ Rake::TestTask.new do |t|
   t.pattern = 'test/**/*_test.rb'
 end
 
-Rake::TestTask.new(:test_structure) do |t|
-  $stdout.sync = true
-  $stderr.sync = true
-  ENV['APP_ENV'] ||= 'test'
-  t.test_files = ['test/api/**/*_test.rb', 'test/models/**/*_test.rb']
-end
-
 namespace :test do
-  task :api do
-    ENV['COV'] = 'false'
-    ENV['TEST'] ||= 'test/api/**/*_test.rb'
-    Rake::Task['test'].invoke
-  end
+  Rake::TestTask.new(:api){ |t| t.pattern = 'test/api/**/*_test.rb' }
 
-  task :models do
-    ENV['COV'] = 'false'
-    ENV['TEST'] ||= 'test/models/**/*_test.rb'
-    Rake::Task['test'].invoke
-  end
+  Rake::TestTask.new(:model){ |t| t.pattern = 'test/models/**/*_test.rb' }
 
-  task :structure do
-    ENV['COV'] = 'false'
-    Rake::Task['test_structure'].invoke
-  end
+  Rake::TestTask.new(:structure){ |t| t.test_files = ['test/api/**/*_test.rb', 'test/models/**/*_test.rb'] }
 
-  task :lib do
-    ENV['COV'] = 'false'
-    ENV['TEST'] ||= 'test/lib/**/*_test.rb'
-    Rake::Task['test'].invoke
-  end
+  Rake::TestTask.new(:lib){ |t| t.pattern = 'test/lib/**/*_test.rb' }
 
-  task :clustering do
-    ENV['COV'] = 'false'
-    ENV['TEST'] ||= 'test/**/*clustering*_test.rb'
-    Rake::Task['test'].invoke
-  end
+  Rake::TestTask.new(:clustering){ |t| t.pattern = 'test/**/*clustering*_test.rb' }
 
-  task :periodic do
-    ENV['COV'] = 'false'
-    ENV['TEST'] ||= 'test/**/*scheduling*_test.rb'
-    Rake::Task['test'].invoke
-  end
+  Rake::TestTask.new(:periodic){ |t| t.pattern = 'test/**/*scheduling*_test.rb' }
 end
 
 task clean_tmp_dir: :environment do
