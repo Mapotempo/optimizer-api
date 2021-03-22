@@ -17,7 +17,7 @@
 #
 require 'minitest'
 
-if Rake.application.top_level_tasks.include?('test') && (!ENV.key?('COV') && !ENV.key?('COVERAGE')) || (ENV['COV'] != 'false' && ENV['COVERAGE'] != 'false')
+if Rake.application.top_level_tasks.include?('test') && [ENV['COVERAGE'], ENV['COV']].exclude? 'false'
   require 'simplecov'
   SimpleCov.start
 end
