@@ -487,7 +487,7 @@ class HeuristicTest < Minitest::Test
 
       # check generated routes
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Heuristics::Scheduling.new(vrp)
+      s = Wrappers::SchedulingHeuristic.new(vrp)
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:stops].size == expecting.size } })
 
@@ -524,7 +524,7 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.day_index = day.to_i
 
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      scheduling = Heuristics::Scheduling.new(vrp)
+      scheduling = Wrappers::SchedulingHeuristic.new(vrp)
       generated_starting_routes = scheduling.instance_variable_get(:@candidate_routes)
 
       # scheduling initialization uses best order to initialize routes
@@ -652,7 +652,7 @@ class HeuristicTest < Minitest::Test
       assert_equal(['vehicle_1', 'vehicle_2', 'vehicle_3'], vrp.vehicles.collect{ |v| v[:id] })
       assert_equal([1, 2, 3], vrp.vehicles.collect{ |v| v[:global_day_index] })
 
-      s = Heuristics::Scheduling.new(vrp)
+      s = Wrappers::SchedulingHeuristic.new(vrp)
       generated_starting_routes = s.instance_variable_get(:@candidate_routes)
       assert_equal([1, 2, 3], generated_starting_routes['vehicle'].keys)
       assert_equal([200, 300, 400], generated_starting_routes['vehicle'].collect{ |_day, route_data| route_data[:tw_end] }) # correct timewindow was provided
@@ -680,7 +680,7 @@ class HeuristicTest < Minitest::Test
       vrp[:configuration][:preprocessing][:partitions] = nil
       vrp[:vehicles].first[:timewindow] = { start: 0, end: 10000, day_index: 0 }
       vrp[:configuration][:schedule][:range_indices][:end] = 8
-      Heuristics::Scheduling.stub_any_instance(
+      Wrappers::SchedulingHeuristic.stub_any_instance(
         :compute_initial_solution,
         lambda { |vrp_in|
           @starting_time = Time.now
@@ -856,7 +856,7 @@ class HeuristicTest < Minitest::Test
 
       # testing behaviour within scheduling_heuristic
       vrp = TestHelper.create(VRP.scheduling)
-      result = Heuristics::Scheduling.stub_any_instance(
+      result = Wrappers::SchedulingHeuristic.stub_any_instance(
         :compute_initial_solution,
         lambda { |vrp_in|
           vrp.preprocessing_heuristic_result = OptimizerWrapper.config[:services][:ortools].empty_result('heuristic', vrp_in, nil, true)
