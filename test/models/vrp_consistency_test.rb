@@ -32,7 +32,7 @@ module Models
       }]
 
       assert_raises OptimizerWrapper::DiscordantProblemError do
-          TestHelper.create(vrp)
+        TestHelper.create(vrp)
       end
     end
 

@@ -362,4 +362,12 @@ class Api::V01::VrpTest < Minitest::Test
       key =~ /(Content-Type|X-RateLimit-Limit|X-RateLimit-Remaining|X-RateLimit-Reset)/
     }.values
   end
+
+  def test_submit_without_schedule_start_should_break
+    vrp_no_sched_start = VRP.scheduling
+    vrp_no_sched_start[:configuration][:schedule] = { range_indices: { start: 0 } }
+    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp_no_sched_start}.to_json, 'CONTENT_TYPE' => 'application/json'
+    assert_equal 400, last_response.status
+    assert_includes(JSON.parse(last_response.body)['message'], 'vrp[configuration][schedule][range_indices][end] is missing')
+  end
 end

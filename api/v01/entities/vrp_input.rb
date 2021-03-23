@@ -224,13 +224,13 @@ module VrpConfiguration
   end
 
   params :vrp_request_indice_range do
-    optional(:start, type: Integer, desc: 'Beginning of the range')
-    optional(:end, type: Integer, desc: 'End of the range')
+    requires(:start, type: Integer, desc: 'Beginning of the range')
+    requires(:end, type: Integer, desc: 'End of the range')
   end
 
   params :vrp_request_date_range do
-    optional(:start, type: Date, desc: 'Beginning of the range in date format')
-    optional(:end, type: Date, desc: 'End of the range in date format')
+    requires(:start, type: Date, desc: 'Beginning of the range in date format')
+    requires(:end, type: Date, desc: 'End of the range in date format')
   end
 end
 
