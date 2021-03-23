@@ -370,4 +370,34 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal 400, last_response.status
     assert_includes(JSON.parse(last_response.body)['message'], 'vrp[configuration][schedule][range_indices][end] is missing')
   end
+
+  def test_ask_for_geometry
+    [false, true, ['points'], [:polylines], [:polylines, 'partitions'], ['unexistant']].each_with_index{ |geometry_field, case_index|
+      OptimizerWrapper.stub(:define_main_process, lambda { |services_vrps, _job|
+          case case_index
+          when 0
+            assert_empty services_vrps.first[:vrp].restitution_geometry
+          when 1
+            assert_equal %i[points polylines partitions], services_vrps.first[:vrp].restitution_geometry
+          when 2
+            assert_equal %i[points], services_vrps.first[:vrp].restitution_geometry
+          when 3
+            assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
+          when 4
+            assert_equal %i[polylines partitions], services_vrps.first[:vrp].restitution_geometry
+          end
+          {}
+        }
+      ) do
+        vrp = VRP.toy
+        vrp[:configuration][:restitution] = { geometry: geometry_field }
+        if case_index == 5
+          post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+          assert_includes [400], last_response.status
+        else
+          submit_vrp api_key: 'demo', vrp: vrp
+        end
+      end
+    }
+  end
 end

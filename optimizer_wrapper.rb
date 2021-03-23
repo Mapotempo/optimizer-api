@@ -72,11 +72,12 @@ module OptimizerWrapper
 
     Filters.filter(vrp)
 
-    vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.periodic_heuristic?
-      config[:solve][:repetition]
-    else
-      1
-    end
+    vrp.resolution_repetition ||=
+      if !vrp.preprocessing_partitions.empty? && vrp.periodic_heuristic?
+        config[:solve][:repetition]
+      else
+        1
+      end
 
     services_vrps = split_independent_vrp(vrp).map{ |vrp_element|
       {
@@ -98,22 +99,22 @@ module OptimizerWrapper
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new('Cannot apply any of the solver services', inapplicable_services)
-    elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
-      raise DiscordantProblemError, 'Geometry is not available if locations are not defined'
+    elsif vrp.restitution_geometry.any? && !vrp.points.all?(&:location)
+      raise DiscordantProblemError.new('Geometry is not available if locations are not defined')
+    elsif config[:solve][:synchronously] ||
+          (services_vrps.size == 1 &&
+          !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
+      # The job seems easy enough to perform it with the server
+      result = define_main_process(services_vrps, job_id)
+      result.size == 1 ? result.first : result
     else
-      if config[:solve][:synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
-        # The job seems easy enough to perform it with the server
-        result = define_main_process(services_vrps, job_id)
-        (result.size == 1) ? result.first : result
-      else
-        # Delegate the job to a worker
-        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
-                                                       api_key: api_key,
-                                                       checksum: checksum,
-                                                       pids: [])
-        JobList.add(api_key, job_id)
-        job_id
-      end
+      # Delegate the job to a worker
+      job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
+                                                      api_key: api_key,
+                                                      checksum: checksum,
+                                                      pids: [])
+      JobList.add(api_key, job_id)
+      job_id
     end
   end
 
@@ -255,7 +256,10 @@ module OptimizerWrapper
               next unless job
 
               current_result = Result.get(job) || { pids: nil }
-              current_result[:csv] = true if cliqued_vrp[:restitution_csv]
+              current_result[:configuration] = {
+                csv: cliqued_vrp.restitution_csv,
+                geometry: cliqued_vrp.restitution_geometry
+              }
               current_result[:pids] = pids
 
               Result.set(job, current_result)
@@ -287,7 +291,10 @@ module OptimizerWrapper
       Cleanse.cleanse(vrp, optim_result)
 
       optim_result[:name] = vrp.name
-      optim_result[:csv] = true if vrp.restitution_csv
+      optim_result[:configuration] = {
+        csv: vrp.restitution_csv,
+        geometry: vrp.restitution_geometry
+      }
       optim_result[:unassigned] = (optim_result[:unassigned] || []) + unfeasible_services
 
       if vrp.preprocessing_first_solution_strategy
@@ -761,7 +768,7 @@ module OptimizerWrapper
     unless segments.empty?
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
                                                       vehicle.router_mode.to_sym, vehicle.router_dimension,
-                                                      segments, vrp.restitution_geometry_polyline, vehicle.router_options)
+                                                      segments, vrp.restitution_geometry.include?(:polyline), vehicle.router_options)
       raise RouterError.new('Route details cannot be received') unless details
     end
 
@@ -787,7 +794,7 @@ module OptimizerWrapper
     details = compute_route_travel_times(vrp, matrix, route, vehicle)
     compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
 
-    return unless vrp.restitution_geometry && route[:activities].size > 1
+    return unless vrp.restitution_geometry.include?(:polylines) && route[:activities].size > 1
 
     details ||= route_details(vrp, route, vehicle)
     route[:geometry] = details&.map(&:last)

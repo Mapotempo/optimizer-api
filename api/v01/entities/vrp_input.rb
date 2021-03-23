@@ -192,8 +192,9 @@ module VrpConfiguration
   end
 
   params :vrp_request_restitution do
-    optional(:geometry, type: Boolean, desc: 'Allow to return the MultiLineString of each route')
-    optional(:geometry_polyline, type: Boolean, desc: 'Encode the MultiLineString')
+    optional(:geometry, type: Array[Symbol], default: [], coerce_with: ->(value) { GeometryType.type_cast(value) },
+                        desc: 'Specifies which geometry needs to be returned. You can choose among points, polylines and partitions or use boolean to output all or no geometry.')
+    optional(:geometry_polyline, type: Boolean, desc: '[DEPRECATED] Use geometry instead')
     optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
     optional(:csv, type: Boolean, desc: 'The output is a CSV file if you do not specify api format')
     optional(:allow_empty_result, type: Boolean, desc: 'Allow no solution from the solver used')

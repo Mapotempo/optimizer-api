@@ -74,8 +74,7 @@ module Models
     field :resolution_batch_heuristic, default: false
     field :resolution_repetition, default: nil
 
-    field :restitution_geometry, default: false
-    field :restitution_geometry_polyline, default: false
+    field :restitution_geometry, default: []
     field :restitution_intermediate_solutions, default: true
     field :restitution_csv, default: false
     field :restitution_allow_empty_result, default: false
@@ -365,12 +364,29 @@ module Models
       }
     end
 
+    def self.convert_geometry_polylines_to_geometry(hash)
+      return unless hash[:configuration] && hash[:configuration][:restitution]
+
+      if hash[:configuration][:restitution][:geometry_polyline]
+        if hash[:configuration][:restitution][:geometry].is_a?(Array) &&
+           hash[:configuration][:restitution][:geometry].size.positive?
+          raise OptimizerWrapper::DiscordantProblemError.new('Old and new geometry behavior used at the same time')
+        end
+
+        hash[:configuration][:restitution][:geometry] = %i[polylines]
+        hash[:configuration][:restitution].delete(:geometry_polyline)
+      elsif hash[:configuration][:restitution][:geometry] == [:to_fill]
+        hash[:configuration][:restitution][:geometry] = %i[polylines partitions]
+      end
+    end
+
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
       self.deduce_first_solution_strategy(hash)
       self.deduce_minimum_duration(hash)
       self.deduce_solver_parameter(hash)
       self.convert_route_indice_into_index(hash)
+      self.convert_geometry_polylines_to_geometry(hash)
     end
 
     def self.filter(hash)
@@ -579,7 +595,6 @@ module Models
 
     def restitution=(restitution)
       self.restitution_geometry = restitution[:geometry]
-      self.restitution_geometry_polyline = restitution[:geometry_polyline]
       self.restitution_intermediate_solutions = restitution[:intermediate_solutions]
       self.restitution_csv = restitution[:csv]
       self.restitution_allow_empty_result = restitution[:allow_empty_result]
