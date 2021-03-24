@@ -629,16 +629,15 @@ module OptimizerWrapper
 
     total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
     route[:activities].each{ |activity|
-      if activity[:point_id]
-        point = vrp.points.find{ |p| p.id == activity[:point_id] }.matrix_index
-        if previous && point
-          dimensions.each{ |dimension|
-            activity[('travel_' + dimension.to_s).to_sym] = matrix.send(dimension)[previous][point]
-            total[dimension] += activity[('travel_' + dimension.to_s).to_sym].round
-            activity[:current_distance] ||= total[dimension].round if dimension == :distance
-          }
-        end
+      point = vrp.points.find{ |p| p.id == activity[:point_id] }&.matrix_index
+      if previous && point
+        dimensions.each{ |dimension|
+          activity[('travel_' + dimension.to_s).to_sym] = matrix.send(dimension)[previous][point]
+          total[dimension] += activity[('travel_' + dimension.to_s).to_sym].round
+          activity[:current_distance] ||= total[dimension].round if dimension == :distance
+        }
       end
+
       previous = point
     }
 
@@ -745,65 +744,70 @@ module OptimizerWrapper
     previous = nil
     details = nil
     segments = route[:activities].reverse.collect{ |activity|
-      current = nil
-      if activity[:point_id]
-        current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
-      elsif activity[:service_id]
-        current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
-      elsif activity[:pickup_shipment_id]
-        current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
-      elsif activity[:delivery_shipment_id]
-        current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
-      elsif activity[:rest_id]
-        current = previous
-      end
-      segment = if previous && current
-        [current[:location][:lat], current[:location][:lon], previous[:location][:lat], previous[:location][:lon]]
-      end
+      current =
+        if activity[:rest_id]
+          previous
+        else
+          vrp.points.find{ |point| point.id == activity[:point_id] }
+        end
+      segment =
+        if previous && current
+          [current[:location][:lat], current[:location][:lon], previous[:location][:lat], previous[:location][:lon]]
+        end
       previous = current
       segment
     }.reverse.compact
+
     unless segments.empty?
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
-                                                      vehicle[:router_mode].to_sym, vehicle[:router_dimension], segments, vrp.restitution_geometry_polyline, vehicle.router_options)
-      raise RouterError, 'Route details cannot be received' unless details
+                                                      vehicle.router_mode.to_sym, vehicle.router_dimension,
+                                                      segments, vrp.restitution_geometry_polyline, vehicle.router_options)
+      raise RouterError.new('Route details cannot be received') unless details
     end
+
     details&.each{ |d| d[0] = (d[0] / 1000.0).round(4) if d[0] }
     details
   end
 
-  def self.compute_route_distances(vrp, route, vehicle)
+  def self.compute_route_travel_times(vrp, matrix, route, vehicle)
+    return nil unless matrix.distance.nil? && route[:activities].size > 1 && vrp.points.all?(&:location)
+
     details = route_details(vrp, route, vehicle)
 
-    return details unless details.to_a.size.positive?
+    return nil unless details && !details.empty?
 
-    route[:total_distance] = details.map(&:first).compact.reduce(:+).round
     route[:activities][1..-1].each_with_index{ |activity, index|
-      activity[:travel_distance] = details[index].first if details[index]
+      activity[:travel_distance] = details[index]&.first
     }
+
+    details
+  end
+
+  def self.fill_route_missing_data(vrp, route, matrix, vehicle, solvers)
+    details = compute_route_travel_times(vrp, matrix, route, vehicle)
+    compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
+
+    return unless vrp.restitution_geometry && route[:activities].size > 1
+
+    details ||= route_details(vrp, route, vehicle)
+    route[:geometry] = details&.map(&:last)
+  end
+
+  def self.fill_route_totals(vrp, route, matrix)
+    if route[:end_time] && route[:start_time]
+      route[:total_time] = route[:end_time] - route[:start_time]
+    end
+
+    compute_route_total_dimensions(vrp, route, matrix)
   end
 
   def self.parse_result(vrp, result)
     tic_parse_result = Time.now
-    result[:routes].each{ |r|
-      details = nil
-
-      next unless r[:activities].size.positive?
-
-      v = vrp.vehicles.find{ |vehicle| vehicle.id == r[:vehicle_id] }
-      matrix = vrp.matrices.find{ |mat| mat.id == v.matrix_id }
-
-      if matrix.distance.nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
-        details = compute_route_distances(vrp, r, v)
-      end
-
-      compute_route_waiting_times(r) unless r[:activities].empty? || result[:solvers].include?('vroom')
-      compute_route_total_dimensions(vrp, r, matrix)
-
-      if vrp.restitution_geometry && r[:activities].size > 1
-        details = route_details(vrp, r, v) if details.nil?
-        r[:geometry] = details.map(&:last) if details
-      end
+    result[:routes].each{ |route|
+      vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
+      matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
+      fill_route_missing_data(vrp, route, matrix, vehicle, result[:solvers])
+      fill_route_totals(vrp, route, matrix)
     }
     compute_result_total_dimensions_and_round_route_stats(result)
 
