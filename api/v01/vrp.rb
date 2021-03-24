@@ -154,7 +154,8 @@ module Api
             end
 
             solution ||= OptimizerWrapper::Result.get(id) || {}
-            output_format = params[:format]&.to_sym || (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
+            output_format = params[:format]&.to_sym ||
+                            (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
             if job&.completed? # job can still be nil if we have the solution from the dump
@@ -174,7 +175,8 @@ module Api
                   status: job&.status&.to_sym || :completed, # :queued, :working, :completed, :failed
                   avancement: job&.message,
                   graph: solution[:graph]
-                }
+                },
+                geojsons: job.nil? || job.completed? ? OutputHelper::Result.generate_geometry(solution) : nil
               }, with: VrpResult)
             end
             # set nil to release memory because puma keeps the grape api endpoint object alive
@@ -227,7 +229,8 @@ module Api
                       status: :killed,
                       avancement: job.message,
                       graph: solution[:graph]
-                    }
+                    },
+                    geojsons: OutputHelper::Result.generate_geometry(solution)
                   }, with: VrpResult)
                 end
               else

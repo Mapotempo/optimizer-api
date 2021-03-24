@@ -350,4 +350,51 @@ class Api::V01::OutputTest < Minitest::Test
       assert_empty undocumented, "#{undocumented} keys are not documented, found in #{method}"
     }
   end
+
+  def test_geojsons_returned
+    asynchronously start_worker: true do
+      vrp = VRP.lat_lon_scheduling
+      @job_id = submit_vrp api_key: 'demo', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'demo'
+      assert result['geojsons']
+      refute_empty(result['geojsons'].first['points'])
+      assert_empty(result['geojsons'].first['partitions'].to_a + result['geojsons'].first['polylines'].to_a)
+
+      vrp = VRP.lat_lon_scheduling
+      vrp[:configuration][:restitution] = { geometry: [:points] }
+      @job_id = submit_vrp api_key: 'demo', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'demo'
+      assert(result['geojsons'].first.key?('points') && result['geojsons'].first.keys.size == 1)
+      refute_empty(result['geojsons'].first['points'])
+      assert(result['geojsons'].first['points']['features'].all?{ |f| f['properties']['color'] })
+
+      vrp = VRP.lat_lon_scheduling
+      vrp[:configuration][:restitution] = { geometry: [:polylines] }
+      @job_id = submit_vrp api_key: 'demo', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'demo'
+      assert(result['geojsons'].first.key?('polylines'))
+      refute_empty(result['geojsons'].first['polylines'])
+      assert(result['geojsons'].first['polylines']['features'].all?{ |f| f['properties']['color'] })
+
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
+      vrp[:configuration][:restitution] = { geometry: [:partitions] }
+      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'ortools'
+      assert(result['geojsons'].first.key?('partitions'))
+      refute(result['geojsons'].first.key?('polylines'))
+      assert_equal ['vehicle', 'work_day'], result['geojsons'].first['partitions'].keys
+      refute_empty(result['geojsons'].first['partitions']['vehicle'])
+      refute_empty(result['geojsons'].first['partitions']['work_day'])
+      assert(result['geojsons'].first['partitions']['vehicle']['features'].all?{ |f| f['properties']['color'] })
+      assert(result['geojsons'].first['partitions']['work_day']['features'].all?{ |f| f['properties']['color'] })
+
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:preprocessing][:partitions] = [TestHelper.vehicle_and_days_partitions[0]]
+      vrp[:configuration][:restitution] = { geometry: [:partitions] }
+      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'ortools'
+      refute(result['geojsons'].first['partitions'].key?('work_day'))
+    end
+  end
 end

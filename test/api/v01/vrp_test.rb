@@ -244,31 +244,27 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_block_call_under_clustering
-    @job_ids = []
-    asynchronously start_worker: true do
-      vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-      @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      response = wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
+    vrp1 = VRP.lat_lon_scheduling_two_vehicles
+    vrp1[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
-      vrp = VRP.independent_skills
-      vrp[:points] = VRP.lat_lon_scheduling[:points]
-      vrp[:services].first[:skills] = ['D']
-      vrp[:configuration][:preprocessing] = {
-        max_split_size: 4,
-        partitions: [
-          { method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }
-        ]
-      }
-      @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      response = wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
-    end
-
-    @job_ids.each{ |job_id|
-      delete_completed_job job_id, api_key: 'demo'
+    vrp2 = VRP.independent_skills
+    vrp2[:points] = VRP.lat_lon_scheduling[:points]
+    vrp2[:services].first[:skills] = ['D']
+    vrp2[:configuration][:preprocessing] = {
+      max_split_size: 4,
+      partitions: [
+        { method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }
+      ]
     }
+
+    asynchronously start_worker: true do
+      [vrp1, vrp2].each{ |vrp|
+        @job_id = submit_vrp(api_key: 'demo', vrp: vrp)
+        response = wait_status @job_id, 'completed', api_key: 'demo'
+        refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
+        delete_completed_job @job_id, api_key: 'demo'
+      }
+    end
   end
 
   def test_unfounded_avancement_message_change

@@ -110,9 +110,11 @@ module OptimizerWrapper
     else
       # Delegate the job to a worker
       job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
-                                                      api_key: api_key,
-                                                      checksum: checksum,
-                                                      pids: [])
+                                                     api_key: api_key,
+                                                     checksum: checksum,
+                                                     pids: [],
+                                                     configuration: { csv: services_vrps.any?{ |s| s[:vrp].restitution_csv },
+                                                                      geometry: [] })
       JobList.add(api_key, job_id)
       job_id
     end
@@ -768,7 +770,8 @@ module OptimizerWrapper
     unless segments.empty?
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
                                                       vehicle.router_mode.to_sym, vehicle.router_dimension,
-                                                      segments, vrp.restitution_geometry.include?(:polyline), vehicle.router_options)
+                                                      segments, vrp.restitution_geometry.include?(:polyline),
+                                                      vehicle.router_options)
       raise RouterError.new('Route details cannot be received') unless details
     end
 
@@ -776,7 +779,7 @@ module OptimizerWrapper
     details
   end
 
-  def self.compute_route_travel_times(vrp, matrix, route, vehicle)
+  def self.compute_route_travel_distances(vrp, matrix, route, vehicle)
     return nil unless matrix.distance.nil? && route[:activities].size > 1 && vrp.points.all?(&:location)
 
     details = route_details(vrp, route, vehicle)
@@ -791,7 +794,9 @@ module OptimizerWrapper
   end
 
   def self.fill_route_missing_data(vrp, route, matrix, vehicle, solvers)
-    details = compute_route_travel_times(vrp, matrix, route, vehicle)
+    route[:original_vehicle_id] = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }.original_id
+    route[:day] = route[:vehicle_id].split('_').last.to_i unless route[:original_vehicle_id] == route[:vehicle_id]
+    details = compute_route_travel_distances(vrp, matrix, route, vehicle)
     compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
 
     return unless vrp.restitution_geometry.include?(:polylines) && route[:activities].size > 1
