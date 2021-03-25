@@ -112,15 +112,14 @@ module Api
               ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.profile(api_key), vrp, checksum)
               count_incr :optimize, transactions: vrp.transactions
               if ret.is_a?(String)
-                # present result, with: VrpResult
                 status 201
-                present({ job: { id: ret, status: :queued }}, with: Grape::Presenters::Presenter)
+                present({ job: { id: ret, status: :queued }}, with: VrpResult)
               elsif ret.is_a?(Hash)
                 status 200
                 if vrp.restitution_csv
-                  present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
+                  present(OptimizerWrapper.build_csv(ret), type: CSV)
                 else
-                  present({ solutions: [ret], job: { status: :completed }}, with: Grape::Presenters::Presenter)
+                  present({ solutions: [ret], job: { status: :completed }}, with: VrpResult)
                 end
               else
                 error!('Internal Server Error', 500)
@@ -155,7 +154,7 @@ module Api
             end
 
             solution ||= OptimizerWrapper::Result.get(id) || {}
-            output_format = params[:format]&.to_sym || ((solution && solution['csv']) ? :csv : env['api.format'])
+            output_format = params[:format]&.to_sym || ((solution && solution[:csv]) ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
             if job&.completed? # job can still be nil if we have the solution from the dump
@@ -166,17 +165,17 @@ module Api
             status 200
 
             if output_format == :csv && (job.nil? || job.completed?) # At this step, if the job is nil then it has already been retrieved into the result store
-              present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+              present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
             else
               present({
-                solutions: [solution['result']].flatten(1),
+                solutions: [solution[:result]].flatten(1),
                 job: {
                   id: id,
                   status: job&.status&.to_sym || :completed, # :queued, :working, :completed, :failed
                   avancement: job&.message,
-                  graph: solution['graph']
+                  graph: solution[:graph]
                 }
-              }, with: Grape::Presenters::Presenter)
+              }, with: VrpResult)
             end
             # set nil to release memory because puma keeps the grape api endpoint object alive
             stored_result = nil # rubocop:disable Lint/UselessAssignment
@@ -217,19 +216,19 @@ module Api
               solution = OptimizerWrapper::Result.get(id)
               status 202
               if solution && !solution.empty?
-                output_format = params[:format]&.to_sym || (solution['csv'] ? :csv : env['api.format'])
+                output_format = params[:format]&.to_sym || (solution[:csv] ? :csv : env['api.format'])
                 if output_format == :csv
-                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+                  present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
                 else
                   present({
-                    solutions: [solution['result']],
+                    solutions: [solution[:result]],
                     job: {
                       id: id,
                       status: :killed,
                       avancement: job.message,
-                      graph: solution['graph']
+                      graph: solution[:graph]
                     }
-                  }, with: Grape::Presenters::Presenter)
+                  }, with: VrpResult)
                 end
               else
                 present({
@@ -237,7 +236,7 @@ module Api
                     id: id,
                     status: :killed,
                   }
-                }, with: Grape::Presenters::Presenter)
+                }, with: VrpResult)
               end
               OptimizerWrapper.job_remove(params[:api_key], id)
             end
