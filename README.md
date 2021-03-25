@@ -1,4 +1,5 @@
-# Mapotempo Optimizer API [![Build Status](https://travis-ci.com/Mapotempo/optimizer-api.svg?branch=master)](https://travis-ci.com/Mapotempo/optimizer-api)
+# Mapotempo Optimizer API ![Build Status](https://github.com/Mapotempo/optimizer-api/actions/workflows/main.yml/badge.svg?branch=master)
+
 
 Run an optimizer REST API depending of many contraints for a Vehicle Routing Problem (VRP).
 
@@ -123,5 +124,5 @@ If you want to run only one specific test (let's say test_instance_clustered tes
 APP_ENV=test bundle exec rake test TESTOPTS="--name=test_instance_clustered"
 ```
 
-# Travis
-To test on travis with a optimizer-ortools different than the latest version, specify in your travis configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you travis owner nick.
+# Github Actions
+To test on Github Actions with a optimizer-ortools different than the latest version, specify in your Actions configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you github owner nick.
