@@ -791,7 +791,8 @@ module Interpreters
     end
 
     def self.duplicate_vehicle(vehicle, timewindow, schedule)
-      (timewindow&.day_index || 0..6).collect{ |day|
+      available_days = timewindow&.day_index ? [timewindow.day_index] : (0..6).to_a
+      available_days.collect{ |day|
         next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
 
         tw = timewindow ? Marshal.load(Marshal.dump(timewindow)) : Models::Timewindow.new({})
