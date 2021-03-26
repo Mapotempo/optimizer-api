@@ -43,6 +43,7 @@ var displaySolution = function (jobId, solution, options) {
   var jsonData = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(solution));
   $('#optim-infos').append(' - <a download="result_' + jobId + '.json" href="' + jsonData + '">' + i18n.downloadJSON + '</a>');
   $('#optim-infos').append(' - <a download="result_' + jobId + '.csv" href="' + csv + '">' + i18n.downloadCSV + '</a>');
+  $('#optim-infos').append(' - <a href="/result.html?api_key=' + getParams()['api_key'] + '&job_id=' + jobId + '">Visualiser les résultats</a>')
 
   if (options && options.downloadButton) {
     downloadButton(jobId, csv);

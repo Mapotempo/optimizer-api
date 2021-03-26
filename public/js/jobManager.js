@@ -14,6 +14,10 @@ function buildDownloadLink(jobId, state) {
     + '" href="' + url + '">' + msg + '</a>';
 }
 
+function buildResultLink(jobId) {
+  return '<a href="/result.html?api_key=' + getParams()['api_key'] + '&job_id=' + jobId + '" target="_blank">Visualiser les résultats</a>'
+}
+
 var jobsManager = {
   jobs: [],
   htmlElements: {
@@ -41,8 +45,9 @@ var jobsManager = {
           + '<button value=' + currentJob.uuid + ' data-role="delete">'
           + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18n.killOptim : i18n.deleteOptim)
           + '</button>'
-          + ' (Status: ' + i18n[currentJob.status] + completedDate + ')'
+          + ' (Status: ' + currentJob.status + completedDate + ')'
           + (donwloadBtn ? buildDownloadLink(currentJob.uuid, currentJob.status) : '')
+          + (currentJob.status === 'completed' ? ' - ' + buildResultLink(currentJob.uuid) : '')
           + '</div>';
 
         $('#jobs-list').append(jobDOM);
