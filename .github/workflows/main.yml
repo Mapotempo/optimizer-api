@@ -2,6 +2,8 @@ name: Docker Image CI
 
 on:
   push:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 env:
   NB_SERVICES: ${{ secrets.NB_SERVICES }}
@@ -13,6 +15,7 @@ env:
 jobs:
   test_basis:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       OPTIONS: "COV=false LOG_LEVEL=info SKIP_DICHO=true SKIP_REAL_CASES=true SKIP_SCHEDULING=true SKIP_SPLIT_CLUSTERING=true"
     steps:
@@ -32,6 +35,7 @@ jobs:
 
   test_dicho:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/dichotomious_test.rb"
     steps:
@@ -51,6 +55,7 @@ jobs:
 
   test_real:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_test.rb"
     steps:
@@ -70,6 +75,7 @@ jobs:
 
   test_real_scheduling:
       runs-on: ubuntu-latest
+      timeout-minutes: 30
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_scheduling_test.rb"
       steps:
@@ -89,6 +95,7 @@ jobs:
 
   test_real_scheduling_solver:
       runs-on: ubuntu-latest
+      timeout-minutes: 20
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_scheduling_solver_test.rb"
       steps:
@@ -108,6 +115,7 @@ jobs:
 
   test_scheduling:
       runs-on: ubuntu-latest
+      timeout-minutes: 5
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/scheduling_*"
       steps:
@@ -127,6 +135,7 @@ jobs:
 
   test_split_clustering:
       runs-on: ubuntu-latest
+      timeout-minutes: 15
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/interpreters/split_clustering_test.rb"
       steps:
