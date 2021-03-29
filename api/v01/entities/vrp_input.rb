@@ -166,10 +166,10 @@ module VrpConfiguration
 
   params :vrp_request_resolution do
     optional(:duration, type: Integer, allow_blank: false, desc: 'Maximum duration of resolution')
-    optional(:iterations, type: Integer, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvment from the best solution already found')
-    optional(:stable_iterations, type: Integer, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
-    optional(:stable_coefficient, type: Float, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:stable_iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:stable_coefficient, type: Float, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:initial_time_out, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: '[ DEPRECATED : use minimum_duration instead]')
     optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
@@ -194,7 +194,7 @@ module VrpConfiguration
   params :vrp_request_restitution do
     optional(:geometry, type: Array[Symbol], default: [], coerce_with: ->(value) { GeometryType.type_cast(value) },
                         desc: 'Specifies which geometry needs to be returned. You can choose among points, polylines and partitions or use boolean to output all or no geometry.')
-    optional(:geometry_polyline, type: Boolean, desc: '[DEPRECATED] Use geometry instead')
+    optional(:geometry_polyline, type: Boolean, documentation: { hidden: true }, desc: '[DEPRECATED] Use geometry instead')
     optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
     optional(:csv, type: Boolean, desc: 'The output is a CSV file if you do not specify api format')
     optional(:allow_empty_result, type: Boolean, desc: 'Allow no solution from the solver used')
@@ -530,7 +530,7 @@ module VrpVehicles
     optional(:cost_value_multiplier, type: Float, desc: 'Multiplier applied to the value matrix and additional activity value. Not taken into account within periodic heuristic.')
     optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route. Not taken into account within periodic heuristic.')
     optional(:cost_late_multiplier, type: Float, desc: 'Cost applied if a point is delivered late (ORtools only). Not taken into account within periodic heuristic.')
-    optional(:cost_setup_time_multiplier, type: Float, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:cost_setup_time_multiplier, type: Float, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
   end
 
   params :vehicle_model_related do
