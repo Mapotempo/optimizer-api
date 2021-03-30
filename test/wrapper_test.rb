@@ -2690,6 +2690,48 @@ class WrapperTest < Minitest::Test
     assert_equal 5, unfeasible.size
   end
 
+  def test_add_unassigned_respects_relations
+    assert_equal %i[shipment sequence meetup].sort, Wrappers::Wrapper::ALL_OR_NONE_RELATIONS.sort
+
+    problem = VRP.lat_lon
+    service_zero = Oj.load(Oj.dump(problem[:services].first))
+    service_zero[:id] = 'service_0'
+    problem[:services].insert(0, service_zero)
+    services_demo = OptimizerWrapper.config[:services][:demo]
+
+    # no relation
+    vrp = TestHelper.create(problem)
+    assert_equal 1, services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason').size
+
+    # all 7 services in one relation type become unfeasible at the same time
+    Wrappers::Wrapper::ALL_OR_NONE_RELATIONS.each{ |relation_type|
+      problem[:relations] = [{ type: relation_type, linked_ids: problem[:services].collect{ |s| s[:id] } }]
+      vrp = TestHelper.create(problem)
+      assert_equal 7, services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason').size
+    }
+
+    # 2 services in shipment, 2 in meetup, which are connected by sequence becomes unfeasible at the same time
+    problem[:relations] = [
+      { type: :shipment, linked_ids: problem[:services][0..1].collect{ |s| s[:id] } },
+      { type: :meetup, linked_ids: problem[:services][2..3].collect{ |s| s[:id] } },
+      { type: :sequence, linked_ids: [0, 2].collect{ |s| problem[:services][s][:id] } },
+      { type: :shipment, linked_ids: problem[:services][5..6].collect{ |s| s[:id] } },
+    ]
+    vrp = TestHelper.create(problem)
+    assert_equal 2, services_demo.add_unassigned([], vrp, vrp[:services][5], 'reason').size # only 1 shipment
+    unassigned = services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason') # shipment + meetup
+    assert_equal 4, unassigned.size
+    in_relation_msg = 'In a relation with an unfeasible service: '
+    expected_reasons = { service_0: 'reason', service_1: "#{in_relation_msg}service_0",
+                         service_2: "#{in_relation_msg}service_0", service_3: "#{in_relation_msg}service_2" }
+    assert_equal expected_reasons, unassigned.collect{ |u| [u[:service_id], u[:reason]] }.to_h.symbolize_keys
+
+    # add more unassigned
+    assert_equal 6, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'reason').size
+    expected_reasons[:service_5], expected_reasons[:service_6] = 'reason', "#{in_relation_msg}service_5"
+    assert_equal expected_reasons, unassigned.collect{ |u| [u[:service_id], u[:reason]] }.to_h.symbolize_keys
+  end
+
   def test_default_repetition
     [[VRP.scheduling, nil, 1],
      [VRP.scheduling, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 3],

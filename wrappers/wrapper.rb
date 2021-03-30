@@ -605,7 +605,31 @@ module Wrappers
       unfeasible
     end
 
+    ALL_OR_NONE_RELATIONS = %i[shipment sequence meetup].freeze
     def add_unassigned(unfeasible, vrp, service, reason)
+      # calls add_unassigned_internal for every service in an "ALL_OR_NONE_RELATION" with the service
+      service_already_marked_unfeasible = unfeasible.any?{ |un| un[:original_service_id] == service.id }
+
+      unless service_already_marked_unfeasible && reason.start_with?('In a relation with an unfeasible service: ')
+        add_unassigned_internal(unfeasible, vrp, service, reason)
+      end
+
+      unless service_already_marked_unfeasible
+        service.relations.each{ |relation|
+          next unless ALL_OR_NONE_RELATIONS.include?(relation.type)
+
+          relation.linked_services&.each{ |service_in|
+            next if service_in == service
+
+            add_unassigned(unfeasible, vrp, service_in, "In a relation with an unfeasible service: #{service.id}")
+          }
+        }
+      end
+
+      unfeasible
+    end
+
+    def add_unassigned_internal(unfeasible, vrp, service, reason)
       if unfeasible.any?{ |unfeas| unfeas[:original_service_id] == service[:id] }
         # we update reason to have more details
         unfeasible.each{ |unfeas|
