@@ -304,6 +304,7 @@ module Models
     end
 
     def test_dates_cannot_be_mixed_with_indices
+      skip 'This should not be skipped after https://gitlab.com/mapotempo/optimizer-api/-/issues/705 is done'
       vrp = VRP.scheduling # contains schedule[:range_indices]
       vrp[:vehicles].first[:unavailable_work_date] = [Date.new(2021, 2, 11)]
 

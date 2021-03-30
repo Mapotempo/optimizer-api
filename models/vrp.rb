@@ -460,9 +460,11 @@ module Models
       }
       if (hash[:configuration][:schedule][:range_indices] && has_date) ||
          (hash[:configuration][:schedule][:range_date] && has_index)
-        raise OptimizerWrapper::DiscordantProblemError.new(
-          'Date intervals are not compatible with schedule range indices'
-        )
+        log 'Dates and day indices used at the same time', level: :warn
+        # TODO : replace by raise when customers are ready
+        # raise OptimizerWrapper::DiscordantProblemError.new(
+        #   'Date intervals are not compatible with schedule range indices'
+        # )
       end
     end
 
