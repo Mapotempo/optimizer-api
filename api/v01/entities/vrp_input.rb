@@ -193,7 +193,7 @@ module VrpConfiguration
 
   params :vrp_request_restitution do
     optional(:geometry, type: Array[Symbol], default: [], coerce_with: ->(value) { GeometryType.type_cast(value) },
-                        desc: 'Specifies which geometry needs to be returned. You can choose among points, polylines and partitions or use boolean to output all or no geometry.')
+                        desc: 'Specifies the geometry structures to be returned. Can be a subset of `[polylines, partitions]` or a boolean value to output all or no geometry.')
     optional(:geometry_polyline, type: Boolean, documentation: { hidden: true }, desc: '[DEPRECATED] Use geometry instead')
     optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
     optional(:csv, type: Boolean, desc: 'The output is a CSV file if you do not specify api format')
@@ -281,7 +281,7 @@ module VrpMisc
     optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
     optional(:speed_multiplier, type: Float, default: 1.0, desc: 'multiply the current modality speed, default : 1.0')
     optional(:skills, type: Array[Symbol],
-                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map(&:to_sym) : val.map(&:to_sym) },
+                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val.map(&:to_sym) },
                       desc: 'Particular abilities required by a vehicle to perform this subtour')
     optional(:duration, type: Integer, desc: 'Maximum subtour duration')
     optional(:transmodal_stops, type: Array, desc: 'Point where the vehicles can park and start the subtours') do
@@ -294,7 +294,7 @@ module VrpMisc
   end
 
   params :vrp_request_zone do
-    requires(:id, type: String, allow_blank: false, desc: '')
+    requires(:id, type: Symbol, allow_blank: false, desc: '')
     requires(:polygon, type: Hash, desc: 'Geometry which describes the area')
     optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle or vehicles combination the zone could be served')
   end
@@ -330,7 +330,7 @@ module VrpMissions
     optional(:maximum_lapse, type: Float, desc: '(Scheduling only) Maximum day lapse between two visits')
     optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:skills, type: Array[Symbol],
-                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map(&:to_sym) : val.map(&:to_sym) },
+                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val.map(&:to_sym) },
                       desc: 'Particular abilities required by a vehicle to perform this service. Not available with periodic heuristic.')
 
     optional(:type, type: Symbol, desc: '`service`, `pickup` or `delivery`. Only service type is available with periodic heuristic.')
@@ -377,7 +377,7 @@ module VrpMissions
     optional(:maximum_inroute_duration, type: Integer, desc: 'Maximum in route duration of this particular shipment (Must be feasible !)')
     optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:skills, type: Array[Symbol],
-                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map(&:to_sym) : val.map(&:to_sym) },
+                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val.map(&:to_sym) },
                       desc: 'Particular abilities required by a vehicle to perform this shipment')
     requires(:pickup, type: Hash, allow_blank: false, desc: 'Activity of collection') do
       use :vrp_request_activity
@@ -499,7 +499,7 @@ module VrpVehicles
     optional :skills, type: Array[Array[Symbol]],
                       coerce_with: ->(val) {
                         val.is_a?(String) ?
-                        [val.split(/,/).map(&:strip).map(&:to_sym)] :
+                        [val.split(/,/).map!(&:strip).map!(&:to_sym)] :
                         val.map{ |set| set.map(&:to_sym) }
                       }, # TODO : Create custom coerce to consider multiple alternatives
                       desc: 'Particular abilities which could be handle by the vehicle. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]. Not available with periodic heuristic.'

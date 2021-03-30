@@ -265,16 +265,17 @@ module Models
     end
 
     def self.ensure_no_conflicting_skills(hash)
-      all_skills = [hash[:vehicles], hash[:services], hash[:shipments]].compact.flatten.collect{ |mission|
+      all_skills = (hash[:vehicles].to_a + hash[:services].to_a + hash[:shipments].to_a).flat_map{ |mission|
         mission[:skills]
-      }.compact.flatten.uniq
+      }.compact.uniq
 
       return unless ['vehicle_partition_', 'work_day_partition_'].any?{ |str|
-        all_skills.any?{ |skill| skill.to_s.include?(str) }
+        all_skills.any?{ |skill| skill.to_s.start_with?(str) }
       }
 
-      raise OptimizerWrapper::DiscordantProblemError.new(
-        'Skills match with internal skills format, this might produce an error')
+      raise OptimizerWrapper::UnsupportedProblemError.new(
+        "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. These skill patterns are reserved for internal use and they would lead to unexpected behaviour."
+      )
     end
 
     def self.expand_data(vrp)
@@ -282,8 +283,7 @@ module Models
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
-      vrp.provide_original_ids
-      vrp.provide_original_skills
+      vrp.provide_original_info
     end
 
     def self.convert_position_relations(hash)

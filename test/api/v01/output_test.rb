@@ -75,13 +75,16 @@ class Api::V01::OutputTest < Minitest::Test
   end
 
   def test_returned_skills
-    vrp = VRP.basic
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 }}
     vrp[:vehicles].first[:skills] = [['skill_to_output']]
     vrp[:services].first[:skills] = ['skill_to_output']
 
     response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)['solutions'].first
-    activities = result['routes'].collect{ |r| r['activities'] }.flatten
+    activities = result['routes'].flat_map{ |r| r['activities'] }
+    assert(activities.any?{ |a| a['detail'] && a['detail']['skills'].to_a.size < 2 })
     assert(activities.any?{ |a| a['detail'] && a['detail']['skills'].to_a.include?('skill_to_output') })
   end
 
@@ -356,36 +359,17 @@ class Api::V01::OutputTest < Minitest::Test
       vrp = VRP.lat_lon_scheduling
       @job_id = submit_vrp api_key: 'demo', vrp: vrp
       result = wait_status @job_id, 'completed', api_key: 'demo'
-      assert result['geojsons']
+      # points should always be returned
       refute_empty(result['geojsons'].first['points'])
       assert_empty(result['geojsons'].first['partitions'].to_a + result['geojsons'].first['polylines'].to_a)
 
-      vrp = VRP.lat_lon_scheduling
-      vrp[:configuration][:restitution] = { geometry: [:points] }
-      @job_id = submit_vrp api_key: 'demo', vrp: vrp
-      result = wait_status @job_id, 'completed', api_key: 'demo'
-      assert(result['geojsons'].first.key?('points') && result['geojsons'].first.keys.size == 1)
-      refute_empty(result['geojsons'].first['points'])
-      assert(result['geojsons'].first['points']['features'].all?{ |f| f['properties']['color'] })
-
-      vrp = VRP.lat_lon_scheduling
-      vrp[:configuration][:restitution] = { geometry: [:polylines] }
-      @job_id = submit_vrp api_key: 'demo', vrp: vrp
-      result = wait_status @job_id, 'completed', api_key: 'demo'
-      assert(result['geojsons'].first.key?('polylines'))
-      refute_empty(result['geojsons'].first['polylines'])
-      assert(result['geojsons'].first['polylines']['features'].all?{ |f| f['properties']['color'] })
-
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-      vrp[:configuration][:restitution] = { geometry: [:partitions] }
+      vrp[:configuration][:restitution] = { geometry: [:polylines, :partitions] }
       @job_id = submit_vrp api_key: 'ortools', vrp: vrp
       result = wait_status @job_id, 'completed', api_key: 'ortools'
-      assert(result['geojsons'].first.key?('partitions'))
-      refute(result['geojsons'].first.key?('polylines'))
+      assert(result['geojsons'].first['polylines']['features'].all?{ |f| f['properties']['color'] })
       assert_equal ['vehicle', 'work_day'], result['geojsons'].first['partitions'].keys
-      refute_empty(result['geojsons'].first['partitions']['vehicle'])
-      refute_empty(result['geojsons'].first['partitions']['work_day'])
       assert(result['geojsons'].first['partitions']['vehicle']['features'].all?{ |f| f['properties']['color'] })
       assert(result['geojsons'].first['partitions']['work_day']['features'].all?{ |f| f['properties']['color'] })
 

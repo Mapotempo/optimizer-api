@@ -17,8 +17,11 @@
 #
 
 class GeometryType
+  ALL_TYPES = %i[polylines partitions].freeze
+
   def self.type_cast(value)
-    all_types = %i[points polylines partitions]
+    value = value.split(',') if value.is_a?(String)
+
     if value.is_a?(FalseClass)
       []
     elsif value.is_a?(TrueClass)
@@ -26,7 +29,7 @@ class GeometryType
     elsif value.is_a?(Array)
       to_return = []
       value.each{ |geometry_type|
-        unless all_types.include?(geometry_type.to_sym)
+        unless ALL_TYPES.include?(geometry_type.to_sym)
           raise ArgumentError.new("Invalid geometry value : #{geometry_type}")
         end
 

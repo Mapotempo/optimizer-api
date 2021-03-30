@@ -176,7 +176,7 @@ module Api
                   avancement: job&.message,
                   graph: solution[:graph]
                 },
-                geojsons: job.nil? || job.completed? ? OutputHelper::Result.generate_geometry(solution) : nil
+                geojsons: OutputHelper::Result.generate_geometry(solution)
               }, with: VrpResult)
             end
             # set nil to release memory because puma keeps the grape api endpoint object alive

@@ -368,19 +368,20 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_ask_for_geometry
-    [false, true, ['points'], [:polylines], [:polylines, 'partitions'], ['unexistant']].each_with_index{ |geometry_field, case_index|
+    [false, true, # boolean
+     ['polylines'], [:polylines], [:polylines, 'partitions'], ['unexistant'], # array of string or symbol
+     'partitions', 'polylines,partitions' # string to be converted into an array
+    ].each_with_index{ |geometry_field, case_index|
       OptimizerWrapper.stub(:define_main_process, lambda { |services_vrps, _job|
           case case_index
           when 0
             assert_empty services_vrps.first[:vrp].restitution_geometry
-          when 1
-            assert_equal %i[points polylines partitions], services_vrps.first[:vrp].restitution_geometry
-          when 2
-            assert_equal %i[points], services_vrps.first[:vrp].restitution_geometry
-          when 3
-            assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
-          when 4
+          when 1 || 4 || 7
             assert_equal %i[polylines partitions], services_vrps.first[:vrp].restitution_geometry
+          when 2 || 3
+            assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
+          when 6
+            assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
           end
           {}
         }

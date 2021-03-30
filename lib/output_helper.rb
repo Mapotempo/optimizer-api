@@ -108,20 +108,22 @@ module OutputHelper
 
         geojson[:partitions] = generate_partitions_geometry(result) if expected_geometry.include?(:partitions)
         geojson[:points] = generate_points_geometry(result)
-        geojsons[:polylines] = generate_polylines_geometry(result) if expected_geometry.include?(:polylines)
+        geojson[:polylines] = generate_polylines_geometry(result) if expected_geometry.include?(:polylines)
         geojson
       }
     end
 
-    def self.generate_partitions_geometry(result)
-      activities = result[:routes].collect{ |r|
-        r[:activities].select{ |a| a[:type] != 'depot' && a[:type] != 'rest' }
-      }.flatten
-      elements = activities + result[:unassigned]
-      all_skills = elements.collect{ |a| a[:detail][:internal_skills] }.flatten.uniq
+    private
 
-      has_vehicle_partition = all_skills.any?{ |skill| skill.to_s.include?('vehicle_partition_') }
-      has_work_day_partition = all_skills.any?{ |skill| skill.to_s.include?('work_day_partition_') }
+    def self.generate_partitions_geometry(result)
+      activities = result[:routes].flat_map{ |r|
+        r[:activities].select{ |a| a[:type] != 'depot' && a[:type] != 'rest' }
+      }
+      elements = activities + result[:unassigned]
+      all_skills = elements.flat_map{ |a| a[:detail][:internal_skills] }.uniq
+
+      has_vehicle_partition = all_skills.any?{ |skill| skill.to_s.start_with?('vehicle_partition_') }
+      has_work_day_partition = all_skills.any?{ |skill| skill.to_s.start_with?('work_day_partition_') }
       return unless has_vehicle_partition || has_work_day_partition
 
       partitions = {}
@@ -141,9 +143,9 @@ module OutputHelper
     def self.draw_cluster(elements, entity)
       polygons = elements.group_by{ |element|
         entity == :vehicle ?
-                  [element[:detail][:internal_skills].find{ |sk| sk.to_s.include?('vehicle_partition_') }] :
-                  [element[:detail][:internal_skills].find{ |sk| sk.to_s.include?('work_day_partition_') },
-                   element[:detail][:skills].find{ |sk| sk.include?('cluster ') }]
+        [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('vehicle_partition_') }] :
+        [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('work_day_partition_') },
+         element[:detail][:skills].find{ |sk| sk.start_with?('cluster ') }]
       }.collect.with_index{ |data, cluster_index|
         cluster_skill, partition_items = data
         collect_basic_hulls(partition_items.collect{ |item| item[:detail] }, entity, cluster_index, cluster_skill)
@@ -159,7 +161,7 @@ module OutputHelper
       if entity == :vehicle
         @colors[cluster_index % @colors.size]
       else
-        day = elements.first[:internal_skills].find{ |skill| skill.include?('work_day_partition_') }.split('_').last
+        day = elements.first[:internal_skills].find{ |skill| skill.start_with?('work_day_partition_') }.split('_').last
         index = OptimizerWrapper::WEEKDAYS.find_index(day.to_sym)
         @colors[index]
       end
@@ -182,7 +184,7 @@ module OutputHelper
       hull = Hull.get_hull(vector)
       return nil if hull.nil?
 
-      quantities = elements.collect{ |e| e[:quantities] }.flatten.group_by{ |qty| qty[:unit] }.collect{ |unit_id, qties|
+      quantities = elements.flat_map{ |e| e[:quantities] }.group_by{ |qty| qty[:unit] }.collect{ |unit_id, qties|
         {
           unit_id: unit_id,
           value: qties.sum{ |qty| qty[:value] || 0 }
@@ -207,6 +209,10 @@ module OutputHelper
     end
 
     def self.generate_points_geometry(result)
+      return nil unless (result[:unassigned].empty? || result[:unassigned].any?{ |un| un[:detail][:lat] }) &&
+                        (result[:routes].all?{ |r| r[:activities].empty? } ||
+                         result[:routes].any?{ |r| r[:activities].any?{ |a| a[:detail] && a[:detail][:lat] } })
+
       points = []
 
       result[:unassigned].each{ |unassigned|

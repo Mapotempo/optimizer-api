@@ -101,9 +101,11 @@ module OptimizerWrapper
       raise UnsupportedProblemError.new('Cannot apply any of the solver services', inapplicable_services)
     elsif vrp.restitution_geometry.any? && !vrp.points.all?(&:location)
       raise DiscordantProblemError.new('Geometry is not available if locations are not defined')
-    elsif config[:solve][:synchronously] ||
-          (services_vrps.size == 1 &&
-          !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
+    elsif config[:solve][:synchronously] || (
+            services_vrps.size == 1 &&
+            !vrp.preprocessing_cluster_threshold &&
+            config[:services][services_vrps[0][:service]].solve_synchronous?(vrp)
+          )
       # The job seems easy enough to perform it with the server
       result = define_main_process(services_vrps, job_id)
       result.size == 1 ? result.first : result
@@ -641,8 +643,8 @@ module OptimizerWrapper
       point = vrp.points.find{ |p| p.id == activity[:point_id] }&.matrix_index
       if previous && point
         dimensions.each{ |dimension|
-          activity[('travel_' + dimension.to_s).to_sym] = matrix.send(dimension)[previous][point]
-          total[dimension] += activity[('travel_' + dimension.to_s).to_sym].round
+          activity["travel_#{dimension}".to_sym] = matrix.send(dimension)[previous][point]
+          total[dimension] += activity["travel_#{dimension}".to_sym].round
           activity[:current_distance] ||= total[dimension].round if dimension == :distance
         }
       end
@@ -793,24 +795,23 @@ module OptimizerWrapper
     details
   end
 
-  def self.fill_route_missing_data(vrp, route, matrix, vehicle, solvers)
+  def self.fill_missing_route_data(vrp, route, matrix, vehicle, solvers)
     route[:original_vehicle_id] = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }.original_id
     route[:day] = route[:vehicle_id].split('_').last.to_i unless route[:original_vehicle_id] == route[:vehicle_id]
     details = compute_route_travel_distances(vrp, matrix, route, vehicle)
     compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
 
-    return unless vrp.restitution_geometry.include?(:polylines) && route[:activities].size > 1
-
-    details ||= route_details(vrp, route, vehicle)
-    route[:geometry] = details&.map(&:last)
-  end
-
-  def self.fill_route_totals(vrp, route, matrix)
     if route[:end_time] && route[:start_time]
       route[:total_time] = route[:end_time] - route[:start_time]
     end
 
     compute_route_total_dimensions(vrp, route, matrix)
+
+    return unless vrp.restitution_geometry.include?(:polylines) && route[:activities].size > 1 &&
+                  route[:activities].count{ |i| ['service', 'pickup', 'delivery'].include?(i[:type]) } > 0
+
+    details ||= route_details(vrp, route, vehicle)
+    route[:geometry] = details&.map(&:last)
   end
 
   def self.parse_result(vrp, result)
@@ -818,8 +819,7 @@ module OptimizerWrapper
     result[:routes].each{ |route|
       vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
       matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
-      fill_route_missing_data(vrp, route, matrix, vehicle, result[:solvers])
-      fill_route_totals(vrp, route, matrix)
+      fill_missing_route_data(vrp, route, matrix, vehicle, result[:solvers])
     }
     compute_result_total_dimensions_and_round_route_stats(result)
 
@@ -844,7 +844,7 @@ module OptimizerWrapper
       next if zone.vehicles.compact.empty?
 
       zone.vehicles.each{ |vehicle|
-        vehicle.skills.each{ |skillset| skillset << zone[:id].to_sym }
+        vehicle.skills.each{ |skillset| skillset << zone[:id] }
       }
     }
 
@@ -856,7 +856,7 @@ module OptimizerWrapper
 
         next unless zone.inside(activity_loc.lat, activity_loc.lon)
 
-        service.skills += [zone[:id].to_sym]
+        service.skills += [zone[:id]]
         service.id
       }.compact
 
@@ -866,11 +866,11 @@ module OptimizerWrapper
         delivery_loc = shipment.delivery.point.location
 
         if zone.inside(pickup_loc[:lat], pickup_loc[:lon])
-          shipment.skills += [zone[:id].to_sym]
+          shipment.skills += [zone[:id]]
           shipments_ids << shipment.id + 'pickup'
         end
         if zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          shipment.skills += [zone[:id].to_sym]
+          shipment.skills += [zone[:id]]
           shipments_ids << shipment.id + 'delivery'
         end
         shipments_ids.uniq

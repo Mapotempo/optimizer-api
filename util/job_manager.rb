@@ -48,7 +48,7 @@ module OptimizerWrapper
       OptimizerWrapper::REDIS.set(Resque::Plugins::Status::Hash.status_key(self.uuid), Resque::Plugins::Status::Hash.encode(value))
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
-      ask_restitution_geojson = services_vrps.collect{ |s_v| s_v[:vrp].restitution_geometry }.flatten.uniq
+      ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].restitution_geometry }.uniq
       result = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
           tick # call tick in case job is killed
