@@ -605,28 +605,49 @@ module Wrappers
       unfeasible
     end
 
+    ALL_OR_NONE_RELATIONS = %i[shipment sequence meetup].freeze
     def add_unassigned(unfeasible, vrp, service, reason)
+      # calls add_unassigned_internal for every service in an "ALL_OR_NONE_RELATION" with the service
+      service_already_marked_unfeasible = unfeasible.any?{ |un| un[:original_service_id] == service.id }
+
+      unless service_already_marked_unfeasible && reason.start_with?('In a relation with an unfeasible service: ')
+        add_unassigned_internal(unfeasible, vrp, service, reason)
+      end
+
+      unless service_already_marked_unfeasible
+        service.relations.each{ |relation|
+          next unless ALL_OR_NONE_RELATIONS.include?(relation.type)
+
+          relation.linked_services&.each{ |service_in|
+            next if service_in == service
+
+            add_unassigned(unfeasible, vrp, service_in, "In a relation with an unfeasible service: #{service.id}")
+          }
+        }
+      end
+
+      unfeasible
+    end
+
+    def add_unassigned_internal(unfeasible, vrp, service, reason)
       if unfeasible.any?{ |unfeas| unfeas[:original_service_id] == service[:id] }
         # we update reason to have more details
-        unfeasible.select{ |unfeas| unfeas[:original_service_id] == service[:id] }.each{ |unfeas|
+        unfeasible.each{ |unfeas|
+          next unless unfeas[:original_service_id] == service[:id]
+
           unfeas[:reason] += " && #{reason}"
         }
       else
-        unfeasible << (0..service.visits_number).collect{ |index|
-          service_unassigned = unfeasible.find{ |una| una[:original_service_id] == service[:id] }
-          service_unassigned[:reason] += " && #{reason}" if service_unassigned
-          next if service_unassigned || service.visits_number.positive? && index.zero?
-
+        unfeasible.concat Array.new(service.visits_number){ |index|
           {
             original_service_id: service.id,
-            service_id: vrp.scheduling? ? "#{service.id}_#{index}_#{service.visits_number}" : service[:id],
+            service_id: vrp.scheduling? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service[:id],
             point_id: service.activity ? service.activity.point_id : nil,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
             type: 'service',
             reason: reason
           }
-        }.compact
-        unfeasible.flatten!
+        }
       end
 
       unfeasible
