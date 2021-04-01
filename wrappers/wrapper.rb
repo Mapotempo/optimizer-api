@@ -616,7 +616,7 @@ module Wrappers
 
       unless service_already_marked_unfeasible
         service.relations.each{ |relation|
-          next unless ALL_OR_NONE_RELATIONS.include?(relation.type)
+          next unless ALL_OR_NONE_RELATIONS.include?(relation.type.to_sym) # TODO: remove to_sym when https://github.com/Mapotempo/optimizer-api/pull/145 is merged
 
           relation.linked_services&.each{ |service_in|
             next if service_in == service
