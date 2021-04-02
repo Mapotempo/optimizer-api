@@ -96,15 +96,12 @@ module OutputHelper
 
       @colors = ['#DD0000', '#FFBB00', '#CC1882', '#00CC00', '#558800', '#009EFF', '#9000EE',
                  '#0077A3', '#000000', '#003880', '#BEE562']
-      @cluster_colors = {}
 
       expected_geometry = solution[:configuration].to_h[:geometry].to_a.map!(&:to_sym) # TODO : investigate how it is possible that no configuration is returned
 
       expected_geometry.map!(&:to_sym)
       [solution[:result]].flatten(1).collect{ |result|
         geojson = {}
-        @vehicle_partitioned = false
-        @work_day_partitioned = false
 
         geojson[:partitions] = generate_partitions_geometry(result) if expected_geometry.include?(:partitions)
         geojson[:points] = generate_points_geometry(result)
@@ -128,13 +125,11 @@ module OutputHelper
 
       partitions = {}
       if has_vehicle_partition
-        @vehicle_partitioned = true
         partitions[:vehicle] = draw_cluster(elements, :vehicle)
       end
 
       return partitions unless has_work_day_partition
 
-      @work_day_partitioned = true
       partitions[:work_day] = draw_cluster(elements, :work_day)
 
       partitions
@@ -157,23 +152,15 @@ module OutputHelper
       }
     end
 
-    def self.compute_color(elements, entity, cluster_index)
+    def self.compute_color(elements, entity, index)
       if entity == :vehicle
-        @colors[cluster_index % @colors.size]
-      else
+        @colors[index % @colors.size]
+      elsif entity == :work_day
         day = elements.first[:internal_skills].find{ |skill| skill.start_with?('work_day_partition_') }.split('_').last
         index = OptimizerWrapper::WEEKDAYS.find_index(day.to_sym)
         @colors[index]
-      end
-    end
-
-    def self.find_color(vehicle_id, day, index)
-      if @work_day_partitioned
-        @cluster_colors["work_day_partition_#{OptimizerWrapper::WEEKDAYS[day % 7]}"]
-      elsif @vehicle_partitioned
-        @cluster_colors["vehicle_partition_#{vehicle_id}"]
       else
-        @colors[index % @colors.size]
+        @colors[index % 7]
       end
     end
 
@@ -192,11 +179,10 @@ module OutputHelper
       }
       duration = elements.sum{ |e| e[:duration] + e[:setup_duration] }
 
-      @cluster_colors[cluster_skill.first] = compute_color(elements, entity, cluster_index)
       {
         type: 'Feature',
         properties: {
-          color: @cluster_colors[cluster_skill.first],
+          color: compute_color(elements, entity, cluster_index),
           name: cluster_skill.join('_'),
         }.merge(
           Hash[quantities.collect{ |qty| [qty[:unit_id].to_sym, qty[:value]] }]
@@ -229,8 +215,8 @@ module OutputHelper
         }
       }
 
-      result[:routes].each_with_index{ |r, index|
-        color = find_color(r[:original_vehicle_id], r[:day], index)
+      result[:routes].each{ |r|
+        color = compute_color([], nil, r[:day])
         r[:activities].each{ |a|
           next unless ['service', 'pickup', 'delivery'].include?(a[:type])
 
@@ -259,10 +245,10 @@ module OutputHelper
     def self.generate_polylines_geometry(result)
       polylines = []
 
-      result[:routes].each_with_index{ |route, route_index|
+      result[:routes].each{ |route|
         next unless route[:geometry]
 
-        color = find_color(route[:original_vehicle_id], route[:day], route_index)
+        color = compute_color([], nil, route[:day])
         polylines << {
           type: 'Feature',
           properties: {
