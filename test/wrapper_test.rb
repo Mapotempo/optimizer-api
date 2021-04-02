@@ -2767,7 +2767,7 @@ class WrapperTest < Minitest::Test
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
       end
       assert_equal expected_repetitions, solve_call,
-        "#{expected_repetitions} repetitions expected, with#{vrp.preprocessing_partitions ? '' : 'no'} partitions and#{vrp.scheduling? ? '' : 'no'} scheduling"
+                   "#{expected_repetitions} repetitions expected, with#{vrp.preprocessing_partitions ? '' : 'no'} partitions and #{vrp.schedule? ? '' : 'no'} scheduling"
     }
   end
 

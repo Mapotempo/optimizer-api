@@ -141,7 +141,7 @@ module Interpreters
       if service_vrp[:split_level].nil?
         empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
 
-        !vrp.scheduling? &&
+        !vrp.schedule? &&
           vrp.preprocessing_max_split_size &&
           vrp.vehicles.size > 1 &&
           (vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit > 1) &&
@@ -803,13 +803,13 @@ module Interpreters
       # collecting vehicles then eliminating to have nb_clusters vehicles,
       # we can create one with nb_clusters items directly.
 
-      r_start = vrp.scheduling? ? vrp.schedule_range_indices[:start] : 0
-      r_end = vrp.scheduling? ? vrp.schedule_range_indices[:end] : 0
+      r_start = vrp.schedule? ? vrp.schedule_range_indices[:start] : 0
+      r_end = vrp.schedule? ? vrp.schedule_range_indices[:end] : 0
 
       vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
-        total_work_days = vrp.scheduling? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
+        total_work_days = vrp.schedule? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
         capacities = {
-          duration: vrp.scheduling? ? vrp.total_work_times[v_i] : vehicle.work_duration,
+          duration: vrp.schedule? ? vrp.total_work_times[v_i] : vehicle.work_duration,
           visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
         }
         vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }

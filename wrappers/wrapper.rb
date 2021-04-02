@@ -39,7 +39,7 @@ module Wrappers
     end
 
     def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size == 1 && !vrp.scheduling?
+      vrp.vehicles.size == 1 && !vrp.schedule?
     end
 
     def assert_vehicles_start(vrp)
@@ -225,11 +225,11 @@ module Wrappers
     end
 
     def assert_if_sequence_tw_then_schedule(vrp)
-      vrp.vehicles.find{ |vehicle| !vehicle.sequence_timewindows.empty? }.nil? || vrp.scheduling?
+      vrp.vehicles.find{ |vehicle| !vehicle.sequence_timewindows.empty? }.nil? || vrp.schedule?
     end
 
     def assert_if_periodic_heuristic_then_schedule(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.scheduling?
+      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.schedule?
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
@@ -263,7 +263,7 @@ module Wrappers
     end
 
     def assert_no_scheduling_if_evaluation(vrp)
-      !vrp.scheduling? || !vrp.resolution_evaluate_only
+      !vrp.schedule? || !vrp.resolution_evaluate_only
     end
 
     def assert_route_if_evaluation(vrp)
@@ -438,7 +438,7 @@ module Wrappers
     end
 
     def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
-      vrp.routes.empty? || !vrp.scheduling? || vrp.periodic_heuristic?
+      vrp.routes.empty? || !vrp.schedule? || vrp.periodic_heuristic?
     end
 
     # TODO: Need a better way to represent solver preference
@@ -585,7 +585,7 @@ module Wrappers
         vehicle_work_days = [0, 1, 2, 3, 4, 5] if vehicle_work_days.empty?
         vehicle_lateness = vehicle.cost_late_multiplier&.positive?
 
-        days = vrp.scheduling? ? (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |day| day } : [0]
+        days = vrp.schedule? ? (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |day| day } : [0]
         days.any?{ |day|
           vehicle_work_days.include?(day % 7) && !vehicle.unavailable_days.include?(day) &&
             !service.unavailable_days.include?(day) &&
@@ -676,7 +676,7 @@ module Wrappers
         unfeasible.concat Array.new(service.visits_number){ |index|
           {
             original_service_id: service.id,
-            service_id: vrp.scheduling? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service[:id],
+            service_id: vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service[:id],
             point_id: service.activity ? service.activity.point_id : nil,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
             type: 'service',
@@ -758,7 +758,7 @@ module Wrappers
         end
 
         # unconsistency for planning
-        next if !vrp.scheduling?
+        next if !vrp.schedule?
 
         unless vrp.can_affect_all_visits?(service)
           add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
@@ -1136,7 +1136,7 @@ module Wrappers
       # (arriving point p takes longer to include the setup_duration)
       # and the setup duration s_p can be removed from the problem.
       # This way solvers like vroom which does not support setup duration can be used.
-      return nil if vrp.scheduling?
+      return nil if vrp.periodic_heuristic?
 
       case options[:mode]
       when :simplify
@@ -1281,7 +1281,7 @@ module Wrappers
       vrp.services.flat_map{ |service|
         Array.new(service.visits_number) { |visit_index|
           {
-            service_id: vrp.scheduling? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id,
+            service_id: vrp.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id,
             type: service.type.to_s,
             point_id: service.activity.point_id,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
@@ -1295,13 +1295,13 @@ module Wrappers
       vrp.shipments.flat_map{ |shipment|
         shipment.visits_number.times.flat_map{ |visit_index|
           [{
-            pickup_shipment_id: vrp.scheduling? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
+            pickup_shipment_id: vrp.schedule? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
             point_id: shipment.pickup.point_id,
             detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil),
             reason: unassigned_reason
            }.delete_if{ |_k, v| !v },
            {
-            delivery_shipment_id: vrp.scheduling? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
+            delivery_shipment_id: vrp.schedule? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
             point_id: shipment.delivery.point_id,
             detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true),
             reason: unassigned_reason
@@ -1327,7 +1327,7 @@ module Wrappers
     end
 
     def empty_result(solver, vrp, unassigned_reason = nil, already_expanded = true)
-      vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp) if vrp.scheduling? && !already_expanded
+      vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp) if vrp.schedule? && !already_expanded
       OptimizerWrapper.parse_result(vrp, {
         solvers: [solver],
         cost: nil,

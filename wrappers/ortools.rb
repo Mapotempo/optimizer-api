@@ -478,7 +478,7 @@ module Wrappers
     end
 
     def check_services_compatible_days(vrp, vehicle, service)
-      !vrp.scheduling? || (!service.minimum_lapse && !service.maximum_lapse) ||
+      !vrp.schedule? || (!service.minimum_lapse && !service.maximum_lapse) ||
         vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
     end
 
