@@ -26,6 +26,7 @@ module TestHelper
       get "0.1/vrp/jobs/#{job_id}.json", options
 
       assert_equal 200, last_response.status, last_response.body
+      assert_includes ['queued', 'working', 'completed'], JSON.parse(last_response.body)['job']['status']
 
       puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
 
@@ -45,6 +46,8 @@ module TestHelper
       assert_equal 200, last_response.status, last_response.body
 
       break if last_response.content_type == 'text/csv;'
+
+      assert_includes ['queued', 'working', 'completed'], JSON.parse(last_response.body)['job']['status']
 
       puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
 
