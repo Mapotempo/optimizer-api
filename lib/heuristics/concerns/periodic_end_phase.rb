@@ -17,8 +17,7 @@
 #
 require 'active_support/concern'
 
-# Second end of the algorithm after scheduling heuristic
-module SchedulingEndPhase
+module PeriodicEndPhase
   extend ActiveSupport::Concern
 
   def refine_solution(&block)
@@ -26,12 +25,12 @@ module SchedulingEndPhase
     @ids_to_renumber = []
 
     if @allow_partial_assignment && !@same_point_day && !@relaxed_same_point_day
-      block&.call(nil, nil, nil, 'scheduling heuristic - adding missing visits', nil, nil, nil)
+      block&.call(nil, nil, nil, 'periodic heuristic - adding missing visits', nil, nil, nil)
       add_missing_visits
     end
 
     unless @services_data.all?{ |_id, data| data[:raw].exclusion_cost.to_f.zero? }
-      block&.call(nil, nil, nil, 'scheduling heuristic - correcting underfilled routes', nil, nil, nil)
+      block&.call(nil, nil, nil, 'periodic heuristic - correcting underfilled routes', nil, nil, nil)
       correct_underfilled_routes
     end
   end

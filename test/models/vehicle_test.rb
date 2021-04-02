@@ -22,7 +22,7 @@ module Models
     include Rack::Test::Methods
 
     def test_work_duration
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
 
       # work duration is only supposed to be called when there is no schedule
@@ -48,7 +48,7 @@ module Models
     end
 
     def test_total_work_time_in_range
-      vrp = VRP.lat_lon_scheduling
+      vrp = VRP.lat_lon_periodic
       vrp = TestHelper.create(vrp)
       assert_equal 32400 * 4, vrp.vehicles.first.total_work_time_in_range(0, 3)
 

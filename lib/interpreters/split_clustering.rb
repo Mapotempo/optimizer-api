@@ -543,7 +543,7 @@ module Interpreters
       vrp = service_vrp[:vrp]
       sub_vrp = Marshal.load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
-      # TODO: Within Scheduling Vehicles require to have unduplicated ids
+      # TODO: Within Periodic Vehicles require to have unduplicated ids
       if available_vehicles_indices
         sub_vrp.vehicles.delete_if.with_index{ |_v, v_i| !available_vehicles_indices.include?(v_i) }
         sub_vrp.routes.delete_if{ |r|
@@ -1186,7 +1186,7 @@ module Interpreters
               duration_from = time_matrix_from_depot[v_index[:from][v_i]][p_index] if v_index[:from][v_i]
               duration_to = time_matrix_to_depot[p_index][v_index[:to][v_i]] if v_index[:to][v_i]
 
-              point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) # TODO: investigate why division by vehicle.router_options[:speed_multiplier] detoriarates the performance of scheduling
+              point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) # TODO: investigate why division by vehicle.router_options[:speed_multiplier] detoriarates the performance of periodic
             }
           }
         else

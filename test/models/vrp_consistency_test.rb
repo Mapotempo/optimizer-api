@@ -24,7 +24,7 @@ module Models
     include ValidateData
 
     def test_reject_if_service_with_activities_in_position_relation
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:services].first[:activities] = [vrp[:services].first[:activity]]
       vrp[:services].first.delete(:activity)
       vrp[:relations] = [{
@@ -39,7 +39,7 @@ module Models
     end
 
     def test_reject_if_periodic_with_any_relation
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:vehicles].first[:end_point_id] = 'point_0' # vehicle_trips
       %i[shipment meetup same_route sequence order vehicle_trips
          minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse
@@ -77,7 +77,7 @@ module Models
     end
 
     def test_reject_routes_with_activities
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].first[:activities] = [vrp[:services].first[:activity]]
       vrp[:services].first.delete(:activity)
       vrp[:routes] = [{ mission_ids: ['service_1'] }]
@@ -87,7 +87,7 @@ module Models
     end
 
     def test_reject_work_day_partition_with_unconsistent_lapses
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].each{ |s|
         s[:visits_number] = 1
         s[:minimum_lapse] = 2
@@ -96,7 +96,7 @@ module Models
       vrp[:configuration][:preprocessing][:partitions] = [{ entity: :work_day }]
       TestHelper.create(vrp) # no raise because if only one visit then lapse is not a problem
 
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].each{ |s|
         s[:visits_number] = 2 # he now have more than one visit
       }
@@ -105,7 +105,7 @@ module Models
         TestHelper.create(vrp)
       end
 
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].each{ |s|
         s[:visits_number] = 2
         s[:minimum_lapse] = 2
@@ -115,7 +115,7 @@ module Models
       vrp[:configuration][:schedule][:range_indices][:end] = 14
       TestHelper.create(vrp) # no raise because it is possible to find a lapse multiple of 7
 
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].each{ |s|
         s[:visits_number] = 2
         s[:minimum_lapse] = 8
@@ -125,7 +125,7 @@ module Models
       vrp[:configuration][:schedule][:range_indices][:end] = 21
       TestHelper.create(vrp) # no raise because it is possible to find a lapse multiple of 7
 
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].each{ |s|
         s[:visits_number] = 2
         s[:minimum_lapse] = 8
@@ -168,7 +168,7 @@ module Models
     end
 
     def test_reject_if_rests_and_periodic_heuristic
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:rests] = [{
           id: 'rest_0',
           duration: 1,
@@ -230,14 +230,14 @@ module Models
     end
 
     def test_available_intervals_compatibility
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].first[:unavailable_date_ranges] = [{ start: Date.new(2021, 2, 6),
                                                           end: Date.new(2021, 2, 8)}]
       assert_raises OptimizerWrapper::DiscordantProblemError do
         TestHelper.create(vrp)
       end
 
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:configuration][:schedule] = { range_indices: { start: 4, end: 7 } }
       vrp[:services].first[:unavailable_visit_day_indices] = [5]
       vrp[:services].first[:unavailable_index_ranges] = [{ start: 0, end: 7 }]
@@ -307,7 +307,7 @@ module Models
     end
 
     def test_dates_cannot_be_mixed_with_indices
-      vrp = VRP.scheduling # contains schedule[:range_indices]
+      vrp = VRP.periodic # contains schedule[:range_indices]
       vrp[:vehicles].first[:unavailable_work_date] = [Date.new(2021, 2, 11)]
 
       assert_raises OptimizerWrapper::DiscordantProblemError do
@@ -316,7 +316,7 @@ module Models
     end
 
     def test_switched_lapses_are_rejected
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:services].first[:minimum_lapse] = 7
       vrp[:services].first[:maximum_lapse] = 14
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
@@ -332,7 +332,7 @@ module Models
     end
 
     def test_consistent_schedule
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:configuration][:schedule] = {}
       assert_raises OptimizerWrapper::DiscordantProblemError do
         Models::Vrp.filter(vrp)

@@ -244,11 +244,11 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_block_call_under_clustering
-    vrp1 = VRP.lat_lon_scheduling_two_vehicles
+    vrp1 = VRP.lat_lon_periodic_two_vehicles
     vrp1[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
     vrp2 = VRP.independent_skills
-    vrp2[:points] = VRP.lat_lon_scheduling[:points]
+    vrp2[:points] = VRP.lat_lon_periodic[:points]
     vrp2[:services].first[:skills] = ['D']
     vrp2[:configuration][:preprocessing] = {
       max_split_size: 4,
@@ -279,7 +279,7 @@ class Api::V01::VrpTest < Minitest::Test
         OptimizerWrapper.config[:solve][:repetition] = 2
 
         asynchronously start_worker: true do
-          vrp = VRP.lat_lon_scheduling_two_vehicles
+          vrp = VRP.lat_lon_periodic_two_vehicles
           vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
           @job_id = submit_vrp(api_key: 'demo', vrp: vrp)
           wait_status @job_id, 'completed', api_key: 'demo'
@@ -301,7 +301,7 @@ class Api::V01::VrpTest < Minitest::Test
                  "fix this test \n(#{self.class.name}::#{self.name}) to represent the actual functionality."
     # Currently the expected output is in the following form
     # [date time] jobid - INFO: avancement: repetition (1..2)/2 - clustering phase (y: 1..2)/2 - step (1..y)/(y)
-    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving scheduling heuristic
+    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving periodic heuristic
 
     lines_with_avancement.each{ |line|
       date_time_jobid = '\[(?<date>[0-9-]*) (?<hour>[0-9: +]*)\] (?<job_id>[0-9a-z]*)'
@@ -315,7 +315,7 @@ class Api::V01::VrpTest < Minitest::Test
       rest = Regexp.last_match(:rest)
 
       # The rest needs to be either clustering or heuristic solution
-      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/8 - scheduling heuristic } =~ rest
+      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/8 - periodic heuristic } =~ rest
 
       refute_nil Regexp.last_match, assert_msg
     }
@@ -360,7 +360,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_submit_without_schedule_start_should_break
-    vrp_no_sched_start = VRP.scheduling
+    vrp_no_sched_start = VRP.periodic
     vrp_no_sched_start[:configuration][:schedule] = { range_indices: { start: 0 } }
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp_no_sched_start}.to_json, 'CONTENT_TYPE' => 'application/json'
     assert_equal 400, last_response.status

@@ -17,8 +17,7 @@
 #
 require 'active_support/concern'
 
-# Second end of the algorithm after scheduling heuristic
-module SchedulingDataInitialization
+module PeriodicDataInitialization
   extend ActiveSupport::Concern
 
   def generate_route_structure(vrp)

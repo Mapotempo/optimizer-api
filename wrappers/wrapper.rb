@@ -262,8 +262,8 @@ module Wrappers
       vrp.services.all?{ |service| service.visits_number == 1 } && vrp.shipments.all?{ |shipment| shipment.visits_number == 1 }
     end
 
-    def assert_no_scheduling_if_evaluation(vrp)
-      !vrp.schedule? || !vrp.resolution_evaluate_only
+    def assert_no_periodic_if_evaluation(vrp)
+      !vrp.periodic_heuristic? || !vrp.resolution_evaluate_only
     end
 
     def assert_route_if_evaluation(vrp)
@@ -330,7 +330,7 @@ module Wrappers
       vrp.resolution_solver || vrp.preprocessing_first_solution_strategy && (vrp.preprocessing_first_solution_strategy.first == 'periodic')
     end
 
-    def assert_clustering_compatible_with_scheduling_heuristic(vrp)
+    def assert_clustering_compatible_with_periodic_heuristic(vrp)
       (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic')) || !vrp.preprocessing_cluster_threshold && !vrp.preprocessing_max_split_size
     end
 

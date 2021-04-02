@@ -176,11 +176,11 @@ module VrpConfiguration
     optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
     optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
     optional(:solver, type: Boolean, desc: 'Defines if solver should be called')
-    optional(:minimize_days_worked, type: Boolean, default: false, desc: '(Scheduling heuristic only) Starts filling earlier days of the period first and minimizes the total number of days worked. Available only if first_solution_strategy is \'periodic\'. Not available with ORtools.')
-    optional(:same_point_day, type: Boolean, desc: '(Scheduling only) Forces all services with the same point_id to take place on the same days. Available only if first_solution_strategy is \'periodic\'. Not available ORtools.')
-    optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Scheduling heuristic only) Considers a solution as valid even if only a subset of the visits of a service is performed. If disabled, a service can only appear fully assigned or fully unassigned in the solution. Not available with ORtools.')
+    optional(:minimize_days_worked, type: Boolean, default: false, desc: '(Periodic heuristic only) Starts filling earlier days of the period first and minimizes the total number of days worked. Available only if first_solution_strategy is \'periodic\'. Not available with ORtools.')
+    optional(:same_point_day, type: Boolean, desc: '(Periodic heuristic only) Forces all services with the same point_id to take place on the same days. Available only if first_solution_strategy is \'periodic\'. Not available ORtools.')
+    optional(:allow_partial_assignment, type: Boolean, default: true, desc: '(Periodic heuristic only) Considers a solution as valid even if only a subset of the visits of a service is performed. If disabled, a service can only appear fully assigned or fully unassigned in the solution. Not available with ORtools.')
     optional(:split_number, type: Integer, desc: 'Give the current number of process for block call')
-    optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for scheduling yet.')
+    optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for periodic yet.')
     optional(:several_solutions, type: Integer, allow_blank: false, default: 1, desc: 'Return several solution computed with different matrices')
     optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
     optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
@@ -205,24 +205,24 @@ module VrpConfiguration
   end
 
   params :vrp_request_schedule do
-    optional(:range_indices, type: Hash, desc: '(Scheduling only) Day indices within the plan has to be build') do
+    optional(:range_indices, type: Hash, desc: '(Schedule only) Day indices within the plan has to be build') do
       use :vrp_request_indice_range
     end
-    optional(:range_date, type: Hash, desc: '(Scheduling only) Define the total period to consider') do
+    optional(:range_date, type: Hash, desc: '(Schedule only) Define the total period to consider') do
       use :vrp_request_date_range
     end
 
     mutually_exclusive :range_indices, :range_date
-    optional(:unavailable_indices, type: Array[Integer], desc: '(Scheduling only) Exclude some days indices from the resolution')
-    optional(:unavailable_date, type: Array[Date], desc: '(Scheduling only) Exclude some days from the resolution')
+    optional(:unavailable_indices, type: Array[Integer], desc: '(Schedule only) Exclude some days indices from the resolution')
+    optional(:unavailable_date, type: Array[Date], desc: '(Schedule only) Exclude some days from the resolution')
     mutually_exclusive :unavailable_indices, :unavailable_date
 
     optional(:unavailable_index_ranges, type: Array, desc:
-      '(Scheduling only) Day index ranges where no routes should be generated') do
+      '(Schedule only) Day index ranges where no routes should be generated') do
       use :vrp_request_indice_range
     end
     optional(:unavailable_date_ranges, type: Array, desc:
-      '(Scheduling only) Date ranges where no routes should be generated') do
+      '(Schedule only) Date ranges where no routes should be generated') do
       use :vrp_request_date_range
     end
     mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
@@ -323,16 +323,16 @@ module VrpMissions
     optional(:priority, type: Integer, values: 0..8, desc: 'Priority assigned to the service in case of conflict to assign every jobs (from 0 to 8, default is 4. 0 is the highest priority level). Not available with same_point_day option.')
     optional(:exclusion_cost, type: Integer, desc: 'Exclusion cost')
 
-    optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: '(Scheduling only) Total number of visits over the complete schedule (including the unavailable visit indices)')
+    optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: '(Schedule only) Total number of visits over the complete schedule (including the unavailable visit indices)')
 
-    optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Scheduling only) unavailable indices of visit')
+    optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Schedule only) unavailable indices of visit')
 
-    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals days indices of unavailabilty')
-    optional(:unavailable_visit_day_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
+    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptionnals days indices of unavailabilty')
+    optional(:unavailable_visit_day_date, type: Array, desc: '(Schedule only) Express the exceptionnals days of unavailability')
     mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
-    optional(:minimum_lapse, type: Float, desc: '(Scheduling only) Minimum day lapse between two visits')
-    optional(:maximum_lapse, type: Float, desc: '(Scheduling only) Maximum day lapse between two visits')
+    optional(:minimum_lapse, type: Float, desc: '(Schedule only) Minimum day lapse between two visits')
+    optional(:maximum_lapse, type: Float, desc: '(Schedule only) Maximum day lapse between two visits')
     optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:skills, type: Array[Symbol],
                       coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val&.map(&:to_sym) },
@@ -353,11 +353,11 @@ module VrpMissions
     mutually_exclusive :quantity_ids, :quantities
 
     optional(:unavailable_index_ranges, type: Array, desc:
-      '(Scheduling only) Day index ranges where visits can not take place') do
+      '(Schedule only) Day index ranges where visits can not take place') do
       use :vrp_request_indice_range
     end
     optional(:unavailable_date_ranges, type: Array, desc:
-      '(Scheduling only) Date ranges where visits can not take place') do
+      '(Schedule only) Date ranges where visits can not take place') do
       use :vrp_request_date_range
     end
     mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
@@ -370,10 +370,10 @@ module VrpMissions
 
     optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: 'Total number of visits over the complete schedule (including the unavailable visit indices)')
 
-    optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Scheduling only) unavailable indices of visit')
+    optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Schedule only) unavailable indices of visit')
 
-    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals days indices of unavailabilty')
-    optional(:unavailable_visit_day_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
+    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptionnals days indices of unavailabilty')
+    optional(:unavailable_visit_day_date, type: Array, desc: '(Schedule only) Express the exceptionnals days of unavailability')
     mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
     optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
@@ -398,11 +398,11 @@ module VrpMissions
     mutually_exclusive :quantity_ids, :quantities
 
     optional(:unavailable_index_ranges, type: Array, desc:
-      '(Scheduling only) Day index ranges where visits can not take place') do
+      '(Schedule only) Day index ranges where visits can not take place') do
       use :vrp_request_indice_range
     end
     optional(:unavailable_date_ranges, type: Array, desc:
-      '(Scheduling only) Date ranges where visits can not take place') do
+      '(Schedule only) Date ranges where visits can not take place') do
       use :vrp_request_date_range
     end
     mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
@@ -465,7 +465,7 @@ module VrpShared
              desc: 'End of the current timewindow in seconds')
     optional(:day_index,
              type: Integer, values: 0..6,
-             desc: '(Scheduling only) Day index of the current timewindow within the periodic week,
+             desc: '(Schedule only) Day index of the current timewindow within the periodic week,
                     (monday = 0, ..., sunday = 6)')
     at_least_one_of :start, :end, :day_index
   end
@@ -496,7 +496,7 @@ module VrpVehicles
     optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index'
 
     optional(:duration, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.type_cast(value) })
-    optional(:overall_duration, type: Integer, values: ->(v) { v.positive? }, documentation: { hidden: true }, desc: '(Scheduling only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:overall_duration, type: Integer, values: ->(v) { v.positive? }, documentation: { hidden: true }, desc: '(Schedule only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:distance, type: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
     optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
     optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
@@ -508,16 +508,16 @@ module VrpVehicles
                       }, # TODO : Create custom coerce to consider multiple alternatives
                       desc: 'Particular abilities which could be handle by the vehicle. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]. Not available with periodic heuristic.'
 
-    optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals indices of unavailabilty')
-    optional(:unavailable_work_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
+    optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptionnals indices of unavailabilty')
+    optional(:unavailable_work_date, type: Array, desc: '(Schedule only) Express the exceptionnals days of unavailability')
     mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
 
     optional(:unavailable_index_ranges, type: Array, desc:
-      '(Scheduling only) Day index ranges where vehicle is not available') do
+      '(Schedule only) Day index ranges where vehicle is not available') do
       use :vrp_request_indice_range
     end
     optional(:unavailable_date_ranges, type: Array, desc:
-      '(Scheduling only) Date ranges where vehicle is not available') do
+      '(Schedule only) Date ranges where vehicle is not available') do
       use :vrp_request_date_range
     end
     mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
@@ -548,7 +548,7 @@ module VrpVehicles
 
     optional(:sequence_timewindow_ids, type: Array[String], documentation: { hidden: true }, desc: 'Sequence timewindows to consider, CSV front only',
                                        coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map(&:strip) : val })
-    optional(:sequence_timewindows, type: Array, desc: '(Scheduling only) Define the vehicle work schedule over a period') do
+    optional(:sequence_timewindows, type: Array, desc: '(Schedule only) Define the vehicle work schedule over a period') do
       use :vrp_request_timewindow
     end
     optional(:timewindow_id, type: String, desc: 'Sequence timewindows to consider')

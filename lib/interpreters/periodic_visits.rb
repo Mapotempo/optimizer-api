@@ -15,7 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './lib/heuristics/scheduling_heuristic.rb'
+require './lib/heuristics/periodic_heuristic.rb'
 
 module Interpreters
   class PeriodicVisits
@@ -49,8 +49,8 @@ module Interpreters
       }
 
       if vrp.periodic_heuristic?
-        scheduling_heuristic = Wrappers::SchedulingHeuristic.new(vrp, job)
-        vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
+        periodic_heuristic = Wrappers::PeriodicHeuristic.new(vrp, job)
+        vrp.routes = periodic_heuristic.compute_initial_solution(vrp, &block)
       end
 
       vrp.services = generate_services(vrp)

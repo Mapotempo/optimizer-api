@@ -604,7 +604,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
-  def self.scheduling
+  def self.periodic
     {
       matrices: [{
         id: 'matrix_0',
@@ -816,7 +816,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp
   end
 
-  def self.lat_lon_scheduling
+  def self.lat_lon_periodic
     vrp = lat_lon_capacitated
     vrp[:vehicles].each{ |v|
       v.delete(:capacities)
@@ -1050,7 +1050,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp
   end
 
-  def self.lat_lon_scheduling_two_vehicles
+  def self.lat_lon_periodic_two_vehicles
     vrp = lat_lon_two_vehicles
     vrp[:vehicles].each{ |v|
       v[:sequence_timewindows] = [
@@ -1075,7 +1075,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp
   end
 
-  def self.scheduling_seq_timewindows
+  def self.periodic_seq_timewindows
     {
       matrices: [{
         id: 'matrix_0',

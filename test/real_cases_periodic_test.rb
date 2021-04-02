@@ -155,18 +155,18 @@ class HeuristicTest < Minitest::Test
         seen += result[:unassigned].size + result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }
       }
 
-      # voluntarily equal to watch evolution of scheduling algorithm performance
+      # voluntarily equal to watch evolution of periodic algorithm performance
       assert_equal expected, seen, 'Do not have the expected number of total visits'
       assert_equal 294, unassigned_visits.sum, 'Do not have the expected number of unassigned visits'
     end
 
     def test_fill_days_and_post_processing
       # checks performance on instance calling post_processing
-      vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
+      vrp = TestHelper.load_vrp(self, fixture_file: 'periodic_with_post_process')
       vrp.resolution_minimize_days_worked = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
-      # voluntarily equal to watch evolution of scheduling algorithm performance
+      # voluntarily equal to watch evolution of periodic algorithm performance
       assert_equal 74, result[:unassigned].size, 'Do not have the expected number of unassigned visits'
     end
 
