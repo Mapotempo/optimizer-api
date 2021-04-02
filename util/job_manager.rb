@@ -112,7 +112,7 @@ module OptimizerWrapper
   class ClusteringError             < StandardError; end
   class DiscordantProblemError      < StandardError; end
   class JobKilledError              < StandardError; end
-  class SchedulingHeuristicError    < StandardError; end
+  class PeriodicHeuristicError      < StandardError; end
   class UnsupportedRouterModeError  < StandardError; end
 
   class Result

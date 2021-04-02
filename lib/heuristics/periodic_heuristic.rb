@@ -19,13 +19,13 @@
 require './lib/helper.rb'
 require './wrappers/wrapper.rb'
 require './lib/output_helper.rb'
-require './lib/heuristics/concerns/scheduling_data_initialisation'
-require './lib/heuristics/concerns/scheduling_end_phase'
+require './lib/heuristics/concerns/periodic_data_initialisation'
+require './lib/heuristics/concerns/periodic_end_phase'
 
 module Wrappers
-  class SchedulingHeuristic < Wrapper
-    include SchedulingDataInitialization
-    include SchedulingEndPhase
+  class PeriodicHeuristic < Wrapper
+    include PeriodicDataInitialization
+    include PeriodicEndPhase
 
     def initialize(vrp, job = nil)
       return if vrp.services.empty?
@@ -63,7 +63,7 @@ module Wrappers
       @uninserted = {}
       @missing_visits = {}
 
-      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
+      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
 
       generate_route_structure(vrp)
       collect_services_data(vrp)
@@ -86,7 +86,7 @@ module Wrappers
         return []
       end
 
-      block&.call(nil, nil, nil, 'scheduling heuristic - start solving', nil, nil, nil)
+      block&.call(nil, nil, nil, 'periodic heuristic - start solving', nil, nil, nil)
       @starting_time = Time.now
       @output_tool&.add_comment('COMPUTE_INITIAL_SOLUTION')
 
@@ -109,7 +109,7 @@ module Wrappers
 
       # Reorder routes with solver and try to add more visits
       if vrp.resolution_solver && !@candidate_services_ids.empty?
-        block&.call(nil, nil, nil, 'scheduling heuristic - re-ordering routes', nil, nil, nil)
+        block&.call(nil, nil, nil, 'periodic heuristic - re-ordering routes', nil, nil, nil)
         reorder_stops(vrp)
         @output_tool&.add_comment('FILL_AFTER_REORDERING')
         fill_days
@@ -128,7 +128,7 @@ module Wrappers
 
       @output_tool&.close_file
 
-      block&.call(nil, nil, nil, 'scheduling heuristic - preparing result', nil, nil, nil)
+      block&.call(nil, nil, nil, 'periodic heuristic - preparing result', nil, nil, nil)
       routes = prepare_output_and_collect_routes(vrp)
       routes
     end
@@ -176,9 +176,14 @@ module Wrappers
         all_routes.each{ |_day, route_data|
           next if route_data[:stops].empty?
 
-          time_back_to_depot = route_data[:stops].last[:end] + matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is starting too soon' if route_data[:stops][0][:start] < route_data[:tw_start]
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is ending too late' if time_back_to_depot > route_data[:tw_end]
+          time_back_to_depot = route_data[:stops].last[:end] +
+                               matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
+          if route_data[:stops][0][:start] < route_data[:tw_start]
+            raise OptimizerWrapper::PeriodicHeuristicError.new('One vehicle is starting too soon')
+          end
+          if time_back_to_depot > route_data[:tw_end]
+            raise OptimizerWrapper::PeriodicHeuristicError.new('One vehicle is ending too late')
+          end
         }
       }
 
@@ -192,7 +197,7 @@ module Wrappers
                     s[:arrival].round.between?(compatible_tw[:start], compatible_tw[:end]) &&
                     (!@duration_in_tw || s[:end] <= compatible_tw[:end])
 
-            raise OptimizerWrapper::SchedulingHeuristicError, 'One service timewindows violated'
+            raise OptimizerWrapper::PeriodicHeuristicError.new('One service timewindows violated')
           }
         }
       }
@@ -285,7 +290,9 @@ module Wrappers
           stop[:max_shift] = route[position - 1][:max_shift]
         else
           tw = find_corresponding_timewindow(route_data[:global_day_index], previous_end + route_time + stop[:considered_setup_duration], @services_data[stop[:id]][:tws_sets][stop[:activity]], stop[:end] - stop[:arrival])
-          raise OptimizerWrapper::SchedulingHeuristicError, 'No timewindow found to update route' if !@services_data[stop[:id]][:tws_sets][stop[:activity]].empty? && tw.nil?
+          if @services_data[stop[:id]][:tws_sets][stop[:activity]].any? && tw.nil?
+            raise OptimizerWrapper::PeriodicHeuristicError.new('No timewindow found to update route')
+          end
 
           stop[:start] = tw ? [tw[:start] - route_time - stop[:considered_setup_duration], previous_end].max : previous_end
           stop[:arrival] = stop[:start] + route_time + stop[:considered_setup_duration]
@@ -298,8 +305,10 @@ module Wrappers
         previous_end = stop[:end]
       }
 
-      raise OptimizerWrapper::SchedulingHeuristicError, 'Vehicle end violated after updating route' if route.size.positive? &&
-                                                                                                       route.last[:end] + matrix(route_data, route.last[:point_id], route_data[:end_point_id]) > route_data[:tw_end]
+      if route.any? &&
+         route.last[:end] + matrix(route_data, route.last[:point_id], route_data[:end_point_id]) > route_data[:tw_end]
+        raise OptimizerWrapper::PeriodicHeuristicError.new('Vehicle end violated after updating route')
+      end
 
       route
     end
@@ -394,22 +403,22 @@ module Wrappers
 
           # TODO : test with and without providing initial solution ?
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route_data[:stops])
-          route_vrp.services = provide_group_tws(route_vrp.services, day) if @same_point_day || @relaxed_same_point_day # to have same data in ORtools and scheduling. Customers should ensure all timewindows are the same for same points
+          route_vrp.services = provide_group_tws(route_vrp.services, day) if @same_point_day || @relaxed_same_point_day # to have same data in ORtools and periodic. Customers should ensure all timewindows are the same for same points
 
           result = OptimizerWrapper.solve(service: :ortools, vrp: route_vrp)
 
           next if result.nil? || !result[:unassigned].empty?
 
           time_back_to_depot = route_data[:stops].last[:end] + matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
-          scheduling_route_time = time_back_to_depot - route_data[:stops].first[:start]
+          periodic_route_time = time_back_to_depot - route_data[:stops].first[:start]
           solver_route_time = (result[:routes].first[:activities].last[:begin_time] - result[:routes].first[:activities].first[:begin_time]) # last activity is vehicle depot
 
-          next if scheduling_route_time - solver_route_time < @candidate_services_ids.flat_map{ |s| @services_data[s][:durations] }.min ||
+          next if periodic_route_time - solver_route_time < @candidate_services_ids.flat_map{ |s| @services_data[s][:durations] }.min ||
                   result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == route_data[:stops].collect{ |s| @indices[s[:id]] } # we did not change our points order
 
           begin
             route_data[:stops] = compute_route_from(route_data, result[:routes].first[:activities]) # this will change @candidate_routes, but it should not be a problem since OR-tools returns a valid solution
-          rescue OptimizerWrapper::SchedulingHeuristicError
+          rescue OptimizerWrapper::PeriodicHeuristicError
             log 'Failing to construct route from OR-tools solution'
           end
         }

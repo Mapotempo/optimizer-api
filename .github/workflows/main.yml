@@ -73,11 +73,11 @@ jobs:
         run: ./.github/actions/tests.sh
         shell: bash
 
-  test_real_scheduling:
+  test_real_periodic:
       runs-on: ubuntu-latest
       timeout-minutes: 30
       env:
-        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_scheduling_test.rb"
+        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_periodic_test.rb"
       steps:
         - uses: actions/checkout@v1
         - name: Cache
