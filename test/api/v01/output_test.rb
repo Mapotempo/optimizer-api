@@ -275,6 +275,16 @@ class Api::V01::OutputTest < Minitest::Test
         submit_csv api_key: 'demo', vrp: vrp, http_accept_language: provided
       end
     }
+
+    vrp[:configuration][:restitution][:csv_deprecated_headers] = true # test with false too
+    OutputHelper::Result.stub(
+      :build_csv,
+      lambda { |_solutions|
+        assert_equal :legacy, I18n.locale # default valuen when http_accept_language is unknown
+      }
+    ) do
+      submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'
+    end
   end
 
   def test_returned_types
