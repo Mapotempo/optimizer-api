@@ -275,6 +275,18 @@ class Api::V01::OutputTest < Minitest::Test
         submit_csv api_key: 'demo', vrp: vrp, http_accept_language: provided
       end
     }
+
+    [true, false].each{ |parameter_value|
+      vrp[:configuration][:restitution][:use_deprecated_csv_headers] = parameter_value
+      OutputHelper::Result.stub(
+        :build_csv,
+        lambda { |solutions|
+          assert_equal parameter_value, solutions.first[:use_deprecated_csv_headers]
+        }
+      ) do
+        submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'
+      end
+    }
   end
 
   def test_returned_types
@@ -478,7 +490,7 @@ class Api::V01::OutputTest < Minitest::Test
            'duration per destination', 'visit duration', 'tags visit', 'tags', 'quantity[kg]',
            'time window start 1', 'time window end 1', 'vehicle', 'reference'],
       es: [
-        'nombre del plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'hora', 'fin',
+        'plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'hora', 'fin',
         'horario inicio 1', 'horario fin 1', 'duración de preparación', 'duración visita', 'cantidad[kg]',
         'etiquetas visita', 'etiquetas', 'vehículo', 'referencia visita'],
       fr: ['plan', 'référence plan', 'tournée', 'nom', 'lat', 'lng', 'type arrêt', 'heure',
@@ -496,5 +508,27 @@ class Api::V01::OutputTest < Minitest::Test
         delete_completed_job @job_id, api_key: 'ortools'
       }
     end
+  end
+
+  def test_use_deprecated_csv_headers_asynchronously
+    vrp = VRP.lat_lon
+    vrp[:configuration][:restitution] = { csv: true }
+
+    legacy_basic_headers = %w[vehicle_id id point_id type begin_time end_time setup_duration duration skills]
+    french_basic_headers = ['tournée', 'référence', 'heure', 'fin de la mission', 'durée client', 'durée visite', 'libellés']
+    [[true, legacy_basic_headers],
+     [false, french_basic_headers]].each{ |parameter, expected|
+
+      vrp[:configuration][:restitution][:use_deprecated_csv_headers] = parameter
+
+      asynchronously start_worker: true do
+        @job_id = submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'
+        wait_status_csv @job_id, 200, api_key: 'demo', http_accept_language: 'fr'
+        current_headers = last_response.body.split("\n").first.split(',')
+        assert_empty expected - current_headers
+
+        delete_completed_job @job_id, api_key: 'ortools'
+      end
+    }
   end
 end

@@ -79,6 +79,7 @@ module Models
     field :geometry, default: []
     field :intermediate_solutions, default: true
     field :csv, default: false
+    field :use_deprecated_csv_headers, default: false
     field :allow_empty_result, default: false
   end
 

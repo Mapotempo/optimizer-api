@@ -79,6 +79,7 @@ module Models
     field :restitution_geometry, default: []
     field :restitution_intermediate_solutions, default: true
     field :restitution_csv, default: false
+    field :restitution_use_deprecated_csv_headers, default: false
     field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil # extends schedule_range_date
@@ -462,6 +463,7 @@ module Models
       self.restitution_geometry = restitution[:geometry]
       self.restitution_intermediate_solutions = restitution[:intermediate_solutions]
       self.restitution_csv = restitution[:csv]
+      self.restitution_use_deprecated_csv_headers = restitution[:use_deprecated_csv_headers]
       self.restitution_allow_empty_result = restitution[:allow_empty_result]
     end
 

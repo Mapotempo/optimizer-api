@@ -190,6 +190,7 @@ module OptimizerWrapper
     check_result_consistency(expected_activity_count, result) if service_vrp[:service] != :demo # demo solver returns a fixed solution
 
     log "<-- define_process levels (dicho: #{dicho_level}, split: #{split_level}) elapsed: #{(Time.now - tic).round(2)} sec", level: :info
+    result[:use_deprecated_csv_headers] = vrp.restitution_use_deprecated_csv_headers
     result
   end
 

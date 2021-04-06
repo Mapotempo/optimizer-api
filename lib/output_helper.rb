@@ -208,6 +208,7 @@ module OutputHelper
     def self.build_csv(solutions)
       return unless solutions
 
+      I18n.locale = :legacy if solutions.any?{ |s| s[:use_deprecated_csv_headers] }
       header, unit_ids, max_timewindows_size, scheduling, any_unassigned = generate_header(solutions)
 
       CSV.generate{ |output_csv|
