@@ -18,7 +18,7 @@
 require './test/test_helper'
 
 class InstanceValidityTest < Minitest::Test
-  if !ENV['SKIP_SCHEDULING']
+  if !ENV['SKIP_PERIODIC']
     def test_reject_if_no_heuristic_neither_first_sol_strategy
       problem = VRP.periodic
       problem[:configuration][:preprocessing][:first_solution_strategy] = []

@@ -18,7 +18,7 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
-  if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
+  if !ENV['SKIP_REAL_PERIODIC'] && !ENV['SKIP_PERIODIC']
     def check_quantities(vrp, result)
       units = vrp.units.collect(&:id)
 
