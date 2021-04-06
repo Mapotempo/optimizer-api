@@ -15,6 +15,7 @@
 - Bump VROOM to v1.8.0 and start using the features integrated since v1.3.0 [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - Bump OR-Tools v7.8 [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - VROOM were previously always called synchronously, it is now reserved to a set of effective `router_mode` (:car, :truck_medium) within a limit of points (<200). [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- Heuristic selection (`first_solution_strategy='self_selection'`) takes into account the supplied initial routes (`routes`) and the best solution is used as the initial route [#159](https://github.com/Mapotempo/optimizer-api/pull/159)
 
 ### Removed
 
