@@ -365,19 +365,15 @@ module Models
     end
 
     def self.convert_geometry_polylines_to_geometry(hash)
-      return unless hash[:configuration] && hash[:configuration][:restitution]
+      return unless hash[:configuration] && hash[:configuration][:restitution].to_h[:geometry]
 
-      if hash[:configuration][:restitution][:geometry_polyline]
-        if hash[:configuration][:restitution][:geometry].is_a?(Array) &&
-           hash[:configuration][:restitution][:geometry].size.positive?
-          raise OptimizerWrapper::DiscordantProblemError.new('Old and new geometry behavior used at the same time')
+      hash[:configuration][:restitution][:geometry] -=
+        if hash[:configuration][:restitution][:geometry_polyline]
+          [:polylines]
+        else
+          [:encoded_polylines]
         end
-
-        hash[:configuration][:restitution][:geometry] = %i[polylines]
-        hash[:configuration][:restitution].delete(:geometry_polyline)
-      elsif hash[:configuration][:restitution][:geometry] == [:to_fill]
-        hash[:configuration][:restitution][:geometry] = %i[polylines partitions]
-      end
+      hash[:configuration][:restitution].delete(:geometry_polyline)
     end
 
     def self.ensure_retrocompatibility(hash)

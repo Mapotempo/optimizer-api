@@ -314,16 +314,5 @@ module Models
       assert_equal 1, created_vrp.services.first.skills.size
       assert_equal created_vrp.services.first.original_skills.size, created_vrp.services.first.skills.size
     end
-
-    def test_geometry_provided
-      vrp = VRP.toy
-      vrp[:configuration][:restitution] = { geometry: %i[partitions points polylines], geometry_polyline: true }
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        Models::Vrp.ensure_retrocompatibility(vrp)
-      end
-      vrp[:configuration][:restitution] = { geometry: true, geometry_polyline: true }
-      Models::Vrp.ensure_retrocompatibility(vrp)
-      assert_equal %i[polylines], vrp[:configuration][:restitution][:geometry]
-    end
   end
 end

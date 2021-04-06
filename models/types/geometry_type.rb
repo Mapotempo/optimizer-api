@@ -17,7 +17,7 @@
 #
 
 class GeometryType
-  ALL_TYPES = %i[polylines partitions].freeze
+  ALL_TYPES = %i[polylines encoded_polylines partitions].freeze
 
   def self.type_cast(value)
     value = value.split(',') if value.is_a?(String)
@@ -25,7 +25,7 @@ class GeometryType
     if value.is_a?(FalseClass)
       []
     elsif value.is_a?(TrueClass)
-      [:to_fill]
+      ALL_TYPES
     elsif value.is_a?(Array)
       to_return = []
       value.each{ |geometry_type|
@@ -35,6 +35,10 @@ class GeometryType
 
         to_return << geometry_type.to_sym
       }
+
+      if (to_return & [:polylines, :encoded_polylines]).size == 2
+        raise ArgumentError.new('Invalid type for geometry value : polylines and encoded polylines are not compatible')
+      end
 
       to_return
     else

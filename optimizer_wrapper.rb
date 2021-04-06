@@ -772,7 +772,7 @@ module OptimizerWrapper
     unless segments.empty?
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
                                                       vehicle.router_mode.to_sym, vehicle.router_dimension,
-                                                      segments, vrp.restitution_geometry.include?(:polyline),
+                                                      segments, vrp.restitution_geometry.include?(:encoded_polyline),
                                                       vehicle.router_options)
       raise RouterError.new('Route details cannot be received') unless details
     end
@@ -807,7 +807,7 @@ module OptimizerWrapper
 
     compute_route_total_dimensions(vrp, route, matrix)
 
-    return unless vrp.restitution_geometry.include?(:polylines) && route[:activities].size > 1 &&
+    return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? && route[:activities].size > 1 &&
                   route[:activities].count{ |i| ['service', 'pickup', 'delivery'].include?(i[:type]) } > 0
 
     details ||= route_details(vrp, route, vehicle)

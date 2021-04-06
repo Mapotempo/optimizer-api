@@ -370,7 +370,7 @@ class Api::V01::VrpTest < Minitest::Test
   def test_ask_for_geometry
     [false, true, # boolean
      ['polylines'], [:polylines], [:polylines, 'partitions'], ['unexistant'], # array of string or symbol
-     'partitions', 'polylines,partitions' # string to be converted into an array
+     'partitions', 'polylines,partitions', 'polylines, encoded_polylines' # string to be converted into an array
     ].each_with_index{ |geometry_field, case_index|
       OptimizerWrapper.stub(:define_main_process, lambda { |services_vrps, _job|
           case case_index
@@ -388,7 +388,7 @@ class Api::V01::VrpTest < Minitest::Test
       ) do
         vrp = VRP.toy
         vrp[:configuration][:restitution] = { geometry: geometry_field }
-        if case_index == 5
+        if [5, 8].include?(case_index)
           post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
           assert_includes [400], last_response.status
         else
