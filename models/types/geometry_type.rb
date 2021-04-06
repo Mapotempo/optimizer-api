@@ -30,14 +30,14 @@ class GeometryType
       to_return = []
       value.each{ |geometry_type|
         unless ALL_TYPES.include?(geometry_type.to_sym)
-          raise ArgumentError.new("Invalid geometry value : #{geometry_type}")
+          raise ArgumentError.new("Invalid geometry value: #{geometry_type}")
         end
 
         to_return << geometry_type.to_sym
       }
 
       if (to_return & [:polylines, :encoded_polylines]).size == 2
-        raise ArgumentError.new('Invalid type for geometry value : polylines and encoded polylines are not compatible')
+        raise ArgumentError.new('Invalid geometry value: polylines and encoded_polylines options are not compatible')
       end
 
       to_return

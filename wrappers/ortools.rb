@@ -201,7 +201,7 @@ module Wrappers
         end
       }
       vrp.shipments.each_with_index{ |shipment, shipment_index|
-        vehicles_indices = if shipment.skills.any? && (vrp.vehicles.all? { |vehicle| vehicle.skills.empty? })
+        vehicles_indices = if shipment.skills.any? && vrp.vehicles.all? { |vehicle| vehicle.skills.empty? }
           []
         else
           vrp.vehicles.collect.with_index{ |vehicle, index|

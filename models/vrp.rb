@@ -228,6 +228,14 @@ module Models
         end
       end
 
+      if configuration[:restitution]
+        if configuration[:restitution][:geometry].to_a.any? &&
+           !hash[:points].all?{ |pt| pt[:location] }
+          raise OptimizerWrapper::DiscordantProblemError.new('Geometry is not available if locations are not defined')
+        end
+      end
+
+
       if configuration[:schedule]
         if configuration[:schedule][:range_indices][:start] > 6
           raise OptimizerWrapper::DiscordantProblemError.new('Api does not support schedule start index bigger than 6 yet')

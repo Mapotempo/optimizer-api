@@ -99,8 +99,6 @@ module OptimizerWrapper
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new('Cannot apply any of the solver services', inapplicable_services)
-    elsif vrp.restitution_geometry.any? && !vrp.points.all?(&:location)
-      raise DiscordantProblemError.new('Geometry is not available if locations are not defined')
     elsif config[:solve][:synchronously] || (
             services_vrps.size == 1 &&
             !vrp.preprocessing_cluster_threshold &&
@@ -114,9 +112,7 @@ module OptimizerWrapper
       job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
                                                      api_key: api_key,
                                                      checksum: checksum,
-                                                     pids: [],
-                                                     configuration: { csv: services_vrps.any?{ |s| s[:vrp].restitution_csv },
-                                                                      geometry: [] })
+                                                     pids: [])
       JobList.add(api_key, job_id)
       job_id
     end
