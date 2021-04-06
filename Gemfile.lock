@@ -7,11 +7,11 @@ GIT
       activesupport (>= 5.0.0)
 
 GIT
-  remote: https://github.com/Mapotempo/balanced_vrp_clustering.git
-  revision: f05b84f49cfc8803ef0adc2bdc12627720d82796
+  remote: https://github.com/senhalil/balanced_vrp_clustering.git
+  revision: 657b71af8721cbbae44c5bba36790fb1c1d6842f
   branch: dev
   specs:
-    balanced_vrp_clustering (0.1.7)
+    balanced_vrp_clustering (0.2.0)
       awesome_print
       color-generator
       geojson2image
@@ -52,7 +52,7 @@ GEM
     anyway_config (2.0.6)
       ruby-next-core (>= 0.8.0)
     ast (2.4.1)
-    awesome_print (1.8.0)
+    awesome_print (1.9.2)
     backport (1.1.2)
     benchmark (0.1.0)
     benchmark-ips (2.8.3)

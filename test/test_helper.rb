@@ -96,6 +96,8 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
     vrp.provide_original_ids unless vrp.is_a?(Hash) # TODO: re-dump with this modification
 
+    vrp[:relations]&.each{ |r| r[:type] = r[:type]&.to_sym } # TODO: re-dump with this modification
+
     vrp
   end
 

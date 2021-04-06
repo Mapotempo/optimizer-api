@@ -28,7 +28,7 @@ class MultiTripsTest < Minitest::Test
     assert_equal 2, vrp.vehicles.size
     assert_equal 1, vrp.relations.size
     vrp.relations.each{ |relation|
-      assert_equal 'vehicle_trips', relation.type
+      assert_equal :vehicle_trips, relation.type
       assert_includes relation.linked_vehicle_ids, 'vehicle_0_trip_0'
       assert_includes relation.linked_vehicle_ids, 'vehicle_0_trip_1'
     }

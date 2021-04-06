@@ -3021,7 +3021,7 @@ class WrapperTest < Minitest::Test
   def test_assert_inapplicable_relations
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration',
+      type: :vehicle_group_duration,
       linked_ids: [],
       linked_vehicle_ids: [],
       lapse: 1
@@ -3032,7 +3032,7 @@ class WrapperTest < Minitest::Test
     refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_relations
 
     problem[:relations] = [{
-      type: 'vehicle_group_duration',
+      type: :vehicle_group_duration,
       linked_ids: ['vehicle_0'],
       linked_vehicle_ids: [],
       lapse: 1

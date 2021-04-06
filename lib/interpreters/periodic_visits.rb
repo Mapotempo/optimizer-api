@@ -41,7 +41,11 @@ module Interpreters
     def expand(vrp, job, &block)
       return vrp unless vrp.scheduling?
 
-      vehicles_linked_by_duration = save_relations(vrp, 'vehicle_group_duration').concat(save_relations(vrp, 'vehicle_group_duration_on_weeks')).concat(save_relations(vrp, 'vehicle_group_duration_on_months'))
+      vehicles_linked_by_duration = save_relations(vrp, :vehicle_group_duration).concat(
+        save_relations(vrp, :vehicle_group_duration_on_weeks)
+      ).concat(
+        save_relations(vrp, :vehicle_group_duration_on_months)
+      )
       vrp.relations = generate_relations(vrp)
       vrp.rests = []
       vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
@@ -130,27 +134,27 @@ module Interpreters
       if mission.minimum_lapse && mission.maximum_lapse
         (2..mission.visits_number).each{ |index|
           current_lapse = (index - 1) * mission.minimum_lapse.to_i
-          vrp.relations << Models::Relation.new(type: 'minimum_day_lapse',
+          vrp.relations << Models::Relation.new(type: :minimum_day_lapse,
                                                 linked_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
                                                 lapse: current_lapse)
         }
         (2..mission.visits_number).each{ |index|
           current_lapse = (index - 1) * mission.maximum_lapse.to_i
-          vrp.relations << Models::Relation.new(type: 'maximum_day_lapse',
+          vrp.relations << Models::Relation.new(type: :maximum_day_lapse,
                                                 linked_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
                                                 lapse: current_lapse)
         }
       elsif mission.minimum_lapse
         (2..mission.visits_number).each{ |index|
           current_lapse = mission.minimum_lapse.to_i
-          vrp.relations << Models::Relation.new(type: 'minimum_day_lapse',
+          vrp.relations << Models::Relation.new(type: :minimum_day_lapse,
                                                 linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
                                                 lapse: current_lapse)
         }
       elsif mission.maximum_lapse
         (2..mission.visits_number).each{ |index|
           current_lapse = mission.maximum_lapse.to_i
-          vrp.relations << Models::Relation.new(type: 'maximum_day_lapse',
+          vrp.relations << Models::Relation.new(type: :maximum_day_lapse,
                                                 linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
                                                 lapse: current_lapse)
         }
@@ -260,7 +264,7 @@ module Interpreters
 
         if vehicle.overall_duration
           new_relation = Models::Relation.new(
-            type: 'vehicle_group_duration',
+            type: :vehicle_group_duration,
             linked_vehicle_ids: @equivalent_vehicles[vehicle.original_id],
             lapse: vehicle.overall_duration + rests_durations[index]
           )
@@ -341,7 +345,7 @@ module Interpreters
       residual_time = []
       idx = 0
       residual_time_for_vehicle = {}
-      vrp.relations.select{ |r| r.type == 'vehicle_group_duration' }.each{ |r|
+      vrp.relations.select{ |r| r.type == :vehicle_group_duration }.each{ |r|
         r.linked_vehicle_ids.each{ |v|
           residual_time_for_vehicle[v] = {
             idx: idx,
@@ -465,7 +469,7 @@ module Interpreters
 
     def get_all_vehicles_in_relation(relations)
       relations&.each{ |r|
-        next if r[:type] == 'vehicle_group_duration'
+        next if r[:type] == :vehicle_group_duration
 
         new_list = []
         r[:linked_vehicle_ids].each{ |v|
@@ -479,9 +483,9 @@ module Interpreters
       new_relations = []
       list.each{ |r|
         case r[:type]
-        when 'vehicle_group_duration'
+        when :vehicle_group_duration
           new_relations << [r[:linked_vehicle_ids], r[:lapse]]
-        when 'vehicle_group_duration_on_weeks'
+        when :vehicle_group_duration_on_weeks
           current_sub_list = []
           first_index = r[:linked_vehicle_ids].min.split('_').last.to_i
           in_periodicity = first_index + 7 * (r[:periodicity] - 1)
@@ -499,7 +503,7 @@ module Interpreters
             end
           }
           new_relations << [current_sub_list, r[:lapse]]
-        when 'vehicle_group_duration_on_months'
+        when :vehicle_group_duration_on_months
           (0..vrp.schedule_months_indices.size - 1).step(r[:periodicity]).collect{ |v| p vrp.schedule_months_indices.slice(v, v + r[:periodicity]).flatten }.each{ |month_indices|
             new_relations << [r[:linked_vehicle_ids].select{ |id| month_indices.include?(id.split('_').last.to_i) }, r[:lapse]]
           }
@@ -508,7 +512,7 @@ module Interpreters
 
       new_relations.each{ |linked_vehicle_ids, lapse|
         vrp.relations << Models::Relation.new(
-          type: 'vehicle_group_duration',
+          type: :vehicle_group_duration,
           linked_vehicle_ids: linked_vehicle_ids,
           lapse: lapse
         )

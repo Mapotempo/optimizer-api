@@ -78,11 +78,11 @@ class HeuristicTest < Minitest::Test
       unassigned_count = Array.new(3){
         vrp = TestHelper.load_vrp(self, fixture_file: 'performance_britanny')
         result = nil
-        Interpreters::SplitClustering.stub(:kmeans_process, lambda{ |nb_clusters, data_items, unit_symbols, limits, options|
+        Interpreters::SplitClustering.stub(:kmeans_process, lambda{ |nb_clusters, data_items, related_item_indices, limits, options|
           options.delete(:distance_matrix)
           options[:restarts] = 4
           # byebug
-          Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items, unit_symbols, limits, options) # call original method
+          Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items, related_item_indices, limits, options) # call original method
         }) do
           result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         end
