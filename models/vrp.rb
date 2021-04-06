@@ -229,7 +229,7 @@ module Models
       end
 
       if configuration[:restitution]
-        if configuration[:restitution][:geometry].to_a.any? &&
+        if configuration[:restitution][:geometry].any? &&
            !hash[:points].all?{ |pt| pt[:location] }
           raise OptimizerWrapper::DiscordantProblemError.new('Geometry is not available if locations are not defined')
         end
