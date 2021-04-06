@@ -18,7 +18,7 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
-  if !ENV['SKIP_SCHEDULING']
+  if !ENV['SKIP_PERIODIC']
     def test_empty_services
       vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)

@@ -18,7 +18,7 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
-  if !ENV['SKIP_SCHEDULING']
+  if !ENV['SKIP_PERIODIC']
     def test_compute_best_common_tw_when_empty_tw
       vrp = VRP.periodic_seq_timewindows
       vrp[:configuration][:resolution][:same_point_day] = true
