@@ -288,7 +288,7 @@ module Interpreters
         subvrps = generate_subproblems(skills_patterns)
         subresults = solve_subproblems(subvrps)
         result = override_original_vrp(subresults)
-        rebuild_entire_route(subresults, result)
+        OptimizerWrapper.parse_result(@original_vrp, rebuild_entire_route(subresults, result))
       end
     end
   end

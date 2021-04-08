@@ -875,7 +875,7 @@ module Wrappers
 
     def empty_result(solver, vrp, unassigned_reason = nil, already_expanded = true)
       vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp) if vrp.scheduling? && !already_expanded
-      {
+      OptimizerWrapper.parse_result(vrp, {
         solvers: [solver],
         cost: nil,
         cost_details: Models::CostDetails.new({}),
@@ -886,7 +886,7 @@ module Wrappers
                      unassigned_rests(vrp)).flatten,
         elapsed: 0,
         total_distance: nil
-      }
+      })
     end
 
     def kill; end

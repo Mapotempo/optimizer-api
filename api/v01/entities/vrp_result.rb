@@ -59,10 +59,10 @@ module Api
       expose :day_week_num, expose_nil: false, documentation: { type: String, desc: '' }
       expose :day_week, expose_nil: false, documentation: { type: String, desc: '' }
       expose :point_id, documentation: { type: String, desc: 'Linked spatial point' }
-      expose :travel_distance, documentation: { type: Integer, desc: 'Travel distance from previous point' }
-      expose :travel_time, documentation: { type: Integer, desc: 'Travel time from previous point' }
+      expose :travel_distance, documentation: { type: Integer, desc: 'Travel distance from previous point (in m)' }
+      expose :travel_time, documentation: { type: Integer, desc: 'Travel time from previous point (in s)' }
       expose :travel_value, documentation: { type: Integer, desc: 'Travel value from previous point' }
-      expose :waiting_time, documentation: { type: Integer, desc: '' }
+      expose :waiting_time, documentation: { type: Integer, desc: 'Idle time (in s)' }
       expose :begin_time, documentation: { type: Integer, desc: 'Time visit starts' }
       expose :end_time, documentation: { type: Integer, desc: 'Time visit ends' }
       expose :departure_time, documentation: { type: Integer, desc: '' }
@@ -72,17 +72,17 @@ module Api
       expose :rest_id, expose_nil: false, documentation: { type: String, desc: 'Internal reference of the rest' }
       expose :detail, using: VrpResultSolutionRouteActivityDetails, documentation: { desc: '' }
       expose :type, documentation: { type: String, desc: 'depot, rest, service, pickup or delivery' }
-      expose :current_distance, documentation: { type: Integer, desc: 'Travel distance from route start to current point' }
+      expose :current_distance, documentation: { type: Integer, desc: 'Travel distance from route start to current point (in m)' }
       expose :alternative, documentation: { type: Integer, desc: 'When one service has alternative activities, index of the chosen one' }
     end
 
     class VrpResultSolutionRoute < Grape::Entity
       expose :vehicle_id, documentation: { type: String, desc: 'Internal reference of the vehicule used for the current route' }
       expose :activities, using: VrpResultSolutionRouteActivities, documentation: { is_array: true, desc: 'Every step of the route' }
-      expose :total_travel_time, documentation: { type: Integer, desc: 'Sum of every travel time within the route' }
-      expose :total_distance, documentation: { type: Integer, desc: 'Sum of every distance within the route' }
-      expose :total_time, documentation: { type: Integer, desc: 'Sum of every travel time and activity duration of the route' }
-      expose :total_waiting_time, documentation: { type: Integer, desc: 'Sum of every idle time within the route' }
+      expose :total_travel_time, documentation: { type: Integer, desc: 'Sum of every travel time within the route (in s)' }
+      expose :total_distance, documentation: { type: Integer, desc: 'Sum of every distance within the route (in m)' }
+      expose :total_time, documentation: { type: Integer, desc: 'Sum of every travel time and activity duration of the route (in s)' }
+      expose :total_waiting_time, documentation: { type: Integer, desc: 'Sum of every idle time within the route (in s)' }
       expose :start_time, documentation: { type: Integer, desc: 'Give the actual start time of the current route if provided by the solve' }
       expose :end_time, documentation: { type: Integer, desc: 'Give the actual end time of the current route if provided by the solver' }
       expose :geometry, documentation: { type: String, desc: 'Contains the geometry of the route, if asked in first place' }
@@ -107,10 +107,10 @@ module Api
       expose :cost, documentation: { type: Float, desc: 'The actual cost of the solution considering all costs' }
       expose :cost_details, using: VRPResultDetailedCosts, documentation: { desc: 'The detail of the different costs which impact the solution' }
       expose :iterations, documentation: { type: Integer, desc: 'Total number of iteration performed to obtain the current result' }
-      expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route' }
-      expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route' }
-      expose :total_travel_time, documentation: { type: Integer, type: 'Cumulated travel time of every route'}
-      expose :total_waiting_time, documentation: { type: Integer, type: 'Cumulated idle time of every route' }
+      expose :total_distance, documentation: { type: Integer, desc: 'cumulated distance of every route (in m)' }
+      expose :total_time, documentation: { type: Integer, desc: 'Cumulated time of every route (in s)' }
+      expose :total_travel_time, documentation: { type: Integer, desc: 'Cumulated travel time of every route (in s)' }
+      expose :total_waiting_time, documentation: { type: Integer, desc: 'Cumulated idle time of every route (in s)' }
       expose :routes, using: VrpResultSolutionRoute, documentation: { is_array: true, desc: 'All the route calculated' }
       expose :unassigned, using: VrpResultSolutionUnassigned, documentation: { is_array: true, desc: 'Jobs which are not part of the solution' }
       expose :elapsed, documentation: { type: Integer, desc: 'Elapsed time within solver in ms' }
