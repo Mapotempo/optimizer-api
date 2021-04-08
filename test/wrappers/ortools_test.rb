@@ -5777,4 +5777,39 @@ class Wrappers::OrtoolsTest < Minitest::Test
   def test_no_nil_in_corresponding_mission_ids
     assert_empty OptimizerWrapper.config[:services][:ortools].send(:corresponding_mission_ids, ['only_id'], ['non_id'])
   end
+
+  def test_self_selection_should_not_change_vehicle_ids
+    vrp = VRP.independent_skills
+    vrp[:configuration][:preprocessing] = { first_solution_strategy: ['self_selection'] }
+
+    heuristic_counter = 0
+    OptimizerWrapper.stub(
+      :solve,
+      lambda{ |_|
+        heuristic_counter += 1
+        if heuristic_counter == 1
+          { cost: 27648.0, solvers: ['ortools'], elapsed: 0.94, routes: [{ vehicle_id: 'vehicle_0', activities: [] }, { vehicle_id: 'vehicle_1', activities: [] }, { vehicle_id: 'vehicle_2', activities: [] }] }
+        else
+          { cost: 14.0, solvers: ['ortools'], elapsed: 0.94,
+            routes: [{ vehicle_id: 'vehicle_0', activities: [{ point_id: 'point_0', type: 'depot'}] },
+                     { vehicle_id: 'vehicle_1', activities: [{ point_id: 'point_0', type: 'depot'}, { service_id: 'service_5', point_id: 'point_5', type: 'service'}, { service_id: 'service_3', point_id: 'point_3', type: 'service'}, { service_id: 'service_1', point_id: 'point_1', type: 'service'}, { service_id: 'service_2', point_id: 'point_2', type: 'service' }] },
+                     { vehicle_id: 'vehicle_2', activities: [{ point_id: 'point_0', type: 'depot'}] }] }
+        end
+      }
+    ) do
+      Interpreters::SeveralSolutions.stub(
+        :collect_heuristics,
+        lambda{ |_, _| %w[global_cheapest_arc parallel_cheapest_insertion local_cheapest_insertion savings] }
+      ) do
+        service_vrp = Interpreters::SeveralSolutions.find_best_heuristic({ service: :ortools, vrp: TestHelper.create(vrp) })
+        assert_equal vrp[:vehicles].size, service_vrp[:vrp].vehicles.collect(&:id).uniq.size, 'We expect same number of IDs as initial vehicles in problem'
+        assert_equal vrp[:services].size, service_vrp[:vrp].services.collect(&:id).uniq.size, 'We expect same number of IDs as initial services in problem'
+        assert_equal 4, service_vrp[:vrp].preprocessing_heuristic_synthesis.size
+        assert_equal ['parallel_cheapest_insertion'], service_vrp[:vrp].preprocessing_first_solution_strategy
+        assert_equal 1, service_vrp[:vrp].routes.size
+        assert_equal 'vehicle_1', service_vrp[:vrp].routes.first.vehicle.id
+        assert_equal ['service_5', 'service_3', 'service_1', 'service_2'], service_vrp[:vrp].routes.first.mission_ids
+      end
+    end
+  end
 end

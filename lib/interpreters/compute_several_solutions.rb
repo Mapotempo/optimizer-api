@@ -191,7 +191,7 @@ module Interpreters
           heuristic_solution
         }
 
-        raise RuntimeError, 'No solution found during heuristic selection' if first_results.all?(&:nil?)
+        raise 'No solution found during heuristic selection' if first_results.all?(&:nil?)
 
         synthesis = []
         first_results.each_with_index{ |result, i|
@@ -214,7 +214,7 @@ module Interpreters
             }.compact
             next if mission_ids.empty?
 
-            Models::Route.new(vehicle: vrp.vehicles.find{ |v| v[:id] = route[:vehicle_id] }, mission_ids: mission_ids)
+            Models::Route.new(vehicle: vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] }, mission_ids: mission_ids)
           }.compact
         end
 
