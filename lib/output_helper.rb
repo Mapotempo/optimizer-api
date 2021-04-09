@@ -90,6 +90,187 @@ module OutputHelper
     end
   end
 
+  class Result
+    def self.generate_geometry(solution)
+      return nil unless solution.to_h[:result]
+
+      @colors = ['#DD0000', '#FFBB00', '#CC1882', '#00CC00', '#558800', '#009EFF', '#9000EE',
+                 '#0077A3', '#000000', '#003880', '#BEE562']
+
+      expected_geometry = solution[:configuration].to_h[:geometry].to_a.map!(&:to_sym) # TODO : investigate how it is possible that no configuration is returned
+
+      expected_geometry.map!(&:to_sym)
+      [solution[:result]].flatten(1).collect{ |result|
+        geojson = {}
+
+        geojson[:partitions] = generate_partitions_geometry(result) if expected_geometry.include?(:partitions)
+        geojson[:points] = generate_points_geometry(result)
+        geojson[:polylines] = generate_polylines_geometry(result) if expected_geometry.include?(:polylines)
+        geojson
+      }
+    end
+
+    private
+
+    def self.generate_partitions_geometry(result)
+      activities = result[:routes].flat_map{ |r|
+        r[:activities].select{ |a| a[:type] != 'depot' && a[:type] != 'rest' }
+      }
+      elements = activities + result[:unassigned]
+      all_skills = elements.flat_map{ |a| a[:detail][:internal_skills] }.uniq
+
+      has_vehicle_partition = all_skills.any?{ |skill| skill.to_s.start_with?('vehicle_partition_') }
+      has_work_day_partition = all_skills.any?{ |skill| skill.to_s.start_with?('work_day_partition_') }
+      return unless has_vehicle_partition || has_work_day_partition
+
+      partitions = {}
+      if has_vehicle_partition
+        partitions[:vehicle] = draw_cluster(elements, :vehicle)
+      end
+
+      return partitions unless has_work_day_partition
+
+      partitions[:work_day] = draw_cluster(elements, :work_day)
+
+      partitions
+    end
+
+    def self.draw_cluster(elements, entity)
+      polygons = elements.group_by{ |element|
+        entity == :vehicle ?
+        [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('vehicle_partition_') }] :
+        [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('work_day_partition_') },
+         element[:detail][:skills].find{ |sk| sk.start_with?('cluster ') }]
+      }.collect.with_index{ |data, cluster_index|
+        cluster_skill, partition_items = data
+        collect_basic_hulls(partition_items.collect{ |item| item[:detail] }, entity, cluster_index, cluster_skill)
+      }
+
+      {
+        type: 'FeatureCollection',
+        features: polygons.compact
+      }
+    end
+
+    def self.compute_color(elements, entity, index)
+      if entity == :vehicle
+        @colors[index % @colors.size]
+      elsif entity == :work_day
+        day = elements.first[:internal_skills].find{ |skill| skill.start_with?('work_day_partition_') }.split('_').last
+        index = OptimizerWrapper::WEEKDAYS.find_index(day.to_sym)
+        @colors[index]
+      else
+        @colors[index % 7]
+      end
+    end
+
+    def self.collect_basic_hulls(elements, entity, cluster_index, cluster_skill)
+      vector = elements.map{ |detail|
+        [detail[:lon], detail[:lat]]
+      }.uniq
+      hull = Hull.get_hull(vector)
+      return nil if hull.nil?
+
+      quantities = elements.flat_map{ |e| e[:quantities] }.group_by{ |qty| qty[:unit] }.collect{ |unit_id, qties|
+        {
+          unit_id: unit_id,
+          value: qties.sum{ |qty| qty[:value] || 0 }
+        }
+      }
+      duration = elements.sum{ |e| e[:duration] + e[:setup_duration] }
+
+      {
+        type: 'Feature',
+        properties: {
+          color: compute_color(elements, entity, cluster_index),
+          name: cluster_skill.join('_'),
+        }.merge(
+          Hash[quantities.collect{ |qty| [qty[:unit_id].to_sym, qty[:value]] }]
+        ).merge(Hash[:duration, duration]),
+        geometry: {
+          type: 'Polygon',
+          coordinates: [hull + [hull.first]]
+        }
+      }
+    end
+
+    def self.generate_points_geometry(result)
+      return nil unless (result[:unassigned].empty? || result[:unassigned].any?{ |un| un[:detail][:lat] }) &&
+                        (result[:routes].all?{ |r| r[:activities].empty? } ||
+                         result[:routes].any?{ |r| r[:activities].any?{ |a| a[:detail] && a[:detail][:lat] } })
+
+      points = []
+
+      result[:unassigned].each{ |unassigned|
+        points << {
+          type: 'Feature',
+          properties: {
+            color: '#B5B5B5',
+            name: unassigned[:service_id] || unassigned[:shipment_id],
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [unassigned[:detail][:lon], unassigned[:detail][:lat]]
+          }
+        }
+      }
+
+      result[:routes].each{ |r|
+        color = compute_color([], nil, r[:day] || 0)
+        r[:activities].each{ |a|
+          next unless ['service', 'pickup', 'delivery'].include?(a[:type])
+
+          points << {
+            type: 'Feature',
+            properties: {
+              color: color,
+              name: a[:service_id] || a[:pickup_id] || a[:shipment_id],
+              vehicle: r[:original_vehicle_id],
+              day: r[:day]
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [a[:detail][:lon], a[:detail][:lat]]
+            }
+          }
+        }
+      }
+
+      {
+        type: 'FeatureCollection',
+        features: points
+      }
+    end
+
+    def self.generate_polylines_geometry(result)
+      polylines = []
+
+      result[:routes].each{ |route|
+        next unless route[:geometry]
+
+        color = compute_color([], nil, route[:day])
+        polylines << {
+          type: 'Feature',
+          properties: {
+            color: color,
+            name: "#{route[:original_vehicle_id]}, day #{route[:day]} route",
+            vehicle: route[:original_vehicle_id],
+            day: route[:day]
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: route[:geometry][0]
+          }
+        }
+      }
+
+      {
+        type: 'FeatureCollection',
+        features: polylines
+      }
+    end
+  end
+
   # To output data about scheduling heuristic process
   class Scheduling
     def initialize(name, vehicle_names, job, schedule_end)

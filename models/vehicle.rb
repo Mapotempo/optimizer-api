@@ -70,6 +70,7 @@ module Models
     field :global_day_index, default: nil
 
     has_many :skills, class_name: 'Array' # Vehicles can have multiple alternative skillsets
+    has_many :original_skills, class_name: 'Array'
 
     field :free_approach, default: false
     field :free_return, default: false

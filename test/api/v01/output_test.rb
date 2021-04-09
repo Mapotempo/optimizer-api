@@ -74,6 +74,20 @@ class Api::V01::OutputTest < Minitest::Test
     refute_includes csv_data.first, 'day_week_num'
   end
 
+  def test_returned_skills
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 }}
+    vrp[:vehicles].first[:skills] = [['skill_to_output']]
+    vrp[:services].first[:skills] = ['skill_to_output']
+
+    response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)['solutions'].first
+    activities = result['routes'].flat_map{ |r| r['activities'] }
+    assert(activities.any?{ |a| a['detail'] && a['detail']['skills'].to_a.size < 2 })
+    assert(activities.any?{ |a| a['detail'] && a['detail']['skills'].to_a.include?('skill_to_output') })
+  end
+
   def test_skill_when_partitions
     vrp = VRP.lat_lon_two_vehicles
     vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
@@ -96,17 +110,21 @@ class Api::V01::OutputTest < Minitest::Test
       assert_equal 1, (element['detail']['skills'].count{ |skill| skill.include?('cluster') })
     }
 
+    # to make it hard to find original_id back :
+    vrp[:vehicles].each{ |v|
+      v[:id] = 'vehicle_cluster_' + v[:id]
+    }
     vrp[:configuration][:preprocessing][:partitions].delete_if{ |partition| partition[:entity] == :work_day }
     response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)['solutions'].first
     to_check = result['routes'].flat_map{ |route| route['activities'].select{ |stop| stop['type'] == 'service' } } + result['unassigned']
     to_check.each{ |element|
-      # each element should have 3 skills added by clustering :
+      # each element should have 2 skills added by clustering :
       assert_equal 2, element['detail']['skills'].size
       # - exactly 1 skill corresponding to vehicle_id entity
-      assert(element['detail']['skills'].include?('vehicle_0') ^ element['detail']['skills'].include?('vehicle_1'))
+      assert(element['detail']['skills'].include?('vehicle_cluster_vehicle_0') ^ element['detail']['skills'].include?('vehicle_cluster_vehicle_1'))
       # - exactly 1 skill corresponding to cluster number
-      assert_equal 1, (element['detail']['skills'].count{ |skill| skill.include?('cluster') })
+      assert_equal 1, (element['detail']['skills'].count{ |skill| skill.include?('cluster ') })
     }
   end
 
@@ -334,5 +352,33 @@ class Api::V01::OutputTest < Minitest::Test
       undocumented = headers - expected_route_keys - expected_activities_keys - expected_unassigned_keys - data[:scheduling_keys]
       assert_empty undocumented, "#{undocumented} keys are not documented, found in #{method}"
     }
+  end
+
+  def test_geojsons_returned
+    asynchronously start_worker: true do
+      vrp = VRP.lat_lon_scheduling
+      @job_id = submit_vrp api_key: 'demo', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'demo'
+      # points should always be returned
+      refute_empty(result['geojsons'].first['points'])
+      assert_empty(result['geojsons'].first['partitions'].to_a + result['geojsons'].first['polylines'].to_a)
+
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
+      vrp[:configuration][:restitution] = { geometry: [:polylines, :partitions] }
+      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'ortools'
+      assert(result['geojsons'].first['polylines']['features'].all?{ |f| f['properties']['color'] })
+      assert_equal ['vehicle', 'work_day'], result['geojsons'].first['partitions'].keys
+      assert(result['geojsons'].first['partitions']['vehicle']['features'].all?{ |f| f['properties']['color'] })
+      assert(result['geojsons'].first['partitions']['work_day']['features'].all?{ |f| f['properties']['color'] })
+
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:preprocessing][:partitions] = [TestHelper.vehicle_and_days_partitions[0]]
+      vrp[:configuration][:restitution] = { geometry: [:partitions] }
+      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'ortools'
+      refute(result['geojsons'].first['partitions'].key?('work_day'))
+    end
   end
 end

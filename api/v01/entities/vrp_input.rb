@@ -166,10 +166,10 @@ module VrpConfiguration
 
   params :vrp_request_resolution do
     optional(:duration, type: Integer, allow_blank: false, desc: 'Maximum duration of resolution')
-    optional(:iterations, type: Integer, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvment from the best solution already found')
-    optional(:stable_iterations, type: Integer, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
-    optional(:stable_coefficient, type: Float, allow_blank: false, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:stable_iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:stable_coefficient, type: Float, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:initial_time_out, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: '[ DEPRECATED : use minimum_duration instead]')
     optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
@@ -192,8 +192,10 @@ module VrpConfiguration
   end
 
   params :vrp_request_restitution do
-    optional(:geometry, type: Boolean, desc: 'Allow to return the MultiLineString of each route')
-    optional(:geometry_polyline, type: Boolean, desc: 'Encode the MultiLineString')
+    optional(:geometry, type: Array[Symbol], default: [], values: %i[polylines encoded_polylines partitions],
+                        coerce_with: ->(value) { GeometryType.type_cast(value) },
+                        desc: 'Specifies the geometry structures to be returned. Can be a subset of `[polylines, encoded_polylines, partitions]` or a boolean value to output all or no geometry. Polylines and encoded_polylines are not compatible.')
+    optional(:geometry_polyline, type: Boolean, documentation: { hidden: true }, desc: '[DEPRECATED] Use geometry instead, with :polylines or :encoded_polylines')
     optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
     optional(:csv, type: Boolean, desc: 'The output is a CSV file if you do not specify api format')
     optional(:allow_empty_result, type: Boolean, desc: 'Allow no solution from the solver used')
@@ -279,7 +281,9 @@ module VrpMisc
     optional(:router_mode, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc')
     optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
     optional(:speed_multiplier, type: Float, default: 1.0, desc: 'multiply the current modality speed, default : 1.0')
-    optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this subtour', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
+    optional(:skills, type: Array[Symbol],
+                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val.map(&:to_sym) },
+                      desc: 'Particular abilities required by a vehicle to perform this subtour')
     optional(:duration, type: Integer, desc: 'Maximum subtour duration')
     optional(:transmodal_stops, type: Array, desc: 'Point where the vehicles can park and start the subtours') do
       use :vrp_request_point
@@ -291,7 +295,7 @@ module VrpMisc
   end
 
   params :vrp_request_zone do
-    requires(:id, type: String, allow_blank: false, desc: '')
+    requires(:id, type: Symbol, allow_blank: false, desc: '')
     requires(:polygon, type: Hash, desc: 'Geometry which describes the area')
     optional(:allocations, type: Array[Array[String]], desc: 'Define by which vehicle or vehicles combination the zone could be served')
   end
@@ -326,7 +330,9 @@ module VrpMissions
     optional(:minimum_lapse, type: Float, desc: '(Scheduling only) Minimum day lapse between two visits')
     optional(:maximum_lapse, type: Float, desc: '(Scheduling only) Maximum day lapse between two visits')
     optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
-    optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this service. Not available with periodic heuristic.', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
+    optional(:skills, type: Array[Symbol],
+                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val.map(&:to_sym) },
+                      desc: 'Particular abilities required by a vehicle to perform this service. Not available with periodic heuristic.')
 
     optional(:type, type: Symbol, desc: '`service`, `pickup` or `delivery`. Only service type is available with periodic heuristic.')
     optional(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
@@ -371,7 +377,9 @@ module VrpMissions
 
     optional(:maximum_inroute_duration, type: Integer, desc: 'Maximum in route duration of this particular shipment (Must be feasible !)')
     optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
-    optional(:skills, type: Array[String], desc: 'Particular abilities required by a vehicle to perform this shipment', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
+    optional(:skills, type: Array[Symbol],
+                      coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val.map(&:to_sym) },
+                      desc: 'Particular abilities required by a vehicle to perform this shipment')
     requires(:pickup, type: Hash, allow_blank: false, desc: 'Activity of collection') do
       use :vrp_request_activity
     end
@@ -489,8 +497,13 @@ module VrpVehicles
     optional(:distance, type: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
     optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
     optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
-    optional :skills, type: Array[Array[String]], desc: 'Particular abilities which could be handle by the vehicle. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]. Not available with periodic heuristic.',
-                      coerce_with: ->(val) { val.is_a?(String) ? [val.split(/,/).map(&:strip)] : val } # TODO : Create custom coerce to consider multiple alternatives
+    optional :skills, type: Array[Array[Symbol]],
+                      coerce_with: ->(val) {
+                        val.is_a?(String) ?
+                        [val.split(/,/).map!(&:strip).map!(&:to_sym)] :
+                        val.map{ |set| set.map(&:to_sym) }
+                      }, # TODO : Create custom coerce to consider multiple alternatives
+                      desc: 'Particular abilities which could be handle by the vehicle. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]. Not available with periodic heuristic.'
 
     optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Scheduling only) Express the exceptionnals indices of unavailabilty')
     optional(:unavailable_work_date, type: Array, desc: '(Scheduling only) Express the exceptionnals days of unavailability')
@@ -518,7 +531,7 @@ module VrpVehicles
     optional(:cost_value_multiplier, type: Float, desc: 'Multiplier applied to the value matrix and additional activity value. Not taken into account within periodic heuristic.')
     optional(:cost_waiting_time_multiplier, type: Float, desc: 'Cost applied to the waiting time in the route. Not taken into account within periodic heuristic.')
     optional(:cost_late_multiplier, type: Float, desc: 'Cost applied if a point is delivered late (ORtools only). Not taken into account within periodic heuristic.')
-    optional(:cost_setup_time_multiplier, type: Float, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
+    optional(:cost_setup_time_multiplier, type: Float, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
   end
 
   params :vehicle_model_related do

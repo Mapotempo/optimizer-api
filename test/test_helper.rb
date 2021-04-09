@@ -85,6 +85,14 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       vrp[:configuration][:preprocessing][:first_solution_strategy] = [vrp[:configuration][:preprocessing][:first_solution_strategy]].flatten
     end
 
+    if vrp[:configuration]
+      if vrp[:configuration][:restitution]
+        vrp[:configuration][:restitution][:geometry] ||= []
+      else
+        vrp[:configuration][:restitution] = { geometry: [] }
+      end
+    end
+
     if vrp.is_a?(Hash) # TODO: make this work for the model as well. So that, it can detect model change and dump incompatibility.
       unknown_model_fields = vrp.keys - [:name, :matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration]
       raise StandardError, "If there is a new model class add it above. If not, following fields should not be in vrp: #{unknown_model_fields}" unless unknown_model_fields.empty?
@@ -94,7 +102,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
     vrp.preprocessing_partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
 
-    vrp.provide_original_ids unless vrp.is_a?(Hash) # TODO: re-dump with this modification
+    vrp.provide_original_info unless vrp.is_a?(Hash) # TODO: re-dump with this modification
 
     vrp[:relations]&.each{ |r| r[:type] = r[:type]&.to_sym } # TODO: re-dump with this modification
 

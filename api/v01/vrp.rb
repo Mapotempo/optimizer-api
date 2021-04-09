@@ -154,7 +154,8 @@ module Api
             end
 
             solution ||= OptimizerWrapper::Result.get(id) || {}
-            output_format = params[:format]&.to_sym || ((solution && solution[:csv]) ? :csv : env['api.format'])
+            output_format = params[:format]&.to_sym ||
+                            (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
             if job&.completed? # job can still be nil if we have the solution from the dump
@@ -174,7 +175,8 @@ module Api
                   status: job&.status&.to_sym || :completed, # :queued, :working, :completed, :failed
                   avancement: job&.message,
                   graph: solution[:graph]
-                }
+                },
+                geojsons: OutputHelper::Result.generate_geometry(solution)
               }, with: VrpResult)
             end
             # set nil to release memory because puma keeps the grape api endpoint object alive
@@ -216,7 +218,7 @@ module Api
               solution = OptimizerWrapper::Result.get(id)
               status 202
               if solution && !solution.empty?
-                output_format = params[:format]&.to_sym || (solution[:csv] ? :csv : env['api.format'])
+                output_format = params[:format]&.to_sym || (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
                 if output_format == :csv
                   present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
                 else
@@ -227,7 +229,8 @@ module Api
                       status: :killed,
                       avancement: job.message,
                       graph: solution[:graph]
-                    }
+                    },
+                    geojsons: OutputHelper::Result.generate_geometry(solution)
                   }, with: VrpResult)
                 end
               else

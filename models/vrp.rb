@@ -74,8 +74,7 @@ module Models
     field :resolution_batch_heuristic, default: false
     field :resolution_repetition, default: nil
 
-    field :restitution_geometry, default: false
-    field :restitution_geometry_polyline, default: false
+    field :restitution_geometry, default: []
     field :restitution_intermediate_solutions, default: true
     field :restitution_csv, default: false
     field :restitution_allow_empty_result, default: false
@@ -140,6 +139,8 @@ module Models
     def self.check_consistency(hash)
       hash[:services] ||= []
       hash[:shipments] ||= []
+
+      ensure_no_conflicting_skills(hash)
 
       # shipment relation consistency
       shipment_relations = hash[:relations]&.select{ |r| r[:type] == :shipment }&.flat_map{ |r| r[:linked_ids] }.to_a
@@ -227,6 +228,14 @@ module Models
         end
       end
 
+      if configuration[:restitution]
+        if configuration[:restitution][:geometry].any? &&
+           !hash[:points].all?{ |pt| pt[:location] }
+          raise OptimizerWrapper::DiscordantProblemError.new('Geometry is not available if locations are not defined')
+        end
+      end
+
+
       if configuration[:schedule]
         if configuration[:schedule][:range_indices][:start] > 6
           raise OptimizerWrapper::DiscordantProblemError.new('Api does not support schedule start index bigger than 6 yet')
@@ -263,12 +272,26 @@ module Models
       end
     end
 
+    def self.ensure_no_conflicting_skills(hash)
+      all_skills = (hash[:vehicles].to_a + hash[:services].to_a + hash[:shipments].to_a).flat_map{ |mission|
+        mission[:skills]
+      }.compact.uniq
+
+      return unless ['vehicle_partition_', 'work_day_partition_'].any?{ |str|
+        all_skills.any?{ |skill| skill.to_s.start_with?(str) }
+      }
+
+      raise OptimizerWrapper::UnsupportedProblemError.new(
+        "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. These skill patterns are reserved for internal use and they would lead to unexpected behaviour."
+      )
+    end
+
     def self.expand_data(vrp)
       vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.adapt_relations_between_shipments
       vrp.expand_unavailable_days
-      vrp.provide_original_ids
+      vrp.provide_original_info
     end
 
     def self.convert_position_relations(hash)
@@ -349,12 +372,25 @@ module Models
       }
     end
 
+    def self.convert_geometry_polylines_to_geometry(hash)
+      return unless hash[:configuration] && hash[:configuration][:restitution].to_h[:geometry]
+
+      hash[:configuration][:restitution][:geometry] -=
+        if hash[:configuration][:restitution][:geometry_polyline]
+          [:polylines]
+        else
+          [:encoded_polylines]
+        end
+      hash[:configuration][:restitution].delete(:geometry_polyline)
+    end
+
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
       self.deduce_first_solution_strategy(hash)
       self.deduce_minimum_duration(hash)
       self.deduce_solver_parameter(hash)
       self.convert_route_indice_into_index(hash)
+      self.convert_geometry_polylines_to_geometry(hash)
     end
 
     def self.filter(hash)
@@ -563,7 +599,6 @@ module Models
 
     def restitution=(restitution)
       self.restitution_geometry = restitution[:geometry]
-      self.restitution_geometry_polyline = restitution[:geometry_polyline]
       self.restitution_intermediate_solutions = restitution[:intermediate_solutions]
       self.restitution_csv = restitution[:csv]
       self.restitution_allow_empty_result = restitution[:allow_empty_result]

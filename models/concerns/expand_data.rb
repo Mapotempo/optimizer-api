@@ -85,9 +85,10 @@ module ExpandData
     }
   end
 
-  def provide_original_ids
+  def provide_original_info
     (self.services + self.shipments + self.vehicles).each{ |element|
       element.original_id = element.id
+      element.original_skills = element.skills.dup
     }
   end
 end

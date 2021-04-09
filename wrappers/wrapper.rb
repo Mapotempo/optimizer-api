@@ -501,11 +501,29 @@ module Wrappers
       }
     end
 
+    def build_skills(job)
+      return nil unless job
+
+      all_skills = job.skills - job.original_skills
+      skills_to_output = []
+
+      vehicle_cluster = all_skills.find{ |sk| sk.to_s.include?('vehicle_partition_') }
+      skills_to_output << vehicle_cluster.to_s.split('_')[2..-1].join('_') if vehicle_cluster
+
+      work_day_cluster = all_skills.find{ |sk| sk.to_s.include?('work_day_partition_') }
+      skills_to_output << work_day_cluster.to_s.split('_')[3..-1].join('_') if work_day_cluster
+
+      skills_to_output << job.original_skills
+
+      skills_to_output.flatten
+    end
+
     def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
       {
         lat: point&.location&.lat,
         lon: point&.location&.lon,
-        skills: job&.skills,
+        skills: build_skills(job),
+        internal_skills: job&.skills,
         setup_duration: activity&.setup_duration,
         duration: activity&.duration,
         additional_value: activity&.additional_value,

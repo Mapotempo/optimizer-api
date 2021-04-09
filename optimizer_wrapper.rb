@@ -72,11 +72,12 @@ module OptimizerWrapper
 
     Filters.filter(vrp)
 
-    vrp.resolution_repetition ||= if !vrp.preprocessing_partitions.empty? && vrp.periodic_heuristic?
-      config[:solve][:repetition]
-    else
-      1
-    end
+    vrp.resolution_repetition ||=
+      if !vrp.preprocessing_partitions.empty? && vrp.periodic_heuristic?
+        config[:solve][:repetition]
+      else
+        1
+      end
 
     services_vrps = split_independent_vrp(vrp).map{ |vrp_element|
       {
@@ -98,22 +99,22 @@ module OptimizerWrapper
 
     if services_vrps.any?{ |sv| !sv[:service] }
       raise UnsupportedProblemError.new('Cannot apply any of the solver services', inapplicable_services)
-    elsif vrp.restitution_geometry && !vrp.points.all?{ |point| point[:location] }
-      raise DiscordantProblemError, 'Geometry is not available if locations are not defined'
+    elsif config[:solve][:synchronously] || (
+            services_vrps.size == 1 &&
+            !vrp.preprocessing_cluster_threshold &&
+            config[:services][services_vrps[0][:service]].solve_synchronous?(vrp)
+          )
+      # The job seems easy enough to perform it with the server
+      result = define_main_process(services_vrps, job_id)
+      result.size == 1 ? result.first : result
     else
-      if config[:solve][:synchronously] || (services_vrps.size == 1 && !vrp.preprocessing_cluster_threshold && config[:services][services_vrps[0][:service]].solve_synchronous?(vrp))
-        # The job seems easy enough to perform it with the server
-        result = define_main_process(services_vrps, job_id)
-        (result.size == 1) ? result.first : result
-      else
-        # Delegate the job to a worker
-        job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
-                                                       api_key: api_key,
-                                                       checksum: checksum,
-                                                       pids: [])
-        JobList.add(api_key, job_id)
-        job_id
-      end
+      # Delegate the job to a worker
+      job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
+                                                     api_key: api_key,
+                                                     checksum: checksum,
+                                                     pids: [])
+      JobList.add(api_key, job_id)
+      job_id
     end
   end
 
@@ -255,7 +256,10 @@ module OptimizerWrapper
               next unless job
 
               current_result = Result.get(job) || { pids: nil }
-              current_result[:csv] = true if cliqued_vrp[:restitution_csv]
+              current_result[:configuration] = {
+                csv: cliqued_vrp.restitution_csv,
+                geometry: cliqued_vrp.restitution_geometry
+              }
               current_result[:pids] = pids
 
               Result.set(job, current_result)
@@ -287,7 +291,10 @@ module OptimizerWrapper
       Cleanse.cleanse(vrp, optim_result)
 
       optim_result[:name] = vrp.name
-      optim_result[:csv] = true if vrp.restitution_csv
+      optim_result[:configuration] = {
+        csv: vrp.restitution_csv,
+        geometry: vrp.restitution_geometry
+      }
       optim_result[:unassigned] = (optim_result[:unassigned] || []) + unfeasible_services
 
       if vrp.preprocessing_first_solution_strategy
@@ -629,16 +636,15 @@ module OptimizerWrapper
 
     total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
     route[:activities].each{ |activity|
-      if activity[:point_id]
-        point = vrp.points.find{ |p| p.id == activity[:point_id] }.matrix_index
-        if previous && point
-          dimensions.each{ |dimension|
-            activity[('travel_' + dimension.to_s).to_sym] = matrix.send(dimension)[previous][point]
-            total[dimension] += activity[('travel_' + dimension.to_s).to_sym].round
-            activity[:current_distance] ||= total[dimension].round if dimension == :distance
-          }
-        end
+      point = vrp.points.find{ |p| p.id == activity[:point_id] }&.matrix_index
+      if previous && point
+        dimensions.each{ |dimension|
+          activity["travel_#{dimension}".to_sym] = matrix.send(dimension)[previous][point]
+          total[dimension] += activity["travel_#{dimension}".to_sym].round
+          activity[:current_distance] ||= total[dimension].round if dimension == :distance
+        }
       end
+
       previous = point
     }
 
@@ -745,65 +751,71 @@ module OptimizerWrapper
     previous = nil
     details = nil
     segments = route[:activities].reverse.collect{ |activity|
-      current = nil
-      if activity[:point_id]
-        current = vrp.points.find{ |point| point[:id] == activity[:point_id] }
-      elsif activity[:service_id]
-        current = vrp.points.find{ |point| point[:id] ==  vrp.services.find{ |service| service[:id] == activity[:service_id] }[:activity][:point_id] }
-      elsif activity[:pickup_shipment_id]
-        current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:pickup_shipment_id] }[:pickup][:point_id] }
-      elsif activity[:delivery_shipment_id]
-        current = vrp.points.find{ |point| point[:id] ==  vrp.shipments.find{ |shipment| shipment[:id] == activity[:delivery_shipment_id] }[:delivery][:point_id] }
-      elsif activity[:rest_id]
-        current = previous
-      end
-      segment = if previous && current
-        [current[:location][:lat], current[:location][:lon], previous[:location][:lat], previous[:location][:lon]]
-      end
+      current =
+        if activity[:rest_id]
+          previous
+        else
+          vrp.points.find{ |point| point.id == activity[:point_id] }
+        end
+      segment =
+        if previous && current
+          [current[:location][:lat], current[:location][:lon], previous[:location][:lat], previous[:location][:lon]]
+        end
       previous = current
       segment
     }.reverse.compact
+
     unless segments.empty?
       details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
-                                                      vehicle[:router_mode].to_sym, vehicle[:router_dimension], segments, vrp.restitution_geometry_polyline, vehicle.router_options)
-      raise RouterError, 'Route details cannot be received' unless details
+                                                      vehicle.router_mode.to_sym, vehicle.router_dimension,
+                                                      segments, vrp.restitution_geometry.include?(:encoded_polyline),
+                                                      vehicle.router_options)
+      raise RouterError.new('Route details cannot be received') unless details
     end
+
     details&.each{ |d| d[0] = (d[0] / 1000.0).round(4) if d[0] }
     details
   end
 
-  def self.compute_route_distances(vrp, route, vehicle)
+  def self.compute_route_travel_distances(vrp, matrix, route, vehicle)
+    return nil unless matrix.distance.nil? && route[:activities].size > 1 && vrp.points.all?(&:location)
+
     details = route_details(vrp, route, vehicle)
 
-    return details unless details.to_a.size.positive?
+    return nil unless details && !details.empty?
 
-    route[:total_distance] = details.map(&:first).compact.reduce(:+).round
     route[:activities][1..-1].each_with_index{ |activity, index|
-      activity[:travel_distance] = details[index].first if details[index]
+      activity[:travel_distance] = details[index]&.first
     }
+
+    details
+  end
+
+  def self.fill_missing_route_data(vrp, route, matrix, vehicle, solvers)
+    route[:original_vehicle_id] = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }.original_id
+    route[:day] = route[:vehicle_id].split('_').last.to_i unless route[:original_vehicle_id] == route[:vehicle_id]
+    details = compute_route_travel_distances(vrp, matrix, route, vehicle)
+    compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
+
+    if route[:end_time] && route[:start_time]
+      route[:total_time] = route[:end_time] - route[:start_time]
+    end
+
+    compute_route_total_dimensions(vrp, route, matrix)
+
+    return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? && route[:activities].size > 1 &&
+                  route[:activities].count{ |i| ['service', 'pickup', 'delivery'].include?(i[:type]) } > 0
+
+    details ||= route_details(vrp, route, vehicle)
+    route[:geometry] = details&.map(&:last)
   end
 
   def self.parse_result(vrp, result)
     tic_parse_result = Time.now
-    result[:routes].each{ |r|
-      details = nil
-
-      next unless r[:activities].size.positive?
-
-      v = vrp.vehicles.find{ |vehicle| vehicle.id == r[:vehicle_id] }
-      matrix = vrp.matrices.find{ |mat| mat.id == v.matrix_id }
-
-      if matrix.distance.nil? && r[:activities].size > 1 && vrp.points.all?(&:location)
-        details = compute_route_distances(vrp, r, v)
-      end
-
-      compute_route_waiting_times(r) unless r[:activities].empty? || result[:solvers].include?('vroom')
-      compute_route_total_dimensions(vrp, r, matrix)
-
-      if vrp.restitution_geometry && r[:activities].size > 1
-        details = route_details(vrp, r, v) if details.nil?
-        r[:geometry] = details.map(&:last) if details
-      end
+    result[:routes].each{ |route|
+      vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
+      matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
+      fill_missing_route_data(vrp, route, matrix, vehicle, result[:solvers])
     }
     compute_result_total_dimensions_and_round_route_stats(result)
 
@@ -840,8 +852,6 @@ module OptimizerWrapper
 
         next unless zone.inside(activity_loc.lat, activity_loc.lon)
 
-        service.sticky_vehicles += zone.vehicles
-        service.sticky_vehicles.uniq!
         service.skills += [zone[:id]]
         service.id
       }.compact
@@ -851,10 +861,6 @@ module OptimizerWrapper
         pickup_loc = shipment.pickup.point.location
         delivery_loc = shipment.delivery.point.location
 
-        if zone.inside(pickup_loc[:lat], pickup_loc[:lon]) && zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          shipment.sticky_vehicles += zone.vehicles
-          shipment.sticky_vehicles.uniq!
-        end
         if zone.inside(pickup_loc[:lat], pickup_loc[:lon])
           shipment.skills += [zone[:id]]
           shipments_ids << shipment.id + 'pickup'

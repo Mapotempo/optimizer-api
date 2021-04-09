@@ -8,6 +8,7 @@
 - Support initial routes and skills in split_solve (`max_split_size`) algorithm [#140](https://github.com/Mapotempo/optimizer-api/pull/140)
 - Support relations (`order`, `same_route`, `sequence`, `shipment`) in split_solve algorithm (`max_split_size`) and partitions (`[:configuration][:preprocessing][:partitions]`) [PR145](https://github.com/Mapotempo/optimizer-api/pull/145)
 - split_solve algorithm (`max_split_size`) respects relations (`vehicle_trips`, `meetup`, `minimum_duration_lapse`, `maximum_duration_lapse`, `minimum_day_lapse`, `maximum_day_lapse`) [PR145](https://github.com/Mapotempo/optimizer-api/pull/145)
+- Return `geojsons` structure according to `geometry` parameter [#165](https://github.com/Mapotempo/optimizer-api/pull/165)
 
 ### Changed
 
@@ -21,6 +22,7 @@
 
 ### Removed
 
+- `geometry_polyline` parameter now be provided through `geometry` parameter [#165](https://github.com/Mapotempo/optimizer-api/pull/165)
 
 ### Fixed
 

@@ -50,6 +50,7 @@ module Models
     # validates_inclusion_of :type, :in => %i(service pickup delivery)
 
     field :skills, default: []
+    field :original_skills, default: []
 
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'

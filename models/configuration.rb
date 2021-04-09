@@ -76,8 +76,7 @@ module Models
   end
 
   class Restitution < Base
-    field :geometry, default: false
-    field :geometry_polyline, default: false
+    field :geometry, default: []
     field :intermediate_solutions, default: true
     field :csv, default: false
     field :allow_empty_result, default: false

@@ -46,6 +46,7 @@ module Models
     # validates_numericality_of :maximum_lapse
 
     field :skills, default: []
+    field :original_skills, default: []
 
     belongs_to :pickup, class_name: 'Models::Activity'
     belongs_to :delivery, class_name: 'Models::Activity'

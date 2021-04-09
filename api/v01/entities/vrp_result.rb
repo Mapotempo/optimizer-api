@@ -129,8 +129,20 @@ module Api
       expose :graph, using: VrpResultJobGraphItem, documentation: { is_array: true, desc: 'Items to plot cost evolution' }
     end
 
+    class VrpResultVisualClusters < Grape::Entity
+      expose :vehicle, expose_nil: false, documentation: { desc: 'Vehicle partition visual' }
+      expose :work_day, expose_nil: false, documentation: { desc: 'Work_day partition visual' }
+    end
+
+    class VrpResultVisual < Grape::Entity
+      expose :partitions, expose_nil: false, using: VrpResultVisualClusters, documentation: { desc: 'According to specified geometry and partitions parameter, geojsons representing each partition' }
+      expose :points, expose_nil: false, documentation: { desc: 'Points visualization' }
+      expose :polylines, expose_nil: false, documentation: { desc: 'Polylines visualization' }
+    end
+
     class VrpResult < Grape::Entity
       expose :solutions, using: VrpResultSolution, documentation: { is_array: true, desc: 'The current best solution' }
+      expose :geojsons, using: VrpResultVisual, documentation: { is_array: true, desc: 'If required through geometry VRP parameter, set of geojsons generated' }
       expose :job, using: VrpResultJob, documentation: { desc: 'The Job status' }
     end
 

@@ -36,6 +36,7 @@ module OptimizerWrapper
   @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides].freeze
+  WEEKDAYS = %i[mon tue wed thu fri sat sun].freeze
   DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR)
   VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
