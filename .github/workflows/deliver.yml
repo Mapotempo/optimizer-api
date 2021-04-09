@@ -1,0 +1,32 @@
+name: Docker Image Delivery
+
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  OPTIMIZER_ORTOOLS_VERSION: ${{ secrets.OPTIMIZER_ORTOOLS_VERSION }}
+  REGISTRY: ${{ secrets.REGISTRY }}
+  REGISTRY_PWD: ${{ secrets.REGISTRY_PWD }}
+  REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+  VROOM_VERSION: ${{ secrets.VROOM_VERSION }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v1
+      - name: Cache
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}
+      - name: Build image
+        run: ./.github/actions/build.sh
+        shell: bash
+      - name: Deliver image
+        run: ./.github/actions/deliver.sh
+        shell: bash
