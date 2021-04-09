@@ -18,12 +18,14 @@
 require './lib/tsp_helper.rb'
 require './models/base'
 require './models/concerns/distance_matrix'
+require './models/concerns/validate_data'
 require './models/concerns/expand_data'
 require './models/concerns/periodic_service'
 
 module Models
   class Vrp < Base
     include DistanceMatrix
+    include ValidateData
     include ExpandData
     include PeriodicService
 
@@ -124,7 +126,7 @@ module Models
       vrp = super({})
       self.filter(hash) # TODO : add filters.rb here
       # moved filter here to make sure we do have schedule_indices (not date) to do work_day check with lapses
-      self.check_consistency(hash)
+      vrp.check_consistency(hash)
       self.ensure_retrocompatibility(hash)
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
@@ -134,172 +136,6 @@ module Models
       self.expand_data(vrp)
 
       vrp
-    end
-
-    def self.check_consistency(hash)
-      hash[:services] ||= []
-      hash[:shipments] ||= []
-
-      ensure_no_conflicting_skills(hash)
-
-      # shipment relation consistency
-      if hash[:relations]&.any?{ |r| r[:type] == :shipment }
-        shipment_relations = hash[:relations].select{ |r| r[:type] == :shipment }
-
-        shipments_not_having_exactly_two_linked_ids = shipment_relations.reject{ |r| r[:linked_ids].uniq.size == 2 }
-        unless shipments_not_having_exactly_two_linked_ids.empty?
-          raise OptimizerWrapper::DiscordantProblemError.new(
-            'Shipment relations need to have two services -- a pickup and a delivery. ' \
-            'Relations of following services does not have exactly two linked_ids: ' \
-            "#{shipments_not_having_exactly_two_linked_ids.flat_map{ |r| r[:linked_ids] }.uniq.sort.join(', ')}"
-          )
-        end
-
-        pickups = shipment_relations.map{ |r| r[:linked_ids].first }
-        deliveries = shipment_relations.map{ |r| r[:linked_ids].last }
-        services_that_are_both_pickup_and_delivery = pickups & deliveries
-        unless services_that_are_both_pickup_and_delivery.empty?
-          raise OptimizerWrapper::UnsupportedProblemError.new(
-            'A service cannot be both a delivery and a pickup in different relations. '\
-            'Following services appear in multiple shipment relations both as pickup and delivery: ',
-            [services_that_are_both_pickup_and_delivery]
-          )
-        end
-      end
-
-      # vehicle time cost consistency
-      if hash[:vehicles]&.any?{ |v| v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1) }
-        raise OptimizerWrapper::DiscordantProblemError, 'cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
-      end
-
-      # ensure IDs are unique
-      # TODO: Active Hash should be checking this
-      [:matrices, :units, :points, :rests, :zones, :timewindows,
-       :vehicles, :services, :shipments, :subtours].each{ |key|
-        next if hash[key]&.collect{ |v| v[:id] }&.uniq!.nil?
-
-        raise OptimizerWrapper::DiscordantProblemError.new("#{key} IDs should be unique")
-      }
-
-      # matrix_id consistency
-      hash[:vehicles]&.each{ |v|
-        if v[:matrix_id] && (hash[:matrices].nil? || hash[:matrices].none?{ |m| m[:id] == v[:matrix_id] })
-          raise OptimizerWrapper::DiscordantProblemError, 'There is no matrix with id vehicle[:matrix_id]'
-        end
-      }
-
-      # matrix_index consistency
-      if hash[:matrices].nil? || hash[:matrices].empty?
-        raise OptimizerWrapper::DiscordantProblemError, 'There is a point with point[:matrix_index] defined but there is no matrix' if hash[:points]&.any?{ |p| p[:matrix_index] }
-      else
-        max_matrix_index = hash[:points].max{ |p| p[:matrix_index] || -1 }[:matrix_index] || -1
-        matrix_not_big_enough = hash[:matrices].any?{ |matrix_group|
-          Models::Matrix.field_names.any?{ |dimension|
-            matrix_group[dimension] && (matrix_group[dimension].size <= max_matrix_index || matrix_group[dimension].any?{ |col| col.size <= max_matrix_index })
-          }
-        }
-        raise OptimizerWrapper::DiscordantProblemError, 'All matrices should have at least maximum(point[:matrix_index]) number of rows and columns' if matrix_not_big_enough
-      end
-
-      # services consistency
-      if (hash[:services] + hash[:shipments]).any?{ |s| (s[:minimum_lapse] || 0) > (s[:maximum_lapse] || 2**32) }
-        raise OptimizerWrapper::DiscordantProblemError.new('Minimum lapse can not be bigger than maximum lapse')
-      end
-
-      # shipment position consistency
-      forbidden_position_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
-      hash[:shipments].each{ |shipment|
-        raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_position_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
-      }
-
-      # routes consistency
-      periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
-      hash[:routes]&.each{ |route|
-        route[:mission_ids].each{ |id|
-          corresponding_service = hash[:services]&.find{ |s| s[:id] == id } || hash[:shipments].find{ |s| s[:id] == id }
-
-          raise OptimizerWrapper::DiscordantProblemError, 'Each mission_ids should refer to an existant service or shipment' if corresponding_service.nil?
-          raise OptimizerWrapper::UnsupportedProblemError, 'Services in initialize routes should have only one activity' if corresponding_service[:activities] && periodic
-        }
-      }
-
-      configuration = hash[:configuration]
-      return unless configuration
-
-      # configuration consistency
-      if configuration[:preprocessing]
-        if configuration[:preprocessing][:partitions]&.any?{ |partition| partition[:entity].to_sym == :work_day }
-          if hash[:services].any?{ |s|
-            min_lapse = s[:minimum_lapse]&.floor || 1
-            max_lapse = s[:maximum_lapse]&.ceil || hash[:configuration][:schedule][:range_indices][:end]
-
-            s[:visits_number].to_i > 1 && (
-              hash[:configuration][:schedule][:range_indices][:end] <= 6 ||
-              (min_lapse..max_lapse).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
-            )
-          }
-
-            raise OptimizerWrapper::DiscordantProblemError, 'Work day partition implies that lapses of all services can be a multiple of 7. There are services whose minimum and maximum lapse do not permit such lapse'
-          end
-        end
-      end
-
-      if configuration[:restitution]
-        if configuration[:restitution][:geometry].any? &&
-           !hash[:points].all?{ |pt| pt[:location] }
-          raise OptimizerWrapper::DiscordantProblemError.new('Geometry is not available if locations are not defined')
-        end
-      end
-
-
-      if configuration[:schedule]
-        if configuration[:schedule][:range_indices][:start] > 6
-          raise OptimizerWrapper::DiscordantProblemError.new('Api does not support schedule start index bigger than 6 yet')
-          # TODO : allow start bigger than 6 and make code consistent with this
-        end
-
-        if configuration[:schedule][:range_indices][:start] > configuration[:schedule][:range_indices][:end]
-          raise OptimizerWrapper::DiscordantProblemError.new('Schedule start index should be less than or equal to end')
-        end
-      else
-        (hash[:services] + hash[:shipments]).each{ |s|
-          raise OptimizerWrapper::DiscordantProblemError.new(
-            'There can not be more than one visit if no schedule is provided') unless s[:visits_number].to_i <= 1
-        }
-      end
-
-      # periodic consistency
-      return unless periodic
-
-      if hash[:relations]
-        incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end]
-        raise OptimizerWrapper::DiscordantProblemError, "#{incompatible_relation_types} relations not available with specified first_solution_strategy" unless incompatible_relation_types.empty?
-      end
-
-      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == :vehicle_group_duration_on_months } &&
-                                                                                                                                                (!configuration[:schedule] || configuration[:schedule][:range_indice])
-
-      raise OptimizerWrapper::DiscordantProblemError, 'Shipments are not available with periodic heuristic.' unless hash[:shipments].empty?
-
-      raise OptimizerWrapper::DiscordantProblemError, 'Rests are not available with periodic heuristic.' unless hash[:vehicles].all?{ |vehicle| vehicle[:rests].to_a.empty? }
-
-      if hash[:configuration][:resolution][:same_point_day]
-        raise OptimizerWrapper.UnsupportedProblemError, 'Same_point_day is not supported if a set has one service with several activities' if hash[:services].any?{ |service| service[:activities].to_a.size.positive? }
-      end
-    end
-
-    def self.ensure_no_conflicting_skills(hash)
-      all_skills = (hash[:vehicles].to_a + hash[:services].to_a + hash[:shipments].to_a).flat_map{ |mission|
-        mission[:skills]
-      }.compact.uniq
-
-      return unless ['vehicle_partition_', 'work_day_partition_'].any?{ |str|
-        all_skills.any?{ |skill| skill.to_s.start_with?(str) }
-      }
-
-      raise OptimizerWrapper::UnsupportedProblemError.new(
-        "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. These skill patterns are reserved for internal use and they would lead to unexpected behaviour."
-      )
     end
 
     def self.expand_data(vrp)
