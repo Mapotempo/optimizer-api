@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Result</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+          integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+          crossorigin=""/>
+    <link rel="stylesheet" href="css/style.css">
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+            integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+            crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/OverlappingMarkerSpiderfier-Leaflet/0.2.6/oms.min.js"></script>
+    <script src="js/jquery-1.12.3.min.js"></script>
+    <script src="js/result.js"></script>
+</head>
+<body data-page="result">
+<div id="map-container">
+    <div id="sidebar">
+        <div class="block">
+            <h1>Visualisation des résultats</h1>
+        </div>
+        <div class="block form">
+            <label for="job-id">Job id</label>
+            <div>
+                <input placeholder="Job id" id="job-id"/>
+            </div>
+            <button id="get-job">Visualiser les résultats du job</button>
+        </div>
+        <div id="partitionsVehicle" class="block">
+            <input id="partitionsVehicle-checkbox" type="checkbox"/>
+            <label for="partitionsVehicle-checkbox">Partitions véhicule</label>
+        </div>
+        <div id="partitionsWorkDay" class="block">
+            <input id="partitionsWorkDay-checkbox" type="checkbox"/>
+            <label for="partitionsWorkDay-checkbox">Partitions jour de travail</label>
+        </div>
+        <div id="points" class="block">
+            <input id="points-checkbox" type="checkbox"/>
+            <label for="points-checkbox">Points</label>
+        </div>
+        <div id="polylines" class="block">
+            <input id="polylines-checkbox" type="checkbox"/>
+            <label for="polylines-checkbox">Polylines</label>
+        </div>
+        <div class="block">
+            <button id="back">Retourner à l'index</button>
+        </div>
+    </div>
+    <div id="map"></div>
+</div>
+</body>
+</html>

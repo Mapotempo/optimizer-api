@@ -95,3 +95,61 @@ form #optim-options input {
 .optim-start {
   margin: 8px 0px;
 }
+
+#map-container {
+  height: 100vh;
+}
+
+#sidebar {
+  height: 94vh;
+  width: 300px;
+  background-color: white;
+  position: absolute;
+  z-index: 999;
+  right: 2vh;
+  top: 2vh;
+  border: 1px solid #878787;
+  border-radius: 5px;
+}
+
+#map {
+  height: inherit;
+}
+
+.circle {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  border: 1px solid white;
+  display: inline-block;
+}
+
+.leaflet-div-icon {
+  background-color: initial;
+  border: 0;
+}
+
+#sidebar h1 {
+  text-align: center;
+}
+
+.form {
+  text-align: center;
+}
+
+.form * {
+  padding: 5px;
+}
+
+.form input {
+  width: 90%;
+  text-align: center;
+}
+
+.loading {
+  cursor: progress;
+}
+
+body[data-page=result] {
+  margin: 0;
+}
