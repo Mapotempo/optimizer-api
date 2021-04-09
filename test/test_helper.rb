@@ -169,8 +169,14 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     end
   end
 
+  def self.initialize_periodic_fully(vrp)
+    periodic = Wrappers::PeriodicHeuristic.new(vrp)
+    periodic.initialize_data(vrp)
+    periodic
+  end
+
   def self.expand_vehicles(vrp)
-    periodic = Interpreters::PeriodicVisits.new(vrp)
+    periodic = Interpreters::PeriodicVisits.new(OptimizerWrapper::PERIODIC_HEURISTIC, vrp)
     periodic.generate_vehicles(vrp)
   end
 

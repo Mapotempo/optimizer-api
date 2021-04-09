@@ -233,7 +233,7 @@ module OptimizerWrapper
 
       # TODO: refactor with dedicated class
       if vrp.schedule?
-        periodic = Interpreters::PeriodicVisits.new(vrp)
+        periodic = Interpreters::PeriodicVisits.new(OptimizerWrapper.config[:services][service], vrp)
         vrp = periodic.expand(vrp, job, &block)
         optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
       end

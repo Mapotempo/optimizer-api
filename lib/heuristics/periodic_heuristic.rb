@@ -27,7 +27,11 @@ module Wrappers
     include PeriodicDataInitialization
     include PeriodicEndPhase
 
-    def initialize(vrp, job = nil)
+    def initialize(hash = {})
+      super(hash)
+    end
+
+    def initialize_data(vrp, job = nil)
       return if vrp.services.empty?
 
       # global data

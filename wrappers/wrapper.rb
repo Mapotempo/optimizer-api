@@ -887,7 +887,7 @@ module Wrappers
     end
 
     def expand_vehicles_for_consistent_empty_result(vrp)
-      periodic = Interpreters::PeriodicVisits.new(vrp)
+      periodic = Interpreters::PeriodicVisits.new(OptimizerWrapper::PERIODIC_HEURISTIC, vrp)
       periodic.generate_vehicles(vrp)
     end
 

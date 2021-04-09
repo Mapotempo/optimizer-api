@@ -76,7 +76,7 @@ class HeuristicTest < Minitest::Test
           options[:restarts] = 4
           Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items, related_item_indices, limits, options) # call original method
         }) do
-          result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+          result = OptimizerWrapper.wrapper_vrp('periodic', { services: { vrp: [:periodic] }}, vrp, nil)
         end
         result[:unassigned].size
       }
@@ -91,13 +91,13 @@ class HeuristicTest < Minitest::Test
   def test_without_same_point_day
     vrp = TestHelper.load_vrp(self)
     vrp.resolution_solver = false
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('periodic', { services: { vrp: [:periodic] }}, vrp, nil)
     unassigned = result[:unassigned].size
     assert_equal 46, unassigned
 
     vrp = TestHelper.load_vrp(self)
     vrp.resolution_solver = true
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    result = OptimizerWrapper.wrapper_vrp('periodic', { services: { vrp: [:periodic] }}, vrp, nil)
     assert unassigned >= result[:unassigned].size
   end
 end

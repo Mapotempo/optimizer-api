@@ -19,23 +19,28 @@ require './lib/heuristics/periodic_heuristic.rb'
 
 module Interpreters
   class PeriodicVisits
-    def initialize(vrp)
+    def initialize(service, vrp)
       @periods = []
       @equivalent_vehicles = {}
       @epoch = Date.new(1970, 1, 1)
 
-      if vrp.schedule?
-        have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
-        have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.any?{ |shipment| shipment.pickup.timewindows.any?(&:day_index) || shipment.delivery.timewindows.any?(&:day_index) }
-        have_vehicles_day_index = vrp.vehicles.any?{ |vehicle| (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows ).any?(&:day_index) }
-        have_rest_day_index = vrp.rests.any?{ |rest| rest.timewindows.any?(&:day_index) }
-        @have_day_index = have_services_day_index || have_shipments_day_index || have_vehicles_day_index || have_rest_day_index
+      return unless vrp.schedule?
 
-        @schedule_start = vrp.schedule_range_indices[:start]
-        @schedule_end = vrp.schedule_range_indices[:end]
+      have_services_day_index =
+        vrp.services.any?{ |s| [s.activity || s.activities].flatten.any?{ |a| a.timewindows.any?(&:day_index) } }
+      have_shipments_day_index =
+        vrp.shipments.any?{ |s| s.pickup.timewindows.any?(&:day_index) || s.delivery.timewindows.any?(&:day_index) }
+      have_vehicles_day_index =
+        vrp.vehicles.any?{ |vehicle| [vehicle.timewindow || vehicle.sequence_timewindows].flatten.any?(&:day_index) }
+      have_rest_day_index = vrp.rests.any?{ |rest| rest.timewindows.any?(&:day_index) }
+      @have_day_index =
+        have_services_day_index || have_shipments_day_index || have_vehicles_day_index || have_rest_day_index
 
-        compute_possible_days(vrp)
-      end
+      @schedule_start = vrp.schedule_range_indices[:start]
+      @schedule_end = vrp.schedule_range_indices[:end]
+      compute_possible_days(vrp)
+
+      @periodic_heuristic = service
     end
 
     def expand(vrp, job, &block)
@@ -49,12 +54,16 @@ module Interpreters
       vrp.relations = generate_relations(vrp)
       vrp.rests = []
       vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
-        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+        if a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index
+          a.global_day_index <=> b.global_day_index
+        else
+          a.id <=> b.id
+        end
       }
 
       if vrp.periodic_heuristic?
-        periodic_heuristic = Wrappers::PeriodicHeuristic.new(vrp, job)
-        vrp.routes = periodic_heuristic.compute_initial_solution(vrp, &block)
+        @periodic_heuristic.initialize_data(vrp, job)
+        vrp.routes = @periodic_heuristic.compute_initial_solution(vrp, &block)
       end
 
       vrp.services = generate_services(vrp)

@@ -23,6 +23,7 @@ require 'tmpdir'
 require './wrappers/demo'
 require './wrappers/vroom'
 require './wrappers/ortools'
+require './lib/heuristics/periodic_heuristic'
 
 require './lib/cache_manager'
 
@@ -43,6 +44,7 @@ module OptimizerWrapper
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS_EXEC = 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
+  PERIODIC_HEURISTIC = Wrappers::PeriodicHeuristic.new(tmp_dir: TMP_DIR)
 
   PARAMS_LIMIT = { points: 100000, vehicles: 1000 }.freeze
   QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }] # Only taken into account if REDIS_COUNT
@@ -70,12 +72,13 @@ module OptimizerWrapper
       demo: DEMO,
       vroom: VROOM,
       ortools: ORTOOLS,
+      periodic_heuristic: PERIODIC_HEURISTIC,
     },
     profiles: {
       demo: {
         queue: 'DEFAULT',
         services: {
-          vrp: [:vroom, :ortools]
+          vrp: [:vroom, :ortools, :periodic_heuristic]
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
