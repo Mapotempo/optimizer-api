@@ -16,10 +16,12 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './test/test_helper'
+require './models/concerns/validate_data'
 
 module Models
   class VrpConsistencyTest < Minitest::Test
     include Rack::Test::Methods
+    include ValidateData
 
     def test_reject_if_service_with_activities_in_position_relation
       vrp = VRP.lat_lon_scheduling_two_vehicles
@@ -316,13 +318,13 @@ module Models
       vrp[:services].first[:minimum_lapse] = 7
       vrp[:services].first[:maximum_lapse] = 14
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-      Models::Vrp.check_consistency(vrp) # no raise
+      check_consistency(vrp) # no raise
 
       vrp[:services].first[:visits_number] = 3
       vrp[:services].first[:minimum_lapse] = 14
       vrp[:services].first[:maximum_lapse] = 7
       error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        Models::Vrp.check_consistency(vrp)
+        check_consistency(vrp)
       end
       assert_equal 'Minimum lapse can not be bigger than maximum lapse', error.message
     end
@@ -336,12 +338,12 @@ module Models
 
       vrp[:configuration][:schedule] = { range_indices: { start: 3, end: 0 } }
       assert_raises OptimizerWrapper::DiscordantProblemError do
-        Models::Vrp.check_consistency(vrp)
+        check_consistency(vrp)
       end
 
       vrp[:configuration][:schedule] = { range_indices: { start: 7, end: 14 } }
       assert_raises OptimizerWrapper::DiscordantProblemError do
-        Models::Vrp.check_consistency(vrp)
+        check_consistency(vrp)
       end
     end
 
@@ -352,7 +354,7 @@ module Models
         { type: :shipment, linked_ids: %w[service_1 service_3] }
       ]
       error = assert_raises OptimizerWrapper::UnsupportedProblemError do
-        Models::Vrp.check_consistency(TestHelper.coerce(vrp))
+        check_consistency(TestHelper.coerce(vrp))
       end
 
       assert_equal 'Services can appear in at most one shipment relation. '\
@@ -364,7 +366,7 @@ module Models
       vrp = VRP.basic
       vrp[:services].first[:skills] = ['vehicle_partition_for_test']
       error = assert_raises OptimizerWrapper::UnsupportedProblemError do
-        Models::Vrp.check_consistency(vrp)
+        check_consistency(vrp)
       end
       assert_equal "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. These skill patterns are reserved for internal use and they would lead to unexpected behaviour.", error.message
     end
