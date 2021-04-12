@@ -536,7 +536,10 @@ class SplitClusteringTest < Minitest::Test
 
       problem = TestHelper.create(vrp)
       check_vrp_services_size = problem.services.size
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
+      error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
+      result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
+      end
       assert_equal check_vrp_services_size, problem.services.size
       assert_equal problem.services.size, result[:unassigned].count{ |s| s[:service_id] } + result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } }
     end
@@ -554,7 +557,10 @@ class SplitClusteringTest < Minitest::Test
       vrp.resolution_duration = 120000
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
-        result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+        error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
+        result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
+          OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+        end
 
         assert result[:routes].size <= 7, "There shouldn't be more than 7 routes -- it is #{result[:routes].size}"
         assert_equal [], result[:unassigned], 'There should be no unassigned services.'
