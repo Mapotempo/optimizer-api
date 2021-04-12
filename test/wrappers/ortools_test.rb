@@ -4942,97 +4942,56 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_self_selection_first_solution_strategy
-    skip 'Requires an entire review of the :overall_duration feature'
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 2, 2],
-          [2, 0, 2],
-          [2, 2, 0]
-        ]
-      }],
-      points: [{
-        id: 'depot',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_1',
-        start_point_id: 'depot',
-        end_point_id: 'depot',
-        matrix_id: 'matrix_0',
-        overall_duration: 10,
-        timewindow: {
-          start: 0
-        },
-        force_start: 6
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1',
-          duration: 1
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_1',
-          duration: 1
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_1',
-          duration: 2
-        }
-      }, {
-        id: 'service_4',
-        activity: {
-          point_id: 'point_2',
-          duration: 2
-        }
-      }, {
-        id: 'service_5',
-        activity: {
-          point_id: 'point_2',
-          duration: 2
-        }
-      }, {
-        id: 'service_6',
-        activity: {
-          point_id: 'point_2',
-          duration: 1
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 1000
-        },
-        preprocessing: {
-          first_solution_strategy: ['self_selection']
-        }
-      }
-    }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:configuration][:preprocessing] = { first_solution_strategy: 'self_selection' }
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert result
     assert_equal 3, result[:heuristic_synthesis].size
     assert result[:heuristic_synthesis].min_by{ |heuristic| heuristic[:cost] || Helper.fixnum_max }[:used]
   end
 
+  def test_self_selection_first_solution_strategy_with_routes
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:routes] = [{
+      vehicle_id: 'vehicle_0',
+      mission_ids: %w[service_4 service_5 service_3 service_2]
+    }]
+    vrp[:configuration][:preprocessing] = { first_solution_strategy: 'self_selection' }
+    list = Interpreters::SeveralSolutions.collect_heuristics(TestHelper.create(vrp), ['self_selection'])
+
+    call_to_solve = 0
+    OptimizerWrapper.stub(
+      :solve, lambda{ |service_vrp|
+        call_to_solve += 1
+
+        # force to prefer solution provided by routes :
+        if call_to_solve <= list.size
+          { cost: 2**32.0, solvers: ['ortools'],
+            routes: [{ vehicle_id: 'vehicle_0', activities: [] }, { vehicle_id: 'vehicle_1', activities: [] }] }
+        else
+          { cost: 10.0, solvers: ['ortools'],
+            routes: [{ vehicle_id: 'vehicle_0',
+                       activities: service_vrp[:vrp].routes.first.mission_ids.collect{ |id|
+                        { service_id: id, type: 'service' } }
+                       },
+                     { vehicle_id: 'vehicle_1', activities: [] }] }
+        end
+      }
+    ) do
+      best_heuristic = Interpreters::SeveralSolutions.find_best_heuristic({ service: :ortools, vrp: TestHelper.create(vrp) })
+      refute_equal best_heuristic[:vrp].preprocessing_first_solution_strategy, 'supplied_initial_routes'
+      assert_equal %w[service_4 service_5 service_3 service_2], best_heuristic[:vrp].routes.first.mission_ids,
+                   'Initial route does not match with expected returned route'
+    end
+    assert_equal list.size + 1, call_to_solve, 'We should have used initial routes as additional first_solution_strategy'
+  end
+
   def test_self_selection_computes_saving_only_once_if_rest
-    vrp = TestHelper.create(VRP.lat_lon)
-    vrp[:vehicles] << vrp[:vehicles].first
-    vrp[:vehicles][1][:id] += '_duplicated'
-    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
+    vrp = VRP.lat_lon_two_vehicles
+    list = Interpreters::SeveralSolutions.collect_heuristics(TestHelper.create(vrp), ['self_selection'])
     assert_equal 3, list.size
 
-    vrp.rests = [{
+    vrp[:rests] = [{
       id: 'rest_0',
       timewindows: [{
         day_index: 0,
@@ -5041,20 +5000,19 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       duration: 1
     }]
-    vrp.vehicles.first.rest_ids = ['rest_0']
+    vrp[:vehicles].first[:rest_ids] = ['rest_0']
 
-    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
+    list = Interpreters::SeveralSolutions.collect_heuristics(TestHelper.create(vrp), ['self_selection'])
     assert_equal 3, list.size
   end
 
-  def test_self_selection_first_solution_strategy_with_rest
-    vrp = TestHelper.create(VRP.lat_lon)
-    vrp.vehicles.first.end_point_id = 'point_1'
-    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
-
+  def test_self_selection_first_solution_strategy_with_rest_should_call_savings
+    vrp = VRP.lat_lon
+    vrp[:vehicles].first[:end_point_id] = 'point_1'
+    list = Interpreters::SeveralSolutions.collect_heuristics(TestHelper.create(vrp), ['self_selection'])
     refute_includes list, 'savings'
 
-    vrp.rests = [{
+    vrp[:rests] = [{
       id: 'rest_0',
       timewindows: [{
         day_index: 0,
@@ -5063,9 +5021,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       duration: 1
     }]
-    vrp.vehicles.first.rest_ids = ['rest_0']
+    vrp[:vehicles].first[:rest_ids] = ['rest_0']
 
-    list = Interpreters::SeveralSolutions.collect_heuristics(vrp, ['self_selection'])
+    list = Interpreters::SeveralSolutions.collect_heuristics(TestHelper.create(vrp), ['self_selection'])
     assert_includes list, 'savings'
   end
 
