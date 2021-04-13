@@ -5,12 +5,11 @@ const DEFAULT_POSITION = [51.505, -0.09];
 const DEFAULT_ZOOM = 5;
 
 var map;
-var oms;
 var queryParams;
 const layers = {
   partitionsVehicle: new L.layerGroup(),
   partitionsWorkDay: new L.layerGroup(),
-  points:new L.featureGroup(),
+  points: { layer: new L.featureGroup(), clusters: new L.markerClusterGroup()},
   polylines: new L.layerGroup()
 }
 
@@ -56,10 +55,9 @@ const layerInitializers = {
           icon: L.divIcon({html: '<span class="circle" style="background-color: '+ geoJsonPoint.properties.color + ';"/>'}),
           title: geoJsonPoint.properties.name + (geoJsonPoint.properties.day ? ' (day : ' + geoJsonPoint.properties.day + ')' : '')
         });
-        oms.addMarker(marker);
         return marker;
       }
-    }).addTo(layers['points']);
+    }).addTo(layers['points'].layer).addTo(layers['points'].clusters);
   },
 
   polylines: function(geojson) {
@@ -101,7 +99,7 @@ function toggleLoading() {
 };
 
 function setCheckboxesVisibility(geojson) {
-  Object.keys(layers).forEach(function (layerName) {
+  forEachLayers(function (layerName) {
     if (geojson['partitions'] && (layerName === 'partitionsVehicle' && geojson['partitions']['vehicle']
       || layerName === 'partitionsWorkDay' && geojson['partitions']['work_day'])) {
       $('#' + layerName).fadeIn();
@@ -125,12 +123,37 @@ function setLayersToShow() {
   const layersToShow = getLayersToShow();
 
   forEachLayers(function(layerName) {
+    if (layerName === 'points') {
+      if (layersToShow[layerName]) {
+        map.addLayer(window.leafletOptions.showClusters ? layers[layerName].clusters : layers[layerName].layer);
+      } else {
+        map.removeLayer(window.leafletOptions.showClusters ? layers[layerName].clusters : layers[layerName].layer);
+      }
+      return;
+    }
+
     if (layersToShow[layerName]) {
       map.addLayer(layers[layerName]);
     } else {
       map.removeLayer(layers[layerName]);
     }
   });
+}
+
+function switchCluster() {
+  const layersToShow = getLayersToShow();
+
+  if (!layersToShow['points']) {
+    return;
+  }
+
+  if (window.leafletOptions.showClusters) {
+    map.removeLayer(layers['points'].layer);
+    map.addLayer(layers['points'].clusters);
+  } else {
+    map.removeLayer(layers['points'].clusters);
+    map.addLayer(layers['points'].layer);
+  }
 }
 
 function showJobOnMap(body) {
@@ -143,13 +166,18 @@ function showJobOnMap(body) {
     });
 
     setLayersToShow();
-    map.fitBounds(layers['points'].getBounds())
+    map.fitBounds(layers['points'].clusters.getBounds())
   }
 }
 
 function clearLayers() {
   forEachLayers(function(layerName) {
-    layers[layerName].clearLayers();
+    if (layerName === 'points') {
+      layers[layerName].layer.clearLayers();
+      layers[layerName].clusters.clearLayers();
+    } else {
+      layers[layerName].clearLayers();
+    }
   });
 }
 
@@ -181,7 +209,17 @@ function handleBack() {
 
 function handleLayers(name) {
   return function(e) {
-    const layer = layers[name]
+    let layer;
+    if (name === 'points') {
+      if (window.leafletOptions.showClusters) {
+        layer = layers[name].clusters;
+      } else {
+        layer = layers[name].layer;
+      }
+    } else {
+      layer = layers[name]
+    }
+
     if (e.target.checked) {
       map.addLayer(layer);
     } else {
@@ -197,6 +235,8 @@ function initializeMap(id) {
     attribution: ATTRIBUTION
   }).addTo(map);
 
+  L.Control.clustersControl({ position: 'topleft', onSwitch: switchCluster }).addTo(map);
+
   return map;
 }
 
@@ -210,7 +250,6 @@ function initializeHandlers() {
 
 function initialize() {
   map = initializeMap(MAP_ID);
-  oms= new OverlappingMarkerSpiderfier(map);
   queryParams = getQueryParams();
 
   if (queryParams.job_id) {
