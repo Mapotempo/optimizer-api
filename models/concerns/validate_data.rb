@@ -120,10 +120,16 @@ module ValidateData
       end
 
       # TODO : this should be replaced next line when max_split does not use visits_number > 1 without schedule anymore
-      # next if schedule && schedule[:range_indices] || mission[:visits_number].to_i <= 1
-      next if configuration.nil? || schedule && schedule[:range_indices] || mission[:visits_number].to_i <= 1
+      # next if schedule && schedule[:range_indices]
+      next if configuration.nil? || schedule && schedule[:range_indices]
 
-      raise OptimizerWrapper::DiscordantProblemError.new('There can not be more than one visit without schedule')
+      if mission[:visits_number].to_i > 1
+        raise OptimizerWrapper::DiscordantProblemError.new('There can not be more than one visit without schedule')
+      end
+
+      if mission[:quantities]&.any{ |qty| qty[:fill] || qty[:empty] }
+        raise OptimizerWrapper::UnsupportedProblemError.new('Periodic heuristic does not support empty or fill yet')
+      end
     }
   end
 
@@ -220,17 +226,17 @@ module ValidateData
   def check_periodic_consistency(configuration)
     if @hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
        (!configuration[:schedule] || configuration[:schedule][:range_indice])
-      raise OptimizerWrapper::DiscordantProblemError.new(
+      raise OptimizerWrapper::UnsupportedProblemError.new(
         'Vehicle group duration on weeks or months is not available without range_date'
       )
     end
 
     unless @hash[:shipments].to_a.empty?
-      raise OptimizerWrapper::DiscordantProblemError.new('Shipments are not available with periodic heuristic')
+      raise OptimizerWrapper::UnsupportedProblemError.new('Shipments are not available with periodic heuristic')
     end
 
     unless @hash[:vehicles].all?{ |vehicle| vehicle[:rests].to_a.empty? }
-      raise OptimizerWrapper::DiscordantProblemError.new('Rests are not available with periodic heuristic')
+      raise OptimizerWrapper::UnsupportedProblemError.new('Rests are not available with periodic heuristic')
     end
 
     if configuration[:resolution] && configuration[:resolution][:same_point_day] &&
@@ -239,6 +245,12 @@ module ValidateData
         'Same_point_day is not supported if a set has one service with several activities'
       )
     end
+
+    return unless configuration[:schedule].to_h.empty?
+
+    raise OptimizerWrapper::DiscordantProblemError.new(
+      'Periodic heuristic needs schedule'
+    )
   end
 
   def check_geometry_parameters(configuration)

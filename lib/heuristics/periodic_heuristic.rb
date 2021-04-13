@@ -31,6 +31,43 @@ module Wrappers
       super(hash)
     end
 
+    def solver_constraints
+      super + [
+        :assert_vehicles_no_capacity_initial,
+        :assert_vehicles_no_alternative_skills,
+        :assert_no_zones,
+        :assert_zones_only_size_one_alternative,
+        :assert_no_empty_nor_fill_quantities,
+        :assert_only_empty_or_fill_quantities,
+        :assert_points_same_definition,
+        :assert_vehicles_no_zero_duration,
+        :assert_correctness_matrices_vehicles_and_points_definition,
+        :assert_square_matrix,
+        :assert_vehicle_tw,
+        :assert_only_force_centroids_if_kmeans_method,
+        :assert_no_evaluation,
+        :assert_shift_preference_compatible_with_heuristic,
+        :assert_no_vehicle_overall_duration,
+        :assert_no_vehicle_distance,
+        :assert_possible_to_get_distances_if_maximum_ride_distance,
+        :assert_no_skills,
+        :assert_no_vehicle_free_approach_or_return,
+        :assert_no_vehicle_limit,
+        :assert_first_solution_strategy_is_possible,
+        :assert_first_solution_strategy_is_valid,
+        :assert_clustering_compatible_with_periodic_heuristic,
+        :assert_lat_lon_for_partition,
+        :assert_vehicle_entity_only_before_work_day,
+        :assert_deprecated_partitions,
+        :assert_partitions_entity,
+        :assert_no_initial_centroids_with_partitions,
+        :assert_valid_partitions,
+        :assert_route_date_or_indice,
+        :assert_not_too_many_visits_in_route,
+        # :assert_no_overall_duration, # TODO: Requires a complete rework
+      ]
+    end
+
     def initialize_data(vrp, job = nil)
       return if vrp.services.empty?
 

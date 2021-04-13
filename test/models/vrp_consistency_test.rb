@@ -370,5 +370,15 @@ module Models
       end
       assert_equal "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. These skill patterns are reserved for internal use and they would lead to unexpected behaviour.", error.message
     end
+
+    def test_reject_if_periodic_heuristic_without_schedule
+      vrp = VRP.periodic
+      vrp[:configuration][:schedule] = nil
+
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.check_consistency(vrp, false)
+      end
+      assert_equal 'Periodic heuristic needs schedule', error.message
+    end
   end
 end

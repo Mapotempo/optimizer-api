@@ -55,15 +55,13 @@ module Wrappers
     end
 
     def assert_vehicles_no_capacity_initial(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |c| c.initial&.positive? }
       }
     end
 
     def assert_vehicles_no_alternative_skills(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        !vehicle.skills || vehicle.skills.size > 1
-      }
+      vrp.vehicles.none?{ |vehicle| vehicle.skills.size > 1 }
     end
 
     def assert_no_direct_shipments(vrp)
@@ -220,19 +218,14 @@ module Wrappers
       vrp.vehicles.none?(&:distance)
     end
 
-    def assert_vehicle_tw_if_schedule(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' ||
-        vrp.vehicles.all?{ |vehicle|
-          vehicle.timewindow || vehicle.sequence_timewindows&.size&.positive?
-        }
+    def assert_vehicle_tw(vrp)
+      vrp.vehicles.all?{ |vehicle|
+        vehicle.timewindow || vehicle.sequence_timewindows&.any?
+      }
     end
 
     def assert_if_sequence_tw_then_schedule(vrp)
       vrp.vehicles.find{ |vehicle| !vehicle.sequence_timewindows.empty? }.nil? || vrp.schedule?
-    end
-
-    def assert_if_periodic_heuristic_then_schedule(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || vrp.schedule?
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
@@ -245,8 +238,8 @@ module Wrappers
           vrp.preprocessing_first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || strategy == 'periodic' || OptimizerWrapper::HEURISTICS.include?(strategy) }
     end
 
-    def assert_no_planning_heuristic(vrp)
-      vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    def assert_no_periodic_heuristic(vrp)
+      !vrp.periodic_heuristic?
     end
 
     def assert_only_force_centroids_if_kmeans_method(vrp)
@@ -273,12 +266,12 @@ module Wrappers
       !vrp.resolution_evaluate_only || vrp.routes && !vrp.routes.empty?
     end
 
-    def assert_wrong_vehicle_shift_preference_with_heuristic(vrp)
-      (vrp.vehicles.map(&:shift_preference).uniq - [:minimize_span] - ['minimize_span']).empty? || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    def assert_shift_preference_compatible_with_heuristic(vrp)
+      (vrp.vehicles.map(&:shift_preference.to_sym).uniq - [:minimize_span]).empty?
     end
 
-    def assert_no_vehicle_overall_duration_if_heuristic(vrp)
-      vrp.vehicles.none?(&:overall_duration) || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    def assert_no_vehicle_overall_duration(vrp)
+      vrp.vehicles.none?(&:overall_duration)
     end
 
     def assert_no_overall_duration(vrp)
@@ -287,36 +280,38 @@ module Wrappers
         vrp.relations.none?{ |relation| relation_array.include?(relation.type&.to_sym) }
     end
 
-    def assert_no_vehicle_distance_if_heuristic(vrp)
-      vrp.vehicles.none?(&:distance) || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    def assert_no_vehicle_distance(vrp)
+      vrp.vehicles.none?(&:distance)
     end
 
     def assert_possible_to_get_distances_if_maximum_ride_distance(vrp)
       vrp.vehicles.none?(&:maximum_ride_distance) || (vrp.points.all?{ |point| point.location&.lat } || vrp.matrices.all?{ |matrix| matrix.distance && !matrix.distance.empty? })
     end
 
-    def assert_no_skills_if_heuristic(vrp)
-      vrp.services.none?{ |service| !service.skills.empty? } || vrp.vehicles.none?{ |vehicle| !vehicle.skills.flatten.empty? } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || !vrp.preprocessing_partitions.empty?
+    def assert_no_skills(vrp)
+      (vrp.services.flat_map(&:skills) & vrp.vehicles.collect(&:skills).flatten).empty? ||
+        vrp.preprocessing_partitions.any?
     end
 
-    def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)
-      vrp.vehicles.none?{ |vehicle| vehicle.free_approach || vehicle.free_return } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    def assert_no_vehicle_free_approach_or_return(vrp)
+      vrp.vehicles.none?{ |vehicle| vehicle.free_approach || vehicle.free_return }
     end
 
     def assert_no_free_approach_or_return(vrp)
       vrp.vehicles.none?{ |vehicle| vehicle.free_approach || vehicle.free_return }
     end
 
-    def assert_no_vehicle_limit_if_heuristic(vrp)
-      vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit >= vrp.vehicles.size || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
+    def assert_no_vehicle_limit(vrp)
+      vrp.resolution_vehicle_limit.nil? ||
+        vrp.resolution_vehicle_limit >= vrp.vehicles.size
     end
 
-    def assert_no_same_point_day_if_no_heuristic(vrp)
-      !vrp.resolution_same_point_day || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
+    def assert_no_same_point_day(vrp)
+      !vrp.resolution_same_point_day
     end
 
-    def assert_no_allow_partial_if_no_heuristic(vrp)
-      vrp.resolution_allow_partial_assignment || vrp.preprocessing_first_solution_strategy.to_a.first == 'periodic'
+    def assert_no_allow_partial(vrp)
+      vrp.resolution_allow_partial_assignment
     end
 
     def assert_no_first_solution_strategy(vrp)
@@ -327,12 +322,8 @@ module Wrappers
       vrp.resolution_solver
     end
 
-    def assert_solver_if_not_periodic(vrp)
-      vrp.resolution_solver || vrp.preprocessing_first_solution_strategy && (vrp.preprocessing_first_solution_strategy.first == 'periodic')
-    end
-
     def assert_clustering_compatible_with_periodic_heuristic(vrp)
-      (!vrp.preprocessing_first_solution_strategy || !vrp.preprocessing_first_solution_strategy.include?('periodic')) || !vrp.preprocessing_cluster_threshold && !vrp.preprocessing_max_split_size
+      vrp.preprocessing_cluster_threshold.nil? && vrp.preprocessing_max_split_size.nil?
     end
 
     def assert_lat_lon_for_partition(vrp)
@@ -366,8 +357,8 @@ module Wrappers
         (vrp.preprocessing_partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.preprocessing_partitions.size)
     end
 
-    def assert_route_date_or_indice_if_periodic(vrp)
-      !vrp.periodic_heuristic? || vrp.routes.all?(&:day_index)
+    def assert_route_date_or_indice(vrp)
+      vrp.routes.all?(&:day_index)
     end
 
     def assert_not_too_many_visits_in_route(vrp)
@@ -447,6 +438,16 @@ module Wrappers
           (shipment.pickup.setup_duration.nil? || shipment.pickup.setup_duration.zero?) &&
             (shipment.delivery.setup_duration.nil? || shipment.delivery.setup_duration.zero?)
         }
+    end
+
+    def assert_no_zones(vrp)
+      vrp.zones.empty?
+    end
+
+    def assert_no_empty_nor_fill_quantities(vrp)
+      (vrp.services + vrp.shipments).all?{ |s|
+        s.quantities.none?{ |qty| qty.fill || qty.empty }
+      }
     end
 
     def solve_synchronous?(_vrp)

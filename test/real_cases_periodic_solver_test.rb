@@ -24,12 +24,15 @@ class HeuristicTest < Minitest::Test
 
       vrps.each{ |vrp|
         vrp.preprocessing_partitions = nil
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
+        result = OptimizerWrapper.wrapper_vrp(
+          'periodic', { services: { vrp: [:periodic] }}, Marshal.load(Marshal.dump(vrp)), nil
+        ) # marshal dump needed, otherwise we create relations (min/maximum lapse)
         unassigned = result[:unassigned].size
 
         vrp.resolution_solver = true
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-        assert unassigned >= result[:unassigned].size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{result[:unassigned].size} now"
+        result = OptimizerWrapper.wrapper_vrp('periodic', { services: { vrp: [:periodic] }}, vrp, nil)
+        assert_operator unassigned, :>=, result[:unassigned].size,
+                        "Number of unassigned increased from #{unassigned} to #{result[:unassigned].size}"
       }
     end
 
@@ -37,7 +40,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
       vrp.resolution_solver = true
       vrp.preprocessing_partitions.each{ |p| p.restarts = 1 }
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('periodic', { services: { vrp: [:periodic] }}, vrp, nil)
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
@@ -61,7 +64,7 @@ class HeuristicTest < Minitest::Test
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
         vrp.resolution_solver = true
-        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+        result = OptimizerWrapper.wrapper_vrp('periodic', { services: { vrp: [:periodic] }}, vrp, nil)
         unassigned_nb + result[:unassigned].size
       }
       assert unassigned_visits <= 225, "Expecting less than 441 unassigned visits, have #{unassigned_visits}"
@@ -74,7 +77,9 @@ class HeuristicTest < Minitest::Test
         Interpreters::SplitClustering.stub(:kmeans_process, lambda{ |nb_clusters, data_items, related_item_indices, limits, options|
           options.delete(:distance_matrix)
           options[:restarts] = 4
-          Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items, related_item_indices, limits, options) # call original method
+          Interpreters::SplitClustering.send(
+            :__minitest_stub__kmeans_process, nb_clusters, data_items, related_item_indices, limits, options
+          ) # call original method
         }) do
           result = OptimizerWrapper.wrapper_vrp('periodic', { services: { vrp: [:periodic] }}, vrp, nil)
         end

@@ -42,6 +42,8 @@ module Wrappers
         :assert_no_subtours,
         :assert_points_same_definition,
         :assert_single_dimension,
+        :assert_no_same_point_day,
+        :assert_no_allow_partial,
 
         # Vehicle/route constraints
         :assert_homogeneous_router_definitions,
@@ -52,6 +54,7 @@ module Wrappers
         :assert_vehicles_no_late_multiplier_or_single_vehicle,
         :assert_vehicles_no_overload_multiplier,
         :assert_vehicles_start_or_end,
+        :assert_no_route_if_schedule_without_periodic_heuristic,
 
         # Mission constraints
         :assert_no_direct_shipments,
@@ -63,7 +66,7 @@ module Wrappers
         # Solver
         :assert_no_first_solution_strategy,
         :assert_no_free_approach_or_return,
-        :assert_no_planning_heuristic,
+        :assert_no_periodic_heuristic,
         :assert_small_minimum_duration,
         :assert_solver,
       ]
