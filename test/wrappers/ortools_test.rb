@@ -57,7 +57,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         }
       }
     }
@@ -383,7 +383,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         },
         schedule: {
           range_indices: {
@@ -519,7 +519,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         },
         schedule:
             {
@@ -737,7 +737,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -807,7 +807,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -869,7 +869,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -936,7 +936,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -997,7 +997,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1066,7 +1066,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1126,7 +1126,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1186,7 +1186,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1256,7 +1256,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1327,7 +1327,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1402,7 +1402,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1471,7 +1471,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -1546,7 +1546,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -2060,7 +2060,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -2281,7 +2281,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -2395,7 +2395,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -2905,7 +2905,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
           vehicle_limit: 1
         },
         restitution: {
@@ -2986,7 +2986,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -3108,7 +3108,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -3213,7 +3213,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -3624,7 +3624,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -3880,7 +3880,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       ],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         }
       }
     }
@@ -4125,7 +4125,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -4186,7 +4186,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -4249,7 +4249,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -4310,7 +4310,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -4395,7 +4395,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       ],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -4468,7 +4468,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -4640,7 +4640,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           evaluate_only: true,
-          duration: 10,
+          duration: 20,
         }
       }
     }
@@ -4697,7 +4697,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           evaluate_only: true,
-          duration: 10,
+          duration: 20,
         }
       }
     }
@@ -4757,7 +4757,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       configuration: {
         resolution: {
           evaluate_only: true,
-          duration: 10,
+          duration: 20,
         }
       }
     }
@@ -4839,7 +4839,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         }
       }
     }
@@ -5096,7 +5096,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         preprocessing: {
           first_solution_strategy: ['first_unbound']
@@ -5161,7 +5161,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         }
       }
     }
@@ -5306,7 +5306,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -5377,7 +5377,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         },
         schedule: {
           range_indices: {
@@ -5446,7 +5446,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         }
       }
     }

@@ -106,7 +106,7 @@ class DichotomiousTest < Minitest::Test
 
     def test_infinite_loop_due_to_impossible_to_cluster
       vrp = VRP.lat_lon
-      vrp[:configuration][:resolution][:duration] = 10
+      vrp[:configuration][:resolution][:duration] = 20
       vrp[:points].each{ |p| p[:location] = { lat: 45, lon: 5 } } # all at the same location (impossible to cluster)
 
       vrp[:matrices][0][:time] = Array.new(7){ Array.new(7, 1) }
