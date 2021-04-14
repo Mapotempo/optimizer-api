@@ -190,11 +190,12 @@ module Interpreters
       service_vrp[:split_solve_data] = {
         current_vehicles: vrp.vehicles.map(&:itself), # new array but original objects
         current_vehicle_limit: vrp.resolution_vehicle_limit,
+        vehicle_has_complete_matrix: vrp.vehicles.map{ |v| [v.id, !v.matrix_id.blank?] }.to_h,
         transferred_empties_or_fills: empties_or_fills.map(&:itself), # new array but original objects
         transferred_vehicles: [],
         transferred_vehicle_limit: vrp.resolution_vehicle_limit && 0,
         transferred_time_limit: 0.0,
-        service_vehicle_assignments: vrp.vehicles.map.with_index{ |v, i| [v[:id], split_by_vehicle[i]] }.to_h,
+        service_vehicle_assignments: vrp.vehicles.map.with_index{ |v, i| [v.id, split_by_vehicle[i]] }.to_h,
         original_vrp: vrp,
         representative_vrp: nil,
       }
@@ -439,7 +440,9 @@ module Interpreters
       split_solve_data[:transferred_vehicles].concat(split_solve_data[:current_vehicles].select{ |vehicle|
         result[:routes].none?{ |r| r[:vehicle_id] == vehicle.id } # not used
       })
-      split_solve_data[:transferred_vehicles].each{ |v| v.matrix_id = nil }
+      split_solve_data[:transferred_vehicles].each{ |v|
+        v.matrix_id = nil unless split_solve_data[:vehicle_has_complete_matrix][v.id]
+      }
 
       # transfer unused resources
       if split_solve_data[:transferred_vehicle_limit]
