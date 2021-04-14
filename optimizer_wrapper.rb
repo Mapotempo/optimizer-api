@@ -630,16 +630,16 @@ module OptimizerWrapper
   def self.compute_route_total_dimensions(vrp, route, matrix)
     previous = nil
     dimensions = []
-    dimensions << :time if matrix.time
-    dimensions << :distance if matrix.distance
-    dimensions << :value if matrix.value
+    dimensions << :time if matrix&.time
+    dimensions << :distance if matrix&.distance
+    dimensions << :value if matrix&.value
 
     total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
     route[:activities].each{ |activity|
       point = vrp.points.find{ |p| p.id == activity[:point_id] }&.matrix_index
       if previous && point
         dimensions.each{ |dimension|
-          activity["travel_#{dimension}".to_sym] = matrix.send(dimension)[previous][point]
+          activity["travel_#{dimension}".to_sym] = matrix&.send(dimension)[previous][point]
           total[dimension] += activity["travel_#{dimension}".to_sym].round
           activity[:current_distance] ||= total[dimension].round if dimension == :distance
         }
@@ -654,9 +654,10 @@ module OptimizerWrapper
     route[:total_travel_time] = total[:time].round if dimensions.include?(:time)
     route[:total_distance] = total[:distance].round if dimensions.include?(:distance)
     route[:total_travel_value] = total[:value].round if dimensions.include?(:value)
-    if route[:activities].all?{ |a| a[:waiting_time] }
-      route[:total_waiting_time] = route[:activities].collect{ |a| a[:waiting_time] }.sum.round
-    end
+
+    return unless route[:activities].all?{ |a| a[:waiting_time] }
+
+    route[:total_waiting_time] = route[:activities].collect{ |a| a[:waiting_time] }.sum.round
   end
 
   def self.compute_result_total_dimensions_and_round_route_stats(result)
@@ -778,7 +779,7 @@ module OptimizerWrapper
   end
 
   def self.compute_route_travel_distances(vrp, matrix, route, vehicle)
-    return nil unless matrix.distance.nil? && route[:activities].size > 1 && vrp.points.all?(&:location)
+    return nil unless matrix&.distance.nil? && route[:activities].size > 1 && vrp.points.all?(&:location)
 
     details = route_details(vrp, route, vehicle)
 
