@@ -899,5 +899,25 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 5, result[:routes].size
     end
+
+    def test_unavailable_days_in_scheduling
+      vrp = VRP.scheduling
+      vrp[:services].first[:visits_number] = 3
+      vrp[:services].first[:minimum_lapse] = 2
+      vrp[:services].first[:maximum_lapse] = 3
+      vrp[:configuration][:schedule][:range_indices][:end] = 6
+
+      [[[], [0, 2, 4]], [[2], [0, 4, 6]]].each{ |unavailable_indices, expectation|
+        vrp[:services].first[:unavailable_visit_day_indices] = unavailable_indices
+        result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+        days_with_service =
+          result[:routes].collect{ |r|
+            if r[:activities].any?{ |a| a[:original_service_id] == 'service_1' }
+              r[:vehicle_id].split('_').last.to_i
+            end
+          }.compact
+        assert_equal expectation, days_with_service, 'Service was not planned at expected days'
+      }
+    end
   end
 end
