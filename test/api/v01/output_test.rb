@@ -364,21 +364,40 @@ class Api::V01::OutputTest < Minitest::Test
       assert_empty(result['geojsons'].first['partitions'].to_a + result['geojsons'].first['polylines'].to_a)
 
       vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-      vrp[:configuration][:restitution] = { geometry: [:polylines, :partitions] }
-      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
-      result = wait_status @job_id, 'completed', api_key: 'ortools'
-      assert(result['geojsons'].first['polylines']['features'].all?{ |f| f['properties']['color'] })
-      assert_equal ['vehicle', 'work_day'], result['geojsons'].first['partitions'].keys
-      assert(result['geojsons'].first['partitions']['vehicle']['features'].all?{ |f| f['properties']['color'] })
-      assert(result['geojsons'].first['partitions']['work_day']['features'].all?{ |f| f['properties']['color'] })
-
-      vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [TestHelper.vehicle_and_days_partitions[0]]
       vrp[:configuration][:restitution] = { geometry: [:partitions] }
       @job_id = submit_vrp api_key: 'ortools', vrp: vrp
       result = wait_status @job_id, 'completed', api_key: 'ortools'
       refute(result['geojsons'].first['partitions'].key?('work_day'))
+    end
+
+    skip 'Remaining part of this test is skipped because at the moment POST does not return the same result as GET ' \
+         '(geojsons is missing); therefore, we need to solve asynchronously but there is a router call and we ' \
+         'cannot stub the child process. When the output of POST (synchronous) is the same as GET, this skip ' \
+         'can be removed.'
+
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{
+      # returns a "truncated" trace, so there will be a jump in the traced path -- original trace has 1000 elements
+      [
+        [43509.5, 3445.0,
+         [[4.951508, 45.28878], [4.951576, 45.288794], [4.951641, 45.289357], [4.951813, 45.290831],
+          [4.951879, 45.29089], [4.951922, 45.290928], [4.814183, 45.57754], [4.814562, 45.577271],
+          [4.814954, 45.576971], [4.815017, 45.576681], [4.815017, 45.576681]]],
+        [44020.8, 3514.8,
+         [[4.815017, 45.576681], [4.815017, 45.576681], [4.814954, 45.576971], [4.814562, 45.577271],
+          [4.814183, 45.57754], [4.814404, 45.577721], [4.950599, 45.288599], [4.950724, 45.288624],
+          [4.951164, 45.288722], [4.951455, 45.288769], [4.951508, 45.28878]]]
+      ]
+    }) do
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
+      vrp[:configuration][:restitution] = { geometry: [:polylines, :partitions] }
+      assert submit_vrp api_key: 'ortools', vrp: vrp
+      result = JSON.parse(last_response.body)
+      assert(result['geojsons'].first['polylines']['features'].all?{ |f| f['properties']['color'] })
+      assert_equal ['vehicle', 'work_day'], result['geojsons'].first['partitions'].keys
+      assert(result['geojsons'].first['partitions']['vehicle']['features'].all?{ |f| f['properties']['color'] })
+      assert(result['geojsons'].first['partitions']['work_day']['features'].all?{ |f| f['properties']['color'] })
     end
   end
 end
