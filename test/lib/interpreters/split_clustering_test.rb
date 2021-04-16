@@ -954,6 +954,27 @@ class SplitClusteringTest < Minitest::Test
       # if schedule is less than a week, we generate one cluster per vehicle per day
       assert_equal 5, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 4 }, vrp.vehicles, :work_day).size
     end
+
+    def test_split_with_vehicle_alternative_skills
+      problem = VRP.lat_lon_scheduling_two_vehicles
+
+      # nothing expected to be raised :
+      [[[]], [['skill']], [['skill'], []]].each{ |skill_set|
+        problem[:vehicles].first[:skills] = skill_set
+        Interpreters::SplitClustering.split_balanced_kmeans(
+          { vrp: TestHelper.create(problem), service: :demo }, problem[:vehicles].size,
+          entity: :vehicle, restarts: 1, max_iterations: 1)
+      }
+
+      # only this case should raise, because we do have alternative skills :
+      problem[:vehicles].first[:skills] = [['skill'], ['other_skill']]
+      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
+        Interpreters::SplitClustering.split_balanced_kmeans(
+          { vrp: TestHelper.create(problem), service: :demo }, problem[:vehicles].size,
+          entity: :vehicle, restarts: 1, max_iterations: 1)
+      end
+      assert_equal 'Cannot use balanced kmeans if there are vehicles with alternative skills', error.message
+    end
   end
 
   def test_select_existing_relations

@@ -663,7 +663,10 @@ module Interpreters
 
         options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
 
-        raise OptimizerWrapper::UnsupportedProblemError, 'Cannot use balanced kmeans if there are vehicles with alternative skills' if vrp.vehicles.any?{ |v| v[:skills].any?{ |skill| skill.is_a?(Array) } && v[:skills].size > 1 }
+        if vrp.vehicles.any?{ |v| v.skills.count{ |skill| skill.is_a?(Array) && !skill.empty? } > 1 }
+          raise OptimizerWrapper::UnsupportedProblemError.new(
+            'Cannot use balanced kmeans if there are vehicles with alternative skills')
+        end
 
         tic = Time.now
 
@@ -1137,35 +1140,6 @@ module Interpreters
         }
 
         c
-      end
-
-      def find_compatible_vehicles(cluster_to_affect, vehicles, available_clusters, vehicles_cluster_distance, _entity, available_ids)
-        compatible_vehicles = []
-        violating = []
-        all_days = [0, 1, 2, 3, 4, 5, 6]
-        available_ids[:vehicle].each{ |v_i|
-          vehicle = vehicles[v_i]
-
-          conflict_with_clusters = vehicle[:skills].collect{ |skill| available_ids[:cluster].collect{ |i| available_clusters[i][:skills].include?(skill) ? available_clusters[i][:number_items] : 0 } }.flatten.sum
-          conflict_with_clusters -= (available_clusters[cluster_to_affect][:skills] - vehicle.skills).size * available_clusters[cluster_to_affect][:number_items]
-          violating << v_i if !(available_clusters[cluster_to_affect][:skills] - vehicle.skills).empty?
-
-          days = [vehicle[:timewindow] ? (vehicle[:timewindow][:day_index] || all_days) : (vehicle[:sequence_timewindows].collect{ |tw| tw[:day_index] || all_days })].flatten.uniq
-          conflict_with_clusters = days.collect{ |day| available_ids[:cluster].collect{ |i| available_clusters[i][:days_conflict][day] } }.flatten.sum
-          conflict_with_clusters -= available_clusters[cluster_to_affect][:days_conflict][days.first] if days.size == 1 # 0 if no conflict between service and vehicle day
-          violating << v_i if days.none?{ |day| available_clusters[cluster_to_affect][:day_skills].none?{ |skill| skill.include?(day.to_s) } }
-
-          # TODO : test case with skills
-
-          compatible_vehicles << [v_i, vehicles_cluster_distance[v_i][cluster_to_affect] * (1 - conflict_with_clusters / 100.0)]
-        }
-
-        if violating.size < available_ids[:vehicle].size
-          # some vehicles are fully compatible
-          compatible_vehicles.delete_if{ |v| violating.include?(v.first) }
-        end
-
-        compatible_vehicles
       end
 
       def remove_from_upper(graph, node, symbol, value_to_remove)
