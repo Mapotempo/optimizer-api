@@ -148,7 +148,7 @@ module Models
         raise OptimizerWrapper::UnsupportedProblemError.new(
           'Services can appear in at most one shipment relation. '\
           'Following services appear in multiple shipment relations',
-          shipment_relations.detect{ |id| shipment_relations.count(id) > 1 }
+          [shipment_relations.select{ |id| shipment_relations.count(id) > 1 }.uniq]
         )
       end
 
