@@ -112,15 +112,20 @@ module TestHelper
   end
 
   def asynchronously(options = {start_worker: false})
-    if options[:start_worker]
-      pid_worker = Process.spawn({ 'COUNT' => '1', 'QUEUE' => 'DEFAULT' }, 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
-      pgid_worker = Process.getpgid(pid_worker)
-      sleep 0.1 while `ps -o pgid | grep #{pgid_worker}`.split(/\n/).size < 2 # wait for the worker to launch
-    end
     old_config_solve_synchronously = OptimizerWrapper.config[:solve][:synchronously]
     OptimizerWrapper.config[:solve][:synchronously] = false
     old_resque_inline = Resque.inline
     Resque.inline = false
+    if options[:start_worker]
+      pid_worker = Process.spawn({ 'COUNT' => '1', 'QUEUE' => 'DEFAULT' }, 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
+      pgid_worker = Process.getpgid(pid_worker)
+      while `ps -o pgid | grep #{pgid_worker}`.split(/\n/).size < 2
+        puts "#{Time.now} Waiting for the worker to launch"
+        sleep 0.1
+      end
+      puts "#{Time.now} Worker is started"
+      sleep 0.1
+    end
     yield
   ensure
     Resque.inline = old_resque_inline
@@ -137,8 +142,12 @@ module TestHelper
         Process.detach(pid)
       }
       Process.kill('SIGTERM', -pgid_worker) # Kill the process group (this doesn't kill grandchildren)
-      puts "Waiting the worker process group #{pgid_worker} to die\n"
       Process.waitpid(-pgid_worker, 0)
+      while `ps -o pgid,pid | grep "#{worker_pids.join('\|')}"`.split(/\n/).any?
+        puts "#{Time.now} Waiting the worker process group #{pgid_worker} to die\n"
+        sleep 0.1
+      end
+      puts "#{Time.now} Worker is killed"
     end
   end
 end
