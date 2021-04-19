@@ -81,7 +81,6 @@ class HeuristicTest < Minitest::Test
         Interpreters::SplitClustering.stub(:kmeans_process, lambda{ |nb_clusters, data_items, related_item_indices, limits, options|
           options.delete(:distance_matrix)
           options[:restarts] = 4
-          # byebug
           Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items, related_item_indices, limits, options) # call original method
         }) do
           result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)

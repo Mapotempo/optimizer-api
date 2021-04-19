@@ -226,7 +226,7 @@ module Interpreters
         }
         synthesis.each{ |synth| synth.delete(:solution) }
         vrp.resolution_batch_heuristic = nil
-        vrp.preprocessing_first_solution_strategy = [best[:heuristic]]
+        vrp.preprocessing_first_solution_strategy = best[:heuristic] != 'supplied_initial_routes' ? [verified(best[:heuristic])] : []
         vrp.preprocessing_heuristic_synthesis = synthesis
         vrp.resolution_duration = vrp.resolution_duration ? [(vrp.resolution_duration.to_f * (1 - percent_allocated_to_heur_selection)).round, 1000].max : nil
         log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec selected heuristic: #{best[:heuristic]}"
@@ -282,7 +282,7 @@ module Interpreters
         heuristic
       else
         log "Unknown heuristic #{heuristic}", level: :fatal
-        raise StandardError, 'Unconsistent first solution strategy used internally'
+        raise StandardError.new('Unconsistent first solution strategy used internally')
       end
     end
   end
