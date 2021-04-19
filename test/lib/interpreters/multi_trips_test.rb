@@ -115,4 +115,18 @@ class MultiTripsTest < Minitest::Test
     assert route1
     assert route0[:activities].last[:departure_time] <= route1[:activities].first[:begin_time]
   end
+
+  def test_vehicle_trips_with_lapse_0
+    problem = VRP.lat_lon_two_vehicles
+    problem[:relations] = [{
+      type: :vehicle_trips,
+      lapse: 0,
+      linked_vehicle_ids: problem[:vehicles].collect{ |v| v[:id] }
+    }]
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    first_route = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0' }
+    second_route = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_1' }
+    assert_operator first_route[:end_time], :<=, second_route[:start_time]
+  end
 end
