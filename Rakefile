@@ -14,7 +14,7 @@ namespace :resque do
     puts "#{Time.now} Cleaning existing jobs with #{Resque::Plugins::Status::STATUS_WORKING} status..."
 
     Resque::Plugins::Status::Hash.statuses.each{ |job|
-      next unless job.status == Resque::Plugins::Status::STATUS_WORKING
+      next unless job.status == Resque::Plugins::Status::STATUS_WORKING && job.time < Time.now - 10.seconds
 
       # Protect the jobs running on other queues
       running_job_ids = Resque.workers.map{ |w|
