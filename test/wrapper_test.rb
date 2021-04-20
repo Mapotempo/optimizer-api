@@ -76,7 +76,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -127,7 +127,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -192,7 +192,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -267,7 +267,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -322,7 +322,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -377,7 +377,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -433,7 +433,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -488,7 +488,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -540,7 +540,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -586,7 +586,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -637,7 +637,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -721,7 +721,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 6
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -804,7 +804,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -845,7 +845,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -924,7 +924,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -978,7 +978,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -1083,7 +1083,7 @@ class WrapperTest < Minitest::Test
           intermediate_solutions: false,
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -1151,7 +1151,7 @@ class WrapperTest < Minitest::Test
           intermediate_solutions: false,
         },
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }
@@ -1209,7 +1209,7 @@ class WrapperTest < Minitest::Test
           cluster_threshold: 5
         },
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -2232,7 +2232,7 @@ class WrapperTest < Minitest::Test
           first_solution_strategy: ['local_cheapest_insertion']
         },
         resolution: {
-          duration: 10
+          duration: 20,
         },
         restitution: {
           intermediate_solutions: false,
@@ -2309,7 +2309,7 @@ class WrapperTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         },
         schedule: {
           range_indices: {
@@ -2380,7 +2380,7 @@ class WrapperTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         },
         schedule: {
           range_indices: {
@@ -2448,7 +2448,7 @@ class WrapperTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         },
         schedule: {
           range_indices: {
@@ -2515,7 +2515,7 @@ class WrapperTest < Minitest::Test
       }],
       configuration: {
         resolution: {
-          duration: 10,
+          duration: 20,
         },
         schedule: {
           range_indices: {

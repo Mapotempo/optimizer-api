@@ -103,7 +103,7 @@ class MultiTripsTest < Minitest::Test
       },
       configuration: {
         resolution: {
-          duration: 10
+          duration: 20,
         }
       }
     }

@@ -215,13 +215,14 @@ module Models
       if configuration[:preprocessing]
         if configuration[:preprocessing][:partitions]&.any?{ |partition| partition[:entity].to_sym == :work_day }
           if hash[:services].any?{ |s|
-              if hash[:configuration][:schedule][:range_indices][:end] <= 6
-                (s[:visits_number] || 1) > 1
-              else
-                (s[:visits_number] || 1) > 1 &&
-                ((s[:minimum_lapse]&.floor || 1)..(s[:maximum_lapse]&.ceil || hash[:configuration][:schedule][:range_indices][:end])).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
-              end
-            }
+            min_lapse = s[:minimum_lapse]&.floor || 1
+            max_lapse = s[:maximum_lapse]&.ceil || hash[:configuration][:schedule][:range_indices][:end]
+
+            s[:visits_number].to_i > 1 && (
+              hash[:configuration][:schedule][:range_indices][:end] <= 6 ||
+              (min_lapse..max_lapse).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
+            )
+          }
 
             raise OptimizerWrapper::DiscordantProblemError, 'Work day partition implies that lapses of all services can be a multiple of 7. There are services whose minimum and maximum lapse do not permit such lapse'
           end

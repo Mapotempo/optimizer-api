@@ -179,7 +179,7 @@ class HeuristicTest < Minitest::Test
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
-        duration: 10,
+        duration: 20,
         solver: false,
         same_point_day: true,
         allow_partial_assignment: false
@@ -224,7 +224,7 @@ class HeuristicTest < Minitest::Test
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 500000, day_index: 1 }]
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
-        duration: 10,
+        duration: 20,
         solver: false,
         same_point_day: true,
         allow_partial_assignment: false
@@ -279,7 +279,7 @@ class HeuristicTest < Minitest::Test
       }]
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
-        duration: 10,
+        duration: 20,
         solver: false,
         same_point_day: true,
         allow_partial_assignment: false
@@ -335,7 +335,7 @@ class HeuristicTest < Minitest::Test
       }]
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
-        duration: 10,
+        duration: 20,
         solver: false,
         same_point_day: true,
         allow_partial_assignment: false
@@ -398,7 +398,7 @@ class HeuristicTest < Minitest::Test
       }]
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
-        duration: 10,
+        duration: 20,
         solver: false,
         same_point_day: true,
         allow_partial_assignment: true
@@ -429,7 +429,7 @@ class HeuristicTest < Minitest::Test
       }]
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:resolution] = {
-        duration: 10,
+        duration: 20,
         solver: false,
         same_point_day: true,
         allow_partial_assignment: true
