@@ -836,14 +836,14 @@ module Wrappers
     end
 
     def simplify_constraints(vrp)
-      if vrp[:vehicles] && !vrp[:vehicles].empty?
-        vrp[:vehicles].each{ |vehicle|
-          if (vehicle[:force_start] || vehicle[:shift_preference] == 'force_start') && vehicle[:duration] && vehicle[:timewindow]
-            vehicle[:timewindow][:end] = vehicle[:timewindow][:start] + vehicle[:duration]
-            vehicle[:duration] = nil
-          end
-        }
-      end
+      # Simplify vehicle durations using timewindows if there is force_start
+      vrp.vehicles&.each{ |vehicle|
+        next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') && vehicle.duration && vehicle.timewindow
+
+        # Warning: this can make some services infeasible because vehicle cannot work after tw.start + duration
+        vehicle.timewindow.end = vehicle.timewindow.start + vehicle.duration
+        vehicle.duration = nil
+      }
 
       vrp
     end
