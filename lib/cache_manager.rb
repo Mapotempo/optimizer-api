@@ -8,7 +8,7 @@ class CacheManager
 
   def initialize(cache)
     @cache = cache
-    @filesize_limit = 50 # in megabytes
+    @filesize_limit = 100 # in megabytes
     FileUtils.mkdir_p(@cache)
   end
 
