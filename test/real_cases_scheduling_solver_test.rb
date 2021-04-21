@@ -38,40 +38,33 @@ class HeuristicTest < Minitest::Test
       vrp.resolution_solver = true
       vrp.preprocessing_partitions.each{ |p| p.restarts = 1 }
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert result
-
-      assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
-                   "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
-        days_used = result[:routes].collect{ |r| r[:activities].count{ |stop| stop[:point_id] == point_id } }.count(&:positive?)
-        assert days_used <= expected_number_of_days, "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
+        days_used = result[:routes].count{ |r| r[:activities].count{ |stop| stop[:point_id] == point_id } > 0 }
+        assert_operator days_used, :<=, expected_number_of_days,
+                        "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
       }
 
-      limit = ENV['TRAVIS'] ? vrp.visits * 6.8 / 100.0 : vrp.visits * 6 / 100.0
-      assert result[:unassigned].size < limit, "#{result[:unassigned].size * 100.0 / vrp.visits}% unassigned instead of #{limit}% authorized"
-      assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') }, 'Some services could not be assigned to a vehicle'
+      # check performance :
+      limit = vrp.visits * 6 / 100.0
+      assert_operator result[:unassigned].size, :<, limit,
+                      "#{result[:unassigned].size * 100.0 / vrp.visits}% unassigned instead of #{limit}% authorized"
+      assert result[:unassigned].none?{ |un| un[:reason].include?(' vehicle ') },
+             'Some services could not be assigned to a vehicle'
     end
 
     def test_performance_12vl_with_solver
       vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
 
-      expected_visits_number = vrps.sum(&:visits) + vrps.sum{ |vrp| vrp.services.count{ |s| s[:visits_number].zero? } }
-
-      assigned_visits = []
-      unassigned_visits = []
-      vrps.each_with_index{ |vrp, vrp_i|
+      unassigned_visits = vrps.each.with_index.inject(0){ |unassigned_nb, (vrp, vrp_i)|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
         vrp.preprocessing_partitions = nil
         vrp.resolution_solver = true
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-        assigned_visits << result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } }
-        unassigned_visits << result[:unassigned].size
+        unassigned_nb + result[:unassigned].size
       }
-      assert_equal expected_visits_number, assigned_visits.sum + unassigned_visits.sum,
-                   "Expecting #{expected_visits_number} visits but have #{assigned_visits.sum + unassigned_visits.sum}"
-      assert unassigned_visits.sum <= 441, "Expecting less than 441 unassigned visits, have #{unassigned_visits.sum}"
+      assert unassigned_visits <= 225, "Expecting less than 441 unassigned visits, have #{unassigned_visits}"
     end
 
     def test_performance_britanny_with_solver
@@ -93,5 +86,18 @@ class HeuristicTest < Minitest::Test
       assert_operator unassigned_count.min, :<=, 120, "#{unassigned_count}.min should be smaller"
       assert_operator unassigned_count.max, :<=, 240, "#{unassigned_count}.max should be smaller"
     end
+  end
+
+  def test_without_same_point_day
+    vrp = TestHelper.load_vrp(self)
+    vrp.resolution_solver = false
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    unassigned = result[:unassigned].size
+    assert_equal 46, unassigned
+
+    vrp = TestHelper.load_vrp(self)
+    vrp.resolution_solver = true
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert unassigned >= result[:unassigned].size
   end
 end
