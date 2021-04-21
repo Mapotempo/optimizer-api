@@ -504,7 +504,7 @@ module Wrappers
         duration: rest.duration,
         router_mode: vehicle&.router_mode,
         speed_multiplier: vehicle&.speed_multiplier
-      }
+      }.delete_if{ |_k, v| v.nil? }
     end
 
     def build_skills(job)
