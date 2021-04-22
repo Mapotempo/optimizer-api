@@ -835,17 +835,84 @@ module Wrappers
       unfeasible
     end
 
-    def simplify_constraints(vrp)
-      # Simplify vehicle durations using timewindows if there is force_start
-      vrp.vehicles&.each{ |vehicle|
-        next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') && vehicle.duration && vehicle.timewindow
+    def simplifications
+      # Simplification functions should have the following structure and implement
+      # :simplify, :rewind, and :patch_result modes.
+      #
+      #       def simplify_X(vrp, result = nil, options = { mode: :simplify })
+      #         # Description of the simplification
+      #         case options[:mode]
+      #         when :simplify
+      #           # simplifies the constraint
+      #         when :rewind
+      #           nil # if nothing to do
+      #         when :patch_result
+      #           # patches the result
+      #         else
+      #           raise 'Unknown :mode option'
+      #         end
+      #         nil # returns nil because the objects are modified and this function is going to be called automatically
+      #       end
+      #
+      # (If some modes are not necessary they can be merged -- e.g. `when :rewind, :patch_result` and have `nil`)
+      # :patch_result is called for interim solutions and for the last solution before the :rewind is called.
 
-        # Warning: this can make some services infeasible because vehicle cannot work after tw.start + duration
-        vehicle.timewindow.end = vehicle.timewindow.start + vehicle.duration
-        vehicle.duration = nil
+      # Warning: The order might be important if the simplifications are interdependent.
+      # The simplifications will be called in the following order and their corresponding rewind
+      # and result patching operations will be called in the opposite order. This can be changed
+      # if necessary.
+      [
+        :simplify_vehicle_duration,
+      ].freeze
+    end
+
+    def simplify_constraints(vrp)
+      simplifications.each{ |simplification|
+        self.send(simplification, vrp, nil, mode: :simplify)
       }
 
       vrp
+    end
+
+    def patch_simplified_constraints_in_result(result, vrp)
+      return result unless result.is_a?(Hash)
+
+      simplifications.reverse_each{ |simplification|
+        self.send(simplification, vrp, result, mode: :patch_result)
+      }
+
+      result
+    end
+
+    def patch_and_rewind_simplified_constraints(vrp, result)
+      # first patch the results (before the constraint are rewinded)
+      patch_simplified_constraints_in_result(result, vrp) if result.is_a?(Hash)
+
+      # then rewind the simplifications
+      simplifications.reverse_each{ |simplification|
+        self.send(simplification, vrp, nil, mode: :rewind)
+      }
+
+      vrp
+    end
+
+    def simplify_vehicle_duration(vrp, _result = nil, options = { mode: :simplify })
+      # Simplify vehicle durations using timewindows if there is force_start
+      case options[:mode]
+      when :simplify
+        vrp.vehicles&.each{ |vehicle|
+          next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') && vehicle.duration && vehicle.timewindow
+
+          # Warning: this can make some services infeasible because vehicle cannot work after tw.start + duration
+          vehicle.timewindow.end = vehicle.timewindow.start + vehicle.duration
+          vehicle.duration = nil
+        }
+      when :rewind, :patch_result
+        nil # TODO: this simplification can be moved to a higher level since it doesn't need rewinding or patching
+      else
+        raise 'Unknown :mode option'
+      end
+      nil
     end
 
     def unassigned_services(vrp, unassigned_reason)
