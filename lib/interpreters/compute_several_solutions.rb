@@ -186,7 +186,7 @@ module Interpreters
           s_vrp[:vrp].resolution_initial_time_out = nil
           s_vrp[:vrp].resolution_minimum_duration = nil
           s_vrp[:vrp].resolution_duration = [time_for_each_heuristic, 300000].min # no more than 5 min for single heur
-          heuristic_solution = OptimizerWrapper.solve(s_vrp)
+          heuristic_solution = OptimizerWrapper.config[:services][s_vrp[:service]].solve(s_vrp[:vrp], nil)
           times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
         }

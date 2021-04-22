@@ -4960,8 +4960,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     list = Interpreters::SeveralSolutions.collect_heuristics(TestHelper.create(vrp), ['self_selection'])
 
     call_to_solve = 0
-    OptimizerWrapper.stub(
-      :solve, lambda{ |service_vrp|
+    OptimizerWrapper.config[:services][:ortools].stub(
+      :solve, lambda{ |vrp_in, _job|
         call_to_solve += 1
 
         # force to prefer solution provided by routes :
@@ -4971,9 +4971,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
         else
           { cost: 10.0, solvers: ['ortools'],
             routes: [{ vehicle_id: 'vehicle_0',
-                       activities: service_vrp[:vrp].routes.first.mission_ids.collect{ |id|
-                        { service_id: id, type: 'service' } }
-                       },
+                       activities: vrp_in.routes.first.mission_ids.collect{ |id| { service_id: id, type: 'service' } } },
                      { vehicle_id: 'vehicle_1', activities: [] }] }
         end
       }
@@ -5741,9 +5739,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:configuration][:preprocessing] = { first_solution_strategy: ['self_selection'] }
 
     heuristic_counter = 0
-    OptimizerWrapper.stub(
-      :solve,
-      lambda{ |_|
+    OptimizerWrapper.config[:services][:ortools].stub(
+      :solve, lambda{ |_vrp_in, _job|
         heuristic_counter += 1
         if heuristic_counter == 1
           { cost: 27648.0, solvers: ['ortools'], elapsed: 0.94, routes: [{ vehicle_id: 'vehicle_0', activities: [] }, { vehicle_id: 'vehicle_1', activities: [] }, { vehicle_id: 'vehicle_2', activities: [] }] }
