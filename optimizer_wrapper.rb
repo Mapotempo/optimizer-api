@@ -240,14 +240,14 @@ module OptimizerWrapper
 
       unfeasible_services += sub_unfeasible_services
       if vrp.resolution_solver && !vrp.periodic_heuristic?
-        # TODO: Move select best heuristic in each solver
-        Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
-
         block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.preprocessing_cluster_threshold.to_f}) ", nil, nil, nil) if vrp.preprocessing_cluster_threshold.to_f.positive?
         optim_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
           time_start = Time.now
 
           block&.call(nil, 0, nil, 'run optimization', nil, nil, nil) if dicho_level.nil? || dicho_level.zero?
+
+          # TODO: Move select best heuristic in each solver
+          Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
 
           cliqued_result = OptimizerWrapper.config[:services][service].solve(
             cliqued_vrp,
