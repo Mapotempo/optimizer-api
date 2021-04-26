@@ -444,6 +444,13 @@ module Models
            vehicle_group_duration_on_months vehicle_group_number]
 
       hash[:relations].delete_if{ |r| r[:lapse].nil? && types_with_duration.include?(r[:type]) }
+
+      # TODO : remove this filter, VRP with duplicated relations should not be accepted
+      uniq_relations = []
+      hash[:relations].group_by{ |r| r[:type] }.each{ |_type, relations_set|
+        uniq_relations += relations_set.uniq
+      }
+      hash[:relations] = uniq_relations
     end
 
     def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)

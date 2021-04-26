@@ -314,5 +314,20 @@ module Models
       assert_equal 1, created_vrp.services.first.skills.size
       assert_equal created_vrp.services.first.original_skills.size, created_vrp.services.first.skills.size
     end
+
+    def test_filter_duplicated_relations
+      vrp = VRP.basic
+      vrp[:relations] = [{
+        type: :shipment,
+        linked_ids: ['service_1', 'service_2']
+      }]
+      Models::Vrp.filter(vrp)
+      assert_equal 1, vrp[:relations].size
+
+      vrp[:relations] << vrp[:relations].first
+      assert_equal 2, vrp[:relations].size
+      Models::Vrp.filter(vrp)
+      assert_equal 1, vrp[:relations].size
+    end
   end
 end
