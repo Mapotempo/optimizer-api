@@ -756,4 +756,18 @@ class Wrappers::VroomTest < Minitest::Test
     assert_equal 0, result[:unassigned].size
     assert_equal 5, result[:routes][0][:activities].size
   end
+
+  def test_correct_route_collection
+    problem = VRP.lat_lon_two_vehicles
+    problem[:services].each{ |service|
+      service[:skills] = ['s1']
+    }
+    problem[:vehicles].last[:skills] = [['s1']]
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, TestHelper.create(problem), nil)
+    assert_equal 2, result[:routes].size
+
+    skilled_route = result[:routes].find{ |route| route[:vehicle_id] == problem[:vehicles].last[:id] }
+    assert_equal problem[:services].size, (skilled_route[:activities].count{ |activity| activity[:service_id] })
+  end
 end
