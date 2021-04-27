@@ -101,7 +101,7 @@ module Wrappers
       cost = (result['summary']['cost'])
       routes = result['routes'].map.with_index{ |route, index|
         @previous = nil
-        vehicle = vrp.vehicles[index]
+        vehicle = vrp.vehicles[route['vehicle']]
         cost += vehicle.cost_fixed if route['steps'].size.positive?
         activities = route['steps'].map{ |step|
           read_step(vrp, vehicle, step)
@@ -301,10 +301,10 @@ module Wrappers
     end
 
     def collect_vehicles(vrp, vrp_skills, vrp_units)
-      vrp.vehicles.map{ |vehicle|
+      vrp.vehicles.map.with_index{ |vehicle, index|
         tw_end = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier.zero?) && vehicle.timewindow&.end || 2**30
         {
-          id: 0,
+          id: index,
           start_index: vehicle.start_point_id ? @points[vehicle.start_point_id].matrix_index : nil,
           end_index: vehicle.end_point_id ? @points[vehicle.end_point_id].matrix_index : nil,
           capacity: vrp_units.map{ |unit| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit&.to_i || 0 },
