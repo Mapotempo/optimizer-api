@@ -544,7 +544,7 @@ module VrpVehicles
     mutually_exclusive :capacity_ids, :capacities
 
     optional(:sequence_timewindow_ids, type: Array[String], documentation: { hidden: true }, desc: 'Sequence timewindows to consider, CSV front only',
-                                       coerce_with: ->(val) { val.split(/,/).map(&:strip) })
+                                       coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map(&:strip) : val })
     optional(:sequence_timewindows, type: Array, desc: '(Scheduling only) Define the vehicle work schedule over a period') do
       use :vrp_request_timewindow
     end
