@@ -98,6 +98,7 @@ module OutputHelper
                  '#0077A3', '#000000', '#003880', '#BEE562']
 
       expected_geometry = solution[:configuration].to_h[:geometry].to_a.map!(&:to_sym) # TODO : investigate how it is possible that no configuration is returned
+      return nil unless expected_geometry.any?
 
       expected_geometry.map!(&:to_sym)
       [solution[:result]].flatten(1).collect{ |result|
