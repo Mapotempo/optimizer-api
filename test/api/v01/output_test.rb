@@ -359,9 +359,7 @@ class Api::V01::OutputTest < Minitest::Test
       vrp = VRP.lat_lon_scheduling
       @job_id = submit_vrp api_key: 'demo', vrp: vrp
       result = wait_status @job_id, 'completed', api_key: 'demo'
-      # points should always be returned
-      refute_empty(result['geojsons'].first['points'])
-      assert_empty(result['geojsons'].first['partitions'].to_a + result['geojsons'].first['polylines'].to_a)
+      assert_nil(result['geojsons'])
 
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [TestHelper.vehicle_and_days_partitions[0]]
@@ -369,6 +367,8 @@ class Api::V01::OutputTest < Minitest::Test
       @job_id = submit_vrp api_key: 'ortools', vrp: vrp
       result = wait_status @job_id, 'completed', api_key: 'ortools'
       refute(result['geojsons'].first['partitions'].key?('work_day'))
+      # points should always be returned
+      refute_empty(result['geojsons'].first['points'])
     end
 
     skip 'Remaining part of this test is skipped because at the moment POST does not return the same result as GET ' \
