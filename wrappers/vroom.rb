@@ -43,6 +43,7 @@ module Wrappers
         :assert_no_subtours,
         :assert_points_same_definition,
         :assert_single_dimension,
+        :assert_not_a_split_solve_candidate,
 
         # Vehicle/route constraints
         :assert_homogeneous_router_definitions,
