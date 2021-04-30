@@ -386,7 +386,8 @@ module Wrappers
       output = Tempfile.new('optimize-vroom-output', @tmp_dir)
       output.close
 
-      cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}'"
+      # TODO : find best value for x https://github.com/Mapotempo/optimizer-api/pull/203
+      cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}' -x 0"
       log cmd
       system(cmd)
 
