@@ -85,6 +85,10 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       vrp[:configuration][:preprocessing][:first_solution_strategy] = [vrp[:configuration][:preprocessing][:first_solution_strategy]].flatten
     end
 
+    if vrp[:configuration] && vrp[:configuration][:restitution] && vrp[:configuration][:restitution][:geometry] == true
+      vrp[:configuration][:restitution][:geometry] = %i[polylines encoded_polylines]
+    end
+
     if vrp[:configuration]
       if vrp[:configuration][:restitution]
         vrp[:configuration][:restitution][:geometry] ||= []

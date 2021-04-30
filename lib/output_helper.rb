@@ -106,7 +106,8 @@ module OutputHelper
 
         geojson[:partitions] = generate_partitions_geometry(result) if expected_geometry.include?(:partitions)
         geojson[:points] = generate_points_geometry(result)
-        geojson[:polylines] = generate_polylines_geometry(result) if expected_geometry.include?(:polylines)
+        # TODO : re-activate this function call when we find a good way to return polylines in result
+        # geojson[:polylines] = generate_polylines_geometry(result) if expected_geometry.include?(:polylines)
         geojson
       }
     end

@@ -25,7 +25,8 @@ class GeometryType
     if value.is_a?(FalseClass)
       []
     elsif value.is_a?(TrueClass)
-      ALL_TYPES
+      # ALL_TYPES
+      %i[polylines encoded_polylines] # ensures old behaviour is respected when geometry is true
     elsif value.is_a?(Array)
       to_return = []
       value.each{ |geometry_type|
@@ -33,7 +34,8 @@ class GeometryType
           raise ArgumentError.new("Invalid geometry value: #{geometry_type}")
         end
 
-        to_return << geometry_type.to_sym
+        # to_return << geometry_type.to_sym
+        to_return << geometry_type.to_sym unless %i[polylines encoded_polylines].include?(geometry_type.to_sym)
       }
 
       if (to_return & [:polylines, :encoded_polylines]).size == 2

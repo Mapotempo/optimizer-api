@@ -368,7 +368,7 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_ask_for_geometry
-    [false, true, # boolean
+    [false, true, true, # boolean
      ['polylines'], [:polylines], [:polylines, 'partitions'], ['unexistant'], # array of string or symbol
      'partitions', 'polylines,partitions', 'polylines, encoded_polylines' # string to be converted into an array
     ].each_with_index{ |geometry_field, case_index|
@@ -376,11 +376,15 @@ class Api::V01::VrpTest < Minitest::Test
           case case_index
           when 0
             assert_empty services_vrps.first[:vrp].restitution_geometry
-          when 1 || 4 || 7
-            assert_equal %i[polylines partitions], services_vrps.first[:vrp].restitution_geometry
-          when 2 || 3
+          when 1
             assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
-          when 6
+          when 2
+            assert_equal %i[encoded_polylines], services_vrps.first[:vrp].restitution_geometry
+          when 5 || 8
+            assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
+          when 3 || 4
+            assert_empty services_vrps.first[:vrp].restitution_geometry
+          when 7
             assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
           end
           {}
@@ -388,7 +392,8 @@ class Api::V01::VrpTest < Minitest::Test
       ) do
         vrp = VRP.toy
         vrp[:configuration][:restitution] = { geometry: geometry_field }
-        if [5, 8].include?(case_index)
+        vrp[:configuration][:restitution][:geometry_polyline] = true if case_index == 2
+        if [6, 9].include?(case_index)
           post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
           assert_includes [400], last_response.status
         else

@@ -192,9 +192,11 @@ module VrpConfiguration
   end
 
   params :vrp_request_restitution do
-    optional(:geometry, type: Array[Symbol], default: [], values: %i[polylines encoded_polylines partitions],
+    # TODO : when we find a good way to return polylines in geojson result, add authorized values here
+    # (we do not want users to send :polylines, :encoded_polylines for now)
+    optional(:geometry, type: Array[Symbol], default: [],
                         coerce_with: ->(value) { GeometryType.type_cast(value) },
-                        desc: 'Specifies the geometry structures to be returned. Can be a subset of `[polylines, encoded_polylines, partitions]` or a boolean value to output all or no geometry. Polylines and encoded_polylines are not compatible.')
+                        desc: 'Specifies the geometry structures to be returned. Can be a subset of `[partitions]` or a boolean value to output all or no geometry. Polylines and encoded_polylines are not compatible.')
     optional(:geometry_polyline, type: Boolean, documentation: { hidden: true }, desc: '[DEPRECATED] Use geometry instead, with :polylines or :encoded_polylines')
     optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
     optional(:csv, type: Boolean, desc: 'The output is a CSV file if you do not specify api format')
