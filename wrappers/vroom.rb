@@ -25,6 +25,7 @@ module Wrappers
     def initialize(hash = {})
       super(hash)
       @exec_vroom = hash[:exec_vroom] || '../vroom/bin/vroom'
+      @exec_vroom += " -t #{hash[:threads]}" if hash[:threads]
     end
 
     def solver_constraints

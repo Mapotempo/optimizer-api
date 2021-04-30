@@ -39,7 +39,7 @@ module OptimizerWrapper
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides].freeze
   WEEKDAYS = %i[mon tue wed thu fri sat sun].freeze
   DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR)
-  VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR)
+  VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR, threads: 1)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS_EXEC = 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
