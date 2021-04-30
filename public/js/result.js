@@ -3,74 +3,14 @@ const ATTRIBUTION = 'Tiles by OpenStreetMap';
 const MAP_ID = 'map';
 const DEFAULT_POSITION = [51.505, -0.09];
 const DEFAULT_ZOOM = 5;
+const FEATURE_COLLECTION = 'FeatureCollection'
+const POINT = 'Point'
+const POLYLINE = 'LineString'
+const POLYGON = 'Polygon'
 
 var map;
 var queryParams;
-const layers = {
-  partitionsVehicle: new L.layerGroup(),
-  partitionsWorkDay: new L.layerGroup(),
-  points: { layer: new L.featureGroup(), clusters: new L.markerClusterGroup()},
-  polylines: new L.layerGroup()
-}
-
-const popupContent = {
-  partitions: function(properties) {
-    const duration = new Date(0);
-    duration.setSeconds(properties.duration);
-    return  (
-      '<div>name : ' + properties.name + '</div>' +
-      '<div>nbr : ' + properties.nbr + '</div>' +
-      '<div>duration : ' + duration.toLocaleTimeString() + '</div>'
-    );
-  },
-  polylines: function(properties) {
-    return  (
-      '<div>name : ' + properties.name + '</div>' +
-      '<div>day : ' + properties.day + '</div>' +
-      '<div>vehicle : ' + properties.vehicle + '</div>'
-    );
-  }
-}
-
-const layerInitializers = {
-  partitions: function(geojson) {
-    ['vehicle', 'work_day'].forEach(function (key, idx) {
-      if (geojson[key]) {
-        new L.geoJSON(geojson[key]['features'], {
-          onEachFeature: function (feature, layer) {
-            layer.setStyle({
-              color: feature.properties.color
-            });
-            layer.bindPopup(popupContent['partitions'](feature.properties));
-          }
-        }).addTo(idx ? layers['partitionsWorkDay'] : layers['partitionsVehicle'])
-      }
-    });
-  },
-
-  points: function(geojson) {
-    new L.geoJSON(geojson['features'], {
-      pointToLayer: function(geoJsonPoint, latlng) {
-        const marker = L.marker(latlng, {
-          icon: L.divIcon({html: '<span class="circle" style="background-color: '+ geoJsonPoint.properties.color + ';"/>'}),
-          title: geoJsonPoint.properties.name + (geoJsonPoint.properties.day ? ' (day : ' + geoJsonPoint.properties.day + ')' : '')
-        });
-        return marker;
-      }
-    }).addTo(layers['points'].layer).addTo(layers['points'].clusters);
-  },
-
-  polylines: function(geojson) {
-    new L.geoJSON(geojson['features'], {
-      onEachFeature: function (feature, layer) {
-        layer.setStyle({
-          color: feature.properties.color
-        });
-        layer.bindPopup(popupContent['polylines'](feature.properties));
-      }
-    }).addTo(layers['polylines'])
-  }
-}
+const layers = {}
 
 function forEachLayers(callback) {
   Object.keys(layers).forEach(function(layerName) {
@@ -96,100 +36,54 @@ function getQueryParams() {
 function toggleLoading() {
   $('body').toggleClass('loading');
   $('#map').toggleClass('loading');
-};
-
-function setCheckboxesVisibility(geojson) {
-  forEachLayers(function (layerName) {
-    if (geojson['partitions'] && (layerName === 'partitionsVehicle' && geojson['partitions']['vehicle']
-      || layerName === 'partitionsWorkDay' && geojson['partitions']['work_day'])) {
-      $('#' + layerName).fadeIn();
-    }
-    else if (geojson[layerName]) {
-      $('#' + layerName).fadeIn();
-    } else {
-      $('#' + layerName).fadeOut();
-    }
-  });
-}
-
-function getLayersToShow() {
-  return Object.keys(layers).reduce(function(object, key) {
-    object[key] = $('#' + key + '-checkbox').get(0).checked
-    return object;
-  }, {});
-}
-
-function setLayersToShow() {
-  const layersToShow = getLayersToShow();
-
-  forEachLayers(function(layerName) {
-    if (layerName === 'points') {
-      if (layersToShow[layerName]) {
-        map.addLayer(window.leafletOptions.showClusters ? layers[layerName].clusters : layers[layerName].layer);
-      } else {
-        map.removeLayer(window.leafletOptions.showClusters ? layers[layerName].clusters : layers[layerName].layer);
-      }
-      return;
-    }
-
-    if (layersToShow[layerName]) {
-      map.addLayer(layers[layerName]);
-    } else {
-      map.removeLayer(layers[layerName]);
-    }
-  });
 }
 
 function switchCluster() {
-  const layersToShow = getLayersToShow();
-
-  if (!layersToShow['points']) {
-    return;
-  }
-
-  if (window.leafletOptions.showClusters) {
-    map.removeLayer(layers['points'].layer);
-    map.addLayer(layers['points'].clusters);
-  } else {
-    map.removeLayer(layers['points'].clusters);
-    map.addLayer(layers['points'].layer);
-  }
+  forEachLayers(function(layerName) {
+    const layerInfos = layers[layerName];
+    if (layerInfos.type === POINT && (map.hasLayer(layerInfos.layer) || map.hasLayer(layerInfos.cluster))) {
+      if (window.leafletOptions.showClusters) {
+        map.removeLayer(layerInfos.layer);
+        map.addLayer(layerInfos.cluster);
+      } else {
+        map.removeLayer(layerInfos.cluster);
+        map.addLayer(layerInfos.layer);
+      }
+    }
+  })
 }
 
 function showJobOnMap(body) {
+  let isFitBound = false;
   if (body.geojsons) {
     const geojson = body.geojsons[body.geojsons.length - 1]
-
-    setCheckboxesVisibility(geojson);
-    Object.keys(geojson).forEach(function (key) {
-      layerInitializers[key](geojson[key])
+    parseGeojsonObject(geojson, '');
+    forEachLayers(function(layerName) {
+      if (!isFitBound && layers[layerName].type === POINT) {
+        map.fitBounds(window.leafletOptions.showClusters ? layers[layerName].cluster.getBounds() : layers[layerName].layer.getBounds())
+      }
     });
-
-    setLayersToShow();
-    map.fitBounds(layers['points'].clusters.getBounds())
   }
 }
 
-function clearLayers() {
+function resetPage() {
+  $('#checkbox-container').empty();
   forEachLayers(function(layerName) {
-    if (layerName === 'points') {
-      layers[layerName].layer.clearLayers();
-      layers[layerName].clusters.clearLayers();
+    const layerInfos = layers[layerName];
+    let layer;
+    if (layerInfos.type === POINT) {
+      layer = window.leafletOptions.showClusters ? layerInfos.cluster : layerInfos.layer;
     } else {
-      layers[layerName].clearLayers();
+      layer = layerInfos.layer;
     }
-  });
-}
-
-function resetCheckBoxes() {
-  forEachLayers(function(layerName) {
-    $('#' + layerName + '-checkbox')[0].checked = false;
-  });
+    if (map.hasLayer(layer)) {
+      map.removeLayer(layer);
+    }
+  })
 }
 
 function getJob(job_id, api_key) {
-  clearLayers();
-  resetCheckBoxes();
+  resetPage();
   toggleLoading();
   $.ajax({
     type: 'GET',
@@ -203,29 +97,95 @@ function getJob(job_id, api_key) {
   })
 }
 
-function handleBack() {
-  window.location.replace(window.location.origin + '?api_key=' + queryParams.api_key)
-}
-
-function handleLayers(name) {
-  return function(e) {
-    let layer;
-    if (name === 'points') {
-      if (window.leafletOptions.showClusters) {
-        layer = layers[name].clusters;
-      } else {
-        layer = layers[name].layer;
-      }
-    } else {
-      layer = layers[name]
+function createCheckbox(layerName) {
+  const label = layerName.split('.').join(' - ');
+  const id = layerName.split('.').join('_');
+  const html =
+      '<div class="block">' +
+      '<input type="checkbox" id="' + id + '"/>' +
+      '<label for="' + id + '">' + label + '</label>' +
+      '</div>';
+  $('#checkbox-container').append(html);
+  $('#' + id).on('click', function(e) {
+    let layer = layers[layerName].layer;
+    if (layers[layerName].type === POINT) {
+      layer = window.leafletOptions.showClusters ? layers[layerName].cluster : layers[layerName].layer;
     }
-
     if (e.target.checked) {
       map.addLayer(layer);
     } else {
       map.removeLayer(layer);
     }
+  });
+}
+
+function createPopupContent(properties) {
+  return Object.keys(properties).map(key => {
+    let content = '';
+    if (key === 'duration') {
+      const duration = new Date(0);
+      duration.setSeconds(properties[key]);
+      content += '<div>duration : ' + duration.toLocaleTimeString() + '</div>'
+    } else if (key !== 'color') {
+      content += '<div>' + key + ' : ' + properties[key] + '</div>'
+    }
+    return content;
+  }).join('');
+}
+
+function createPointLayer(featuresCollection, key, featureType) {
+  layers[key] = { layer: new L.featureGroup(), cluster: new L.markerClusterGroup(), type: featureType };
+
+  new L.geoJSON(featuresCollection, {
+    pointToLayer: function(geoJsonPoint, latlng) {
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({html: '<span class="circle" style="background-color: '+ geoJsonPoint.properties.color + ';"/>'}),
+      });
+      marker.bindPopup(createPopupContent(geoJsonPoint.properties));
+      return marker;
+    }
+  }).addTo(layers[key].layer).addTo(layers[key].cluster);
+}
+
+function createLayer(featuresCollection, key, featureType) {
+  layers[key] = { layer: new L.layerGroup(), type: featureType }
+  new L.geoJSON(featuresCollection, {
+    onEachFeature: function (feature, layer) {
+      layer.setStyle({
+        color: feature.properties.color
+      });
+      layer.bindPopup(createPopupContent(feature.properties));
+    }
+  }).addTo(layers[key].layer)
+}
+
+function getFeatureType(featuresCollection) {
+  if (featuresCollection.features) {
+    return featuresCollection.features[0].geometry.type;
   }
+  return null;
+}
+
+function parseGeojsonObject(obj, parent) {
+  const featureType = getFeatureType(obj);
+  if (obj.type === FEATURE_COLLECTION) {
+    featureType === POINT ? createPointLayer(obj, parent, featureType) : createLayer(obj, parent, featureType);
+    createCheckbox(parent);
+    return [parent];
+  } else {
+
+    Object.keys(obj).forEach(key => {
+      if (typeof obj[key] === 'object') {
+        const newKey = parent + (parent.length > 0 ? '.' : '') + key;
+        parseGeojsonObject(obj[key], newKey);
+      }
+    });
+
+  }
+}
+
+function handleBack() {
+  window.location.replace(window.location.origin + '?api_key=' + queryParams.api_key)
 }
 
 function initializeMap(id) {
@@ -241,11 +201,8 @@ function initializeMap(id) {
 }
 
 function initializeHandlers() {
-  $('#get-job').on('click', function() { getJob($('#job-id').val(), queryParams.api_key); });
+  $('#get-job').on('click', function() { getJob($('#job-id').val(), queryParams.api_key) });
   $('#back').on('click', handleBack);
-  forEachLayers(function(layerName) {
-    $('#' + layerName + '-checkbox').on('change', handleLayers(layerName));
-  });
 }
 
 function initialize() {
