@@ -368,5 +368,14 @@ module Models
       end
       assert_equal "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. These skill patterns are reserved for internal use and they would lead to unexpected behaviour.", error.message
     end
+
+    def test_reject_when_duplicated_ids
+      vrp = VRP.toy
+      vrp[:services] << vrp[:services].first
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
+      end
+    end
   end
 end
