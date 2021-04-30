@@ -26,7 +26,7 @@ RUN gem install bundler --version 2.1.4
 RUN bundle --version
 RUN bundle install --path vendor/bundle --full-index --without ${BUNDLE_WITHOUT} -j $(nproc)
 
-LABEL maintainer="Mapotempo <contact@mapotempo.com>"
+LABEL maintainer="Mapotempo <tech@mapotempo.com>"
 
 ENV REDIS_HOST redis-cache
 ENV LANG C.UTF-8
