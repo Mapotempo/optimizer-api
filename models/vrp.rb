@@ -143,13 +143,28 @@ module Models
       ensure_no_conflicting_skills(hash)
 
       # shipment relation consistency
-      shipment_relations = hash[:relations]&.select{ |r| r[:type] == :shipment }&.flat_map{ |r| r[:linked_ids] }.to_a
-      unless shipment_relations.size == shipment_relations.uniq.size
-        raise OptimizerWrapper::UnsupportedProblemError.new(
-          'Services can appear in at most one shipment relation. '\
-          'Following services appear in multiple shipment relations',
-          [shipment_relations.select{ |id| shipment_relations.count(id) > 1 }.uniq]
-        )
+      if hash[:relations]&.any?{ |r| r[:type] == :shipment }
+        shipment_relations = hash[:relations].select{ |r| r[:type] == :shipment }
+
+        shipments_not_having_exactly_two_linked_ids = shipment_relations.reject{ |r| r[:linked_ids].uniq.size == 2 }
+        unless shipments_not_having_exactly_two_linked_ids.empty?
+          raise OptimizerWrapper::DiscordantProblemError.new(
+            'Shipment relations need to have two services -- a pickup and a delivery. ' \
+            'Relations of following services does not have exactly two linked_ids: ' \
+            "#{shipments_not_having_exactly_two_linked_ids.flat_map{ |r| r[:linked_ids] }.uniq.sort.join(', ')}"
+          )
+        end
+
+        pickups = shipment_relations.map{ |r| r[:linked_ids].first }
+        deliveries = shipment_relations.map{ |r| r[:linked_ids].last }
+        services_that_are_both_pickup_and_delivery = pickups & deliveries
+        unless services_that_are_both_pickup_and_delivery.empty?
+          raise OptimizerWrapper::UnsupportedProblemError.new(
+            'A service cannot be both a delivery and a pickup in different relations. '\
+            'Following services appear in multiple shipment relations both as pickup and delivery: ',
+            [services_that_are_both_pickup_and_delivery]
+          )
+        end
       end
 
       # vehicle time cost consistency
