@@ -25,6 +25,7 @@ module Wrappers
     def initialize(hash = {})
       super(hash)
       @exec_vroom = hash[:exec_vroom] || '../vroom/bin/vroom'
+      @exec_vroom += " -t #{hash[:threads]}" if hash[:threads]
     end
 
     def solver_constraints
@@ -42,6 +43,7 @@ module Wrappers
         :assert_no_subtours,
         :assert_points_same_definition,
         :assert_single_dimension,
+        :assert_not_a_split_solve_candidate,
 
         # Vehicle/route constraints
         :assert_homogeneous_router_definitions,
@@ -384,7 +386,8 @@ module Wrappers
       output = Tempfile.new('optimize-vroom-output', @tmp_dir)
       output.close
 
-      cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}'"
+      # TODO : find best value for x https://github.com/Mapotempo/optimizer-api/pull/203
+      cmd = "#{@exec_vroom} -i '#{input.path}' -o '#{output.path}' -x 0"
       log cmd
       system(cmd)
 

@@ -3062,12 +3062,12 @@ class WrapperTest < Minitest::Test
     refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
   end
 
-  def test_reject_when_duplicated_ids
-    vrp = VRP.toy
-    vrp[:services] << vrp[:services].first
+  def test_vroom_not_called_if_max_split_lower_thant_services_size
+    problem = VRP.lat_lon_two_vehicles
+    assert_empty OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem))
 
-    assert_raises OptimizerWrapper::DiscordantProblemError do
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
-    end
+    problem[:configuration][:preprocessing] = { max_split_size: 2 }
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)),
+                    :assert_not_a_split_solve_candidate
   end
 end
