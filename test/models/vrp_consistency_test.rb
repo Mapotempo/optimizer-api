@@ -345,33 +345,8 @@ module Models
       end
     end
 
-    def test_services_cannot_appear_in_more_than_one_shipment_relation
+    def test_services_cannot_be_pickup_and_delivery_in_multiple_relations
       vrp = VRP.basic
-      vrp[:relations] = [
-        { type: :shipment, linked_ids: %w[service_1 service_2] },
-        { type: :shipment, linked_ids: %w[service_1 service_3] }
-      ]
-      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
-        Models::Vrp.check_consistency(TestHelper.coerce(vrp))
-      end
-
-      assert_equal 'Services can appear in at most one shipment relation. '\
-                 'Following services appear in multiple shipment relations',
-                   error.message, 'Error message does not match'
-    end
-
-    def test_accept_multi_pickup_or_delivery_and_refuse_other_complex_relations
-      vrp = VRP.basic
-
-      # multi-pickup single delivery
-      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
-                         { type: 'shipment', linked_ids: ['service_2', 'service_3'] }]
-      assert Models::Vrp.create(TestHelper.coerce(vrp)), 'Multi-pickup shipment should not be rejected'
-
-      # single pickup multi-delivery
-      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
-                         { type: 'shipment', linked_ids: ['service_1', 'service_2'] }]
-      assert Models::Vrp.create(TestHelper.coerce(vrp)), 'Multi-delivery shipment should not be rejected'
 
       # complex shipment should be refused
       vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
@@ -382,7 +357,10 @@ module Models
       assert_equal 'A service cannot be both a delivery and a pickup in different relations. '\
                    'Following services appear in multiple shipment relations both as pickup and delivery: ',
                    error.message, 'Error message does not match'
+    end
 
+    def test_shipments_should_have_a_pickup_and_a_delivery
+      vrp = VRP.basic
       # invalid shipments should be refused
       vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_1'] },
                          { type: 'shipment', linked_ids: ['service_2'] },
@@ -394,6 +372,20 @@ module Models
                    'Relations of following services does not have exactly two linked_ids: ' \
                    'service_1, service_2',
                    error.message, 'Error message does not match'
+    end
+
+    def test_multi_pickup_or_multi_delivery_relations_are_accepted
+      vrp = VRP.basic
+
+      # multi-pickup single delivery
+      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
+                         { type: 'shipment', linked_ids: ['service_2', 'service_3'] }]
+      assert Models::Vrp.create(TestHelper.coerce(vrp)), 'Multi-pickup shipment should not be rejected'
+
+      # single pickup multi-delivery
+      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
+                         { type: 'shipment', linked_ids: ['service_1', 'service_2'] }]
+      assert Models::Vrp.create(TestHelper.coerce(vrp)), 'Multi-delivery shipment should not be rejected'
     end
 
     def test_ensure_no_skill_matches_with_internal_skills_format

@@ -2705,9 +2705,10 @@ class WrapperTest < Minitest::Test
 
     # all 7 services in one relation type become unfeasible at the same time
     Wrappers::Wrapper::ALL_OR_NONE_RELATIONS.each{ |relation_type|
-      problem[:relations] = [{ type: relation_type, linked_ids: problem[:services].collect{ |s| s[:id] } }]
+      linked_ids_size = relation_type == :shipment ? 2 : problem[:services].size
+      problem[:relations] = [{ type: relation_type, linked_ids: problem[:services][0..linked_ids_size-1].collect{ |s| s[:id] } }]
       vrp = TestHelper.create(problem)
-      assert_equal 7, services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason').size
+      assert_equal linked_ids_size, services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason').size
     }
 
     # 2 services in shipment, 2 in meetup, which are connected by sequence becomes unfeasible at the same time
