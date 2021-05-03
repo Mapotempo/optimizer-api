@@ -494,6 +494,8 @@ module Wrappers
             setup_value: quantity.unit.counting ? quantity.setup_value : 0
           }
         }.compact
+      else
+        []
       end
     end
 
