@@ -29,6 +29,7 @@
 - `unassigned` output were in some cases returning the key `shipment_id` instead of `pickup_shipment_id` and `delivery_shipment_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - Uniformize route content and always return `original_vehicle_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - Infeasibility detection of services with negative quantity [#111](https://github.com/Mapotempo/optimizer-api/pull/111)
+- Correctly display when an error occurs in `scheduling` page [#207](https://github.com/Mapotempo/optimizer-api/pull/207)
 
 
 ## [v1.6.0] - 2021-02-10
