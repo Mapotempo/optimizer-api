@@ -1,16 +1,20 @@
 # Changelog
 
-## [v1.7.1-dev] - Unreleased
+## [v1.8.0-dev] - Unreleased
 
 ### Added
-
-- Remove simple pauses before optimization and reinsert them back into the solution to increase solver performance [#211](https://github.com/Mapotempo/optimizer-api/pull/211)
 
 ### Changed
 
 ### Removed
 
 ### Fixed
+
+## [v1.7.1] - 2021-05-20
+
+### Added
+
+- Remove simple pauses before optimization and reinsert them back into the solution to increase solver performance [#211](https://github.com/Mapotempo/optimizer-api/pull/211)
 
 ## [v1.7.0] - 2021-05-03
 
