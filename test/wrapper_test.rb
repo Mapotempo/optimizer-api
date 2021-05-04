@@ -3070,4 +3070,113 @@ class WrapperTest < Minitest::Test
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)),
                     :assert_not_a_split_solve_candidate
   end
+
+  def test_simplify_constraints_simplifies_pause
+    problem = VRP.toy
+    problem[:rests] = [{ id: 'rest_0', timewindows: [{ start: 1, end: 10 }], duration: 1 }]
+    problem[:vehicles].first[:rest_ids] = ['rest_0']
+
+    vrp = TestHelper.create(problem)
+    original_rests = vrp.vehicles.first.rests.dup
+    assert original_rests, 'Original vehicle should have a rest'
+
+    vrp = OptimizerWrapper.config[:services][:demo].simplify_constraints(vrp)
+    assert vrp.vehicles.first.rests.none?, 'Simplification should have removed this rest'
+    assert vrp.vehicles.first[:rest_ids].none?
+    assert_equal original_rests, vrp.vehicles.first[:simplified_rests]
+    assert_equal original_rests.collect(&:id).sort, vrp.vehicles.first[:simplified_rest_ids].sort
+  end
+
+  def test_simplified_pause_returns_the_same_cost
+    # TODO: instance needs to be replaced with an appropriate local instance with a matrix and the dump can be deleted
+    # The instance needs at least:
+    #  - a vehicle without a start and an end (and the opposite)
+    #  - a vehicle with a start but without an end (and the opposite)
+    #  - some vehicles to be with force_start and some not
+    #  - some pauses with and without TW
+    #  - some pauses that will be simplified and some not simplified (due to conditions) (and verified in the test)
+    #  - a route that has a natural solution where the pause needs to be inserted after all services
+    vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
+
+    # solve WITH simplification
+    result_w_simplification = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    # check if all rests respect their TWs (duplicated below)
+    result_w_simplification[:routes].each{ |route|
+      planned_rest = route[:activities].find{ |a| a[:type] == 'rest' }
+
+      rest_id = vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] }[:rest_ids].first
+      rest = vrp.rests.find{ |r| r[:id] == rest_id }
+      assert rest, 'Simplification should put back the original rests'
+
+      assert_operator planned_rest[:begin_time], :>=, rest.timewindows[0].start, 'Rest violates its timewindow.start'
+      assert_operator planned_rest[:begin_time], :<=, rest.timewindows[0].end, 'Rest violates its timewindow.end'
+    }
+
+    # solve WITHOUT simplification but from the last solution with evaluate_only
+    result_wo_simplification = Wrappers::Wrapper.stub_any_instance(:simplify_vehicle_pause, proc{ nil } ) do
+      vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
+      vrp.resolution_evaluate_only = true
+      vrp.preprocessing_first_solution_strategy = nil
+      vrp.routes = result_w_simplification[:routes].collect{ |r|
+        next if r[:activities].none?{ |a| a[:service_id] }
+
+        {
+          vehicle: vrp.vehicles.find{ |v| v.id == r[:vehicle_id] },
+          mission_ids: r[:activities].collect{ |a| a[:service_id] }.compact
+        }
+      }.compact
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+
+    # check if the results with and without simplification are the same
+    result_wo_simplification[:routes].each_with_index{ |r, i|
+      # TODO: following fails due to a bug in total_travel_time calculation
+      # assert_equal r[:total_travel_time], result_w_simplification[:routes][i][:total_travel_time],
+      #              'Manually inserting the simplified pause should give the same route total travel time'
+
+      # TODO: the delta should be a lot smaller, may be as small as 1e-5 but due to a cost calculation difference
+      # or-tools returns a different internal cost when there is a pause, we can decrease the delta when this difference
+      # is fixed.
+      assert_in_delta r[:cost_details][:time], result_w_simplification[:routes][i][:cost_details][:time], 0.1,
+                      'Manually inserting the simplified pause should give the same time cost'
+
+      assert_equal r[:total_time], result_w_simplification[:routes][i][:total_time],
+                   'Manually inserting the simplified pause should give the same route total time'
+    }
+
+    # solve WITH simplification but from the last solution with evaluate_only
+    vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
+    vrp.resolution_evaluate_only = true
+    vrp.preprocessing_first_solution_strategy = nil
+    vrp.routes = result_wo_simplification[:routes].collect{ |r|
+      next if r[:activities].none?{ |a| a[:service_id] }
+
+      {
+        vehicle: vrp.vehicles.find{ |v| v.id == r[:vehicle_id] },
+        mission_ids: r[:activities].collect{ |a| a[:service_id] }.compact
+      }
+    }.compact
+    result_w_simplification = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+    # check if all rests respect their TWs
+    result_w_simplification[:routes].each{ |route|
+      planned_rest = route[:activities].find{ |a| a[:type] == 'rest' }
+
+      rest_id = vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] }[:rest_ids].first
+      rest = vrp.rests.find{ |r| r[:id] == rest_id }
+      assert rest, 'Simplification should put back the original rests'
+
+      assert_operator planned_rest[:begin_time], :>=, rest.timewindows[0].start, 'Rest violates its timewindow.start'
+      assert_operator planned_rest[:begin_time], :<=, rest.timewindows[0].end, 'Rest violates its timewindow.end'
+    }
+
+    # check if the results with and without simplification are the same
+    result_wo_simplification[:routes].each_with_index{ |r, i|
+      assert_in_delta r[:cost_details][:time], result_w_simplification[:routes][i][:cost_details][:time], 0.1,
+                      'Manually inserting the simplified pause should give the same time cost'
+
+      assert_equal r[:total_time], result_w_simplification[:routes][i][:total_time],
+                   'Manually inserting the simplified pause should give the same route total time'
+    }
+  end
 end
