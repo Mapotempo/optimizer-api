@@ -19,7 +19,7 @@ require './test/test_helper'
 
 class RubocopTest < Minitest::Test
   def test_no_error_in_files
-    parallel = ENV['RUBOCOP_PARALLEL'] || ENV['TRAVIS'] ? '--parallel' : nil
+    parallel = ENV['RUBOCOP_PARALLEL'] || ENV['CI'] ? '--parallel' : nil
     # parallel option could cause not to use rubocop from bundle
     options = "#{parallel} -f c --config .rubocop.yml --fail-level E --display-only-fail-level-offenses"
     cmd = "bundle exec rubocop ./* #{options}"
@@ -28,7 +28,7 @@ class RubocopTest < Minitest::Test
   end
 
   def test_no_warning_in_tests
-    parallel = ENV['RUBOCOP_PARALLEL'] || ENV['TRAVIS'] ? '--parallel' : nil
+    parallel = ENV['RUBOCOP_PARALLEL'] || ENV['CI'] ? '--parallel' : nil
     # parallel option could cause not to use rubocop from bundle
     options = "#{parallel} -f c --config .rubocop.yml --fail-level W --display-only-fail-level-offenses"
     cmd = "bundle exec rubocop ./test/* #{options}"
