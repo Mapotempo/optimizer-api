@@ -30,7 +30,7 @@ gem 'resque-status', '>0.4'
 gem 'rest-client'
 
 gem 'ai4r'
-gem 'balanced_vrp_clustering', github: 'senhalil/balanced_vrp_clustering', branch: 'dev' # Replace senhalil with Mapotempo when the following PR is merged https://github.com/Mapotempo/balanced_vrp_clustering/pull/16
+gem 'balanced_vrp_clustering', github: 'Mapotempo/balanced_vrp_clustering', branch: 'dev'
 gem 'sim_annealing'
 
 gem 'polylines'
