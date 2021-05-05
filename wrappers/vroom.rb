@@ -22,6 +22,8 @@ require 'tempfile'
 
 module Wrappers
   class Vroom < Wrapper
+    CUSTOM_QUANTITY_BIGNUM = 1e3
+
     def initialize(hash = {})
       super(hash)
       @exec_vroom = hash[:exec_vroom] || '../vroom/bin/vroom'
@@ -267,8 +269,14 @@ module Wrappers
             service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
           time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] },
-          delivery: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }&.value&.to_i || 0 },
-          pickup: vrp_units.map{ |unit| service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }&.value&.to_i || 0 }
+          delivery: vrp_units.map{ |unit|
+            q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }
+            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+          },
+          pickup: vrp_units.map{ |unit|
+            q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }
+            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+          }
         }.delete_if{ |k, v|
           v.nil? || v.is_a?(Array) && v.empty? ||
             k == :delivery && pickup_flag ||
@@ -280,7 +288,10 @@ module Wrappers
     def collect_shipments(vrp, vrp_skills, vrp_units)
       vrp.shipments.map.with_index{ |shipment, index|
         {
-          amount: vrp_units.map{ |unit| shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }&.value&.to_i || 0 },
+          amount: vrp_units.map{ |unit|
+            q = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }
+            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+          },
           skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
             shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
           priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
@@ -309,7 +320,10 @@ module Wrappers
           id: index,
           start_index: vehicle.start_point_id ? @points[vehicle.start_point_id].matrix_index : nil,
           end_index: vehicle.end_point_id ? @points[vehicle.end_point_id].matrix_index : nil,
-          capacity: vrp_units.map{ |unit| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit&.to_i || 0 },
+          capacity: vrp_units.map{ |unit|
+            c = vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }
+            ((c&.limit || 0) * CUSTOM_QUANTITY_BIGNUM).round
+          },
           # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
           time_window: [vehicle.timewindow&.start || 0, tw_end],
           # VROOM expects a default skill

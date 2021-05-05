@@ -345,7 +345,7 @@ module VrpMissions
     end
     mutually_exclusive :activity, :activities
     optional(:quantity_ids, type: String, documentation: { hidden: true }, desc: 'Quantities to consider, CSV front only')
-    optional(:quantities, type: Array, desc: 'Define the entities which are taken or dropped') do
+    optional(:quantities, type: Array, desc: 'Define the entities which are taken or dropped. The maximum precision supported is 1e-3.') do
       use :vrp_request_quantity
     end
     mutually_exclusive :quantity_ids, :quantities
@@ -390,7 +390,7 @@ module VrpMissions
     end
     optional(:direct, type: Boolean, default: false, desc: 'When activated, vehicle should go directly to delivery point after pick up')
     optional(:quantity_ids, type: String, documentation: { hidden: true }, desc: 'Quantities to consider, CSV front only')
-    optional(:quantities, type: Array, desc: 'Define the entities which are taken and dropped') do
+    optional(:quantities, type: Array, desc: 'Define the entities which are taken and dropped. The maximum precision supported is 1e-3.') do
       use :vrp_request_quantity
     end
     mutually_exclusive :quantity_ids, :quantities
@@ -540,7 +540,7 @@ module VrpVehicles
     optional(:start_point_id, type: String, desc: 'Begin of the tour')
     optional(:end_point_id, type: String, desc: 'End of the tour')
     optional(:capacity_ids, type: String, documentation: { hidden: true }, desc: 'Capacities to consider, CSV front only')
-    optional(:capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry') do
+    optional(:capacities, type: Array, desc: 'Define the limit of entities the vehicle could carry. The maximum precision supported is 1e-3.') do
       use :vrp_request_capacity
     end
     mutually_exclusive :capacity_ids, :capacities
