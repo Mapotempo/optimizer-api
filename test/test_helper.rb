@@ -217,7 +217,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
 
   def self.basic
     {
-      units: [],
+      units: [{ id: 'kg' }],
       matrices: [{
         id: 'matrix_0',
         time: [

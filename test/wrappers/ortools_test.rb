@@ -5770,4 +5770,25 @@ class Wrappers::OrtoolsTest < Minitest::Test
       end
     end
   end
+
+  def test_quantity_precision
+    problem = VRP.basic
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'kg', value: 1.001 }]
+    }
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{ unit_id: 'kg', limit: 3 }]
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_equal 1, result[:unassigned].size, 'The result is expected to contain 1 unassigned'
+
+    assert_operator result[:routes].first[:activities].count{ |activity| activity[:service_id] }, :<=, 2,
+                    'The vehicle cannot load more than 2 services and 3 kg'
+    result[:routes].first[:activities].each{ |activity|
+      next unless activity[:service_id]
+
+      assert_equal 1.001, activity[:detail][:quantities].first[:value]
+    }
+  end
 end
