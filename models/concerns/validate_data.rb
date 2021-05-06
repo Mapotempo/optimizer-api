@@ -35,7 +35,7 @@ module ValidateData
 
     check_data_globally(schedule)
     check_matrices
-    check_vehicles(periodic_heuristic)
+    check_vehicles(schedule, periodic_heuristic)
     check_relations(periodic_heuristic)
     check_services(schedule)
 
@@ -107,7 +107,7 @@ module ValidateData
     end
   end
 
-  def check_vehicles(periodic_heuristic)
+  def check_vehicles(schedule, periodic_heuristic)
     @hash[:vehicles].each{ |v|
       if v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1)
         raise OptimizerWrapper::DiscordantProblemError.new(
@@ -125,6 +125,12 @@ module ValidateData
 
           raise OptimizerWrapper::DiscordantProblemError.new('Vehicle timewindows are infeasible')
         }
+      end
+
+      unless schedule || v[:sequence_timewindows].to_a.empty?
+        raise OptimizerWrapper::UnsupportedProblemError.new(
+          'Vehicle[:sequence_timewindows] are only available when a schedule is provided'
+        )
       end
 
       next unless periodic_heuristic
@@ -225,13 +231,13 @@ module ValidateData
   def calculate_day_availabilities(vehicles, timewindow_arrays)
     vehicles_days = timewindow_arrays.collect{ |timewindows|
       if timewindows.empty?
-        []
+        (0..6).to_a
       else
         days = timewindows.flat_map{ |tw| tw[:day_index] || (0..6).to_a }
         days.compact!
         days.uniq
       end
-    }.delete_if(&:empty?)
+    }
 
     vehicles_unavailable_indices = vehicles.collect{ |v| v[:unavailable_work_day_indices] }
     vehicles_unavailable_indices.compact!
@@ -275,7 +281,7 @@ module ValidateData
 
     week_days, unavailable_indices = calculate_day_availabilities(relation_vehicles, vehicles_timewindows)
     if week_days.uniq.size > 1 || unavailable_indices.uniq.size > 1
-      raise OptimizerWrapper::UnsupportedProblemError.new(
+      raise OptimizerWrapper::DiscordantProblemError.new(
         'Vehicles in vehicle_trips relation should have the same available days'
       )
     end

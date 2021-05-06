@@ -2520,6 +2520,7 @@ class WrapperTest < Minitest::Test
       end: 10
     }]
     vrp[:services].first[:activity][:duration] = 15
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
     assert_equal(1, result.values.flatten.count{ |un| un[:reason] == 'Service duration greater than any vehicle timewindow' })
 

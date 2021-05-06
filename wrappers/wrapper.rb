@@ -207,10 +207,6 @@ module Wrappers
         }
     end
 
-    def assert_if_sequence_tw_then_schedule(vrp)
-      vrp.vehicles.find{ |vehicle| !vehicle.sequence_timewindows.empty? }.nil? || vrp.schedule?
-    end
-
     def assert_if_periodic_heuristic_then_schedule(vrp)
       !vrp.periodic_heuristic? || vrp.schedule?
     end
