@@ -27,13 +27,13 @@ module ValidateData
     hash[:relations] ||= []
     @hash = hash
 
-    ensure_no_conflicting_skills
-
     configuration = @hash[:configuration]
     schedule = configuration && configuration[:schedule]
     periodic_heuristic = schedule &&
                          configuration[:preprocessing] &&
                          configuration[:preprocessing][:first_solution_strategy].to_a.include?('periodic')
+
+    check_data_globally(schedule)
     check_matrices
     check_vehicles(periodic_heuristic)
     check_relations(periodic_heuristic)
@@ -41,6 +41,11 @@ module ValidateData
 
     check_routes(periodic_heuristic)
     check_configuration(configuration, periodic_heuristic)
+  end
+
+  def check_data_globally(schedule)
+    ensure_no_conflicting_skills
+    ensure_no_day_indices unless schedule
   end
 
   def ensure_no_conflicting_skills
@@ -55,6 +60,25 @@ module ValidateData
     raise OptimizerWrapper::UnsupportedProblemError.new(
       "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. " \
       'These skill patterns are reserved for internal use and they would lead to unexpected behaviour.'
+    )
+  end
+
+  def ensure_no_day_indices
+    day_indices =
+      # there can be no sequence_timewindows without schedule
+      @hash[:vehicles].flat_map{ |v| v[:timewindow].to_h[:day_index] } +
+      (@hash[:services].to_a + @hash[:shipments].to_a).flat_map{ |s|
+        activities = [s[:activity], s[:activities], s[:pickup], s[:delivery]].compact.flatten
+        activities.flat_map{ |a| a[:timewindows]&.flat_map{ |tw| tw[:day_index] } }
+      } +
+      @hash[:rests].to_a.flat_map{ |r| r[:timewindows].to_a.flat_map{ |tw| tw[:day_index] } } +
+      @hash[:timewindows].to_a.flat_map{ |tw| tw[:day_index] } +
+      @hash[:routes].to_a.flat_map{ |r| r[:day_index] ? r[:day_index] % 7 : nil }
+
+    return if day_indices.compact.uniq.size <= 1
+
+    raise OptimizerWrapper::DiscordantProblemError.new(
+      'There cannot be different day indices if no schedule is provided'
     )
   end
 

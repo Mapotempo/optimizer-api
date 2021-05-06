@@ -661,5 +661,32 @@ module Models
         end
       }
     end
+
+    def test_reject_if_different_day_indices_without_schedule
+      vrp = VRP.basic
+      vrp[:vehicles][0][:timewindow] = { day_index: 0 }
+      vrp[:services][0][:activity][:timewindows] = [{ day_index: 0 }]
+      check_consistency(vrp) # no error expected because we can ignore day indices if they are all the same
+
+      vrp[:services][1][:activity][:timewindows] = [{ day_index: 1 }]
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+      assert_equal 'There cannot be different day indices if no schedule is provided', error.message
+    end
+
+    def test_route_has_no_day_unless_schedule_or_one_route
+      vrp = VRP.basic
+      vrp[:routes] = [{ mission_ids: [], day_index: 0 }]
+      check_consistency(vrp) # no error expected because we have one route and only one vehicle
+      vrp[:vehicles][0][:timewindow] = { day_index: 1 }
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp) # one route and only one vehicle, but day indices do not match
+      end
+      assert_equal 'There cannot be different day indices if no schedule is provided', error.message
+
+      vrp[:configuration][:schedule] = { mission_ids: [], range_indices: { start: 0, end: 3 }}
+      check_consistency(vrp) # no error expected because we do have a schedule now
+    end
   end
 end
