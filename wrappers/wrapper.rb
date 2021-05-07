@@ -504,7 +504,7 @@ module Wrappers
         duration: rest.duration,
         router_mode: vehicle&.router_mode,
         speed_multiplier: vehicle&.speed_multiplier
-      }
+      }.delete_if{ |_k, v| v.nil? }
     end
 
     def build_skills(job)
@@ -835,17 +835,291 @@ module Wrappers
       unfeasible
     end
 
+    def simplifications
+      # Simplification functions should have the following structure and implement
+      # :simplify, :rewind, and :patch_result modes.
+      #
+      #       def simplify_X(vrp, result = nil, options = { mode: :simplify })
+      #         # Description of the simplification
+      #         case options[:mode]
+      #         when :simplify
+      #           # simplifies the constraint
+      #         when :rewind
+      #           nil # if nothing to do
+      #         when :patch_result
+      #           # patches the result
+      #         else
+      #           raise 'Unknown :mode option'
+      #         end
+      #         nil # returns nil because the objects are modified and this function is going to be called automatically
+      #       end
+      #
+      # (If some modes are not necessary they can be merged -- e.g. `when :rewind, :patch_result` and have `nil`)
+      # :patch_result is called for interim solutions and for the last solution before the :rewind is called.
+
+      # TODO: We can simplify service timewindows if they are not necessary -- e.g., all service TWs are "larger" than
+      # the vehicle TWs. (this modification needs to be rewinded incase we are in dicho or max_split)
+
+      # TODO: infeasibility detection can be done with the simplification interface
+      # (especially the part that is done after matrix)
+
+      # Warning: The order might be important if the simplifications are interdependent.
+      # The simplifications will be called in the following order and their corresponding rewind
+      # and result patching operations will be called in the opposite order. This can be changed
+      # if necessary.
+      [
+        :simplify_vehicle_duration,
+        :simplify_vehicle_pause,
+      ].freeze
+    end
+
     def simplify_constraints(vrp)
-      if vrp[:vehicles] && !vrp[:vehicles].empty?
-        vrp[:vehicles].each{ |vehicle|
-          if (vehicle[:force_start] || vehicle[:shift_preference] == 'force_start') && vehicle[:duration] && vehicle[:timewindow]
-            vehicle[:timewindow][:end] = vehicle[:timewindow][:start] + vehicle[:duration]
-            vehicle[:duration] = nil
-          end
-        }
-      end
+      simplifications.each{ |simplification|
+        self.send(simplification, vrp, nil, mode: :simplify)
+      }
 
       vrp
+    end
+
+    def patch_simplified_constraints_in_result(result, vrp)
+      return result unless result.is_a?(Hash)
+
+      simplifications.reverse_each{ |simplification|
+        self.send(simplification, vrp, result, mode: :patch_result)
+      }
+
+      result
+    end
+
+    def patch_and_rewind_simplified_constraints(vrp, result)
+      # first patch the results (before the constraint are rewinded)
+      patch_simplified_constraints_in_result(result, vrp) if result.is_a?(Hash)
+
+      # then rewind the simplifications
+      simplifications.reverse_each{ |simplification|
+        self.send(simplification, vrp, nil, mode: :rewind)
+      }
+
+      vrp
+    end
+
+    def simplify_vehicle_duration(vrp, _result = nil, options = { mode: :simplify })
+      # Simplify vehicle durations using timewindows if there is force_start
+      case options[:mode]
+      when :simplify
+        vrp.vehicles&.each{ |vehicle|
+          next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') && vehicle.duration && vehicle.timewindow
+
+          # Warning: this can make some services infeasible because vehicle cannot work after tw.start + duration
+          vehicle.timewindow.end = vehicle.timewindow.start + vehicle.duration
+          vehicle.duration = nil
+        }
+      when :rewind, :patch_result
+        nil # TODO: this simplification can be moved to a higher level since it doesn't need rewinding or patching
+      else
+        raise 'Unknown :mode option'
+      end
+      nil
+    end
+
+    def simplify_vehicle_pause(vrp, result = nil, options = { mode: :simplify })
+      # Simplifies vehicle pauses if there is no reason to keep them -- i.e., no services with timewindows
+      case options[:mode]
+      when :simplify
+        return nil unless !vrp.scheduling? &&
+                          vrp.relations&.none?{ |r| r.type == :maximum_duration_lapse } &&
+                          vrp.services&.none?{ |service|
+                            service.maximum_lapse ||
+                            service.activity&.timewindows&.any? ||
+                            service.activities&.any?{ |a| a.timewindows&.any? }
+                          }
+
+        vrp.vehicles&.each{ |vehicle|
+          # TODO: ( vehicle.rests.size > 1) having multiple pauses to insert is harder but it is possible (need to pay
+          # attention to not to shift the previously inserted pauses out of their TW, and if necessary make services
+          # jump over them)
+          #
+          # TODO: (r.timewindows&.size.to_i > 1) having multiple TWs for pauses is possible but even harder.
+          # If necessary, this implementation can be extended to handle this case by re-optimizing with or-tools
+          # in a generic way
+          next if vehicle.rests.size > 1 || vehicle.rests.any?{ |r| r.timewindows&.size.to_i > 1 }
+
+          # If there is a service longer than the timewindow of the rest then we cannot be sure to
+          # insert the pause without inducing unnecessary idle time
+          max_service_duration = 0
+          vrp.services.each{ |service|
+            next unless (service.sticky_vehicles.empty? || service.sticky_vehicles == vehicle) &&
+                        (service.skills - vehicle.skills).empty?
+
+            service_duration = service.activity&.setup_duration.to_i +
+                               service.activity&.duration.to_i +
+                               service.activities&.collect{ |a| a.setup_duration.to_i + a.duration.to_i }&.max.to_i
+
+            max_service_duration = service_duration if service_duration > max_service_duration
+          }
+
+          # NOTE: We could, in theory, add a TW to the "long" services so that they won't "block"
+          # the pause location but then we need to create alternative copies of these services
+          # for each vehicle, with different rest timewindows -- which kinda defeats the purpose.
+          #
+          # TODO: we could still simplify the other pauses of a vehicle even if some of the pauses cannot be
+          # simplified due to `max_service_duration > rest.tw` but this would complicate the post-processing
+          # e.g., we cannot shift everything later easily. At the moment, at most one pause is supported anyways.
+          next if vehicle.rests.any?{ |rest|
+            rest.timewindows.any? { |rest_tw|
+              rest_start = rest_tw.start || vehicle.timewindow&.start || 0
+              rest_end = rest_tw.end || vehicle.timewindow&.end || rest_start + vehicle.duration - rest.duration
+              max_service_duration > rest_end - rest_start
+            }
+          }
+
+          vehicle.rests.each{ |rest|
+            vehicle.duration -= rest.duration if vehicle.duration
+            vehicle.timewindow.end -= rest.duration if vehicle.timewindow&.end
+          }
+
+          vehicle[:simplified_rest_ids] = vehicle[:rest_ids].dup
+          vehicle[:rest_ids] = []
+          vehicle[:simplified_rests] = vehicle.rests.dup
+          vehicle.rests = []
+        }
+
+        vrp[:simplified_rests] = vrp.rests.select{ |r| vrp.vehicles.none?{ |v| v.rests.include?(r) } }
+        vrp.rests -= vrp[:simplified_rests]
+      when :rewind
+        # take the modifications back in case the vehicle is moved to another sub-problem
+        vrp.vehicles&.each{ |vehicle|
+          next unless vehicle[:simplified_rest_ids]&.any?
+
+          vehicle[:rest_ids].concat vehicle[:simplified_rest_ids]
+          vehicle[:simplified_rest_ids] = nil
+          vehicle.rests.concat vehicle[:simplified_rests]
+          vehicle[:simplified_rests] = nil
+
+          vehicle.rests.each{ |rest|
+            vehicle.duration += rest.duration if vehicle.duration
+            vehicle.timewindow.end += rest.duration if vehicle.timewindow&.end
+          }
+        }
+
+        if vrp[:simplified_rests]
+          vrp.rests.concat vrp[:simplified_rests]
+          vrp[:simplified_rests] = nil
+        end
+      when :patch_result
+        # correct the result with respect to simplifications
+        pause_and_depot = %w[depot rest].freeze
+        vrp.vehicles&.each{ |vehicle|
+          next unless vehicle[:simplified_rest_ids]&.any?
+
+          route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
+          no_cost = route[:activities].none?{ |a| pause_and_depot.exclude?(a[:type]) }
+
+          # first shift every activity all the way to the left (earlier) if the route starts after
+          # the vehicle TW.start so that it is easier to do the insertions since there is no TW on
+          # services, we can do this even if force_start is false
+          shift_amount = vehicle.timewindow&.start.to_i - route[:start_time]
+          shift_route_times(route, shift_amount) if shift_amount < 0
+
+          # insert the rests back into the route and adjust the timing of the activities coming after the pause
+          vehicle[:simplified_rests].each{ |rest|
+            # find the first service that finishes after the TW.end of pause
+            insert_rest_at =
+              unless rest.timewindows&.last&.end.nil?
+                route[:activities].index{ |activity|
+                  (activity[:end_time] || activity[:begin_time]) > rest.timewindows.last.end
+                }
+              end
+
+            insert_rest_at, rest_start =
+              if insert_rest_at.nil?
+                # reached the end of the route or there is no TW.end on the pause
+                # in any case, insert the rest at the end (before the end depot if it exists)
+                if route[:activities].empty?
+                  # no activity
+                  [route[:activities].size, vehicle.timewindow&.start || 0]
+                elsif route[:activities].last[:type] == 'depot' && vehicle.end_point
+                  # last activity is an end depot
+                  [route[:activities].size - 1, route[:activities].last[:begin_time]]
+                else
+                  # last activity is not an end depot
+                  # either the last activity is a service and it has an end_time
+                  # or it is the begin depot and we can use the begin_time
+                  [route[:activities].size, route[:activities].last[:end_time] || route[:activities].last[:begin_time]]
+                end
+              else
+                # there is a clear position to insert
+                activity_after_rest = route[:activities][insert_rest_at]
+
+                rest_start = activity_after_rest[:begin_time]
+                # if this the first service of this location then we need to consider the setup_duration
+                rest_start -= activity_after_rest[:detail][:setup_duration].to_i if activity_after_rest[:travel_time] > 0
+                if rest.timewindows&.last&.end && rest_start > rest.timewindows.last.end
+                  rest_start -= activity_after_rest[:travel_time]
+                  rest_start = [rest_start, rest.timewindows&.first&.start.to_i].max # don't induce idle_time if within travel_time
+                end
+
+                [insert_rest_at, rest_start]
+              end
+
+            # Above we try to make the pause as late as possible, and if rest_start is still not after TW.start
+            # we need to correct it. Checking with TW.start (not TW.end) is important in case there is force_start.
+            idle_time_created_by_inserted_pause = [rest.timewindows&.first&.start.to_i - rest_start, 0].max
+            rest_start = rest.timewindows.first.start if idle_time_created_by_inserted_pause > 0
+
+            if vehicle.timewindow&.end && rest_start > vehicle.timewindow&.end
+              raise 'An unexpected error happened while calculating the pause location' # this should not be possible
+            end
+
+            if !vehicle.force_start && vehicle.shift_preference != 'force_start'
+              # if no force_start, shift everything to the right so that inserting pause wouldn't create any idle time
+              shift_route_times(route, idle_time_created_by_inserted_pause)
+              idle_time_created_by_inserted_pause = 0
+            end
+
+            route[:activities].insert(insert_rest_at, { rest_id: rest.id, type: 'rest', begin_time: rest_start,
+                                                        end_time: rest_start + rest.duration,
+                                                        departure_time: rest_start + rest.duration,
+                                                        detail: build_rest(rest) })
+
+            shift_route_times(route, idle_time_created_by_inserted_pause + rest.duration, insert_rest_at + 1)
+
+            next if no_cost
+
+            cost_increase = vehicle.cost_time_multiplier.to_f * rest.duration +
+                            vehicle.cost_waiting_time_multiplier.to_f * idle_time_created_by_inserted_pause
+
+            if route[:cost_details]
+              route[:cost_details].time += cost_increase
+              route[:cost_details].total += cost_increase
+            end
+            if result[:cost_details]
+              result[:cost_details].time += cost_increase
+              result[:cost_details].total += cost_increase
+            end
+            result[:cost] += cost_increase # totals are not calculated yet
+          }
+        }
+      else
+        raise 'Unknown :mode option'
+      end
+      nil
+    end
+
+    def shift_route_times(route, shift_amount, shift_start_index = 0)
+      return if shift_amount == 0
+
+      raise 'Cannot shift the route, there are not enough activities' if shift_start_index > route[:activities].size
+
+      route[:start_time] += shift_amount if shift_start_index == 0
+      route[:activities].each_with_index{ |activity, index|
+        next if index < shift_start_index
+
+        activity[:begin_time] += shift_amount
+        activity[:end_time] += shift_amount if activity[:end_time]
+        activity[:departure_time] += shift_amount if activity[:departure_time]
+      }
+      route[:end_time] += shift_amount
     end
 
     def unassigned_services(vrp, unassigned_reason)

@@ -221,8 +221,6 @@ module OptimizerWrapper
       sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
       vrp.clean_according_to(sub_unfeasible_services)
 
-      vrp = config[:services][service].simplify_constraints(vrp)
-
       # Remove infeasible services
       sub_unfeasible_services.each{ |una_service|
         index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
@@ -240,14 +238,16 @@ module OptimizerWrapper
 
       unfeasible_services += sub_unfeasible_services
       if vrp.resolution_solver && !vrp.periodic_heuristic?
-        # TODO: Move select best heuristic in each solver
-        Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
-
         block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.preprocessing_cluster_threshold.to_f}) ", nil, nil, nil) if vrp.preprocessing_cluster_threshold.to_f.positive?
         optim_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
           time_start = Time.now
 
+          OptimizerWrapper.config[:services][service].simplify_constraints(cliqued_vrp)
+
           block&.call(nil, 0, nil, 'run optimization', nil, nil, nil) if dicho_level.nil? || dicho_level.zero?
+
+          # TODO: Move select best heuristic in each solver
+          Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
 
           cliqued_result = OptimizerWrapper.config[:services][service].solve(
             cliqued_vrp,
@@ -265,8 +265,14 @@ module OptimizerWrapper
               Result.set(job, current_result)
             }
           ) { |wrapper, avancement, total, _message, cost, _time, solution|
-            block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution.class.name == 'Hash' ? solution : nil) if dicho_level.nil? || dicho_level.zero?
+            solution =
+              if solution.is_a?(Hash)
+                OptimizerWrapper.config[:services][service].patch_simplified_constraints_in_result(solution, cliqued_vrp)
+              end
+            block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution) if dicho_level.nil? || dicho_level.zero?
           }
+
+          OptimizerWrapper.config[:services][service].patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_result)
 
           if cliqued_result.is_a?(Hash)
             # cliqued_result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
