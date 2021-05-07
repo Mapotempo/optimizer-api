@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.7.1-dev] - Unreleased
+
+### Added
+
+### Changed
+
+### Removed
+
+### Fixed
+
 ## [v1.7.0] - 2021-05-03
 
 ### Added
