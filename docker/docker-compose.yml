@@ -2,7 +2,7 @@ version: '3.3'
 services:
   redis:
     image: redis:${REDIS_VERSION:-3.2-alpine}
-    hostname: travis-redis
+    hostname: travis-redis # should we rename ? remove ?
     volumes:
       - ../redis:/data
     command: redis-server --appendonly yes
@@ -11,7 +11,7 @@ services:
 
   redis-cache:
     image: redis:${REDIS_VERSION:-3.2-alpine}
-    hostname: travis-redis-cache
+    hostname: travis-redis-cache # should we rename ? remove ?
     volumes:
       - ../redis:/data
     command: redis-server --save ""
@@ -32,7 +32,7 @@ services:
 
   api:
     image: registry.test.com/mapotempo/optimizer-api:latest
-    hostname: travis-api
+    hostname: travis-api # should we rename ? remove ?
     environment:
       PASSENGER_APP_ENV: test
       REDIS_COUNT_HOST: redis-count
@@ -47,7 +47,7 @@ services:
   resque-default:
     image: registry.test.com/mapotempo/optimizer-api:latest
     working_dir: /srv/app
-    hostname: travis-resque-default
+    hostname: travis-resque-default # should we rename ? remove ?
     environment:
       APP_ENV: test
       COUNT: 5
