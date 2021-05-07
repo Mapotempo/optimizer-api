@@ -20,6 +20,10 @@
 require_all 'lib'
 require_all 'util'
 
+RELATION_ZIP_CLUSTER_CAN_HANDLE = %i[minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse
+                                     vehicle_trips vehicle_group_duration vehicle_group_duration_on_weeks
+                                     vehicle_group_duration_on_months vehicle_group_number].freeze
+
 module OptimizerWrapper
   @zip_condition = false
 
@@ -579,7 +583,8 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    @zip_condition = vrp.matrices.any? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.schedule?
+    @zip_condition = vrp.matrices.any? && (cluster_threshold || force_cluster) && !vrp.schedule? &&
+                     (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty?
 
     if @zip_condition
       if vrp.services.any?{ |s| s.activities.any? }
