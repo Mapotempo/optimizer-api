@@ -67,16 +67,29 @@ module Wrappers
     end
 
     def assert_no_direct_shipments(vrp)
-      vrp.shipments.none?{ |shipment| shipment.direct }
+      vrp.shipments.none?(&:direct) &&
+        (vrp.relations.collect{ |r| r.type == :shipment ? r.linked_ids : [] } &
+         vrp.relations.collect{ |r| r.type == :sequence ? r.linked_ids : [] }).empty?
     end
 
     def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
-      vrp.shipments.empty? || vrp.shipments.none? { |shipment|
+      vrp.shipments.none? { |shipment|
         first_open = shipment.pickup.timewindows.min_by(&:start)
         last_close = shipment.delivery.timewindows.max_by(&:end)
         first_open && last_close && first_open.start + 86400 * (first_open.day_index || 0) >
           (last_close.end || 86399) + 86400 * (last_close.day_index || 0)
-      }
+      } &&
+        vrp.relations.none?{ |relation|
+          first_open, last_close =
+            if relation.type == :shipment
+              [vrp.services.find{ |s| s.id == relation.linked_ids[0] }.activity.timewindows.min_by(&:start),
+               vrp.services.find{ |s| s.id == relation.linked_ids[1] }.activity.timewindows.max_by(&:end)]
+            end
+
+          relation.type == :shipment && first_open && last_close &&
+            first_open.start + 86400 * (first_open.day_index || 0) >
+              (last_close.end || 86399) + 86400 * (last_close.day_index || 0)
+        }
     end
 
     def assert_services_no_priority(vrp)
@@ -137,9 +150,17 @@ module Wrappers
     end
 
     def assert_shipments_no_late_multiplier(vrp)
-      vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
+      vrp.shipments.none?{ |shipment|
         shipment.pickup.late_multiplier&.positive? || shipment.delivery.late_multiplier&.positive?
-      }
+      } &&
+        vrp.relations.none?{ |relation|
+          if relation.type == :shipment
+            vrp.services.find{ |s| s.id == relation.linked_ids[0] }.activity.late_multiplier&.positive? ||
+              vrp.services.find{ |s| s.id == relation.linked_ids[1] }.activity..late_multiplier&.positive?
+          else
+            false
+          end
+        }
     end
 
     def assert_missions_no_late_multiplier(vrp)
@@ -169,11 +190,11 @@ module Wrappers
     end
 
     def assert_one_sticky_at_most(vrp)
-      (vrp.services.empty? || vrp.services.none?{ |service|
+      vrp.services.none?{ |service|
         service.sticky_vehicles.size > 1
-      }) && (vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
+      } && vrp.shipments.none?{ |shipment|
         shipment.sticky_vehicles.size > 1
-      })
+      }
     end
 
     def assert_no_relations(vrp)
@@ -257,12 +278,9 @@ module Wrappers
       !vrp.resolution_evaluate_only
     end
 
-    def assert_no_shipments_if_evaluation(vrp)
-      (!vrp.shipments || vrp.shipments.empty?) || !vrp.resolution_evaluate_only
-    end
-
     def assert_only_one_visit(vrp)
-      vrp.services.all?{ |service| service.visits_number == 1 } && vrp.shipments.all?{ |shipment| shipment.visits_number == 1 }
+      vrp.services.all?{ |service| service.visits_number == 1 } &&
+        vrp.shipments.all?{ |shipment| shipment.visits_number == 1 }
     end
 
     def assert_no_scheduling_if_evaluation(vrp)
@@ -442,10 +460,9 @@ module Wrappers
     end
 
     def assert_no_setup_duration(vrp)
-      vrp.services.all?{ |service| service.activity.setup_duration.nil? || service.activity.setup_duration.zero? } &&
+      vrp.services.all?{ |service| service.activity.setup_duration.zero? } &&
         vrp.shipments.all?{ |shipment|
-          (shipment.pickup.setup_duration.nil? || shipment.pickup.setup_duration.zero?) &&
-            (shipment.delivery.setup_duration.nil? || shipment.delivery.setup_duration.zero?)
+          shipment.pickup.setup_duration.zero? && shipment.delivery.setup_duration.zero?
         }
     end
 

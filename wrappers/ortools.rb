@@ -50,7 +50,6 @@ module Wrappers
         :assert_only_force_centroids_if_kmeans_method,
         :assert_no_scheduling_if_evaluation,
         :assert_route_if_evaluation,
-        :assert_no_shipments_if_evaluation,
         :assert_wrong_vehicle_shift_preference_with_heuristic,
         :assert_no_vehicle_overall_duration_if_heuristic,
         :assert_no_vehicle_distance_if_heuristic,
@@ -498,7 +497,7 @@ module Wrappers
     end
 
     def parse_output(vrp, _services, points, _matrix_indices, _cost, _iterations, output)
-      if vrp.vehicles.empty? || (vrp.services.nil? || vrp.services.empty?) && (vrp.shipments.nil? || vrp.shipments.empty?)
+      if vrp.vehicles.empty? || vrp.services.empty? && vrp.shipments.empty?
         return empty_result('ortools', vrp)
       end
 
@@ -703,7 +702,7 @@ module Wrappers
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
       log "----> run_ortools services(#{services.size}) preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
       tic = Time.now
-      if vrp.vehicles.empty? || (vrp.services.nil? || vrp.services.empty?) && (vrp.shipments.nil? || vrp.shipments.empty?)
+      if vrp.vehicles.empty? || vrp.services.empty? && vrp.shipments.empty?
         return [0, 0, @previous_result = parse_output(vrp, services, points, matrix_indices, 0, 0, nil)]
       end
 

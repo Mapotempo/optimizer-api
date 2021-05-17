@@ -31,7 +31,7 @@ module Interpreters
           (service_vrp[:vrp].resolution_vehicle_limit.nil? || service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit) &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
           !service_vrp[:vrp].scheduling? &&
-          service_vrp[:vrp].shipments.empty? && # TODO: check dicho with a P&D instance to remove this condition
+          !service_vrp[:vrp].shipments? && # TODO: check dicho with a P&D instance to remove this condition
           service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon }
         )
     end
@@ -44,7 +44,7 @@ module Interpreters
       if dichotomious_candidate?(service_vrp)
         vrp = service_vrp[:vrp]
         message = "dicho - level(#{service_vrp[:dicho_level]}) "\
-                  "activities: #{vrp.services.size + vrp.shipments.size * 2} "\
+                  "activities: #{vrp.visits} "\
                   "vehicles (limit): #{vrp.vehicles.size}(#{vrp.resolution_vehicle_limit})"\
                   "duration [min, max]: [#{vrp.resolution_minimum_duration&.round},#{vrp.resolution_duration&.round}]"
         log message, level: :info

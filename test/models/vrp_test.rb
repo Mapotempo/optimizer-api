@@ -329,5 +329,19 @@ module Models
       Models::Vrp.filter(vrp)
       assert_equal 1, vrp[:relations].size
     end
+
+    def test_shipments
+      vrp = VRP.basic
+      refute TestHelper.create(vrp).shipments?
+
+      vrp[:relations] = [{
+        type: :shipment,
+        linked_ids: ['service_1', 'service_2']
+      }]
+      assert TestHelper.create(vrp).shipments?
+
+      vrp = VRP.pud
+      assert TestHelper.create(vrp).shipments?
+    end
   end
 end

@@ -890,14 +890,14 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    if vrp.matrices.size.positive? && vrp.shipments.size.zero? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
+    if vrp.matrices.size.positive? && !vrp.shipments? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
       raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.') if vrp.services.any?{ |s| s.activities.size.positive? }
 
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if !vrp.matrices.empty? && vrp.shipments.empty? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
+    if !vrp.matrices.empty? && !vrp.shipments? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else

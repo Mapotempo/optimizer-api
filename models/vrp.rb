@@ -777,5 +777,10 @@ module Models
     def periodic_heuristic?
       self.preprocessing_first_solution_strategy.to_a.include?('periodic')
     end
+
+    def shipments?
+      self.shipments.any? ||
+        self.relations.any?{ |r| r.type == :shipment }
+    end
   end
 end

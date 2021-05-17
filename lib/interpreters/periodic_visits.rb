@@ -25,8 +25,8 @@ module Interpreters
       @epoch = Date.new(1970, 1, 1)
 
       if vrp.scheduling?
-        have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
-        have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.any?{ |shipment| shipment.pickup.timewindows.any?(&:day_index) || shipment.delivery.timewindows.any?(&:day_index) }
+        have_services_day_index = vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
+        have_shipments_day_index = vrp.shipments.any?{ |shipment| shipment.pickup.timewindows.any?(&:day_index) || shipment.delivery.timewindows.any?(&:day_index) }
         have_vehicles_day_index = vrp.vehicles.any?{ |vehicle| (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows ).any?(&:day_index) }
         have_rest_day_index = vrp.rests.any?{ |rest| rest.timewindows.any?(&:day_index) }
         @have_day_index = have_services_day_index || have_shipments_day_index || have_vehicles_day_index || have_rest_day_index
