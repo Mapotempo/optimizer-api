@@ -97,7 +97,8 @@ module Wrappers
       matrix_indices.uniq!
 
       tic = Time.now
-      result = run_vroom(vrp, [:time, :distance], job)
+      problem = vroom_problem(vrp, [:time, :distance])
+      result = run_vroom(problem, job)
       elapsed_time = (Time.now - tic) * 1000
 
       return if !result
@@ -271,10 +272,12 @@ module Wrappers
           time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] },
           delivery: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }
+            @total_quantities[unit.id] -= q&.value || 0
             ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           },
           pickup: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }
+            @total_quantities[unit.id] += q&.value || 0
             ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           }
         }.delete_if{ |k, v|
@@ -290,6 +293,7 @@ module Wrappers
         {
           amount: vrp_units.map{ |unit|
             q = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }
+            @total_quantities[unit.id] += q&.value || 0
             ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           },
           skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
@@ -322,7 +326,7 @@ module Wrappers
           end_index: vehicle.end_point_id ? @points[vehicle.end_point_id].matrix_index : nil,
           capacity: vrp_units.map{ |unit|
             c = vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }
-            ((c&.limit || 0) * CUSTOM_QUANTITY_BIGNUM).round
+            ((c&.limit || @total_quantities[unit.id]) * CUSTOM_QUANTITY_BIGNUM).round
           },
           # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
           time_window: [vehicle.timewindow&.start || 0, tw_end],
@@ -344,15 +348,21 @@ module Wrappers
       }
     end
 
-    def run_vroom(vrp, dimensions, _job)
-      input = Tempfile.new('optimize-vroom-input', @tmp_dir)
+    def vroom_problem(vrp, dimensions)
       problem = { vehicles: [], jobs: [], matrix: [] }
-
+      @total_quantities = Hash.new { 0 }
       # WARNING: only first alternative set of skills is used
-      vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq + vrp.services.flat_map{ |service| service.sticky_vehicles.map(&:id) }.uniq
-      vrp_units = vrp.units.select{ |unit| vrp.vehicles.map{ |vehicle| vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }&.limit }&.max&.positive? }
-      problem[:vehicles] = collect_vehicles(vrp, vrp_skills, vrp_units)
+      vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq +
+                   vrp.services.flat_map{ |service| service.sticky_vehicles.map(&:id) }.uniq
+      vrp_units = vrp.units.select{ |unit|
+        vrp.vehicles.map{ |vehicle|
+          vehicle.capacities.find{ |capacity|
+            capacity.unit.id == unit.id
+          }&.limit
+        }&.compact&.max&.positive?
+      }
       problem[:jobs] = collect_jobs(vrp, vrp_skills, vrp_units)
+      problem[:vehicles] = collect_vehicles(vrp, vrp_skills, vrp_units)
       problem[:shipments] = collect_shipments(vrp, vrp_skills, vrp_units)
       matrix_indices = (problem[:jobs].map{ |job| job[:location_index] } +
         problem[:shipments].flat_map{ |shipment| [shipment[:pickup][:location_index], shipment[:delivery][:location_index]] } +
@@ -393,6 +403,11 @@ module Wrappers
       end
       problem[:matrix] = agglomerate_matrix
       problem.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
+      problem
+    end
+
+    def run_vroom(problem, _job)
+      input = Tempfile.new('optimize-vroom-input', @tmp_dir)
 
       input.write(problem.to_json)
       input.close

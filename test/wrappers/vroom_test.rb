@@ -791,4 +791,26 @@ class Wrappers::VroomTest < Minitest::Test
       assert_equal 1.001, activity[:detail][:quantities].first[:value]
     }
   end
+
+  def test_partially_nil_capacities
+    problem = VRP.basic
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'kg', value: 1 }]
+    }
+    problem[:vehicles] << problem[:vehicles].first.dup
+    problem[:vehicles].first[:capacities] = [{ unit_id: 'kg', limit: 2 }]
+    problem[:vehicles].last[:id] = 'vehicle_1'
+
+    vroom = Wrappers::Vroom.new
+    vroom.stub(
+      :run_vroom, lambda{ |vroom_vrp, _job|
+        assert_equal [2 * Wrappers::Vroom::CUSTOM_QUANTITY_BIGNUM], vroom_vrp[:vehicles].first[:capacity]
+        assert_equal vroom_vrp[:jobs].flat_map{ |job| job[:pickup].first }.sum,
+                     vroom_vrp[:vehicles].last[:capacity].first
+        nil
+      }
+    ) do
+      vroom.solve(TestHelper.create(problem))
+    end
+  end
 end
