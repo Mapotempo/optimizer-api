@@ -208,53 +208,55 @@ module Wrappers
 
     private
 
+    def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
+      if @allow_partial_assignment
+        @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
+          original_id: service_id,
+          reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_data[service_id][:used_days].min}"
+        }
+        [true, impacted_days, false]
+      else
+        clean_stops(service_id, vehicle_id)
+        [false, [], true]
+      end
+    end
+
     def plan_next_visits(vehicle_id, service_id, first_unseen_visit)
       return if @services_data[service_id][:raw].visits_number == 1
 
-      days_available = @candidate_routes[vehicle_id].keys
-      next_day = @services_data[service_id][:used_days].max + @services_data[service_id][:heuristic_period]
-      day_to_insert = days_available.select{ |day| day >= next_day.round }.min
       impacted_days = []
-      if day_to_insert
-        diff = day_to_insert - next_day.round
-        next_day += diff
-      end
+      next_day = @services_data[service_id][:used_days].max + @services_data[service_id][:heuristic_period]
+      day_to_insert =
+        if @services_data[service_id][:raw].visits_number == 2
+          day_to_insert = find_day_for_second_visit(vehicle_id, @services_data[service_id][:used_days][0], service_id)
+        else
+          @candidate_routes[vehicle_id].keys.select{ |day| day >= next_day.round }.min
+        end
 
       cleaned_service = false
       need_to_add_visits = false
       (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |visit_number|
         inserted_day = nil
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
-          inserted_day = try_to_insert_at(vehicle_id, day_to_insert, service_id, visit_number) if days_available.include?(day_to_insert)
-          impacted_days |= [inserted_day]
-
-          next_day += @services_data[service_id][:heuristic_period]
-          day_to_insert = days_available.select{ |day| day >= next_day.round }.min
-
-          next if day_to_insert.nil?
-
           diff = day_to_insert - next_day.round
           next_day += diff
+
+          inserted_day = try_to_insert_at(vehicle_id, day_to_insert, service_id, visit_number)
+
+          next_day += @services_data[service_id][:heuristic_period]
+          day_to_insert = @candidate_routes[vehicle_id].keys.select{ |day| day >= next_day.round }.min
         end
 
-        next if inserted_day
-
-        if !@allow_partial_assignment
-          clean_stops(service_id, vehicle_id)
-          cleaned_service = true
-          impacted_days = []
+        if inserted_day
+          impacted_days |= [inserted_day]
         else
-          need_to_add_visits = true # only if allow_partial_assignment, do not add_missing_visits otherwise
-          @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
-            original_id: service_id,
-            reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_data[service_id][:used_days].min}"
-          }
+          need_to_add_visits, impacted_days, cleaned_service =
+            reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
         end
       }
 
       @missing_visits[vehicle_id] << service_id if need_to_add_visits
-
-      impacted_days.compact
+      impacted_days
     end
 
     def adjust_candidate_routes(vehicle_id, day_finished)
@@ -529,13 +531,24 @@ module Wrappers
       }.compact
     end
 
-    def two_visits_and_can_not_assign_second(vehicle_id, day, service_id)
-      return false unless @services_data[service_id][:raw].visits_number == 2
+    def find_day_for_second_visit(vehicle_id, first_day, service_id)
+      return [] unless @services_data[service_id][:raw].visits_number == 2
 
-      next_day = day + @services_data[service_id][:heuristic_period]
-      day_to_insert = @candidate_routes[vehicle_id].keys.select{ |potential_day| potential_day >= next_day.round }.min
+      potential_days =
+        if @unlocked.include?(service_id)
+          point = @services_data[service_id][:points_ids].first # there can be only on point in points_ids in this case
+          @points_vehicles_and_days[point][:days].dup
+        else
+          @candidate_routes[vehicle_id].keys
+        end
 
-      !(day_to_insert && find_best_index(service_id, @candidate_routes[vehicle_id][day_to_insert], false))
+      potential_days.sort!
+      potential_days.delete_if{ |d|
+        !d.between?(first_day + (@services_data[service_id][:raw].minimum_lapse || 0),
+                    first_day + (@services_data[service_id][:raw].maximum_lapse || 2**32))
+      }
+
+      potential_days.find{ |d| find_best_index(service_id, @candidate_routes[vehicle_id][d], false) }
     end
 
     def same_point_compatibility(service_id, vehicle_id, day)
@@ -888,7 +901,7 @@ module Wrappers
         compatible_vehicle(service_id, route_data) &&
         service_does_not_violate_capacity(service_id, route_data, first_visit) &&
         (!first_visit ||
-          !two_visits_and_can_not_assign_second(vehicle_id, day, service_id) &&
+          find_day_for_second_visit(vehicle_id, day, service_id) &&
           route_data[:available_ids].include?(service_id) &&
           relaxed_or_same_point_day_constraint_respected(service_id, vehicle_id, day) &&
           same_point_compatibility(service_id, vehicle_id, day))
@@ -1217,7 +1230,8 @@ module Wrappers
 
     def try_to_insert_at(vehicle_id, day, service_id, visit_number)
       # when adjusting routes, tries to insert [service_id] at [day] for [vehicle]
-      return if @candidate_routes[vehicle_id][day][:completed]
+      return if @candidate_routes[vehicle_id][day].nil? ||
+                @candidate_routes[vehicle_id][day][:completed]
 
       best_index = find_best_index(service_id, @candidate_routes[vehicle_id][day], false)
       return unless best_index

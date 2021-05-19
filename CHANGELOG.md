@@ -10,6 +10,8 @@
 
 ### Changed
 
+- Improve cases where a service has two visits in periodic heuristic: ensure that the second visit can be assigned to the right day [#227](https://github.com/Mapotempo/optimizer-api/pull/227)
+
 ### Removed
 
 - Field `trips` in vehicle model. Use `vehicle_trips` relation instead [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
