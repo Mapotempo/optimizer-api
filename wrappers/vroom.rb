@@ -164,7 +164,7 @@ module Wrappers
       when 'pickup', 'delivery'
         read_shipment(vrp, vehicle, step)
       when 'start', 'end'
-        read_depot(vehicle, step)
+        read_depot(vrp, vehicle, step)
       when 'break'
         read_break(step)
       else
@@ -194,17 +194,18 @@ module Wrappers
       }.delete_if{ |_k, v| v.nil? }
     end
 
-    def read_depot(vehicle, step)
+    def read_depot(vrp, vehicle, step)
       point = step['type'] == 'start' ? vehicle&.start_point : vehicle&.end_point
       return nil if point.nil?
 
+      route_data = step['type'] == 'end' ? compute_route_data(vrp, point, step) : {}
       @previous = point
       {
         point_id: point.id,
         type: 'depot',
         begin_time: step['arrival'],
         detail: build_detail(nil, nil, point, nil, nil, vehicle)
-      }.delete_if{ |_k, v| v.nil? }
+      }.merge(route_data).delete_if{ |_k, v| v.nil? }
     end
 
     def read_job(vrp, vehicle, step)
