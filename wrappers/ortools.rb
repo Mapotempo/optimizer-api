@@ -514,8 +514,7 @@ module Wrappers
 
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
-      solution_cost = Models::CostDetails.new({})
-      {
+      result = {
         cost: content.cost || 0,
         solvers: ['ortools'],
         iterations: content.iterations || 0,
@@ -698,6 +697,7 @@ module Wrappers
           }
         }
       }.merge(cost_details: costs_array.sum)
+      OptimizerWrapper.parse_result(vrp, result)
     end
 
     def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
