@@ -274,7 +274,7 @@ module Wrappers
           delivery: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }
             @total_quantities[unit.id] -= q&.value || 0
-            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+            (-(q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           },
           pickup: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }
