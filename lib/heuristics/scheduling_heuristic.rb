@@ -511,8 +511,6 @@ module Wrappers
         # quantities are respected
         ((@same_point_day && @services_data[service_id][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
           (!@same_point_day && @services_data[service_id][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
-          # service is available at this day
-          !@services_data[service_id][:raw].unavailable_days.include?(day) &&
           (@services_data[service_id][:sticky_vehicles_ids].empty? || @services_data[service_id][:sticky_vehicles_ids].include?(vehicle_id))
       }.each{ |service_id|
         next if @services_data[service_id][:used_days] && !days_respecting_lapse(service_id, vehicle_id).include?(day)
@@ -840,7 +838,17 @@ module Wrappers
       }.compact.min_by{ |cost| cost[:back_to_depot] }
     end
 
+    def compatible_days(service_id, day)
+      !@services_data[service_id][:raw].unavailable_days.include?(day)
+    end
+
+    def service_compatible_with_route(service_id, route_data)
+      compatible_days(service_id, route_data[:global_day_index])
+    end
+
     def find_best_index(service_id, route_data, first_visit = true)
+      return nil unless service_compatible_with_route(service_id, route_data)
+
       ### find the best position in [route_data] to insert [service] ###
       route = route_data[:stops]
       service_data = @services_data[service_id]
