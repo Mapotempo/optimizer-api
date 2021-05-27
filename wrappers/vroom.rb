@@ -50,7 +50,7 @@ module Wrappers
         :assert_homogeneous_router_definitions,
         :assert_matrices_only_one,
         :assert_no_distance_limitation,
-        :assert_no_vehicles_with_duration_modifiers,
+        :assert_no_service_duration_modifiers,
         :assert_vehicles_no_duration_limit,
         :assert_vehicles_no_force_start,
         :assert_vehicles_no_late_multiplier_or_single_vehicle,
@@ -60,7 +60,7 @@ module Wrappers
         # Mission constraints
         :assert_no_direct_shipments,
         :assert_no_exclusion_cost,
-        :assert_no_setup_duration,
+        :assert_no_complex_setup_durations,
         :assert_missions_no_late_multiplier,
         :assert_only_one_visit,
 

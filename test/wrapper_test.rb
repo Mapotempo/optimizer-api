@@ -3183,4 +3183,51 @@ class WrapperTest < Minitest::Test
                    'Manually inserting the simplified pause should give the same route total time'
     }
   end
+
+  def test_simplify_service_setup_duration
+    problem = VRP.basic
+
+    original_time_matrix = Oj.load(Oj.dump(problem[:matrices][0][:time]))
+    problem[:services].each_with_index{ |service, index|
+      service[:activity][:setup_duration] = 600 + index
+    }
+
+    vrp = TestHelper.create(problem)
+
+    OptimizerWrapper.config[:services][:demo].simplify_service_setup_duration_and_vehicle_setup_modifiers(vrp)
+
+    vrp.matrices[0][:time].each_with_index{ |row, row_index|
+      row[1..-1].each_with_index{ |value, col_index|
+        original_value = original_time_matrix[row_index][col_index + 1] # the first column is skipped
+        if original_value.zero?
+          assert_equal 0, value, 'A zero time should stay zero after setup_duration simplification'
+        else
+          assert_equal original_value + 600 + col_index, value, 'Time should have been increased with the setup duration'
+        end
+      }
+    }
+  end
+
+  def test_cannot_simplify_service_setup_duration
+    problem = VRP.basic
+
+    original_time_matrix = Oj.load(Oj.dump(problem[:matrices][0][:time]))
+    problem[:services] << Oj.load(Oj.dump(problem[:services].last)) # the same point_id
+    problem[:services].last[:id] += '_dup'
+
+    problem[:services].each_with_index{ |service, index|
+      service[:activity][:setup_duration] = 600 + index # but different setup_duration
+    }
+
+    vrp = TestHelper.create(problem)
+
+    OptimizerWrapper.config[:services][:demo].simplify_service_setup_duration_and_vehicle_setup_modifiers(vrp)
+
+    dup_service_matrix_index = vrp.services.last.activity.point.matrix_index
+    vrp.matrices[0][:time].each_with_index{ |row, row_index|
+      assert_equal original_time_matrix[row_index][dup_service_matrix_index],
+                   row[dup_service_matrix_index],
+                   'Cannot simplify the pause if the point has multiple setup durations'
+    }
+  end
 end
