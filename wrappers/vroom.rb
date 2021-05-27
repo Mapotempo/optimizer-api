@@ -262,7 +262,6 @@ module Wrappers
     def collect_jobs(vrp, vrp_skills, vrp_units)
       vrp.services.map.with_index{ |service, index|
         # Activity is mandatory
-        pickup_flag = service.quantities.none?{ |quantity| quantity.value.negative? }
         {
           id: index,
           location_index: @points[service.activity.point_id].matrix_index,
@@ -281,10 +280,8 @@ module Wrappers
             @total_quantities[unit.id] += q&.value || 0
             ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           }
-        }.delete_if{ |k, v|
-          v.nil? || v.is_a?(Array) && v.empty? ||
-            k == :delivery && pickup_flag ||
-            k == :anykey && !pickup_flag
+        }.delete_if{ |_k, v|
+          v.nil? || v.is_a?(Array) && v.empty?
         }
       }
     end
@@ -293,9 +290,9 @@ module Wrappers
       vrp.shipments.map.with_index{ |shipment, index|
         {
           amount: vrp_units.map{ |unit|
-            q = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }
-            @total_quantities[unit.id] += q&.value || 0
-            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+            value = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id }&.value.to_f.abs
+            @total_quantities[unit.id] += value
+            (value * CUSTOM_QUANTITY_BIGNUM).round
           },
           skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
             shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
