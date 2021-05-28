@@ -80,7 +80,7 @@ module Wrappers
     end
 
     def solve(vrp, job = nil, _thread_proc = nil)
-      if vrp.points.empty? || vrp.services.empty? && vrp.shipments.empty?
+      if vrp.vehicles.empty? || vrp.points.empty? || vrp.services.empty? && vrp.shipments.empty?
         return empty_result('vroom', vrp)
       end
 
