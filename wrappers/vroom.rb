@@ -84,18 +84,7 @@ module Wrappers
         return empty_result('vroom', vrp)
       end
 
-      @points = Hash[vrp.points.map{ |point| [point.id, point] }]
       rest_equivalence(vrp)
-
-      matrix_indices = vrp.services.map{ |service|
-        service.activity.point.matrix_index
-      }
-
-      matrix_indices += vrp.shipments.flat_map{ |shipment|
-        [shipment.pickup.point.matrix_index, shipment.delivery.point.matrix_index]
-      }
-      matrix_indices += vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point&.matrix_index, vehicle.end_point&.matrix_index] }.compact
-      matrix_indices.uniq!
 
       tic = Time.now
       problem = vroom_problem(vrp, [:time, :distance])
@@ -105,10 +94,10 @@ module Wrappers
       return if !result
 
       cost = (result['summary']['cost'])
-      routes = result['routes'].map.with_index{ |route, index|
+      routes = result['routes'].map{ |route|
         @previous = nil
         vehicle = vrp.vehicles[route['vehicle']]
-        cost += vehicle.cost_fixed if route['steps'].size.positive?
+        cost += vehicle.cost_fixed if route['steps'].any?
         activities = route['steps'].map{ |step|
           read_step(vrp, vehicle, step)
         }.compact
@@ -279,7 +268,7 @@ module Wrappers
         # Activity is mandatory
         {
           id: index,
-          location_index: @points[service.activity.point_id].matrix_index,
+          location_index: service.activity.point.matrix_index,
           service: service.activity.duration.to_i,
           skills: collect_skills(service, vrp_skills),
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
@@ -313,13 +302,13 @@ module Wrappers
           pickup: {
             id: vrp.services.size + index * 2,
             service: shipment.pickup.duration,
-            location_index: @points[shipment.pickup.point_id].matrix_index,
+            location_index: shipment.pickup.point.matrix_index,
             time_windows: shipment.pickup.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
           }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
           delivery: {
             id: vrp.services.size + index * 2 + 1,
             service: shipment.delivery.duration,
-            location_index: @points[shipment.delivery.point_id].matrix_index,
+            location_index: shipment.delivery.point.matrix_index,
             time_windows: shipment.delivery.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
           }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
         }.delete_if{ |_k, v|
@@ -333,8 +322,8 @@ module Wrappers
         tw_end = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier.zero?) && vehicle.timewindow&.end || 2**30
         {
           id: index,
-          start_index: vehicle.start_point_id ? @points[vehicle.start_point_id].matrix_index : nil,
-          end_index: vehicle.end_point_id ? @points[vehicle.end_point_id].matrix_index : nil,
+          start_index: vehicle.start_point&.matrix_index,
+          end_index: vehicle.end_point&.matrix_index,
           capacity: vrp_units.map{ |unit|
             c = vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }
             ((c&.limit || @total_quantities[unit.id]) * CUSTOM_QUANTITY_BIGNUM).round
@@ -430,11 +419,7 @@ module Wrappers
       log cmd
       system(cmd)
 
-      unless $CHILD_STATUS.nil?
-        if $CHILD_STATUS.exitstatus.zero?
-          JSON.parse(File.read(output.path))
-        end
-      end
+      JSON.parse(File.read(output.path)) if $CHILD_STATUS&.exitstatus&.zero?
     ensure
       input&.unlink
       output&.unlink

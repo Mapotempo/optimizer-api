@@ -43,19 +43,19 @@ module Wrappers
     end
 
     def assert_vehicles_start(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.start_point.nil?
       }
     end
 
     def assert_vehicles_start_or_end(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.start_point.nil? && vehicle.end_point.nil?
       }
     end
 
     def assert_vehicles_no_capacity_initial(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |c| c.initial&.positive? }
       }
     end
@@ -65,11 +65,11 @@ module Wrappers
     end
 
     def assert_no_direct_shipments(vrp)
-      vrp.shipments.none?{ |shipment| shipment.direct }
+      vrp.shipments.none?(&:direct)
     end
 
     def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
-      vrp.shipments.empty? || vrp.shipments.none? { |shipment|
+      vrp.shipments.none? { |shipment|
         first_open = shipment.pickup.timewindows.min_by(&:start)
         last_close = shipment.delivery.timewindows.max_by(&:end)
         first_open && last_close && first_open.start + 86400 * (first_open.day_index || 0) >
@@ -78,7 +78,7 @@ module Wrappers
     end
 
     def assert_services_no_priority(vrp)
-      vrp.services.empty? || vrp.services.uniq(&:priority).size == 1
+      vrp.services.uniq(&:priority).size <= 1
     end
 
     def assert_vehicles_objective(vrp)
@@ -91,7 +91,7 @@ module Wrappers
     end
 
     def assert_vehicles_no_late_multiplier(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.cost_late_multiplier&.positive?
       }
     end
@@ -101,7 +101,7 @@ module Wrappers
     end
 
     def assert_vehicles_no_overload_multiplier(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |capacity|
           capacity.overload_multiplier&.positive?
         }
@@ -109,21 +109,21 @@ module Wrappers
     end
 
     def assert_vehicles_no_force_start(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?(&:force_start)
+      vrp.vehicles.none?(&:force_start)
     end
 
     def assert_vehicles_no_duration_limit(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?(&:duration)
+      vrp.vehicles.none?(&:duration)
     end
 
     def assert_vehicles_no_zero_duration(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.duration&.zero?
       }
     end
 
     def assert_services_no_late_multiplier(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
+      vrp.services.none?{ |service|
         if service.activity
           service.activity&.timewindows&.size&.positive? && service.activity&.late_multiplier&.positive?
         else
@@ -135,7 +135,7 @@ module Wrappers
     end
 
     def assert_shipments_no_late_multiplier(vrp)
-      vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
+      vrp.shipments.none?{ |shipment|
         shipment.pickup.late_multiplier&.positive? || shipment.delivery.late_multiplier&.positive?
       }
     end
@@ -167,11 +167,8 @@ module Wrappers
     end
 
     def assert_one_sticky_at_most(vrp)
-      (vrp.services.empty? || vrp.services.none?{ |service|
-        service.sticky_vehicles.size > 1
-      }) && (vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
-        shipment.sticky_vehicles.size > 1
-      })
+      vrp.services.none?{ |service| service.sticky_vehicles.size > 1 } &&
+        vrp.shipments.none?{ |shipment| shipment.sticky_vehicles.size > 1 }
     end
 
     def assert_no_relations(vrp)

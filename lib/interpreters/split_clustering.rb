@@ -525,13 +525,14 @@ module Interpreters
         sub_vrp.routes.delete_if{ |r|
           route_week_day = r.day_index ? r.day_index % 7 : nil
           sub_vrp.vehicles.none?{ |vehicle|
-            vehicle_week_day_availability = if vehicle.timewindow
-              vehicle.timewindow.day_index || (0..6)
-            else
-              vehicle.sequence_timewindows.collect{ |tw|
-                tw.day_index || (0..6)
-              }.flatten.uniq
-            end
+            vehicle_week_day_availability =
+              if vehicle.timewindow
+                vehicle.timewindow.day_index || (0..6)
+              else
+                vehicle.sequence_timewindows.collect{ |tw|
+                  tw.day_index || (0..6)
+                }.flatten.uniq
+              end
 
             vehicle.id == r.vehicle_id && (route_week_day.nil? || vehicle_week_day_availability.include?(route_week_day))
           }
@@ -659,7 +660,7 @@ module Interpreters
 
         data_items, cumulated_metrics, grouped_objects, related_item_indices = collect_data_items_metrics(vrp, cumulated_metrics, options)
 
-        limits = { metric_limit: centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
+        limits = { metric_limit: centroid_limits(vrp, nb_clusters, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
 
         options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
 
@@ -710,7 +711,6 @@ module Interpreters
       vrp = service_vrp[:vrp]
       # Split using hierarchical tree method
       if vrp.services.all?{ |service| service[:activity] }
-        max_cut_metrics = Hash.new(0)
         cumulated_metrics = Hash.new(0)
 
         data_items, cumulated_metrics, grouped_objects = collect_data_items_metrics(vrp, cumulated_metrics)
@@ -1163,25 +1163,26 @@ module Interpreters
         if node.nil?
           [nil]
         elsif (graph[node][:level]).zero?
-           [node]
-         else
-           [tree_leafs(graph, graph[node][:left]), tree_leafs(graph, graph[node][:right])]
-         end
-      end
-
-      def tree_leafs_delete(graph, node)
-        returned = if node.nil?
-          []
-        elsif (graph[node][:level]).zero?
           [node]
         else
           [tree_leafs(graph, graph[node][:left]), tree_leafs(graph, graph[node][:right])]
         end
+      end
+
+      def tree_leafs_delete(graph, node)
+        returned =
+          if node.nil?
+            []
+          elsif (graph[node][:level]).zero?
+            [node]
+          else
+            [tree_leafs(graph, graph[node][:left]), tree_leafs(graph, graph[node][:right])]
+          end
         graph.delete(node)
         returned
       end
 
-      def centroid_limits(vrp, nb_clusters, data_items, cumulated_metrics, cut_symbol, entity)
+      def centroid_limits(vrp, nb_clusters, cumulated_metrics, cut_symbol, entity)
         limits = []
 
         if entity == :vehicle && vrp.schedule_range_indices

@@ -232,7 +232,7 @@ module Models
     end
 
     def work_duration
-      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle should not have sequence timewindow if there is no schedule' unless self.sequence_timewindows.empty?
+      raise 'vehicle::work_duration cannot handle sequence_timewindow' if self.sequence_timewindows.any?
 
       timewindow_duration =
         if self.timewindow&.end
