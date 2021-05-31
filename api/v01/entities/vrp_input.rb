@@ -259,7 +259,7 @@ module VrpMisc
                            It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse,
                            shipment, meetup, minimum_duration_lapse, maximum_duration_lapse')
     optional(:lapse,
-             type: Integer, values: ->(v) { v.positive? },
+             type: Integer, values: ->(v) { v >= 0 },
              desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
     optional(:linked_ids, type: Array[String], allow_blank: false, desc: 'List of activities involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:linked_vehicle_ids, type: Array[String], allow_blank: false, desc: 'List of vehicles involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })

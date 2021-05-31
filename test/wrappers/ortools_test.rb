@@ -133,41 +133,32 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert_equal 3, result[:routes][1][:activities].size
+    # TODO : providing lapse = 0 should unable all vehicles
   end
 
   def test_group_number
     problem = VRP.lat_lon_capacitated
-    problem[:vehicles] += [{
-      id: 'vehicle_1',
-      matrix_id: 'm1',
-      start_point_id: 'point_0',
-      end_point_id: 'point_0',
-      router_dimension: 'distance',
-      capacities: [{
-        unit_id: 'kg',
-        limit: 2
-      }]
-    }, {
-      id: 'vehicle_2',
-      matrix_id: 'm1',
-      start_point_id: 'point_0',
-      end_point_id: 'point_0',
-      router_dimension: 'distance',
-      capacities: [{
-        unit_id: 'kg',
-        limit: 5
-      }]
-    }]
-    problem[:relations] = [{
-        type: :vehicle_group_number,
-        linked_vehicle_ids: ['vehicle_0', 'vehicle_1', 'vehicle_2'],
-        lapse: 2
-      }]
+    problem[:vehicles] << problem[:vehicles][0].dup
+    problem[:vehicles][1][:id] = 'vehicle_1'
+    problem[:vehicles][1][:capacities][0][:limit] = 2
+    problem[:vehicles] << problem[:vehicles][0].dup
+    problem[:vehicles][2][:id] = 'vehicle_2'
+
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert result
-    assert_equal 2, result[:unassigned].size
-    assert_equal 2, result[:routes].find{ |route| route[:vehicle_id] == 'vehicle_1' }[:activities].size
-    assert_equal 2, (result[:routes].count{ |route| route[:activities].size > 2 })
+    assert(result[:routes].all?{ |r| r[:activities].any?{ |a| a[:type] == 'service' } })
+
+    problem[:relations] = [{
+      type: :vehicle_group_number,
+      linked_vehicle_ids: ['vehicle_0', 'vehicle_1', 'vehicle_2'],
+      lapse: 2
+    }]
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_equal 2, (result[:routes].count{ |r| r[:activities].any?{ |a| a[:type] == 'service' } })
+
+    # extreme case : lapse is 0
+    problem[:relations].first[:lapse] = 0
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_empty(result[:routes].select{ |r| r[:activities].any?{ |a| a[:type] == 'service' } })
   end
 
   def test_periodic_overall_duration
@@ -564,6 +555,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal([3, 2], result[:routes].collect{ |r| r[:activities].size })
+    # TODO : providing lapse = 0 should unable all vehicles
   end
 
   def test_overall_duration_on_weeks
@@ -593,6 +585,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal([3, 2], result[:routes].collect{ |r| r[:activities].size })
+    # TODO : providing lapse = 0 should unable all vehicles
   end
 
   def test_overall_duration_on_weeks_date
@@ -2921,219 +2914,65 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_minimum_day_lapse
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0',
-        global_day_index: 0
-      }, {
-        id: 'vehicle_1',
-        matrix_id: 'matrix_0',
-        global_day_index: 1
-      }, {
-        id: 'vehicle_2',
-        matrix_id: 'matrix_0',
-        global_day_index: 2
-      }, {
-        id: 'vehicle_3',
-        matrix_id: 'matrix_0',
-        global_day_index: 3
-      }, {
-        id: 'vehicle_4',
-        matrix_id: 'matrix_0',
-        global_day_index: 4
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      relations: [{
-        id: 'minimum_lapse_1',
-        type: :minimum_day_lapse,
-        lapse: 2,
-        linked_ids: ['service_1', 'service_2', 'service_3']
-      }],
-      configuration: {
-        resolution: {
-          duration: 20,
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
-    assert result
+    # extreme case : lapse of 0
+    problem = VRP.basic
+    problem[:vehicles].each{ |v| v.delete(:start_point_id) }
+    problem[:relations] = [{
+      type: :minimum_day_lapse,
+      lapse: 0,
+      linked_ids: ['service_1', 'service_2', 'service_3']
+    }]
+    problem[:configuration][:schedule] = { range_indices: { start: 0, end: 4 }}
+
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 5, result[:routes].size
-    assert_equal problem[:services].size, result[:routes][0][:activities].size + result[:routes][2][:activities].size + result[:routes][4][:activities].size
-    assert_equal result[:routes][0][:activities].size, result[:routes][2][:activities].size
-    assert_equal result[:routes][2][:activities].size, result[:routes][4][:activities].size
+    assert_empty result[:unassigned]
+    assert_equal [0, 1, 2], result[:routes].collect{ |r| r[:activities].any? ? r[:day] : nil }.compact
+
+    # standard case
+    problem[:relations].first[:lapse] = 2
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_equal 5, result[:routes].size
+    # There should be a lapse of 2 between each visits :
+    assert_equal [0, 2, 4], result[:routes].collect{ |r| r[:activities].any? ? r[:day] : nil }.compact
   end
 
   def test_maximum_day_lapse
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      units: [{
-        id: 'unit'
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        matrix_id: 'matrix_0',
-        global_day_index: 0,
-        capacities: [{
-          unit_id: 'unit',
-          limit: 1
-        }]
-      }, {
-        id: 'vehicle_1',
-        matrix_id: 'matrix_0',
-        global_day_index: 1,
-        capacities: [{
-          unit_id: 'unit',
-          limit: 1
-        }]
-      }, {
-        id: 'vehicle_2',
-        matrix_id: 'matrix_0',
-        global_day_index: 2,
-        capacities: [{
-          unit_id: 'unit',
-          limit: 1
-        }]
-      }, {
-        id: 'vehicle_3',
-        matrix_id: 'matrix_0',
-        global_day_index: 3,
-        capacities: [{
-          unit_id: 'unit',
-          limit: 1
-        }]
-      }, {
-        id: 'vehicle_4',
-        matrix_id: 'matrix_0',
-        global_day_index: 4,
-        capacities: [{
-          unit_id: 'unit',
-          limit: 1
-        }]
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        },
-        quantities: [{
-          unit_id: 'unit',
-          value: 1
-        }]
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        },
-        quantities: [{
-          unit_id: 'unit',
-          value: 1
-        }]
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_2'
-        },
-        quantities: [{
-          unit_id: 'unit',
-          value: 1
-        }]
-      }],
-      relations: [{
-        id: 'maximum_lapse_1',
-        type: :maximum_day_lapse,
-        lapse: 1,
-        linked_ids: ['service_1', 'service_2']
-      }, {
-        id: 'maximum_lapse_2',
-        type: :maximum_day_lapse,
-        lapse: 1,
-        linked_ids: ['service_1', 'service_3']
-      }],
-      configuration: {
-        resolution: {
-          duration: 20,
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
-    assert result
+    # extreme case : lapse of 0
+    problem = VRP.basic
+    relation = [{
+      type: :maximum_day_lapse,
+      lapse: 0,
+      linked_ids: ['service_1', 'service_3']
+    }]
+    problem[:relations] = relation
+    problem[:configuration][:schedule] = { range_indices: { start: 0, end: 4 }}
+
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 5, result[:routes].size
-    assert_equal 1, result[:unassigned].size
+    route_with_service = result[:routes].find{ |r| r[:activities].any?{ |a| a[:service_id].to_s == 'service_1_1_1' } }
+    # service_1 and service_3 should be in the same route because lapse is 0:
+    assert(route_with_service[:activities].any?{ |a| a[:service_id].to_s == 'service_3_1_1' })
 
-    global_day_index_v23 = problem[:vehicles].find{ |vehicle|
-      result[:routes].find{ |route|
-        route[:activities].one?{ |activity| activity[:service_id] == 'service_2' || activity[:service_id] == 'service_3' }
-      }[:vehicle_id] == vehicle[:id]
-    }[:global_day_index]
+    # add quantities to prevent from assigning all services at the same day :
+    problem[:units] = [{ id: 'visit' }]
+    problem[:vehicles].each{ |v|
+      v.delete(:start_point_id)
+      v[:capacities] = [{ unit_id: 'visit', limit: 1 }]
+    }
+    problem[:services].each{ |s|
+      s[:quantities] = [{ unit_id: 'visit', value: 1 }]
+    }
+    problem.delete(:relations)
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_equal [['service_1_1_1'], ['service_2_1_1'], ['service_3_1_1'], [], []],
+                 (result[:routes].collect{ |r| r[:activities].collect{ |a| a[:service_id] } })
 
-    global_day_index_v1 = problem[:vehicles].find{ |vehicle|
-      result[:routes].find{ |route|
-        route[:activities].one?{ |activity| activity[:service_id] == 'service_1' }
-      }[:vehicle_id] == vehicle[:id]
-    }[:global_day_index]
-
-    assert_equal 1, global_day_index_v23 - global_day_index_v1
+    problem[:relations] = relation
+    problem[:relations].first[:lapse] = 1
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_equal [['service_1_1_1'], ['service_3_1_1'], ['service_2_1_1'], [], []],
+                 (result[:routes].collect{ |r| r[:activities].collect{ |a| a[:service_id] } })
   end
 
   def test_counting_quantities
@@ -3471,12 +3310,20 @@ class Wrappers::OrtoolsTest < Minitest::Test
       lapse: 100,
       linked_ids: ['shipment_1pickup', 'shipment_1delivery']
     }]
-    vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
-    assert result
-    assert_equal 4, result[:routes][0][:activities].size
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    result = ortools.solve(TestHelper.create(problem), 'test')
+    pickup_index = result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' }
+    delivery_index = result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_operator pickup_index, :<, delivery_index
+    assert_operator result[:routes][0][:activities][pickup_index][:end_time] + 100,
+                    :>=,
+                    result[:routes][0][:activities][delivery_index][:begin_time]
     assert_equal 2, result[:unassigned].size
+
+    problem[:relations].each{ |r| r[:lapse] = 0 }
+    result = ortools.solve(TestHelper.create(problem), 'test')
+    # pickup and delivery at not at same location so it is impossible to assign with lapse 0
+    # we could use direct shipment instead
+    assert_equal 4, result[:unassigned].size
   end
 
   def test_pickup_timewindow_after_delivery_timewindow
@@ -5507,12 +5354,17 @@ class Wrappers::OrtoolsTest < Minitest::Test
     # those services are at same location, they should be planned together :
     assert_includes [second_index - 1, second_index + 1], first_index
     assert_equal result[:routes].first[:activities][first_index][:begin_time], result[:routes].first[:activities][second_index][:begin_time]
+    previous_result = result[:routes].collect{ |r| r[:activities].collect{ |a| a[:service_id] } }
 
     vrp[:relations] = [{
       type: :minimum_duration_lapse,
       linked_ids: ['service_1', 'service_2'],
-      lapse: 10
+      lapse: 0
     }]
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert_equal previous_result, (result[:routes].collect{ |r| r[:activities].collect{ |a| a[:service_id] } })
+
+    vrp[:relations].first[:lapse] = 10
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     route = result[:routes].first[:activities]
     first_index = route.find_index{ |stop| stop[:service_id] == 'service_1' }
