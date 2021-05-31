@@ -171,8 +171,10 @@ module Wrappers
         vrp.shipments.none?{ |shipment| shipment.sticky_vehicles.size > 1 }
     end
 
-    def assert_no_relations(vrp)
-      vrp.relations.empty? || vrp.relations.all?{ |relation| relation.linked_ids.empty? && relation.linked_vehicle_ids.empty? }
+    def assert_no_relations_except_simple_shipments(vrp)
+      vrp.relations.all?{ |r|
+        (r.type == :shipment && r.linked_ids.size == 2) ||
+          (r.linked_ids.empty? && r.linked_vehicle_ids.empty?) }
     end
 
     def assert_zones_only_size_one_alternative(vrp)
