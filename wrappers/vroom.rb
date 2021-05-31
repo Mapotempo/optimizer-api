@@ -45,7 +45,6 @@ module Wrappers
         :assert_no_subtours,
         :assert_points_same_definition,
         :assert_single_dimension,
-        :assert_not_a_split_solve_candidate,
 
         # Vehicle/route constraints
         :assert_homogeneous_router_definitions,
@@ -76,7 +75,7 @@ module Wrappers
 
     def solve_synchronous?(vrp)
       compatible_routers = %i[car truck_medium]
-      vrp.points.size < 200 && vrp.vehicles.all?{ |vehicle| compatible_routers.include?(vehicle.router_mode&.to_sym) } # WARNING: this should change accordingly with router evolution
+      vrp.points.size < 200 && !Interpreters::SplitClustering.split_solve_candidate?({ vrp: vrp }) && vrp.vehicles.all?{ |vehicle| compatible_routers.include?(vehicle.router_mode&.to_sym) } # WARNING: this should change accordingly with router evolution
     end
 
     def solve(vrp, job = nil, _thread_proc = nil)

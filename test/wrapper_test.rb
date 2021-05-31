@@ -3062,13 +3062,14 @@ class WrapperTest < Minitest::Test
     refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_first_solution_strategy
   end
 
-  def test_vroom_not_called_if_max_split_lower_thant_services_size
+  def test_vroom_cannot_be_called_synchronously_if_max_split_lower_than_services_size
     problem = VRP.lat_lon_two_vehicles
     assert_empty OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem))
+    assert OptimizerWrapper.config[:services][:vroom].solve_synchronous?(TestHelper.create(problem))
 
     problem[:configuration][:preprocessing] = { max_split_size: 2 }
-    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)),
-                    :assert_not_a_split_solve_candidate
+    assert_empty OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem))
+    refute OptimizerWrapper.config[:services][:vroom].solve_synchronous?(TestHelper.create(problem))
   end
 
   def test_simplify_constraints_simplifies_pause

@@ -450,10 +450,6 @@ module Wrappers
         }
     end
 
-    def assert_not_a_split_solve_candidate(vrp)
-      !Interpreters::SplitClustering.split_solve_candidate?({ vrp: vrp })
-    end
-
     def solve_synchronous?(_vrp)
       false
     end
