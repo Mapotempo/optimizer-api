@@ -4,6 +4,8 @@
 
 ### Added
 
+- Document return codes [#224](https://github.com/Mapotempo/optimizer-api/pull/224)
+
 ### Changed
 
 ### Removed
