@@ -9,6 +9,18 @@ For ruby, bundler and gems, rbenv or rvm are recommanded.
 
 ### On Ubuntu
 
+```
+sudo apt install libssl-dev libyaml-dev
+```
+
+* Depending on the Ubuntu version, libssl 1.0 may not be available. Then the following may fix the issue.
+
+```
+sudo add-apt-repository 'deb http://security.ubuntu.com/ubuntu bionic-security main'
+sudo apt update
+sudo apt install libssl1.0-dev
+```
+
 * Ruby 2.5.5 (if not using rbenv/rvm)
 ```
 sudo apt install ruby-full
@@ -17,6 +29,11 @@ sudo apt install ruby-full
 ```
 sudo apt install redis-server
 ```
+* Start redis service
+```
+sudo systemctl enable redis-server.service
+```
+
 * libgeos-dev
 ```
 sudo apt install libgeos-dev libgeos-3.7.1
@@ -37,12 +54,23 @@ brew install geos
 ## Installation
 
 ```
+gem install bundler
 bundle install
 ```
 
 This project requires some solver and interface projects in order to be fully functionnal!
 * [Vroom v1.8.0](https://github.com/VROOM-Project/vroom/releases/tag/v1.8.0)
-* [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8)
+* [Optimizer-ortools v1.4.0](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8)
+
+By default, Optimizer-API and the related projects are supposed to be in parallel folders as follows:
+
+![Project folders](/public/images/folders.png?raw=true)
+
+We recommand to use a symbolic link to point the OR-Tools asset.
+
+```
+  ln -s or-tools_Debian-10-64bit_v7.8.7959 or-tools
+```
 
 ## Configuration
 
