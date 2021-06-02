@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2019
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -19,25 +19,6 @@ require './test/test_helper'
 require 'date'
 
 class MultiTripsTest < Minitest::Test
-  def test_expand_vehicles_trips
-    vrp = VRP.lat_lon
-    vrp[:vehicles].first[:trips] = 2
-
-    vrp = Interpreters::MultiTrips.new.expand(TestHelper.create(vrp))
-
-    assert_equal 2, vrp.vehicles.size
-    assert_equal 1, vrp.relations.size
-    vrp.relations.each{ |relation|
-      assert_equal :vehicle_trips, relation.type
-      assert_includes relation.linked_vehicle_ids, 'vehicle_0_trip_0'
-      assert_includes relation.linked_vehicle_ids, 'vehicle_0_trip_1'
-    }
-
-    Interpreters::MultiTrips.new.expand(vrp) # consecutive MultiTrips.expand should not produce any error neither inconsistency
-    assert_equal 2, vrp.vehicles.size
-    assert_equal 1, vrp.relations.size
-  end
-
   def test_solve_vehicles_trips_capacity
     vrp = VRP.lat_lon_capacitated
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
@@ -46,7 +27,12 @@ class MultiTripsTest < Minitest::Test
 
     # increasing number of trips increases overall available capacity and reduces unassigned :
 
-    vrp[:vehicles].first[:trips] = 2
+    vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:id] += '_second_trip'
+    vrp[:relations] = [{
+      type: 'vehicle_trips',
+      linked_vehicle_ids: [vrp[:vehicles].first[:id], vrp[:vehicles].last[:id]]
+    }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 2, result[:routes].size
     assert_equal 2, result[:unassigned].size
@@ -54,7 +40,9 @@ class MultiTripsTest < Minitest::Test
     routes_end = result[:routes].collect{ |route| route[:activities].last[:begin_time] }
     assert_operator routes_end[0], :<=, routes_start[1]
 
-    vrp[:vehicles].first[:trips] = 3
+    vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:id] += '_third_trip'
+    vrp[:relations].first[:linked_vehicle_ids] << vrp[:vehicles].last[:id]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 3, result[:routes].size
     assert_empty result[:unassigned]
@@ -68,14 +56,20 @@ class MultiTripsTest < Minitest::Test
   def test_solve_vehicles_trips_duration
     vrp = VRP.basic
     vrp[:matrices].first[:time] = vrp[:matrices].first[:time].collect{ |l| l.collect{ |v| v.positive? ? 4 : 0 } }
-    vrp[:vehicles].first[:duration] = 4
+    vrp[:vehicles].first[:end_point_id] = vrp[:vehicles].first[:start_point_id]
+    vrp[:vehicles].first[:duration] = 10
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 1, result[:routes].size
     assert_equal 2, result[:unassigned].size
 
     # increasing number of trips increases overall available duration and reduces unassigned :
 
-    vrp[:vehicles].first[:trips] = 2
+    vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:id] += '_second_trip'
+    vrp[:relations] = [{
+      type: 'vehicle_trips',
+      linked_vehicle_ids: [vrp[:vehicles].first[:id], vrp[:vehicles].last[:id]]
+    }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 2, result[:routes].size
     assert_equal 1, result[:unassigned].size
@@ -83,7 +77,9 @@ class MultiTripsTest < Minitest::Test
     routes_end = result[:routes].collect{ |route| route[:activities].last[:begin_time] }
     assert_operator routes_end[0], :<=, routes_start[1]
 
-    vrp[:vehicles].first[:trips] = 3
+    vrp[:vehicles] << vrp[:vehicles].first.dup
+    vrp[:vehicles].last[:id] += '_third_trip'
+    vrp[:relations].first[:linked_vehicle_ids] << vrp[:vehicles].last[:id]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 3, result[:routes].size
     assert_empty result[:unassigned]

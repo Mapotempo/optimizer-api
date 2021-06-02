@@ -10,6 +10,8 @@
 
 ### Removed
 
+- Field `trips` in vehicle model. Use `vehicle_trips` relation instead [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
+
 ### Fixed
 
 ## [v1.7.1] - 2021-05-20

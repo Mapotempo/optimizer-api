@@ -461,14 +461,14 @@ module Models
 
       vrp[:vehicles][1][:timewindow] = { start: 0, end: 10, day_index: 1 }
       # days are uncompatible
-      assert_raises OptimizerWrapper::DiscordantProblemError do
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
         check_consistency(vrp)
       end
 
       vrp[:vehicles][1][:timewindow] = nil
       vrp[:vehicles][1][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
       # vehicles have common day index 0 but they are still not available at exact same days
-      assert_raises OptimizerWrapper::DiscordantProblemError do
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
         check_consistency(vrp)
       end
     end
@@ -483,7 +483,7 @@ module Models
       vrp[:vehicles][0][:unavailable_work_day_indices] = [0, 1]
       vrp[:vehicles][1][:unavailable_work_day_indices] = [2, 3]
       # no common day_index anymore
-      assert_raises OptimizerWrapper::DiscordantProblemError do
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
         check_consistency(vrp)
       end
     end
@@ -502,7 +502,7 @@ module Models
       vrp = VRP.lat_lon_two_vehicles
       vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
       vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
-      assert_raises OptimizerWrapper::DiscordantProblemError do
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
         check_consistency(vrp)
       end
 

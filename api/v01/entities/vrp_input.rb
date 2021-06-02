@@ -490,7 +490,6 @@ module VrpVehicles
     optional(:force_start, type: Boolean, documentation: { hidden: true }, desc: '[ DEPRECATED ]')
     optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open,
       as late as possible or let vehicle start at any time. Not available with periodic heuristic, it will always leave as soon as possible.')
-    optional(:trips, type: Integer, default: 1, desc: 'The number of times a vehicle is allowed to return to the depot within its route. Not available with periodic heuristic.')
 
     optional :matrix_id, type: String, desc: 'Related matrix, if already defined'
     optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index'
