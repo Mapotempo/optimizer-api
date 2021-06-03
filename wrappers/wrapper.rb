@@ -978,7 +978,7 @@ module Wrappers
           next if vehicle.rests.any?{ |rest|
             rest.timewindows.any? { |rest_tw|
               rest_start = rest_tw.start || vehicle.timewindow&.start || 0
-              rest_end = rest_tw.end || vehicle.timewindow&.end || rest_start + vehicle.duration - rest.duration
+              rest_end = rest_tw.end || vehicle.timewindow&.end || vehicle.duration && rest.duration && (rest_start + vehicle.duration - rest.duration) || 2**56
               max_service_duration > rest_end - rest_start
             }
           }

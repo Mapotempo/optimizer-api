@@ -5640,4 +5640,25 @@ class Wrappers::OrtoolsTest < Minitest::Test
       assert_equal 1.001, activity[:detail][:quantities].first[:value]
     }
   end
+
+  def test_simplify_vehicle_pause_without_timewindow_or_duration
+    complete_vrp = VRP.pud
+    complete_vrp[:rests] = [{
+      id: 'rest_0',
+      duration: 1,
+      timewindows: [{ day_index: 0 }]
+    }]
+    complete_vrp[:vehicles].first[:rest_ids] = ['rest_0']
+    complete_vrp[:services] = [{
+      id: 'service_0',
+      activity: {
+        point_id: 'point_0'
+      }
+    }]
+
+    # main interest of this test is to ensure test does not fail even though we have no timewindow end on rest/vehicle
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(complete_vrp), nil)
+    assert(result[:routes].first[:activities].any?{ |stop| stop[:type] == 'rest' })
+    assert_empty result[:unassigned]
+  end
 end
