@@ -792,6 +792,18 @@ class Wrappers::VroomTest < Minitest::Test
     }
   end
 
+  def test_negative_quantities_should_not_raise
+    problem = VRP.basic
+    problem[:units] << { id: 'l' }
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'kg', value: 1 }, { unit_id: 'l', value: -1}]
+    }
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{ unit_id: 'kg', limit: 3 }, { unit_id: 'l', limit: 2}]
+    }
+    OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, TestHelper.create(problem), nil)
+  end
+
   def test_partially_nil_capacities
     problem = VRP.basic
     problem[:services].each{ |service|

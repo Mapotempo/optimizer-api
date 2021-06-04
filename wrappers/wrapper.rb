@@ -381,6 +381,16 @@ module Wrappers
       }
     end
 
+    def assert_no_vehicles_with_duration_modifiers(vrp)
+      # TODO: this assert can be relaxed by implementing a simplifier
+      # if all vehicles are homogenous w.r.t. a given duration_modifier,
+      # then we can update the durations directly and rewind it easily
+      vrp.vehicles.all?{ |vehicle|
+        (vehicle.coef_setup.nil? || vehicle.coef_setup == 1) && vehicle.additional_setup.to_i == 0 &&
+          (vehicle.coef_service.nil? || vehicle.coef_service == 1) && vehicle.additional_service.to_i == 0
+      }
+    end
+
     def assert_homogeneous_router_definitions(vrp)
       vrp.vehicles.group_by{ |vehicle|
         [vehicle.router_mode, vehicle.dimensions, vehicle.router_options]

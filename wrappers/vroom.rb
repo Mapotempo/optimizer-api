@@ -51,6 +51,7 @@ module Wrappers
         :assert_homogeneous_router_definitions,
         :assert_matrices_only_one,
         :assert_no_distance_limitation,
+        :assert_no_vehicles_with_duration_modifiers,
         :assert_vehicles_no_duration_limit,
         :assert_vehicles_no_force_start,
         :assert_vehicles_no_late_multiplier_or_single_vehicle,
@@ -262,7 +263,6 @@ module Wrappers
     def collect_jobs(vrp, vrp_skills, vrp_units)
       vrp.services.map.with_index{ |service, index|
         # Activity is mandatory
-        pickup_flag = service.quantities.none?{ |quantity| quantity.value.negative? }
         {
           id: index,
           location_index: @points[service.activity.point_id].matrix_index,
@@ -274,17 +274,15 @@ module Wrappers
           delivery: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }
             @total_quantities[unit.id] -= q&.value || 0
-            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+            (-(q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           },
           pickup: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }
             @total_quantities[unit.id] += q&.value || 0
             ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           }
-        }.delete_if{ |k, v|
-          v.nil? || v.is_a?(Array) && v.empty? ||
-            k == :delivery && pickup_flag ||
-            k == :anykey && !pickup_flag
+        }.delete_if{ |_k, v|
+          v.nil? || v.is_a?(Array) && v.empty?
         }
       }
     end
@@ -293,9 +291,9 @@ module Wrappers
       vrp.shipments.map.with_index{ |shipment, index|
         {
           amount: vrp_units.map{ |unit|
-            q = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }
-            @total_quantities[unit.id] += q&.value || 0
-            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+            value = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id }&.value.to_f.abs
+            @total_quantities[unit.id] += value
+            (value * CUSTOM_QUANTITY_BIGNUM).round
           },
           skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
             shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
