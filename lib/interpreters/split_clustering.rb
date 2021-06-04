@@ -233,7 +233,7 @@ module Interpreters
         ).sort_by!{ |side|
           [side.size, side.sum(&:visits_number)] # [number_of_vehicles, number_of_visits]
         }.reverse!.collect!{ |side|
-          enum_current_vehicles.select{ |v| side.any?{ |s| s.id == v.id } }
+          enum_current_vehicles.select{ |v| side.any?{ |s| s.id == "0_representative_vrp_s_#{v.id}" } }
         }
 
         unless sides.size == 2 && sides.none?(&:empty?)
@@ -242,6 +242,10 @@ module Interpreters
           log 'There should be exactly two clusters in split_solve_core!', level: :warn
           ss_data[:cannot_split_further] = true
         end
+
+        # TODO: In some case one side might be significantly smaller than the other side.
+        # This is not necessarily a bad thing but we might want to re-groupe such "tiny" VRPs
+        # to prevent inefficient use of vehicles.
 
         split_service_counts = sides.collect{ |current_vehicles|
           current_vehicles.sum{ |v| ss_data[:service_vehicle_assignments][v.id].size }
@@ -338,24 +342,45 @@ module Interpreters
 
       points = []
       services = []
+      relations = []
       split_solve_data[:service_vehicle_assignments].each{ |vehicle_id, vehicle_services|
-        # TODO: We don't have to represent each group with only 1 point. We can represent each group with multiple
-        #       points, carefully selected to represent the mean, median and extremes of the group
-        #       and "relate" these points with :same_route so that they will stay on the same "side" in the 2-split
         average_lat = vehicle_services.sum{ |s| s.activity.point.location.lat } / vehicle_services.size.to_f
         average_lon = vehicle_services.sum{ |s| s.activity.point.location.lon } / vehicle_services.size.to_f
-        points << { id: "p#{vehicle_id}", location: { lat: average_lat, lon: average_lon }}
+        points << { id: "0_representative_vrp_p_#{vehicle_id}", location: { lat: average_lat, lon: average_lon }}
         services << {
-          id: vehicle_id, # vehicle_id used to find the original service-vehicle assignment
+          id: "0_representative_vrp_s_#{vehicle_id}", # vehicle_id used to find the original service-vehicle assignment
           visits_number: vehicle_services.size,
           activity: {
-            point_id: "p#{vehicle_id}",
+            point_id: "0_representative_vrp_p_#{vehicle_id}",
             duration: vehicle_services.sum{ |s| s.activity.duration.to_f } / Math.sqrt(vehicle_services.size)
           }
         }
+
+        # If there are many points in the sub-representative-vrp. We can represent each group with multiple
+        # points, carefully selected to represent the extremes of the group and "relate" these points
+        # with :same_route so that they will stay on the same "side" in the 2-split. So that the vehicles
+        # with close points can stay on the same side.
+        next if vehicle_services.size < 5
+
+        vehicle_service_coordinates = vehicle_services.collect{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }
+        extreme_points = Helper.approximate_quadrilateral_polygon(vehicle_service_coordinates)
+        linked_ids = ["0_representative_vrp_s_#{vehicle_id}"]
+        extreme_points.each_with_index{ |lat_lon, index|
+          points << { id: "#{index + 1}_representative_vrp_p_#{vehicle_id}", location: { lat: lat_lon[0], lon: lat_lon[1] }}
+          services << {
+            id: "#{index + 1}_representative_vrp_s_#{vehicle_id}", # vehicle_id used to find the original service-vehicle assignment
+            visits_number: 1,
+            activity: {
+              point_id: "#{index + 1}_representative_vrp_p_#{vehicle_id}",
+              duration: 1
+            }
+          }
+          linked_ids << "#{index + 1}_representative_vrp_s_#{vehicle_id}"
+        }
+
+        relations << { type: :same_route, linked_ids: linked_ids }
       }
 
-      relations = []
       # go through the original relations and force the services and vehicles to stay in the same sub-vrp if necessary
       split_solve_data[:original_vrp].relations.select{ |r| FORCING_RELATIONS.include?(r.type) }.each{ |relation|
         if relation.linked_vehicle_ids.any? && relation.linked_services.none?
@@ -364,7 +389,7 @@ module Interpreters
           linked_ids = []
           relation.linked_services.each{ |linked_service|
             split_solve_data[:service_vehicle_assignments].any?{ |v_id, v_services|
-              linked_ids << v_id if v_services.include?(linked_service)
+              linked_ids << "0_representative_vrp_s_#{v_id}" if v_services.include?(linked_service)
             }
           }
           linked_ids.uniq!
@@ -397,8 +422,8 @@ module Interpreters
       r_sub_vrp = ::Models::Vrp.create({ name: 'representative_sub_vrp' }, false)
       r_sub_vrp.vehicles = representative_vrp.vehicles # 2-fake-vehicles
       r_sub_vrp.services = representative_vrp.services.select{ |representative_service|
-        # the service which represent the services of vehicle `v`, has its id set to `v.id`
-        split_solve_data[:current_vehicles].any?{ |v| v.id == representative_service.id }
+        # the service which represent the services of vehicle `v`, has its id include `v.id`
+        split_solve_data[:current_vehicles].any?{ |v| representative_service.id.end_with?("_representative_vrp_s_#{v.id}") }
       }
       r_sub_vrp.points = r_sub_vrp.services.map{ |s| s.activity.point }
       r_sub_vrp.relations = representative_vrp.relations.select{ |relation|
