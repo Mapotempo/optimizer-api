@@ -117,7 +117,7 @@ module Api
               elsif ret.is_a?(Hash)
                 status 200
                 if vrp.restitution_csv
-                  present(OptimizerWrapper.build_csv(ret), type: CSV)
+                  present(OptimizerWrapper.build_csv([ret]), type: CSV)
                 else
                   present({ solutions: [ret], job: { status: :completed }}, with: VrpResult)
                 end
@@ -165,11 +165,17 @@ module Api
 
             status 200
 
+            unless solution.nil? || solution[:result].nil? || solution[:result].is_a?(Array)
+            # TODO: solution[:result] should always be an array, find out why it is not and
+            # remove this check and other similar ones -- i.e.,  [solution[:result]].flatten(1).
+              solution[:result] = [solution[:result]]
+            end
+
             if output_format == :csv && (job.nil? || job.completed?) # At this step, if the job is nil then it has already been retrieved into the result store
               present(OptimizerWrapper.build_csv(solution[:result]), type: CSV)
             else
               present({
-                solutions: [solution[:result]].flatten(1),
+                solutions: solution[:result],
                 job: {
                   id: id,
                   status: job&.status&.to_sym || :completed, # :queued, :working, :completed, :failed

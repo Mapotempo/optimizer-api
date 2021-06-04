@@ -515,73 +515,71 @@ module OptimizerWrapper
     optim_planning_output = nil
     max_timewindows_size = 0
     reasons = nil
-    if solutions
-      (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
-        solution[:routes].each{ |route|
-          route[:activities].each{ |activity|
-            next if activity[:detail].nil? || !activity[:detail][:quantities]
+    solutions&.collect{ |solution|
+      solution[:routes].each{ |route|
+        route[:activities].each{ |activity|
+          next if activity[:detail].nil? || !activity[:detail][:quantities]
 
-            activity[:detail][:quantities].each{ |quantity|
-              unit_ids << quantity[:unit]
-              quantities_header << "quantity_#{quantity['label'] || quantity[:unit]}"
-            }
+          activity[:detail][:quantities].each{ |quantity|
+            unit_ids << quantity[:unit]
+            quantities_header << "quantity_#{quantity['label'] || quantity[:unit]}"
           }
         }
-        quantities_header.uniq!
-        unit_ids.uniq!
+      }
+      quantities_header.uniq!
+      unit_ids.uniq!
 
-        max_timewindows_size = ([max_timewindows_size] + solution[:routes].collect{ |route|
-          route[:activities].collect{ |activity|
-            next if activity[:detail].nil? || !activity[:detail][:timewindows]
-
-            activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
-          }.compact
-        }.flatten +
-        solution[:unassigned].collect{ |activity|
+      max_timewindows_size = ([max_timewindows_size] + solution[:routes].collect{ |route|
+        route[:activities].collect{ |activity|
           next if activity[:detail].nil? || !activity[:detail][:timewindows]
 
           activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
-        }.compact).max
-        timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
-          ["timewindow_start_#{index}", "timewindow_end_#{index}"]
-        }.flatten
-        header += quantities_header + timewindows_header
-        reasons = true if solution[:unassigned].size.positive?
+        }.compact
+      }.flatten +
+      solution[:unassigned].collect{ |activity|
+        next if activity[:detail].nil? || !activity[:detail][:timewindows]
 
-        optim_planning_output = solution[:routes].any?{ |route| route[:activities].any?{ |stop| stop[:day_week] } }
-      }
-      CSV.generate{ |out_csv|
-        if optim_planning_output
-          header = ['day_week_num', 'day_week'] + header
-        end
-        if reasons
-          header << 'unassigned_reason'
-        end
-        out_csv << header
-        (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
-          solution[:routes].each{ |route|
-            route[:activities].each{ |activity|
-              days_info = optim_planning_output ? [activity[:day_week_num], activity[:day_week]] : []
-              common = build_csv_activity(solution[:name], route, activity)
-              timewindows = build_csv_timewindows(activity, max_timewindows_size)
-              quantities = unit_ids.collect{ |unit_id|
-                activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id } && activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }[:value]
-              }
-              out_csv << (days_info + common + quantities + timewindows + [nil])
-            }
-          }
-          solution[:unassigned].each{ |activity|
+        activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
+      }.compact).max
+      timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
+        ["timewindow_start_#{index}", "timewindow_end_#{index}"]
+      }.flatten
+      header += quantities_header + timewindows_header
+      reasons = true if solution[:unassigned].size.positive?
+
+      optim_planning_output = solution[:routes].any?{ |route| route[:activities].any?{ |stop| stop[:day_week] } }
+    }
+    CSV.generate{ |out_csv|
+      if optim_planning_output
+        header = ['day_week_num', 'day_week'] + header
+      end
+      if reasons
+        header << 'unassigned_reason'
+      end
+      out_csv << header
+      (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
+        solution[:routes].each{ |route|
+          route[:activities].each{ |activity|
             days_info = optim_planning_output ? [activity[:day_week_num], activity[:day_week]] : []
-            common = build_csv_activity(solution[:name], nil, activity)
+            common = build_csv_activity(solution[:name], route, activity)
             timewindows = build_csv_timewindows(activity, max_timewindows_size)
             quantities = unit_ids.collect{ |unit_id|
               activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id } && activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }[:value]
             }
-            out_csv << (days_info + common + quantities + timewindows + [activity[:reason]])
+            out_csv << (days_info + common + quantities + timewindows + [nil])
           }
         }
+        solution[:unassigned].each{ |activity|
+          days_info = optim_planning_output ? [activity[:day_week_num], activity[:day_week]] : []
+          common = build_csv_activity(solution[:name], nil, activity)
+          timewindows = build_csv_timewindows(activity, max_timewindows_size)
+          quantities = unit_ids.collect{ |unit_id|
+            activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id } && activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }[:value]
+          }
+          out_csv << (days_info + common + quantities + timewindows + [activity[:reason]])
+        }
       }
-    end
+    }
   end
 
   private
