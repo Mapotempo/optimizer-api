@@ -55,7 +55,6 @@ module Wrappers
         :assert_no_vehicle_overall_duration_if_heuristic,
         :assert_no_vehicle_distance_if_heuristic,
         :assert_possible_to_get_distances_if_maximum_ride_distance,
-        :assert_no_skills_if_heuristic,
         :assert_no_vehicle_free_approach_or_return_if_heuristic,
         :assert_no_vehicle_limit_if_heuristic,
         :assert_no_same_point_day_if_no_heuristic,

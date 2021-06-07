@@ -490,12 +490,14 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_fail_when_alternative_skills
-      vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
-        metric: 'duration',
-        entity: :work_day
-      }]
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:configuration][:preprocessing] = {
+        partitions: [{
+          method: 'balanced_kmeans',
+          metric: 'duration',
+          entity: :vehicle
+        }]
+      }
       vrp[:services].first[:skills] = ['skill']
       vrp[:vehicles][0][:skills] = [['skill'], ['other_skill']]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
@@ -956,7 +958,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_split_with_vehicle_alternative_skills
-      problem = VRP.lat_lon_scheduling_two_vehicles
+      problem = VRP.lat_lon_two_vehicles
 
       # nothing expected to be raised :
       [[[]], [['skill']], [['skill'], []]].each{ |skill_set|

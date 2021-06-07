@@ -842,8 +842,15 @@ module Wrappers
       !@services_data[service_id][:raw].unavailable_days.include?(day)
     end
 
+    def compatible_vehicle(service_id, route_data)
+      # WARNING : this does not consider vehicle alternative skills properly
+      # we would need to know which skill_set is required in order that all services on same vehicle are compatible
+      route_data[:skills].any?{ |skill_set| (@services_data[service_id][:raw].skills - skill_set).empty? }
+    end
+
     def service_compatible_with_route(service_id, route_data)
-      compatible_days(service_id, route_data[:global_day_index])
+      compatible_days(service_id, route_data[:day]) &&
+        compatible_vehicle(service_id, route_data)
     end
 
     def find_best_index(service_id, route_data, first_visit = true)

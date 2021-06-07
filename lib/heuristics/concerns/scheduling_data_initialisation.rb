@@ -37,6 +37,7 @@ module SchedulingDataInitialization
         stops: [],
         capacity: capacity,
         capacity_left: Marshal.load(Marshal.dump(capacity)),
+        skills: vehicle.skills,
         maximum_ride_time: vehicle.maximum_ride_time,
         maximum_ride_distance: vehicle.maximum_ride_distance,
         router_dimension: vehicle.router_dimension.to_sym,

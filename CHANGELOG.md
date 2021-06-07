@@ -3,6 +3,7 @@
 ## [v1.8.0-dev] - Unreleased
 
 ### Added
+- Support skills in periodic heuristic (`first_solution_strategy='periodic'`) [#194](https://github.com/Mapotempo/optimizer-api/pull/194)
 
 ### Changed
 
