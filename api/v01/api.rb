@@ -119,9 +119,9 @@ module Api
 
       before do
         if !params || !::OptimizerWrapper.access(true).key?(params[:api_key])
-          error!('401 Unauthorized', 401)
+          error!('Unauthorized', 401)
         elsif OptimizerWrapper.access[params[:api_key]][:expire_at]&.to_date&.send(:<, Date.today)
-          error!('402 Subscription expired', 402)
+          error!("Subscription expired. Please contact support (#{::OptimizerWrapper.config[:product_support_email]}) or sales (#{::OptimizerWrapper.config[:product_sales_email]}) to extend your access period.", 402)
         end
         set_locale
       end

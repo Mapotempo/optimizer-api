@@ -94,11 +94,11 @@ module Api
                 model: ::Api::V01::Status
               }, {
                 code: 402,
-                message: 'Subscription expired',
+                message: "Subscription expired. Please contact support (#{::OptimizerWrapper.config[:product_support_email]}) or sales (#{::OptimizerWrapper.config[:product_sales_email]}) to extend your access period.",
                 model: ::Api::V01::Status
               }, {
                 code: 413,
-                message: 'Exceeded limit authorized for your account. Please contact support or sales to increase limits.',
+                message: "Exceeded limit authorized for your account. Please contact support (#{::OptimizerWrapper.config[:product_support_email]}) or sales (#{::OptimizerWrapper.config[:product_sales_email]}) to increase limits.",
                 model: ::Api::V01::Status
             }],
             detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
@@ -119,7 +119,7 @@ module Api
               next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value
 
               error!({
-                message: "Exceeded #{key} limit authorized for your account: #{value}. Please contact support or sales to increase limits."
+                message: "Exceeded #{key} limit authorized for your account: #{value}. Please contact support (#{::OptimizerWrapper.config[:product_support_email]}) or sales (#{::OptimizerWrapper.config[:product_sales_email]}) to increase limits."
               }, 413)
             }
 
