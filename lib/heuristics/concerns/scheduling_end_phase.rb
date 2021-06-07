@@ -30,7 +30,7 @@ module SchedulingEndPhase
       add_missing_visits
     end
 
-    unless @services_data.all?{ |_id, data| (data[:raw].exclusion_cost || 0).zero? }
+    unless @services_data.all?{ |_id, data| data[:raw].exclusion_cost.to_f.zero? }
       block&.call(nil, nil, nil, 'scheduling heuristic - correcting underfilled routes', nil, nil, nil)
       correct_underfilled_routes
     end
@@ -239,7 +239,9 @@ module SchedulingEndPhase
 
           all_empty = false
 
-          next if route_data[:stops].sum{ |stop| @services_data[stop[:id]][:raw].exclusion_cost || 0 } >= route_data[:cost_fixed]
+          next if route_data[:stops].sum{ |stop|
+                    @services_data[stop[:id]][:raw].exclusion_cost.to_f
+                  } >= route_data[:cost_fixed]
 
           smth_removed = true
           locally_removed = route_data[:stops].collect{ |stop|
@@ -409,7 +411,8 @@ module SchedulingEndPhase
           if insertion_costs.flatten.empty?
             keep_inserting = false
             empty_routes.delete_if{ |tab| tab[:vehicle_id] == best_route[:vehicle_id] && tab[:day] == best_route[:day] }
-            if route_data[:stops].empty? || route_data[:stops].sum{ |stop| @services_data[stop[:id]][:raw].exclusion_cost || 0 } < route_data[:cost_fixed]
+            if route_data[:stops].empty? ||
+               route_data[:stops].sum{ |stop| @services_data[stop[:id]][:raw].exclusion_cost.to_f } < route_data[:cost_fixed]
               route_data[:stops] = []
               previous_vehicle_filled_info = {
                 stores: best_route[:stores],
@@ -420,7 +423,7 @@ module SchedulingEndPhase
               route_data[:stops].each{ |stop|
                 @ids_to_renumber |= [stop[:id]]
                 still_removed.delete(still_removed.find{ |removed| removed.first == stop[:id] })
-                @output_tool&.add_single_visit(route_data[:global_day_index], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
+                @output_tool&.add_single_visit(route_data[:day], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
                 @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == stop[:id] }[0])
               }
             end

@@ -24,12 +24,13 @@ module SchedulingDataInitialization
   def generate_route_structure(vrp)
     vrp.vehicles.each{ |vehicle|
       capacity = compute_capacities(vehicle[:capacities], true)
-      vrp.units.reject{ |unit| capacity.has_key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
+      vrp.units.reject{ |unit| capacity.key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
       @candidate_routes[vehicle.original_id][vehicle.global_day_index] = {
-        vehicle_id: vehicle.id,
-        global_day_index: vehicle.global_day_index,
-        tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - vehicle.global_day_index * 86400,
-        tw_end: (vehicle.timewindow.end < 84600) ? vehicle.timewindow.end : vehicle.timewindow.end - vehicle.global_day_index * 86400,
+        # vehicle: vehicle # it is costly to use this
+        vehicle_original_id: vehicle.original_id,
+        day: vehicle.global_day_index,
+        tw_start: vehicle.timewindow.start % 86400,
+        tw_end: vehicle.timewindow.end % 86400,
         start_point_id: vehicle.start_point&.id,
         end_point_id: vehicle.end_point&.id,
         duration: vehicle.duration || (vehicle.timewindow.end - vehicle.timewindow.start),
