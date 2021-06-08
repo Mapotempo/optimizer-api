@@ -121,8 +121,8 @@ module Helper
     }.sum
   end
 
-  def self.visits(services, shipments)
-    services.sum(&:visits_number) + shipments.sum(&:visits_number) * 2
+  def self.visits(services)
+    services.sum(&:visits_number)
   end
 end
 

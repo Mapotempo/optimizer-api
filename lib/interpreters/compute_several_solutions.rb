@@ -210,7 +210,7 @@ module Interpreters
           # if another heuristic is the best, use its solution as the initial route
           vrp.routes = best[:solution][:routes].collect{ |route|
             mission_ids = route[:activities].collect{ |a|
-              a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id]
+              a[:service_id]
             }.compact
             next if mission_ids.empty?
 
@@ -240,7 +240,6 @@ module Interpreters
     def self.select_best_heuristic(vrp)
       vehicles = vrp[:vehicles] || []
       services = vrp[:services] || []
-      shipments = vrp[:shipments] || []
 
       loop_route = vehicles.any?{ |vehicle|
         if (vehicle.start_point_id.nil? || vehicle.end_point_id.nil?) && (vehicle.start_point.nil? || vehicle.end_point.nil?)
@@ -264,9 +263,9 @@ module Interpreters
       elsif vehicles.any?{ |vehicle| vehicle[:force_start] || vehicle[:shift_preference] && vehicle[:shift_preference] == 'force_start' }
         verified('path_cheapest_arc')
       elsif loop_route && unique_configuration &&
-            (vehicles.any?{ |vehicle| vehicle[:duration] } && vehicles.size == 1 || size_mtws.to_f / (services.collect{ |service| service[:visits_number] }.sum + shipments.size * 2) > 0.2 && size_rest.zero?)
+            (vehicles.any?{ |vehicle| vehicle[:duration] } && vehicles.size == 1 || size_mtws.to_f / (services.collect{ |service| service[:visits_number] }.sum) > 0.2 && size_rest.zero?)
         verified('global_cheapest_arc')
-      elsif vehicles.size == 1 && size_rest.positive? || !shipments.empty? || size_mtws > 0
+      elsif vehicles.size == 1 && size_rest.positive? || size_mtws > 0
         verified('local_cheapest_insertion')
       elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?{ |vehicle| vehicle[:duration] }
         verified('savings')

@@ -20,7 +20,7 @@ require './test/test_helper'
 class Wrappers::DemoTest < Minitest::Test
   def test_demo
     demo = OptimizerWrapper.config[:services][:demo]
-    vrp = TestHelper.create({})
+    vrp = TestHelper.create(VRP.basic)
     assert_empty demo.inapplicable_solve?(vrp)
     assert demo.solve(vrp)
   end

@@ -20,10 +20,10 @@ require 'active_support/concern'
 # Expands provided data
 module ValidateData
   extend ActiveSupport::Concern
-
+  POSITION_RELATIONS = %i[order sequence shipment]
   def check_consistency(hash)
     hash[:services] ||= []
-    hash[:shipments] ||= []
+    hash[:vehicles] ||= []
     @hash = hash
 
     ensure_uniq_ids
@@ -39,9 +39,10 @@ module ValidateData
     check_relations(periodic_heuristic)
     # TODO : this should be replaced by schedule when max_split does not use visits_number > 1 without schedule anymore
     # indeed, no configuration implies no schedule and there should be no visits_number > 1 in this case
-    # check_services_and_shipments(schedule)
-    check_services_and_shipments(configuration, schedule)
-    check_shipments_specificities
+    # check_services(schedule)
+    check_services(configuration, schedule)
+    check_position_relation_specificities
+    check_relation_consistent_timewindows
 
     check_routes(periodic_heuristic)
     check_configuration(configuration, periodic_heuristic) if configuration
@@ -50,7 +51,7 @@ module ValidateData
   def ensure_uniq_ids
     # TODO: Active Hash should be checking this
     [:matrices, :units, :points, :rests, :zones, :timewindows,
-     :vehicles, :services, :shipments, :subtours].each{ |key|
+     :vehicles, :services, :subtours].each{ |key|
       next if @hash[key]&.collect{ |v| v[:id] }&.uniq!.nil?
 
       raise OptimizerWrapper::DiscordantProblemError.new("#{key} IDs should be unique")
@@ -58,7 +59,7 @@ module ValidateData
   end
 
   def ensure_no_conflicting_skills
-    all_skills = (@hash[:vehicles].to_a + @hash[:services].to_a + @hash[:shipments].to_a).flat_map{ |mission|
+    all_skills = (@hash[:vehicles] + @hash[:services]).map{ |mission|
       mission[:skills]
     }.compact.uniq
 
@@ -98,7 +99,7 @@ module ValidateData
   end
 
   def check_vehicles(periodic_heuristic)
-    @hash[:vehicles]&.each{ |v|
+    @hash[:vehicles].each{ |v|
       if v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1)
         raise OptimizerWrapper::DiscordantProblemError.new(
           'Cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
@@ -125,8 +126,8 @@ module ValidateData
     }
   end
 
-  def check_services_and_shipments(configuration, schedule)
-    (@hash[:services].to_a + @hash[:shipments].to_a).each{ |mission|
+  def check_services(configuration, schedule)
+    @hash[:services].each{ |mission|
       if (mission[:minimum_lapse] || 0) > (mission[:maximum_lapse] || 2**32)
         raise OptimizerWrapper::DiscordantProblemError.new('Minimum lapse can not be bigger than maximum lapse')
       end
@@ -139,17 +140,57 @@ module ValidateData
     }
   end
 
-  def check_shipments_specificities
+  # In a sequence a->b, b cannot be served if its timewindows are closed
+  # before that a has its timewindows opened
+  def check_relation_consistent_timewindows
+    unconsistent_relation_timewindows = []
+    @hash[:relations]&.each{ |relation|
+      next unless POSITION_RELATIONS.include?(relation[:type])
+
+      latest_sequence_earliest_arrival = nil
+      services = @hash[:services].select{ |service| relation[:linked_ids].include?(service[:id]) }
+      services.each{ |service|
+        next unless service[:activity][:timewindows]&.any?
+
+        earliest_arrival = service[:activity][:timewindows].map{ |tw| (tw[:day_index] || 0) * 86400 + (tw[:start] || 0) }.min
+        latest_arrival = service[:activity][:timewindows].map{ |tw| (tw[:day_index] || 0) * 86400 + (tw[:end] || 86399) }.max -
+                         service[:activity][:duration]
+
+        latest_sequence_earliest_arrival = [latest_sequence_earliest_arrival, earliest_arrival].compact.max
+        if latest_arrival < latest_sequence_earliest_arrival
+          unconsistent_relation_timewindows << relation[:linked_ids]
+        end
+      }
+    }
+    return unless unconsistent_relation_timewindows.any?
+
+    raise OptimizerWrapper::DiscordantProblemError.new("Unconsistent timewindows within relations: #{unconsistent_relation_timewindows}")
+  end
+
+  def check_position_relation_specificities
     forbidden_position_pairs = [
       [:always_middle, :always_first],
       [:always_last, :always_middle],
       [:always_last, :always_first]
     ]
-    @hash[:shipments]&.each{ |shipment|
-      return unless forbidden_position_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
 
-      raise OptimizerWrapper::DiscordantProblemError.new('Unconsistent positions in shipments.')
+    unconsistent_position_services = []
+    @hash[:relations]&.each{ |relation|
+      next unless POSITION_RELATIONS.include?(relation[:type])
+
+      services = @hash[:services].select{ |service| relation[:linked_ids].include?(service[:id]) }
+      previous_service = nil
+      services.each{ |service|
+        if previous_service && forbidden_position_pairs.include?([previous_service[:activity][:position], service[:activity][:position]])
+          unconsistent_position_services << [previous_service[:id], service[:id]]
+        end
+        previous_service = service
+      }
     }
+
+    return unless unconsistent_position_services.any?
+
+    raise OptimizerWrapper::DiscordantProblemError.new("Unconsistent positions in relations: #{unconsistent_position_services}")
   end
 
   def calculate_day_availabilities(vehicles, timewindow_arrays)
@@ -290,6 +331,8 @@ module ValidateData
       end
     end
 
+    check_sticky_relation_consistency
+
     incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end]
     return unless periodic_heuristic && incompatible_relation_types.any?
 
@@ -298,10 +341,31 @@ module ValidateData
     )
   end
 
+  def check_sticky_relation_consistency
+    unconsistent_stickies = []
+    @hash[:relations].none?{ |relation|
+      relation_sticky_ids = []
+      services = @hash[:services].select{ |service| relation[:linked_ids]&.include?(service[:id]) }
+      services.none?{ |service|
+        sticky_ids = service[:sticky_vehicle_ids] || []
+        if [sticky_ids + relation_sticky_ids].uniq.size > 1
+          unconsistent_stickies << services.map{ |service| service[:id] }
+        end
+        relation_sticky_ids += sticky_ids
+      }
+    }
+    if unconsistent_stickies.any?
+      raise OptimizerWrapper::UnsupportedProblemError.new(
+        'All services from a relation should have consistent sticky_vehicle_ids or none'\
+        'Following services have different sticky_vehicle_ids: ',
+        unconsistent_stickies)
+    end
+  end
+
   def check_routes(periodic_heuristic)
     @hash[:routes]&.each{ |route|
       route[:mission_ids].each{ |id|
-        corresponding = @hash[:services]&.find{ |s| s[:id] == id } || @hash[:shipments]&.find{ |s| s[:id] == id }
+        corresponding = @hash[:services]&.find{ |s| s[:id] == id }
 
         if corresponding.nil?
           raise OptimizerWrapper::DiscordantProblemError.new('Each mission_ids should refer to an existant id')
@@ -368,10 +432,6 @@ module ValidateData
       raise OptimizerWrapper::DiscordantProblemError.new(
         'Vehicle group duration on weeks or months is not available without range_date'
       )
-    end
-
-    unless @hash[:shipments].to_a.empty?
-      raise OptimizerWrapper::UnsupportedProblemError.new('Shipments are not available with periodic heuristic')
     end
 
     unless @hash[:vehicles].all?{ |vehicle| vehicle[:rests].to_a.empty? }

@@ -704,7 +704,7 @@ class InterpreterTest < Minitest::Test
       relations: [{
         id: 'id_rel',
         type: :meetup,
-        linked_ids: ['shipment_0delivery', 'shipment_1delivery']
+        linked_ids: ['shipment_0_delivery', 'shipment_1_delivery']
       }],
       configuration: {
         preprocessing: {

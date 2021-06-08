@@ -2068,344 +2068,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal problem[:services].size, result[:routes][1][:activities].size - 1
   end
 
-  def test_pickup_delivery
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 3, 3, 3],
-          [3, 0, 3, 3],
-          [3, 3, 0, 3],
-          [3, 3, 3, 0]
-        ]
-      }],
-      units: [{
-        id: 'unit_0',
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        cost_time_multiplier: 1,
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        capacities: [{
-          unit_id: 'unit_0',
-          limit: 10,
-          overload_multiplier: 0,
-        }]
-      }],
-      services: [{
-        id: 'service_0',
-        type: 'pickup',
-        activity: {
-          point_id: 'point_1',
-          late_multiplier: 0,
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 4,
-        }]
-      }, {
-        id: 'service_1',
-        type: 'pickup',
-        activity: {
-          point_id: 'point_2',
-          late_multiplier: 0,
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 4,
-        }]
-      }, {
-        id: 'service_2',
-        type: 'delivery',
-        activity: {
-          point_id: 'point_3',
-          late_multiplier: 0,
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 10,
-        }]
-      }, {
-        id: 'service_3',
-        type: 'delivery',
-        activity: {
-          point_id: 'point_3',
-          late_multiplier: 0,
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 9,
-        }]
-      }],
-      configuration: {
-        preprocessing: {
-          prefer_short_segment: true
-        },
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
-    assert result
-    assert_equal 1, result[:unassigned].size
-    assert_equal 5, result[:routes][0][:activities].size
-  end
-
-  def test_pickup_delivery_2
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 3, 3, 3],
-          [3, 0, 3, 3],
-          [3, 3, 0, 3],
-          [3, 3, 3, 0]
-        ]
-      }],
-      units: [{
-        id: 'unit_0',
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        capacities: [{
-          unit_id: 'unit_0',
-          limit: 10,
-          overload_multiplier: 0,
-        }]
-      }],
-      services: [{
-        id: 'service_0',
-        type: 'pickup',
-        activity: {
-          point_id: 'point_1'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 9,
-        }]
-      }, {
-        id: 'service_1',
-        type: 'pickup',
-        activity: {
-          point_id: 'point_2'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 9,
-        }]
-      }, {
-        id: 'service_2',
-        type: 'delivery',
-        activity: {
-          point_id: 'point_3'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 9,
-        }]
-      }, {
-        id: 'service_3',
-        type: 'delivery',
-        activity: {
-          point_id: 'point_3'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 9,
-        }]
-      }, {
-        id: 'service_4',
-        type: 'delivery',
-        activity: {
-          point_id: 'point_3'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 9,
-        }]
-      }, {
-        id: 'service_5',
-        type: 'pickup',
-        activity: {
-          point_id: 'point_2'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 9,
-        }]
-      }],
-      configuration: {
-        resolution: {
-          duration: 20,
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
-    assert result
-    assert_equal 0, result[:unassigned].size
-    assert_equal 8, result[:routes][0][:activities].size
-  end
-
-  def test_pickup_delivery_3
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 3, 3, 3],
-          [3, 0, 3, 3],
-          [3, 3, 0, 3],
-          [3, 3, 3, 0]
-        ]
-      }],
-      units: [{
-        id: 'unit_0',
-      }, {
-        id: 'unit_1',
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        capacities: [{
-          unit_id: 'unit_0',
-          limit: 2,
-          overload_multiplier: 0,
-        }, {
-          unit_id: 'unit_1',
-          limit: 2,
-          overload_multiplier: 0,
-        }]
-      }],
-      services: [{
-        id: 'service_1',
-        type: 'service',
-        activity: {
-          point_id: 'point_1'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: -1,
-        }, {
-          unit_id: 'unit_1',
-          value: 1,
-        }]
-      }, {
-        id: 'service_2',
-        type: 'pickup',
-        activity: {
-          point_id: 'point_2'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 2,
-        }, {
-          unit_id: 'unit_1',
-          value: -2,
-        }]
-      }, {
-        id: 'service_3',
-        type: 'delivery',
-        activity: {
-          point_id: 'point_3'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: -1,
-        }, {
-          unit_id: 'unit_0',
-          value: -1,
-        }]
-      }, {
-        id: 'service_4',
-        type: 'delivery',
-        activity: {
-          point_id: 'point_3'
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: -3,
-        }, {
-          unit_id: 'unit_0',
-          value: 3,
-        }]
-      }],
-      configuration: {
-        resolution: {
-          duration: 20,
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
-    assert result
-    assert_equal 1, result[:unassigned].size
-    assert_equal 5, result[:routes][0][:activities].size
-
-    assert_equal 'service_3', result[:routes][0][:activities][1][:service_id]
-    assert_equal 'service_1', result[:routes][0][:activities][2][:service_id]
-    assert_equal 'service_2', result[:routes][0][:activities][3][:service_id]
-  end
-
   def test_route_duration
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
@@ -3072,8 +2734,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(VRP.pud)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 6, result[:routes][0][:activities].size
   end
@@ -3161,8 +2825,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1, result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
-    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1, result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
+    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
+                 result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
+    assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1,
+                 result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
     assert_equal 0, result[:unassigned].size
     assert_equal 6, result[:routes][0][:activities].size
   end
@@ -3270,7 +2936,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 5, result[:routes][0][:activities].size
   end
@@ -3289,8 +2956,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 6, result[:routes][0][:activities].size
   end
@@ -3304,11 +2973,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:relations] = [{
       type: :maximum_duration_lapse,
       lapse: 100,
-      linked_ids: ['shipment_0pickup', 'shipment_0delivery']
+      linked_ids: ['shipment_0_pickup', 'shipment_0_delivery']
     }, {
       type: :maximum_duration_lapse,
       lapse: 100,
-      linked_ids: ['shipment_1pickup', 'shipment_1delivery']
+      linked_ids: ['shipment_1_pickup', 'shipment_1_delivery']
     }]
     result = ortools.solve(TestHelper.create(problem), 'test')
     pickup_index = result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' }
@@ -3324,77 +2993,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     # pickup and delivery at not at same location so it is impossible to assign with lapse 0
     # we could use direct shipment instead
     assert_equal 4, result[:unassigned].size
-  end
-
-  def test_pickup_timewindow_after_delivery_timewindow
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1, 1],
-          [1, 0, 1, 1],
-          [1, 1, 0, 1],
-          [1, 1, 1, 0]
-        ]
-      }],
-      units: [{
-        id: 'unit_0',
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        cost_time_multiplier: 1,
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
-      shipments: [{
-        id: 'shipment_1',
-        pickup: {
-          point_id: 'point_1',
-          duration: 1,
-          late_multiplier: 0,
-          timewindows: [{
-            start: 6,
-            end: 9
-          }]
-        },
-        delivery: {
-          point_id: 'point_2',
-          duration: 1,
-          late_multiplier: 0,
-          timewindows: [{
-            start: 1,
-            end: 5
-          }]
-        }
-      }],
-      configuration: {
-        preprocessing: {
-          prefer_short_segment: true
-        },
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    refute ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
-    vrp[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
-    assert ortools.assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
   end
 
   def test_value_matrix
@@ -5378,20 +4976,32 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_empty result[:unassigned]
     shipment_route = result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:pickup_shipment_id] == 'shipment_0' } }
-    current_order = shipment_route[:activities].collect{ |stop| stop[:pickup_shipment_id] }
-    current_order.compact!
+    ordered_pickup_ids = shipment_route[:activities].map{ |act| act[:pickup_shipment_id] }.compact
+    delivery1 = vrp.services.find{ |service| service.id == "#{ordered_pickup_ids[1]}_delivery" }
+    pickup0 = vrp.services.find{ |service| service.id == "#{ordered_pickup_ids[0]}_pickup" }
 
     # add consecutivity :
-    relation = Models::Relation.new(type: :minimum_duration_lapse, linked_ids: [current_order[1], current_order[0]], lapse: 1800)
-    vrp.relations = [relation]
-    vrp.adapt_relations_between_shipments
+    relation = Models::Relation.new(type: :minimum_duration_lapse,
+                                    linked_services: [delivery1, pickup0],
+                                    linked_ids: [delivery1.id, pickup0.id],
+                                    lapse: 1800)
+    vrp.relations << relation
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
-    shipment_route = result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:pickup_shipment_id] == current_order[1] } }[:activities]
-    shipment_index = shipment_route.find_index{ |stop| stop[:delivery_shipment_id] == current_order[1] }
-    other_shipment_route = result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:pickup_shipment_id] == current_order[0] } }[:activities]
-    other_shipment_index = other_shipment_route.find_index{ |stop| stop[:delivery_shipment_id] == current_order[0] }
-    assert other_shipment_index
-    assert_operator shipment_route[shipment_index][:departure_time] + 1800, :<=, other_shipment_route[other_shipment_index][:begin_time]
+    shipment1_route = result[:routes].find{ |r|
+      r[:activities].any?{ |stop| stop[:pickup_shipment_id] == delivery1.original_id }
+    }
+    delivery1_index = shipment1_route[:activities].find_index{ |stop|
+      stop[:delivery_shipment_id] == delivery1.original_id
+    }
+    shipment0_route = result[:routes].find{ |r|
+      r[:activities].any?{ |stop| stop[:pickup_shipment_id] == pickup0.original_id }
+    }
+    pickup0_index = shipment0_route[:activities].find_index{ |stop|
+      stop[:delivery_shipment_id] == pickup0.original_id
+    }
+    assert pickup0_index
+    assert_operator shipment1_route[:activities][delivery1_index][:departure_time] + 1800, :<=,
+                    shipment0_route[:activities][pickup0_index][:begin_time]
   end
 
   def test_cost_details
@@ -5412,18 +5022,19 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_direct_shipment
     vrp = VRP.pud
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp.dup), nil)
     route = result[:routes].first[:activities]
-    first_shipment_index = route.find_index{ |stop| stop[:pickup_shipment_id] }
-    corresponding_delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == route[first_shipment_index][:pickup_shipment_id] }
-    assert_operator first_shipment_index + 1, :<, corresponding_delivery_index, 'If this is case, we should edit the services to make sure we are testing direct shipment properly'
-
-    vrp[:shipments].find{ |s| s[:id] == route[first_shipment_index][:pickup_shipment_id] }[:direct] = true
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    pickup_index = route.find_index{ |stop| stop[:pickup_shipment_id] }
+    pickup_id = route[pickup_index][:pickup_shipment_id]
+    delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == pickup_id }
+    assert_operator pickup_index + 1, :<, delivery_index,
+                    'If this is case, we should edit the services to make sure we are testing direct shipment properly'
+    vrp[:shipments].find{ |s| s[:id] == pickup_id }[:direct] = true
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp.dup), nil)
     route = result[:routes].first[:activities]
-    shipment_index = route.find_index{ |stop| stop[:pickup_shipment_id] == route[first_shipment_index][:pickup_shipment_id] }
-    delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == route[first_shipment_index][:pickup_shipment_id] }
-    assert_equal shipment_index + 1, delivery_index
+    pickup_index = route.find_index{ |stop| stop[:pickup_shipment_id] == pickup_id }
+    delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == pickup_id }
+    assert_equal pickup_index + 1, delivery_index
   end
 
   def test_ensure_total_time_and_travel_info_with_ortools

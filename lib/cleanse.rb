@@ -119,6 +119,6 @@ module Cleanse
   end
 
   def self.cleanse_empty_routes(result)
-    result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] } }
+    result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] } }
   end
 end

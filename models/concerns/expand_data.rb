@@ -34,7 +34,7 @@ module ExpandData
 
     self.routes.each{ |route|
       route.mission_ids.each{ |id|
-        corresponding = [self.services, self.shipments].compact.flatten.find{ |s| s.id == id }
+        corresponding = self.services.find{ |s| s.id == id }
         corresponding.sticky_vehicle_ids = [route.vehicle_id]
       }
     }
@@ -56,14 +56,14 @@ module ExpandData
     self.vehicles.each{ |vehicle|
       vehicle.unavailable_days |= unavailable_days
     }
-    [self.services + self.shipments].flatten.each{ |mission|
+    self.services.each{ |mission|
       mission.unavailable_days |= unavailable_days
     }
   end
 
   def provide_original_info
-    (self.services + self.shipments + self.vehicles).each{ |element|
-      element.original_id = element.id
+    (self.services + self.vehicles).each{ |element|
+      element.original_id ||= element.id
       element.original_skills = element.skills.dup
     }
   end

@@ -2835,7 +2835,8 @@ class WrapperTest < Minitest::Test
     problem[:shipments].first[:direct] = true
 
     generated_vrp = TestHelper.create(problem)
-    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(generated_vrp), :assert_no_direct_shipments
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(generated_vrp),
+                    :assert_no_relations_except_shipments
     assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(generated_vrp)
   end
 
@@ -3001,8 +3002,10 @@ class WrapperTest < Minitest::Test
     }]
 
     vrp = TestHelper.create(problem)
-    refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_relations_except_simple_shipments
-    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_relations_except_simple_shipments
+    refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
+                    :assert_no_relations_except_simple_shipments
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp),
+                    :assert_no_relations_except_simple_shipments
 
     problem[:relations] = [{
       type: :vehicle_group_duration,
@@ -3012,8 +3015,10 @@ class WrapperTest < Minitest::Test
     }]
 
     vrp = TestHelper.create(problem)
-    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_relations_except_simple_shipments
-    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_relations_except_simple_shipments
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
+                    :assert_no_relations_except_simple_shipments
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp),
+                    :assert_no_relations_except_simple_shipments
   end
 
   def test_solver_needed

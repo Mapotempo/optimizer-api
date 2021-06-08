@@ -145,8 +145,7 @@ module Interpreters
           vrp.preprocessing_max_split_size &&
           vrp.vehicles.size > 1 &&
           (vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit > 1) &&
-          (vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size &&
-          vrp.shipments.empty? # Clustering supports Shipment only as Relation  TODO: delete this check when Model::Shipment is removed
+          (vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
       else
         ss_data = service_vrp[:split_solve_data]
         return false if ss_data[:cannot_split_further]
@@ -484,7 +483,7 @@ module Interpreters
     end
 
     def self.remove_empty_routes(result)
-      result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] } }
+      result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] } }
     end
 
     def self.remove_poorly_populated_routes(vrp, result, limit)
@@ -506,11 +505,11 @@ module Interpreters
         if load_flag && time_flag
           emptied_routes = true
 
-          number_of_services_in_the_route = route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact.size
+          number_of_services_in_the_route = route[:activities].map{ |a| a[:service_id] && a.slice(:service_id, :detail).compact }.compact.size
 
           log "route #{route[:vehicle_id]} is emptied: #{number_of_services_in_the_route} services are now unassigned.", level: :info
 
-          result[:unassigned] += route[:activities].map{ |a| a.slice(:service_id, :pickup_shipment_id, :delivery_shipment_id, :detail).compact if a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] }.compact
+          result[:unassigned] += route[:activities].map{ |a| a[:service_id] && a.slice(:service_id, :detail).compact }.compact
           true
         end
       }
@@ -563,10 +562,9 @@ module Interpreters
         }
       end
       sub_vrp.services = sub_vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
-      sub_vrp.shipments = sub_vrp.shipments.select{ |shipment| partial_service_ids.include?(shipment.id) }.compact
-      points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.uniq.compact | sub_vrp.shipments.flat_map{ |s| [s.pickup.point.id, s.delivery.point.id] }.uniq.compact
+      points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.uniq.compact
       sub_vrp.rests = sub_vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
-      sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } || sub_vrp.shipments.any? { |s| id == s.id + 'delivery' || id == s.id + 'pickup' } } }
+      sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } } }
       sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
       sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
       sub_vrp = add_corresponding_entity_skills(entity, sub_vrp)
@@ -672,8 +670,7 @@ module Interpreters
       options = defaults.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
-      if vrp.shipments.all?{ |shipment| shipment&.pickup&.point&.location && shipment&.delivery&.point&.location } &&
-         vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
+      if vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
         cumulated_metrics = Hash.new(0)
 
         if options[:entity] == :work_day || !vrp.matrices.empty?
@@ -938,9 +935,6 @@ module Interpreters
                       steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
                     }
                   end
-
-        # TODO: this raise can be deleted once the Models::Shipment is replaced with Relations
-        raise UnsupportedProblemError.new('Clustering supports `Shipments` only as `Relations`') if vrp.shipments.any?
 
         # TODO(0): instead of an overall minimum vehicle duration we can only consider the vehicles
         # that can serve the sub_set that is about to be merged in theory.

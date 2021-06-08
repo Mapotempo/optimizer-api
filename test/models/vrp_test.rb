@@ -139,8 +139,8 @@ module Models
         generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
         assert_equal 3, generated_vrp.relations.size
         assert_equal 2, generated_vrp.relations.first.linked_ids.size
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0delivery'
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_delivery'
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
       }
 
       vrp[:services] = [{
@@ -154,7 +154,7 @@ module Models
       }]
       generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
       assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
 
       vrp[:relations] = [{
         type: :same_route,

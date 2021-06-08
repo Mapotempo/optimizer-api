@@ -557,5 +557,78 @@ module Models
       assert_equal 'Vehicle timewindows are infeasible',
                    error.message, 'Error message does not match'
     end
+
+    def test_pickup_timewindow_after_delivery_timewindow
+      problem = {
+        matrices: [{
+          id: 'matrix_0',
+          time: [
+            [0, 1, 1, 1],
+            [1, 0, 1, 1],
+            [1, 1, 0, 1],
+            [1, 1, 1, 0]
+          ]
+        }],
+        units: [{
+          id: 'unit_0',
+        }],
+        points: [{
+          id: 'point_0',
+          matrix_index: 0
+        }, {
+          id: 'point_1',
+          matrix_index: 1
+        }, {
+          id: 'point_2',
+          matrix_index: 2
+        }],
+        vehicles: [{
+          id: 'vehicle_0',
+          cost_time_multiplier: 1,
+          start_point_id: 'point_0',
+          end_point_id: 'point_0',
+          matrix_id: 'matrix_0'
+        }],
+        shipments: [{
+          id: 'shipment_1',
+          pickup: {
+            point_id: 'point_1',
+            duration: 1,
+            late_multiplier: 0,
+            timewindows: [{
+              start: 6,
+              end: 9
+            }]
+          },
+          delivery: {
+            point_id: 'point_2',
+            duration: 1,
+            late_multiplier: 0,
+            timewindows: [{
+              start: 1,
+              end: 5
+            }]
+          }
+        }],
+        configuration: {
+          preprocessing: {
+            prefer_short_segment: true
+          },
+          resolution: {
+            duration: 100
+          },
+          restitution: {
+            intermediate_solutions: false,
+          }
+        }
+      }
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+      end
+      problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
+
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+    end
   end
 end

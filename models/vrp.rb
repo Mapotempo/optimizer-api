@@ -115,7 +115,6 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :vehicles, class_name: 'Models::Vehicle'
     has_many :services, class_name: 'Models::Service'
-    has_many :shipments, class_name: 'Models::Shipment'
     has_many :relations, class_name: 'Models::Relation'
     has_many :routes, class_name: 'Models::Route'
     has_many :subtours, class_name: 'Models::Subtour'
@@ -126,12 +125,10 @@ module Models
       Models.delete_all if delete
 
       vrp = super({})
+      self.convert_shipments_to_services(hash)
       self.filter(hash) # TODO : add filters.rb here
       # moved filter here to make sure we do have schedule_indices (not date) to do work_day check with lapses
       vrp.check_consistency(hash)
-      # TODO: check_consistency has checks written for hash[:shipment] when removing Model::Shipment, move that logic to
-      # relations and move the convert_shipments_to_services higher so that all logic is implemented with relations
-      self.convert_shipments_to_services(hash)
       self.ensure_retrocompatibility(hash)
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :relations, :subtours, :routes, :configuration].each{ |key|
@@ -150,12 +147,20 @@ module Models
         linked_ids = []
         %i[pickup delivery].each{ |part|
           service = Oj.load(Oj.dump(shipment))
-          service[:id] += part.to_s
+          service[:original_id] = shipment[:id]
+          service[:id] += "_#{part}"
           service[:id] += '_conv' while hash[:services].any?{ |s| s[:id] == service[:id] } # protect against id clash
           linked_ids << service[:id]
-          service[:type] = part.to_s # (QUESTION !!!!! Do we want this to be 'service' and multiply the quantity on our own with (+1/-1) or keep 'pickup' and 'delivery'?) TODO: :type should be symbol
+          service[:type] = part.to_sym
           service[:activity] = service[part]
           %i[pickup delivery direct maximum_inroute_duration].each{ |key| service.delete(key) }
+
+          if part == :delivery
+            service[:quantities]&.each{ |quantity|
+              quantity[:value] = -quantity[:value] if quantity[:value]
+              quantity[:setup_value] = -quantity[:setup_value] if quantity[:setup_value]
+            }
+          end
           hash[:services] << service
         }
         convert_relations_of_shipment_to_services(hash, shipment[:id], linked_ids[0], linked_ids[1])
@@ -164,6 +169,7 @@ module Models
         max_lapse = shipment[:maximum_inroute_duration]
         hash[:relations] << { type: :maximum_duration_lapse, linked_ids: linked_ids, lapse: max_lapse } if max_lapse
       }
+      convert_shipment_within_routes(hash)
       hash.delete(:shipments)
     end
 
@@ -189,6 +195,29 @@ module Models
       }
     end
 
+    def self.convert_shipment_within_routes(hash)
+      return unless hash[:shipments]
+      shipment_ids = Hash.new
+      hash[:shipments].each{ |shipment| shipment_ids[shipment[:id]] = 0 }
+      hash[:routes]&.each{ |route|
+        route[:mission_ids].map!{ |mission_id|
+          if shipment_ids.key?(mission_id)
+            if shipment_ids[mission_id].zero?
+              shipment_ids[mission_id] += 1
+              "#{mission_id}_pickup"
+            elsif shipment_ids[mission_id] == 1
+              shipment_ids[mission_id] += 1
+              "#{mission_id}_delivery"
+            else
+              raise OptimizerWrapper::DiscordantProblemError.new('A shipment could only appear twice in routes.')
+            end
+          else
+            mission_id
+          end
+        }
+      }
+    end
+
     def self.expand_data(vrp)
       vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
@@ -202,7 +231,7 @@ module Models
         case r[:type]
         when :force_first
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            to_modify = [hash[:services]].flatten.find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_first
@@ -210,7 +239,7 @@ module Models
           relations_to_remove << r_i
         when :never_first
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            to_modify = [hash[:services]].flatten.find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Never first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :never_first
@@ -218,7 +247,7 @@ module Models
           relations_to_remove << r_i
         when :force_end
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            to_modify = [hash[:services]].flatten.find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force end relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_last
@@ -305,15 +334,14 @@ module Models
     end
 
     def self.remove_unnecessary_units(hash)
-      return hash if !hash[:units] || !hash[:vehicles] || (!hash[:services] && !hash[:shipments])
+      return hash if !hash[:units]
 
       vehicle_units = hash[:vehicles]&.flat_map{ |v| v[:capacities]&.map{ |c| c[:unit_id] } || [] } || []
       subtour_units = hash[:subtours]&.flat_map{ |v| v[:capacities]&.map{ |c| c[:unit_id] } || [] } || []
       service_units = hash[:services]&.flat_map{ |s| s[:quantities]&.map{ |c| c[:unit_id] } || [] } || []
-      shipment_units = hash[:shipments]&.flat_map{ |s| s[:quantities]&.map{ |c| c[:unit_id] } || [] } || []
 
       capacity_units = (hash[:capacities]&.map{ |c| c[:unit_id] } || []) | vehicle_units | subtour_units
-      quantity_units = (hash[:quantities]&.map{ |q| q[:unit_id] } || []) | service_units | shipment_units
+      quantity_units = (hash[:quantities]&.map{ |q| q[:unit_id] } || []) | service_units
       needed_units = capacity_units & quantity_units
 
       hash[:units].delete_if{ |u| needed_units.exclude? u[:id] }
@@ -324,7 +352,6 @@ module Models
       hash[:vehicles]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
       hash[:subtours]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
       hash[:services]&.each{ |s| rejected_quantities.each{ |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
-      hash[:shipments]&.each{ |s| rejected_quantities.each{ |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
 
       hash[:capacities]&.delete_if{ |capacity| rejected_capacities.include? capacity[:id] }
       hash[:quantities]&.delete_if{ |quantity| rejected_quantities.include? quantity[:id] }
@@ -332,7 +359,6 @@ module Models
       hash[:vehicles]&.each{ |v| v[:capacities]&.delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
       hash[:subtours]&.each{ |v| v[:capacities]&.delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
       hash[:services]&.each{ |v| v[:quantities]&.delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
-      hash[:shipments]&.each{ |s| s[:quantities]&.delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
     end
 
     def self.remove_unnecessary_relations(hash)
@@ -404,7 +430,7 @@ module Models
     end
 
     def self.detect_date_indices_inconsistency(hash)
-      missions_and_vehicles = hash[:services].to_a + hash[:shipments].to_a + hash[:vehicles].to_a
+      missions_and_vehicles = hash[:services] + hash[:vehicles]
       has_date = missions_and_vehicles.any?{ |m|
         (m[:unavailable_date_ranges] || m[:unavailable_work_date])&.any?
       }
@@ -443,7 +469,7 @@ module Models
 
       # remove unavailable dates and ranges :
       hash[:vehicles].each{ |v| deduce_unavailable_days(hash, v, start_index, end_index, :vehicle) }
-      [hash[:services].to_a + hash[:shipments].to_a].flatten.each{ |element|
+      hash[:services].each{ |element|
         deduce_unavailable_days(hash, element, start_index, end_index, :visit)
       }
       if hash[:configuration][:schedule]
@@ -566,7 +592,7 @@ module Models
     end
 
     def visits
-      Helper.visits(self.services, self.shipments)
+      Helper.visits(self.services)
     end
 
     def total_work_times

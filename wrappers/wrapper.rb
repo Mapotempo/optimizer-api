@@ -23,9 +23,7 @@ module Wrappers
     end
 
     def solver_constraints
-      [
-       :assert_no_pickup_timewindows_after_delivery_timewindows,
-      ]
+      []
     end
 
     def inapplicable_solve?(vrp)
@@ -62,19 +60,6 @@ module Wrappers
 
     def assert_vehicles_no_alternative_skills(vrp)
       vrp.vehicles.none?{ |vehicle| vehicle.skills.size > 1 }
-    end
-
-    def assert_no_direct_shipments(vrp)
-      vrp.shipments.none?(&:direct)
-    end
-
-    def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
-      vrp.shipments.none? { |shipment|
-        first_open = shipment.pickup.timewindows.min_by(&:start)
-        last_close = shipment.delivery.timewindows.max_by(&:end)
-        first_open && last_close && first_open.start + 86400 * (first_open.day_index || 0) >
-          (last_close.end || 86399) + 86400 * (last_close.day_index || 0)
-      }
     end
 
     def assert_services_no_priority(vrp)
@@ -134,16 +119,6 @@ module Wrappers
       }
     end
 
-    def assert_shipments_no_late_multiplier(vrp)
-      vrp.shipments.none?{ |shipment|
-        shipment.pickup.late_multiplier&.positive? || shipment.delivery.late_multiplier&.positive?
-      }
-    end
-
-    def assert_missions_no_late_multiplier(vrp)
-      assert_shipments_no_late_multiplier(vrp) && assert_services_no_late_multiplier(vrp)
-    end
-
     def assert_matrices_only_one(vrp)
       vrp.vehicles.group_by{ |vehicle|
         vehicle.matrix_id || [vehicle.router_mode.to_sym, vehicle.router_dimension, vehicle.speed_multiplier]
@@ -167,8 +142,7 @@ module Wrappers
     end
 
     def assert_one_sticky_at_most(vrp)
-      vrp.services.none?{ |service| service.sticky_vehicles.size > 1 } &&
-        vrp.shipments.none?{ |shipment| shipment.sticky_vehicles.size > 1 }
+      vrp.services.none?{ |service| service.sticky_vehicles.size > 1 }
     end
 
     def assert_no_relations_except_simple_shipments(vrp)
@@ -254,12 +228,8 @@ module Wrappers
       !vrp.resolution_evaluate_only
     end
 
-    def assert_no_shipments_if_evaluation(vrp)
-      (!vrp.shipments || vrp.shipments.empty?) || !vrp.resolution_evaluate_only
-    end
-
     def assert_only_one_visit(vrp)
-      vrp.services.all?{ |service| service.visits_number == 1 } && vrp.shipments.all?{ |shipment| shipment.visits_number == 1 }
+      vrp.services.all?{ |service| service.visits_number == 1 }
     end
 
     def assert_no_periodic_if_evaluation(vrp)
@@ -403,7 +373,7 @@ module Wrappers
     end
 
     def assert_no_exclusion_cost(vrp)
-      vrp.services.none?(&:exclusion_cost) && vrp.shipments.none?(&:exclusion_cost)
+      vrp.services.none?(&:exclusion_cost)
     end
 
     def assert_only_time_dimension(vrp)
@@ -451,17 +421,12 @@ module Wrappers
     end
 
     def assert_no_complex_setup_durations(vrp)
-      (
-        vrp.services.all?{ |s| s.activity.setup_duration.to_i == 0 } || # either there is no setup duration
-        ( # or it can be simplified by augmenting the time matrix
-          vrp.services.group_by{ |s| s.activity.point }.all?{ |_point, service_group|
-            service_group.uniq{ |s| s.activity.setup_duration.to_i }.size == 1
-          } && vrp.vehicles.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size <= 1
-        )
-      ) && vrp.shipments.all?{ |shipment|
-        shipment.pickup.setup_duration.to_i == 0 &&
-          shipment.delivery.setup_duration.to_i == 0
-      }
+      vrp.services.all?{ |s| s.activity.setup_duration.to_i == 0 } || # either there is no setup duration
+      ( # or it can be simplified by augmenting the time matrix
+        vrp.services.group_by{ |s| s.activity.point }.all?{ |_point, service_group|
+          service_group.uniq{ |s| s.activity.setup_duration.to_i }.size == 1
+        } && vrp.vehicles.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size <= 1
+      )
     end
 
     def solve_synchronous?(_vrp)
@@ -1291,25 +1256,6 @@ module Wrappers
       }
     end
 
-    def unassigned_shipments(vrp, unassigned_reason)
-      vrp.shipments.flat_map{ |shipment|
-        shipment.visits_number.times.flat_map{ |visit_index|
-          [{
-            pickup_shipment_id: vrp.schedule? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
-            point_id: shipment.pickup.point_id,
-            detail: build_detail(shipment, shipment.pickup, shipment.pickup.point, nil, nil, nil),
-            reason: unassigned_reason
-           }.delete_if{ |_k, v| !v },
-           {
-            delivery_shipment_id: vrp.schedule? ? "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}" : shipment.id.to_s,
-            point_id: shipment.delivery.point_id,
-            detail: build_detail(shipment, shipment.delivery, shipment.delivery.point, nil, nil, nil, true),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }]
-        }
-      }
-    end
-
     def unassigned_rests(vrp)
       vrp.vehicles.flat_map{ |vehicle|
         vehicle.rests.flat_map{ |rest|
@@ -1337,7 +1283,6 @@ module Wrappers
           OptimizerWrapper.empty_route(vrp, vehicle)
         },
         unassigned: (unassigned_services(vrp, unassigned_reason) +
-                     unassigned_shipments(vrp, unassigned_reason) +
                      unassigned_rests(vrp)).flatten,
         elapsed: 0,
         total_distance: nil
