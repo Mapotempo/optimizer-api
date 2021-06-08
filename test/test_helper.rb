@@ -209,6 +209,12 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     vrps
   end
 
+  def self.periodic_expand(problem)
+    vrp = TestHelper.create(problem)
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    periodic.send(:expand, vrp, nil)
+  end
+
   def self.expand_vehicles(vrp)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     periodic.generate_vehicles(vrp)

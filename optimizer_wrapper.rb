@@ -510,17 +510,17 @@ module OptimizerWrapper
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
         log 'Wrong number of visits returned in result', level: :warn
-        raise RuntimeError, 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
+        raise 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
       end
     }
   end
 
   def self.adjust_vehicles_duration(vrp)
-      vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
-        v.rests.each{ |r|
-          v.duration += r.duration
-        }
+    vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
+      v.rests.each{ |r|
+        v.duration += r.duration
       }
+    }
   end
 
   def self.round_route_stats(route)

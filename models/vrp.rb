@@ -547,7 +547,7 @@ module Models
     end
 
     def self.generate_first_last_possible_day_for_first_visit(hash)
-      [hash[:services], hash[:shipments]].compact.flatten.each{ |s|
+      hash[:services].to_a.each{ |s|
         next unless s[:last_performed_visit_day_index]
 
         s[:first_possible_days] = [

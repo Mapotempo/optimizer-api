@@ -44,7 +44,9 @@ module Interpreters
       vrp.relations = generate_relations(vrp)
       vrp.rests = []
       vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
-        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+        a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ?
+          a.global_day_index <=> b.global_day_index :
+          a.id <=> b.id
       }
 
       if vrp.periodic_heuristic?
@@ -408,11 +410,11 @@ module Interpreters
       # for each of this service's visits, computes first and last possible day to be assigned
       vrp.services.each{ |service|
         service.first_possible_days =
-          visits_extremum_days(service, service[:first_possible_days], vrp.vehicles,
+          visits_extremum_days(service, service.first_possible_days, vrp.vehicles,
                                service.minimum_lapse || 1, { is_min_lapse: true, first_possible_days: [] })
         if service.last_possible_days.any?
           service.last_possible_days =
-            visits_extremum_days(service, service[:last_possible_days], vrp.vehicles, service.maximum_lapse,
+            visits_extremum_days(service, service.last_possible_days, vrp.vehicles, service.maximum_lapse,
                                  { is_min_lapse: false, first_possible_days: service[:first_possible_days] })
         else
           day = @schedule_end
