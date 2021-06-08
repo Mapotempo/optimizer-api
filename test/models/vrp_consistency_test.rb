@@ -313,6 +313,14 @@ module Models
       assert_raises OptimizerWrapper::DiscordantProblemError do
         Models::Vrp.filter(vrp)
       end
+
+      vrp[:vehicles].first[:unavailable_work_date] = []
+      Models::Vrp.filter(vrp)
+
+      vrp[:services].first[:last_performed_visit_date] = Date.new(2021, 2, 11)
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        Models::Vrp.filter(vrp)
+      end
     end
 
     def test_switched_lapses_are_rejected

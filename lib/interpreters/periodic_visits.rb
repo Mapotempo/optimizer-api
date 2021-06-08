@@ -371,36 +371,63 @@ module Interpreters
       end
     end
 
+    def visits_extremum_days(service, possible_days, vehicles, lapse, options)
+      day = @schedule_start
+      nb_visits_seen = 0
+      set = []
+      while day <= @schedule_end && nb_visits_seen < service.visits_number
+        # it is possible that user provided last_performed_visit_date/day_index or filled first_possible_days field
+        # we assume if there are X values in first_possible_days then it corresponds to X first visits of this service
+        # user needs to provide nil value if he wants to skip one service when providing first_possible_days
+        day =
+          if lapse
+            [possible_days[nb_visits_seen], day].compact.max
+          else
+            # case with maximum_lapse, but maximum_lapse is nil
+            @schedule_end - (service.visits_number - nb_visits_seen - 1) * (service.minimum_lapse || 1)
+          end
+
+        while (service.unavailable_days.include?(day) || vehicles.none?{ |v| v.available_at(day) } || # day is not available
+              nb_visits_seen > 0 && day <= set[nb_visits_seen - 1] ||
+              options[:first_possible_days][nb_visits_seen] && options[:first_possible_days][nb_visits_seen] > day) &&
+              day.between?(@schedule_start, @schedule_end)
+          day += options[:is_min_lapse] ? 1 : -1
+        end
+
+        return set unless day.between?(@schedule_start, @schedule_end)
+
+        set << day
+        nb_visits_seen += 1
+        day += lapse || 1
+      end
+
+      set
+    end
+
     def compute_possible_days(vrp)
       # for each of this service's visits, computes first and last possible day to be assigned
       vrp.services.each{ |service|
-        day = @schedule_start
-        nb_services_seen = 0
+        service.first_possible_days =
+          visits_extremum_days(service, service[:first_possible_days], vrp.vehicles,
+                               service.minimum_lapse || 1, { is_min_lapse: true, first_possible_days: [] })
+        if service.last_possible_days.any?
+          service.last_possible_days =
+            visits_extremum_days(service, service[:last_possible_days], vrp.vehicles, service.maximum_lapse,
+                                 { is_min_lapse: false, first_possible_days: service[:first_possible_days] })
+        else
+          day = @schedule_end
+          nb_visits_seen = 0
+          last_possible_days = []
+          while day >= @schedule_start && nb_visits_seen < service.visits_number
+            day -= 1 while (service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) } ||
+                           service.last_possible_days[nb_visits_seen - 1]) && day >= @schedule_start
 
-        # first possible day
-        while day <= @schedule_end && nb_services_seen < service.visits_number
-          if service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
-            day += 1
-          else
-            service.first_possible_days += [day]
-            nb_services_seen += 1
-            day += service.minimum_lapse || 1
-          end
-        end
-
-        # last possible day
-        day = @schedule_end
-        nb_services_seen = 0
-        while day >= @schedule_start && nb_services_seen < service.visits_number
-          if service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
-            day -= 1
-          else
-            service.last_possible_days += [day]
-            nb_services_seen += 1
+            last_possible_days << day
+            nb_visits_seen += 1
             day -= service.minimum_lapse || 1
           end
+          service.last_possible_days = last_possible_days.reverse
         end
-        service.last_possible_days.reverse!
       }
     end
 

@@ -1963,59 +1963,12 @@ class WrapperTest < Minitest::Test
   end
 
   def test_impossible_service_unconsistent_minimum_lapse
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        timewindow: {
-          start: 0,
-        }
-      }],
-      services: [{
-        id: 'service_1',
-        visits_number: 2,
-        activity: {
-          point_id: 'point_1'
-        },
-        minimum_lapse: 2
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 100,
-        },
-        schedule: {
-          range_date: {
-            start: Date.new(2017, 1, 27),
-            end: Date.new(2017, 1, 28)
-          }
-        }
-      }
-    }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    problem = VRP.periodic
+    problem[:services][0][:visits_number] = 2
+    problem[:services][0][:minimum_lapse] = 2
+    problem[:configuration][:schedule] = { range_date: { start: Date.new(2017, 1, 27), end: Date.new(2017, 1, 28) }}
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
     assert_equal(2, result[:unassigned].count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
   end
 
@@ -2746,7 +2699,7 @@ class WrapperTest < Minitest::Test
     vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 2 }
     assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? } }
-    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    result = OptimizerWrapper.config[:services][:demo].detect_scheduling_unfeasible_services(TestHelper.create(vrp))
     assert_equal(2, result.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].select{ |tw| tw[:day_index] == 2 }.each{ |tw| tw[:day_index] = 0 } }
     assert_equal(2, result.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
@@ -2754,7 +2707,7 @@ class WrapperTest < Minitest::Test
 
   def test_impossible_minimum_lapse_opened_days_real_case
     vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
-    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
+    result = OptimizerWrapper.config[:services][:demo].detect_scheduling_unfeasible_services(vrp)
     result.select!{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }
     result.collect!{ |un| un[:original_service_id] }
     result.uniq!
@@ -3233,5 +3186,46 @@ class WrapperTest < Minitest::Test
     # ship and service but only check service
     unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
     assert_equal 1, (unfeasible_services.count{ |un| un[:reason] == 'Service timewindows are infeasible' })
+  end
+
+  def test_detect_unfeasible_with_last_know_date_index
+    problem = VRP.periodic
+    problem[:services].first[:visits_number] = 3
+    problem[:services].first[:minimum_lapse] = 15
+    problem[:services].first[:last_performed_visit_day_index] = -1
+    problem[:services] = [problem[:services].first]
+    problem[:configuration][:schedule][:range_indices] = { start: 0, end: 30 }
+
+    vrp = TestHelper.create(problem)
+    Interpreters::PeriodicVisits.new(vrp)
+    unassigned = OptimizerWrapper.config[:services][:demo].detect_scheduling_unfeasible_services(vrp)
+    assert(unassigned.any?{ |un| un[:reason].include?('Provided constraints do not allow to find a range') })
+  end
+
+  def test_detect_unfeasible_because_of_first_last_possible_days
+    problem = VRP.periodic
+    problem[:services].first[:visits_number] = 2
+    problem[:services].first[:minimum_lapse] = 1
+    problem[:services].first[:maximum_lapse] = 30
+    problem[:services].first[:first_possible_days] = [10]
+    problem[:services].first[:last_possible_days] = [2]
+    problem[:configuration][:schedule][:range_indices] = { start: 0, end: 30 }
+    vrp = TestHelper.create(problem)
+    Interpreters::PeriodicVisits.new(vrp)
+    unassigned = OptimizerWrapper.config[:services][:demo].detect_scheduling_unfeasible_services(vrp)
+    assert(unassigned.any?{ |un| un[:reason].include?('Provided constraints do not allow to find a range') })
+
+    # clean to be feasible
+    problem[:services].each{ |s| s.delete(:first_possible_days); s.delete(:last_possible_days) }
+    vrp = TestHelper.create(problem)
+    Interpreters::PeriodicVisits.new(vrp)
+    assert_empty OptimizerWrapper.config[:services][:demo].detect_scheduling_unfeasible_services(vrp)
+
+    # make unfeasible because of unavailable days
+    problem[:services].first[:first_possible_days] = [10]
+    problem[:configuration][:schedule][:unavailable_indices] = (10..30).to_a
+    vrp = TestHelper.create(problem)
+    Interpreters::PeriodicVisits.new(vrp)
+    assert(unassigned.any?{ |un| un[:reason].include?('Provided constraints do not allow to find a range') })
   end
 end

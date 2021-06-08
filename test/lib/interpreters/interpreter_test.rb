@@ -1592,4 +1592,118 @@ class InterpreterTest < Minitest::Test
     assert_equal 4, expanded_vrp.vehicles.size
     assert_equal 2, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
   end
+
+  def test_first_last_possible_days_with_last_performed_visit_date
+    vrp = VRP.periodic
+    vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 30 }
+    vrp[:services].first[:visits_number] = 3
+    vrp[:services].first[:minimum_lapse] = 10
+    vrp[:services] = [vrp[:services].first]
+
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[0], [10], [20]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[10], [20], [30]], expanded_vrp.services.collect(&:last_possible_days)
+
+    vrp[:services].first[:last_performed_visit_day_index] = -5
+    created_vrp = TestHelper.create(vrp)
+    assert_equal [5], created_vrp.services.first.first_possible_days
+    assert_equal [30], created_vrp.services.first.last_possible_days
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[5], [15], [25]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[10], [20], [30]], expanded_vrp.services.collect(&:last_possible_days)
+
+    vrp[:services].first[:last_performed_visit_day_index] = -5
+    vrp[:services].first[:minimum_lapse] = nil
+    vrp[:services].first[:maximum_lapse] = 10
+    vrp[:services].each{ |s| s.delete(:first_possible_days); s.delete(:last_possible_days) }
+    created_vrp = TestHelper.create(vrp)
+    assert_equal [0], created_vrp.services.first.first_possible_days
+    assert_equal [5], created_vrp.services.first.last_possible_days
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[0], [1], [2]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[5], [15], [25]], expanded_vrp.services.collect(&:last_possible_days)
+
+    vrp[:services].first[:last_performed_visit_day_index] = -2
+    vrp[:services].first[:minimum_lapse] = 3
+    vrp[:services].first[:maximum_lapse] = 8
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[1], [4], [7]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[6], [14], [22]], expanded_vrp.services.collect(&:last_possible_days)
+
+    vrp[:services].first[:last_performed_visit_day_index] = -1
+    vrp[:services].first[:minimum_lapse] = nil
+    vrp[:services].first[:maximum_lapse] = nil
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[0], [1], [2]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[28], [29], [30]], expanded_vrp.services.collect(&:last_possible_days)
+  end
+
+  def test_first_last_possible_days_with_last_performed_visit_date_with_schedule_start_not_zero
+    vrp = VRP.periodic
+    vrp[:configuration][:schedule][:range_indices] = { start: 2, end: 30 }
+    vrp[:services].first[:visits_number] = 3
+    vrp[:services].first[:minimum_lapse] = 10
+    vrp[:services] = [vrp[:services].first]
+
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[2], [12], [22]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[10], [20], [30]], expanded_vrp.services.collect(&:last_possible_days)
+
+    vrp[:services].first[:last_performed_visit_day_index] = -1
+    created_vrp = TestHelper.create(vrp)
+    assert_equal [9], created_vrp.services.first.first_possible_days
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[9], [19], [29]], expanded_vrp.services.collect(&:first_possible_days)
+  end
+
+  def test_first_last_possible_days_with_last_performed_visit_date_with_schedule_range_date
+    vrp = VRP.periodic
+    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 6, 1), end: Date.new(2021, 6, 30) }}
+
+    # last_performed is before schedule start
+    vrp[:services].first[:last_performed_visit_date] = Date.new(2021, 5, 31)
+    vrp[:services].first[:visits_number] = 3
+    vrp[:services].first[:minimum_lapse] = 10
+    vrp[:services] = [vrp[:services].first]
+
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[10], [20], [30]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[10], [20], [30]], expanded_vrp.services.collect(&:last_possible_days)
+
+    # last_performed is after schedule start
+    vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 6, 1), end: Date.new(2021, 6, 30) }}
+    vrp[:services].first[:last_performed_visit_date] = Date.new(2021, 6, 5)
+    vrp[:services].first[:visits_number] = 3
+    vrp[:services].first[:minimum_lapse] = 5
+    vrp[:services].each{ |s| s.delete(:first_possible_days); s.delete(:last_possible_days) }
+    vrp[:services] = [vrp[:services].first]
+
+    created_vrp = TestHelper.create(vrp)
+    assert_equal [10], created_vrp.services.first.first_possible_days
+    assert_equal [30], created_vrp.services.first.last_possible_days
+
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal [[10], [15], [20]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[20], [25], [30]], expanded_vrp.services.collect(&:last_possible_days)
+  end
+
+  def test_first_last_possible_days_with_and_last_performed_with_one_visit
+    # even thought this is not very consistent because 1 visit should have no lapse,
+    # we ensure it would work if we wanted to create similar constraints with previous period
+    problem = VRP.periodic
+    created_vrp = TestHelper.create(problem)
+    assert_empty created_vrp.services.first.first_possible_days
+    assert_empty created_vrp.services.first.last_possible_days
+
+    expanded_vrp = TestHelper.periodic_expand(problem)
+    assert_equal [[0], [0], [0]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[3], [3], [3]], expanded_vrp.services.collect(&:last_possible_days)
+
+    problem[:services].first[:last_performed_visit_day_index] = -2
+    problem[:services].first[:minimum_lapse] = 3
+    problem[:services].first[:maximum_lapse] = 4
+    expanded_vrp = TestHelper.periodic_expand(problem)
+    assert_equal [[1], [0], [0]], expanded_vrp.services.collect(&:first_possible_days)
+    assert_equal [[2], [3], [3]], expanded_vrp.services.collect(&:last_possible_days)
+  end
 end

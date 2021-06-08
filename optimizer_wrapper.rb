@@ -197,6 +197,17 @@ module OptimizerWrapper
     result
   end
 
+  def self.remove_infeasible_services(vrp, sub_unfeasible_services)
+    services_to_reinject = []
+    sub_unfeasible_services.each{ |una_service|
+      index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+      if index
+        services_to_reinject << vrp.services.slice!(index)
+      end
+    }
+    services_to_reinject
+  end
+
   def self.solve(service_vrp, job = nil, block = nil)
     vrp = service_vrp[:vrp]
     service = service_vrp[:service]
@@ -227,17 +238,13 @@ module OptimizerWrapper
       sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
       vrp.clean_according_to(sub_unfeasible_services)
 
-      # Remove infeasible services
-      sub_unfeasible_services.each{ |una_service|
-        index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
-        if index
-          services_to_reinject << vrp.services.slice!(index)
-        end
-      }
+      services_to_reinject += remove_infeasible_services(vrp, sub_unfeasible_services)
 
       # TODO: refactor with dedicated class
       if vrp.schedule?
         periodic = Interpreters::PeriodicVisits.new(vrp)
+        unfeasible_services += config[:services][service].detect_scheduling_unfeasible_services(vrp)
+        services_to_reinject += remove_infeasible_services(vrp, unfeasible_services)
         vrp = periodic.expand(vrp, job, &block)
         optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
       end

@@ -331,6 +331,9 @@ module VrpMissions
     optional(:unavailable_visit_day_date, type: Array, desc: '(Schedule only) Express the exceptionnals days of unavailability')
     mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
+    optional(:last_performed_visit_day_index, type: Integer, desc: '(Periodic heuristic only) Day index where last visit of this service took place within previous schedule. Lapse need to be respected towards this day index.')
+    optional(:last_performed_visit_date, type: Date, desc: '(Periodic heuristic only) Date where last visit of this service took place within previous schedule. Lapse need to be respected towards this date.')
+    mutually_exclusive :last_performed_visit_day_index, :last_performed_visit_date
     optional(:minimum_lapse, type: Float, desc: '(Schedule only) Minimum day lapse between two visits')
     optional(:maximum_lapse, type: Float, desc: '(Schedule only) Maximum day lapse between two visits')
     optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the service is assigned', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
