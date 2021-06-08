@@ -270,6 +270,17 @@ module PeriodicEndPhase
     still_removed
   end
 
+  def compute_costs_for_route_with_compatible_ids(all_ids, day, route_data)
+    ids_to_compute = all_ids.select{ |id|
+      # TODO : ensure lapses are respected
+      !@services_data[id][:used_days].include?(day) &&
+        ((@services_data[id][:used_days] + [day]).sort.find_index(day) > 0 ||
+        day_in_possible_interval(id, day, 1))
+    }
+
+    compute_costs_for_route(route_data, ids_to_compute, false)
+  end
+
   def reaffect_in_non_empty_route(still_removed)
     need_to_stop = false
     until still_removed.empty? || need_to_stop
@@ -281,7 +292,7 @@ module PeriodicEndPhase
             []
           else
             referent_route ||= route_data
-            insertion_costs = compute_costs_for_route(route_data, remaining_ids)
+            insertion_costs = compute_costs_for_route_with_compatible_ids(remaining_ids, day, route_data)
             insertion_costs.each{ |cost|
               cost[:vehicle] = vehicle_id
               cost[:day] = day
@@ -380,7 +391,8 @@ module PeriodicEndPhase
         keep_inserting = true
         inserted = []
         while keep_inserting
-          insertion_costs = compute_costs_for_route(route_data, still_removed.collect(&:first).uniq - inserted)
+          all_ids = still_removed.collect(&:first).uniq
+          insertion_costs = compute_costs_for_route_with_compatible_ids(all_ids, best_route[:day], route_data)
 
           if insertion_costs.flatten.empty?
             keep_inserting = false
@@ -415,9 +427,16 @@ module PeriodicEndPhase
     still_removed
   end
 
+  def allow_any_day_to_assign_visits
+    @candidate_routes.each{ |_vehicle_id, all_routes|
+      all_routes.each{ |_day, route_data|
+        route_data[:available_ids] = @services_data.keys
+      }
+    }
+  end
+
   def reaffect_prohibiting_partial_assignment(still_removed)
-    # allow any day to assign visits
-    @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, route_data| route_data[:available_ids] = @services_data.keys } }
+    allow_any_day_to_assign_visits
 
     banned = []
     adapted_still_removed = still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
@@ -428,9 +447,11 @@ module PeriodicEndPhase
       @candidate_routes.each{ |vehicle_id, all_routes|
         all_routes.each{ |day, route_data|
           most_prio_and_frequent.each_with_index{ |service, s_i|
+            next unless day.between?(@services_data[service.first][:raw].first_possible_days.min,
+                                     @services_data[service.first][:raw].last_possible_days.max)
             potential_costs[s_i][vehicle_id] ||= {}
 
-            cost = compute_costs_for_route(route_data, [service[0]]).first
+            cost = compute_costs_for_route(route_data, [service[0]], false).first
             potential_costs[s_i][vehicle_id][day] = cost
           }
         }
@@ -502,6 +523,8 @@ module PeriodicEndPhase
     return days.collect{ |day| [day] } if visits_number == 1
 
     days.sort.each_with_index{ |first_day, day_index|
+      next unless day_in_possible_interval(id, first_day, 1)
+
       available_days = days.slice(days.find_index(first_day)..-1)
       break if available_days.size < visits_number
 

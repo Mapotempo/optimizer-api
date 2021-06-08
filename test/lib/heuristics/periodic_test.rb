@@ -925,4 +925,26 @@ class HeuristicTest < Minitest::Test
       }
     end
   end
+
+  def test_first_last_possible_day_respected
+    vrp = VRP.periodic
+    vrp[:services][1][:visits_number] = 2
+    vrp[:services][1][:minimum_lapse] = 1
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert result[:routes][-1][:activities].any?{ |a| a[:service_id] == 'service_1_1_1' },
+           'This test is not consistent if this fails'
+    second_route = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0_1' }
+    assert second_route[:activities].any?{ |a| a[:service_id] == 'service_2_2_2' },
+           'This test is not consistent if this fails'
+
+    vrp[:services][0][:last_possible_days] = [1]
+    vrp[:services][1][:first_possible_days] = [1]
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert [0, 1].any?{ |r_i| result[:routes][r_i][:activities].any?{ |a| a[:service_id] == 'service_1_1_1' } },
+           'Service_1 can not take place after day index 1'
+    assert result[:routes][0][:activities].none?{ |a| a[:service_id] == 'service_2_1_2' },
+           'Service_2 can not take before after day index 1'
+    # TODO : vrp[:services][1][:first_possible_days] = [0, 2]
+    # + vrp[:services][1][:last_possible_days] = [0, 2] should for dates of both visits of service_2
+  end
 end
