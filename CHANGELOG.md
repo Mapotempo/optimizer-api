@@ -17,6 +17,7 @@
 ### Fixed
 
 - VROOM was used incorrectly in various cases: negative quantities, vehicle duration, activity position [#223](https://github.com/Mapotempo/optimizer-api/pull/223) [#242](https://github.com/Mapotempo/optimizer-api/pull/242)
+- Capacity violation in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#227](https://github.com/Mapotempo/optimizer-api/pull/227)
 
 ## [v1.7.1] - 2021-05-20
 

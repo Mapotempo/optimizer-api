@@ -57,7 +57,7 @@ module PeriodicDataInitialization
       defined_route.mission_ids.each{ |id|
         next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
 
-        best_index = find_best_index(id, associated_route) if associated_route
+        best_index = find_best_index(id, associated_route, false) if associated_route
         considered_ids << id
         if best_index
           insert_point_in_route(associated_route, best_index, false)

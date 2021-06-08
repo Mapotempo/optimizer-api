@@ -157,7 +157,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of periodic algorithm performance
       assert_equal expected, seen, 'Do not have the expected number of total visits'
-      assert_equal 294, unassigned_visits.sum, 'Do not have the expected number of unassigned visits'
+      assert_equal 292, unassigned_visits.sum, 'Do not have the expected number of unassigned visits'
     end
 
     def test_fill_days_and_post_processing

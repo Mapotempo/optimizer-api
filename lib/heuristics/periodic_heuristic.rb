@@ -514,45 +514,23 @@ module Wrappers
     end
 
     def compute_costs_for_route(route_data, set = nil)
-      vehicle_id = route_data[:vehicle_original_id]
+      ### for each remaining service to assign, computes the cost of assigning it to [route_data] ###
+      unless set
+        set = @to_plan_service_ids
+        set.delete_if{ |id| @services_data[id][:raw].visits_number == 1 } if @same_point_day
+      end
+
       day = route_data[:day]
+      set.collect{ |service_id|
+        next if @services_data[service_id][:used_days] &&
+                !days_respecting_lapse(service_id, @candidate_routes[route_data[:vehicle_original_id]]).include?(day)
 
-      ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
-      insertion_costs = []
-      set ||= @same_point_day ? @to_plan_service_ids.reject{ |id| @services_data[id][:raw].visits_number == 1 } : @to_plan_service_ids
-      # we will assign services with one vehicle in relaxed_same_point_day part
-      set.select{ |service_id|
-        # quantities are respected
-        ((@same_point_day && @services_data[service_id][:group_capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }) ||
-          (!@same_point_day && @services_data[service_id][:capacity].all?{ |need, quantity| quantity <= route_data[:capacity_left][need] })) &&
-          (@services_data[service_id][:sticky_vehicles_ids].empty? || @services_data[service_id][:sticky_vehicles_ids].include?(vehicle_id))
-      }.each{ |service_id|
-        next if @services_data[service_id][:used_days] && !days_respecting_lapse(service_id, vehicle_id).include?(day)
-
-        point = @services_data[service_id][:points_ids].first if @same_point_day || @relaxed_same_point_day # there can be only on point in points_ids
-        next if @relaxed_same_point_day &&
-                !@points_vehicles_and_days[point][:vehicles].empty? &&
-                (!@points_vehicles_and_days[point][:vehicles].include?(vehicle_id) || !(@points_vehicles_and_days[point][:maximum_visits_number] < @services_data[service_id][:raw].visits_number || @points_vehicles_and_days[point][:days].include?(day)))
-
-        next if @same_point_day && @unlocked.include?(service_id) && (!@points_vehicles_and_days[point][:vehicles].include?(vehicle_id) || !@points_vehicles_and_days[point][:days].include?(day))
-
-        period = @services_data[service_id][:heuristic_period]
-
-        next if !(period.nil? ||
-                route_data[:available_ids].include?(service_id) && (day + period..@schedule_end).step(period).find{ |current_day| @candidate_routes[vehicle_id][current_day.floor] && @candidate_routes[vehicle_id][current_day.floor][:completed] || @candidate_routes[vehicle_id][current_day.ceil] && @candidate_routes[vehicle_id][current_day.ceil][:completed] }.nil? &&
-                same_point_compatibility(service_id, vehicle_id, day))
-
-        next if two_visits_and_can_not_assign_second(vehicle_id, day, service_id)
-
-        other_indices = find_best_index(service_id, route_data)
-        insertion_costs << other_indices if other_indices
-      }
-
-      insertion_costs.compact
+        find_best_index(service_id, route_data)
+      }.compact
     end
 
     def two_visits_and_can_not_assign_second(vehicle_id, day, service_id)
-      return false unless @services_data[service_id][:raw].visits_number == 2 # || @end_phase ?
+      return false unless @services_data[service_id][:raw].visits_number == 2
 
       next_day = day + @services_data[service_id][:heuristic_period]
       day_to_insert = @candidate_routes[vehicle_id].keys.select{ |potential_day| potential_day >= next_day.round }.min
@@ -872,16 +850,52 @@ module Wrappers
     def compatible_vehicle(service_id, route_data)
       # WARNING : this does not consider vehicle alternative skills properly
       # we would need to know which skill_set is required in order that all services on same vehicle are compatible
-      route_data[:skills].any?{ |skill_set| (@services_data[service_id][:raw].skills - skill_set).empty? }
+      service_data = @services_data[service_id]
+      route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? } &&
+        (service_data[:sticky_vehicles_ids].empty? || service_data[:sticky_vehicles_ids].include?(route_data[:vehicle_original_id]))
     end
 
-    def service_compatible_with_route(service_id, route_data)
-      compatible_days(service_id, route_data[:day]) &&
-        compatible_vehicle(service_id, route_data)
+    def service_does_not_violate_capacity(service_id, route_data, first_visit)
+      needed_capacity = @services_data[service_id][:group_capacity] if first_visit && @same_point_day
+      needed_capacity ||= @services_data[service_id][:capacity] # if no same point day or not its group representative
+      needed_capacity.all?{ |need, quantity| quantity <= route_data[:capacity_left][need] }
+    end
+
+    def relaxed_or_same_point_day_constraint_respected(service_id, vehicle_id, day)
+      return true unless @same_point_day || @relaxed_same_point_day
+
+      # there can be only on point in points_ids because of these options :
+      point = @services_data[service_id][:points_ids].first
+
+      return true if @points_vehicles_and_days[point][:vehicles].empty?
+
+      if @relaxed_same_point_day
+        @points_vehicles_and_days[point][:vehicles].include?(vehicle_id) &&
+          (@points_vehicles_and_days[point][:days].include?(day) ||
+          @points_vehicles_and_days[point][:maximum_visits_number] < @services_data[service_id][:raw].visits_number)
+      else # @same_point_day is on :
+        !@unlocked.include?(service_id) ||
+          @points_vehicles_and_days[point][:vehicles].include?(vehicle_id) &&
+            @points_vehicles_and_days[point][:days].include?(day)
+      end
+    end
+
+    def service_compatible_with_route(service_id, route_data, first_visit)
+      vehicle_id = route_data[:vehicle_original_id]
+      day = route_data[:day]
+
+      compatible_days(service_id, day) &&
+        compatible_vehicle(service_id, route_data) &&
+        service_does_not_violate_capacity(service_id, route_data, first_visit) &&
+        (!first_visit ||
+          !two_visits_and_can_not_assign_second(vehicle_id, day, service_id) &&
+          route_data[:available_ids].include?(service_id) &&
+          relaxed_or_same_point_day_constraint_respected(service_id, vehicle_id, day) &&
+          same_point_compatibility(service_id, vehicle_id, day))
     end
 
     def find_best_index(service_id, route_data, first_visit = true)
-      return nil unless service_compatible_with_route(service_id, route_data)
+      return nil unless service_compatible_with_route(service_id, route_data, first_visit)
 
       ### find the best position in [route_data] to insert [service] ###
       route = route_data[:stops]
@@ -1203,19 +1217,14 @@ module Wrappers
 
     def try_to_insert_at(vehicle_id, day, service_id, visit_number)
       # when adjusting routes, tries to insert [service_id] at [day] for [vehicle]
-      if !@candidate_routes[vehicle_id][day][:completed] &&
-         @services_data[service_id][:capacity].all?{ |need, qty| @candidate_routes[vehicle_id][day][:capacity_left][need] - qty >= 0 } &&
-         @services_data[service_id][:sticky_vehicles_ids].empty? || @services_data[service_id][:sticky_vehicles_ids].include?(vehicle_id)
+      return if @candidate_routes[vehicle_id][day][:completed]
 
-        best_index = find_best_index(service_id, @candidate_routes[vehicle_id][day], false)
+      best_index = find_best_index(service_id, @candidate_routes[vehicle_id][day], false)
+      return unless best_index
 
-        if best_index
-          insert_point_in_route(@candidate_routes[vehicle_id][day], best_index, false)
-          @candidate_routes[vehicle_id][day][:stops].find{ |stop| stop[:id] == service_id }[:number_in_sequence] = visit_number
-
-          day
-        end
-      end
+      insert_point_in_route(@candidate_routes[vehicle_id][day], best_index, false)
+      @candidate_routes[vehicle_id][day][:stops].find{ |stop| stop[:id] == service_id }[:number_in_sequence] = visit_number
+      day
     end
 
     def find_corresponding_timewindow(day, arrival_time, timewindows, duration)
