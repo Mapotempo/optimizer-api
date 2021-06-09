@@ -1028,7 +1028,7 @@ module Wrappers
           # first shift every activity all the way to the left (earlier) if the route starts after
           # the vehicle TW.start so that it is easier to do the insertions since there is no TW on
           # services, we can do this even if force_start is false
-          shift_amount = vehicle.timewindow&.start.to_i - route[:start_time]
+          shift_amount = vehicle.timewindow&.start.to_i - (route[:start_time] || vehicle.timewindow&.start).to_i
           shift_route_times(route, shift_amount) if shift_amount < 0
 
           # insert the rests back into the route and adjust the timing of the activities coming after the pause
@@ -1129,7 +1129,7 @@ module Wrappers
         activity[:end_time] += shift_amount if activity[:end_time]
         activity[:departure_time] += shift_amount if activity[:departure_time]
       }
-      route[:end_time] += shift_amount
+      route[:end_time] += shift_amount if route[:end_time]
     end
 
     def unassigned_services(vrp, unassigned_reason)
