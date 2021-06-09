@@ -16,7 +16,6 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
-require './models/concerns/validate_timewindows'
 
 module Models
   class Rest < Base
