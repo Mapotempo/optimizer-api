@@ -737,17 +737,26 @@ module Wrappers
           end
         end
 
-        next if service.activity.nil? && service.activities.empty?
+        activities = [service.activity, service.activities].compact.flatten
 
-        duration = service.activity ? service.activity.duration : service.activities.collect(&:duration).min
-        add_unassigned(unfeasible, vrp, service, 'Service duration greater than any vehicle timewindow') if vehicle_max_shift && duration > vehicle_max_shift
+        if activities.any?{ |a| a.timewindows.any?{ |tw| tw.start && tw.end && tw.start > tw.end } }
+          add_unassigned(unfeasible, vrp, service, 'Service timewindows are infeasible')
+        end
 
-        add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow') if !find_vehicle(vrp, service)
+        if vehicle_max_shift && activities.collect(&:duration).min > vehicle_max_shift
+          add_unassigned(unfeasible, vrp, service, 'Service duration greater than any vehicle timewindow')
+        end
+
+        unless find_vehicle(vrp, service)
+          add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow')
+        end
 
         # unconsistency for planning
         next if !vrp.scheduling?
 
-        add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse') unless vrp.can_affect_all_visits?(service)
+        unless vrp.can_affect_all_visits?(service)
+          add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
+        end
       }
 
       unfeasible

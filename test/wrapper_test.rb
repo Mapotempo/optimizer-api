@@ -3230,4 +3230,12 @@ class WrapperTest < Minitest::Test
                    'Cannot simplify the pause if the point has multiple setup durations'
     }
   end
+  
+  def test_reject_when_unfeasible_timewindows
+    vrp = VRP.toy
+    vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }, { start: 20, end: 15 }]
+    # ship and service but only check service
+    unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_equal 1, (unfeasible_services.count{ |un| un[:reason] == 'Service timewindows are infeasible' })
+  end
 end
