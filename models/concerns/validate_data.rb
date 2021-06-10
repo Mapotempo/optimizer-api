@@ -145,7 +145,7 @@ module ValidateData
       if timewindows.empty?
         []
       else
-        days = timewindows.flat_map{ |tw| tw[:day_index] }
+        days = timewindows.flat_map{ |tw| tw[:day_index] || (0..6).to_a }
         days.compact!
         days.uniq
       end

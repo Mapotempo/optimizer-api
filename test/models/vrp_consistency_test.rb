@@ -473,6 +473,34 @@ module Models
       end
     end
 
+    def test_compatible_days_availabilities_with_vehicle_trips_with_sequence_timewindows
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 },
+                                                  { start: 20, end: 30, day_index: 1 }]
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 },
+                                                  { start: 17, end: 45, day_index: 1 }]
+
+      check_consistency(vrp) # this should not raise
+
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 }]
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15 }]
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 },
+                                                  { start: 17, end: 19, day_index: 1 }]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+    end
+
     def test_unavailable_days_with_vehicle_trips
       vrp = VRP.lat_lon_scheduling_two_vehicles
       vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
