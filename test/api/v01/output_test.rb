@@ -54,14 +54,50 @@ class Api::V01::OutputTest < Minitest::Test
     # tmpdir and generated files are already deleted
   end
 
-  def test_day_week_num
+  def test_day_week_num_and_other_scheduling_fields
     vrp = VRP.scheduling
+    vrp[:services].first[:visits_number] = 2
     vrp[:configuration][:restitution] = { csv: true }
 
     csv_data = submit_csv api_key: 'demo', vrp: vrp
     assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
     assert_includes csv_data.first, 'day_week'
     assert_includes csv_data.first, 'day_week_num'
+
+    day_index = csv_data.first.find_index('day')
+    assert_equal ['day', '0', '1', '2', '3'], csv_data.collect{ |l| l[day_index] }.compact.uniq
+
+    visit_index = csv_data.first.find_index('visit_index')
+    assert_equal ['1', '2', 'visit_index'], csv_data.collect{ |l| l[visit_index] }.compact.uniq.sort
+  end
+
+  def test_check_returned_day_and_visit_index
+    vrp = VRP.basic
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)
+    assert(result['solutions'].first['routes'].none?{ |route| route['day'] })
+    assert(result['solutions'].first['routes'].none?{ |route| route['activities'].any?{ |a| a['visit_index'] } })
+
+    vrp = VRP.scheduling
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)
+    assert_equal [0, 1, 2, 3], result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
+    visit_indices = result['solutions'].first['routes'].flat_map{ |r|
+      r['activities'].flat_map{ |a| a['visit_index'] }
+    }.compact
+    assert_equal [1], visit_indices.uniq
+
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule] = {
+      range_date: {
+        start: Date.new(2021, 2, 10),
+        end: Date.new(2021, 2, 15)
+      }
+    }
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)
+    assert_equal %w[2021-02-10 2021-02-11 2021-02-12 2021-02-13 2021-02-14 2021-02-15],
+                 result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
   end
 
   def test_no_day_week_num
@@ -336,17 +372,17 @@ class Api::V01::OutputTest < Minitest::Test
       periodic_ortools: {
         problem: VRP.lat_lon,
         solver_name: 'ortools',
-        scheduling_keys: %w[day_week_num day_week]
+        scheduling_keys: %w[day_week_num day_week day visit_index]
       },
       periodic_heuristic: {
         problem: VRP.lat_lon_scheduling,
         solver_name: 'heuristic',
-        scheduling_keys: %w[day_week_num day_week]
+        scheduling_keys: %w[day_week_num day_week day visit_index]
       }
     }
 
-    expected_route_keys = %w[vehicle_id total_travel_time total_travel_distance total_waiting_time]
-    expected_activities_keys = %w[point_id waiting_time begin_time end_time id lat lon duration setup_duration additional_value skills tags]
+    expected_route_keys = %w[vehicle_id original_vehicle_id total_travel_time total_travel_distance total_waiting_time]
+    expected_activities_keys = %w[point_id waiting_time begin_time end_time id original_id lat lon duration setup_duration additional_value skills tags]
     expected_unassigned_keys = %w[point_id id type unassigned_reason]
 
     [:ortools, :periodic_ortools].each{ |method| methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 } }
@@ -438,16 +474,16 @@ class Api::V01::OutputTest < Minitest::Test
 
     # checks columns headers when required for import
     expected_headers = {
-      en: ['plan', 'reference plan', 'route', 'name', 'lat', 'lng', 'stop type', 'start time', 'end time',
+      en: ['plan', 'reference plan', 'route', 'name', 'lat', 'lng', 'stop type', 'time', 'end time',
            'duration per destination', 'visit duration', 'tags visit', 'tags', 'quantity[kg]',
-           'time window start 1', 'time window end 1'],
+           'time window start 1', 'time window end 1', 'vehicle', 'reference'],
       es: [
-        'nombre del plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'inicio', 'fin',
+        'nombre del plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'hora', 'fin',
         'horario inicio 1', 'horario fin 1', 'duración de preparación', 'duración visita', 'cantidad[kg]',
-        'etiquetas visita', 'etiquetas'],
-      fr: ['plan', 'référence plan', 'tournée', 'nom', 'lat', 'lng', 'type arrêt', 'début de la mission',
+        'etiquetas visita', 'etiquetas', 'vehículo', 'referencia visita'],
+      fr: ['plan', 'référence plan', 'tournée', 'nom', 'lat', 'lng', 'type arrêt', 'heure',
            'fin de la mission', 'durée client', 'durée visite', 'libellés visite', 'libellés',
-           'quantité[kg]', 'horaire début 1', 'horaire fin 1']
+           'quantité[kg]', 'horaire début 1', 'horaire fin 1', 'véhicule', 'référence visite']
     }
 
     asynchronously start_worker: true do

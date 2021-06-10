@@ -23,6 +23,7 @@ legacy:
       name: day_week_num
       ref: day_week
     route:
+      day: day
       id: vehicle_id
       original_id: original_vehicle_id
       total_travel_distance: total_travel_distance
@@ -47,5 +48,6 @@ legacy:
       type_rest: rest
       type_store: store
       type_visit: visit
+      visit_index: visit_index
       wait_time: waiting_time
     tags: tags

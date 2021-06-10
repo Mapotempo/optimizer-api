@@ -84,6 +84,7 @@ module Models
 
   class Schedule < Base
     field :range_indices, default: nil # extends schedule_range_date
+    field :start_date, default: nil
     field :unavailable_days, default: Set[] # extends unavailable_date
     field :months_indices, default: []
   end

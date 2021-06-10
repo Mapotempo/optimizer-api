@@ -23,6 +23,7 @@ en:
       name: plan
       ref: reference plan
     route:
+      day: day
       id: route
       original_id: vehicle
       total_travel_distance: total travel distance
@@ -47,5 +48,6 @@ en:
       type_rest: rest
       type_store: store
       type_visit: visit
+      visit_index: visit index
       wait_time: waiting time
     tags: tags

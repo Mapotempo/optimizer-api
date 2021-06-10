@@ -614,6 +614,32 @@ module OptimizerWrapper
     end
   end
 
+  def self.provide_day(vrp, route)
+    return unless vrp.scheduling?
+
+    route_index = route[:vehicle_id].split('_').last.to_i
+
+    if vrp.schedule_start_date
+      days_from_start = route_index - vrp.schedule_range_indices[:start]
+      route[:day] = vrp.schedule_start_date.to_date + days_from_start
+    else
+      route_index
+    end
+  end
+
+  def self.provide_visits_index(vrp, set)
+    return unless vrp.scheduling?
+
+    set.each{ |activity|
+      id = activity[:service_id] || activity[:rest_id] ||
+           activity[:pickup_shipment_id] || activity[:delivery_shipment_id]
+
+      next unless id
+
+      activity[:visit_index] = id.split('_').last.to_i
+    }
+  end
+
   def self.route_details(vrp, route, vehicle)
     previous = nil
     details = nil
@@ -660,7 +686,8 @@ module OptimizerWrapper
 
   def self.fill_missing_route_data(vrp, route, matrix, vehicle, solvers)
     route[:original_vehicle_id] = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }.original_id
-    route[:day] = route[:vehicle_id].split('_').last.to_i unless route[:original_vehicle_id] == route[:vehicle_id]
+    route[:day] = provide_day(vrp, route)
+    provide_visits_index(vrp, route[:activities])
     details = compute_route_travel_distances(vrp, matrix, route, vehicle)
     compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
 
@@ -684,6 +711,7 @@ module OptimizerWrapper
       matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
       fill_missing_route_data(vrp, route, matrix, vehicle, result[:solvers])
     }
+    provide_visits_index(vrp, result[:unassigned])
     compute_result_total_dimensions_and_round_route_stats(result)
 
     log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.visits}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.visits + 2 * vrp.shipments.size) * 100).round(1)}%)"

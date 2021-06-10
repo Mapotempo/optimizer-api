@@ -82,6 +82,7 @@ module Models
     field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil # extends schedule_range_date
+    field :schedule_start_date, default: nil
     field :schedule_unavailable_days, default: Set[] # extends unavailable_date and schedule_unavailable_indices
     field :schedule_months_indices, default: []
 
@@ -435,6 +436,7 @@ module Models
         start: start_index,
         end: end_index
       }
+      hash[:configuration][:schedule][:start_date] = hash[:configuration][:schedule][:range_date][:start]
       hash[:configuration][:schedule].delete(:range_date)
 
       hash
@@ -504,6 +506,7 @@ module Models
 
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
+      self.schedule_start_date = schedule[:start_date]
       self.schedule_unavailable_days = schedule[:unavailable_days]
       self.schedule_months_indices = schedule[:months_indices]
     end

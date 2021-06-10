@@ -36,9 +36,9 @@ module OutputHelper
                quantities_header +
                timewindows_header +
                unassigned_header +
-               complementary_header
+               complementary_header(solutions_set.any?{ |solution| solution[:routes].any?{ |route| route[:day] } })
 
-      [header, unit_ids, max_timewindows_size, scheduling]
+      [header, unit_ids, max_timewindows_size, scheduling, !unassigned_header.empty?]
     end
 
     def self.generate_scheduling_header(solutions_set)
@@ -113,12 +113,25 @@ module OutputHelper
       [max_timewindows_size, timewindows_header]
     end
 
-    def self.complementary_header
-      [I18n.t('export_file.stop.name'),
-       I18n.t('export_file.route.original_id')]
+    def self.complementary_header(any_day_index)
+      [
+        I18n.t('export_file.stop.name'),
+        I18n.t('export_file.route.original_id'),
+        any_day_index ? I18n.t('export_file.route.day') : nil,
+        any_day_index ? I18n.t('export_file.stop.visit_index') : nil
+      ]
     end
 
-    def self.activity_line(activity, route, name, unit_ids, max_timewindows_size, scheduling)
+    def self.complementary_data(route, activity)
+      [
+        activity[:original_service_id] || activity[:original_shipment_id] || activity[:original_rest_id],
+        route && route[:original_vehicle_id],
+        route && route[:day],
+        activity[:visit_index]
+      ]
+    end
+
+    def self.activity_line(activity, route, name, unit_ids, max_timewindows_size, scheduling, reason)
       days_info = scheduling ? [activity[:day_week_num], activity[:day_week]] : []
       common = build_csv_activity(name, route, activity)
       timewindows = build_csv_timewindows(activity, max_timewindows_size)
@@ -126,12 +139,7 @@ module OutputHelper
         quantity = activity[:detail][:quantities]&.find{ |qty| qty[:unit] == unit_id }
         quantity[:value] if quantity
       }
-
-      complementary_data = [
-        activity[:original_id],
-        route && route[:original_vehicle_id]
-      ]
-      (days_info + common + quantities + timewindows + [activity[:reason]] + complementary_data)
+      (days_info + common + quantities + timewindows + reason + complementary_data(route, activity))
     end
 
     def self.find_type_and_complete_id(activity)
@@ -200,18 +208,21 @@ module OutputHelper
     def self.build_csv(solutions)
       return unless solutions
 
-      header, unit_ids, max_timewindows_size, scheduling = generate_header(solutions_set)
+      header, unit_ids, max_timewindows_size, scheduling, any_unassigned = generate_header(solutions)
 
       CSV.generate{ |output_csv|
         output_csv << header
         solutions.collect{ |solution|
           solution[:routes].each{ |route|
             route[:activities].each{ |activity|
-              output_csv << activity_line(activity, route, solution[:name], unit_ids, max_timewindows_size, scheduling)
+              reason = any_unassigned ? [nil] : []
+              output_csv << activity_line(
+                activity, route, solution[:name], unit_ids, max_timewindows_size, scheduling, reason)
             }
           }
-          solution['unassigned'].each{ |activity|
-            output_csv << activity_line(activity, nil, solution[:name], unit_ids, max_timewindows_size, scheduling)
+          solution[:unassigned].each{ |activity|
+            output_csv << activity_line(
+              activity, nil, solution[:name], unit_ids, max_timewindows_size, scheduling, [activity[:reason]])
           }
         }
       }

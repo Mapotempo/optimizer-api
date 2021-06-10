@@ -5,6 +5,7 @@
 ### Added
 
 - CSV headers adapts to the language provided through HTTP_ACCEPT_LANGUAGE header to facilitate import in Mapotempo-Web [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
+- Return route day/date and visits' index in result [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 
 ### Changed
 

@@ -23,6 +23,7 @@ es:
       name: plan
       ref: referencia del plan
     route:
+      day: día
       id: gira
       original_id: vehículo
       total_travel_distance: recorrido total
@@ -47,5 +48,6 @@ es:
       type_rest: descanso
       type_store: depósito
       type_visit: visita
+      visit_index: índice de la visita
       wait_time: tiempo de espera
     tags: etiquetas
