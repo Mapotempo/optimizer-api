@@ -260,6 +260,19 @@ module Wrappers
       }
     end
 
+    def collect_skills(object, vrp_skills)
+      return unless vrp_skills.any?
+
+      [vrp_skills.size] +
+        if object.is_a?(Models::Vehicle)
+          [vrp_skills.find_index{ |sk| sk == object.id }].compact +
+          (object.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || []).compact
+        else
+          object.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact +
+          object.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact
+        end
+    end
+
     def collect_jobs(vrp, vrp_skills, vrp_units)
       vrp.services.map.with_index{ |service, index|
         # Activity is mandatory
@@ -267,8 +280,7 @@ module Wrappers
           id: index,
           location_index: @points[service.activity.point_id].matrix_index,
           service: service.activity.duration.to_i,
-          skills: [vrp_skills.size] + service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          skills: collect_skills(service, vrp_skills),
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
           time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] },
           delivery: vrp_units.map{ |unit|
@@ -295,8 +307,7 @@ module Wrappers
             @total_quantities[unit.id] += value
             (value * CUSTOM_QUANTITY_BIGNUM).round
           },
-          skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          skills: collect_skills(shipment, vrp_skills),
           priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
           pickup: {
             id: vrp.services.size + index * 2,
@@ -330,8 +341,7 @@ module Wrappers
           # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
           time_window: [vehicle.timewindow&.start || 0, tw_end],
           # VROOM expects a default skill
-          skills: [vrp_skills.size] + ([vrp_skills.find_index{ |sk| sk == vehicle.id }] +
-            (vehicle.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || [])).compact,
+          skills: collect_skills(vehicle, vrp_skills),
           breaks: vehicle.rests.map{ |rest|
             rest_index = @rest_hash["#{vehicle.id}_#{rest.id}"][:index]
             {
