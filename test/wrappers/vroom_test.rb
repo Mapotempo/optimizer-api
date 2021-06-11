@@ -590,6 +590,26 @@ class Wrappers::VroomTest < Minitest::Test
     assert_equal 6, result[:routes][0][:activities].size
   end
 
+  def test_shipments_timewindows
+    vroom = OptimizerWrapper.config[:services][:vroom]
+    problem = VRP.pud
+    problem[:shipments].map!{ |shipment|
+      shipment[:pickup][:timewindows] = [{start: 5, end: 20}]
+      shipment[:delivery][:timewindows] = [{start: 10, end: 40}]
+      shipment
+    }
+
+    vrp = TestHelper.create(problem)
+    result = vroom.solve(vrp, 'test')
+    assert result
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
   def test_shipments_quantities
     vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
