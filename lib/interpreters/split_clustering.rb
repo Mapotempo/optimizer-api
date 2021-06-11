@@ -951,7 +951,17 @@ module Interpreters
               raise UnsupportedProblemError, 'Clustering does not support services with multiple activities.'
             end
 
-          can_be_grouped = options[:group_points] && s.relations.none?{ |r| LINKING_RELATIONS.include?(r.type) }
+          # we can group services even if they have are in linking relations if everything else is the same
+          linked_relation_details =
+            if options[:group_points]
+              s.relations.select{ |r| LINKING_RELATIONS.include?(r.type) }.collect{ |relation|
+                relation.linked_services.collect{ |service|
+                  rs_location = service.activity.point.location
+                  [relation.type, rs_location.lat, rs_location.lon]
+                }
+              }.sort
+            end
+
           {
             lat: location.lat.round_with_steps(decimal[:digits], decimal[:steps]),
             lon: location.lon.round_with_steps(decimal[:digits], decimal[:steps]),
@@ -959,7 +969,8 @@ module Interpreters
               [vrp.routes.find{ |r| r.mission_ids.include? s.id }&.vehicle_id].compact, # split respects initial routes
             skills: s.skills.to_a.dup,
             day_skills: compute_day_skills(s.activity&.timewindows),
-            do_not_group: can_be_grouped ? nil : s.id, # use the ID to prevent grouping
+            do_not_group: options[:group_points] ? nil : s.id, # use the ID to prevent grouping
+            linked_relation_details: linked_relation_details,
           }
         }.each_with_index{ |(characteristics, sub_set), sub_set_index|
           unit_quantities = Hash.new(0)
@@ -970,6 +981,9 @@ module Interpreters
             s_setup_duration = s.activity ? s.activity.setup_duration : (s.pickup ? s.pickup.setup_duration : s.delivery.setup_duration)
             s_duration = s.activity ? s.activity.duration : (s.pickup ? s.pickup.duration : s.delivery.duration)
             duration = ((i.zero? ? s_setup_duration : 0) + s_duration) * s.visits_number
+            # TODO: If the services are not merged due another reason (for example pickups are at the same location but
+            # the deliveries are not), in the case, we assume the worst case and apply the setup_duration to all.
+            # However, because of this, clustering might return unbalanced clusters (because the duration is skewed).
             unit_quantities[:duration] += duration
             cumulated_metrics[:duration] += duration
             s.quantities.each{ |quantity|
@@ -1000,9 +1014,13 @@ module Interpreters
 
         data_items.each_with_index{ |data_item, index|
           sub_set = grouped_objects[data_item[2]]
-          next unless sub_set.size == 1 # linking_relations are not grouped with others
-
-          sub_set.first.relations.select{ |r| LINKING_RELATIONS.include?(r.type) }.each{ |relation|
+          # linking_relations are grouped only if the relations are completely compatible/the same,
+          # this means all locations of all relations of this sub_set should have been grouped as
+          # well, then we need to check only the relations of a single service from each sub_set but
+          # we need to make sure that we are checking the same relations in different sub_set. That
+          # is why we do select a single service from each sub_set with max_by logic
+          service = sub_set.max_by{ |s| s.relations.max_by{ |r| LINKING_RELATIONS.include?(r.type) ? r.id : 0 }&.id.to_i }
+          service.relations.select{ |r| LINKING_RELATIONS.include?(r.type) }.each{ |relation|
             related_item_indices[relation] << index
           }
         }
@@ -1024,7 +1042,9 @@ module Interpreters
 
         c.distance_function = lambda do |data_item_a, data_item_b|
           # If there is no vehicle that can serve both points at the same time, make sure they are not merged
-          if data_item_a[4][:do_not_group] || data_item_b[4][:do_not_group] ||
+          if data_item_a[4][:do_not_group] ||
+             data_item_b[4][:do_not_group] ||
+             data_item_a[4][:linked_relation_details] != data_item_b[4][:linked_relation_details] ||
              (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty?
             return max_distance + 1
           end
