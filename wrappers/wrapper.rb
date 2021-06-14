@@ -1028,7 +1028,7 @@ module Wrappers
           # first shift every activity all the way to the left (earlier) if the route starts after
           # the vehicle TW.start so that it is easier to do the insertions since there is no TW on
           # services, we can do this even if force_start is false
-          shift_amount = vehicle.timewindow&.start.to_i - route[:start_time]
+          shift_amount = vehicle.timewindow&.start.to_i - (route[:start_time] || vehicle.timewindow&.start).to_i
           shift_route_times(route, shift_amount) if shift_amount < 0
 
           # insert the rests back into the route and adjust the timing of the activities coming after the pause
@@ -1129,7 +1129,7 @@ module Wrappers
         activity[:end_time] += shift_amount if activity[:end_time]
         activity[:departure_time] += shift_amount if activity[:departure_time]
       }
-      route[:end_time] += shift_amount
+      route[:end_time] += shift_amount if route[:end_time]
     end
 
     def unassigned_services(vrp, unassigned_reason)
@@ -1188,7 +1188,21 @@ module Wrappers
         cost: nil,
         cost_details: Models::CostDetails.new({}),
         iterations: nil,
-        routes: vrp.vehicles.collect{ |vehicle| { vehicle_id: vehicle.id, activities: [] } },
+        routes: vrp.vehicles.collect{ |vehicle|
+          route_start_time = vehicle.timewindow&.start.to_i
+          route_end_time = route_start_time
+          {
+            vehicle_id: vehicle.id,
+            original_vehicle_id: vehicle.original_id,
+            cost_details: Models::CostDetails.new({}),
+            activities: [], # TODO: check if depot activities are needed
+                            # or-tools returns depot_start -> depot_end for empty vehicles
+                            # in that case route_end_time needs to be corrected
+            start_time: route_start_time,
+            end_time: route_end_time,
+            initial_loads: vrp.units.collect{ |unit| { unit: unit.id, label: unit.label, value: 0 }}
+          }
+        },
         unassigned: (unassigned_services(vrp, unassigned_reason) +
                      unassigned_shipments(vrp, unassigned_reason) +
                      unassigned_rests(vrp)).flatten,
