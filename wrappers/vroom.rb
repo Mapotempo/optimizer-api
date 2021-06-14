@@ -234,7 +234,7 @@ module Wrappers
       activity = type == 'pickup' ? shipment.pickup : shipment.delivery
       point = activity.point
       route_data = compute_route_data(vrp, point, step)
-      begin_time = step['arrival'] + step['waiting_time']
+      begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
       job_data = {
         original_shipment_id: shipment.original_id,
         pickup_shipment_id: type == 'pickup' && shipment.id,
@@ -242,8 +242,8 @@ module Wrappers
         type: type,
         point_id: point.id,
         begin_time: begin_time,
-        end_time: begin_time + step['service'],
-        departure_time: begin_time + step['service'],
+        end_time: begin_time && (begin_time + step['service']),
+        departure_time: begin_time && (begin_time + step['service']),
         detail: build_detail(shipment, activity, point, nil, nil, vehicle)
       }.merge(route_data).delete_if{ |_k, v| v.nil? || v == false }
       @previous = point
