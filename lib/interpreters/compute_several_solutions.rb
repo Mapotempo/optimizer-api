@@ -278,12 +278,11 @@ module Interpreters
     end
 
     def self.verified(heuristic)
-      if OptimizerWrapper::HEURISTICS.include?(heuristic)
-        heuristic
-      else
-        log "Unknown heuristic #{heuristic}", level: :fatal
-        raise StandardError.new('Unconsistent first solution strategy used internally')
+      unless OptimizerWrapper::HEURISTICS.include?(heuristic)
+        raise StandardError.new("Unknown heuristic : #{heuristic}. Inconsistent first solution strategy used internally")
       end
+
+      heuristic
     end
   end
 end
