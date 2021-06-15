@@ -144,6 +144,10 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
       # To automaticly generate a dump file with TEST_DUMP_VRP
       # json file should have neither matrix nor name!
+      if vrp.name && ENV['TEST_DUMP_VRP'].to_s == 'true'
+        raise StandardError.new('Matrice can not be dumped when VRP has a name')
+      end
+
       if vrp.matrices.empty? && vrp.name.nil?
         vrp.name = filename
         matrix_required(vrp)

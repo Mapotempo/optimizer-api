@@ -1189,19 +1189,7 @@ module Wrappers
         cost_details: Models::CostDetails.new({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle|
-          route_start_time = vehicle.timewindow&.start.to_i
-          route_end_time = route_start_time
-          {
-            vehicle_id: vehicle.id,
-            original_vehicle_id: vehicle.original_id,
-            cost_details: Models::CostDetails.new({}),
-            activities: [], # TODO: check if depot activities are needed
-                            # or-tools returns depot_start -> depot_end for empty vehicles
-                            # in that case route_end_time needs to be corrected
-            start_time: route_start_time,
-            end_time: route_end_time,
-            initial_loads: vrp.units.collect{ |unit| { unit: unit.id, label: unit.label, value: 0 }}
-          }
+          OptimizerWrapper.empty_route(vrp, vehicle)
         },
         unassigned: (unassigned_services(vrp, unassigned_reason) +
                      unassigned_shipments(vrp, unassigned_reason) +

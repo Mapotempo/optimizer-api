@@ -815,10 +815,31 @@ module OptimizerWrapper
     route[:geometry] = details&.map(&:last)
   end
 
+  def self.empty_route(vrp, vehicle)
+    route_start_time = [[vehicle.timewindow], vehicle.sequence_timewindows].compact.flatten[0]&.start.to_i
+    route_end_time = route_start_time
+    {
+      vehicle_id: vehicle.id,
+      original_vehicle_id: vehicle.original_id,
+      cost_details: Models::CostDetails.new({}),
+      activities: [], # TODO: check if depot activities are needed
+                      # or-tools returns depot_start -> depot_end for empty vehicles
+                      # in that case route_end_time needs to be corrected
+      start_time: route_start_time,
+      end_time: route_end_time,
+      initial_loads: vrp.units.collect{ |unit| { unit: unit.id, label: unit.label, value: 0 } }
+    }
+  end
+
   def self.parse_result(vrp, result)
     tic_parse_result = Time.now
-    result[:routes].each{ |route|
-      vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
+    vrp.vehicles.each{ |vehicle|
+      route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
+      unless route
+        # there should be one route per vehicle in result :
+        route = empty_route(vrp, vehicle)
+        result[:routes] << route
+      end
       matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
       fill_missing_route_data(vrp, route, matrix, vehicle, result[:solvers])
     }
