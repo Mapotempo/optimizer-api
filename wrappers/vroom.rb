@@ -110,7 +110,7 @@ module Wrappers
           original_vehicle_id: vehicle.original_id,
           activities: activities,
           start_time: activities.first[:begin_time],
-          end_time: activities.last[:begin_time] + (activities.last[:duration] || 0),
+          end_time: activities.last[:begin_time] + (activities.last[:detail][:duration] || 0),
         }
       }
 

@@ -1541,8 +1541,10 @@ module Wrappers
 
         activity[:begin_time] += shift_amount
         activity[:end_time] += shift_amount if activity[:end_time]
+        activity[:waiting_time] -= [shift_amount, activity[:waiting_time]].min if activity[:waiting_time]
         activity[:departure_time] += shift_amount if activity[:departure_time]
       }
+      route[:total_time] += shift_amount if route[:total_time]
       route[:end_time] += shift_amount if route[:end_time]
     end
 

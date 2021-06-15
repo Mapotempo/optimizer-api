@@ -156,7 +156,10 @@ module OptimizerWrapper
       }
     }
 
-    check_result_consistency(expected_activity_count, several_results) if services_vrps.collect{ |sv| sv[:service] } != [:demo] # demo solver returns a fixed solution
+    # demo solver returns a fixed solution
+    unless services_vrps.collect{ |sv| sv[:service] }.uniq == [:demo]
+      check_result_consistency(expected_activity_count, several_results)
+    end
 
     nb_routes = several_results.sum{ |result| result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } } }
     nb_unassigned = several_results.sum{ |result| result[:unassigned].size }
@@ -497,8 +500,38 @@ module OptimizerWrapper
 
   def self.check_result_consistency(expected_value, results)
     [results].flatten(1).each{ |result|
-      nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] } }
-      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] }
+      if result[:routes].any?{ |route| route[:activities].any?{ |a| a[:waiting_time].to_i < 0 } }
+        log 'Computed waiting times are invalid', level: :warn
+        raise RuntimeError, 'Computed waiting times are invalid' if ENV['APP_ENV'] != 'production'
+      end
+
+      waiting_times = result[:routes].map{ |route| route[:total_waiting_time] }.compact
+      durations = result[:routes].map{ |route|
+        route[:activities].map{ |act| act[:departure_time] && (act[:departure_time] - act[:begin_time]) }.compact
+      }
+      setup_durations = result[:routes].map{ |route|
+        route[:activities].map{ |act|
+          next if act[:type] == 'rest'
+
+          (act[:travel_time].nil? || act[:travel_time]&.positive?) && act[:detail][:setup_duration] || 0
+        }.compact
+      }
+      total_time = result[:total_time] || 0
+      total_travel_time = result[:total_travel_time] || 0
+      if total_time != (total_travel_time || 0) +
+                       waiting_times.sum +
+                       (setup_durations.flatten.reduce(&:+) || 0) +
+                       (durations.flatten.reduce(&:+) || 0)
+
+        log_string = "Expected #{total_time} == #{total_travel_time} +"\
+                     " #{waiting_times.sum} + #{setup_durations.flatten.reduce(&:+)}"\
+                     " + #{durations.flatten.reduce(&:+)}"
+        log log_string, level: :warn
+        raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
+      end
+
+      nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }
+      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:pickup_shipment_id] || unassigned[:delivery_shipment_id] }
 
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
@@ -550,6 +583,7 @@ module OptimizerWrapper
           activity[:current_distance] ||= total[dimension].round if dimension == :distance
         }
       end
+      next if point.nil?
 
       previous = point
     }
@@ -581,31 +615,36 @@ module OptimizerWrapper
   end
 
   def self.compute_route_waiting_times(route)
-    seen = 1
-    previous_end =
-      if route[:activities].first[:type] == 'depot'
-        route[:activities].first[:begin_time]
-      else
-        route[:activities].first[:end_time]
-      end
-    route[:activities].first[:waiting_time] = 0
-
-    first_service_seen = true
-    while seen < route[:activities].size
-      considered_setup =
-        if route[:activities][seen][:type] == 'rest'
-          0
-        elsif first_service_seen || route[:activities][seen][:travel_time].positive?
-          route[:activities][seen][:detail][:setup_duration] || 0
-        else
-          0
+    previous_end = route[:activities].first[:begin_time]
+    loc_index = nil
+    consumed_travel_time = 0
+    consumed_setup_time = 0
+    route[:activities].each.with_index{ |act, index|
+      used_travel_time = 0
+      if act[:type] == 'rest'
+        if loc_index.nil?
+          next_index = route[:activities][index..-1].index{ |a| a[:type] != 'rest' }
+          loc_index = index + next_index if next_index
+          consumed_travel_time = 0
         end
-      first_service_seen = false if %w[service pickup delivery].include?(route[:activities][seen][:type])
-      arrival_time = previous_end + (route[:activities][seen][:travel_time] || 0) + considered_setup
-      route[:activities][seen][:waiting_time] = route[:activities][seen][:begin_time] - arrival_time
-      previous_end = route[:activities][seen][:end_time]
-      seen += 1
-    end
+        shared_travel_time = loc_index && route[:activities][loc_index][:travel_time] || 0
+        potential_setup = shared_travel_time > 0 && route[:activities][loc_index][:detail][:setup_duration] || 0
+        left_travel_time = shared_travel_time - consumed_travel_time
+        used_travel_time = [act[:begin_time] - previous_end, left_travel_time].min
+        consumed_travel_time += used_travel_time
+        # As setup is considered as a transit value, it may be performed before a rest
+        consumed_setup_time  += [act[:begin_time] - previous_end - used_travel_time, potential_setup].min
+      else
+        used_travel_time = (act[:travel_time] || 0) - consumed_travel_time - consumed_setup_time
+        consumed_travel_time = 0
+        consumed_setup_time = 0
+        loc_index = nil
+      end
+      considered_setup = act[:travel_time]&.positive? && (act[:detail][:setup_duration].to_i - consumed_setup_time) || 0
+      arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
+      act[:waiting_time] = act[:begin_time] - arrival_time
+      previous_end = act[:end_time] || act[:begin_time]
+    }
   end
 
   def self.provide_day(vrp, route)

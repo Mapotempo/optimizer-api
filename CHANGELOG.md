@@ -26,6 +26,7 @@
 - VROOM was used incorrectly in various cases: negative quantities, vehicle duration, activity position [#223](https://github.com/Mapotempo/optimizer-api/pull/223) [#242](https://github.com/Mapotempo/optimizer-api/pull/242)
 - Capacity violation in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#227](https://github.com/Mapotempo/optimizer-api/pull/227)
 - Service timewindows without an `end` were not respected [#262](https://github.com/Mapotempo/optimizer-api/pull/262)
+- `total_time`, `total_travel_time` and related values are correctly calculated [#237](https://github.com/Mapotempo/optimizer-api/pull/237)
 
 ## [v1.7.1] - 2021-05-20
 
