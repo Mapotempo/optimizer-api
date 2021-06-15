@@ -487,5 +487,11 @@ class RealCasesTest < Minitest::Test
       assert result
       assert_equal 5, result[:routes].size
     end
+
+    def test_vroom_one_vehicle_is_not_needed
+      vrp = TestHelper.load_vrp(self)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:vroom] }}, vrp, nil)
+      assert_equal 5, result[:routes].size
+    end
   end
 end

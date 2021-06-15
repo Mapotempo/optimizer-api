@@ -124,7 +124,7 @@ module Wrappers
 
       log 'Solution cost: ' + cost.to_s + ' & unassigned: ' + unassigneds.size.to_s, level: :info
 
-      {
+      result = {
         cost: cost,
         cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
         solvers: ['vroom'],
@@ -137,6 +137,7 @@ module Wrappers
         routes: routes,
         unassigned: unassigneds
       }
+      OptimizerWrapper.parse_result(vrp, result)
     end
 
     private
