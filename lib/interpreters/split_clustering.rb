@@ -943,6 +943,43 @@ module Interpreters
         # TODO: this raise can be deleted once the Models::Shipment is replaced with Relations
         raise UnsupportedProblemError.new('Clustering supports `Shipments` only as `Relations`') if vrp.shipments.any?
 
+        # TODO(0): instead of an overall minimum vehicle duration we can only consider the vehicles
+        # that can serve the sub_set that is about to be merged in theory.
+        # If there is a small vehicle/bike, serving a specific zone and cannot reach far away
+        # regions due to its constraints, then it shouldn't affect the grouping decisions.
+        # However, this would be costly to check for each service. Instead, we
+        # can have `compatible_vehicles = Array[Model::Vehicle &]` inside each service
+        # this would:
+        #   - simplify the group_by condition (services of the same location can be grouped only if
+        #     they have the same set of `compatible_vehicles`)
+        #   - this way we need to check the capacity of the compatible_vehicles only (which means
+        #     we can group more)
+        #   - the same set can be used
+        #       to simplify infeasibility detection (detect_unfeasible_services, etc) a service with an empty
+        #         `compatible_vehicles` set can be added to the unassigned list, similarly a vehicle which does not
+        #         appear in any services `compatible_vehicles` set is an unneeded vehicle (which might be infeasible)
+        #       to handle the capacity logic in zip_cluster
+        #       to decrease the complexity of or-tools model by supplying vehicle_indices
+        min_vehicle_capacities = Hash[vehicle_units.collect{ |unit_id|
+          [
+            unit_id.to_sym,
+            vrp.vehicles.map{ |v|
+              v.capacities.find{ |c| c.unit.id == unit_id }&.limit
+            }.compact.min
+          ]
+        }]
+        min_vehicle_capacities[:duration] = vrp.vehicles.collect{ |vehicle|
+          if vehicle.sequence_timewindows.any?
+            schedule_start = vrp.schedule_range_indices[:start]
+            schedule_end = vrp.schedule_range_indices[:end]
+            total_work_time_in_range = vehicle.total_work_time_in_range(schedule_start, schedule_end)
+            total_work_days_in_range = vehicle.total_work_days_in_range(schedule_start, schedule_end)
+            (total_work_time_in_range / total_work_days_in_range).round
+          else
+            vehicle.work_duration
+          end
+        }.min
+
         vrp.services.group_by{ |s|
           location =
             if s.activity
@@ -973,36 +1010,64 @@ module Interpreters
             linked_relation_details: linked_relation_details,
           }
         }.each_with_index{ |(characteristics, sub_set), sub_set_index|
-          unit_quantities = Hash.new(0)
+          sub_set.sort_by!(&:visits_number).reverse!
 
-          sub_set.sort_by!(&:visits_number).reverse!.each_with_index{ |s, i|
-            unit_quantities[:visits] += s.visits_number
-            cumulated_metrics[:visits] += s.visits_number
-            s_setup_duration = s.activity ? s.activity.setup_duration : (s.pickup ? s.pickup.setup_duration : s.delivery.setup_duration)
-            s_duration = s.activity ? s.activity.duration : (s.pickup ? s.pickup.duration : s.delivery.duration)
-            duration = ((i.zero? ? s_setup_duration : 0) + s_duration) * s.visits_number
-            # TODO: If the services are not merged due another reason (for example pickups are at the same location but
-            # the deliveries are not), in the case, we assume the worst case and apply the setup_duration to all.
-            # However, because of this, clustering might return unbalanced clusters (because the duration is skewed).
-            unit_quantities[:duration] += duration
-            cumulated_metrics[:duration] += duration
-            s.quantities.each{ |quantity|
-              next if !vehicle_units.include? quantity.unit.id
+          merge_index = 0
+          while sub_set.any?
+            merged_quantities = Hash.new(0) # merged_x are not multiplied with visits_number because we want to respect the individual vehicle limits
+            unit_quantities = Hash.new(0)
 
-              unit_quantities[quantity.unit_id.to_sym] += quantity.value * s.visits_number
-              cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+            merge_set = sub_set.take_while.with_index{ |s, i|
+              s_duration = s.activity ? s.activity.duration : (s.pickup ? s.pickup.duration : s.delivery.duration)
+
+              next if i.positive? && (
+                s.quantities.any?{ |quantity|
+                  unit = quantity.unit_id.to_sym
+                  next if min_vehicle_capacities[unit].nil?
+
+                  merged_quantities[unit] + quantity.value >= min_vehicle_capacities[unit]
+                } || (merged_quantities[:duration] + s_duration >= min_vehicle_capacities[:duration])
+              )
+
+              unit_quantities[:visits] += s.visits_number
+              cumulated_metrics[:visits] += s.visits_number
+              s_setup_duration = s.activity ? s.activity.setup_duration : (s.pickup ? s.pickup.setup_duration : s.delivery.setup_duration)
+              duration = ((i.zero? ? s_setup_duration : 0) + s_duration) * s.visits_number
+              merged_quantities[:duration] += (i.zero? ? s_setup_duration : 0) + s_duration
+              # TODO: If the services are not merged due another reason (for example pickups are at the same location but
+              # the deliveries are not), in the case, we assume the worst case and apply the setup_duration to all.
+              # However, because of this, clustering might return unbalanced clusters (because the duration is skewed).
+              unit_quantities[:duration] += duration
+              cumulated_metrics[:duration] += duration
+              s.quantities.each{ |quantity|
+                next if !vehicle_units.include? quantity.unit.id
+
+                merged_quantities[quantity.unit_id.to_sym] += quantity.value
+                unit_quantities[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+                cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+              }
             }
-          }
+            sub_set = sub_set.drop(merge_set.size)
 
-          point = sub_set[0].activity.point
-          characteristics[:matrix_index] = point[:matrix_index] if !vrp.matrices.empty?
-          grouped_objects["#{point.id}_#{sub_set_index}"] = sub_set
-          # TODO : group sticky and skills (in expected characteristics too)
-          characteristics[:duration_from_and_to_depot] = [0, 0] if options[:basic_split]
-          data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}", unit_quantities, characteristics, nil]
+            # if there are more items left in sub_set this means we stop due to capacity/duration
+            # we set characteristics[:do_not_group] = true so that points of this location cannot
+            # be merged further in zip_data_items
+            characteristics[:do_not_group] ||= true if sub_set.any?
+
+            point = merge_set[0].activity.point
+            characteristics[:merged_quantities] = merged_quantities
+            characteristics[:matrix_index] = point[:matrix_index] if !vrp.matrices.empty?
+            grouped_objects["#{point.id}_#{sub_set_index}_#{merge_index}"] = merge_set
+            # TODO : group sticky and skills (in expected characteristics too)
+            characteristics[:duration_from_and_to_depot] = [0, 0] if options[:basic_split]
+            data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}_#{merge_index}", unit_quantities, characteristics.dup, nil]
+            merge_index += 1
+          end
         }
 
-        zip_dataitems(vrp, data_items, grouped_objects) if options[:group_points] && vrp.matrices.any? && vrp.matrices[0][:distance]&.any?
+        if options[:group_points] && vrp.matrices.any? && vrp.matrices[0][:distance]&.any?
+          zip_dataitems(vrp, data_items, grouped_objects, min_vehicle_capacities)
+        end
 
         add_duration_from_and_to_depot(vrp, data_items) if !options[:basic_split]
 
@@ -1028,7 +1093,7 @@ module Interpreters
         related_item_indices.group_by{ |k, _v| k.type }.transform_values!{ |v| v.collect!{ |i| i[1] } }
       end
 
-      def zip_dataitems(vrp, items, grouped_objects)
+      def zip_dataitems(vrp, items, grouped_objects, min_vehicle_capacities)
         vehicle_characteristics = generate_expected_characteristics(vrp.vehicles)
 
         compatible_vehicles = Hash.new{}
@@ -1045,7 +1110,14 @@ module Interpreters
           if data_item_a[4][:do_not_group] ||
              data_item_b[4][:do_not_group] ||
              data_item_a[4][:linked_relation_details] != data_item_b[4][:linked_relation_details] ||
-             (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty?
+             (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty? ||
+             min_vehicle_capacities.any?{ |unit, limit|
+               next if limit.nil?
+
+               data_item_a[4][:merged_quantities][unit] + data_item_b[4][:merged_quantities][unit] > limit
+             }
+             # see TODO(0) of collect_data_items_metrics about min_vehicle_capacities
+
             return max_distance + 1
           end
 
