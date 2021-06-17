@@ -18,19 +18,6 @@
 require './test/test_helper'
 
 class HelperTest < Minitest::Test
-  def test_no_unassigned_merge_with_nil_result
-    results = [{ unassigned: [{ service_id: 'service_1' }] }, nil]
-    merged_result = Helper.merge_results(results, false)
-    assert_equal merged_result[:unassigned].size, 1
-    assert(merged_result[:unassigned].one?{ |unassigned| unassigned[:service_id] == 'service_1' })
-  end
-
-  def test_merge_results_with_only_nil_results
-    results = [nil]
-    assert Helper.merge_results(results)
-    assert Helper.merge_results(results, false)
-  end
-
   def test_rounding_with_steps
     decimal_max = 4
 

@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -18,19 +18,23 @@
 require './models/base'
 
 module Models
-  class Capacity < Base
-    include LoadAsJson
+  class Solution < Base
+    class Info < Base
+      field :total_time, default: 0
+      field :total_travel_time, default: 0
+      field :total_waiting_time, default: 0
 
-    field :limit
-    field :initial
-    field :overload_multiplier
+      field :total_distance, default: 0
 
-    # ActiveHash doesn't validate the validator of the associated objects
-    # Forced to do the validation in Grape params
-    # validates_numericality_of :limit
-    # validates_numericality_of :initial
-    # validates_numericality_of :overload_multiplier, allow_nil: true
+      field :total_travel_value
 
-    belongs_to :unit, class_name: 'Models::Unit'
+      def +(other)
+        merged_details = Info.new({})
+        self.attributes.each_key{ |key|
+          merged_details[key] = (self[key] || 0) + (other[key] || 0)
+        }
+        merged_details
+      end
+    end
   end
 end

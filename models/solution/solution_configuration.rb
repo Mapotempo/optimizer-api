@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -18,19 +18,21 @@
 require './models/base'
 
 module Models
-  class Capacity < Base
-    include LoadAsJson
+  class Solution < Base
+    class Configuration < Base
+      field :csv, default: false
+      field :geometry, default: false
+      field :deprecated_headers, default: false
+      field :schedule_start_date
 
-    field :limit
-    field :initial
-    field :overload_multiplier
-
-    # ActiveHash doesn't validate the validator of the associated objects
-    # Forced to do the validation in Grape params
-    # validates_numericality_of :limit
-    # validates_numericality_of :initial
-    # validates_numericality_of :overload_multiplier, allow_nil: true
-
-    belongs_to :unit, class_name: 'Models::Unit'
+      def +(other)
+        Configuration.create(
+          csv: csv || other.csv,
+          geometry: (geometry + other.geometry).uniq,
+          deprecated_headers: deprecated_headers || other.deprecated_headers,
+          schedule_start_date: schedule_start_date
+        )
+      end
+    end
   end
 end

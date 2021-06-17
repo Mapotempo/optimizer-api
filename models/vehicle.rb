@@ -19,6 +19,10 @@ require './models/base'
 
 module Models
   class Vehicle < Base
+    include ContainedPointAsJson
+    include TimewindowAsJson
+    include VehicleAsJson
+
     field :original_id, default: nil
     field :cost_fixed, default: 0
     field :cost_distance_multiplier, default: 0
@@ -102,6 +106,14 @@ module Models
     has_many :capacities, class_name: 'Models::Capacity'
     # include ValidateTimewindows # <- This doesn't work
     has_many :rests, class_name: 'Models::Rest'
+
+    def vrp_result(_options = {})
+      {
+        vehicle_id: self.id,
+        original_vehicle_id: self.original_id,
+        day: self.global_day_index
+      }.stringify_keys
+    end
 
     def self.create(hash)
       if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_days]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?

@@ -42,7 +42,9 @@ module OutputHelper
 
     def self.generate_periodic_header(solutions_set)
       if solutions_set.any?{ |solution|
-           solution[:routes].any?{ |route| route[:original_vehicle_id] != route[:vehicle_id] }
+           solution[:routes].any?{ |route|
+            route[:original_vehicle_id] != route[:vehicle_id]
+          }
          }
         [true, [I18n.t('export_file.plan.name'), I18n.t('export_file.plan.ref')]]
       else
@@ -207,7 +209,7 @@ module OutputHelper
     def self.build_csv(solutions)
       return unless solutions
 
-      I18n.locale = :legacy if solutions.any?{ |s| s[:use_deprecated_csv_headers] }
+      I18n.locale = :legacy if solutions.any?{ |s| s[:configuration][:deprecated_headers] }
       header, unit_ids, max_timewindows_size, periodic, any_unassigned = generate_header(solutions)
 
       CSV.generate{ |output_csv|
@@ -302,26 +304,28 @@ module OutputHelper
   end
 
   class Result
-    def self.generate_geometry(solution)
-      return nil if solution.nil? || solution[:result].nil? || solution[:result].empty?
+    def self.generate_geometry(result_object)
+      return nil if result_object.nil? || result_object[:result].nil? || result_object[:result].empty?
 
       @colors = ['#DD0000', '#FFBB00', '#CC1882', '#00CC00', '#558800', '#009EFF', '#9000EE',
                  '#0077A3', '#000000', '#003880', '#BEE562']
+      return nil if result_object[:result].none?{ |solution|
+        solution[:configuration] && solution[:configuration][:geometry]&.any?
+      }
 
-      expected_geometry = solution[:configuration].to_h[:geometry].to_a.map!(&:to_sym) # TODO : investigate how it is possible that no configuration is returned
-      return nil unless expected_geometry.any?
+      result_object[:result].collect{ |solution|
+        expected_geometry = solution[:configuration][:geometry].to_a.map!(&:to_sym)
+        next unless expected_geometry.any?
 
-      expected_geometry.map!(&:to_sym)
-      solution[:result].collect{ |result|
         geojson = {}
         # if there is vehicle partition, the geojson object colors will be based on vehicle indices
-        vehicle_color_indices = result[:routes]&.map&.with_index{ |route, index|
+        vehicle_color_indices = solution[:routes]&.map&.with_index{ |route, index|
           [route[:original_vehicle_id], index]
         }&.to_h
 
-        geojson[:partitions] = generate_partitions_geometry(result, vehicle_color_indices) if expected_geometry.include?(:partitions)
-        geojson[:points] = generate_points_geometry(result, vehicle_color_indices)
-        geojson[:polylines] = generate_polylines_geometry(result, vehicle_color_indices) if expected_geometry.include?(:polylines) && ENV['OPTIM_GENERATE_GEOJSON_POLYLINES']
+        geojson[:partitions] = generate_partitions_geometry(solution, vehicle_color_indices) if expected_geometry.include?(:partitions)
+        geojson[:points] = generate_points_geometry(solution, vehicle_color_indices)
+        geojson[:polylines] = generate_polylines_geometry(solution, vehicle_color_indices) if expected_geometry.include?(:polylines) && ENV['OPTIM_GENERATE_GEOJSON_POLYLINES']
         geojson
       }
     end
@@ -416,6 +420,8 @@ module OutputHelper
 
       points = []
 
+      mission_types = [:service, :pickup, :delivery]
+
       result[:unassigned].each{ |unassigned|
         points << {
           type: 'Feature',
@@ -433,7 +439,7 @@ module OutputHelper
       result[:routes].each{ |r|
         color = compute_color([], nil, vehicle_color_indices[r[:original_vehicle_id]] || r[:day] || 0)
         r[:activities].each{ |a|
-          next unless ['service', 'pickup', 'delivery'].include?(a[:type])
+          next unless mission_types.include?(a[:type].to_sym)
 
           skills_properties = compute_skills_properties([nil, [a]])
           points << {

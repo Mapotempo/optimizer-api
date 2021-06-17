@@ -83,7 +83,7 @@ class Api::V01::OutputTest < Minitest::Test
     result = JSON.parse(response.body)
     assert_equal [0, 1, 2, 3], result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
     visit_indices = result['solutions'].first['routes'].flat_map{ |r|
-      r['activities'].flat_map{ |a| a['visit_index'] }
+      r['activities'].map{ |a| a['visit_index'] }
     }.compact
     assert_equal [1], visit_indices.uniq
 
@@ -283,7 +283,7 @@ class Api::V01::OutputTest < Minitest::Test
       OutputHelper::Result.stub(
         :build_csv,
         lambda { |solutions|
-          assert_equal parameter_value, solutions.first[:use_deprecated_csv_headers]
+          assert_equal parameter_value, solutions.first[:configuration][:deprecated_headers]
         }
       ) do
         submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'

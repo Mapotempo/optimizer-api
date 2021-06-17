@@ -97,55 +97,38 @@ module Helper
     end
   end
 
-  def self.merge_results(results, merge_unassigned = true)
-    results.flatten!
-    results.compact!
-    {
-      solvers: results.flat_map{ |r| r[:solvers] }.compact,
-      cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
-      cost_details: results.map{ |r| r[:cost_details] }.compact.sum,
-      iterations: results.size != 1 ? nil : results[0][:iterations],
-      heuristic_synthesis: results.size != 1 ? nil : results[0][:heuristic_synthesis],
-      routes: results.flat_map{ |r| r[:routes] }.compact.uniq,
-      unassigned: merge_unassigned ? results.flat_map{ |r| r[:unassigned] }.compact.uniq : results.map{ |r| r[:unassigned] }.compact.last,
-      elapsed: results.map{ |r| r[:elapsed] || 0 }.reduce(&:+),
-      total_time: results.map{ |r| r[:total_time] }.compact.reduce(&:+),
-      total_travel_time: results.map{ |r| r[:total_travel_time] }.compact.reduce(&:+),
-      total_value: results.map{ |r| r[:total_travel_value] }.compact.reduce(&:+),
-      total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+),
-      use_deprecated_csv_headers: results.any?{ |r| r[:use_deprecated_csv_headers] },
-    }
-  end
-
-  def self.replace_routes_in_result(result, new_result)
-    # Updates the routes of result with the ones in new_result and corrects the total stats
+  def self.replace_routes_in_result(solution, new_solution)
+    # Updates the routes of solution with the ones in new_solution and corrects the total stats
     # TODO: Correct total cost (needs cost per route!!!)
 
     # Correct unassigned services
-    result[:unassigned].delete_if{ |activity|
-      # Remove from unassigned if they appear in new unasigned or if they are served in new routes
-      new_result[:unassigned].any?{ |a| a[:service_id] == activity[:service_id] } ||
-        new_result[:routes].any?{ |r| r[:activities].any?{ |a| a[:service_id] == activity[:service_id] } }
+    new_service_ids = new_solution.routes.flat_map{ |route| route.stops.map(&:service_id) }.compact +
+                      new_solution.unassigned.map(&:service_id).compact
+
+    solution.unassigned.delete_if{ |activity|
+      # Remove from unassigned if they appear in new unassigned or if they are served in new routes
+      new_service_ids.include?(activity.service_id)
     }
-    result[:unassigned] += new_result[:unassigned]
+    solution.unassigned += new_solution.unassigned
 
     # Correct total stats and delete old routes
-    new_result[:routes].each{ |new_route|
-      old_route = result[:routes].find{ |r| r[:vehicle_id] == new_route[:vehicle_id] } || {} # this vehicle might not be used in the old results
+    new_solution.routes.each{ |new_route|
+      # This vehicle might not be used in the old solutions
+      old_index = solution.routes.index{ |r| r.vehicle.id == new_route.vehicle.id }
+      # old_route_stops = old_index ? solution.routes[old_index].stops : []
+      solution.routes[old_index] = new_route if old_index
+      solution.routes << new_route unless old_index
 
       [:total_time, :total_travel_time, :total_travel_value, :total_distance].each{ |stat|
-        next if new_route[stat].nil? && old_route[stat].nil? # if both nil no correction necessary
+        # If both nil no correction necessary
+        next if new_route.info.send(stat).nil? && solution.routes[old_index].info.send(stat).nil?
 
-        result[stat] = result[stat].to_f + new_route[stat].to_f - old_route[stat].to_f # = to_f incase this stat was nil
+        solution.info.send("#{stat}=",
+                              solution.info.send(stat) + new_route.info.send(stat) -
+                              solution.routes[old_index].info.send(stat))
       }
-
-      result[:routes].delete(old_route)
     }
-
-    # Add the new routes
-    result[:routes] += new_result[:routes]
-
-    result
+    solution
   end
 
   def self.services_duration(services)
@@ -172,7 +155,7 @@ class Numeric
   #
   # ndigits: the number of decimal places (when nsteps = 0)
   #
-  # nsteps: the number of steps between val.round(ndigits) and val.round(ndigits) + 1/10**ndigits
+  # nsteps: the number of stops between val.round(ndigits) and val.round(ndigits) + 1/10**ndigits
   #
   # For example,
   # array = [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
@@ -183,15 +166,15 @@ class Numeric
   #
   # With nsteps the number of uniq elements between two decimals can be controlled:
   # array.collect{ |val| val.round_with_steps(1, 0) }.uniq      :=>     [0.1, 0.2]                                                         # same with round(1)
-  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra step in between
-  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra stop in between
+  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra stop in between
   # ...
-  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra stop in between
   # array.collect{ |val| val.round_with_steps(1, 9) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]   # same with round(2)
   #
   # Theoretically, val.round_with_steps(ndigits, nsteps) is
   # equivalent to  val.round_to_multiple_of(1.0 / (nsteps + 1) / 10**ndigits )
   def round_with_steps(ndigits, nsteps = 0)
-    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nsteps + 1.0)).round(ndigits) / (nsteps + 1.0)).round(ndigits + 1)
+    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nstops + 1.0)).round(ndigits) / (nstops + 1.0)).round(ndigits + 1)
   end
 end

@@ -49,30 +49,29 @@ module Interpreters
 
         OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.preprocessing_partitions.size == 2, job) if OptimizerWrapper.config[:debug][:output_clusters] && service_vrp.size < splited_service_vrps.size
 
-        split_results = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
+        split_solutions = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
           cluster_ref = i + 1
-          result = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
+          solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
             msg = "split partition process #{cluster_ref}/#{splited_service_vrps.size} - #{message}" unless message.nil?
             block&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
 
           # add associated cluster as skill
-          [result].each{ |solution|
-            next if solution.nil? || solution.empty?
+          next if solution.nil?
 
-            solution[:routes].each{ |route|
-              route[:activities].each do |stop|
-                next if stop[:service_id].nil?
+          solution.routes.each{ |route|
+            route.stops.each do |stop|
+              next unless stop.service_id
 
-                stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_ref}"]
-              end
-            }
-            solution[:unassigned].each do |stop|
-              next if stop[:service_id].nil?
-
-              stop[:detail][:skills] = stop[:detail][:skills].to_a + ["cluster #{cluster_ref}"]
+              stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
             end
           }
+          solution.unassigned.each do |stop|
+            next if stop.service_id.nil?
+
+            stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
+          end
+          solution
         }
 
         # merge expanded vehicles, services and relations
@@ -80,7 +79,7 @@ module Interpreters
         vrp.services = splited_service_vrps.flat_map{ |sv| sv[:vrp].services }
         vrp.relations = splited_service_vrps.flat_map{ |sv| sv[:vrp].relations }
 
-        return Helper.merge_results(split_results)
+        return split_solutions.reduce(&:+)
       elsif split_solve_candidate?(service_vrp)
         return split_solve(service_vrp, &block)
       else
@@ -253,8 +252,8 @@ module Interpreters
         }
         log "--> split_solve_core level: #{split_level} | split services #{split_service_counts.sum}->#{split_service_counts}, vehicles #{enum_current_vehicles.size}->#{sides.collect(&:size)}"
 
-        # RECURSIVELY CALL split_solve_core AND MERGE RESULTS
-        results = sides.collect.with_index{ |side, index|
+        # RECURSIVELY CALL split_solve_core AND MERGE SOLUTIONS
+        solutions = sides.collect.with_index{ |side, index|
           service_vrp[:split_level] = split_level + 1
 
           ss_data[:current_vehicles] = side
@@ -268,14 +267,12 @@ module Interpreters
         ss_data[:cannot_split_further] = false
         log "<-- split_solve_core level: #{split_level}"
 
-        Helper.merge_results(results)
+        solutions.reduce(&:+)
       else # Stopping condition -- the problem is small enough
         # Finally generate the sub-vrp without hard-copy and solve it
-        result = split_solve_sub_vrp(service_vrp, job, &block)
-
-        transfer_unused_resources(ss_data, service_vrp[:vrp], result)
-
-        result
+        solution = split_solve_sub_vrp(service_vrp, job, &block)
+        transfer_unused_resources(ss_data, service_vrp[:vrp], solution)
+        solution
       end
     end
 
@@ -288,7 +285,8 @@ module Interpreters
 
       service_vrp[:vrp] = create_sub_vrp(ss_data)
 
-      OptimizerWrapper.define_process(service_vrp, job, &block)
+      solution = OptimizerWrapper.define_process(service_vrp, job, &block)
+      solution.parse(service_vrp[:vrp])
     ensure
       log "<-- split_solve_sub_vrp lv: #{split_level}"
     end
@@ -491,21 +489,21 @@ module Interpreters
       }
     end
 
-    def self.transfer_unused_resources(split_solve_data, vrp, result)
+    def self.transfer_unused_resources(split_solve_data, vrp, solution)
       # remove used empties_or_fills
       split_solve_data[:transferred_empties_or_fills].delete_if{ |service|
-        result[:unassigned].none?{ |a| a[:service_id] == service.id }
+        solution.unassigned.none?{ |a| a.service_id == service.id }
       }
 
-      remove_empty_routes(result)
+      remove_empty_routes(solution)
       # empty poorly populated routes only if necessary
-      if result[:unassigned].empty? &&
-         result[:routes].size == vrp.vehicles.size &&
-         (vrp.resolution_vehicle_limit.nil? || result[:routes].size == vrp.resolution_vehicle_limit)
-        remove_poorly_populated_routes(vrp, result, 0.1)
+      if solution.unassigned.empty? &&
+         solution.routes.size == vrp.vehicles.size &&
+         (vrp.resolution_vehicle_limit.nil? || solution.routes.size == vrp.resolution_vehicle_limit)
+        remove_poorly_populated_routes(vrp, solution, 0.1)
       end
 
-      used_vehicle_ids = result[:routes].map{ |r| r[:vehicle_id] }
+      used_vehicle_ids = solution.routes.map{ |r| r.vehicle.id }
       forcing_vehicle_relations = split_solve_data[:original_vrp].relations.select{ |r|
         FORCING_RELATIONS.include?(r.type) && r.linked_vehicle_ids&.any?
       }
@@ -532,40 +530,42 @@ module Interpreters
 
       # transfer unused resources
       if split_solve_data[:transferred_vehicle_limit]
-        split_solve_data[:transferred_vehicle_limit] = vrp.resolution_vehicle_limit - result[:routes].size
+        split_solve_data[:transferred_vehicle_limit] = vrp.resolution_vehicle_limit - solution.routes.size
       end
-      split_solve_data[:transferred_time_limit] = [vrp.resolution_duration.to_f - result[:elapsed], 0].max # to_f incase nil
+      split_solve_data[:transferred_time_limit] = [vrp.resolution_duration.to_f - solution.elapsed, 0].max # to_f incase nil
       nil
     end
 
-    def self.remove_poor_routes(vrp, result)
-      if result
-        remove_empty_routes(result)
-        remove_poorly_populated_routes(vrp, result, 0.1) if !Interpreters::Dichotomious.dichotomious_candidate?(vrp: vrp, service: :ortools)
-      end
+    def self.remove_poor_routes(vrp, solution)
+      return unless solution
+
+      remove_empty_routes(solution)
+      remove_poorly_populated_routes(vrp, solution, 0.1) if !Interpreters::Dichotomious.dichotomious_candidate?(vrp: vrp, service: :ortools)
     end
 
-    def self.remove_empty_routes(result)
-      result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] } }
+    def self.remove_empty_routes(solution)
+      solution.routes.delete_if{ |route| route.stops.none?(&:service_id) }
     end
 
-    def self.remove_poorly_populated_routes(vrp, result, limit)
+    def self.remove_poorly_populated_routes(vrp, solution, limit)
       forcing_relation_vehicle_ids = vrp.relations.flat_map{ |relation|
         FORCING_RELATIONS.include?(relation.type) ? relation.linked_vehicle_ids.to_a : []
       }.uniq
 
       emptied_routes = false
-      result[:routes].delete_if{ |route|
-        vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
-        loads = route[:activities].last[:detail][:quantities]
+      solution.routes.delete_if{ |route|
+        vehicle = vrp.vehicles.find{ |current_vehicle| current_vehicle.id == route.vehicle_id }
+        loads = route.stops.last.loads
         load_flag = vehicle.capacities.empty? || vehicle.capacities.all?{ |capacity|
-          current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
-          current_load[:current_load] / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
+          current_load = loads.find{ |unit_load| unit_load.quantity.unit.id == capacity.unit.id }
+          current_load.current / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
         }
-        vehicle_worktime = vehicle.duration || vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start) # can be nil!
-        route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
-
-        log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime} percent: #{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :info
+        vehicle_worktime = vehicle.duration ||
+                           vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start)
+        route_duration = route.info.total_time ||
+                         (route.stops.last.info.begin_time - route.stops.first.info.begin_time)
+        log "route #{route.vehicle.id} time: #{route_duration}/#{vehicle_worktime} percent: " \
+            "#{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :info
 
         # Do not remove a poorly populated routes if it is in a forcing relation
         # TODO: Ideally, we wouldn't remove a poorly populated vehicle only if, any of its linked vehicles is
@@ -583,11 +583,12 @@ module Interpreters
             result[key] -= route[key] if route[key]
           }
 
-          number_of_services_in_the_route = route[:activities].map{ |a| a[:service_id] && a.slice(:service_id, :detail).compact }.compact.size
+          number_of_services_in_the_route = route.stops.count(&:service_id)
 
-          log "route #{route[:vehicle_id]} is emptied: #{number_of_services_in_the_route} services are now unassigned.", level: :info
+          log "route #{route.vehicle.id} is emptied: #{number_of_services_in_the_route} " \
+              'services are now unassigned.', level: :info
 
-          result[:unassigned] += route[:activities].map{ |a| a[:service_id] && a.slice(:service_id, :detail).compact }.compact
+          solution.unassigned += route.stops.select(&:service_id)
           true
         end
       }
@@ -922,7 +923,7 @@ module Interpreters
 
     def self.collect_cluster_data(vrp, nb_clusters)
       # TODO: due to historical dev, this function is in two pieces but
-      # it is possbile to do the same task in one step. That is, instead of
+      # it is possbile to do the same task in one stop. That is, instead of
       # collecting vehicles then eliminating to have nb_clusters vehicles,
       # we can create one with nb_clusters items directly.
 
@@ -1053,12 +1054,12 @@ module Interpreters
         decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
                     {
                       digits: 4, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      steps: 5   # digits.steps 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
+                      stops: 5   # digits.stops 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
                     }
                   else
                     {
                       digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
+                      stops: 8   # digits.stops 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
                     }
                   end
 
@@ -1119,8 +1120,8 @@ module Interpreters
             end
 
           {
-            lat: location.lat.round_with_steps(decimal[:digits], decimal[:steps]),
-            lon: location.lon.round_with_steps(decimal[:digits], decimal[:steps]),
+            lat: location.lat.round_with_steps(decimal[:digits], decimal[:stops]),
+            lon: location.lon.round_with_steps(decimal[:digits], decimal[:stops]),
             v_id: s[:sticky_vehicle_ids].to_a |
               [vrp.routes.find{ |r| r.mission_ids.include? s.id }&.vehicle_id].compact, # split respects initial routes
             skills: s.skills.to_a.dup,
@@ -1383,16 +1384,6 @@ module Interpreters
           graph[node][:unit_metrics][symbol] -= value_to_remove
           remove_from_upper(graph, graph[node][:parent], symbol, value_to_remove)
         end
-      end
-
-      def remove_used_empties_and_refills(vrp, result)
-        result[:routes].collect{ |route|
-          current_service = nil
-          route[:activities].select{ |activity| activity[:service_id] }.collect{ |activity|
-            current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
-            current_service if current_service&.quantities&.any?(&:fill) || current_service&.quantities&.any?(&:empty)
-          }
-        }.flatten
       end
 
       def tree_leafs(graph, node)

@@ -19,6 +19,8 @@ require './models/base'
 
 module Models
   class Service < Base
+    include ServiceAsJson
+
     field :original_id, default: nil
 
     field :priority, default: 4
@@ -35,6 +37,7 @@ module Models
     field :last_possible_days, default: []
 
     field :visits_number, default: 1
+    field :visit_index, default: nil
 
     # validates_numericality_of :visits_number
 

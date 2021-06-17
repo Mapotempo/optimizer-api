@@ -85,7 +85,7 @@ module Wrappers
 
     def solve(vrp, job = nil, _thread_proc = nil)
       if vrp.vehicles.empty? || vrp.points.empty? || vrp.services.empty?
-        return empty_result('vroom', vrp)
+        return vrp.empty_solution(:vroom)
       end
 
       rest_equivalence(vrp)
@@ -102,36 +102,36 @@ module Wrappers
         @previous = nil
         vehicle = vrp.vehicles[route['vehicle']]
         cost += vehicle.cost_fixed if route['steps'].any?
-        activities = route['steps'].map{ |step|
+        stops = route['steps'].map{ |step|
           read_step(vrp, vehicle, step)
         }.compact
-        {
-          vehicle_id: vehicle.id,
-          original_vehicle_id: vehicle.original_id,
-          activities: activities,
-          start_time: activities.first[:begin_time],
-          end_time: activities.last[:begin_time] + (activities.last[:detail][:duration] || 0),
+        initial_loads = route['steps'].first['load']&.map&.with_index{ |load, l_index|
+          Models::Solution::Load.new(quantity: Models::Quantity.new(unit: vrp.units[l_index]), current: load)
         }
+        Models::Solution::Route.new(
+          initial_loads: initial_loads,
+          stops: stops,
+          vehicle: vehicle,
+          info: Models::Solution::Route::Info.new(
+            start_time: stops.first.info.begin_time,
+            end_time: stops.last.info.begin_time + stops.last.activity.duration
+          )
+        )
       }
 
       unassigneds = result['unassigned'].map{ |step| read_unassigned(vrp, step) }
 
       log 'Solution cost: ' + cost.to_s + ' & unassigned: ' + unassigneds.size.to_s, level: :info
 
-      result = {
+      solution =
+      Models::Solution.new(
         cost: cost,
-        cost_details: Models::CostDetails.create({}), # TODO: fulfill with solution costs
-        solvers: ['vroom'],
-        elapsed: elapsed_time, # ms
-#        total_travel_distance: 0,
-#        total_travel_time: 0,
-#        total_waiting_time: 0,
-#        start_time: 0,
-#        end_time: 0,
+        elapsed: elapsed_time,
+        solvers: [:vroom],
         routes: routes,
         unassigned: unassigneds
-      }
-      OptimizerWrapper.parse_result(vrp, result)
+      )
+      solution.parse(vrp)
     end
 
     private
@@ -172,14 +172,13 @@ module Wrappers
     def read_break(step)
       original_rest = @rest_hash.find{ |_key, value| value[:index] == step['id'] }.last[:rest]
       begin_time = step['arrival'] + step['waiting_time']
-      {
-        rest_id: original_rest.id,
-        type: 'rest',
-        detail: build_rest(original_rest),
+
+      times = {
         begin_time: begin_time,
-        end_time: begin_time + step['service'],
-        departure_time: begin_time + step['service']
-      }.delete_if{ |_k, v| v.nil? }
+        end_time: begin_time && (begin_time + step['service']),
+        departure_time: begin_time && (begin_time + step['service'])
+      }
+      Models::Solution::Stop.new(original_rest, info: Models::Solution::Stop::Info.new(times))
     end
 
     def read_depot(vrp, vehicle, step)
@@ -188,31 +187,35 @@ module Wrappers
 
       route_data = step['type'] == 'end' ? compute_route_data(vrp, point, step) : {}
       @previous = point
-      {
-        point_id: point.id,
-        type: 'depot',
-        begin_time: step['arrival'],
-        detail: build_detail(nil, nil, point, nil, nil, vehicle)
-      }.merge(route_data).delete_if{ |_k, v| v.nil? }
+
+      times = {
+        begin_time: step['arrival']
+      }.merge(route_data)
+      if step['type'] == 'end'
+        Models::Solution::Stop.new(vehicle.end_point, info: Models::Solution::Stop::Info.new(times))
+      else
+        Models::Solution::Stop.new(vehicle.start_point, info: Models::Solution::Stop::Info.new(times))
+      end
     end
 
-    def read_activity(vrp, vehicle, step)
-      service = @object_id_map[step['id']]
+    def read_activity(vrp, vehicle, act_step)
+      service = @object_id_map[act_step['id']]
       point = service.activity.point
-      route_data = compute_route_data(vrp, point, step)
-      begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
-      job_data = {
-        original_service_id: service.original_id,
-        service_id: service.id,
-        pickup_shipment_id: service.type == :pickup && service.original_id,
-        delivery_shipment_id: service.type == :delivery && service.original_id,
-        type: service.type,
-        point_id: point.id,
+      route_data = compute_route_data(vrp, point, act_step)
+      begin_time = act_step['arrival'] && (act_step['arrival'] + act_step['waiting_time'])
+      times = {
         begin_time: begin_time,
-        end_time: begin_time && (begin_time + step['service']),
-        departure_time: begin_time && (begin_time + step['service']),
-        detail: build_detail(service, service.activity, point, nil, nil, vehicle)
-      }.merge(route_data).delete_if{ |_k, v| v.nil? }
+        end_time: begin_time && (begin_time + act_step['service']),
+        departure_time: begin_time && (begin_time + act_step['service'])
+      }.merge(route_data)
+      quantity_hash = service.quantities.map{ |quantity| [quantity.unit.id, quantity] }.to_h
+      loads = vrp.units.map.with_index{ |unit, u_index|
+        Models::Solution::Load.new(
+          quantity: Models::Quantity.new(unit: unit),
+          current: act_step['load'] && (act_step['load'][u_index].to_f / CUSTOM_QUANTITY_BIGNUM) || 0
+        )
+      }
+      job_data = Models::Solution::Stop.new(service, info: Models::Solution::Stop::Info.new(times), loads: loads)
       @previous = point
       job_data
     end

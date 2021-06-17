@@ -42,7 +42,7 @@ class Api::V01::VrpTest < Minitest::Test
         assert_equal [:skill], services_vrps[0][:vrp][:services][0][:skills]
         assert_equal [[]], services_vrps[0][:vrp][:vehicles][1][:skills]
         assert_equal [], services_vrps[0][:vrp][:services][1][:skills]
-        {}
+        []
       }
     ) do
       vrp = VRP.toy
@@ -78,7 +78,7 @@ class Api::V01::VrpTest < Minitest::Test
         ].each_with_index{ |expected_skills, v_i|
           assert_equal vrp.vehicles[v_i].skills, expected_skills
         }
-        {}
+        [vrp.empty_solution({})]
       }
     ) do
       submit_vrp api_key: 'demo', vrp: problem
@@ -375,7 +375,7 @@ class Api::V01::VrpTest < Minitest::Test
           when 7
             assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
           end
-          {}
+          []
         }
       ) do
         vrp = VRP.toy

@@ -18,7 +18,7 @@
 require './models/base'
 
 module Models
-  class Rest < Base
+  class Rest < Activity
     field :duration, default: 0
     field :late_multiplier, default: 0
     field :exclusion_cost, default: nil
@@ -31,5 +31,12 @@ module Models
 
     has_many :timewindows, class_name: 'Models::Timewindow'
     # include ValidateTimewindows
+
+    def vrp_result(options = {})
+      hash = super(options)
+      hash.delete('late_multiplier')
+      hash.delete('exclusion_cost')
+      hash
+    end
   end
 end

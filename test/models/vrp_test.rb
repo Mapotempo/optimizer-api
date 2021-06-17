@@ -413,5 +413,21 @@ module Models
         TestHelper.create(problem)
       end
     end
+
+    def test_to_json
+      problem = VRP.lat_lon_capacitated
+      vrp = Models::Vrp.create(problem)
+      vrp_hash = JSON.parse(vrp.to_json, symbolize_names: true)
+      # Verify that an JSON dumped vrp may be imported again
+      re_vrp = Models::Vrp.create(vrp_hash)
+
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, re_vrp, nil)
+
+      # Populate again the active hash base
+      Models::Vrp.create(vrp_hash)
+      solution_hash = JSON.parse(solutions[0].to_json, symbolize_names: true)
+      # Verify that a JSON dumped solution may be imported again
+      Models::Solution.new(solution_hash)
+    end
   end
 end

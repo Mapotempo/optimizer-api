@@ -73,7 +73,7 @@ module OptimizerWrapper
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].restitution_geometry }.uniq
-      result = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
+      solution = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
           tick # call tick in case job is killed
           next # if not go back to optimization
@@ -90,7 +90,7 @@ module OptimizerWrapper
             geometry: ask_restitution_geojson
           }
           p[:graph] << { iteration: avancement, cost: cost, time: time }
-          p[:result] = solution if solution
+          p[:result] = [solution.vrp_result].flatten if solution
           Result.set(self.uuid, p)
         end
       }
@@ -103,7 +103,7 @@ module OptimizerWrapper
         csv: ask_restitution_csv,
         geometry: ask_restitution_geojson
       }
-      p[:result] = result
+      p[:result] = solution.vrp_result
       if services_vrps.size == 1 && p && p[:result].any? && p[:graph]&.any?
         p[:result].first[:iterations] = p[:graph].last[:iteration]
         p[:result].first[:elapsed] = p[:graph].last[:time]

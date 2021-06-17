@@ -21,45 +21,54 @@ class DichotomiousTest < Minitest::Test
   if !ENV['SKIP_DICHO']
     def test_dichotomious_approach
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
+      # TODO: Remove it once the dicho contions are stabilized
+      vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance.
 
       t1 = Time.now
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       t2 = Time.now
-      assert result
-
-      # Check activities
-      activity_assert_message = "Too many unassigned services (#{result[:unassigned].size}) for #{result[:routes].size} routes"
-      if result[:routes].size > 12
-        assert result[:unassigned].size <= 27, activity_assert_message
-      elsif result[:routes].size == 12
-        assert result[:unassigned].size <= 37, activity_assert_message
-      elsif result[:routes].size == 11
-        assert result[:unassigned].size <= 57, activity_assert_message
+      active_route_size = solutions[0].routes.count{ |route| route.count_services.positive? }
+      # Check stops
+      activity_assert_message =
+        "Too many unassigned services (#{solutions[0].unassigned.size}) for #{active_route_size} routes"
+      if active_route_size > 12
+        assert solutions[0].unassigned.size <= 27, activity_assert_message
+      elsif active_route_size == 12
+        assert solutions[0].unassigned.size <= 37, activity_assert_message
+      elsif active_route_size == 11
+        assert solutions[0].unassigned.size <= 57, activity_assert_message
       else
-        assert result[:unassigned].size <= 78, activity_assert_message
+        assert solutions[0].unassigned.size <= 78, activity_assert_message
       end
 
       # Check routes
-      route_assert_message = "Too many routes (#{result[:routes].size}) to have #{result[:unassigned].size} unassigned services"
-      if result[:unassigned].size > 30
-        assert result[:routes].size < 12, route_assert_message
-      elsif result[:unassigned].size > 15
-        assert result[:routes].size < 13, route_assert_message
-      elsif result[:unassigned].size > 5
-        assert result[:routes].size < 14, route_assert_message
+      route_assert_message =
+        "Too many routes (#{active_route_size}) to have #{solutions[0].unassigned.size} unassigned services"
+      if solutions[0].unassigned.size > 30
+        assert active_route_size < 12, route_assert_message
+      elsif solutions[0].unassigned.size > 15
+        assert active_route_size < 13, route_assert_message
+      elsif solutions[0].unassigned.size > 5
+        assert active_route_size < 14, route_assert_message
       else
-        assert result[:routes].size < 15, route_assert_message
+        assert active_route_size < 15, route_assert_message
       end
 
       # Check elapsed time
       min_dur = vrp.resolution_minimum_duration / 1000.0
       max_dur = vrp.resolution_duration / 1000.0
 
-      assert result[:elapsed] / 1000 < max_dur, "Time spent in optimization (#{result[:elapsed] / 1000}) is greater than the maximum duration asked (#{max_dur})." # Should never be violated!
-      assert result[:elapsed] / 1000 > min_dur * 0.95, "Time spent in optimization (#{result[:elapsed] / 1000}) is less than the minimum duration asked (#{min_dur})." # Due to "no remaining jobs" in end_stage, it can be violated (randomly).
+      assert solutions[0].elapsed / 1000 < max_dur, # Should never be violated!
+             "Time spent in optimization (#{solutions[0].elapsed / 1000}) is greater than " \
+             "the maximum duration asked (#{max_dur})."
+      # Due to "no remaining jobs" in end_stage, it can be violated (randomly).
+      assert solutions[0].elapsed / 1000 > min_dur * 0.95,
+             "Time spent in optimization (#{solutions[0].elapsed / 1000}) is less than " \
+             "the minimum duration asked (#{min_dur})."
       assert t2 - t1 > min_dur, "Too short elapsed time: #{t2 - t1}"
-      assert t2 - t1 < max_dur * 1.35, "Time spend in the API (#{t2 - t1}) is too big compared to maximum optimization duration asked (#{max_dur})." # Due to API overhead, it can be violated (randomly) .
+      assert t2 - t1 < max_dur * 1.35, # Due to API overhead, it can be violated (randomly).
+             "Time spend in the API (#{t2 - t1}) is too big compared to maximum " \
+             "optimization duration asked (#{max_dur})."
     end
 
     def test_dichotomious_condition_limits
@@ -209,7 +218,11 @@ class DichotomiousTest < Minitest::Test
     end
 
     def test_rest_cannot_appear_as_a_mission_in_the_initial_route
-      assert_empty Interpreters::Dichotomious.send(:build_initial_routes, {}, [{ routes: [activities: [{ rest_id: 'id' }]] }])
+      rest = Models::Rest.new(id: 'id')
+      route_rest = Models::Solution::Stop.new(rest)
+      solution_route = Models::Solution::Route.new(stops: [route_rest])
+      initial_solution = Models::Solution.new(routes: [solution_route])
+      assert_empty Interpreters::Dichotomious.send(:build_initial_routes, [initial_solution])
     end
 
     def test_dichotomious_approach_transfer_unused_vehicles_transfers_points_correctly
