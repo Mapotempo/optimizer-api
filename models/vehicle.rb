@@ -115,6 +115,22 @@ module Models
       super(hash)
     end
 
+    def start_depot_activity
+      Models::RouteActivity.new(
+        service_id: self.start_point&.id,
+        type: :depot,
+        details: Models::Activity.new(point: self.start_point)
+      )
+    end
+
+    def end_depot_activity
+      Models::RouteActivity.new(
+        service_id: self.end_point&.id,
+        type: :depot,
+        details: Models::Activity.new(point: self.end_point)
+      )
+    end
+
     def need_matrix_time?
       cost_time_multiplier.positive? || timewindow&.end || cost_late_multiplier&.positive? ||
         cost_setup_time_multiplier.positive? || !rests.empty? || maximum_ride_time || duration || overall_duration

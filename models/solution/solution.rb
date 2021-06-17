@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -18,18 +18,17 @@
 require './models/base'
 
 module Models
-  class Rest < Activity
-    field :duration, default: 0
-    field :late_multiplier, default: 0
-    field :exclusion_cost, default: nil
+  class Solution < Base
+    field :cost, default: 0
+    field :elapsed, default: 0
+    field :heuristic_synthesis, default: {}
+    field :iterations
+    field :solvers, default: []
 
-    # ActiveHash doesn't validate the validator of the associated objects
-    # Forced to do the validation in Grape params
-    # validates_numericality_of :duration
-    # validates_numericality_of :late_multiplier
-    # validates_numericality_of :exclusion_cost, allow_nil: true
+    has_many :routes, class_name: 'Models::SolutionRoute'
+    has_many :unassigned, class_name: 'Models::RouteActivity'
 
-    has_many :timewindows, class_name: 'Models::Timewindow'
-    # include ValidateTimewindows
+    belongs_to :costs, class_name: 'Models::CostDetails'
+    belongs_to :details, class_name: 'Models::RouteDetails'
   end
 end

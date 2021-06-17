@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -18,18 +18,9 @@
 require './models/base'
 
 module Models
-  class Rest < Activity
-    field :duration, default: 0
-    field :late_multiplier, default: 0
-    field :exclusion_cost, default: nil
+  class Load < Base
+    field :current_load
 
-    # ActiveHash doesn't validate the validator of the associated objects
-    # Forced to do the validation in Grape params
-    # validates_numericality_of :duration
-    # validates_numericality_of :late_multiplier
-    # validates_numericality_of :exclusion_cost, allow_nil: true
-
-    has_many :timewindows, class_name: 'Models::Timewindow'
-    # include ValidateTimewindows
+    belongs_to :quantity, class_name: 'Models::Quantity'
   end
 end
