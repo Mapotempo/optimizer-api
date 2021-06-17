@@ -58,5 +58,14 @@ module Models
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation'
+
+    def route_activity(index)
+      Models::RouteActivity.new(
+        service_id: self.original_id || self.id,
+        type: self.type,
+        alternative: index,
+        details: index && self.activities[index] || self.activity
+      )
+    end
   end
 end

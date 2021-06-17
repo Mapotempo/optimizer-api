@@ -19,20 +19,20 @@ require './models/base'
 
 module Models
   class CostDetails < Base
-      field :total, default: 0
-      field :fixed, default: 0
-      field :time, default: 0
-      field :distance, default: 0
-      field :value, default: 0
-      field :lateness, default: 0
-      field :overload, default: 0
+    field :total, default: 0
+    field :fixed, default: 0
+    field :time, default: 0
+    field :distance, default: 0
+    field :value, default: 0
+    field :lateness, default: 0
+    field :overload, default: 0
 
-      def +(other)
-        merged_cost = CostDetails.new({})
-        self.attributes.each_key{ |key|
-          merged_cost[key] = (self[key] || 0) + (other[key] || 0)
-        }
-        merged_cost
-      end
+    def +(other)
+      merged_cost = CostDetails.new({})
+      self.attributes.each_key{ |key|
+        merged_cost[key] = (self[key] || 0) + (other[key] || 0)
+      }
+      merged_cost
+    end
   end
 end
