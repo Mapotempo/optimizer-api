@@ -434,103 +434,6 @@ module Wrappers
       false
     end
 
-    def build_timewindows(activity, day_index)
-      activity.timewindows.select{ |timewindow|
-        day_index.nil? ||
-          timewindow.day_index.nil? ||
-          timewindow.day_index == day_index
-      }.collect{ |timewindow|
-        {
-          start: timewindow.start,
-          end: timewindow.end,
-          day_index: timewindow.day_index
-        }
-      }
-    end
-
-    def build_quantities(job, job_loads, delivery = nil)
-      if job_loads
-        job_loads.collect{ |current_load|
-          associated_quantity = job.quantities.find{ |quantity| quantity.unit && quantity.unit.id == current_load[:unit] } if job
-          {
-            unit: current_load[:unit],
-            label: current_load[:label],
-            value: associated_quantity && associated_quantity.value && (delivery.nil? ? 1 : -1) * associated_quantity.value,
-            setup_value: current_load[:counting] ? associated_quantity && associated_quantity.setup_value : nil,
-            current_load: current_load[:current_load]
-          }.delete_if{ |_k, v| !v }
-        }
-      elsif job
-        job.quantities.collect{ |quantity|
-          next if quantity.unit.nil?
-
-          {
-            unit: quantity.unit.id,
-            label: quantity.unit.label,
-            value: quantity&.value && (delivery.nil? ? 1 : -1) * quantity.value,
-            setup_value: quantity.unit.counting ? quantity.setup_value : 0
-          }
-        }.compact
-      else
-        []
-      end
-    end
-
-    def build_rest(rest, vehicle = nil)
-      {
-        duration: rest.duration,
-        router_mode: vehicle&.router_mode,
-        speed_multiplier: vehicle&.speed_multiplier
-      }.delete_if{ |_k, v| v.nil? }
-    end
-
-    def build_skills(job)
-      return nil unless job
-
-      all_skills = job.skills - job.original_skills
-      skills_to_output = []
-
-      vehicle_cluster = all_skills.find{ |sk| sk.to_s.include?('vehicle_partition_') }
-      skills_to_output << vehicle_cluster.to_s.split('_')[2..-1].join('_') if vehicle_cluster
-
-      work_day_cluster = all_skills.find{ |sk| sk.to_s.include?('work_day_partition_') }
-      skills_to_output << work_day_cluster.to_s.split('_')[3..-1].join('_') if work_day_cluster
-
-      skills_to_output << job.original_skills
-
-      skills_to_output.flatten
-    end
-
-    def build_detail(job, activity, point, day_index, job_load, vehicle, delivery = nil)
-      {
-        lat: point&.location&.lat,
-        lon: point&.location&.lon,
-        skills: build_skills(job),
-        internal_skills: job&.skills,
-        setup_duration: activity&.setup_duration,
-        duration: activity&.duration,
-        additional_value: activity&.additional_value,
-        timewindows: activity && build_timewindows(activity, day_index),
-        quantities: build_quantities(job, job_load, delivery),
-        router_mode: vehicle&.router_mode,
-        speed_multiplier: vehicle&.speed_multiplier
-      }.delete_if{ |_k, v| !v }
-    end
-
-    def build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
-      if previous_matrix_index && current_matrix_index
-        travel_distance = vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0
-        travel_time = vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0
-        travel_value = vehicle_matrix[:value] ? vehicle_matrix[:value][previous_matrix_index][current_matrix_index] : 0
-        return {
-          travel_distance: travel_distance,
-          travel_time: travel_time,
-          travel_value: travel_value
-        }
-      end
-      {}
-    end
-
     def compatible_day?(vrp, service, t_day, vehicle)
       first_day = vrp.schedule_range_indices[:start]
       last_day = vrp.schedule_range_indices[:end]
@@ -631,23 +534,17 @@ module Wrappers
     def add_unassigned_internal(unfeasible, vrp, service, reason)
       if unfeasible[service.id]
         # we update reason to have more details
-        unfeasible[service.id].each{ |un| un[:reason] += " && #{reason}" }
+        unfeasible[service.id].each{ |un| un.reason += " && #{reason}" }
       else
-        service_detail = build_detail(service, service.activity, service.activity.point, nil, nil, nil)
-
         unfeasible[service.id] = []
-
         service.visits_number.times{ |index|
-          unfeasible[service.id] << {
-            original_service_id: service.original_id,
-            pickup_shipment_id: service.type == :pickup && service.original_id,
-            delivery_shipment_id: service.type == :delivery && service.original_id,
-            service_id: vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service.id,
-            point_id: service.activity&.point_id,
-            detail: service_detail,
-            type: service.type,
+          stop_id = vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service.id
+          unfeasible[service.id] << Models::Solution::Stop.new(
+            service,
+            id: service.id,
+            service_id: stop_id,
             reason: reason
-          }.delete_if{ |_k, v| v.nil? }
+          )
         }
       end
 
@@ -857,7 +754,6 @@ module Wrappers
         log "Following services marked as infeasible:\n#{unfeasible.values.flatten.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug
         log "#{unfeasible.size} services marked as infeasible with the following reasons: #{unfeasible.values.flatten.collect{ |u| u[:reason] }.uniq.join(', ')}", level: :info
       end
-
       unfeasible
     end
 
@@ -916,7 +812,7 @@ module Wrappers
     end
 
     def patch_simplified_constraints_in_result(result, vrp)
-      return result unless result.is_a?(Hash)
+      return result unless result.is_a?(Models::Solution)
 
       simplifications.reverse_each{ |simplification|
         result_patched = self.send(simplification, vrp, result, mode: :patch_result)
@@ -928,7 +824,7 @@ module Wrappers
 
     def patch_and_rewind_simplified_constraints(vrp, result)
       # first patch the results (before the constraint are rewinded)
-      patch_simplified_constraints_in_result(result, vrp) if result.is_a?(Hash)
+      patch_simplified_constraints_in_result(result, vrp) if result.is_a?(Models::Solution)
 
       # then rewind the simplifications
       simplifications.reverse_each{ |simplification|
@@ -1004,18 +900,13 @@ module Wrappers
 
         simplification_active = true
 
-        result[:routes].each{ |route|
-          vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
-
+        result.routes.each{ |route|
           # correct the costs if the vehicle had cost adjustment and it is used
-          next unless vehicle[:fixed_cost_before_adjustment] && route[:cost_details]&.fixed&.positive?
+          next unless route.vehicle[:fixed_cost_before_adjustment] && route.cost_info&.fixed&.positive?
 
-          cost_diff = route[:cost_details].fixed - vehicle[:fixed_cost_before_adjustment]
-
-          route[:cost_details].fixed -= cost_diff
-          result[:cost_details].fixed -= cost_diff
+          route.cost_info.fixed = route.vehicle[:fixed_cost_before_adjustment]
         }
-        result[:cost] = result[:cost_details].total
+        result.update_costs
       else
         raise 'Unknown :mode option'
       end
@@ -1086,7 +977,6 @@ module Wrappers
               activity.timewindows.each{ |tw| tw.end += activity.duration if tw&.end }
               activity.additional_value = 0
               activity.duration = 0
-              activity.setup_duration = 0
 
               # inserting the remaining parts of a multipart service should be of highest priority
               new_service.priority = 0 # 0 is the highest priority
@@ -1147,31 +1037,29 @@ module Wrappers
 
         simplification_data[:original_services].each{ |service|
           # delete the unassigned expanded version of service and calculate how many of them planned/unassigned
-          unassigned_exp_ser_count = result[:unassigned].size
-          unassigned_exp_ser_count -= result[:unassigned].delete_if{ |uns| uns[:original_service_id] == service.original_id }.size
+          unassigned_exp_ser_count = result.unassigned.size
+          unassigned_exp_ser_count -= result.unassigned.delete_if{ |uns| uns.id == service.original_id }.size
           planned_exp_ser_count = simplification_data[:expanded_services].count{ |s| s.original_id == service.original_id } - unassigned_exp_ser_count
 
           if planned_exp_ser_count == 0
             # if all of them were unplanned
             # replace the deleted unassigned expanded ones with one single original un-expanded service
-            result[:unassigned] << {
-              original_service_id: service.original_id,
-              service_id: service.id,
-              point_id: service.activity.point_id,
-              detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
-            }
+            result.unassigned << Models::Solution::Stop.new(service)
           else
             # replace the planned one(s) into one single unexpanded original service
-            first_exp_ser_activity = nil
-            last_exp_ser_activity = nil
-            insert_location = nil
-            deleted_exp_ser_count = 0
-            result[:routes].each{ |route|
-              route[:activities].delete_if.with_index{ |activity, index|
-                if activity[:original_service_id] == service.original_id
+            result.routes.each{ |route|
+              stop_info = nil
+              first_exp_ser_stop = nil
+              last_exp_ser_stop = nil
+              insert_location = nil
+              deleted_exp_ser_count = 0
+              route.stops.delete_if.with_index{ |stop, index|
+                if stop.id == service.original_id
+
                   insert_location ||= index
-                  first_exp_ser_activity ||= activity # first_exp_ser_activity has the travel and timing info
-                  last_exp_ser_activity = activity # last_exp_ser_activity has the quantity info
+                  stop_info ||= stop.info
+                  first_exp_ser_stop ||= stop # first_exp_ser_stop has the travel and timing info
+                  last_exp_ser_stop = stop # last_exp_ser_stop has the quantity info
                   deleted_exp_ser_count += 1
                   true
                 elsif deleted_exp_ser_count == planned_exp_ser_count
@@ -1181,29 +1069,31 @@ module Wrappers
 
               next unless insert_location # expanded activity(ies) of service is found in this route
 
-              merged_activity = first_exp_ser_activity.merge(last_exp_ser_activity) { |key, first, last|
-                if key == :service_id
-                  service.id
-                elsif key == :detail && first != last
-                  # if only one expanded service is planned (i.e., first == last), then first will be correct
-                  # if not correct the quantities
-                  first[:quantities].each_with_index{ |first_quantity, q_ind|
-                    last_quantity = last[:quantities][q_ind][:unit] == first_quantity[:unit] && last[:quantities][q_ind]
-                    last_quantity ||= last[:quantities].find{ |q| q[:unit] == first_quantity[:unit] }
-                    value_correction = last_quantity[:current_load] - first_quantity[:current_load]
-                    first_quantity[:current_load] = last_quantity[:current_load]
+              stop = Models::Solution::Stop.new(service, loads: [], info: stop_info)
 
-                    next if first_quantity[:value].nil? && value_correction == 0
+              current_firsts = Hash.new { 0 }
+              current_lasts = Hash.new { 0 }
 
-                    first_quantity[:value] = first_quantity[:value].to_f + value_correction
-                  }
-                  first
-                else
-                  first
-                end
+              first_exp_ser_stop.loads.each{ |load|
+                current_firsts[load.quantity.unit_id] = load.current
               }
 
-              route[:activities].insert(insert_location, merged_activity)
+              if last_exp_ser_stop != first_exp_ser_stop
+                last_exp_ser_stop.loads.each{ |load|
+                  current_lasts[load.quantity.unit_id] = load.current
+                }
+              end
+              vrp.units.map{ |unit|
+                Models::Solution::Load.new(
+                  quantity: Models::Quantity.new(
+                    unit: unit,
+                    value: current_lasts[unit.id] - current_firsts[unit.id]
+                  ),
+                  current: current_firsts[unit.id]
+                )
+              }
+
+              result.insert_stop(vrp, route, stop, insert_location)
 
               break
             }
@@ -1327,28 +1217,28 @@ module Wrappers
         end
       when :patch_result
         # correct the result with respect to simplifications
-        pause_and_depot = %w[depot rest].freeze
+        pause_and_depot = %i[depot rest].freeze
         vrp.vehicles&.each{ |vehicle|
           next unless vehicle[:simplified_rests]&.any?
 
           simplification_active ||= true
 
-          route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
-          no_cost = route[:activities].none?{ |a| pause_and_depot.exclude?(a[:type]) }
+          route = result.routes.find{ |r| r.vehicle.id == vehicle.id }
+          no_cost = route.stops.none?{ |a| pause_and_depot.exclude?(a.type) }
 
           # first shift every activity all the way to the left (earlier) if the route starts after
           # the vehicle TW.start so that it is easier to do the insertions since there is no TW on
           # services, we can do this even if force_start is false
-          shift_amount = vehicle.timewindow&.start.to_i - (route[:start_time] || vehicle.timewindow&.start).to_i
+          shift_amount = vehicle.timewindow&.start.to_i - (route.info.start_time || vehicle.timewindow&.start).to_i
           shift_route_times(route, shift_amount) if shift_amount < 0
 
-          # insert the rests back into the route and adjust the timing of the activities coming after the pause
+          # insert the rests back into the route and adjust the info of the stops coming after the pause
           vehicle[:simplified_rests].each{ |rest|
             # find the first service that finishes after the TW.end of pause
             insert_rest_at =
               unless rest.timewindows&.last&.end.nil?
-                route[:activities].index{ |activity|
-                  (activity[:end_time] || activity[:begin_time]) > rest.timewindows.last.end
+                route.stops.index{ |activity|
+                  (activity.info.end_time || activity.info.begin_time) > rest.timewindows.last.end
                 }
               end
 
@@ -1356,27 +1246,27 @@ module Wrappers
               if insert_rest_at.nil?
                 # reached the end of the route or there is no TW.end on the pause
                 # in any case, insert the rest at the end (before the end depot if it exists)
-                if route[:activities].empty?
+                if route.stops.empty?
                   # no activity
-                  [route[:activities].size, vehicle.timewindow&.start || 0]
-                elsif route[:activities].last[:type] == 'depot' && vehicle.end_point
+                  [route.stops.size, vehicle.timewindow&.start || 0]
+                elsif route.stops.last.type == :depot && vehicle.end_point
                   # last activity is an end depot
-                  [route[:activities].size - 1, route[:activities].last[:begin_time]]
+                  [route.stops.size - 1, route.stops.last.info.begin_time]
                 else
                   # last activity is not an end depot
                   # either the last activity is a service and it has an end_time
                   # or it is the begin depot and we can use the begin_time
-                  [route[:activities].size, route[:activities].last[:end_time] || route[:activities].last[:begin_time]]
+                  [route.stops.size, route.stops.last.info.end_time || route.stops.last.info.begin_time]
                 end
               else
                 # there is a clear position to insert
-                activity_after_rest = route[:activities][insert_rest_at]
+                stop_after_rest = route.stops[insert_rest_at]
 
-                rest_start = activity_after_rest[:begin_time]
+                rest_start = stop_after_rest.info.begin_time
                 # if this the first service of this location then we need to consider the setup_duration
-                rest_start -= activity_after_rest[:detail][:setup_duration].to_i if activity_after_rest[:travel_time] > 0
+                rest_start -= stop_after_rest.activity.setup_duration.to_i if stop_after_rest.info.travel_time > 0
                 if rest.timewindows&.last&.end && rest_start > rest.timewindows.last.end
-                  rest_start -= activity_after_rest[:travel_time]
+                  rest_start -= stop_after_rest.info.travel_time
                   rest_start = [rest_start, rest.timewindows&.first&.start.to_i].max # don't induce idle_time if within travel_time
                 end
 
@@ -1397,23 +1287,18 @@ module Wrappers
               shift_route_times(route, idle_time_created_by_inserted_pause)
               idle_time_created_by_inserted_pause = 0
             end
-
-            route[:activities].insert(insert_rest_at, { rest_id: rest.id, type: 'rest', begin_time: rest_start,
-                                                        end_time: rest_start + rest.duration,
-                                                        departure_time: rest_start + rest.duration,
-                                                        detail: build_rest(rest) })
-
-            shift_route_times(route, idle_time_created_by_inserted_pause + rest.duration, insert_rest_at + 1)
+            times = { begin_time: rest_start, end_time: rest_start + rest.duration, departure_time: rest_start + rest.duration }
+            rest_stop = Models::Solution::Stop.new(rest, info: Models::Solution::Stop::Info.new(times))
+            result.insert_stop(vrp, route, rest_stop, insert_rest_at, idle_time_created_by_inserted_pause)
+            # shift_route_times(route, idle_time_created_by_inserted_pause + rest.duration, insert_rest_at + 1)
 
             next if no_cost
 
             cost_increase = vehicle.cost_time_multiplier.to_f * rest.duration +
                             vehicle.cost_waiting_time_multiplier.to_f * idle_time_created_by_inserted_pause
-
-
-            route[:cost_details]&.time += cost_increase
-            result[:cost_details]&.time += cost_increase
-            result[:cost] += cost_increase # totals are not calculated yet
+            route.cost_info&.time += cost_increase
+            result.cost_info&.time += cost_increase
+            result.cost += cost_increase # totals are not calculated yet
           }
         }
       else
@@ -1469,7 +1354,7 @@ module Wrappers
           }
         }
 
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
@@ -1481,14 +1366,14 @@ module Wrappers
         }
       when :rewind
         # take it back in case in dicho and there will be re-optimization
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
 
         vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
-          setup_duration = service_group.first[:simplified_setup_duration].to_i
+          setup_duration = service_group.first.activity[:simplified_setup_duration].to_i
 
           next if setup_duration.zero?
 
@@ -1503,8 +1388,8 @@ module Wrappers
           }
 
           service_group.each{ |service|
-            service.setup_duration = service[:simplified_setup_duration]
-            service[:simplified_setup_duration] = nil
+            service.activity.setup_duration = service.activity[:simplified_setup_duration]
+            service.activity[:simplified_setup_duration] = nil
           }
         }
 
@@ -1518,43 +1403,45 @@ module Wrappers
         # patches the result
         # the travel_times need to be decreased and setup_duration need to be increased by
         # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless result.routes.any?{ |route|
+          route.stops.any?{ |stop| stop.activity[:simplified_setup_duration] }
+        }
 
         simplification_active = true
 
         vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
-        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point }
+        services_grouped_by_point = vrp.services.group_by{ |s| s.activity.point }
 
         overall_total_travel_time_correction = 0
-        result[:routes].each{ |route|
+        result.routes.each{ |route|
           vehicle = vehicles_grouped_by_vehicle_id[route[:vehicle_id]].first
           coef_setup = vehicle[:simplified_coef_setup] || 1
           additional_setup = vehicle[:simplified_additional_setup].to_i
 
           total_travel_time_correction = 0
-          route[:activities].each{ |activity|
-            next if activity[:travel_time].to_i.zero?
+          route.stops.each{ |stop|
+            next if stop.info.travel_time.to_i.zero? || services_grouped_by_point[stop.activity.point].nil?
 
-            setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+            setup_duration = stop.activity[:simplified_setup_duration].to_i
 
             next if setup_duration.zero?
 
             time_correction = coef_setup * setup_duration + additional_setup
 
             total_travel_time_correction += time_correction
-            activity[:detail][:setup_duration] = time_correction.round
-            activity[:travel_time] -= activity[:detail][:setup_duration]
+            stop.activity.setup_duration = time_correction.round
+            stop.info.travel_time -= time_correction
           }
 
           overall_total_travel_time_correction += total_travel_time_correction
-          route[:total_travel_time] -= total_travel_time_correction.round
+          route.info.total_travel_time -= total_travel_time_correction.round
         }
-        result[:total_travel_time] -= overall_total_travel_time_correction.round
+        result.info.total_travel_time -= overall_total_travel_time_correction.round
 
-        result[:unassigned].each{ |activity|
-          setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+        result.unassigned.each{ |stop|
+          setup_duration = stop.activity[:simplified_setup_duration].to_i
 
-          activity[:detail][:setup_duration] = setup_duration
+          stop.activity.setup_duration = setup_duration
         }
       else
         raise 'Unknown :mode option'
@@ -1565,66 +1452,17 @@ module Wrappers
     def shift_route_times(route, shift_amount, shift_start_index = 0)
       return if shift_amount == 0
 
-      raise 'Cannot shift the route, there are not enough activities' if shift_start_index > route[:activities].size
+      raise 'Cannot shift the route, there are not enough stops' if shift_start_index > route.stops.size
 
-      route[:start_time] += shift_amount if shift_start_index == 0
-      route[:activities].each_with_index{ |activity, index|
+      route.info.start_time += shift_amount if shift_start_index == 0
+      route.stops.each_with_index{ |activity, index|
         next if index < shift_start_index
 
-        activity[:begin_time] += shift_amount
-        activity[:end_time] += shift_amount if activity[:end_time]
-        activity[:waiting_time] -= [shift_amount, activity[:waiting_time]].min if activity[:waiting_time]
-        activity[:departure_time] += shift_amount if activity[:departure_time]
+        activity.info.begin_time += shift_amount
+        activity.info.end_time += shift_amount if activity.info.end_time
+        activity.info.departure_time += shift_amount if activity.info.departure_time
       }
-      route[:total_time] += shift_amount if route[:total_time]
-      route[:end_time] += shift_amount if route[:end_time]
-    end
-
-    def unassigned_services(vrp, unassigned_reason)
-      vrp.services.flat_map{ |service|
-        Array.new(service.visits_number) { |visit_index|
-          {
-            service_id: vrp.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id,
-            type: service.type.to_s,
-            point_id: service.activity.point_id,
-            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }
-        }
-      }
-    end
-
-    def unassigned_rests(vrp)
-      vrp.vehicles.flat_map{ |vehicle|
-        vehicle.rests.flat_map{ |rest|
-          {
-            rest_id: rest.id,
-            detail: build_rest(rest, nil)
-          }
-        }
-      }
-    end
-
-    def expand_vehicles_for_consistent_empty_result(vrp)
-      periodic = Interpreters::PeriodicVisits.new(vrp)
-      periodic.generate_vehicles(vrp)
-    end
-
-    def empty_result(solver, vrp, unassigned_reason = nil, already_expanded = true)
-      vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp) if vrp.schedule? && !already_expanded
-      OptimizerWrapper.parse_result(vrp, {
-        solvers: [solver],
-        cost: nil,
-        cost_details: Models::CostDetails.create({}),
-        iterations: nil,
-        routes: vrp.vehicles.collect{ |vehicle|
-          OptimizerWrapper.empty_route(vrp, vehicle)
-        },
-        unassigned: (unassigned_services(vrp, unassigned_reason) +
-                     unassigned_rests(vrp)).flatten,
-        elapsed: 0,
-        total_distance: nil
-      })
+      route.info.end_time += shift_amount if route.info.end_time
     end
 
     def kill; end

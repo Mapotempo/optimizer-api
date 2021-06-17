@@ -100,9 +100,9 @@ module Interpreters
       end
     end
 
-    def self.expand_several_solutions(service_vrps)
-      several_solutions(service_vrps).flat_map{ |each_service_vrps|
-        if service_vrps[0][:vrp].resolution_batch_heuristic
+    def self.expand_similar_resolutions(service_vrps)
+      several_resolutions(service_vrps).flat_map{ |each_service_vrps|
+        if each_service_vrps.first[:vrp].resolution_batch_heuristic
           batch_heuristic(each_service_vrps)
         else
           [each_service_vrps]
@@ -110,8 +110,9 @@ module Interpreters
       }
     end
 
-    def self.expand_repeat(service_vrp)
-      return [service_vrp] if service_vrp[:vrp].resolution_repetition < 1
+    def self.expand_repetitions(service_vrp)
+      return [service_vrp] if service_vrp[:vrp].resolution_repetition.nil? ||
+                              service_vrp[:vrp].resolution_repetition <= 1
 
       repeated_service_vrp = [service_vrp]
 
@@ -148,11 +149,11 @@ module Interpreters
       }
     end
 
-    def self.several_solutions(service_vrps)
-      several_service_vrps = [service_vrps] # First one is the original vrp
+    def self.several_resolutions(service_vrps)
+      several_service_vrps = [service_vrps]
 
-      (service_vrps[0][:vrp].resolution_several_solutions - 1).times{ |i|
-        several_service_vrps << service_vrps.collect{ |service_vrp|
+      (service_vrps.first[:vrp].resolution_several_solutions - 1).times{ |i|
+        several_service_vrps << service_vrps.map{ |service_vrp|
           variate_service_vrp(Marshal.load(Marshal.dump(service_vrp)), i)
         }
       }
@@ -194,36 +195,32 @@ module Interpreters
         raise 'No solution found during heuristic selection' if first_results.all?(&:nil?)
 
         synthesis = []
-        first_results.each_with_index{ |result, i|
+        first_results.each_with_index{ |solution, i|
           synthesis << {
             heuristic: custom_heuristics[i],
-            quality: result.nil? ? Float::MAX : result[:cost].to_i + (times[i] / 1000).to_i,
+            quality: solution.nil? ? Float::MAX : solution.cost.to_i + (times[i] / 1000).to_i,
             used: false,
-            cost: result ? result[:cost] : nil,
+            cost: solution ? solution.cost : nil,
             time_spent: times[i],
-            solution: result
+            solution: solution
           }
         }
         best = synthesis.min_by{ |element| element[:quality] }
 
         if best[:heuristic] != 'supplied_initial_routes'
           # if another heuristic is the best, use its solution as the initial route
-          vrp.routes = best[:solution][:routes].collect{ |route|
-            mission_ids = route[:activities].collect{ |a|
-              a[:service_id]
-            }.compact
+          vrp.routes = best[:solution].routes.collect{ |route|
+            mission_ids = route.stops.collect(&:service_id).compact
             next if mission_ids.empty?
 
-            Models::Route.create(vehicle: vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] }, mission_ids: mission_ids)
+            Models::Route.create(vehicle: vrp.vehicles.find{ |v| v.id == route.vehicle_id }, mission_ids: mission_ids)
           }.compact
         end
 
         best[:used] = true
 
         vrp.preprocessing_heuristic_result = best[:solution]
-        vrp.preprocessing_heuristic_result[:solvers].each{ |solver|
-          solver = 'preprocessing_' + solver
-        }
+        vrp.preprocessing_heuristic_result[:solvers].map!{ |solver| "preprocessing_#{solver}".to_sym }
         synthesis.each{ |synth| synth.delete(:solution) }
         vrp.resolution_batch_heuristic = nil
         vrp.preprocessing_first_solution_strategy = best[:heuristic] != 'supplied_initial_routes' ? [verified(best[:heuristic])] : []

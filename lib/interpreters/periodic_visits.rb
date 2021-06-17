@@ -168,6 +168,7 @@ module Interpreters
             service,
             id: "#{service.id}_#{visit_index + 1}_#{service.visits_number}",
             visits_number: 1,
+            visit_index: visit_index + 1,
             first_possible_days: [service.first_possible_days[visit_index]],
             last_possible_days: [service.last_possible_days[visit_index]]
           )

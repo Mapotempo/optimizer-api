@@ -23,72 +23,23 @@ module Wrappers
       super(hash)
     end
 
-    def build_route_activity(mission, type, activity)
-      timewindows = []
-      if activity.timewindows && !activity.timewindows.empty?
-        timewindows = [{
-          start: timewindows&.first&.start,
-          end: timewindows&.first&.end,
-        }]
-      end
-      {
-        point_id: activity.point.id,
-        travel_time: 0,
-        travel_distance: 0,
-        travel_start_time: 0,
-        waiting_time: 0,
-        arrival_time: 0,
-        departure_time: 0,
-        type: type,
-        begin_time: 0,
-        end_time: 0,
-        detail: build_detail(mission, activity, activity.point, nil, nil, nil)
-      }
-    end
-
-    def build_route_depot(point)
-      point && {
-          point_id: point.id,
-          travel_time: 0,
-          travel_distance: 0,
-          travel_start_time: 0,
-          type: 'depot',
-          begin_time: 0,
-          end_time: 0,
-          detail: {
-            lat: point.location&.lat,
-            lon: point.location&.lon,
-          }
-      }
-    end
-
     def solve(vrp, _job = nil, _thread_proc = nil, &_block)
-      {
-        cost: 0,
-        cost_details: Models::CostDetails.create({}),
-        solvers: [:demo],
-        total_travel_distance: 0,
-        total_travel_time: 0,
-        total_waiting_time: 0,
-        start_time: 0,
-        end_time: 0,
-        routes: vrp.vehicles.collect{ |vehicle|
-          {
-            vehicle_id: vehicle.id,
-            original_vehicle_id: vehicle.original_id,
-            activities: (
-              [build_route_depot(vehicle.start_point)] +
-              vrp.services.collect{ |service|
-                mission_hash = build_route_activity(service, service.type, service.activity || service.activities.first)
-                mission_hash[:service_id] = service.id
-                mission_hash
-              } +
-              [build_route_depot(vehicle.end_point)]
-            ).compact
-          }
-        } || [],
-        unassigned: []
+      routes = vrp.vehicles.map{ |vehicle|
+        stops = [vehicle.start_point && Models::Solution::Stop.new(vehicle.start_point)] +
+                vrp.services.map{ |service|
+                  Models::Solution::Stop.new(service, index: service.activities.any? && 0)
+                } + [vehicle.end_point && Models::Solution::Stop.new(vehicle.end_point)]
+        Models::Solution::Route.new(
+          vehicle: vehicle,
+          stops: stops.compact
+        )
       }
+      solution = Models::Solution.new(
+        solvers: [:demo],
+        routes: routes
+      )
+
+      solution.parse(vrp, compute_dimensions: true)
     end
   end
 end
