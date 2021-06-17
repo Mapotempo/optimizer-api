@@ -28,7 +28,13 @@ module Models
     has_many :routes, class_name: 'Models::SolutionRoute'
     has_many :unassigned, class_name: 'Models::RouteActivity'
 
-    belongs_to :costs, class_name: 'Models::CostDetails'
-    belongs_to :details, class_name: 'Models::RouteDetails'
+    belongs_to :costs, class_name: 'Models::CostDetails', default: Models::CostDetails.new({})
+    belongs_to :details, class_name: 'Models::RouteDetails', default: Models::RouteDetails.new({})
+
+    def as_json(options = {})
+      hash = super(options)
+      hash.delete('details')
+      hash.merge(details.as_json(options))
+    end
   end
 end

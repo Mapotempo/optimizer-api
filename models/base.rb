@@ -119,6 +119,8 @@ module Models
           self[id_function_name] = self[name]&.id
         end
       end
+
+      add_default_value(name, options[:default]) if options[:default]
     end
 
     private

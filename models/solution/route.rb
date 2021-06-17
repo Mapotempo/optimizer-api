@@ -27,5 +27,11 @@ module Models
     belongs_to :cost_details, class_name: 'Models::CostDetails'
     belongs_to :details, class_name: 'Models::RouteDetails'
     belongs_to :vehicle, class_name: 'Models::Vehicle'
+
+    def as_json(options = {})
+      hash = super(options)
+      hash.delete('details')
+      hash.merge(details.as_json(options))
+    end
   end
 end
