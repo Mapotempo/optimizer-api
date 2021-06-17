@@ -132,6 +132,8 @@ module Models
         c = class_from_string(options[:class_name])
         self[name] = val_id && c.find(val_id)
       end
+
+      add_default_value(name, options[:default]) if options[:default]
     end
 
     private
