@@ -61,9 +61,7 @@ module Wrappers
     end
 
     def assert_vehicles_no_alternative_skills(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
-        !vehicle.skills || vehicle.skills.size > 1
-      }
+      vrp.vehicles.none?{ |vehicle| vehicle.skills.size > 1 }
     end
 
     def assert_no_direct_shipments(vrp)
@@ -293,10 +291,6 @@ module Wrappers
 
     def assert_possible_to_get_distances_if_maximum_ride_distance(vrp)
       vrp.vehicles.none?(&:maximum_ride_distance) || (vrp.points.all?{ |point| point.location&.lat } || vrp.matrices.all?{ |matrix| matrix.distance && !matrix.distance.empty? })
-    end
-
-    def assert_no_skills_if_heuristic(vrp)
-      vrp.services.none?{ |service| !service.skills.empty? } || vrp.vehicles.none?{ |vehicle| !vehicle.skills.flatten.empty? } || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' || !vrp.preprocessing_partitions.empty?
     end
 
     def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)

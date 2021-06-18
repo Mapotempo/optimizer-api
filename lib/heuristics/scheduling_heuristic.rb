@@ -176,9 +176,16 @@ module Wrappers
         all_routes.each{ |_day, route_data|
           next if route_data[:stops].empty?
 
-          time_back_to_depot = route_data[:stops].last[:end] + matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is starting too soon' if route_data[:stops][0][:start] < route_data[:tw_start]
-          raise OptimizerWrapper::SchedulingHeuristicError, 'One vehicle is ending too late' if time_back_to_depot > route_data[:tw_end]
+          back_to_depot = route_data[:stops].last[:end] +
+                          matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
+
+          if route_data[:stops][0][:start] < route_data[:tw_start]
+            raise OptimizerWrapper::SchedulingHeuristicError.new('One vehicle is starting too soon')
+          end
+
+          next unless back_to_depot > route_data[:tw_end]
+
+          raise OptimizerWrapper::SchedulingHeuristicError.new('One vehicle is ending too late')
         }
       }
 
@@ -284,8 +291,12 @@ module Wrappers
           stop[:end] = stop[:arrival] + @services_data[stop[:id]][:durations][stop[:activity]]
           stop[:max_shift] = route[position - 1][:max_shift]
         else
-          tw = find_corresponding_timewindow(route_data[:global_day_index], previous_end + route_time + stop[:considered_setup_duration], @services_data[stop[:id]][:tws_sets][stop[:activity]], stop[:end] - stop[:arrival])
-          raise OptimizerWrapper::SchedulingHeuristicError, 'No timewindow found to update route' if !@services_data[stop[:id]][:tws_sets][stop[:activity]].empty? && tw.nil?
+          tw = find_corresponding_timewindow(route_data[:day],
+                                             previous_end + route_time + stop[:considered_setup_duration],
+                                             @services_data[stop[:id]][:tws_sets][stop[:activity]], stop[:end] - stop[:arrival])
+          if !@services_data[stop[:id]][:tws_sets][stop[:activity]].empty? && tw.nil?
+            raise OptimizerWrapper::SchedulingHeuristicError.new('No timewindow found to update route')
+          end
 
           stop[:start] = tw ? [tw[:start] - route_time - stop[:considered_setup_duration], previous_end].max : previous_end
           stop[:arrival] = stop[:start] + route_time + stop[:considered_setup_duration]
@@ -298,8 +309,10 @@ module Wrappers
         previous_end = stop[:end]
       }
 
-      raise OptimizerWrapper::SchedulingHeuristicError, 'Vehicle end violated after updating route' if route.size.positive? &&
-                                                                                                       route.last[:end] + matrix(route_data, route.last[:point_id], route_data[:end_point_id]) > route_data[:tw_end]
+      if route.any? &&
+         route.last[:end] + matrix(route_data, route.last[:point_id], route_data[:end_point_id]) > route_data[:tw_end]
+        raise OptimizerWrapper::SchedulingHeuristicError.new('Vehicle end violated after updating route')
+      end
 
       route
     end
@@ -400,18 +413,18 @@ module Wrappers
 
           next if result.nil? || !result[:unassigned].empty?
 
-          time_back_to_depot = route_data[:stops].last[:end] + matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
-          scheduling_route_time = time_back_to_depot - route_data[:stops].first[:start]
-          solver_route_time = (result[:routes].first[:activities].last[:begin_time] - result[:routes].first[:activities].first[:begin_time]) # last activity is vehicle depot
+          back_to_depot = route_data[:stops].last[:end] +
+                          matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
+          scheduling_route_time = back_to_depot - route_data[:stops].first[:start]
+          solver_route_time = (result[:routes].first[:activities].last[:begin_time] -
+                              result[:routes].first[:activities].first[:begin_time]) # last activity is vehicle depot
 
-          next if scheduling_route_time - solver_route_time < @candidate_services_ids.flat_map{ |s| @services_data[s][:durations] }.min ||
-                  result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == route_data[:stops].collect{ |s| @indices[s[:id]] } # we did not change our points order
+          minimum_duration = @candidate_services_ids.flat_map{ |s| @services_data[s][:durations] }.min
+          original_indices = route_data[:stops].collect{ |s| @indices[s[:id]] }
+          next if scheduling_route_time - solver_route_time < minimum_duration ||
+                  result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == original_indices # we did not change our points order
 
-          begin
-            route_data[:stops] = compute_route_from(route_data, result[:routes].first[:activities]) # this will change @candidate_routes, but it should not be a problem since OR-tools returns a valid solution
-          rescue OptimizerWrapper::SchedulingHeuristicError
-            log 'Failing to construct route from OR-tools solution'
-          end
+          route_data[:stops] = compute_route_from(route_data, result[:routes].first[:activities])
         }
       }
     end
@@ -500,8 +513,8 @@ module Wrappers
     end
 
     def compute_costs_for_route(route_data, set = nil)
-      vehicle_id = route_data[:vehicle_id].split('_')[0..-2].join('_')
-      day = route_data[:vehicle_id].split('_').last.to_i
+      vehicle_id = route_data[:vehicle_original_id]
+      day = route_data[:day]
 
       ### compute the cost, for each remaining service to assign, of assigning it to [route_data] ###
       insertion_costs = []
@@ -584,7 +597,7 @@ module Wrappers
         else
           next_service[:tw] = @services_data[next_service[:id]][:tws_sets][next_service[:activity]]
           next_service[:duration] = @services_data[next_service[:id]][:durations][next_service[:activity]]
-          next_end = compute_tw_for_next(inserted_final_time, next_service, time_to_next, route_data[:global_day_index])
+          next_end = compute_tw_for_next(inserted_final_time, next_service, time_to_next, route_data[:day])
           shift += next_end - next_service[:end]
         end
 
@@ -661,11 +674,13 @@ module Wrappers
                    matrix(route_data, @services_data[next_id][:points_ids][original_next_activity], next_next_point_id)
         end
         acceptable_shift, computed_shift = acceptable?(shift, route_data, position)
-        time_back_to_depot = if position == route_data[:stops].size
-          timewindow[:final_time] + matrix(route_data, service[:point_id], route_data[:end_point_id])
-        else
-          route_data[:stops].last[:end] + matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id]) + computed_shift
-        end
+        time_back_to_depot =
+          if position == route_data[:stops].size
+            timewindow[:final_time] + matrix(route_data, service[:point_id], route_data[:end_point_id])
+          else
+            route_data[:stops].last[:end] + computed_shift +
+              matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
+          end
 
         end_respected = timewindow[:end_tw] ? timewindow[:arrival_time] <= timewindow[:end_tw] : true
         route_start = position.zero? ? timewindow[:start_time] : route_data[:stops].first[:start]
@@ -686,10 +701,19 @@ module Wrappers
       while impacted_days.size.positive?
         started_day = impacted_days.first
         can_not_insert_more = false
-        while @candidate_routes[vehicle_id][started_day][:stops].map{ |stop| @services_data[stop[:id]][:raw].exclusion_cost || 0 }.reduce(&:+) < @candidate_routes[vehicle_id][started_day][:cost_fixed] || can_not_insert_more
+        route_cost_fixed = @candidate_routes[vehicle_id][started_day][:cost_fixed]
+        route_exclusion_costs =
+          @candidate_routes[vehicle_id][started_day][:stops].map{ |stop|
+            @services_data[stop[:id]][:raw].exclusion_cost || 0
+          }.reduce(&:+)
+        while route_exclusion_costs < route_cost_fixed || can_not_insert_more
           inserted_id, _unlocked_ids = try_to_add_new_point(vehicle_id, started_day)
           impacted_days |= adjust_candidate_routes(vehicle_id, started_day)
-          can_not_insert_more = true unless inserted_id
+          if inserted_id
+            route_exclusion_costs += @services_data[inserted_id][:raw].exclusion_cost.to_f
+          else
+            can_not_insert_more = true
+          end
         end
 
         impacted_days.sort!.delete(started_day)
@@ -746,7 +770,7 @@ module Wrappers
       additional_durations = @services_data[best_index[:id]][:durations].first + best_index[:considered_setup_duration]
       @same_located[best_index[:id]].each_with_index{ |service_id, i|
         @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, r_d| r_d[:available_ids].delete(service_id) } }
-        @services_data[service_id][:used_days] << route_data[:global_day_index]
+        @services_data[service_id][:used_days] << route_data[:day]
         route_data[:stops].insert(best_index[:position] + i + 1,
                                           id: service_id,
                                           point_id: best_index[:point],
@@ -817,8 +841,8 @@ module Wrappers
 
         {
           id: service_id,
-          vehicle: route_data[:vehicle_id].split('_')[0..-2].join('_'),
-          day: route_data[:global_day_index],
+          vehicle: route_data[:vehicle_original_id],
+          day: route_data[:day],
           point: service_data[:points_ids][activity],
           start: tw[:start_time],
           arrival: tw[:arrival_time],
@@ -827,11 +851,13 @@ module Wrappers
           considered_setup_duration: tw[:setup_duration],
           next_activity: next_activity,
           potential_shift: tw[:max_shift],
-          additional_route_time: if route_data[:stops].empty?
-            matrix(route_data, route_data[:start_point_id], service_data[:points_ids][activity]) + matrix(route_data, service_data[:points_ids][activity], route_data[:end_point_id])
-          else
-            [0, shift - duration - tw[:setup_duration]].max
-          end,
+          additional_route_time:
+            if route_data[:stops].empty?
+              matrix(route_data, route_data[:start_point_id], service_data[:points_ids][activity]) +
+                matrix(route_data, service_data[:points_ids][activity], route_data[:end_point_id])
+            else
+              [0, shift - duration - tw[:setup_duration]].max
+            end,
           back_to_depot: back_depot,
           activity: activity,
         }
@@ -842,8 +868,15 @@ module Wrappers
       !@services_data[service_id][:raw].unavailable_days.include?(day)
     end
 
+    def compatible_vehicle(service_id, route_data)
+      # WARNING : this does not consider vehicle alternative skills properly
+      # we would need to know which skill_set is required in order that all services on same vehicle are compatible
+      route_data[:skills].any?{ |skill_set| (@services_data[service_id][:raw].skills - skill_set).empty? }
+    end
+
     def service_compatible_with_route(service_id, route_data)
-      compatible_days(service_id, route_data[:global_day_index])
+      compatible_days(service_id, route_data[:day]) &&
+        compatible_vehicle(service_id, route_data)
     end
 
     def find_best_index(service_id, route_data, first_visit = true)
@@ -858,20 +891,29 @@ module Wrappers
         positions_to_try.collect{ |position|
           ### compute cost of inserting service activity [activity] at [position] in [route_data]
           previous = get_previous_info(route_data, position)
+          current = service_data[:points_ids][activity]
+          next_point = position == route_data[:stops].size ? route_data[:end_point_id] : route[position][:point_id]
 
-          next_point = (position == route_data[:stops].size) ? route_data[:end_point_id] : route[position][:point_id]
+          # TODO : this needs to be improved because when we insert a point at same location as start or end_point_id
+          # we still might create a detour because we can insert at first and/or last position
+          # we should not generate useless route time :
+          next if position.between?(1, route.size - 2) && # not first neither last position
+                  matrix(route_data, previous[:point_id], next_point, :time).zero? &&
+                  matrix(route_data, previous[:point_id], @services_data[service_id][:points_ids][activity], :time) > 0
+
           next if position.positive? && position < route.size && # not first neither last position
                   previous[:point_id] == next_point && previous[:point_id] != @services_data[service_id][:points_ids][activity] # there is no point in testing a position that will imply useless route time
 
           next if route_data[:maximum_ride_time] &&
-                  (position.positive? && matrix(route_data, previous[:point_id], service_data[:points_ids][activity], :time) > route_data[:maximum_ride_time] ||
-                  position < route_data[:stops].size && matrix(route_data, service_data[:points_ids][activity], route[position][:point_id], :time) > route_data[:maximum_ride_time])
+                  (position.positive? && matrix(route_data, previous, current, :time) > route_data[:maximum_ride_time] ||
+                  position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :time) > route_data[:maximum_ride_time])
 
           next if route_data[:maximum_ride_distance] &&
-                  (position.positive? && matrix(route_data, previous[:point_id], service_data[:points_ids][activity], :distance) > route_data[:maximum_ride_distance] ||
-                  position < route_data[:stops].size && matrix(route_data, service_data[:points_ids][activity], route[position][:point_id], :distance) > route_data[:maximum_ride_distance])
+                  (position.positive? && matrix(route_data, previous, current, :distance) > route_data[:maximum_ride_distance] ||
+                  position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :distance) > route_data[:maximum_ride_distance])
 
-          best_cost_according_to_tws(route_data, service_id, service_data, previous, position: position, activity: activity, first_visit: first_visit)
+          best_cost_according_to_tws(route_data, service_id, service_data, previous,
+                                     position: position, activity: activity, first_visit: first_visit)
         }
       }.flatten.compact.min_by{ |cost| cost[:back_to_depot] }
     end
@@ -904,7 +946,7 @@ module Wrappers
           setup_duration: setup_duration
         }
       else
-        inserted_service[:tw].select{ |tw| tw[:day_index].nil? || tw[:day_index] == route_data[:global_day_index] % 7 }.each{ |tw|
+        inserted_service[:tw].select{ |tw| tw[:day_index].nil? || tw[:day_index] == route_data[:day] % 7 }.each{ |tw|
           start = [previous[:end], tw[:start] - route_time - setup_duration].max
           arrival = start + route_time + setup_duration
           final = arrival + inserted_service[:duration]
@@ -947,9 +989,12 @@ module Wrappers
 
       @services_data[point_to_add[:id]][:used_days] << point_to_add[:day]
       @services_data[point_to_add[:id]][:used_vehicles] |= [point_to_add[:vehicle]]
-      @points_vehicles_and_days[point_to_add[:point]][:vehicles] = @points_vehicles_and_days[point_to_add[:point]][:vehicles] | [route_data[:vehicle_id].split('_')[0..-2].join('_')]
-      @points_vehicles_and_days[point_to_add[:point]][:days] = @points_vehicles_and_days[point_to_add[:point]][:days] | [route_data[:global_day_index]]
-      @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] = [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number], @services_data[point_to_add[:id]][:raw].visits_number].max
+      @points_vehicles_and_days[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
+      @points_vehicles_and_days[point_to_add[:point]][:days] |= [route_data[:day]]
+      @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] =
+        [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number],
+         @services_data[point_to_add[:id]][:raw].visits_number].max
+      @points_vehicles_and_days[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
       @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
       @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, r_d| r_d[:available_ids].delete(point_to_add[:id]) } } if first_visit
@@ -1060,11 +1105,10 @@ module Wrappers
       [route_start, route_end, final_travel_time, final_travel_distance]
     end
 
-    def get_activities(day, route_data, vrp)
+    def get_activities(day, route_data, vrp, vehicle)
       computed_activities = []
       route_start, route_end, final_travel_time, final_travel_distance = get_route_data(route_data)
 
-      vehicle = vrp.vehicles.find{ |v| v.id == route_data[:vehicle_id] }
       if route_data[:start_point_id]
         computed_activities <<
           get_stop(day, vrp, 'depot', vehicle,
@@ -1085,18 +1129,23 @@ module Wrappers
       routes = []
       solution = []
 
-      @candidate_routes.each{ |vehicle_id, all_routes|
+      @candidate_routes.each{ |original_vehicle_id, all_routes|
         all_routes.sort_by{ |day, _route_data| day }.each{ |day, route_data|
-          computed_activities, start_time, end_time = get_activities(day, route_data, vrp)
+          vrp_vehicle = vrp.vehicles.find{ |v|
+            v.original_id == original_vehicle_id && v.global_day_index == day &&
+              # in case two vehicles have same global_day_index :
+              v.timewindow.start % 86400 == route_data[:tw_start] && v.timewindow.end % 86400 == route_data[:tw_end]
+          }
+          computed_activities, start_time, end_time = get_activities(day, route_data, vrp, vrp_vehicle)
 
           routes << {
-            vehicle: { id: route_data[:vehicle_id] },
+            vehicle: { id: vrp_vehicle.id },
             mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
           }
 
           solution << {
-            vehicle_id: route_data[:vehicle_id],
-            original_vehicle_id: vehicle_id,
+            vehicle_id: vrp_vehicle.id,
+            original_vehicle_id: original_vehicle_id,
             start_time: start_time,
             end_time: end_time,
             activities: computed_activities
@@ -1181,7 +1230,8 @@ module Wrappers
         nil
       else
         route_data[:stops].max_by{ |stop|
-          matrix(route_data, route_data[:start_point_id], stop[:point_id]) + matrix(route_data, stop[:point_id], route_data[:end_point_id])
+          matrix(route_data, route_data[:start_point_id], stop[:point_id]) +
+            matrix(route_data, stop[:point_id], route_data[:end_point_id])
         }[:point_id]
       end
     end

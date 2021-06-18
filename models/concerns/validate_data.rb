@@ -31,11 +31,11 @@ module ValidateData
 
     configuration = @hash[:configuration]
     schedule = configuration[:schedule] if configuration
-    periodic_heuristic = configuration &&
+    periodic_heuristic = schedule &&
                          configuration[:preprocessing] &&
                          configuration[:preprocessing][:first_solution_strategy].to_a.include?('periodic')
     check_matrices
-    check_vehicles
+    check_vehicles(periodic_heuristic)
     check_relations(periodic_heuristic)
     # TODO : this should be replaced by schedule when max_split does not use visits_number > 1 without schedule anymore
     # indeed, no configuration implies no schedule and there should be no visits_number > 1 in this case
@@ -97,18 +97,22 @@ module ValidateData
     end
   end
 
-  def check_vehicles
+  def check_vehicles(periodic_heuristic)
     @hash[:vehicles]&.each{ |v|
-      # vehicle time cost consistency
       if v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1)
         raise OptimizerWrapper::DiscordantProblemError.new(
           'Cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
         )
       end
 
-      # matrix_id consistency
       if v[:matrix_id] && (@hash[:matrices].nil? || @hash[:matrices].none?{ |m| m[:id] == v[:matrix_id] })
         raise OptimizerWrapper::DiscordantProblemError.new('There is no matrix with id vehicle[:matrix_id]')
+      end
+
+      next unless periodic_heuristic
+
+      if v[:skills].to_a.size > 1
+        raise OptimizerWrapper::DiscordantProblemError.new('Periodic heuristic does not support vehicle alternative skills')
       end
     }
   end
