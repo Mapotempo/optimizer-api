@@ -33,5 +33,42 @@ module Models
       hash.delete('details')
       hash.merge(details.as_json(options))
     end
+
+    def activities=(_acts)
+      compute_route_waiting_times
+    end
+
+    def compute_route_waiting_times
+      previous_end = activities.first.timings.begin_time
+      loc_index = nil
+      consumed_travel_time = 0
+      consumed_setup_time = 0
+      activities.each.with_index{ |act, index|
+        used_travel_time = 0
+        if act.type == 'rest'
+          if loc_index.nil?
+            next_index = activities[index..-1].index{ |a| a[:type] != 'rest' }
+            loc_index = index + next_index if next_index
+            consumed_travel_time = 0
+          end
+          shared_travel_time = loc_index && activities[loc_index].timings.travel_time || 0
+          potential_setup = shared_travel_time > 0 && activities[loc_index].details.setup_duration || 0
+          left_travel_time = shared_travel_time - consumed_travel_time
+          used_travel_time = [act.timings.begin_time - previous_end, left_travel_time].min
+          consumed_travel_time += used_travel_time
+          # As setup is considered as a transit value, it may be performed before a rest
+          consumed_setup_time  += act.timings.begin_time - previous_end - [used_travel_time, potential_setup].min
+        else
+          used_travel_time = (act.timings.travel_time || 0) - consumed_travel_time - consumed_setup_time
+          consumed_travel_time = 0
+          consumed_setup_time = 0
+          loc_index = nil
+        end
+        considered_setup = act.timings.travel_time&.positive? && (act.details.setup_duration.to_i - consumed_setup_time) || 0
+        arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
+        act.timings.waiting_time = act.timings.begin_time - arrival_time
+        previous_end = act.timings.end_time || act.timings.begin_time
+      }
+    end
   end
 end

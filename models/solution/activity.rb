@@ -16,14 +16,16 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
+require './models/solution/timings'
 
 module Models
   class RouteActivity < Base
     # field :point_id
+    field :id
     field :type
     field :alternative
     field :reason, default: nil
-    # TODO: The following fields should be merged in v2
+    # TODO: The following fields should be merged into id in v2
     field :service_id
     field :pickup_shipment_id
     field :delivery_shipment_id
@@ -31,6 +33,6 @@ module Models
 
     belongs_to :load, class_name: 'Models::Load'
     belongs_to :details, class_name: 'Models::Activity'
-    belongs_to :timings, class_name: 'Models::Timings'
+    belongs_to :timings, class_name: 'Models::Timings', default: Models::Timings.new({})
   end
 end
