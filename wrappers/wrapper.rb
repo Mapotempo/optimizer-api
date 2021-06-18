@@ -147,8 +147,17 @@ module Wrappers
 
     def assert_no_relations_except_simple_shipments(vrp)
       vrp.relations.all?{ |r|
-        (r.type == :shipment && r.linked_ids.size == 2) ||
-          (r.linked_ids.empty? && r.linked_vehicle_ids.empty?) }
+        return true if r.linked_ids.empty? && r.linked_vehicle_ids.empty?
+        return false unless r.type == :shipment && r.linked_ids.size == 2
+
+        quantities = Hash.new {}
+        vrp.units.each{ |unit| quantities[unit.id] = [] }
+        r.linked_services.first.quantities.each{ |q| quantities[q.unit.id] << q.value }
+        r.linked_services.last.quantities.each{ |q| quantities[q.unit.id] << q.value }
+        quantities.all?{ |_unit, values|
+          [0, 2].include?(values.size) && values.first >= 0 && values.first == -values.last
+        }
+      }
     end
 
     def assert_zones_only_size_one_alternative(vrp)
