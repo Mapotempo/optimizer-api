@@ -51,6 +51,7 @@ module Wrappers
         :assert_homogeneous_router_definitions,
         :assert_matrices_only_one,
         :assert_no_distance_limitation,
+        :assert_no_vehicles_with_duration_modifiers,
         :assert_vehicles_no_duration_limit,
         :assert_vehicles_no_force_start,
         :assert_vehicles_no_late_multiplier_or_single_vehicle,
@@ -124,7 +125,7 @@ module Wrappers
 
       log 'Solution cost: ' + cost.to_s + ' & unassigned: ' + unassigneds.size.to_s, level: :info
 
-      {
+      result = {
         cost: cost,
         cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
         solvers: ['vroom'],
@@ -137,6 +138,7 @@ module Wrappers
         routes: routes,
         unassigned: unassigneds
       }
+      OptimizerWrapper.parse_result(vrp, result)
     end
 
     private
@@ -233,7 +235,7 @@ module Wrappers
       activity = type == 'pickup' ? shipment.pickup : shipment.delivery
       point = activity.point
       route_data = compute_route_data(vrp, point, step)
-      begin_time = step['arrival'] + step['waiting_time']
+      begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
       job_data = {
         original_shipment_id: shipment.original_id,
         pickup_shipment_id: type == 'pickup' && shipment.id,
@@ -241,8 +243,8 @@ module Wrappers
         type: type,
         point_id: point.id,
         begin_time: begin_time,
-        end_time: begin_time + step['service'],
-        departure_time: begin_time + step['service'],
+        end_time: begin_time && (begin_time + step['service']),
+        departure_time: begin_time && (begin_time + step['service']),
         detail: build_detail(shipment, activity, point, nil, nil, vehicle)
       }.merge(route_data).delete_if{ |_k, v| v.nil? || v == false }
       @previous = point
@@ -259,32 +261,41 @@ module Wrappers
       }
     end
 
+    def collect_skills(object, vrp_skills)
+      return unless vrp_skills.any?
+
+      [vrp_skills.size] +
+        if object.is_a?(Models::Vehicle)
+          [vrp_skills.find_index{ |sk| sk == object.id }].compact +
+          (object.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || []).compact
+        else
+          object.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact +
+          object.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact
+        end
+    end
+
     def collect_jobs(vrp, vrp_skills, vrp_units)
       vrp.services.map.with_index{ |service, index|
         # Activity is mandatory
-        pickup_flag = service.quantities.none?{ |quantity| quantity.value.negative? }
         {
           id: index,
           location_index: @points[service.activity.point_id].matrix_index,
           service: service.activity.duration.to_i,
-          skills: [vrp_skills.size] + service.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            service.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          skills: collect_skills(service, vrp_skills),
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
           time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] },
           delivery: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }
             @total_quantities[unit.id] -= q&.value || 0
-            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+            (-(q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           },
           pickup: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.positive? }
             @total_quantities[unit.id] += q&.value || 0
             ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
           }
-        }.delete_if{ |k, v|
-          v.nil? || v.is_a?(Array) && v.empty? ||
-            k == :delivery && pickup_flag ||
-            k == :anykey && !pickup_flag
+        }.delete_if{ |_k, v|
+          v.nil? || v.is_a?(Array) && v.empty?
         }
       }
     end
@@ -293,12 +304,11 @@ module Wrappers
       vrp.shipments.map.with_index{ |shipment, index|
         {
           amount: vrp_units.map{ |unit|
-            q = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value&.positive? }
-            @total_quantities[unit.id] += q&.value || 0
-            ((q&.value || 0) * CUSTOM_QUANTITY_BIGNUM).round
+            value = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id }&.value.to_f.abs
+            @total_quantities[unit.id] += value
+            (value * CUSTOM_QUANTITY_BIGNUM).round
           },
-          skills: [vrp_skills.size] + shipment.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-            shipment.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+          skills: collect_skills(shipment, vrp_skills),
           priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
           pickup: {
             id: vrp.services.size + index * 2,
@@ -332,8 +342,7 @@ module Wrappers
           # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
           time_window: [vehicle.timewindow&.start || 0, tw_end],
           # VROOM expects a default skill
-          skills: [vrp_skills.size] + ([vrp_skills.find_index{ |sk| sk == vehicle.id }] +
-            (vehicle.skills&.first&.map{ |skill| vrp_skills.find_index{ |sk| sk == skill } } || [])).compact,
+          skills: collect_skills(vehicle, vrp_skills),
           breaks: vehicle.rests.map{ |rest|
             rest_index = @rest_hash["#{vehicle.id}_#{rest.id}"][:index]
             {

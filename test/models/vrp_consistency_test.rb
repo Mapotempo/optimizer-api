@@ -40,7 +40,7 @@ module Models
 
     def test_reject_if_periodic_with_any_relation
       vrp = VRP.scheduling
-      %i[shipment meetup same_route sequence order
+      %i[shipment meetup same_route sequence order vehicle_trips
          minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse
          vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].each{ |relation_type|
         vrp[:relations] = [{
@@ -406,6 +406,136 @@ module Models
       assert_raises OptimizerWrapper::DiscordantProblemError do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
       end
+    end
+
+    def test_vehicle_trips_relation_must_have_linked_vehicle_ids
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [{
+        type: 'vehicle_trips'
+      }]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+    end
+
+    def test_vehicles_store_consistency_with_vehicle_trips
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      check_consistency(vrp) # this should not raise
+
+      vrp[:vehicles][1][:start_point_id] = 'point_1'
+      # second trip should start where previous ended
+      # at least until we implement a lapse between tours
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+
+      first_vehicle_location = vrp[:points].find{ |pt| pt[:id] == 'point_0' }[:location]
+      vrp[:points].find{ |pt| pt[:id] == 'point_1' }[:location] = first_vehicle_location
+      check_consistency(vrp) # if ID is different but location is the same, nothing should be raised
+    end
+
+    def test_vehicle_timewindows_consistency_with_vehicle_trips
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:vehicles][0][:timewindow] = { start: 10, end: 100 }
+      vrp[:vehicles][1][:timewindow] = { start: 5, end: 7 }
+
+      # next should be able to finish after previous
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:vehicles][1][:timewindow] = { start: 5, end: 100 }
+      check_consistency(vrp) # this should not raise
+    end
+
+    def test_compatible_days_availabilities_with_vehicle_trips
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:vehicles][0][:timewindow] = { start: 0, end: 10 }
+      check_consistency(vrp) # this should not raise
+
+      vrp[:vehicles][0][:timewindow] = { start: 0, end: 10, day_index: 0 }
+      check_consistency(vrp) # this should not raise
+
+      vrp[:vehicles][1][:timewindow] = { start: 0, end: 10, day_index: 1 }
+      # days are uncompatible
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:vehicles][1][:timewindow] = nil
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
+      # vehicles have common day index 0 but they are still not available at exact same days
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+    end
+
+    def test_compatible_days_availabilities_with_vehicle_trips_with_sequence_timewindows
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 },
+                                                  { start: 20, end: 30, day_index: 1 }]
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 },
+                                                  { start: 17, end: 45, day_index: 1 }]
+
+      check_consistency(vrp) # this should not raise
+
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 }]
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15 }]
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 },
+                                                  { start: 17, end: 19, day_index: 1 }]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+    end
+
+    def test_unavailable_days_with_vehicle_trips
+      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      # vehicle trips are not available with periodic heuristic for now :
+      vrp[:configuration][:preprocessing] = nil
+      check_consistency(vrp) # this should not raise
+
+      vrp[:vehicles][0][:unavailable_work_day_indices] = [0, 1]
+      vrp[:vehicles][1][:unavailable_work_day_indices] = [2, 3]
+      # no common day_index anymore
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+    end
+
+    def test_vehicle_in_vehicle_trips_does_not_exist
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations].first[:linked_vehicle_ids] << 'unknown vehicle'
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+    end
+
+    def test_vehicle_trips_uncompatible_with_clustering
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+
+      vrp[:configuration][:preprocessing] = nil
+      check_consistency(vrp) # this should not raise
     end
   end
 end

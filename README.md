@@ -60,7 +60,7 @@ bundle install
 
 This project requires some solver and interface projects in order to be fully functionnal!
 * [Vroom v1.8.0](https://github.com/VROOM-Project/vroom/releases/tag/v1.8.0)
-* [Optimizer-ortools v1.4.0](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8)
+* [Optimizer-ortools v1.5.0](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8)
 
 By default, Optimizer-API and the related projects are supposed to be in parallel folders as follows:
 

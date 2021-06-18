@@ -4,9 +4,13 @@
 
 ### Added
 
+- Implementation of `vehicle_trips` relation: the routes can be successive or with a minimum duration `lapse` in between [#123] (https://github.com/Mapotempo/optimizer-api/pull/123)
+
 ### Changed
 
 ### Removed
+
+- Field `trips` in vehicle model. Use `vehicle_trips` relation instead [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
 
 ### Fixed
 

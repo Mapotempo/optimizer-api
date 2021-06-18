@@ -92,7 +92,7 @@ module OutputHelper
 
   class Result
     def self.generate_geometry(solution)
-      return nil unless solution.to_h[:result]
+      return nil if solution.nil? || solution[:result].nil? || solution[:result].empty?
 
       @colors = ['#DD0000', '#FFBB00', '#CC1882', '#00CC00', '#558800', '#009EFF', '#9000EE',
                  '#0077A3', '#000000', '#003880', '#BEE562']
@@ -101,7 +101,7 @@ module OutputHelper
       return nil unless expected_geometry.any?
 
       expected_geometry.map!(&:to_sym)
-      [solution[:result]].flatten(1).collect{ |result|
+      solution[:result].collect{ |result|
         geojson = {}
 
         geojson[:partitions] = generate_partitions_geometry(result) if expected_geometry.include?(:partitions)

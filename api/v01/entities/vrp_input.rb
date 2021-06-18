@@ -253,14 +253,15 @@ module VrpMisc
                                                                  shipment meetup
                                                                  minimum_duration_lapse maximum_duration_lapse
                                                                  force_first never_first force_end
+                                                                 vehicle_trips
                                                                  vehicle_group_duration vehicle_group_duration_on_weeks
                                                                  vehicle_group_duration_on_months vehicle_group_number],
                     desc: 'Relations allow to define constraints explicitly between activities and/or vehicles.
                            It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse,
-                           shipment, meetup, minimum_duration_lapse, maximum_duration_lapse')
+                           shipment, meetup, minimum_duration_lapse, maximum_duration_lapse, vehicle_trips')
     optional(:lapse,
              type: Integer, values: ->(v) { v >= 0 },
-             desc: 'Only used for relations implying a duration constraint : minimum/maximum day lapse, vehicle group durations...')
+             desc: 'Only used for relations implying a duration constraint. Lapse expressed in days for minimum/maximum day lapse, in seconds for minimum/maximum_duration_lapse and vehicle_trips.')
     optional(:linked_ids, type: Array[String], allow_blank: false, desc: 'List of activities involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:linked_vehicle_ids, type: Array[String], allow_blank: false, desc: 'List of vehicles involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:periodicity, type: Integer, documentation: { hidden: true }, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')
@@ -489,7 +490,6 @@ module VrpVehicles
     optional(:force_start, type: Boolean, documentation: { hidden: true }, desc: '[ DEPRECATED ]')
     optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open,
       as late as possible or let vehicle start at any time. Not available with periodic heuristic, it will always leave as soon as possible.')
-    optional(:trips, type: Integer, default: 1, desc: 'The number of times a vehicle is allowed to return to the depot within its route. Not available with periodic heuristic.')
 
     optional :matrix_id, type: String, desc: 'Related matrix, if already defined'
     optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index'

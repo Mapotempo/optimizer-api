@@ -590,6 +590,26 @@ class Wrappers::VroomTest < Minitest::Test
     assert_equal 6, result[:routes][0][:activities].size
   end
 
+  def test_shipments_timewindows
+    vroom = OptimizerWrapper.config[:services][:vroom]
+    problem = VRP.pud
+    problem[:shipments].map!{ |shipment|
+      shipment[:pickup][:timewindows] = [{start: 5, end: 20}]
+      shipment[:delivery][:timewindows] = [{start: 10, end: 40}]
+      shipment
+    }
+
+    vrp = TestHelper.create(problem)
+    result = vroom.solve(vrp, 'test')
+    assert result
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
   def test_shipments_quantities
     vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
@@ -790,6 +810,18 @@ class Wrappers::VroomTest < Minitest::Test
 
       assert_equal 1.001, activity[:detail][:quantities].first[:value]
     }
+  end
+
+  def test_negative_quantities_should_not_raise
+    problem = VRP.basic
+    problem[:units] << { id: 'l' }
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'kg', value: 1 }, { unit_id: 'l', value: -1}]
+    }
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{ unit_id: 'kg', limit: 3 }, { unit_id: 'l', limit: 2}]
+    }
+    OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, TestHelper.create(problem), nil)
   end
 
   def test_partially_nil_capacities

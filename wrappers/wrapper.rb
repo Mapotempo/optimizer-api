@@ -381,6 +381,16 @@ module Wrappers
       }
     end
 
+    def assert_no_vehicles_with_duration_modifiers(vrp)
+      # TODO: this assert can be relaxed by implementing a simplifier
+      # if all vehicles are homogenous w.r.t. a given duration_modifier,
+      # then we can update the durations directly and rewind it easily
+      vrp.vehicles.all?{ |vehicle|
+        (vehicle.coef_setup.nil? || vehicle.coef_setup == 1) && vehicle.additional_setup.to_i == 0 &&
+          (vehicle.coef_service.nil? || vehicle.coef_service == 1) && vehicle.additional_service.to_i == 0
+      }
+    end
+
     def assert_homogeneous_router_definitions(vrp)
       vrp.vehicles.group_by{ |vehicle|
         [vehicle.router_mode, vehicle.dimensions, vehicle.router_options]
@@ -1018,7 +1028,7 @@ module Wrappers
           # first shift every activity all the way to the left (earlier) if the route starts after
           # the vehicle TW.start so that it is easier to do the insertions since there is no TW on
           # services, we can do this even if force_start is false
-          shift_amount = vehicle.timewindow&.start.to_i - route[:start_time]
+          shift_amount = vehicle.timewindow&.start.to_i - (route[:start_time] || vehicle.timewindow&.start).to_i
           shift_route_times(route, shift_amount) if shift_amount < 0
 
           # insert the rests back into the route and adjust the timing of the activities coming after the pause
@@ -1119,7 +1129,7 @@ module Wrappers
         activity[:end_time] += shift_amount if activity[:end_time]
         activity[:departure_time] += shift_amount if activity[:departure_time]
       }
-      route[:end_time] += shift_amount
+      route[:end_time] += shift_amount if route[:end_time]
     end
 
     def unassigned_services(vrp, unassigned_reason)
@@ -1178,7 +1188,9 @@ module Wrappers
         cost: nil,
         cost_details: Models::CostDetails.new({}),
         iterations: nil,
-        routes: vrp.vehicles.collect{ |vehicle| { vehicle_id: vehicle.id, activities: [] } },
+        routes: vrp.vehicles.collect{ |vehicle|
+          OptimizerWrapper.empty_route(vrp, vehicle)
+        },
         unassigned: (unassigned_services(vrp, unassigned_reason) +
                      unassigned_shipments(vrp, unassigned_reason) +
                      unassigned_rests(vrp)).flatten,
