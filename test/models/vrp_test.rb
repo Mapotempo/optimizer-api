@@ -163,8 +163,8 @@ module Models
       }]
       generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
       assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0pickup'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
 
       %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type

@@ -143,13 +143,14 @@ module Models
     def self.convert_shipments_to_services(hash)
       hash[:services] ||= []
       hash[:relations] ||= []
+      service_ids = hash[:services].map{ |service| service[:id] }
       hash[:shipments]&.each{ |shipment|
         linked_ids = []
         %i[pickup delivery].each{ |part|
           service = Oj.load(Oj.dump(shipment))
           service[:original_id] = shipment[:id]
           service[:id] += "_#{part}"
-          service[:id] += '_conv' while hash[:services].any?{ |s| s[:id] == service[:id] } # protect against id clash
+          service[:id] += '_conv' while service_ids.any?{ |id| id == service[:id] } # protect against id clash
           linked_ids << service[:id]
           service[:type] = part.to_sym
           service[:activity] = service[part]

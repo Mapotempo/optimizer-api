@@ -59,7 +59,7 @@ module ValidateData
   end
 
   def ensure_no_conflicting_skills
-    all_skills = (@hash[:vehicles] + @hash[:services]).map{ |mission|
+    all_skills = (@hash[:vehicles] + @hash[:services]).flat_map{ |mission|
       mission[:skills]
     }.compact.uniq
 

@@ -2836,7 +2836,7 @@ class WrapperTest < Minitest::Test
 
     generated_vrp = TestHelper.create(problem)
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(generated_vrp),
-                    :assert_no_relations_except_shipments
+                    :assert_no_relations_except_simple_shipments
     assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(generated_vrp)
   end
 
