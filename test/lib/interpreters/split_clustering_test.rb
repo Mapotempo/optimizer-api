@@ -394,15 +394,15 @@ class SplitClusteringTest < Minitest::Test
         metric: 'duration',
         entity: :work_day
       }]
-      vrp[:services].first[:skills] = ['skill']
-      vrp[:vehicles][0][:skills] = [['skill']]
+      vrp[:services].first[:skills] = [:skill]
+      vrp[:vehicles][0][:skills] = [[:skill]]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
-      cluster_with_skill = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s[:id] == vrp[:services][0][:id] } }
-      assert(cluster_with_skill[:vrp].vehicles.any?{ |v| v.skills.any?{ |skill_set| skill_set.include?('skill') } })
+      cluster_with_skill = generated_services_vrps.find{ |sub_vrp| sub_vrp[:vrp][:services].any?{ |s| s.id == vrp[:services][0][:id] } }
+      assert(cluster_with_skill[:vrp].vehicles.any?{ |v| v.skills.any?{ |skill_set| skill_set.include?(:skill) } })
     end
 
     def test_no_doubles_3000

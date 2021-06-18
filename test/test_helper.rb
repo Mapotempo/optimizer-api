@@ -68,16 +68,21 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
     [vrp[:services], vrp[:shipments]].each{ |group|
       group&.each{ |s|
-        next if s.nil?
-        next if vrp.is_a?(Hash) && !s.key?(:visits_number)
-
-        raise StandardError, "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid." unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
+        s[:skills]&.map!(&:to_sym)
 
         [s[:activity] || s[:activities] || s[:pickup] || s[:delivery]].flatten.each{ |activity|
           next unless activity[:position]
 
           activity[:position] = activity[:position].to_sym
         }
+
+        next if vrp.is_a?(Hash) && !s.key?(:visits_number)
+
+        unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
+          raise StandardError.new(
+            "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid."
+          )
+        end
       }
     }
 
@@ -106,9 +111,15 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
     vrp.preprocessing_partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
 
-    vrp.provide_original_info unless vrp.is_a?(Hash) # TODO: re-dump with this modification
+    vrp[:relations]&.each{ |r| r[:type] = r[:type]&.to_sym }
 
-    vrp[:relations]&.each{ |r| r[:type] = r[:type]&.to_sym } # TODO: re-dump with this modification
+    vrp[:vehicles]&.each{ |v|
+      next if v[:skills].to_a.empty?
+
+      raise 'Vehicle skills should be an array of array' unless v[:skills].first&.is_a?(Array)
+
+      v[:skills].each{ |set| set.map!(&:to_sym) }
+    }
 
     vrp
   end
@@ -185,6 +196,13 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   def self.vehicle_and_days_partitions
     [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle },
      { method: 'balanced_kmeans', metric: 'duration', entity: :work_day }]
+  end
+
+  def self.vehicle_trips_relation(vrp)
+    {
+      type: 'vehicle_trips',
+      linked_vehicle_ids: vrp[:vehicles].collect{ |v| v[:id] }
+    }
   end
 end
 

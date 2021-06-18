@@ -24,7 +24,6 @@ require './util/job_manager.rb'
 
 require './lib/routers/router_wrapper.rb'
 require './lib/interpreters/multi_modal.rb'
-require './lib/interpreters/multi_trips.rb'
 require './lib/interpreters/periodic_visits.rb'
 require './lib/interpreters/split_clustering.rb'
 require './lib/interpreters/compute_several_solutions.rb'
@@ -199,8 +198,6 @@ module OptimizerWrapper
     log "--> optim_wrap::solve VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size} vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with levels (dicho: #{service_vrp[:dicho_level]}, split: #{service_vrp[:split_level].to_i})", level: :debug
 
     tic = Time.now
-
-    Interpreters::MultiTrips.new.expand(vrp)
 
     optim_result = nil
 

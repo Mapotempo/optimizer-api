@@ -1408,7 +1408,7 @@ class InterpreterTest < Minitest::Test
     assert_equal 2, expanded_vrp.relations.size
 
     problem[:relations].first[:type] = :vehicle_group_duration
-    expanded_vrp = periodic_expand(vrp)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 1,  expanded_vrp.relations.size
     assert_equal 4,  expanded_vrp.relations.first[:linked_vehicle_ids].size
 
@@ -1418,7 +1418,7 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     refute_empty vrp.schedule_months_indices
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
   end
 
@@ -1484,6 +1484,9 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
 
+    problem[:configuration][:schedule] = {
+      range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 2, 1) }
+    }
     problem[:relations].first[:periodicity] = 2
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
@@ -1553,5 +1556,40 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(vrp)
     assert_equal 2, expanded_vrp.services.first.first_possible_days[0]
     assert_equal 2, expanded_vrp.services.first.last_possible_days[0]
+  end
+
+  def test_expand_multitrips_relations
+    # If two vehicles are in vehicle_trips relation,
+    # VRP is only valid if they available at same days
+    # In this case, vehicle_trip relation should be repeated
+    # every day those vehicles are available
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
+    vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+    vrp[:vehicles].each{ |v|
+      v.delete(:sequence_timewindows)
+      v[:timewindow] = { start: 0, end: 10 }
+    }
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 8, expanded_vrp.vehicles.size
+    assert_equal 4, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
+
+    vrp[:vehicles].each{ |v|
+      v[:timewindow] = { start: 0, end: 10, day_index: 0 }
+    }
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.vehicles.size
+    assert_equal 1, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
+
+    vrp[:vehicles].each{ |v|
+      v.delete(:timewindow)
+    }
+    vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 },
+                                                { start: 20, end: 30, day_index: 1 }]
+    vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 },
+                                                { start: 17, end: 45, day_index: 1 }]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 4, expanded_vrp.vehicles.size
+    assert_equal 2, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
   end
 end
