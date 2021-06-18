@@ -952,7 +952,8 @@ module Wrappers
           # TODO: (r.timewindows&.size.to_i > 1) having multiple TWs for pauses is possible but even harder.
           # If necessary, this implementation can be extended to handle this case by re-optimizing with or-tools
           # in a generic way
-          next if vehicle.rests.size > 1 || vehicle.rests.any?{ |r| r.timewindows&.size.to_i > 1 }
+          next if vehicle.rests.size > 1 ||
+                  vehicle.rests.any?{ |r| r.timewindows&.size.to_i > 1 || r.exclusion_cost.to_f.positive? }
 
           # If there is a service longer than the timewindow of the rest then we cannot be sure to
           # insert the pause without inducing unnecessary idle time
@@ -978,7 +979,7 @@ module Wrappers
           next if vehicle.rests.any?{ |rest|
             rest.timewindows.any? { |rest_tw|
               rest_start = rest_tw.start || vehicle.timewindow&.start || 0
-              rest_end = rest_tw.end || vehicle.timewindow&.end || rest_start + vehicle.duration - rest.duration
+              rest_end = rest_tw.end || vehicle.timewindow&.end || vehicle.duration && rest.duration && (rest_start + vehicle.duration - rest.duration) || 2**56
               max_service_duration > rest_end - rest_start
             }
           }
