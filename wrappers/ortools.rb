@@ -793,7 +793,6 @@ module Wrappers
         end
         [cost, iterations, @previous_result]
       elsif @thread.value.signaled? && @thread.value.termsig == 9
-        log 'Job killed', level: :fatal # Keep trace in worker
         raise OptimizerWrapper::JobKilledError
       else # Fatal Error
         message = case @thread.value
@@ -804,8 +803,7 @@ module Wrappers
                   else
                     "Job terminated with unknown thread status: #{@thread.value}"
                   end
-        log message, level: :fatal
-        raise RuntimeError, message
+        raise message
       end
     ensure
       input&.unlink

@@ -88,7 +88,7 @@ module OptimizerWrapper
       tick('Job Killed')
       nil
     rescue StandardError => e
-      log "\n\n#{e}\n\t#{e.backtrace.join("\n\t")}", level: :fatal
+      log "#{e.class.name}: #{e}\n\t#{e.backtrace.join("\n\t")}", level: :fatal
       raise
     end
 
