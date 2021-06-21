@@ -2129,6 +2129,18 @@ class WrapperTest < Minitest::Test
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_correctness_matrices_vehicles_and_points_definition
   end
 
+  def test_activity_position_presence
+    problem = VRP.basic
+    vrp = TestHelper.create(problem)
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_activity_with_position
+    refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_activity_with_position
+
+    problem[:services].first[:activity][:position] = 'always_last'
+    vrp = TestHelper.create(problem)
+    refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp), :assert_no_activity_with_position
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp), :assert_no_activity_with_position
+  end
+
   def test_unassigned_presence
     problem = {
       units: [{
