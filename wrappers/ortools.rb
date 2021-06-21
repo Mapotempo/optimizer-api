@@ -514,26 +514,26 @@ module Wrappers
                 end
               elsif activity.type == 'service'
                 collected_indices << current_index
-                  service = vrp.services[current_index]
-                  point = service.activity&.point || !service.activities.empty? && service.activities[activity.alternative].point
-                  current_matrix_index = point.matrix_index
-                  route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
-                  # TODO: The logic behing pickup_shipment_id and delivery_shipment_id should be moved
-                  #       to result model and removed in v2
-                  current_activity = {
-                    original_service_id: service.original_id,
-                    pickup_shipment_id: service.type == :pickup && service.original_id,
-                    delivery_shipment_id: service.type == :delivery && service.original_id,
-                    service_id: service.id,
-                    point_id: point ? point.id : nil,
-                    type: service.type,
-                    current_distance: activity.current_distance,
-                    begin_time: earliest_start,
-                    end_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
-                    departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
-                    detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
-                    alternative: service.activities ? activity.alternative : nil
-                  }.merge(route_data).delete_if{ |_k, v| !v }
+                service = vrp.services[current_index]
+                point = service.activity&.point || !service.activities.empty? && service.activities[activity.alternative].point
+                current_matrix_index = point.matrix_index
+                route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
+                # TODO: The logic behing pickup_shipment_id and delivery_shipment_id should be moved
+                #       to result model and removed in v2
+                current_activity = {
+                  original_service_id: service.original_id,
+                  pickup_shipment_id: service.type == :pickup && service.original_id,
+                  delivery_shipment_id: service.type == :delivery && service.original_id,
+                  service_id: service.id,
+                  point_id: point ? point.id : nil,
+                  type: service.type,
+                  current_distance: activity.current_distance,
+                  begin_time: earliest_start,
+                  end_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
+                  departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
+                  detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
+                  alternative: service.activities ? activity.alternative : nil
+                }.merge(route_data).delete_if{ |_k, v| !v }
                 previous_matrix_index = current_matrix_index
               elsif activity.type == 'break'
                 activity.id

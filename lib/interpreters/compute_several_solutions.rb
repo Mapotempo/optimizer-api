@@ -238,36 +238,47 @@ module Interpreters
     end
 
     def self.select_best_heuristic(vrp)
-      vehicles = vrp[:vehicles] || []
-      services = vrp[:services] || []
+      vehicles = vrp.vehicles
+      services = vrp.services
 
       loop_route = vehicles.any?{ |vehicle|
-        if (vehicle.start_point_id.nil? || vehicle.end_point_id.nil?) && (vehicle.start_point.nil? || vehicle.end_point.nil?)
+        if (vehicle.start_point_id.nil? || vehicle.end_point_id.nil?) &&
+           (vehicle.start_point.nil? || vehicle.end_point.nil?)
           true
         else
           start_point = vehicle.start_point
           end_point = vehicle.end_point
 
           vehicle.start_point_id == vehicle.end_point_id ||
-            start_point[:location] && end_point[:location] && start_point[:location][:lat] == end_point[:location][:lat] && start_point[:location][:lon] == end_point[:location][:lon] ||
-            vrp[:matrices] && start_point[:matrix_index] && end_point[:matrix_index] && vrp[:matrices].all?{ |matrix| matrix[:time] && matrix[:time][start_point[:matrix_index]][end_point[:matrix_index]] == 0 }
+            start_point.same_location?(end_point) ||
+            vrp.matrices && start_point.matrix_index && end_point.matrix_index &&
+              vrp.matrices.all?{ |matrix|
+                matrix.time && matrix.time[start_point.matrix_index][end_point.matrix_index] == 0
+              }
         end
       }
-      size_mtws = services.select{ |service| service[:timewindows].to_a.size > 1 }.size
-      size_rest = vehicles.collect{ |vehicle| vehicle[:rests].to_a.size }.sum
-      unique_configuration = vehicles.collect{ |vehicle| vehicle[:router_mode] }.uniq.size == 1 && vehicles.collect{ |vehicle| vehicle[:router_dimension] }.uniq.size == 1 &&
-                             vehicles.collect{ |vehicle| vehicle[:start_point_id] }.uniq.size == 1 && vehicles.collect{ |vehicle| vehicle[:end_point_id] }.uniq.size == 1
+      size_mtws = services.count{ |service| service.activity.timewindows.size > 1 }
+      size_rest = vehicles.map{ |vehicle| vehicle.rests.size }.sum
+      unique_configuration = vehicles.map(&:router_mode).uniq.size == 1 &&
+                             vehicles.map(&:router_dimension).uniq.size == 1 &&
+                             vehicles.map{ |vehicle| vehicle.start_point.id }.uniq.size == 1 &&
+                             vehicles.map{ |vehicle| vehicle.end_point.id }.uniq.size == 1
 
-      if vehicles.any?{ |vehicle| vehicle[:overall_duration] }
+      # TODO: The conditions below should be reworked
+      if vehicles.any?(&:overall_duration)
         verified('christofides')
-      elsif vehicles.any?{ |vehicle| vehicle[:force_start] || vehicle[:shift_preference] && vehicle[:shift_preference] == 'force_start' }
+      elsif vehicles.any?{ |vehicle|
+              vehicle.force_start ||
+              vehicle.shift_preference && vehicle.shift_preference == 'force_start'
+            }
         verified('path_cheapest_arc')
       elsif loop_route && unique_configuration &&
-            (vehicles.any?{ |vehicle| vehicle[:duration] } && vehicles.size == 1 || size_mtws.to_f / (services.collect{ |service| service[:visits_number] }.sum) > 0.2 && size_rest.zero?)
+            (vehicles.any?(&:duration) && vehicles.size == 1 ||
+            size_mtws.to_f / services.map(&:visits_number).sum > 0.2 && size_rest.zero?)
         verified('global_cheapest_arc')
-      elsif vehicles.size == 1 && size_rest.positive? || size_mtws > 0
+      elsif vehicles.size == 1 && size_rest.positive? || size_mtws > 0 || vrp.relations.any?{ |r| r.type == :shipment }
         verified('local_cheapest_insertion')
-      elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?{ |vehicle| vehicle[:duration] }
+      elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?(&:duration)
         verified('savings')
       elsif size_rest.positive? || unique_configuration || loop_route
         verified('parallel_cheapest_insertion')

@@ -126,6 +126,17 @@ module Models
       }
     end
 
+    def test_shipment_conversion_into_services
+      vrp = VRP.pud
+      generated_vrp = TestHelper.create(vrp)
+
+      refute_respond_to generated_vrp, :shipments
+      assert_equal 4, generated_vrp.services.size
+      assert_equal(
+        2, generated_vrp.relations.count{ |relation| relation.type == :shipment && relation.linked_services.size == 2 }
+      )
+    end
+
     def test_deduce_consistent_relations
       vrp = VRP.pud
 

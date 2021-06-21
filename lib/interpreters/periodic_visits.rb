@@ -96,10 +96,11 @@ module Interpreters
         next unless related_missions.any? && related_missions.all?{ |mission| mission.visits_number == visits_number }
 
         (1..visits_number).collect{ |relation_index|
-          new_relation = Marshal.load(Marshal.dump(relation))
-          new_relation.linked_ids = related_missions.collect{ |mission|
+          linked_ids = related_missions.collect{ |mission|
             "#{mission.id}_#{relation_index}_#{mission.visits_number}"
           }
+          new_relation = Models::Relation.create(type: relation.type, linked_ids: linked_ids,
+                                                 lapse: relation.lapse, periodicity: relation.periodicity)
           new_relation
         }
       }.compact.flatten

@@ -41,8 +41,6 @@ module ValidateData
     # indeed, no configuration implies no schedule and there should be no visits_number > 1 in this case
     # check_services(schedule)
     check_services(configuration, schedule)
-    check_position_relation_specificities
-    check_relation_consistent_timewindows
 
     check_routes(periodic_heuristic)
     check_configuration(configuration, periodic_heuristic) if configuration
@@ -140,15 +138,17 @@ module ValidateData
     }
   end
 
-  # In a sequence a->b, b cannot be served if its timewindows are closed
-  # before that a has its timewindows opened
+  # In a sequence s1->s2, s2 cannot be served if its timewindows have ended before
+  # any timewindows of s1 have started
   def check_relation_consistent_timewindows
     unconsistent_relation_timewindows = []
     @hash[:relations]&.each{ |relation|
       next unless POSITION_RELATIONS.include?(relation[:type])
 
       latest_sequence_earliest_arrival = nil
-      services = @hash[:services].select{ |service| relation[:linked_ids].include?(service[:id]) }
+      services = relation[:linked_ids].map{ |linked_id|
+        @hash[:services].find{ |service| service[:id] == linked_id }
+      }
       services.each{ |service|
         next unless service[:activity][:timewindows]&.any?
 
@@ -178,7 +178,9 @@ module ValidateData
     @hash[:relations]&.each{ |relation|
       next unless POSITION_RELATIONS.include?(relation[:type])
 
-      services = @hash[:services].select{ |service| relation[:linked_ids].include?(service[:id]) }
+      services = relation[:linked_ids].map{ |linked_id|
+        @hash[:services].find{ |service| service[:id] == linked_id }
+      }
       previous_service = nil
       services.each{ |service|
         if previous_service && forbidden_position_pairs.include?([previous_service[:activity][:position], service[:activity][:position]])
@@ -331,6 +333,8 @@ module ValidateData
       end
     end
 
+    check_position_relation_specificities
+    check_relation_consistent_timewindows
     check_sticky_relation_consistency
 
     incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end]
@@ -348,18 +352,20 @@ module ValidateData
       services = @hash[:services].select{ |service| relation[:linked_ids]&.include?(service[:id]) }
       services.none?{ |service|
         sticky_ids = service[:sticky_vehicle_ids] || []
-        if [sticky_ids + relation_sticky_ids].uniq.size > 1
-          unconsistent_stickies << services.map{ |service| service[:id] }
+
+        if relation_sticky_ids.any? && sticky_ids.any? && (sticky_ids & relation_sticky_ids).empty?
+          unconsistent_stickies << services.map{ |s| s[:id] }
         end
         relation_sticky_ids += sticky_ids
       }
     }
-    if unconsistent_stickies.any?
-      raise OptimizerWrapper::UnsupportedProblemError.new(
-        'All services from a relation should have consistent sticky_vehicle_ids or none'\
-        'Following services have different sticky_vehicle_ids: ',
-        unconsistent_stickies)
-    end
+    return unless unconsistent_stickies.any?
+
+    raise OptimizerWrapper::UnsupportedProblemError.new(
+      'All services from a relation should have consistent sticky_vehicle_ids or none'\
+      'Following services have different sticky_vehicle_ids: ',
+      unconsistent_stickies
+    )
   end
 
   def check_routes(periodic_heuristic)

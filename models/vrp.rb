@@ -143,15 +143,16 @@ module Models
     def self.convert_shipments_to_services(hash)
       hash[:services] ||= []
       hash[:relations] ||= []
+      @linked_ids = {}
       service_ids = hash[:services].map{ |service| service[:id] }
       hash[:shipments]&.each{ |shipment|
-        linked_ids = []
+        @linked_ids[shipment[:id]] = []
         %i[pickup delivery].each{ |part|
           service = Oj.load(Oj.dump(shipment))
           service[:original_id] = shipment[:id]
           service[:id] += "_#{part}"
           service[:id] += '_conv' while service_ids.any?{ |id| id == service[:id] } # protect against id clash
-          linked_ids << service[:id]
+          @linked_ids[shipment[:id]] << service[:id]
           service[:type] = part.to_sym
           service[:activity] = service[part]
           %i[pickup delivery direct maximum_inroute_duration].each{ |key| service.delete(key) }
@@ -164,18 +165,23 @@ module Models
           end
           hash[:services] << service
         }
-        convert_relations_of_shipment_to_services(hash, shipment[:id], linked_ids[0], linked_ids[1])
-        hash[:relations] << { type: :shipment, linked_ids: linked_ids }
-        hash[:relations] << { type: :sequence, linked_ids: linked_ids } if shipment[:direct]
+        convert_relations_of_shipment_to_services(hash,
+                                                  shipment[:id],
+                                                  @linked_ids[shipment[:id]][0],
+                                                  @linked_ids[shipment[:id]][1])
+        hash[:relations] << { type: :shipment, linked_ids: @linked_ids[shipment[:id]] }
+        hash[:relations] << { type: :sequence, linked_ids: @linked_ids[shipment[:id]] } if shipment[:direct]
         max_lapse = shipment[:maximum_inroute_duration]
-        hash[:relations] << { type: :maximum_duration_lapse, linked_ids: linked_ids, lapse: max_lapse } if max_lapse
+        next unless max_lapse
+
+        hash[:relations] << { type: :maximum_duration_lapse, linked_ids: @linked_ids[shipment[:id]], lapse: max_lapse }
       }
       convert_shipment_within_routes(hash)
       hash.delete(:shipments)
     end
 
     def self.convert_relations_of_shipment_to_services(hash, shipment_id, pickup_service_id, delivery_service_id)
-      hash[:relations]&.each{ |relation|
+      hash[:relations].each{ |relation|
         case relation[:type]
         when :minimum_duration_lapse, :maximum_duration_lapse
           relation[:linked_ids][0] = delivery_service_id if relation[:linked_ids][0] == shipment_id
@@ -192,23 +198,29 @@ module Models
             msg = 'Relation between shipment pickup and delivery should be explicitly specified for `:sequence` and `:order` relations.'
             raise OptimizerWrapper::DiscordantProblemError.new(msg)
           end
+        else
+          if relation[:linked_ids].any?{ |id| id == shipment_id }
+            msg = "Relations of type #{relation[:type]} cannot be linked using the shipment object."
+            raise OptimizerWrapper::DiscordantProblemError.new(msg)
+          end
         end
       }
     end
 
     def self.convert_shipment_within_routes(hash)
       return unless hash[:shipments]
-      shipment_ids = Hash.new
+
+      shipment_ids = {}
       hash[:shipments].each{ |shipment| shipment_ids[shipment[:id]] = 0 }
       hash[:routes]&.each{ |route|
         route[:mission_ids].map!{ |mission_id|
           if shipment_ids.key?(mission_id)
             if shipment_ids[mission_id].zero?
               shipment_ids[mission_id] += 1
-              "#{mission_id}_pickup"
+              @linked_ids[mission_id][0]
             elsif shipment_ids[mission_id] == 1
               shipment_ids[mission_id] += 1
-              "#{mission_id}_delivery"
+              @linked_ids[mission_id][1]
             else
               raise OptimizerWrapper::DiscordantProblemError.new('A shipment could only appear twice in routes.')
             end
@@ -232,7 +244,7 @@ module Models
         case r[:type]
         when :force_first
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services]].flatten.find{ |s| s[:id] == id }
+            to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_first
@@ -240,7 +252,7 @@ module Models
           relations_to_remove << r_i
         when :never_first
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services]].flatten.find{ |s| s[:id] == id }
+            to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Never first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :never_first
@@ -248,7 +260,7 @@ module Models
           relations_to_remove << r_i
         when :force_end
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services]].flatten.find{ |s| s[:id] == id }
+            to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force end relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_last
