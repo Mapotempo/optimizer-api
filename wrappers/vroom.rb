@@ -239,7 +239,7 @@ module Wrappers
     end
 
     def collect_skills(object, vrp_skills)
-      return unless vrp_skills.any?
+      return [] unless vrp_skills.any?
 
       [vrp_skills.size] +
         if object.is_a?(Models::Vehicle)
@@ -309,8 +309,7 @@ module Wrappers
           @total_quantities[unit.id] += value
           (value * CUSTOM_QUANTITY_BIGNUM).round
         },
-        skills: [vrp_skills.size] + activity_objects.first.skills.flat_map{ |skill| vrp_skills.find_index{ |sk| sk == skill } }.compact + # undefined skills are ignored
-          activity_objects.first.sticky_vehicles.flat_map{ |sticky| vrp_skills.find_index{ |sk| sk == sticky.id } }.compact,
+        skills: collect_skills(activity_objects.first, vrp_skills) | collect_skills(activity_objects.last, vrp_skills),
         priority: (100 * (8 - activity_objects.first.priority).to_f / 8).to_i,
         pickup: {
           id: pickup_index,
