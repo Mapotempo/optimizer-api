@@ -74,7 +74,7 @@ module Models
         alternative: options[:index],
         loads: loads(options),
         detail: options[:index] && self.activities[options[:index]] || self.activity,
-        timings: options[:timings],
+        timing: options[:timing] || Models::Timing.new({}),
         reason: options[:reason]
       )
     end

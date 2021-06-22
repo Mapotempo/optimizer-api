@@ -18,7 +18,7 @@
 require './models/base'
 
 module Models
-  class Timings < Base
+  class Timing < Base
     field :day_week_num
     field :day_week
 

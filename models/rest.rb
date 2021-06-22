@@ -38,7 +38,7 @@ module Models
         rest_id: self.id,
         type: :rest,
         detail: self,
-        timings: options[:timings]
+        timing: options[:timing] || Models::Timing.new({})
       )
     end
   end

@@ -27,7 +27,7 @@ module Wrappers
       routes = vrp.vehicles.map{ |vehicle|
         activities = [vehicle.start_depot_activity] +
                      vrp.services.map{ |service|
-                       service.route_activity(service.activities.any? && 0)
+                       service.route_activity(index: service.activities.any? && 0)
                      } + [vehicle.end_depot_activity]
         Models::SolutionRoute.new(
           vehicle: vehicle,

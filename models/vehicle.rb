@@ -121,7 +121,7 @@ module Models
         type: :depot,
         loads: options[:loads],
         detail: Models::Activity.new(point: self.start_point),
-        timings: options[:timings]
+        timing: options[:timing] || Models::Timing.new({})
       )
     end
 
@@ -131,7 +131,7 @@ module Models
         type: :depot,
         loads: options[:loads],
         detail: Models::Activity.new(point: self.end_point),
-        timings: options[:timings]
+        timing: options[:timing] || Models::Timing.new({})
       )
     end
 

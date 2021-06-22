@@ -67,9 +67,9 @@ module Models
         matrix_index = activity.detail.point&.matrix_index
         if previous_index && matrix_index
           dimensions.each{ |dimension|
-            activity.timings.send("travel_#{dimension}=", matrix&.send(dimension)[previous_index][matrix_index])
-            total[dimension] += activity.timings.send("travel_#{dimension}".to_sym).round
-            activity.timings.current_distance ||= total[dimension].round if dimension == :distance
+            activity.timing.send("travel_#{dimension}=", matrix&.send(dimension)[previous_index][matrix_index])
+            total[dimension] += activity.timing.send("travel_#{dimension}".to_sym).round
+            activity.timing.current_distance ||= total[dimension].round if dimension == :distance
           }
         end
 
@@ -83,13 +83,13 @@ module Models
       detail.total_distance = total[:distance].round if dimensions.include?(:distance)
       detail.total_travel_value = total[:value].round if dimensions.include?(:value)
 
-      return unless activities.all?{ |a| a.timings.waiting_time }
+      return unless activities.all?{ |a| a.timing.waiting_time }
 
-      detail.total_waiting_time = activities.collect{ |a| a.timings.waiting_time }.sum.round
+      detail.total_waiting_time = activities.collect{ |a| a.timing.waiting_time }.sum.round
     end
 
     def compute_route_waiting_times
-      previous_end = activities.first.timings.begin_time
+      previous_end = activities.first.timing.begin_time
       loc_index = nil
       consumed_travel_time = 0
       consumed_setup_time = 0
@@ -101,23 +101,23 @@ module Models
             loc_index = index + next_index if next_index
             consumed_travel_time = 0
           end
-          shared_travel_time = loc_index && activities[loc_index].timings.travel_time || 0
+          shared_travel_time = loc_index && activities[loc_index].timing.travel_time || 0
           potential_setup = shared_travel_time > 0 && activities[loc_index].detail.setup_duration || 0
           left_travel_time = shared_travel_time - consumed_travel_time
-          used_travel_time = [act.timings.begin_time - previous_end, left_travel_time].min
+          used_travel_time = [act.timing.begin_time - previous_end, left_travel_time].min
           consumed_travel_time += used_travel_time
           # As setup is considered as a transit value, it may be performed before a rest
-          consumed_setup_time  += act.timings.begin_time - previous_end - [used_travel_time, potential_setup].min
+          consumed_setup_time  += act.timing.begin_time - previous_end - [used_travel_time, potential_setup].min
         else
-          used_travel_time = (act.timings.travel_time || 0) - consumed_travel_time - consumed_setup_time
+          used_travel_time = (act.timing.travel_time || 0) - consumed_travel_time - consumed_setup_time
           consumed_travel_time = 0
           consumed_setup_time = 0
           loc_index = nil
         end
-        considered_setup = act.timings.travel_time&.positive? && (act.detail.setup_duration.to_i - consumed_setup_time) || 0
+        considered_setup = act.timing.travel_time&.positive? && (act.detail.setup_duration.to_i - consumed_setup_time) || 0
         arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
-        act.timings.waiting_time = act.timings.begin_time - arrival_time
-        previous_end = act.timings.end_time || act.timings.begin_time
+        act.timing.waiting_time = act.timing.begin_time - arrival_time
+        previous_end = act.timing.end_time || act.timing.begin_time
       }
     end
 
@@ -129,7 +129,7 @@ module Models
       return nil unless details && !details.empty?
 
       activities[1..-1].each_with_index{ |activity, index|
-        activity.timings.travel_distance = details[index]&.first
+        activity.timing.travel_distance = details[index]&.first
       }
 
       details
