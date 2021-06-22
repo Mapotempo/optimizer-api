@@ -111,8 +111,8 @@ module Wrappers
           activities: activities,
           vehicle: vehicle,
           detail: Models::RouteDetail.new(
-            start_time: activities.first.timings.begin_time,
-            end_time: activities.last.timings.begin_time + activities.last.detail.duration
+            start_time: activities.first.timing.begin_time,
+            end_time: activities.last.timing.begin_time + activities.last.detail.duration
           )
         )
       }
@@ -177,7 +177,7 @@ module Wrappers
         end_time: begin_time && (begin_time + step['service']),
         departure_time: begin_time && (begin_time + step['service'])
       }
-      original_rest.route_activity(timings: Models::Timings.new(times))
+      original_rest.route_activity(timing: Models::Timing.new(times))
     end
 
     def read_depot(vrp, vehicle, step)
@@ -191,9 +191,9 @@ module Wrappers
         begin_time: step['arrival']
       }.merge(route_data)
       if step['type'] == 'end'
-        vehicle.end_depot_activity(timings: Models::Timings.new(times))
+        vehicle.end_depot_activity(timing: Models::Timing.new(times))
       else
-        vehicle.start_depot_activity(timings: Models::Timings.new(times))
+        vehicle.start_depot_activity(timing: Models::Timing.new(times))
       end
     end
 
@@ -207,7 +207,7 @@ module Wrappers
         end_time: begin_time && (begin_time + step['service']),
         departure_time: begin_time && (begin_time + step['service'])
       }.merge(route_data)
-      job_data = service.route_activity(timings: Models::Timings.new(times))
+      job_data = service.route_activity(timing: Models::Timing.new(times))
       @previous = point
       job_data
     end

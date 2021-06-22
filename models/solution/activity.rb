@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
-require './models/solution/timings'
+require './models/solution/timing'
 
 module Models
   class RouteActivity < Base
@@ -33,6 +33,6 @@ module Models
 
     has_many :loads, class_name: 'Models::Load'
     belongs_to :detail, class_name: 'Models::Activity'
-    belongs_to :timings, class_name: 'Models::Timings', default: Models::Timings.new({})
+    belongs_to :timing, class_name: 'Models::Timing', default: Models::Timing.new({})
   end
 end
