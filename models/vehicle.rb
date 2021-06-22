@@ -115,19 +115,23 @@ module Models
       super(hash)
     end
 
-    def start_depot_activity
+    def start_depot_activity(options = {})
       Models::RouteActivity.new(
-        service_id: self.start_point&.id,
+        id: self.start_point&.id,
         type: :depot,
-        details: Models::Activity.new(point: self.start_point)
+        loads: options[:loads],
+        detail: Models::Activity.new(point: self.start_point),
+        timings: options[:timings]
       )
     end
 
-    def end_depot_activity
+    def end_depot_activity(options = {})
       Models::RouteActivity.new(
-        service_id: self.end_point&.id,
+        id: self.end_point&.id,
         type: :depot,
-        details: Models::Activity.new(point: self.end_point)
+        loads: options[:loads],
+        detail: Models::Activity.new(point: self.end_point),
+        timings: options[:timings]
       )
     end
 

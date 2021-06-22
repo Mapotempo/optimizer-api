@@ -111,9 +111,8 @@ module OptimizerWrapper
 
     expected_activity_count = services_vrps.collect{ |sv| sv[:vrp].visits }.sum
 
-    several_service_vrps = Interpreters::SeveralSolutions.expand_several_solutions(services_vrps)
-
-    several_results = several_service_vrps.collect.with_index{ |current_service_vrps, solution_index|
+    several_service_vrps = Interpreters::SeveralSolutions.expand_similar_resolutions(services_vrps)
+    several_solutions = several_service_vrps.collect.with_index{ |current_service_vrps, solution_index|
       callback_main = lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
         msg = "#{"solution: #{solution_index + 1}/#{several_service_vrps.size} - " if several_service_vrps.size > 1}#{message}" unless message.nil?
         block&.call(wrapper, avancement, total, msg, cost, time, solution)
@@ -122,7 +121,7 @@ module OptimizerWrapper
       join_independent_vrps(current_service_vrps, callback_main) { |service_vrp, callback_join|
         repeated_results = []
 
-        service_vrp_repeats = Interpreters::SeveralSolutions.expand_repeat(service_vrp)
+        service_vrp_repeats = Interpreters::SeveralSolutions.expand_repetitions(service_vrp)
 
         service_vrp_repeats.each_with_index{ |repeated_service_vrp, repetition_index|
           repeated_results << define_process(repeated_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
@@ -145,17 +144,17 @@ module OptimizerWrapper
 
     # demo solver returns a fixed solution
     unless services_vrps.collect{ |sv| sv[:service] }.uniq == [:demo]
-      check_result_consistency(expected_activity_count, several_results)
+      check_solutions_consistency(expected_activity_count, several_solutions)
     end
 
-    nb_routes = several_results.sum{ |result| result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } } }
-    nb_unassigned = several_results.sum{ |result| result[:unassigned].size }
+    nb_routes = several_solutions.sum{ |result| result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } } }
+    nb_unassigned = several_solutions.sum{ |result| result[:unassigned].size }
     percent_unassigned = (100.0 * nb_unassigned / expected_activity_count).round(1)
 
     log "result - #{nb_unassigned} of #{expected_activity_count} (#{percent_unassigned}%) unassigned activities"
     log "result - #{nb_routes} of #{services_vrps.sum{ |sv| sv[:vrp].vehicles.size }} vehicles used"
 
-    several_results
+    several_solutions
   ensure
     log "<-- define_main_process elapsed: #{(Time.now - tic).round(2)} sec", level: :info
   end
@@ -175,17 +174,17 @@ module OptimizerWrapper
     tic = Time.now
     expected_activity_count = vrp.visits
 
-    result ||= Interpreters::SplitClustering.split_clusters(service_vrp, job, &block)        # Calls recursively define_process
+    solution ||= Interpreters::SplitClustering.split_clusters(service_vrp, job, &block)        # Calls recursively define_process
 
-    result ||= Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job, &block)   # Calls recursively define_process
+    solution ||= Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job, &block)   # Calls recursively define_process
 
-    result ||= solve(service_vrp, job, block)
+    solution ||= solve(service_vrp, job, block)
 
-    check_result_consistency(expected_activity_count, result) if service_vrp[:service] != :demo # demo solver returns a fixed solution
+    check_solutions_consistency(expected_activity_count, [solution]) if service_vrp[:service] != :demo # demo solver returns a fixed solution
 
     log "<-- define_process levels (dicho: #{dicho_level}, split: #{split_level}) elapsed: #{(Time.now - tic).round(2)} sec", level: :info
-    result[:use_deprecated_csv_headers] = vrp.restitution_use_deprecated_csv_headers
-    result
+    solution.use_deprecated_csv_headers = vrp.restitution_use_deprecated_csv_headers
+    solution
   end
 
   def self.solve(service_vrp, job = nil, block = nil)
@@ -207,9 +206,7 @@ module OptimizerWrapper
       multi_modal = Interpreters::MultiModal.new(vrp, service)
       optim_result = multi_modal.multimodal_routes
     elsif vrp.vehicles.empty? || vrp.services.empty?
-      optim_result = config[:services][service].empty_result(
-        service.to_s, vrp, 'No vehicle available for this service', false
-      )
+      optim_result = vrp.empty_solution(service.to_s, 'No vehicle available for this service', false)
     else
       unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
@@ -245,7 +242,7 @@ module OptimizerWrapper
           # TODO: Move select best heuristic in each solver
           Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
 
-          cliqued_result = OptimizerWrapper.config[:services][service].solve(
+          cliqued_solution = OptimizerWrapper.config[:services][service].solve(
             cliqued_vrp,
             job,
             proc{ |pids|
@@ -262,24 +259,24 @@ module OptimizerWrapper
             }
           ) { |wrapper, avancement, total, _message, cost, _time, solution|
             solution =
-              if solution.is_a?(Hash)
+              if solution.is_a?(Models::Solution)
                 OptimizerWrapper.config[:services][service].patch_simplified_constraints_in_result(solution, cliqued_vrp)
               end
             block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution) if dicho_level.nil? || dicho_level.zero?
           }
 
-          OptimizerWrapper.config[:services][service].patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_result)
+          OptimizerWrapper.config[:services][service].patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_solution)
 
-          if cliqued_result.is_a?(Hash)
-            # cliqued_result[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-            block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_result[:elapsed]) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
-            parse_result(cliqued_vrp, cliqued_result)
-          elsif cliqued_result == 'Job killed'
+          if cliqued_solution.is_a?(Models::Solution)
+            # cliqued_solution[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
+            block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_solution.elapsed) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
+            cliqued_solution.parse_solution(cliqued_vrp)
+          elsif cliqued_solution.status == :killed
             next
-          elsif cliqued_result.is_a?(String)
-            raise RuntimeError, cliqued_result
+          elsif cliqued_solution.is_a?(String)
+            raise RuntimeError, cliqued_solution
           elsif (vrp.preprocessing_heuristic_result.nil? || vrp.preprocessing_heuristic_result.empty?) && !vrp.restitution_allow_empty_result
-            puts cliqued_result
+            puts cliqued_solution
             raise RuntimeError, 'No solution provided'
           end
         }
@@ -446,7 +443,7 @@ module OptimizerWrapper
   end
 
   def self.join_independent_vrps(services_vrps, callback)
-    results = services_vrps.each_with_index.map{ |service_vrp, i|
+    solutions = services_vrps.each_with_index.map{ |service_vrp, i|
       block = if services_vrps.size > 1 && !callback.nil?
                 proc { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
                   msg = "split independent process #{i + 1}/#{services_vrps.size} - #{message}" unless message.nil?
@@ -458,7 +455,8 @@ module OptimizerWrapper
       yield(service_vrp, block)
     }
 
-    Helper.merge_results(results, true)
+    solutions.reduce(&:+)
+    # Helper.merge_results(solutions, true)
   end
 
   def self.job_list(api_key)
@@ -506,30 +504,32 @@ module OptimizerWrapper
 
   private
 
-  def self.check_result_consistency(expected_value, results)
-    [results].flatten(1).each{ |result|
-      if result[:routes].any?{ |route| route[:activities].any?{ |a| a[:waiting_time].to_i < 0 } }
+  def self.check_solutions_consistency(expected_value, solutions)
+    solutions.each{ |solution|
+      if solution.routes.any?{ |route| route.activities.any?{ |a| a.timings.waiting_time < 0 } }
         log 'Computed waiting times are invalid', level: :warn
         raise RuntimeError, 'Computed waiting times are invalid' if ENV['APP_ENV'] != 'production'
       end
 
-      waiting_times = result[:routes].map{ |route| route[:total_waiting_time] }.compact
-      durations = result[:routes].map{ |route|
-        route[:activities].map{ |act| act[:departure_time] && (act[:departure_time] - act[:begin_time]) }.compact
-      }
-      setup_durations = result[:routes].map{ |route|
-        route[:activities].map{ |act|
-          next if act[:type] == 'rest'
-
-          (act[:travel_time].nil? || act[:travel_time]&.positive?) && act[:detail][:setup_duration] || 0
+      waiting_times = solution.routes.map{ |route| route.detail.total_waiting_time }.compact
+      durations = solution.routes.map{ |route|
+        route.activities.map{ |act|
+          act.timings.departure_time && (act.timings.departure_time - act.timings.begin_time)
         }.compact
       }
-      total_time = result[:total_time] || 0
-      total_travel_time = result[:total_travel_time] || 0
+      setup_durations = solution.routes.map{ |route|
+        route.activities.map{ |act|
+          next if act.type == 'rest'
+
+          (act.timings.travel_time.nil? || act.timings.travel_time&.positive?) && act.detail.setup_duration || 0
+        }.compact
+      }
+      total_time = solution.details.total_time || 0
+      total_travel_time = solution.details.total_travel_time || 0
       if !@zip_condition && total_time != (total_travel_time || 0) +
-                                          waiting_times.sum +
-                                          (setup_durations.flatten.reduce(&:+) || 0) +
-                                          (durations.flatten.reduce(&:+) || 0)
+                                           waiting_times.sum +
+                                           (setup_durations.flatten.reduce(&:+) || 0) +
+                                           (durations.flatten.reduce(&:+) || 0)
 
         log_string = 'Computed times are invalid'
         tags = {
@@ -539,13 +539,12 @@ module OptimizerWrapper
           setup_durations: setup_durations.flatten.reduce(&:+),
           durations: durations.flatten.reduce(&:+)
         }
-
         log log_string, tags.merge(level: :warn)
         raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
       end
 
-      nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }
-      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:pickup_shipment_id] || unassigned[:delivery_shipment_id] }
+      nb_assigned = solution.routes.sum{ |route| route.activities.count(&:service_id) }
+      nb_unassigned = solution.unassigned.count(&:service_id)
 
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         tags = { expected: expected_value, assigned: nb_assigned, unassigned: nb_unassigned }
@@ -564,69 +563,13 @@ module OptimizerWrapper
       }
   end
 
-  def self.round_route_stats(route)
-    [:end_time, :start_time].each{ |key|
-      next unless route[key]
-
-      route[key] = route[key].round
-    }
-
-    route[:activities].each{ |activity|
-      [:begin_time, :current_distance, :departure_time, :end_time,
-       :travel_distance, :travel_time, :travel_value, :waiting_time].each{ |key|
-        next unless activity[key]
-
-        activity[key] = activity[key].round
-      }
-    }
-  end
-
-  def self.compute_route_total_dimensions(vrp, route, matrix)
-    previous = nil
-    dimensions = []
-    dimensions << :time if matrix&.time
-    dimensions << :distance if matrix&.distance
-    dimensions << :value if matrix&.value
-
-    total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
-    route[:activities].each{ |activity|
-      point = vrp.points.find{ |p| p.id == activity[:point_id] }&.matrix_index
-      if previous && point
-        dimensions.each{ |dimension|
-          activity["travel_#{dimension}".to_sym] = matrix&.send(dimension)[previous][point]
-          total[dimension] += activity["travel_#{dimension}".to_sym].round
-          activity[:current_distance] ||= total[dimension].round if dimension == :distance
-        }
-      end
-      next if point.nil?
-
-      previous = point
-    }
-
-    if route[:end_time] && route[:start_time]
-      route[:total_time] = route[:end_time] - route[:start_time]
+  def self.formatted_duration(duration)
+    if duration
+      h = (duration / 3600).to_i
+      m = (duration / 60).to_i % 60
+      s = duration.to_i % 60
+      [h, m, s].map { |t| t.to_s.rjust(2, '0') }.join(':')
     end
-    route[:total_travel_time] = total[:time].round if dimensions.include?(:time)
-    route[:total_distance] = total[:distance].round if dimensions.include?(:distance)
-    route[:total_travel_value] = total[:value].round if dimensions.include?(:value)
-
-    return unless route[:activities].all?{ |a| a[:waiting_time] }
-
-    route[:total_waiting_time] = route[:activities].collect{ |a| a[:waiting_time] }.sum.round
-  end
-
-  def self.compute_result_total_dimensions_and_round_route_stats(result)
-    [:total_time, :total_travel_time, :total_travel_value, :total_distance, :total_waiting_time].each{ |stat_symbol|
-      next unless result[:routes].all?{ |r| r[stat_symbol] }
-
-      result[stat_symbol] = result[:routes].collect{ |r|
-        r[stat_symbol]
-      }.reduce(:+)
-    }
-
-    result[:routes].each{ |r|
-      round_route_stats(r)
-    }
   end
 
   def self.compute_route_waiting_times(route)
@@ -686,109 +629,6 @@ module OptimizerWrapper
 
       activity[:visit_index] = id.split('_')[-2].to_i
     }
-  end
-
-  def self.route_details(vrp, route, vehicle)
-    previous = nil
-    details = nil
-    segments = route[:activities].reverse.collect{ |activity|
-      current =
-        if activity[:rest_id]
-          previous
-        else
-          vrp.points.find{ |point| point.id == activity[:point_id] }
-        end
-      segment =
-        if previous && current
-          [current[:location][:lat], current[:location][:lon], previous[:location][:lat], previous[:location][:lon]]
-        end
-      previous = current
-      segment
-    }.reverse.compact
-
-    unless segments.empty?
-      details = vrp.router.compute_batch(OptimizerWrapper.config[:router][:url],
-                                                      vehicle.router_mode.to_sym, vehicle.router_dimension,
-                                                      segments, vrp.restitution_geometry.include?(:encoded_polylines),
-                                                      vehicle.router_options)
-      raise RouterError.new('Route details cannot be received') unless details
-    end
-
-    details&.each{ |d| d[0] = (d[0] / 1000.0).round(4) if d[0] }
-    details
-  end
-
-  def self.compute_route_travel_distances(vrp, matrix, route, vehicle)
-    return nil unless matrix&.distance.nil? && route[:activities].size > 1 && vrp.points.all?(&:location)
-
-    details = route_details(vrp, route, vehicle)
-
-    return nil unless details && !details.empty?
-
-    route[:activities][1..-1].each_with_index{ |activity, index|
-      activity[:travel_distance] = details[index]&.first
-    }
-
-    details
-  end
-
-  def self.fill_missing_route_data(vrp, route, matrix, vehicle, solvers)
-    route[:original_vehicle_id] = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }.original_id
-    route[:day] = provide_day(vrp, route)
-    provide_visits_index(vrp, route[:activities])
-    details = compute_route_travel_distances(vrp, matrix, route, vehicle)
-    compute_route_waiting_times(route) unless route[:activities].empty?
-
-    if route[:end_time] && route[:start_time]
-      route[:total_time] = route[:end_time] - route[:start_time]
-    end
-
-    compute_route_total_dimensions(vrp, route, matrix)
-
-    return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? &&
-                  route[:activities].any?{ |act| act[:service_id] }
-
-    details ||= route_details(vrp, route, vehicle)
-    route[:geometry] = details&.map(&:last)
-  end
-
-  def self.empty_route(vrp, vehicle)
-    route_start_time = [[vehicle.timewindow], vehicle.sequence_timewindows].compact.flatten[0]&.start.to_i
-    route_end_time = route_start_time
-    {
-      vehicle_id: vehicle.id,
-      original_vehicle_id: vehicle.original_id,
-      cost_details: Models::CostDetails.create({}),
-      activities: [], # TODO: check if depot activities are needed
-                      # or-tools returns depot_start -> depot_end for empty vehicles
-                      # in that case route_end_time needs to be corrected
-      start_time: route_start_time,
-      end_time: route_end_time,
-      initial_loads: vrp.units.collect{ |unit| { unit: unit.id, label: unit.label, value: 0 } }
-    }
-  end
-
-  def self.parse_result(vrp, result)
-    tic_parse_result = Time.now
-    vrp.vehicles.each{ |vehicle|
-      route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
-      unless route
-        # there should be one route per vehicle in result :
-        route = empty_route(vrp, vehicle)
-        result[:routes] << route
-      end
-      matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
-      fill_missing_route_data(vrp, route, matrix, vehicle, result[:solvers])
-    }
-    provide_visits_index(vrp, result[:unassigned])
-    compute_result_total_dimensions_and_round_route_stats(result)
-
-    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.visits} (#{(result[:unassigned].size.to_f / vrp.visits * 100).round(1)}%)"
-    used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } }
-    log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicle_count}"
-    log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
-
-    result
   end
 
   def self.apply_zones(vrp)

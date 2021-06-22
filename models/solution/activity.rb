@@ -31,8 +31,8 @@ module Models
     field :delivery_shipment_id
     field :rest_id
 
-    belongs_to :load, class_name: 'Models::Load'
-    belongs_to :details, class_name: 'Models::Activity'
+    has_many :loads, class_name: 'Models::Load'
+    belongs_to :detail, class_name: 'Models::Activity'
     belongs_to :timings, class_name: 'Models::Timings', default: Models::Timings.new({})
   end
 end

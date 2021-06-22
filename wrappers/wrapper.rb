@@ -1573,37 +1573,12 @@ module Wrappers
       route[:end_time] += shift_amount if route[:end_time]
     end
 
-    def unassigned_services(vrp, unassigned_reason)
-      vrp.services.flat_map{ |service|
-        Array.new(service.visits_number) { |visit_index|
-          {
-            service_id: vrp.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id,
-            type: service.type.to_s,
-            point_id: service.activity.point_id,
-            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
-            reason: unassigned_reason
-          }.delete_if{ |_k, v| !v }
-        }
-      }
-    end
-
-    def unassigned_rests(vrp)
-      vrp.vehicles.flat_map{ |vehicle|
-        vehicle.rests.flat_map{ |rest|
-          {
-            rest_id: rest.id,
-            detail: build_rest(rest, nil)
-          }
-        }
-      }
-    end
-
     def expand_vehicles_for_consistent_empty_result(vrp)
       periodic = Interpreters::PeriodicVisits.new(vrp)
       periodic.generate_vehicles(vrp)
     end
 
-    def empty_result(solver, vrp, unassigned_reason = nil, already_expanded = true)
+    def empty_solution(solver, vrp, unassigned_reason = nil, already_expanded = true)
       vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp) if vrp.schedule? && !already_expanded
       OptimizerWrapper.parse_result(vrp, {
         solvers: [solver],

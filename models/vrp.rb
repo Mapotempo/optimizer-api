@@ -143,6 +143,48 @@ module Models
       vrp
     end
 
+    def empty_solution(solver, unassigned_reason = nil, already_expanded = true)
+      self.vehicles = expand_vehicles_for_consistent_empty_result(self) if self.schedule? && !already_expanded
+      solution = Models::Solution.new(
+        routes: self.vehicles.map{ |v| self.empty_route(v) },
+        unassigned: (unassigned_services(unassigned_reason) +
+                     unassigned_rests)
+      )
+      solution.parse_solution(self)
+    end
+
+    def empty_route(vehicle)
+      route_start_time = [[vehicle.timewindow], vehicle.sequence_timewindows].compact.flatten[0]&.start.to_i
+      route_end_time = route_start_time
+      Models::SolutionRoute.new(
+        vehicle: vehicle,
+        detail: Models::RouteDetail.new(
+          start_time: route_start_time,
+          end_time: route_end_time
+        ),
+        initial_loads: self.units.map{ |unit|
+          Models::Load.new({
+            current_load: 0,
+            quantity: Models::Quantity.new(unit: unit, value: 0)
+          })
+        }
+      )
+    end
+
+    def unassigned_services(unassigned_reason)
+      self.services.flat_map{ |service|
+        Array.new(service.visits_number) { |visit_index|
+          service_id = self.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id
+          service.route_activity(service_id: service_id, reason: unassigned_reason)
+        }
+      }
+    end
+
+    def unassigned_rests
+      self.vehicles.flat_map{ |vehicle| vehicle.rests.flat_map(&:route_activity) }
+    end
+
+
     def self.convert_shipments_to_services(hash)
       hash[:services] ||= []
       hash[:relations] ||= []
