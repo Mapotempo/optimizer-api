@@ -59,12 +59,23 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation'
 
-    def route_activity(index)
+    def loads(options)
+      current_loads = options[:loads]&.map{ |load| [load.quantity.unit.id, load.current_load] }.to_h || {}
+      quantities.map{ |q| Models::Load.new(quantity: q, current_load: current_loads[q.unit.id]) }
+    end
+
+    def route_activity(options = {})
       Models::RouteActivity.new(
-        service_id: self.original_id || self.id,
+        id: self.original_id,
+        service_id: options[:service_id] || self.id,
+        pickup_shipment_id: self.type == :pickup && self.original_id || self.id,
+        delivery_shipment_id: self.type == :delivery && self.original_id || self.id,
         type: self.type,
-        alternative: index,
-        details: index && self.activities[index] || self.activity
+        alternative: options[:index],
+        loads: loads(options),
+        detail: options[:index] && self.activities[options[:index]] || self.activity,
+        timings: options[:timings],
+        reason: options[:reason]
       )
     end
   end

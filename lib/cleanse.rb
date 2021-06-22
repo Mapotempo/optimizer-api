@@ -53,16 +53,16 @@ module Cleanse
   def self.same_fill_units(capacities, previous, current)
     if previous && current
       if previous
-        previous_fill_units = previous.quantities.collect{ |quantity|
+        previous_fill_units = previous.load.quantities.collect{ |quantity|
           quantity.unit.id if quantity.fill
         }.compact
       end
       if current
-        useful_units = (current.quantities.collect{ |quantity|
+        useful_units = (current.load.quantities.collect{ |quantity|
           quantity.unit.id
         }.compact & capacities)
 
-        current_fill_units = current.quantities.collect{ |quantity|
+        current_fill_units = current.load.quantities.collect{ |quantity|
           quantity.unit.id if quantity.fill
         }.compact
       end
@@ -70,27 +70,29 @@ module Cleanse
     end
   end
 
-  def self.cleanse_empties_fills(vrp, result)
-    result[:routes].each{ |route|
-      vehicle = vrp.vehicles.find{ |vehicle| vehicle.id == route[:vehicle_id] }
+  def self.cleanse_empties_fills(vrp, solution)
+    service_types = %i[pickup delivery service]
+
+    solution.routes.each{ |route|
+      vehicle = route.vehicle
       capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
       previous = nil
       previous_point = nil
       current_service = nil
       current_point = nil
 
-      route[:activities].delete_if{ |activity|
-        current_service = vrp.services.find{ |service| service[:id] == activity[:service_id] }
+      route.activities.delete_if{ |activity|
+        current_point = activity.detail.point if service_types.include? (activity.type)
 
-        current_point = current_service.activity&.point || current_service.activities.find{ |a| a.point_id == activity[:point_id] }.point if current_service
+        next unless current_point
 
         if previous && current_service && same_position(vrp, previous_point, current_point) && same_empty_units(capacities_units, previous, current_service) &&
            !same_fill_units(capacities_units, previous, current_service)
-          add_unnassigned(result[:unassigned], current_service, 'Duplicate empty service.')
+          add_unnassigned(solution[:unassigned], current_service, 'Duplicate empty service.')
           true
         elsif previous && current_service && same_position(vrp, previous_point, current_point) && same_fill_units(capacities_units, previous, current_service) &&
               !same_empty_units(capacities_units, previous, current_service)
-          add_unnassigned(result[:unassigned], current_service, 'Duplicate fill service.')
+          add_unnassigned(solution[:unassigned], current_service, 'Duplicate fill service.')
           true
         else
           previous = current_service if previous.nil? || activity[:service_id]

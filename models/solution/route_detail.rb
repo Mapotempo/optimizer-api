@@ -18,14 +18,24 @@
 require './models/base'
 
 module Models
-  class RouteDetails < Base
+  class RouteDetail < Base
     field :total_time, default: 0
     field :total_travel_time, default: 0
     field :total_waiting_time, default: 0
 
     field :total_distance, default: 0
 
+    field :total_travel_value
+
     field :start_time
     field :end_time
+
+    def +(other)
+      merged_details = RouteDetail.new({})
+      self.attributes.each_key{ |key|
+        merged_details[key] = (self[key] || 0) + (other[key] || 0)
+      }
+      merged_details
+    end
   end
 end

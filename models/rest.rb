@@ -31,5 +31,15 @@ module Models
 
     has_many :timewindows, class_name: 'Models::Timewindow'
     # include ValidateTimewindows
+
+    def route_activity(options = {})
+      Models::RouteActivity.new(
+        id: self.id,
+        rest_id: self.id,
+        type: :rest,
+        detail: self,
+        timings: options[:timings]
+      )
+    end
   end
 end
