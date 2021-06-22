@@ -143,51 +143,49 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   def self.multipe_matrices_required(vrps, filename)
     return unless ENV['TEST_DUMP_VRP'].to_s == 'true'
 
-    vrps.each(&:compute_matrix)
+    if ENV['KEEP_DUMPED_MATRIX'] == 'true'
+      original_dump = Marshal.load(Zlib.inflate(File.read("test/fixtures/#{vrp.name}.dump")))
+    end
+
+    vrps.each_with_index{ |vrp, vrp_i|
+      next if vrp.matrices.any?
+
+      if ENV['KEEP_DUMPED_MATRIX'] == 'true'
+        vrp.matrices = original_dump.matrices[vrp_i]
+        vrp.points.each{ |pt|
+          pt.matrix_index = original_dump[vrp_i].points.find{ |original_pt| original_pt.id == pt.id }.matrix_index
+        }
+        vrp.vehicles.each{ |v|
+          v.matrix_id = original_dump[vrp_i].vehicles.find{ |original_v| original_v.id == v.id }.matrix_id
+        }
+      else
+        WebMock.enable_net_connect!
+        vrp.compute_matrix
+        WebMock.disable_net_connect!
+      end
+    }
+
     File.write("test/fixtures/#{filename}.dump", Zlib.deflate(Marshal.dump(vrps)))
   end
 
   def self.load_vrp(test, options = {})
-    filename = options[:fixture_file] || test.name[5..-1]
-    dump_file = "test/fixtures/#{filename}.dump"
-    if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrp = Marshal.load(Zlib.inflate(File.read(dump_file))) # rubocop: disable Security/MarshalLoad
-      coerce(vrp)
-    else
-      json_file = "test/fixtures/#{filename}.json"
-      vrp = options[:problem] || JSON.parse(File.read(json_file), symbolize_names: true)[:vrp]
-      vrp = create(vrp)
-
-      # To automaticly generate a dump file with TEST_DUMP_VRP
-      # json file should have neither matrix nor name!
-      if vrp.name && ENV['TEST_DUMP_VRP'].to_s == 'true'
-        raise StandardError.new('Matrice can not be dumped when VRP has a name')
-      end
-
-      if vrp.matrices.empty? && vrp.name.nil?
-        vrp.name = filename
-        matrix_required(vrp)
-      end
-
-      vrp
-    end
+    load_vrps(test, options)[0]
   end
 
   def self.load_vrps(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
     dump_file = "test/fixtures/#{filename}.dump"
     if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrps = Marshal.load(Zlib.inflate(File.read(dump_file))) # rubocop: disable Security/MarshalLoad
+      vrps = [Marshal.load(Zlib.inflate(File.read(dump_file)))].flatten # rubocop: disable Security/MarshalLoad
       vrps.map!{ |vrp| coerce(vrp) }
     else
       json_file = "test/fixtures/#{filename}.json"
-      vrps = options[:problem] || JSON.parse(File.read(json_file), symbolize_names: true).map{ |vrp| vrp[:vrp] }
+      vrps = options[:problem] ? { vrp: options[:problem] } :
+                                 JSON.parse(File.read(json_file), symbolize_names: true)
+      vrps = [vrps] unless vrps.is_a?(Array)
+      vrps.map!{ |vrp| create(vrp[:vrp]) }
 
-      vrps.map!{ |vrp|
-        create(vrp)
-      }
-
-      multipe_matrices_required(vrps, filename)
+      matrices_required(vrps, filename)
 
       vrps
     end
