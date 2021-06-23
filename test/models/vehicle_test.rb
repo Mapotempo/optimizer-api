@@ -27,7 +27,7 @@ module Models
 
       # work duration is only supposed to be called when there is no schedule
       # therefore, work_duration should not be called if vehicle has sequence_timewindows
-      assert_raises OptimizerWrapper::DiscordantProblemError do
+      assert_raises do
         vrp.vehicles.first.work_duration
       end
 

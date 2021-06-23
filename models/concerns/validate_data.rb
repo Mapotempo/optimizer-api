@@ -250,6 +250,16 @@ module ValidateData
     # shipment relation consistency
     if @hash[:relations]&.any?{ |r| r[:type] == :shipment }
       shipment_relations = @hash[:relations].select{ |r| r[:type] == :shipment }
+      service_ids = @hash[:services].map{ |s| s[:id] }
+
+      shipments_with_invalid_linked_ids = shipment_relations.reject{ |r| r[:linked_ids].all?{ |s_id| service_ids.include?(s_id) } }
+      unless shipments_with_invalid_linked_ids.empty?
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          'Shipment relations need to have two valid services -- a pickup and a delivery. ' \
+          'The following services of shipment relations are invalid: ' \
+          "#{shipments_with_invalid_linked_ids.flat_map{ |r| r[:linked_ids].select{ |s_id| service_ids.exclude?(s_id) } }.uniq.sort.join(', ')}"
+        )
+      end
 
       shipments_not_having_exactly_two_linked_ids = shipment_relations.reject{ |r| r[:linked_ids].uniq.size == 2 }
       unless shipments_not_having_exactly_two_linked_ids.empty?

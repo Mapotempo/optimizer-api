@@ -41,17 +41,16 @@ module Wrappers
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_no_evaluation,
         :assert_no_partitions,
-        :assert_no_relations,
+        :assert_no_relations_except_simple_shipments,
         :assert_no_subtours,
         :assert_points_same_definition,
         :assert_single_dimension,
-        :assert_not_a_split_solve_candidate,
 
         # Vehicle/route constraints
         :assert_homogeneous_router_definitions,
         :assert_matrices_only_one,
         :assert_no_distance_limitation,
-        :assert_no_vehicles_with_duration_modifiers,
+        :assert_no_service_duration_modifiers,
         :assert_vehicles_no_duration_limit,
         :assert_vehicles_no_force_start,
         :assert_vehicles_no_late_multiplier_or_single_vehicle,
@@ -61,7 +60,7 @@ module Wrappers
         # Mission constraints
         :assert_no_direct_shipments,
         :assert_no_exclusion_cost,
-        :assert_no_setup_duration,
+        :assert_no_complex_setup_durations,
         :assert_missions_no_late_multiplier,
         :assert_only_one_visit,
 
@@ -76,26 +75,15 @@ module Wrappers
 
     def solve_synchronous?(vrp)
       compatible_routers = %i[car truck_medium]
-      vrp.points.size < 200 && vrp.vehicles.all?{ |vehicle| compatible_routers.include?(vehicle.router_mode&.to_sym) } # WARNING: this should change accordingly with router evolution
+      vrp.points.size < 200 && !Interpreters::SplitClustering.split_solve_candidate?({ vrp: vrp }) && vrp.vehicles.all?{ |vehicle| compatible_routers.include?(vehicle.router_mode&.to_sym) } # WARNING: this should change accordingly with router evolution
     end
 
     def solve(vrp, job = nil, _thread_proc = nil)
-      if vrp.points.empty? || vrp.services.empty? && vrp.shipments.empty?
+      if vrp.vehicles.empty? || vrp.points.empty? || vrp.services.empty? && vrp.shipments.empty?
         return empty_result('vroom', vrp)
       end
 
-      @points = Hash[vrp.points.map{ |point| [point.id, point] }]
       rest_equivalence(vrp)
-
-      matrix_indices = vrp.services.map{ |service|
-        service.activity.point.matrix_index
-      }
-
-      matrix_indices += vrp.shipments.flat_map{ |shipment|
-        [shipment.pickup.point.matrix_index, shipment.delivery.point.matrix_index]
-      }
-      matrix_indices += vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point&.matrix_index, vehicle.end_point&.matrix_index] }.compact
-      matrix_indices.uniq!
 
       tic = Time.now
       problem = vroom_problem(vrp, [:time, :distance])
@@ -105,10 +93,10 @@ module Wrappers
       return if !result
 
       cost = (result['summary']['cost'])
-      routes = result['routes'].map.with_index{ |route, index|
+      routes = result['routes'].map{ |route|
         @previous = nil
         vehicle = vrp.vehicles[route['vehicle']]
-        cost += vehicle.cost_fixed if route['steps'].size.positive?
+        cost += vehicle.cost_fixed if route['steps'].any?
         activities = route['steps'].map{ |step|
           read_step(vrp, vehicle, step)
         }.compact
@@ -161,10 +149,8 @@ module Wrappers
 
     def read_step(vrp, vehicle, step)
       case step['type']
-      when 'job'
-        read_job(vrp, vehicle, step)
-      when 'pickup', 'delivery'
-        read_shipment(vrp, vehicle, step)
+      when 'job', 'pickup', 'delivery'
+        read_activity(vrp, vehicle, step)
       when 'start', 'end'
         read_depot(vrp, vehicle, step)
       when 'break'
@@ -175,12 +161,7 @@ module Wrappers
     end
 
     def read_unassigned(vrp, step)
-      id = step['id']
-      if id < vrp.services.size
-        read_job(vrp, nil, step)
-      else
-        read_shipment(vrp, nil, step)
-      end
+      read_activity(vrp, nil, step)
     end
 
     def read_break(step)
@@ -210,43 +191,39 @@ module Wrappers
       }.merge(route_data).delete_if{ |_k, v| v.nil? }
     end
 
-    def read_job(vrp, vehicle, step)
-      service = vrp.services[step['id']]
-      point = service.activity.point
-      route_data = compute_route_data(vrp, point, step)
-      begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
-      job_data = {
-        original_service_id: service.original_id,
-        service_id: service.id,
-        type: 'service',
-        point_id: point.id,
-        begin_time: begin_time,
-        end_time: begin_time && (begin_time + step['service']),
-        departure_time: begin_time && (begin_time + step['service']),
-        detail: build_detail(service, service.activity, point, nil, nil, vehicle)
-      }.merge(route_data).delete_if{ |_k, v| v.nil? }
-      @previous = point
-      job_data
-    end
-
-    def read_shipment(vrp, vehicle, step)
-      shipment = vrp.shipments[((step['id'] - vrp.services.size) / 2).floor]
-      type = ((step['id'] - vrp.services.size) % 2).zero? ? 'pickup' : 'delivery'
-      activity = type == 'pickup' ? shipment.pickup : shipment.delivery
+    def read_activity(vrp, vehicle, step)
+      # activity_object can be a model:shipment, a unitary service or a service in shipment relation (with another)
+      # and in the latter case note that step['type'](pickup/shipment) is not equal to type(service)
+      # which is the case for or-tools as well -- i.e., services appear as services even if they appear
+      # in a shipment relation
+      activity_object, type = @object_id_map[step['id']]
+      activity =
+        case type
+        when :service
+          activity_object.activity
+        when :pickup
+          activity_object.pickup
+        when :delivery
+          activity_object.delivery
+        else
+          raise 'Unimplemented activity type in wrappers/vroom.rb'
+        end
       point = activity.point
       route_data = compute_route_data(vrp, point, step)
       begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
       job_data = {
-        original_shipment_id: shipment.original_id,
-        pickup_shipment_id: type == 'pickup' && shipment.id,
-        delivery_shipment_id: type == 'delivery' && shipment.id,
+        original_service_id: type == :service && activity_object.original_id,
+        service_id: type == :service && activity_object.id,
+        original_shipment_id: type != :service && activity_object.original_id,
+        pickup_shipment_id: type == :pickup && activity_object.id,
+        delivery_shipment_id: type == :delivery && activity_object.id,
         type: type,
         point_id: point.id,
         begin_time: begin_time,
         end_time: begin_time && (begin_time + step['service']),
         departure_time: begin_time && (begin_time + step['service']),
-        detail: build_detail(shipment, activity, point, nil, nil, vehicle)
-      }.merge(route_data).delete_if{ |_k, v| v.nil? || v == false }
+        detail: build_detail(activity_object, activity, point, nil, nil, vehicle)
+      }.merge(route_data).delete_if{ |_k, v| v.nil? }
       @previous = point
       job_data
     end
@@ -262,7 +239,7 @@ module Wrappers
     end
 
     def collect_skills(object, vrp_skills)
-      return unless vrp_skills.any?
+      return [] unless vrp_skills.any?
 
       [vrp_skills.size] +
         if object.is_a?(Models::Vehicle)
@@ -275,11 +252,15 @@ module Wrappers
     end
 
     def collect_jobs(vrp, vrp_skills, vrp_units)
-      vrp.services.map.with_index{ |service, index|
+      @object_id_map ||= {}
+      # ignore the services with a shipment relation
+      vrp.services.select{ |s| s.relations.none?{ |r| r.type == :shipment } }.map{ |service|
         # Activity is mandatory
+        index = @object_id_map.size
+        @object_id_map[index] = [service, :service]
         {
           id: index,
-          location_index: @points[service.activity.point_id].matrix_index,
+          location_index: service.activity.point.matrix_index,
           service: service.activity.duration.to_i,
           skills: collect_skills(service, vrp_skills),
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
@@ -301,30 +282,49 @@ module Wrappers
     end
 
     def collect_shipments(vrp, vrp_skills, vrp_units)
-      vrp.shipments.map.with_index{ |shipment, index|
-        {
-          amount: vrp_units.map{ |unit|
-            value = shipment.quantities.find{ |quantity| quantity.unit.id == unit.id }&.value.to_f.abs
-            @total_quantities[unit.id] += value
-            (value * CUSTOM_QUANTITY_BIGNUM).round
-          },
-          skills: collect_skills(shipment, vrp_skills),
-          priority: (100 * (8 - shipment.priority).to_f / 8).to_i,
-          pickup: {
-            id: vrp.services.size + index * 2,
-            service: shipment.pickup.duration,
-            location_index: @points[shipment.pickup.point_id].matrix_index,
-            time_windows: shipment.pickup.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
-          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
-          delivery: {
-            id: vrp.services.size + index * 2 + 1,
-            service: shipment.delivery.duration,
-            location_index: @points[shipment.delivery.point_id].matrix_index,
-            time_windows: shipment.delivery.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
-          }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
-        }.delete_if{ |_k, v|
-          v.nil? || v.is_a?(Array) && v.empty?
-        }
+      vrp.relations.select{ |r| r.type == :shipment }.map{ |relation|
+        pickup, delivery = relation.linked_services
+        collect_shipments_core([pickup, delivery], [pickup.activity, delivery.activity], [:service], vrp_skills, vrp_units)
+      } + vrp.shipments.map{ |shipment|
+        collect_shipments_core([shipment], [shipment.pickup, shipment.delivery], [:pickup, :delivery], vrp_skills, vrp_units)
+      }
+    end
+
+    def collect_shipments_core(activity_objects, activities, types, vrp_skills, vrp_units)
+      @object_id_map ||= {}
+      # handles both services in shipment relation and model:shipments
+      # activity_objects [array] contains the two services (pickup and delivery) or the shipment
+      # activities [array] contains the model:activity of the services (pickup.activity, delivery.activity) or the shipment (shipment.pickup, shipment.delivery)
+      # types [array] contains the type of the objects -- i.e., [:service, :service] for services in shipment relation or [:pickup, :delivery] for model:shipment
+      pickup_index = @object_id_map.size
+      delivery_index = pickup_index + 1
+
+      @object_id_map[pickup_index] = [activity_objects.first, types.first]
+      @object_id_map[delivery_index] = [activity_objects.last, types.last]
+
+      pickup, delivery = activities.first, activities.last
+      {
+        amount: vrp_units.map{ |unit|
+          value = activity_objects.first.quantities.find{ |quantity| quantity.unit.id == unit.id }&.value.to_f.abs
+          @total_quantities[unit.id] += value
+          (value * CUSTOM_QUANTITY_BIGNUM).round
+        },
+        skills: collect_skills(activity_objects.first, vrp_skills) | collect_skills(activity_objects.last, vrp_skills),
+        priority: (100 * (8 - activity_objects.first.priority).to_f / 8).to_i,
+        pickup: {
+          id: pickup_index,
+          service: pickup.duration,
+          location_index: pickup.point.matrix_index,
+          time_windows: pickup.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
+        }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
+        delivery: {
+          id: delivery_index,
+          service: delivery.duration,
+          location_index: delivery.point.matrix_index,
+          time_windows: delivery.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
+        }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
+      }.delete_if{ |_k, v|
+        v.nil? || v.is_a?(Array) && v.empty?
       }
     end
 
@@ -333,8 +333,8 @@ module Wrappers
         tw_end = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier.zero?) && vehicle.timewindow&.end || 2**30
         {
           id: index,
-          start_index: vehicle.start_point_id ? @points[vehicle.start_point_id].matrix_index : nil,
-          end_index: vehicle.end_point_id ? @points[vehicle.end_point_id].matrix_index : nil,
+          start_index: vehicle.start_point&.matrix_index,
+          end_index: vehicle.end_point&.matrix_index,
           capacity: vrp_units.map{ |unit|
             c = vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }
             ((c&.limit || @total_quantities[unit.id]) * CUSTOM_QUANTITY_BIGNUM).round
@@ -430,11 +430,7 @@ module Wrappers
       log cmd
       system(cmd)
 
-      unless $CHILD_STATUS.nil?
-        if $CHILD_STATUS.exitstatus.zero?
-          JSON.parse(File.read(output.path))
-        end
-      end
+      JSON.parse(File.read(output.path)) if $CHILD_STATUS&.exitstatus&.zero?
     ensure
       input&.unlink
       output&.unlink

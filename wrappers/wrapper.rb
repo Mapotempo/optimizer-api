@@ -43,19 +43,19 @@ module Wrappers
     end
 
     def assert_vehicles_start(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.start_point.nil?
       }
     end
 
     def assert_vehicles_start_or_end(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.start_point.nil? && vehicle.end_point.nil?
       }
     end
 
     def assert_vehicles_no_capacity_initial(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |c| c.initial&.positive? }
       }
     end
@@ -65,11 +65,11 @@ module Wrappers
     end
 
     def assert_no_direct_shipments(vrp)
-      vrp.shipments.none?{ |shipment| shipment.direct }
+      vrp.shipments.none?(&:direct)
     end
 
     def assert_no_pickup_timewindows_after_delivery_timewindows(vrp)
-      vrp.shipments.empty? || vrp.shipments.none? { |shipment|
+      vrp.shipments.none? { |shipment|
         first_open = shipment.pickup.timewindows.min_by(&:start)
         last_close = shipment.delivery.timewindows.max_by(&:end)
         first_open && last_close && first_open.start + 86400 * (first_open.day_index || 0) >
@@ -78,7 +78,7 @@ module Wrappers
     end
 
     def assert_services_no_priority(vrp)
-      vrp.services.empty? || vrp.services.uniq(&:priority).size == 1
+      vrp.services.uniq(&:priority).size <= 1
     end
 
     def assert_vehicles_objective(vrp)
@@ -91,7 +91,7 @@ module Wrappers
     end
 
     def assert_vehicles_no_late_multiplier(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.cost_late_multiplier&.positive?
       }
     end
@@ -101,7 +101,7 @@ module Wrappers
     end
 
     def assert_vehicles_no_overload_multiplier(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.capacities.find{ |capacity|
           capacity.overload_multiplier&.positive?
         }
@@ -109,21 +109,21 @@ module Wrappers
     end
 
     def assert_vehicles_no_force_start(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?(&:force_start)
+      vrp.vehicles.none?(&:force_start)
     end
 
     def assert_vehicles_no_duration_limit(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?(&:duration)
+      vrp.vehicles.none?(&:duration)
     end
 
     def assert_vehicles_no_zero_duration(vrp)
-      vrp.vehicles.empty? || vrp.vehicles.none?{ |vehicle|
+      vrp.vehicles.none?{ |vehicle|
         vehicle.duration&.zero?
       }
     end
 
     def assert_services_no_late_multiplier(vrp)
-      vrp.services.empty? || vrp.services.none?{ |service|
+      vrp.services.none?{ |service|
         if service.activity
           service.activity&.timewindows&.size&.positive? && service.activity&.late_multiplier&.positive?
         else
@@ -135,7 +135,7 @@ module Wrappers
     end
 
     def assert_shipments_no_late_multiplier(vrp)
-      vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
+      vrp.shipments.none?{ |shipment|
         shipment.pickup.late_multiplier&.positive? || shipment.delivery.late_multiplier&.positive?
       }
     end
@@ -167,15 +167,14 @@ module Wrappers
     end
 
     def assert_one_sticky_at_most(vrp)
-      (vrp.services.empty? || vrp.services.none?{ |service|
-        service.sticky_vehicles.size > 1
-      }) && (vrp.shipments.empty? || vrp.shipments.none?{ |shipment|
-        shipment.sticky_vehicles.size > 1
-      })
+      vrp.services.none?{ |service| service.sticky_vehicles.size > 1 } &&
+        vrp.shipments.none?{ |shipment| shipment.sticky_vehicles.size > 1 }
     end
 
-    def assert_no_relations(vrp)
-      vrp.relations.empty? || vrp.relations.all?{ |relation| relation.linked_ids.empty? && relation.linked_vehicle_ids.empty? }
+    def assert_no_relations_except_simple_shipments(vrp)
+      vrp.relations.all?{ |r|
+        (r.type == :shipment && r.linked_ids.size == 2) ||
+          (r.linked_ids.empty? && r.linked_vehicle_ids.empty?) }
     end
 
     def assert_zones_only_size_one_alternative(vrp)
@@ -375,13 +374,13 @@ module Wrappers
       }
     end
 
-    def assert_no_vehicles_with_duration_modifiers(vrp)
+    def assert_no_service_duration_modifiers(vrp)
       # TODO: this assert can be relaxed by implementing a simplifier
-      # if all vehicles are homogenous w.r.t. a given duration_modifier,
-      # then we can update the durations directly and rewind it easily
+      # if all vehicles are homogenous w.r.t. service_duration modifiers,
+      # we can update the service durations directly and rewind it easily
+      # see simplify_service_setup_duration_and_vehicle_setup_modifiers for an example
       vrp.vehicles.all?{ |vehicle|
-        (vehicle.coef_setup.nil? || vehicle.coef_setup == 1) && vehicle.additional_setup.to_i == 0 &&
-          (vehicle.coef_service.nil? || vehicle.coef_service == 1) && vehicle.additional_service.to_i == 0
+        (vehicle.coef_service.nil? || vehicle.coef_service == 1) && vehicle.additional_service.to_i == 0
       }
     end
 
@@ -445,16 +444,18 @@ module Wrappers
       vrp.vehicles.all?{ |vehicle| vehicle.cost_fixed.nil? || vehicle.cost_fixed.zero? } || vrp.vehicles.map(&:cost_fixed).uniq.size == 1
     end
 
-    def assert_no_setup_duration(vrp)
-      vrp.services.all?{ |service| service.activity.setup_duration.nil? || service.activity.setup_duration.zero? } &&
-        vrp.shipments.all?{ |shipment|
-          (shipment.pickup.setup_duration.nil? || shipment.pickup.setup_duration.zero?) &&
-            (shipment.delivery.setup_duration.nil? || shipment.delivery.setup_duration.zero?)
-        }
-    end
-
-    def assert_not_a_split_solve_candidate(vrp)
-      !Interpreters::SplitClustering.split_solve_candidate?({ vrp: vrp })
+    def assert_no_complex_setup_durations(vrp)
+      (
+        vrp.services.all?{ |s| s.activity.setup_duration.to_i == 0 } || # either there is no setup duration
+        ( # or it can be simplified by augmenting the time matrix
+          vrp.services.group_by{ |s| s.activity.point }.all?{ |_point, service_group|
+            service_group.uniq{ |s| s.activity.setup_duration.to_i }.size == 1
+          } && vrp.vehicles.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size <= 1
+        )
+      ) && vrp.shipments.all?{ |shipment|
+        shipment.pickup.setup_duration.to_i == 0 &&
+          shipment.delivery.setup_duration.to_i == 0
+      }
     end
 
     def solve_synchronous?(_vrp)
@@ -874,6 +875,7 @@ module Wrappers
       [
         :simplify_vehicle_duration,
         :simplify_vehicle_pause,
+        :simplify_service_setup_duration_and_vehicle_setup_modifiers,
       ].freeze
     end
 
@@ -1104,6 +1106,139 @@ module Wrappers
             end
             result[:cost] += cost_increase # totals are not calculated yet
           }
+        }
+      else
+        raise 'Unknown :mode option'
+      end
+      nil
+    end
+
+    def simplify_service_setup_duration_and_vehicle_setup_modifiers(vrp, result = nil, options = { mode: :simplify })
+      # Simplifies setup durations if there is no reason to keep them.
+      # If all services of a point p has the same setup_duration s_p,
+      # and if all vehicles using the same matrix have the same coef_setup and additional_setup;
+      # then the time matrix can be modified so that for all i, t'_ip = t_ip + s_p
+      # (arriving point p takes longer to include the setup_duration)
+      # and the setup duration s_p can be removed from the problem.
+      # This way solvers like vroom which does not support setup duration can be used.
+      return nil if vrp.scheduling?
+
+      case options[:mode]
+      when :simplify
+        # simplifies the constraint
+        return nil if vrp.vehicles.group_by(&:matrix_id).any?{ |_m_id, v_group|
+                        v_group.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size > 1
+                      }
+
+        vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
+        vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
+          next if service_group.any?{ |s| s.activity.setup_duration.to_i == 0 } || # no need if no setup_duration
+                  service_group.uniq{ |s| s.activity.setup_duration }.size > 1 # can't if setup_durations are different
+
+          setup_duration = service_group.first.activity.setup_duration
+
+          service_group.each{ |service|
+            service.activity[:simplified_setup_duration] = service.activity.setup_duration
+            service.activity.setup_duration = nil
+          }
+
+          vrp.matrices.each{ |matrix|
+            vehicle = vehicles_grouped_by_matrix_id[matrix.id].first
+            coef_setup = vehicle.coef_setup || 1
+            additional_setup = vehicle.additional_setup.to_i
+
+            # WARNING: Here we apply the setup_duration for the points which has non-zero
+            # distance (in time!) between them because this is the case in optimizer-ortools.
+            # If this is changed to per "destination" (i.e., point.id) based setup duration
+            # then the following logic needs to be updated. Basically we need to do each_with_index
+            # and apply the setup duration increment to every pair except index == point.matrix_index
+            # even if they were 0 in the first place.
+            matrix.time.each{ |row|
+              row[point.matrix_index] += (coef_setup * setup_duration + additional_setup).to_i if row[point.matrix_index] > 0
+            }
+          }
+        }
+
+        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+
+        vrp.vehicles.each{ |vehicle|
+          vehicle[:simplified_coef_setup] = vehicle.coef_setup
+          vehicle[:simplified_additional_setup] = vehicle.additional_setup
+          vehicle.coef_setup = nil
+          vehicle.additional_setup = nil
+        }
+      when :rewind
+        # take it back in case in dicho and there will be re-optimization
+        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+
+        vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
+
+        vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
+          setup_duration = service_group.first[:simplified_setup_duration].to_i
+
+          next if setup_duration.zero?
+
+          vrp.matrices.each{ |matrix|
+            vehicle = vehicles_grouped_by_matrix_id[matrix.id].first
+            coef_setup = vehicle[:simplified_coef_setup] || 1
+            additional_setup = vehicle[:simplified_additional_setup].to_i
+
+            matrix.time.each{ |row|
+              row[point.matrix_index] -= (coef_setup * setup_duration + additional_setup).to_i  if row[point.matrix_index] > 0
+            }
+          }
+
+          service_group.each{ |service|
+            service.setup_duration = service[:simplified_setup_duration]
+            service[:simplified_setup_duration] = nil
+          }
+        }
+
+        vrp.vehicles.each{ |vehicle|
+          vehicle.coef_setup = vehicle[:simplified_coef_setup]
+          vehicle.additional_setup = vehicle[:simplified_additional_setup]
+          vehicle[:simplified_coef_setup] = nil
+          vehicle[:simplified_additional_setup] = nil
+        }
+      when :patch_result
+        # patches the result
+        # the travel_times need to be decreased and setup_duration need to be increased by
+        # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
+        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+
+        vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
+        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point }
+
+        overall_total_travel_time_correction = 0
+        result[:routes].each{ |route|
+          vehicle = vehicles_grouped_by_vehicle_id[route[:vehicle_id]].first
+          coef_setup = vehicle[:simplified_coef_setup] || 1
+          additional_setup = vehicle[:simplified_additional_setup].to_i
+
+          total_travel_time_correction = 0
+          route[:activities].each{ |activity|
+            next if activity[:travel_time].to_i.zero?
+
+            setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+
+            next if setup_duration.zero?
+
+            time_correction = coef_setup * setup_duration + additional_setup
+
+            total_travel_time_correction += time_correction
+            activity[:detail][:setup_duration] = time_correction.round
+            activity[:travel_time] -= activity[:detail][:setup_duration]
+          }
+
+          overall_total_travel_time_correction += total_travel_time_correction
+          route[:total_travel_time] -= total_travel_time_correction.round
+        }
+        result[:total_travel_time] -= overall_total_travel_time_correction.round
+
+        result[:unassigned].each{ |activity|
+          setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+
+          activity[:detail][:setup_duration] = setup_duration
         }
       else
         raise 'Unknown :mode option'

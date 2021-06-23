@@ -661,8 +661,9 @@ class SplitClusteringTest < Minitest::Test
       Interpreters::SplitClustering::LINKING_RELATIONS.each_with_index{ |relation, index|
         problem[:relations] << { type: relation, linked_ids: [] }
         n_service_per_relation.times.each{ |i|
-          problem[:services] << dummy_service.dup
+          problem[:services] << Oj.load(Oj.dump(dummy_service))
           problem[:services].last[:id] = "service_#{relation}_#{i}"
+          problem[:services].last[:activity][:point_id] = "point_#{i}"
           problem[:relations].last[:linked_ids] << problem[:services].last[:id]
         }
         expected_linked_items[relation] << Array.new(n_service_per_relation){ |i| index * n_service_per_relation + i }
