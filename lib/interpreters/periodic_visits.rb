@@ -493,6 +493,9 @@ module Interpreters
         # if a key is supplied in the options manually as nil, this means removing the key
         next if options.key?(key) && options[key].nil?
 
+        # if a key is supplied in the options manually as nil, this means removing the key
+        next if options.key?(key) && options[key].nil?
+
         data[key] = options[key] || original[key]
       }
     end
