@@ -466,9 +466,13 @@ module Interpreters
     private
 
     def get_original_values(original, options)
+      # Except the following keys (which do not have a non-id version) skip the id version to crete a shallow copy
+      fields_without_a_non_id_method = %i[original_id matrix_id value_matrix_id].freeze
       [original.attributes.keys + options.keys].flatten.each_with_object({}) { |key, data|
-        next if [:sticky_vehicle_ids, :quantity_ids,
-                 :start_point_id, :end_point_id, :capacity_ids, :sequence_timewindow_ids, :timewindow_id].include?(key)
+        next if (key[-3..-1] == '_id' || key[-4..-1] == '_ids') && fields_without_a_non_id_method.exclude?(key)
+
+        # if a key is supplied in the options manually as nil, this means removing the key
+        next if options.key?(key) && options[key].nil?
 
         data[key] = options[key] || original[key]
       }
@@ -476,11 +480,7 @@ module Interpreters
 
     def duplicate_safe(original, options = {})
       # TODO : replace by implementing initialize_copy function for shallow copy + create model for visits
-      if original.is_a?(Models::Service)
-        Models::Service.new(get_original_values(original, options))
-      elsif original.is_a?(Models::Vehicle)
-        Models::Vehicle.new(get_original_values(original, options))
-      end
+      original.class.create(get_original_values(original, options))
     end
   end
 end
