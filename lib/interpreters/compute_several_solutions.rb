@@ -214,7 +214,7 @@ module Interpreters
             }.compact
             next if mission_ids.empty?
 
-            Models::Route.new(vehicle: vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] }, mission_ids: mission_ids)
+            Models::Route.create(vehicle: vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] }, mission_ids: mission_ids)
           }.compact
         end
 

@@ -567,7 +567,7 @@ module Models
       assert_raises OptimizerWrapper::DiscordantProblemError do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
       end
-      problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
+      problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.create(start: 1, end: 9)]
 
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
     end

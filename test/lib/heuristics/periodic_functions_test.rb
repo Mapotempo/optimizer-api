@@ -524,7 +524,7 @@ class HeuristicTest < Minitest::Test
 
         if visits_number == 10
           vrp.vehicles.first.sequence_timewindows = (0..4).collect{ |day_index|
-            Models::Timewindow.new(start: 0, end: 20, day_index: day_index)
+            Models::Timewindow.create(start: 0, end: 20, day_index: day_index)
           }
           vrp.vehicles.first.timewindow = nil
         end

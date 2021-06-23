@@ -211,7 +211,7 @@ module Interpreters
           mission_ids = route[:activities].map{ |activity| activity[:service_id] }.compact
           next if mission_ids.empty?
 
-          Models::Route.new(
+          Models::Route.create(
             vehicle: {
               id: route[:vehicle_id]
             },

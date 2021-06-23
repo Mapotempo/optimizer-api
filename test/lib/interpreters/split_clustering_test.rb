@@ -35,14 +35,14 @@ class SplitClusteringTest < Minitest::Test
         service_vrp[:vrp].vehicles.each{ |v|
           v.capacities = []
           service_vrp[:vrp].units.each{ |u|
-            v.capacities << Models::Capacity.new(unit: u, limit: total[u.id] * 0.65)
+            v.capacities << Models::Capacity.create(unit: u, limit: total[u.id] * 0.65)
           }
         }
 
         # entity: `vehicle` setting only works if the number of clusters is equal to the number of vehicles.
         original = service_vrp[:vrp].vehicles.first
         service_vrp[:vrp].vehicles = [original]
-        service_vrp[:vrp].vehicles << Models::Vehicle.new(
+        service_vrp[:vrp].vehicles << Models::Vehicle.create(
           id: "#{original.id}_copy",
           duration: original.duration,
           matrix_id: original.matrix_id,
@@ -910,7 +910,7 @@ class SplitClusteringTest < Minitest::Test
     def test_list_vehicles
       # with timewindow
       vrp = TestHelper.create(VRP.basic)
-      vrp.vehicles.first.timewindow = Models::Timewindow.new(start: 0, end: 10)
+      vrp.vehicles.first.timewindow = Models::Timewindow.create(start: 0, end: 10)
       # one vehicle with no day index : we should generate one vehicle per week_day :
       assert_equal 7, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
       assert_equal 7, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 10 }, vrp.vehicles, :work_day).size
@@ -925,8 +925,8 @@ class SplitClusteringTest < Minitest::Test
       # with sequence_timewindows
       vrp = TestHelper.create(VRP.basic)
       vrp.vehicles.first.sequence_timewindows = [
-        Models::Timewindow.new(start: 0, end: 10),
-        Models::Timewindow.new(start: 15, end: 35)
+        Models::Timewindow.create(start: 0, end: 10),
+        Models::Timewindow.create(start: 15, end: 35)
       ]
       # we generate one cluster per week day, for each vehicle sequence timewindow
       assert_equal 14, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
@@ -935,21 +935,21 @@ class SplitClusteringTest < Minitest::Test
       assert_equal 8, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 3 }, vrp.vehicles, :work_day).size
 
       vrp.vehicles.first.sequence_timewindows = [
-        Models::Timewindow.new(start: 0, end: 10, day_index: 0),
-        Models::Timewindow.new(start: 15, end: 35, day_index: 1)
+        Models::Timewindow.create(start: 0, end: 10, day_index: 0),
+        Models::Timewindow.create(start: 15, end: 35, day_index: 1)
       ]
       assert_equal 2, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
       assert_equal 1, Interpreters::SplitClustering.list_vehicles({ start: 1, end: 6 }, vrp.vehicles, :work_day).size
 
       vrp.vehicles.first.sequence_timewindows = [
-        Models::Timewindow.new(start: 0, end: 10, day_index: 0),
-        Models::Timewindow.new(start: 15, end: 35)
+        Models::Timewindow.create(start: 0, end: 10, day_index: 0),
+        Models::Timewindow.create(start: 15, end: 35)
       ]
       assert_equal 8, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
 
       vrp.vehicles.first.sequence_timewindows = [
-        Models::Timewindow.new(start: 0, end: 10, day_index: 0),
-        Models::Timewindow.new(start: 15, end: 35, day_index: 0)
+        Models::Timewindow.create(start: 0, end: 10, day_index: 0),
+        Models::Timewindow.create(start: 15, end: 35, day_index: 0)
       ]
       assert_equal 2, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 7 }, vrp.vehicles, :work_day).size
 

@@ -874,7 +874,7 @@ module Interpreters
       available_days.collect{ |day|
         next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
 
-        tw = timewindow ? Marshal.load(Marshal.dump(timewindow)) : Models::Timewindow.new({})
+        tw = timewindow ? Marshal.load(Marshal.dump(timewindow)) : Models::Timewindow.create({})
         tw.day_index = day
         provide_work_day_skill(vehicle, day)
         new_vehicle = Marshal.load(Marshal.dump(vehicle))

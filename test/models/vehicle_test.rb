@@ -65,11 +65,11 @@ module Models
       assert_equal 2**32, vrp.vehicles.first.total_work_time_in_range(0, 3)
 
       vrp.vehicles.first.reset_computed_data
-      vrp.vehicles.first.sequence_timewindows = [Models::Timewindow.new({ start: 1, end: 4 })]
+      vrp.vehicles.first.sequence_timewindows = [Models::Timewindow.create({ start: 1, end: 4 })]
       assert_equal 12, vrp.vehicles.first.total_work_time_in_range(0, 3)
 
       vrp.vehicles.first.reset_computed_data
-      vrp.vehicles.first.sequence_timewindows << Models::Timewindow.new({ start: 5, end: 6, day_index: 0 })
+      vrp.vehicles.first.sequence_timewindows << Models::Timewindow.create({ start: 5, end: 6, day_index: 0 })
       assert_equal 13, vrp.vehicles.first.total_work_time_in_range(0, 3)
     end
   end
