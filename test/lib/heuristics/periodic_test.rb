@@ -544,13 +544,13 @@ class HeuristicTest < Minitest::Test
       refute_includes result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }[:vehicle_id], 'vehicle_0_'
     end
 
-    def test_skills_in_scheduling
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+    def test_skills_in_periodic_heuristic
+      vrp = VRP.lat_lon_periodic_two_vehicles
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assigned_route = result[:routes].find{ |r| r[:activities].any?{ |stop| stop[:service_id] == 'service_6_1_1' } }
       assert_includes assigned_route[:vehicle_id], 'vehicle_0_' # default result
 
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:vehicles][1][:skills] = [[:compatible]]
       vrp[:services].find{ |s| s[:id] == 'service_6' }[:skills] = [:compatible]
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
@@ -905,8 +905,8 @@ class HeuristicTest < Minitest::Test
       assert_equal 5, result[:routes].size
     end
 
-    def test_unavailable_days_in_scheduling
-      vrp = VRP.scheduling
+    def test_unavailable_days_in_periodic
+      vrp = VRP.periodic
       vrp[:services].first[:visits_number] = 3
       vrp[:services].first[:minimum_lapse] = 2
       vrp[:services].first[:maximum_lapse] = 3

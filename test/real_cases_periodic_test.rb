@@ -70,7 +70,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
       vrp.resolution_minimize_days_worked = true
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      # voluntarily equal to watch evolution of scheduling algorithm performance :
+      # voluntarily equal to watch evolution of periodic algorithm performance :
       assert_equal 25, result[:unassigned].size, 'Do not have the expected number of unassigned visits'
       check_quantities(vrp, result)
     end

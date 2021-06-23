@@ -504,7 +504,7 @@ module Models
     end
 
     def test_unavailable_days_with_vehicle_trips
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
       # vehicle trips are not available with periodic heuristic for now :
       vrp[:configuration][:preprocessing] = nil

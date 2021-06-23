@@ -36,7 +36,7 @@ class Api::V01::OutputTest < Minitest::Test
     current = {
       dump_vrp_dir: OptimizerWrapper.dump_vrp_dir,
       output_clusters: OptimizerWrapper.config[:debug][:output_clusters],
-      output_schedule: OptimizerWrapper.config[:debug][:output_schedule]
+      output_periodic: OptimizerWrapper.config[:debug][:output_periodic]
     }
 
     Dir.mktmpdir('temp_', 'test/') { |tmpdir|
@@ -50,7 +50,7 @@ class Api::V01::OutputTest < Minitest::Test
     # Reset settings back to current
     OptimizerWrapper.dump_vrp_dir = current[:dump_vrp_dir]
     OptimizerWrapper.config[:debug][:output_clusters] = current[:output_clusters]
-    OptimizerWrapper.config[:debug][:output_schedule] = current[:output_schedule]
+    OptimizerWrapper.config[:debug][:output_periodic] = current[:output_periodic]
     # tmpdir and generated files are already deleted
   end
 
@@ -78,7 +78,7 @@ class Api::V01::OutputTest < Minitest::Test
     assert(result['solutions'].first['routes'].none?{ |route| route['day'] })
     assert(result['solutions'].first['routes'].none?{ |route| route['activities'].any?{ |a| a['visit_index'] } })
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)
     assert_equal [0, 1, 2, 3], result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
@@ -87,7 +87,7 @@ class Api::V01::OutputTest < Minitest::Test
     }.compact
     assert_equal [1], visit_indices.uniq
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = {
       range_date: {
         start: Date.new(2021, 2, 10),
@@ -226,7 +226,7 @@ class Api::V01::OutputTest < Minitest::Test
   def test_files_generated
     name = 'test_files_generated'
     OptimizerWrapper.config[:debug][:output_clusters] = true
-    OptimizerWrapper.config[:debug][:output_schedule] = true
+    OptimizerWrapper.config[:debug][:output_periodic] = true
 
     vrp = TestHelper.load_vrp(self, fixture_file: 'instance_clustered')
     vrp.resolution_repetition = 1
@@ -464,7 +464,7 @@ class Api::V01::OutputTest < Minitest::Test
           [4.951164, 45.288722], [4.951455, 45.288769], [4.951508, 45.28878]]]
       ]
     }) do
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       vrp[:configuration][:restitution] = { geometry: [:polylines, :partitions] }
       assert submit_vrp api_key: 'ortools', vrp: vrp

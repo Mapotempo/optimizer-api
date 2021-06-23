@@ -613,7 +613,7 @@ module OptimizerWrapper
   end
 
   def self.provide_day(vrp, route)
-    return unless vrp.scheduling?
+    return unless vrp.schedule?
 
     route_index = route[:vehicle_id].split('_').last.to_i
 
@@ -626,7 +626,7 @@ module OptimizerWrapper
   end
 
   def self.provide_visits_index(vrp, set)
-    return unless vrp.scheduling?
+    return unless vrp.schedule?
 
     set.each{ |activity|
       id = activity[:service_id] || activity[:rest_id] ||

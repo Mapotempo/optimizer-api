@@ -89,7 +89,7 @@ class InstanceValidityTest < Minitest::Test
       problem = VRP.periodic
       problem[:vehicles].first[:timewindow] = nil
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_vehicle_tw_if_schedule
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_vehicle_tw_if_periodic
     end
 
     def test_reject_if_periodic_heuristic_without_schedule

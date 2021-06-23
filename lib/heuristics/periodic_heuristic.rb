@@ -62,7 +62,9 @@ module Wrappers
       @uninserted = {}
       @missing_visits = {}
 
-      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
+      if OptimizerWrapper.config[:debug][:output_periodic]
+        @output_tool = OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end)
+      end
 
       generate_route_structure(vrp)
       collect_services_data(vrp)
