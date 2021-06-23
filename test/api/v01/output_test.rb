@@ -54,14 +54,50 @@ class Api::V01::OutputTest < Minitest::Test
     # tmpdir and generated files are already deleted
   end
 
-  def test_day_week_num
+  def test_day_week_num_and_other_scheduling_fields
     vrp = VRP.scheduling
+    vrp[:services].first[:visits_number] = 2
     vrp[:configuration][:restitution] = { csv: true }
 
     csv_data = submit_csv api_key: 'demo', vrp: vrp
     assert_equal csv_data.collect(&:size).max, csv_data.collect(&:size).first
     assert_includes csv_data.first, 'day_week'
     assert_includes csv_data.first, 'day_week_num'
+
+    day_index = csv_data.first.find_index('day')
+    assert_equal ['day', '0', '1', '2', '3'], csv_data.collect{ |l| l[day_index] }.compact.uniq
+
+    visit_index = csv_data.first.find_index('visit_index')
+    assert_equal ['1', '2', 'visit_index'], csv_data.collect{ |l| l[visit_index] }.compact.uniq.sort
+  end
+
+  def test_check_returned_day_and_visit_index
+    vrp = VRP.basic
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)
+    assert(result['solutions'].first['routes'].none?{ |route| route['day'] })
+    assert(result['solutions'].first['routes'].none?{ |route| route['activities'].any?{ |a| a['visit_index'] } })
+
+    vrp = VRP.scheduling
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)
+    assert_equal [0, 1, 2, 3], result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
+    visit_indices = result['solutions'].first['routes'].flat_map{ |r|
+      r['activities'].flat_map{ |a| a['visit_index'] }
+    }.compact
+    assert_equal [1], visit_indices.uniq
+
+    vrp = VRP.scheduling
+    vrp[:configuration][:schedule] = {
+      range_date: {
+        start: Date.new(2021, 2, 10),
+        end: Date.new(2021, 2, 15)
+      }
+    }
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body)
+    assert_equal %w[2021-02-10 2021-02-11 2021-02-12 2021-02-13 2021-02-14 2021-02-15],
+                 result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
   end
 
   def test_no_day_week_num
@@ -226,32 +262,65 @@ class Api::V01::OutputTest < Minitest::Test
     vrp = VRP.basic
     vrp[:configuration][:restitution] = { csv: true }
 
-    OptimizerWrapper.stub(
-      :build_csv,
-      lambda { |_solutions|
-        assert_equal :en, I18n.locale
-      }
-    ) do
-      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
-    end
+    [[nil, :legacy],
+     ['fr', :fr],
+     ['en', :en],
+     ['de', :en]].each{ |provided, expected|
+      OutputHelper::Result.stub(
+        :build_csv,
+        lambda { |_solutions|
+          assert_equal expected, I18n.locale
+        }
+      ) do
+        submit_csv api_key: 'demo', vrp: vrp, http_accept_language: provided
+      end
+    }
 
-    OptimizerWrapper.stub(
-      :build_csv,
-      lambda { |_solutions|
-        assert_equal :fr, I18n.locale
-      }
-    ) do
-      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => 'fr'
-    end
+    [true, false].each{ |parameter_value|
+      vrp[:configuration][:restitution][:use_deprecated_csv_headers] = parameter_value
+      OutputHelper::Result.stub(
+        :build_csv,
+        lambda { |solutions|
+          assert_equal parameter_value, solutions.first[:use_deprecated_csv_headers]
+        }
+      ) do
+        submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'
+      end
+    }
+  end
 
-    OptimizerWrapper.stub(
-      :build_csv,
-      lambda { |_solutions|
-        assert_equal :en, I18n.locale
+  def test_returned_types
+    complete_vrp = VRP.pud
+    complete_vrp[:rests] = [{
+      id: 'rest_0',
+      duration: 1,
+      timewindows: [{
+        day_index: 0
+      }]
+    }]
+    complete_vrp[:vehicles].first[:rest_ids] = ['rest_0']
+    complete_vrp[:services] = [{
+      id: 'service_0',
+      activity: {
+        point_id: 'point_0',
+        timewindows: [{ start: 0, end: 1000 }]
       }
-    ) do
-      post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => 'bad_value'
-    end
+    }]
+    complete_vrp[:configuration][:restitution] = { csv: true }
+
+    type_index = nil
+
+    [['en', ['stop type', 'rest', 'store', 'visit']],
+     ['fr', ['type arrêt', 'pause', 'dépôt', 'visite']],
+     ['es', ['tipo parada', 'descanso', 'depósito', 'visita']]].each{ |provided, translations|
+      result = submit_csv api_key: 'ortools', vrp: complete_vrp, http_accept_language: provided
+      type_index = result.first.find_index(translations[0])
+      types = result.collect{ |line| line[type_index] }.compact - [translations[0]]
+      assert_equal 3, types.uniq.size
+      assert_equal 1, types.count(translations[1])
+      assert_equal 2, types.count(translations[2])
+      assert_equal 5, types.count(translations[3])
+    }
   end
 
   def test_csv_configuration
@@ -315,17 +384,17 @@ class Api::V01::OutputTest < Minitest::Test
       periodic_ortools: {
         problem: VRP.lat_lon,
         solver_name: 'ortools',
-        scheduling_keys: %w[day_week_num day_week]
+        scheduling_keys: %w[day_week_num day_week day visit_index]
       },
       periodic_heuristic: {
         problem: VRP.lat_lon_scheduling,
         solver_name: 'heuristic',
-        scheduling_keys: %w[day_week_num day_week]
+        scheduling_keys: %w[day_week_num day_week day visit_index]
       }
     }
 
-    expected_route_keys = %w[vehicle_id total_travel_time total_travel_distance total_waiting_time]
-    expected_activities_keys = %w[point_id waiting_time begin_time end_time id lat lon duration setup_duration additional_value skills tags]
+    expected_route_keys = %w[vehicle_id original_vehicle_id total_travel_time total_travel_distance total_waiting_time]
+    expected_activities_keys = %w[point_id waiting_time begin_time end_time id original_id lat lon duration setup_duration additional_value skills tags]
     expected_unassigned_keys = %w[point_id id type unassigned_reason]
 
     [:ortools, :periodic_ortools].each{ |method| methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 } }
@@ -405,5 +474,61 @@ class Api::V01::OutputTest < Minitest::Test
       assert(result['geojsons'].first['partitions']['vehicle']['features'].all?{ |f| f['properties']['color'] })
       assert(result['geojsons'].first['partitions']['work_day']['features'].all?{ |f| f['properties']['color'] })
     end
+  end
+
+  def test_csv_headers_compatible_with_import_according_to_language
+    vrp = VRP.lat_lon_capacitated
+    vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }]
+    vrp[:vehicles].each{ |v| v[:timewindow] = { start: 0, end: 10000 } }
+    vrp[:configuration][:preprocessing] = { first_solution_strategy: ['periodic'] }
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 2 }}
+    vrp[:configuration][:restitution] = { csv: true }
+
+    # checks columns headers when required for import
+    expected_headers = {
+      en: ['plan', 'reference plan', 'route', 'name', 'lat', 'lng', 'stop type', 'time', 'end time',
+           'duration per destination', 'visit duration', 'tags visit', 'tags', 'quantity[kg]',
+           'time window start 1', 'time window end 1', 'vehicle', 'reference'],
+      es: [
+        'plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'hora', 'fin',
+        'horario inicio 1', 'horario fin 1', 'duración de preparación', 'duración visita', 'cantidad[kg]',
+        'etiquetas visita', 'etiquetas', 'vehículo', 'referencia visita'],
+      fr: ['plan', 'référence plan', 'tournée', 'nom', 'lat', 'lng', 'type arrêt', 'heure',
+           'fin de la mission', 'durée client', 'durée visite', 'libellés visite', 'libellés',
+           'quantité[kg]', 'horaire début 1', 'horaire fin 1', 'véhicule', 'référence visite']
+    }
+
+    asynchronously start_worker: true do
+      expected_headers.each{ |languague, expected_list|
+        @job_id = submit_csv api_key: 'ortools', vrp: vrp
+        wait_status_csv @job_id, 200, api_key: 'ortools', http_accept_language: languague
+        current_headers = last_response.body.split("\n").first.split(',')
+        assert_empty expected_list - current_headers
+
+        delete_completed_job @job_id, api_key: 'ortools'
+      }
+    end
+  end
+
+  def test_use_deprecated_csv_headers_asynchronously
+    vrp = VRP.lat_lon
+    vrp[:configuration][:restitution] = { csv: true }
+
+    legacy_basic_headers = %w[vehicle_id id point_id type begin_time end_time setup_duration duration skills]
+    french_basic_headers = ['tournée', 'référence', 'heure', 'fin de la mission', 'durée client', 'durée visite', 'libellés']
+    [[true, legacy_basic_headers],
+     [false, french_basic_headers]].each{ |parameter, expected|
+
+      vrp[:configuration][:restitution][:use_deprecated_csv_headers] = parameter
+
+      asynchronously start_worker: true do
+        @job_id = submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'
+        wait_status_csv @job_id, 200, api_key: 'demo', http_accept_language: 'fr'
+        current_headers = last_response.body.split("\n").first.split(',')
+        assert_empty expected - current_headers
+
+        delete_completed_job @job_id, api_key: 'ortools'
+      end
+    }
   end
 end

@@ -18,6 +18,218 @@
 
 require './lib/hull.rb'
 module OutputHelper
+  # For result output
+  class Result
+    def self.generate_header(solutions_set)
+      scheduling, scheduling_header = generate_scheduling_header(solutions_set)
+      unit_ids, quantities_header = generate_quantities_header(solutions_set)
+      max_timewindows_size, timewindows_header = generate_timewindows_header(solutions_set)
+      unassigned_header =
+        if solutions_set.any?{ |solution| solution[:unassigned].size.positive? }
+          [I18n.t('export_file.comment')]
+        else
+          []
+        end
+
+      header = scheduling_header +
+               basic_header +
+               quantities_header +
+               timewindows_header +
+               unassigned_header +
+               complementary_header(solutions_set.any?{ |solution| solution[:routes].any?{ |route| route[:day] } })
+
+      [header, unit_ids, max_timewindows_size, scheduling, !unassigned_header.empty?]
+    end
+
+    def self.generate_scheduling_header(solutions_set)
+      if solutions_set.any?{ |solution|
+           solution[:routes].any?{ |route| route[:original_vehicle_id] != route[:vehicle_id] }
+         }
+        [true, [I18n.t('export_file.plan.name'), I18n.t('export_file.plan.ref')]]
+      else
+        [false, []]
+      end
+    end
+
+    def self.basic_header
+      [I18n.t('export_file.route.id'),
+       I18n.t('export_file.stop.reference'),
+       I18n.t('export_file.stop.point_id'),
+       I18n.t('export_file.stop.lat'),
+       I18n.t('export_file.stop.lon'),
+       I18n.t('export_file.stop.type'),
+       I18n.t('export_file.stop.wait_time'),
+       I18n.t('export_file.stop.start_time'),
+       I18n.t('export_file.stop.end_time'),
+       I18n.t('export_file.stop.setup'),
+       I18n.t('export_file.stop.duration'),
+       I18n.t('export_file.stop.additional_value'),
+       I18n.t('export_file.stop.skills'),
+       I18n.t('export_file.tags'),
+       I18n.t('export_file.route.total_travel_time'),
+       I18n.t('export_file.route.total_travel_distance'),
+       I18n.t('export_file.route.total_wait_time')]
+    end
+
+    def self.generate_quantities_header(solutions_set)
+      unit_ids, quantities_header = [], []
+
+      solutions_set.collect{ |solution|
+        solution[:routes].each{ |route|
+          route[:activities].each{ |activity|
+            next if activity[:detail].nil?
+
+            (activity[:detail][:quantities] || []).each{ |quantity|
+              unit_ids << quantity[:unit]
+              quantities_header << I18n.t('export_file.stop.quantity', unit: (quantity[:label] || quantity[:unit]))
+            }
+          }
+        }
+      }
+
+      [unit_ids.uniq, quantities_header.uniq]
+    end
+
+    def self.generate_timewindows_header(solutions_set)
+      max_timewindows_size = solutions_set.collect{ |solution|
+        solution[:routes].collect{ |route|
+          route[:activities].collect{ |activity|
+            if activity[:detail]
+              (activity[:detail][:timewindows] || []).collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
+            end
+          }
+        } + solution[:unassigned].collect{ |activity|
+          if activity[:detail]
+            (activity[:detail][:timewindows] || []).collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
+          end
+        }
+      }.flatten.compact.max
+
+      timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
+        tw_index = index + (I18n.locale == :legacy ? 0 : 1)
+        [I18n.t('export_file.stop.tw_start', index: tw_index), I18n.t('export_file.stop.tw_end', index: tw_index)]
+      }.flatten
+
+      [max_timewindows_size, timewindows_header]
+    end
+
+    def self.complementary_header(any_day_index)
+      [
+        I18n.t('export_file.stop.name'),
+        I18n.t('export_file.route.original_id'),
+        any_day_index ? I18n.t('export_file.route.day') : nil,
+        any_day_index ? I18n.t('export_file.stop.visit_index') : nil
+      ]
+    end
+
+    def self.complementary_data(route, activity)
+      [
+        activity[:original_service_id] || activity[:original_shipment_id] || activity[:original_rest_id],
+        route && route[:original_vehicle_id],
+        route && route[:day],
+        activity[:visit_index]
+      ]
+    end
+
+    def self.activity_line(activity, route, name, unit_ids, max_timewindows_size, scheduling, reason)
+      days_info = scheduling ? [activity[:day_week_num], activity[:day_week]] : []
+      common = build_csv_activity(name, route, activity)
+      timewindows = build_csv_timewindows(activity, max_timewindows_size)
+      quantities = unit_ids.collect{ |unit_id|
+        quantity = activity[:detail][:quantities]&.find{ |qty| qty[:unit] == unit_id }
+        quantity[:value] if quantity
+      }
+      (days_info + common + quantities + timewindows + reason + complementary_data(route, activity))
+    end
+
+    def self.find_type_and_complete_id(activity)
+      if activity[:service_id]
+        [I18n.t('export_file.stop.type_visit'), activity[:service_id]]
+      elsif activity[:pickup_shipment_id]
+        [I18n.t('export_file.stop.type_visit'), "#{activity[:pickup_shipment_id]}_pickup"]
+      elsif activity[:delivery_shipment_id]
+        [I18n.t('export_file.stop.type_visit'), "#{activity[:delivery_shipment_id]}_delivery"]
+      elsif activity[:shipment_id]
+        [I18n.t('export_file.stop.type_visit'), "#{activity[:shipment_id]}_#{activity[:type]}"]
+      elsif activity[:rest_id]
+        [I18n.t('export_file.stop.type_rest'), activity[:rest_id]]
+      else
+        [I18n.t('export_file.stop.type_store'), activity[:point_id]]
+      end
+    end
+
+    def self.build_csv_activity(name, route, activity)
+      type, complete_id = find_type_and_complete_id(activity)
+      [
+        route && route[:vehicle_id],
+        complete_id,
+        activity[:point_id],
+        activity[:detail][:lat],
+        activity[:detail][:lon],
+        type,
+        formatted_duration(activity[:waiting_time]),
+        formatted_duration(activity[:begin_time]),
+        formatted_duration(activity[:end_time]),
+        formatted_duration(activity[:detail][:setup_duration] || 0),
+        formatted_duration(activity[:detail][:duration] || 0),
+        activity[:detail][:additional_value] || 0,
+        activity[:detail][:skills].to_a.empty? ? nil : activity[:detail][:skills].to_a.flatten.join(','),
+        name,
+        route && formatted_duration(route[:total_travel_time]),
+        route && route[:total_distance],
+        route && formatted_duration(route[:total_waiting_time]),
+      ].flatten
+    end
+
+    def self.build_csv_timewindows(activity, max_timewindows_size)
+      tws = activity[:detail][:timewindows]&.collect{ |tw| { start: tw[:start], end: tw[:end] } }.to_a.uniq
+
+      (0..max_timewindows_size - 1).collect{ |index|
+        if index < tws.size
+          timewindow = tws.sort_by{ |tw| tw[:start] || 0 }[index]
+
+          [timewindow[:start] && formatted_duration(timewindow[:start]),
+           timewindow[:end] && formatted_duration(timewindow[:end])]
+        else
+          [nil, nil]
+        end
+      }.flatten
+    end
+
+    def self.formatted_duration(duration)
+      return unless duration
+
+      h = (duration / 3600).to_i
+      m = (duration / 60).to_i % 60
+      s = duration.to_i % 60
+      [h, m, s].map { |t| t.to_s.rjust(2, '0') }.join(':')
+    end
+
+    def self.build_csv(solutions)
+      return unless solutions
+
+      I18n.locale = :legacy if solutions.any?{ |s| s[:use_deprecated_csv_headers] }
+      header, unit_ids, max_timewindows_size, scheduling, any_unassigned = generate_header(solutions)
+
+      CSV.generate{ |output_csv|
+        output_csv << header
+        solutions.collect{ |solution|
+          solution[:routes].each{ |route|
+            route[:activities].each{ |activity|
+              reason = any_unassigned ? [nil] : []
+              output_csv << activity_line(
+                activity, route, solution[:name], unit_ids, max_timewindows_size, scheduling, reason)
+            }
+          }
+          solution[:unassigned].each{ |activity|
+            output_csv << activity_line(
+              activity, nil, solution[:name], unit_ids, max_timewindows_size, scheduling, [activity[:reason]])
+          }
+        }
+      }
+    end
+  end
+
   # To output clusters generated
   class Clustering
     def self.generate_files(all_service_vrps, two_stages = false, job = nil)

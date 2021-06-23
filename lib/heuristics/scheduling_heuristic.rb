@@ -18,7 +18,6 @@
 
 require './lib/helper.rb'
 require './wrappers/wrapper.rb'
-require './lib/output_helper.rb'
 require './lib/heuristics/concerns/scheduling_data_initialisation'
 require './lib/heuristics/concerns/scheduling_end_phase'
 
@@ -1260,6 +1259,7 @@ module Wrappers
 
       # configuration
       route_vrp.schedule_range_indices = nil
+      route_vrp.schedule_start_date = nil
 
       route_vrp.resolution_minimum_duration = 100
       route_vrp.resolution_time_out_multiplier = 5

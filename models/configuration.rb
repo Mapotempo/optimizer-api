@@ -79,11 +79,13 @@ module Models
     field :geometry, default: []
     field :intermediate_solutions, default: true
     field :csv, default: false
+    field :use_deprecated_csv_headers, default: false
     field :allow_empty_result, default: false
   end
 
   class Schedule < Base
     field :range_indices, default: nil # extends schedule_range_date
+    field :start_date, default: nil
     field :unavailable_days, default: Set[] # extends unavailable_date
     field :months_indices, default: []
   end

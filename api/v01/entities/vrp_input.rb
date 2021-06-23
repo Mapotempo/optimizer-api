@@ -200,6 +200,7 @@ module VrpConfiguration
     optional(:geometry_polyline, type: Boolean, documentation: { hidden: true }, desc: '[DEPRECATED] Use geometry instead, with :polylines or :encoded_polylines')
     optional(:intermediate_solutions, type: Boolean, desc: 'Return intermediate solutions if available')
     optional(:csv, type: Boolean, desc: 'The output is a CSV file if you do not specify api format')
+    optional(:use_deprecated_csv_headers, type: Boolean, desc: 'Forces API to ignore provided language to return old CSV headers')
     optional(:allow_empty_result, type: Boolean, desc: 'Allow no solution from the solver used')
   end
 

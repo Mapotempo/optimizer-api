@@ -31,6 +31,7 @@ require './lib/heuristics/assemble_heuristic.rb'
 require './lib/heuristics/dichotomious_approach.rb'
 require './lib/filters.rb'
 require './lib/cleanse.rb'
+require './lib/output_helper.rb'
 
 require 'ai4r'
 include Ai4r::Data
@@ -188,6 +189,7 @@ module OptimizerWrapper
     check_result_consistency(expected_activity_count, result) if service_vrp[:service] != :demo # demo solver returns a fixed solution
 
     log "<-- define_process levels (dicho: #{dicho_level}, split: #{split_level}) elapsed: #{(Time.now - tic).round(2)} sec", level: :info
+    result[:use_deprecated_csv_headers] = vrp.restitution_use_deprecated_csv_headers
     result
   end
 
@@ -495,90 +497,6 @@ module OptimizerWrapper
     end
   end
 
-  def self.find_type(activity)
-    if activity[:service_id] || activity[:pickup_shipment_id] || activity[:delivery_shipment_id] || activity[:shipment_id]
-      'visit'
-    elsif activity[:rest_id]
-      'rest'
-    elsif activity[:point_id]
-      'store'
-    end
-  end
-
-  def self.build_csv(solutions)
-    header = ['vehicle_id', 'id', 'point_id', 'lat', 'lon', 'type', 'waiting_time', 'begin_time', 'end_time', 'setup_duration', 'duration', 'additional_value', 'skills', 'tags', 'total_travel_time', 'total_travel_distance', 'total_waiting_time']
-    quantities_header = []
-    unit_ids = []
-    optim_planning_output = nil
-    max_timewindows_size = 0
-    reasons = nil
-    solutions&.collect{ |solution|
-      solution[:routes].each{ |route|
-        route[:activities].each{ |activity|
-          next if activity[:detail].nil? || !activity[:detail][:quantities]
-
-          activity[:detail][:quantities].each{ |quantity|
-            unit_ids << quantity[:unit]
-            quantities_header << "quantity_#{quantity['label'] || quantity[:unit]}"
-          }
-        }
-      }
-      quantities_header.uniq!
-      unit_ids.uniq!
-
-      max_timewindows_size = ([max_timewindows_size] + solution[:routes].collect{ |route|
-        route[:activities].collect{ |activity|
-          next if activity[:detail].nil? || !activity[:detail][:timewindows]
-
-          activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
-        }.compact
-      }.flatten +
-      solution[:unassigned].collect{ |activity|
-        next if activity[:detail].nil? || !activity[:detail][:timewindows]
-
-        activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
-      }.compact).max
-      timewindows_header = (0..max_timewindows_size.to_i - 1).collect{ |index|
-        ["timewindow_start_#{index}", "timewindow_end_#{index}"]
-      }.flatten
-      header += quantities_header + timewindows_header
-      reasons = true if solution[:unassigned].size.positive?
-
-      optim_planning_output = solution[:routes].any?{ |route| route[:activities].any?{ |stop| stop[:day_week] } }
-    }
-    CSV.generate{ |out_csv|
-      if optim_planning_output
-        header = ['day_week_num', 'day_week'] + header
-      end
-      if reasons
-        header << 'unassigned_reason'
-      end
-      out_csv << header
-      (solutions.is_a?(Array) ? solutions : [solutions]).collect{ |solution|
-        solution[:routes].each{ |route|
-          route[:activities].each{ |activity|
-            days_info = optim_planning_output ? [activity[:day_week_num], activity[:day_week]] : []
-            common = build_csv_activity(solution[:name], route, activity)
-            timewindows = build_csv_timewindows(activity, max_timewindows_size)
-            quantities = unit_ids.collect{ |unit_id|
-              activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id } && activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }[:value]
-            }
-            out_csv << (days_info + common + quantities + timewindows + [nil])
-          }
-        }
-        solution[:unassigned].each{ |activity|
-          days_info = optim_planning_output ? [activity[:day_week_num], activity[:day_week]] : []
-          common = build_csv_activity(solution[:name], nil, activity)
-          timewindows = build_csv_timewindows(activity, max_timewindows_size)
-          quantities = unit_ids.collect{ |unit_id|
-            activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id } && activity[:detail][:quantities]&.find{ |quantity| quantity[:unit] == unit_id }[:value]
-          }
-          out_csv << (days_info + common + quantities + timewindows + [activity[:reason]])
-        }
-      }
-    }
-  end
-
   private
 
   def self.check_result_consistency(expected_value, results)
@@ -600,15 +518,6 @@ module OptimizerWrapper
           v.duration += r.duration
         }
       }
-  end
-
-  def self.formatted_duration(duration)
-    if duration
-      h = (duration / 3600).to_i
-      m = (duration / 60).to_i % 60
-      s = duration.to_i % 60
-      [h, m, s].map { |t| t.to_s.rjust(2, '0') }.join(':')
-    end
   end
 
   def self.round_route_stats(route)
@@ -703,50 +612,30 @@ module OptimizerWrapper
     end
   end
 
-  def self.build_csv_activity(name, route, activity)
-    type = find_type(activity)
-    [
-      route && route[:vehicle_id],
-      build_complete_id(activity),
-      activity[:point_id],
-      activity[:detail][:lat],
-      activity[:detail][:lon],
-      type,
-      formatted_duration(activity[:waiting_time]),
-      formatted_duration(activity[:begin_time]),
-      formatted_duration(activity[:end_time]),
-      formatted_duration(activity[:detail][:setup_duration] || 0),
-      formatted_duration(activity[:detail][:duration] || 0),
-      activity[:detail][:additional_value] || 0,
-      activity[:detail][:skills].to_a.empty? ? nil : activity[:detail][:skills].to_a.flatten.join(','),
-      name,
-      route && formatted_duration(route[:total_travel_time]),
-      route && route[:total_distance],
-      route && formatted_duration(route[:total_waiting_time]),
-    ].flatten
+  def self.provide_day(vrp, route)
+    return unless vrp.scheduling?
+
+    route_index = route[:vehicle_id].split('_').last.to_i
+
+    if vrp.schedule_start_date
+      days_from_start = route_index - vrp.schedule_range_indices[:start]
+      route[:day] = vrp.schedule_start_date.to_date + days_from_start
+    else
+      route_index
+    end
   end
 
-  def self.build_complete_id(activity)
-    return activity[:service_id] if activity[:service_id]
+  def self.provide_visits_index(vrp, set)
+    return unless vrp.scheduling?
 
-    return "#{activity[:pickup_shipment_id]}_pickup" if activity[:pickup_shipment_id]
+    set.each{ |activity|
+      id = activity[:service_id] || activity[:rest_id] ||
+           activity[:pickup_shipment_id] || activity[:delivery_shipment_id]
 
-    return "#{activity[:delivery_shipment_id]}_delivery" if activity[:delivery_shipment_id]
+      next unless id
 
-    return "#{activity[:shipment_id]}_#{activity['type']}" if activity[:shipment_id]
-
-    activity[:rest_id] || activity[:point_id]
-  end
-
-  def self.build_csv_timewindows(activity, max_timewindows_size)
-    (0..max_timewindows_size - 1).collect{ |index|
-      if activity[:detail][:timewindows] && index < activity[:detail][:timewindows].collect{ |tw| [tw[:start], tw[:end]] }.uniq.size
-        timewindow = activity[:detail][:timewindows].select{ |tw| [tw[:start], tw[:end]] }.uniq.sort_by{ |t| t[:start] }[index]
-        [timewindow[:start] && formatted_duration(timewindow[:start]), timewindow[:end] && formatted_duration(timewindow[:end])]
-      else
-        [nil, nil]
-      end
-    }.flatten
+      activity[:visit_index] = id.split('_').last.to_i
+    }
   end
 
   def self.route_details(vrp, route, vehicle)
@@ -795,7 +684,8 @@ module OptimizerWrapper
 
   def self.fill_missing_route_data(vrp, route, matrix, vehicle, solvers)
     route[:original_vehicle_id] = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }.original_id
-    route[:day] = route[:vehicle_id].split('_').last.to_i unless route[:original_vehicle_id] == route[:vehicle_id]
+    route[:day] = provide_day(vrp, route)
+    provide_visits_index(vrp, route[:activities])
     details = compute_route_travel_distances(vrp, matrix, route, vehicle)
     compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
 
@@ -840,6 +730,7 @@ module OptimizerWrapper
       matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
       fill_missing_route_data(vrp, route, matrix, vehicle, result[:solvers])
     }
+    provide_visits_index(vrp, result[:unassigned])
     compute_result_total_dimensions_and_round_route_stats(result)
 
     log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.visits}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.visits + 2 * vrp.shipments.size) * 100).round(1)}%)"

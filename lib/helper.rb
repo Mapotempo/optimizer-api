@@ -65,19 +65,21 @@ module Helper
 
   def self.merge_results(results, merge_unassigned = true)
     results.flatten!
+    results.compact!
     {
-      solvers: results.flat_map{ |r| r && r[:solvers] }.compact,
-      cost: results.map{ |r| r && r[:cost] }.compact.reduce(&:+),
-      cost_details: results.map{ |r| r && r[:cost_details] }.compact.sum,
-      iterations: (results.size != 1) ? nil : results[0] && results[0][:iterations],
-      heuristic_synthesis: (results.size != 1) ? nil : results[0] && results[0][:heuristic_synthesis],
-      routes: results.flat_map{ |r| r && r[:routes] }.compact.uniq,
-      unassigned: merge_unassigned ? results.flat_map{ |r| r && r[:unassigned] }.compact.uniq : results.map{ |r| r && r[:unassigned] }.compact.last,
-      elapsed: results.map{ |r| r && r[:elapsed] || 0 }.reduce(&:+),
-      total_time: results.map{ |r| r && r[:total_time] }.compact.reduce(&:+),
-      total_travel_time: results.map{ |r| r && r[:total_travel_time] }.compact.reduce(&:+),
-      total_value: results.map{ |r| r && r[:total_travel_value] }.compact.reduce(&:+),
-      total_distance: results.map{ |r| r && r[:total_distance] }.compact.reduce(&:+)
+      solvers: results.flat_map{ |r| r[:solvers] }.compact,
+      cost: results.map{ |r| r[:cost] }.compact.reduce(&:+),
+      cost_details: results.map{ |r| r[:cost_details] }.compact.sum,
+      iterations: results.size != 1 ? nil : results[0][:iterations],
+      heuristic_synthesis: results.size != 1 ? nil : results[0][:heuristic_synthesis],
+      routes: results.flat_map{ |r| r[:routes] }.compact.uniq,
+      unassigned: merge_unassigned ? results.flat_map{ |r| r[:unassigned] }.compact.uniq : results.map{ |r| r[:unassigned] }.compact.last,
+      elapsed: results.map{ |r| r[:elapsed] || 0 }.reduce(&:+),
+      total_time: results.map{ |r| r[:total_time] }.compact.reduce(&:+),
+      total_travel_time: results.map{ |r| r[:total_travel_time] }.compact.reduce(&:+),
+      total_value: results.map{ |r| r[:total_travel_value] }.compact.reduce(&:+),
+      total_distance: results.map{ |r| r[:total_distance] }.compact.reduce(&:+),
+      use_deprecated_csv_headers: results.any?{ |r| r[:use_deprecated_csv_headers] },
     }
   end
 

@@ -74,10 +74,14 @@ module Api
       expose :type, documentation: { type: String, desc: 'depot, rest, service, pickup or delivery' }
       expose :current_distance, documentation: { type: Integer, desc: 'Travel distance from route start to current point (in m)' }
       expose :alternative, documentation: { type: Integer, desc: 'When one service has alternative activities, index of the chosen one' }
+      expose :visit_index, documentation: { type: Integer, desc: 'Index of the visit' }
     end
 
     class VrpResultSolutionRoute < Grape::Entity
-      expose :vehicle_id, documentation: { type: String, desc: 'Internal reference of the vehicule used for the current route' }
+      expose :day, documentation: { type: [Integer, Date],
+                                    desc: 'Day index or date (if provided within schedule) where route takes place' }
+      expose :vehicle_id, documentation: { type: String,
+                                           desc: 'Internal reference of vehicule corresponding to this route' }
       expose :activities, using: VrpResultSolutionRouteActivities, documentation: { is_array: true, desc: 'Every step of the route' }
       expose :total_travel_time, documentation: { type: Integer, desc: 'Sum of every travel time within the route (in s)' }
       expose :total_distance, documentation: { type: Integer, desc: 'Sum of every distance within the route (in m)' }

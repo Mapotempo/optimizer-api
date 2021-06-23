@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -16,38 +16,38 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
-en:
+legacy:
   export_file:
-    comment: comment
+    comment: unassigned_reason
     plan:
-      name: plan
-      ref: reference plan
+      name: day_week_num
+      ref: day_week
     route:
       day: day
-      id: route
-      original_id: vehicle
-      total_travel_distance: total travel distance
-      total_travel_time: total travel time
-      total_wait_time: total waiting time
+      id: vehicle_id
+      original_id: original_vehicle_id
+      total_travel_distance: total_travel_distance
+      total_travel_time: total_travel_time
+      total_wait_time: total_waiting_time
     stop:
       additional_value: additional_value
-      duration: visit duration
-      end_time: end time
+      duration: duration
+      end_time: end_time
       lat: lat
-      lon: lng
-      name: name
-      point_id: reference
-      quantity: "quantity[%{unit}]"
-      reference: reference visit
-      setup: duration per destination
-      skills: tags visit
-      start_time: time
-      tw_end: "time window end %{index}"
-      tw_start: "time window start %{index}"
-      type: stop type
+      lon: lon
+      name: original_id
+      point_id: point_id
+      quantity: "quantity_%{unit}"
+      reference: id
+      setup: setup_duration
+      skills: skills
+      start_time: begin_time
+      tw_end: "timewindow_end_%{index}"
+      tw_start: "timewindow_start_%{index}"
+      type: type
       type_rest: rest
       type_store: store
       type_visit: visit
-      visit_index: visit index
-      wait_time: waiting time
+      visit_index: visit_index
+      wait_time: waiting_time
     tags: tags
