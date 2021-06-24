@@ -850,7 +850,7 @@ class WrapperTest < Minitest::Test
       }
     }
 
-    Routers::RouterWrapper.stub_any_instance(:matrix, proc{ |_url, _mode, _dimensions, _row, _column, options|
+    OptimizerWrapper.router.stub(:matrix, proc{ |_url, _mode, _dimensions, _row, _column, options|
       case options[:speed_multiplier]
       when 0.9
         [[
@@ -930,7 +930,9 @@ class WrapperTest < Minitest::Test
     }
 
     assert_raises RouterError do
-      Routers::RouterWrapper.stub_any_instance(:matrix, proc{ raise RouterError, 'STUB: Expectation Failed - RouterWrapper::OutOfSupportedAreaOrNotSupportedDimensionError' }) do
+      OptimizerWrapper.router.stub(:matrix, proc{
+        raise RouterError.new('STUB: Expectation Failed - RouterWrapper::OutOfSupportedAreaOrNotSupportedDimensionError')
+      }) do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
       end
     end
@@ -984,7 +986,9 @@ class WrapperTest < Minitest::Test
     }
 
     assert_raises RouterError do
-      Routers::RouterWrapper.stub_any_instance(:matrix, proc{ raise RouterError, 'STUB: Internal Server Error - OSRM request fails with: InvalidValue Exclude flag combination is not supported.' }) do
+      OptimizerWrapper.router.stub(:matrix, proc{
+        raise RouterError.new('STUB: Internal Server Error - OSRM request fails with: InvalidValue Exclude flag combination is not supported.')
+      }) do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
       end
     end
@@ -992,7 +996,7 @@ class WrapperTest < Minitest::Test
 
   def test_geometry_polyline_encoded
     vrp = TestHelper.load_vrp(self)
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{
+    OptimizerWrapper.router.stub(:compute_batch, proc{
       (0..vrp.vehicles.size - 1).collect{ |_| [0, 0, 'trace'] }
     }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -1002,7 +1006,7 @@ class WrapperTest < Minitest::Test
 
   def test_geometry_polyline
     vrp = TestHelper.load_vrp(self)
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{
+    OptimizerWrapper.router.stub(:compute_batch, proc{
       (0..vrp.vehicles.size - 1).collect{ |_| [0, 0, 'trace'] }
     }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -1012,7 +1016,7 @@ class WrapperTest < Minitest::Test
 
   def test_geometry_route_single_activity
     vrp = TestHelper.load_vrp(self)
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{
+    OptimizerWrapper.router.stub(:compute_batch, proc{
       (0..vrp.vehicles.size - 1).collect{ |_| [0, 0, 'trace'] }
     }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -1022,7 +1026,7 @@ class WrapperTest < Minitest::Test
 
   def test_geometry_with_rests
     vrp = TestHelper.load_vrp(self)
-    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{
+    OptimizerWrapper.router.stub(:compute_batch, proc{
       (0..vrp.vehicles.size - 1).collect{ |_| [0, 0, 'trace'] }
     }) do
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -3242,7 +3246,7 @@ class WrapperTest < Minitest::Test
                    'Cannot simplify the pause if the point has multiple setup durations'
     }
   end
-  
+
   def test_reject_when_unfeasible_timewindows
     vrp = VRP.toy
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }, { start: 20, end: 15 }]

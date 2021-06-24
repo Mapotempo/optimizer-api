@@ -539,7 +539,7 @@ class SplitClusteringTest < Minitest::Test
       problem = TestHelper.create(vrp)
       check_vrp_services_size = problem.services.size
       error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
-      result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
+      result = OptimizerWrapper.router.stub(:matrix, error) do
         OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       end
       assert_equal check_vrp_services_size, problem.services.size
@@ -560,7 +560,7 @@ class SplitClusteringTest < Minitest::Test
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
         error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
-        result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
+        result = OptimizerWrapper.router.stub(:matrix, error) do
           OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
         end
 

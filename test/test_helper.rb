@@ -57,6 +57,13 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # Code needs to be valid both for vrp and json.
     # Thus `if service[:activity] && service[:activity][symbol]` style verificiations.
 
+    vrp[:points]&.each{ |pt|
+      next unless pt[:location]
+
+      pt[:location][:lat] = pt[:location][:lat].to_f
+      pt[:location][:lon] = pt[:location][:lon].to_f
+    }
+
     # TODO: Either find a way to call grape validators automatically or add necessary grape coerces here
     [:duration, :setup_duration].each { |symbol|
       vrp[:services]&.each{ |service|
@@ -131,41 +138,52 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     Models::Vrp.create(coerce(problem))
   end
 
-  def self.matrix_required(vrp)
-    return unless ENV['TEST_DUMP_VRP'].to_s == 'true' && vrp.name
+  def self.matrices_required(vrps, filename)
+    return if vrps.all?{ |vrp| vrp.matrices.any? }
 
-    WebMock.enable_net_connect!
-    vrp.compute_matrix
-    WebMock.disable_net_connect!
-    File.write("test/fixtures/#{vrp.name}.dump", Zlib.deflate(Marshal.dump(vrp)))
-  end
+    dump_file = "test/fixtures/#{filename}.dump"
+    dumped_data = Oj.load(Zlib.inflate(File.read(dump_file))) if File.file?(dump_file)
 
-  def self.multipe_matrices_required(vrps, filename)
-    return unless ENV['TEST_DUMP_VRP'].to_s == 'true'
-
-    if ENV['KEEP_DUMPED_MATRIX'] == 'true'
-      original_dump = Marshal.load(Zlib.inflate(File.read("test/fixtures/#{vrp.name}.dump")))
-    end
-
-    vrps.each_with_index{ |vrp, vrp_i|
+    write_in_dump = []
+    vrps.each{ |vrp|
       next if vrp.matrices.any?
 
-      if ENV['KEEP_DUMPED_MATRIX'] == 'true'
-        vrp.matrices = original_dump.matrices[vrp_i]
-        vrp.points.each{ |pt|
-          pt.matrix_index = original_dump[vrp_i].points.find{ |original_pt| original_pt.id == pt.id }.matrix_index
-        }
-        vrp.vehicles.each{ |v|
-          v.matrix_id = original_dump[vrp_i].vehicles.find{ |original_v| original_v.id == v.id }.matrix_id
-        }
-      else
+      if dumped_data.nil? && ENV['TEST_DUMP_VRP'] != 'true'
         WebMock.enable_net_connect!
         vrp.compute_matrix
         WebMock.disable_net_connect!
+      else
+        OptimizerWrapper.router.stub(:matrix, lambda { |url, mode, dimensions, row, column, options|
+          if ENV['TEST_DUMP_VRP'] == 'true'
+            matrices =
+              OptimizerWrapper.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+            write_in_dump <<
+              { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }
+            matrices
+          else
+            corresponding_data = dumped_data.find{ |request|
+              request[:mode] == mode && request[:dimensions] == dimensions &&
+                request[:options] == options &&
+                # Oj rounds values :
+                request[:row] == row.collect{ |r| r.collect{ |v| v.round(6) } } &&
+                request[:column] == column.collect{ |c| c.collect{ |v| v.round(6) } }
+            }
+            raise 'Could not find matrix in the dump' unless corresponding_data
+
+            corresponding_matrices = corresponding_data[:matrices]
+            # TODO: If services are filtered then some test may not find
+            # their corresponding matrices because row and/or column will be different
+            # In this case, we need to modify the above code and filter via lat/lon
+            # to have the same order/content.
+            dimensions.collect.with_index{ |_dim, dim_i| corresponding_matrices[dim_i] }
+          end
+        }) do
+          vrp.compute_matrix
+        end
       end
     }
 
-    File.write("test/fixtures/#{filename}.dump", Zlib.deflate(Marshal.dump(vrps)))
+    File.write("test/fixtures/#{filename}.dump", Zlib.deflate(Oj.dump(write_in_dump))) if write_in_dump.any?
   end
 
   def self.load_vrp(test, options = {})
@@ -174,21 +192,15 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
   def self.load_vrps(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
-    dump_file = "test/fixtures/#{filename}.dump"
-    if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrps = [Marshal.load(Zlib.inflate(File.read(dump_file)))].flatten # rubocop: disable Security/MarshalLoad
-      vrps.map!{ |vrp| coerce(vrp) }
-    else
-      json_file = "test/fixtures/#{filename}.json"
-      vrps = options[:problem] ? { vrp: options[:problem] } :
-                                 JSON.parse(File.read(json_file), symbolize_names: true)
-      vrps = [vrps] unless vrps.is_a?(Array)
-      vrps.map!{ |vrp| create(vrp[:vrp]) }
+    json_file = "test/fixtures/#{filename}.json"
+    vrps = options[:problem] ? { vrp: options[:problem] } :
+                               JSON.parse(File.read(json_file), symbolize_names: true)
+    vrps = [vrps] unless vrps.is_a?(Array)
+    vrps.map!{ |vrp| create(vrp[:vrp]) }
 
-      matrices_required(vrps, filename)
+    matrices_required(vrps, filename) unless vrps.any?(&:name) # this is a way not to keep track of matrices when it is not needed
 
-      vrps
-    end
+    vrps
   end
 
   def self.expand_vehicles(vrp)
