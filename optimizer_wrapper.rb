@@ -294,7 +294,7 @@ module OptimizerWrapper
         csv: vrp.restitution_csv,
         geometry: vrp.restitution_geometry
       }
-      optim_result[:unassigned] = (optim_result[:unassigned] || []) + unfeasible_services.values.flatten
+      optim_result.unassigned = (optim_result.unassigned || []) + unfeasible_services.values
 
       if vrp.preprocessing_first_solution_strategy
         optim_result[:heuristic_synthesis] = vrp.preprocessing_heuristic_synthesis

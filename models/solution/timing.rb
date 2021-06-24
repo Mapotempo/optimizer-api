@@ -28,7 +28,7 @@ module Models
 
     field :waiting_time, default: 0
     field :begin_time, default: 0
-    field :end_time, default: 0
+    field :end_time
     field :departure_time, default: 0
 
     field :current_distance, default: 0

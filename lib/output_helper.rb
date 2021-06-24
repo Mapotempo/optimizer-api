@@ -431,7 +431,7 @@ module OutputHelper
       result[:routes].each{ |r|
         color = compute_color([], nil, r[:day] || 0)
         r[:activities].each{ |a|
-          next unless ['service', 'pickup', 'delivery'].include?(a[:type])
+          next unless [:service, :pickup, :delivery].include?(a[:type])
 
           points << {
             type: 'Feature',

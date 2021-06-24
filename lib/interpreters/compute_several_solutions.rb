@@ -220,9 +220,7 @@ module Interpreters
         best[:used] = true
 
         vrp.preprocessing_heuristic_result = best[:solution]
-        vrp.preprocessing_heuristic_result[:solvers].each{ |solver|
-          solver = 'preprocessing_' + solver
-        }
+        vrp.preprocessing_heuristic_result[:solvers].map!{ |solver| "preprocessing_#{solver}".to_sym }
         synthesis.each{ |synth| synth.delete(:solution) }
         vrp.resolution_batch_heuristic = nil
         vrp.preprocessing_first_solution_strategy = best[:heuristic] != 'supplied_initial_routes' ? [verified(best[:heuristic])] : []

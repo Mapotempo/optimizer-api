@@ -59,9 +59,14 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation'
 
-    def loads(options)
-      current_loads = options[:loads]&.map{ |load| [load.quantity.unit.id, load.current_load] }.to_h || {}
-      quantities.map{ |q| Models::Load.new(quantity: q, current_load: current_loads[q.unit.id]) }
+    def loads(options = {})
+      quantity_hash = quantities.map{ |quantity| [quantity.unit.id, quantity] }.to_h
+      options[:loads]&.map{ |ld|
+        next unless quantity_hash.key? ld.quantity.unit.id
+
+        ld.quantity = quantity_hash[ld.quantity.unit.id]
+        ld
+      }&.compact
     end
 
     def route_activity(options = {})

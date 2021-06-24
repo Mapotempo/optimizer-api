@@ -36,6 +36,17 @@ module Models
 
     def activities=(_acts)
       compute_route_waiting_times
+      compute_total_time
+    end
+
+    def compute_total_time
+      return if activities.empty?
+
+      detail.end_time = activities.last.timing.end_time || activities.last.timing.begin_time
+      detail.start_time = activities.first.timing.begin_time
+      return unless detail.end_time && detail.start_time
+
+      detail.total_time = detail.end_time - detail.start_time
     end
 
     def fill_missing_route_data(vrp, matrix)
@@ -89,6 +100,8 @@ module Models
     end
 
     def compute_route_waiting_times
+      return if activities.empty?
+
       previous_end = activities.first.timing.begin_time
       loc_index = nil
       consumed_travel_time = 0
@@ -122,7 +135,8 @@ module Models
     end
 
     def compute_route_travel_distances(vrp, matrix)
-      return nil unless matrix&.distance.nil? && activities.size > 1 && activities.all?{ |act| act.detail.point.location }
+      return nil unless matrix&.distance.nil? && activities.size > 1 &&
+                        activities.reject{ |act| act.type == :rest }.all?{ |act| act.detail.point.location }
 
       details = route_details(vrp)
 

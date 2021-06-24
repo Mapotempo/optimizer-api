@@ -19,7 +19,7 @@ require './models/base'
 
 module Models
   class Load < Base
-    field :current_load
+    field :current, default: 0
 
     belongs_to :quantity, class_name: 'Models::Quantity'
   end

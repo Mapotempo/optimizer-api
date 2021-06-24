@@ -1055,7 +1055,7 @@ module Wrappers
                              service_in_vrp.activity,
                              service_in_vrp.activity&.point,
                              nil, nil, nil),
-        type: 'service',
+        type: :service,
         reason: reason
       }
     end
@@ -1117,11 +1117,11 @@ module Wrappers
       size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
       week = Helper.string_padding(day / 7 + 1, size_weeks)
 
-      service_in_vrp = @services_data[data[:id]][:raw] if type == 'service'
+      service_in_vrp = @services_data[data[:id]][:raw] if type == :service
       associated_point = vrp.points.find{ |point| point.id == data[:point_id] }
 
       stop_detail = case type
-                    when 'service'
+                    when :service
                       build_detail(
                         service_in_vrp, service_in_vrp.activity || service_in_vrp.activities[data[:activity]],
                         associated_point, day % 7, nil, vehicle
@@ -1138,7 +1138,7 @@ module Wrappers
         day_week_num: "#{day % 7}_#{week}",
         day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}",
         point_id: data[:point_id],
-        service_id: ("#{data[:id]}_#{number_in_sequence}_#{service_in_vrp.visits_number}" if type == 'service'),
+        service_id: ("#{data[:id]}_#{number_in_sequence}_#{service_in_vrp.visits_number}" if type == :service),
         original_service_id: service_in_vrp&.id,
         travel_time: data[:travel_time],
         travel_distance: data[:travel_distance],

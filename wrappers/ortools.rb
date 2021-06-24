@@ -414,6 +414,72 @@ module Wrappers
       )
     end
 
+    def build_route_activity(vrp, vehicle, activity)
+      times = { begin_time: activity.start_time, current_distance: activity.current_distance }
+      loads = activity.quantities.map.with_index{ |quantity, index|
+        Models::Load.new(quantity: Models::Quantity.new(unit: vrp.units[index]), current: quantity)
+      }
+      case activity.type
+      when 'start'
+        vehicle.start_depot_activity(timing: times, loads: loads)
+      when 'end'
+        vehicle.end_depot_activity(timing: times, loads: loads)
+      when 'service'
+        service = vrp.services[activity.index]
+        @problem_services.delete(service.id)
+        service.route_activity(timing: times, loads: loads, index: activity.alternative)
+      when 'break'
+        vehicle_rest = @problem_rests[vehicle.id][activity.id]
+        @problem_rests[vehicle.id].delete(activity.id)
+        vehicle_rest.route_activity(timing: times, loads: loads)
+      end
+    end
+
+    def build_routes(vrp, routes)
+      @vehicle_rest_ids = Hash.new([])
+      routes.map.with_index{ |route, index|
+        vehicle = vrp.vehicles[index]
+        route_costs = build_cost_details(route.cost_details)
+        activities = route.activities.map{ |activity|
+          build_route_activity(vrp, vehicle, activity)
+        }.compact
+        route_detail = Models::RouteDetail.new({})
+        initial_loads = route.activities.first.quantities.map.with_index{ |quantity, q_index|
+          Models::Load.new(quantity: Models::Quantity.new(unit: vrp.units[q_index]), current: quantity)
+        }
+        Models::SolutionRoute.new(
+          activities: activities,
+          initial_loads: initial_loads,
+          cost_details: route_costs,
+          detail: route_detail,
+          vehicle: vehicle
+        )
+      }
+    end
+
+    def build_unassigned
+      @problem_services.values.map(&:route_activity) +
+        @problem_rests.flat_map{ |_k, v_rest| v_rest.values.map(&:route_activity) }
+    end
+
+    def build_solution(vrp, content)
+      @problem_services = vrp.services.map{ |service| [service.id, service] }.to_h
+      @problem_rests = vrp.vehicles.map{ |vehicle|
+        [vehicle.id, vehicle.rests.map{ |rest| [rest.id, rest] }.to_h]
+      }.to_h
+      routes = build_routes(vrp, content.routes)
+      cost_details = routes.map(&:cost_details).sum
+      Models::Solution.new(
+        cost: content.cost,
+        cost_details: cost_details,
+        solvers: [:ortools],
+        iterations: content.iterations,
+        elapsed: content.duration * 1000,
+        routes: routes,
+        unassigned: build_unassigned
+      )
+    end
+
     def check_services_compatible_days(vrp, vehicle, service)
       !vrp.schedule? || (!service.minimum_lapse && !service.maximum_lapse) ||
         vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
@@ -435,7 +501,7 @@ module Wrappers
 
     def parse_output(vrp, output)
       if vrp.vehicles.empty? || vrp.services.empty?
-        return empty_result('ortools', vrp)
+        return vrp.empty_solution(:ortools)
       end
 
       output.rewind
@@ -444,173 +510,14 @@ module Wrappers
 
       return @previous_result if content.routes.empty? && @previous_result
 
-      route_start_time = 0
-      route_end_time = 0
-      # To prevent results and routes sharing the same Model::CostDetails object ([x].sum returns the same x object)
-      # and to make sure that even for an empty solution returned by ortools, we have a proper Model::CostDetails object
-      # in result[:cost_details], use additive identity 0 (i.e., summation with an empty CostDetails object)
-      costs_array = [Models::CostDetails.create({})]
+      solution = build_solution(vrp, content)
 
-      collected_indices = []
-      vehicle_rest_ids = Hash.new([])
-      result = {
-        cost: content.cost || 0,
-        solvers: ['ortools'],
-        iterations: content.iterations || 0,
-        elapsed: content.duration * 1000, # ms
-        routes: content.routes.each_with_index.collect{ |route, index|
-          vehicle = vrp.vehicles[index]
-          vehicle_matrix = vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }
-          route_costs = build_cost_details(route.cost_details)
-          costs_array << route_costs
-
-          previous_matrix_index = nil
-          load_status = vrp.units.collect{ |unit|
-            {
-              unit: unit.id,
-              label: unit.label,
-              current_load: 0
-            }
-          }
-          route_start = vehicle.timewindow&.start || 0
-          earliest_start = route_start
-          {
-            vehicle_id: vehicle.id,
-            original_vehicle_id: vehicle.original_id,
-            cost_details: route_costs,
-            activities: route.activities.collect.with_index{ |activity, activity_index|
-              current_activity = nil
-              current_index = activity.index || 0
-              activity_loads = load_status.collect.with_index{ |load_quantity, load_index|
-                unit = vrp.units.find{ |u| u.id == load_quantity[:unit] }
-                {
-                  unit: unit.id,
-                  label: unit.label,
-                  current_load: (if vehicle.end_point && activity.type == 'end'
-                                  route.activities[-2].quantities[load_index]
-                                elsif activity.type == 'break' && activity_index.positive?
-                                  route.activities[activity_index - 1].quantities[load_index]
-                                else
-                                  activity.quantities[load_index]
-                                end || 0).round(2),
-                  counting: unit.counting
-                }
-              }
-              earliest_start = activity.start_time || 0
-              if activity.type == 'start'
-                load_status = build_quantities(nil, activity_loads)
-                route_start_time = earliest_start
-                if vehicle.start_point
-                  previous_matrix_index = vehicle.start_point.matrix_index
-                  current_activity = {
-                    point_id: vehicle.start_point.id,
-                    type: 'depot',
-                    begin_time: earliest_start,
-                    current_distance: activity.current_distance,
-                    detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
-                  }.delete_if{ |_k, v| !v }
-                end
-              elsif activity.type == 'end'
-                current_matrix_index = vehicle.end_point&.matrix_index
-                route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
-                route_end_time = earliest_start
-                if vehicle.end_point
-                  current_activity = {
-                    point_id: vehicle.end_point.id,
-                    type: 'depot',
-                    current_distance: activity.current_distance,
-                    begin_time: earliest_start,
-                    detail: {
-                      lat: vehicle.end_point.location&.lat,
-                      lon: vehicle.end_point.location&.lon,
-                      quantities: activity_loads.collect{ |current_load|
-                        {
-                          unit: current_load[:unit],
-                          current_load: current_load[:current_load]
-                        }
-                      }
-                    }
-                  }.merge(route_data).delete_if{ |_k, v| !v }
-                end
-              elsif activity.type == 'service'
-                collected_indices << current_index
-                service = vrp.services[current_index]
-                point = service.activity&.point || !service.activities.empty? && service.activities[activity.alternative].point
-                current_matrix_index = point.matrix_index
-                route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
-                # TODO: The logic behing pickup_shipment_id and delivery_shipment_id should be moved
-                #       to result model and removed in v2
-                current_activity = {
-                  original_service_id: service.original_id,
-                  pickup_shipment_id: service.type == :pickup && service.original_id,
-                  delivery_shipment_id: service.type == :delivery && service.original_id,
-                  service_id: service.id,
-                  point_id: point ? point.id : nil,
-                  type: service.type,
-                  current_distance: activity.current_distance,
-                  begin_time: earliest_start,
-                  end_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
-                  departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
-                  detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
-                  alternative: service.activities ? activity.alternative : nil
-                }.merge(route_data).delete_if{ |_k, v| !v }
-                previous_matrix_index = current_matrix_index
-              elsif activity.type == 'break'
-                activity.id
-                vehicle_rest_ids[vehicle.id] << activity.id
-                vehicle_rest = vehicle.rests.find{ |rest| rest.id == activity.id }
-                earliest_start = activity.start_time
-                current_activity = {
-                  rest_id: activity.id,
-                  type: 'rest',
-                  begin_time: earliest_start,
-                  end_time: earliest_start + vehicle_rest[:duration],
-                  departure_time: earliest_start + vehicle_rest[:duration],
-                  detail: build_rest(vehicle_rest)
-                }
-                earliest_start += vehicle_rest[:duration]
-              end
-              current_activity
-            }.compact,
-            start_time: route_start_time,
-            end_time: route_end_time,
-            initial_loads: load_status.collect{ |unit|
-              {
-                unit: unit[:unit],
-                label: unit[:label],
-                value: unit[:current_load]
-              }
-            }
-          }
-        },
-        unassigned: (vrp.services.collect(&:id) - collected_indices.collect{ |index| index < vrp.services.size && vrp.services[index].id }).collect{ |service_id|
-          service = vrp.services.find{ |s| s.id == service_id }
-          {
-            original_service_id: service.original_id,
-            pickup_shipment_id: service.type == :pickup && service.original_id,
-            delivery_shipment_id: service.type == :delivery && service.original_id,
-            service_id: service_id,
-            point_id: service.activity ? service.activity.point_id : service.activities.collect{ |activity| activity[:point_id] },
-            type: service.type,
-            detail: service.activity ? build_detail(service, service.activity, service.activity.point, nil, nil, nil) : { activities: service.activities }
-          }
-        } + vrp.vehicles.flat_map{ |vehicle|
-          (vehicle.rests.collect(&:id) - vehicle_rest_ids[vehicle.id]).map{ |rest_id|
-            rest = vrp.rests.find{ |rt| rt.id == rest_id }
-            {
-              vehicle_id: vehicle.id,
-              rest_id: rest_id,
-              type: 'rest',
-              detail: build_rest(rest)
-            }
-          }
-        }
-      }.merge(cost_details: costs_array.sum)
-      OptimizerWrapper.parse_result(vrp, result)
+      solution.parse_solution(vrp)
     end
 
     def run_ortools(problem, vrp, thread_proc = nil, &block)
-      log "----> run_ortools services(#{vrp.services.size}) preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
+      log "----> run_ortools services(#{vrp.services.size}) " \
+          "preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
       tic = Time.now
       if vrp.vehicles.empty? || vrp.services.empty?
         return [0, 0, @previous_result = parse_output(vrp, nil)]

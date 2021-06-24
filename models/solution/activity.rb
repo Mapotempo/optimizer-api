@@ -34,5 +34,16 @@ module Models
     has_many :loads, class_name: 'Models::Load'
     belongs_to :detail, class_name: 'Models::Activity'
     belongs_to :timing, class_name: 'Models::Timing', default: Models::Timing.new({})
+
+    def initialize(options)
+      super(options)
+      set_timing_end_time
+    end
+
+    def set_timing_end_time
+      timing.end_time = timing.begin_time + detail.duration
+      timing.departure_time = timing.end_time
+    end
+
   end
 end

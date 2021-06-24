@@ -30,7 +30,7 @@ module Models
     has_many :routes, class_name: 'Models::SolutionRoute'
     has_many :unassigned, class_name: 'Models::RouteActivity'
 
-    belongs_to :costs, class_name: 'Models::CostDetails', default: Models::CostDetails.new({})
+    belongs_to :cost_details, class_name: 'Models::CostDetails', default: Models::CostDetails.new({})
     belongs_to :details, class_name: 'Models::RouteDetail', default: Models::RouteDetail.new({})
 
     def as_json(options = {})
@@ -77,7 +77,7 @@ module Models
       self.solvers += other.solvers
       self.routes += other.routes
       self.unassigned += other.unassigned
-      self.costs += other.costs
+      self.cost_details += other.cost_details
       self.details += other.details
       self
     end
