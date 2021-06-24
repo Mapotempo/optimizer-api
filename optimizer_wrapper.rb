@@ -227,7 +227,7 @@ module OptimizerWrapper
 
       # Remove infeasible services
       sub_unfeasible_services.each{ |una_service|
-        index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+        index = vrp.services.find_index{ |s| una_service.service_id == s.id }
         if index
           services_to_reinject << vrp.services.slice!(index)
         end
@@ -305,7 +305,7 @@ module OptimizerWrapper
         csv: vrp.restitution_csv,
         geometry: vrp.restitution_geometry
       }
-      optim_result[:unassigned] = (optim_result[:unassigned] || []) + unfeasible_services
+      optim_result.unassigned = (optim_result.unassigned || []) + unfeasible_services
 
       if vrp.preprocessing_first_solution_strategy
         optim_result[:heuristic_synthesis] = vrp.preprocessing_heuristic_synthesis

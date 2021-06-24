@@ -245,7 +245,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 's1',
-        type: 'service',
         activity: {
           point_id: 'p1'
         }
@@ -448,37 +447,31 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 'service_1',
-        type: 'service',
         activity: {
           point_id: 'point_1'
         }
       }, {
         id: 'service_2',
-        type: 'service',
         activity: {
           point_id: 'point_2'
         }
       }, {
         id: 'service_3',
-        type: 'service',
         activity: {
           point_id: 'point_3'
         }
       }, {
         id: 'service_4',
-        type: 'service',
         activity: {
           point_id: 'point_4'
         }
       }, {
         id: 'service_5',
-        type: 'service',
         activity: {
           point_id: 'point_5'
         }
       }, {
         id: 'service_6',
-        type: 'service',
         activity: {
           point_id: 'point_6'
         }
@@ -745,7 +738,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 'service_1',
-        type: 'service',
         activity: {
           point_id: 'point_1'
         },
@@ -755,7 +747,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_2',
-        type: 'service',
         activity: {
           point_id: 'point_2'
         },
@@ -765,7 +756,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_3',
-        type: 'service',
         activity: {
           point_id: 'point_3'
         },
@@ -775,7 +765,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_4',
-        type: 'service',
         activity: {
           point_id: 'point_4'
         },
@@ -785,7 +774,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_5',
-        type: 'service',
         activity: {
           point_id: 'point_5'
         },
@@ -795,7 +783,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_6',
-        type: 'service',
         activity: {
           point_id: 'point_6'
         },
@@ -961,79 +948,66 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 'service_1',
-        type: 'service',
         activity: {
           point_id: 'point_1'
         }
       }, {
         id: 'service_2',
-        type: 'service',
         activity: {
           point_id: 'point_2'
         }
       }, {
         id: 'service_3',
-        type: 'service',
         activity: {
           point_id: 'point_3'
         }
       }, {
         id: 'service_4',
-        type: 'service',
         activity: {
           point_id: 'point_4'
         }
       }, {
         id: 'service_5',
-        type: 'service',
         activity: {
           point_id: 'point_5'
         }
       }, {
         id: 'service_6',
-        type: 'service',
         activity: {
           point_id: 'point_6'
         }
       }, {
         id: 'service_7',
-        type: 'service',
         activity: {
           point_id: 'point_7'
         }
       }, {
         id: 'service_8',
-        type: 'service',
         activity: {
           point_id: 'point_8'
         }
       }, {
         id: 'service_9',
-        type: 'service',
         activity: {
           point_id: 'point_9'
         }
       }, {
         id: 'service_10',
-        type: 'service',
         activity: {
           point_id: 'point_10'
         }
       }, {
         id: 'service_11',
-        type: 'service',
         activity: {
           point_id: 'point_11'
         }
       }, {
         id: 'service_12',
-        type: 'service',
         activity: {
           point_id: 'point_11_d'
         }
       }, {
         id: 'service_13',
-        type: 'service',
         activity: {
           point_id: 'point_1_d'
         }

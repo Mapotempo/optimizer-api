@@ -116,6 +116,8 @@ module Models
     end
 
     def start_depot_activity(options = {})
+      return unless start_point
+
       Models::RouteActivity.new(
         id: self.start_point&.id,
         type: :depot,
@@ -126,6 +128,7 @@ module Models
     end
 
     def end_depot_activity(options = {})
+      return unless end_point
       Models::RouteActivity.new(
         id: self.end_point&.id,
         type: :depot,
