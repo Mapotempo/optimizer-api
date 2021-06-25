@@ -16,6 +16,9 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'minitest'
+require 'webmock/minitest'
+WebMock.disable_net_connect!
+
 require 'simplecov'
 SimpleCov.start if (!ENV.has_key?('COV') && !ENV.has_key?('COVERAGE')) || (ENV['COV'] != 'false' && ENV['COVERAGE'] != 'false')
 
@@ -131,7 +134,9 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   def self.matrix_required(vrp)
     return unless ENV['TEST_DUMP_VRP'].to_s == 'true' && vrp.name
 
+    WebMock.enable_net_connect!
     vrp.compute_matrix
+    WebMock.disable_net_connect!
     File.write("test/fixtures/#{vrp.name}.dump", Zlib.deflate(Marshal.dump(vrp)))
   end
 
