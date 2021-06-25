@@ -5256,6 +5256,29 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
   end
 
+  def test_initial_quantity
+    problem = VRP.basic
+    problem[:services].first[:quantities] = [{ unit_id: 'kg', value: -1 }]
+    problem[:services].last[:quantities] = [{ unit_id: 'kg', value: -1 }]
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{ unit_id: 'kg', limit: 3, initial: 0 }]
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_equal 2, result[:unassigned].size, 'The result is expected to contain 2 unassigned'
+
+    problem = VRP.basic
+    problem[:services].first[:quantities] = [{ unit_id: 'kg', value: -1 }]
+    problem[:services].last[:quantities] = [{ unit_id: 'kg', value: 1 }]
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{ unit_id: 'kg', limit: 3, initial: 0 }]
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert result[:routes].first[:activities].index{ |act| act[:service_id] == problem[:services].last[:id] } <
+           result[:routes].first[:activities].index{ |act| act[:service_id] == problem[:services].first[:id] }
+  end
+
   def test_simplify_vehicle_pause_without_timewindow_or_duration
     complete_vrp = VRP.pud
     complete_vrp[:rests] = [{

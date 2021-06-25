@@ -40,6 +40,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :limit, :float, 1
     optional :overload_multiplier, :float, 2
     optional :counting, :bool, 3
+    optional :initial_limit, :float, 4
+    optional :initial_capacity, :float, 5
   end
   add_message 'ortools_vrp.Vehicle' do
     optional :id, :string, 1
