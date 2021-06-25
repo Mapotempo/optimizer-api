@@ -274,6 +274,12 @@ module Wrappers
       (vrp.vehicles.map(&:shift_preference).uniq - [:minimize_span] - ['minimize_span']).empty? || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
 
+    def assert_no_activity_with_position(vrp)
+      vrp.services.none?{ |service|
+        (service.activities.to_a + [service.activity]).compact.any?{ |a| a.position != :neutral }
+      }
+    end
+
     def assert_no_vehicle_overall_duration_if_heuristic(vrp)
       vrp.vehicles.none?(&:overall_duration) || vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic'
     end
