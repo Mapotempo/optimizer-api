@@ -56,7 +56,7 @@ module Wrappers
 
     def assert_vehicles_no_capacity_initial(vrp)
       vrp.vehicles.none?{ |vehicle|
-        vehicle.capacities.find{ |c| c.initial&.positive? }
+        vehicle.capacities.any?{ |c| c.initial && c.initial < c.limit }
       }
     end
 
