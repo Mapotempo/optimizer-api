@@ -109,6 +109,14 @@ module ValidateData
         raise OptimizerWrapper::DiscordantProblemError.new('There is no matrix with id vehicle[:matrix_id]')
       end
 
+      if v[:timewindow] || v[:sequence_timewindows]
+        [v[:timewindow], v[:sequence_timewindows]].compact.flatten.each{ |tw|
+          next unless tw[:start] && tw[:end] && tw[:start] > tw[:end]
+
+          raise OptimizerWrapper::DiscordantProblemError.new('Vehicle timewindows are infeasible')
+        }
+      end
+
       next unless periodic_heuristic
 
       if v[:skills].to_a.size > 1

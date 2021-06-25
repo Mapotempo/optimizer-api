@@ -537,5 +537,23 @@ module Models
       vrp[:configuration][:preprocessing] = nil
       check_consistency(vrp) # this should not raise
     end
+
+    def test_reject_when_unfeasible_vehicle_timewindows
+      vrp = VRP.toy
+      vrp[:vehicles].first[:timewindow] = { start: 10000, end: 0 }
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+      assert_equal 'Vehicle timewindows are infeasible',
+                   error.message, 'Error message does not match'
+
+      vrp[:vehicles].first[:timewindow] = nil
+      vrp[:vehicles].first[:sequence_timewindows] = [{ start: 100, end: 200}, { start: 150, end: 100 }]
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+      assert_equal 'Vehicle timewindows are infeasible',
+                   error.message, 'Error message does not match'
+    end
   end
 end
