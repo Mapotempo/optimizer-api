@@ -9,8 +9,8 @@
 - Return route day/date and visits' index in result [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 - Treat complex shipments (multi-pickup-single-delivery and single-pickup-multi-delivery) as multiple simple shipments internally to increase performance [#261](https://github.com/Mapotempo/optimizer-api/pull/261)
 - Prioritize the vehicles (and trips of `vehicle_trips` relation) via modifying the fixed costs so that first vehicles (and trips) are preferred over the latter ones [#266](https://github.com/Mapotempo/optimizer-api/pull/266)
-
 - Document return codes [#224](https://github.com/Mapotempo/optimizer-api/pull/224)
+- OR-Tools wrapper can use `initial` capacity value [#245](https://github.com/Mapotempo/optimizer-api/pull/245)
 
 ### Changed
 

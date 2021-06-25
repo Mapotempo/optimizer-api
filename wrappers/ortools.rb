@@ -36,7 +36,6 @@ module Wrappers
       super + [
         :assert_end_optimization,
         :assert_vehicles_objective,
-        :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_alternative_skills,
         :assert_zones_only_size_one_alternative,
         :assert_only_empty_or_fill_quantities,
@@ -97,6 +96,31 @@ module Wrappers
           unit_id: unit.id,
           fill: false,
           empty: false
+        }
+      }
+      total_quantities = vrp.units.map{ |unit| [unit.id, 0] }.to_h
+
+      vrp.relations.select{ |r| r.type == :shipment }.each{ |r|
+        vrp.units.each{ |unit|
+          total_negative = 0
+          total_positive = 0
+          r.linked_services.each{ |s|
+            quantity = s.quantities.find{ |q| q.unit_id == unit.id }&.value || 0
+            if quantity > 0
+              total_positive += quantity
+            else
+              total_negative -= quantity
+            end
+          }
+          total_quantities[unit.id] += [total_positive, total_negative].max
+        }
+      }
+
+      vrp.services.each{ |service|
+        next if service.relations.any?{ |r| r.type == :shipment }
+
+        service.quantities.each{ |q|
+          total_quantities[q.unit.id] += (q.value || 0).abs
         }
       }
 
@@ -284,7 +308,8 @@ module Wrappers
             OrtoolsVrp::Capacity.new(
               limit: (q&.limit && q.limit < 1e+22) ? q.limit : -1,
               overload_multiplier: q&.overload_multiplier || 0,
-              counting: unit&.counting || false
+              counting: unit&.counting || false,
+              initial_limit: q&.initial || [total_quantities[unit.id], q&.limit].compact.max
             )
           },
           time_window: OrtoolsVrp::TimeWindow.new(
