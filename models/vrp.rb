@@ -556,7 +556,12 @@ module Models
         result = TSPHelper.solve(tsp)
         total_travel_time = result[:cost]
 
-        total_vehicle_work_time = vehicles.map{ |vehicle| vehicle[:duration] || vehicle[:timewindow][:end] - vehicle[:timewindow][:start] }.reduce(:+)
+        total_vehicle_work_time =
+          vehicles.map{ |vehicle|
+            vehicle.duration ||
+              vehicle.timewindow&.end && vehicle.timewindow&.start && (vehicle.timewindow.end - vehicle.timewindow.start) ||
+              2**56
+          }.reduce(:+)
         average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
         total_service_time = services.map{ |service| service[:activity][:duration].to_i }.reduce(:+)
 
