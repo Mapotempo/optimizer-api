@@ -86,18 +86,18 @@ class HeuristicTest < Minitest::Test
       assert_operator unassigned_count.min, :<=, 120, "#{unassigned_count}.min should be smaller"
       assert_operator unassigned_count.max, :<=, 240, "#{unassigned_count}.max should be smaller"
     end
-  end
 
-  def test_without_same_point_day
-    vrp = TestHelper.load_vrp(self)
-    vrp.resolution_solver = false
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    unassigned = result[:unassigned].size
-    assert_equal 46, unassigned
+    def test_without_same_point_day
+      vrp = TestHelper.load_vrp(self)
+      vrp.resolution_solver = false
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      unassigned = result[:unassigned].size
+      assert_equal 46, unassigned
 
-    vrp = TestHelper.load_vrp(self)
-    vrp.resolution_solver = true
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert unassigned >= result[:unassigned].size
+      vrp = TestHelper.load_vrp(self)
+      vrp.resolution_solver = true
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      assert unassigned >= result[:unassigned].size
+    end
   end
 end
