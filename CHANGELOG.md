@@ -4,9 +4,7 @@
 
 ### Added
 - Support skills in periodic heuristic (`first_solution_strategy='periodic'`) [#194](https://github.com/Mapotempo/optimizer-api/pull/194)
-
-- Implementation of `vehicle_trips` relation: the routes can be successive or with a minimum duration `lapse` in between [#123] (https://github.com/Mapotempo/optimizer-api/pull/123)
-
+- Implementation of `vehicle_trips` relation: the routes can be successive or with a minimum duration `lapse` in between [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
 - CSV headers adapts to the language provided through HTTP_ACCEPT_LANGUAGE header to facilitate import in Mapotempo-Web [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 - Return route day/date and visits' index in result [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 
@@ -17,6 +15,8 @@
 - Field `trips` in vehicle model. Use `vehicle_trips` relation instead [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
 
 ### Fixed
+
+- VROOM was used incorrectly in various cases: negative quantities, vehicle duration, activity position [#223](https://github.com/Mapotempo/optimizer-api/pull/223) [#242](https://github.com/Mapotempo/optimizer-api/pull/242)
 
 ## [v1.7.1] - 2021-05-20
 
