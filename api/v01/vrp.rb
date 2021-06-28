@@ -224,6 +224,11 @@ module Api
                 job.status = 'killed'
               end
               solution = OptimizerWrapper::Result.get(id)
+              unless solution.nil? || solution[:result].nil? || solution[:result].is_a?(Array)
+              # TODO: solution[:result] should always be an array, find out why it is not and
+              # remove this check and other similar ones -- i.e.,  [solution[:result]].flatten(1).
+                solution[:result] = [solution[:result]]
+              end
               status 202
               if solution && !solution.empty?
                 output_format = params[:format]&.to_sym || (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
@@ -231,7 +236,7 @@ module Api
                   present(OutputHelper::Result.build_csv(solution[:result]), type: CSV)
                 else
                   present({
-                    solutions: [solution[:result]],
+                    solutions: solution[:result],
                     job: {
                       id: id,
                       status: :killed,
@@ -249,6 +254,7 @@ module Api
                   }
                 }, with: VrpResult)
               end
+              solution = nil # rubocop:disable Lint/UselessAssignment
               OptimizerWrapper.job_remove(params[:api_key], id)
             end
           end
