@@ -107,7 +107,11 @@ module Wrappers
         activities = route['steps'].map{ |step|
           read_step(vrp, vehicle, step)
         }.compact
+        initial_loads = route['steps'].first['load']&.map&.with_index{ |load, l_index|
+          Models::Load.new(quantity: Models::Quantity.new(unit: vrp.units[l_index]), current: load)
+        }
         Models::SolutionRoute.new(
+          initial_loads: initial_loads,
           activities: activities,
           vehicle: vehicle,
           detail: Models::RouteDetail.new(
@@ -197,17 +201,24 @@ module Wrappers
       end
     end
 
-    def read_activity(vrp, vehicle, step)
-      service = @object_id_map[step['id']]
+    def read_activity(vrp, vehicle, act_step)
+      service = @object_id_map[act_step['id']]
       point = service.activity.point
-      route_data = compute_route_data(vrp, point, step)
-      begin_time = step['arrival'] && (step['arrival'] + step['waiting_time'])
+      route_data = compute_route_data(vrp, point, act_step)
+      begin_time = act_step['arrival'] && (act_step['arrival'] + act_step['waiting_time'])
       times = {
         begin_time: begin_time,
-        end_time: begin_time && (begin_time + step['service']),
-        departure_time: begin_time && (begin_time + step['service'])
+        end_time: begin_time && (begin_time + act_step['service']),
+        departure_time: begin_time && (begin_time + act_step['service'])
       }.merge(route_data)
-      job_data = service.route_activity(timing: Models::Timing.new(times))
+      quantity_hash = service.quantities.map{ |quantity| [quantity.unit.id, quantity] }.to_h
+      loads = vrp.units.map.with_index{ |unit, u_index|
+        Models::Load.new(
+          quantity: quantity_hash[unit.id],
+          current: act_step['load'] && (act_step['load'][u_index].to_f / CUSTOM_QUANTITY_BIGNUM) || 0
+        )
+      }
+      job_data = service.route_activity(timing: Models::Timing.new(times), loads: loads)
       @previous = point
       job_data
     end
