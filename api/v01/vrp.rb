@@ -219,8 +219,10 @@ module Api
               status 404
               error!({ message: "Job with id='#{id}' not found" }, 404)
             else
-              OptimizerWrapper.job_kill(params[:api_key], id)
-              job.status = 'killed'
+              if job.killable?
+                OptimizerWrapper.job_kill(params[:api_key], id)
+                job.status = 'killed'
+              end
               solution = OptimizerWrapper::Result.get(id)
               status 202
               if solution && !solution.empty?
