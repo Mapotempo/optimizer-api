@@ -101,7 +101,7 @@ module OptimizerWrapper
       raise UnsupportedProblemError.new('Cannot apply any of the solver services', inapplicable_services)
     elsif config[:solve][:synchronously] || (
             services_vrps.size == 1 &&
-            !vrp.preprocessing_cluster_threshold &&
+            vrp.preprocessing_cluster_threshold.to_f == 0.0 &&
             config[:services][services_vrps[0][:service]].solve_synchronous?(vrp)
           )
       # The job seems easy enough to perform it with the server
@@ -797,14 +797,14 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    if vrp.matrices.size.positive? && vrp.shipments.size.zero? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
+    if vrp.matrices.any? && vrp.shipments.empty? && (cluster_threshold || force_cluster) && !vrp.scheduling?
       raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.') if vrp.services.any?{ |s| s.activities.size.positive? }
 
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if !vrp.matrices.empty? && vrp.shipments.empty? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
+    if vrp.matrices.any? && vrp.shipments.empty? && (cluster_threshold || force_cluster) && !vrp.scheduling?
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else
@@ -1016,6 +1016,7 @@ module OptimizerWrapper
         total_time: route[:total_time] || 0,
         total_travel_time: route[:total_travel_time] || 0,
         total_travel_value: route[:total_travel_value] || 0,
+        cost_details: route[:cost_details] || Models::CostDetails.new({}),
         geometry: route[:geometry]
       }.delete_if{ |_k, v| v.nil? }
     }
