@@ -34,11 +34,12 @@ module Wrappers
           activities: activities.compact
         )
       }
-
-      Models::Solution.new(
+      solution = Models::Solution.new(
         solvers: [:demo],
         routes: routes
       )
+
+      solution.parse_solution(vrp, compute_dimensions: true)
     end
   end
 end

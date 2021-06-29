@@ -397,6 +397,7 @@ module OptimizerWrapper
 
     sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp({ vrp: vrp }, [], unused_vehicle_indices)
     sub_service_vrp[:vrp].matrices = []
+    sub_service_vrp[:vrp].vehicles.each{ |v| v.matrix_id = nil }
     independent_vrps.push(sub_service_vrp[:vrp])
 
     independent_vrps
