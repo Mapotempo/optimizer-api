@@ -227,7 +227,7 @@ module OptimizerWrapper
 
       # Remove infeasible services
       sub_unfeasible_services.each{ |una_service|
-        index = vrp.services.find_index{ |s| una_service.service_id == s.id }
+        index = vrp.services.find_index{ |s| una_service.id == s.id }
         if index
           services_to_reinject << vrp.services.slice!(index)
         end
