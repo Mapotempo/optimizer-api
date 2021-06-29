@@ -164,7 +164,7 @@ module Models
         ),
         initial_loads: self.units.map{ |unit|
           Models::Load.new({
-            current_load: 0,
+            current: 0,
             quantity: Models::Quantity.new(unit: unit, value: 0)
           })
         }
@@ -726,50 +726,60 @@ module Models
       case type
       when :time
         tsp = TSPHelper.create_tsp(self, vehicles.first)
-        result = TSPHelper.solve(tsp)
-        total_travel_time = result[:cost]
+        solution = TSPHelper.solve(tsp)
+        total_travel_time = solution.details.total_travel_time
 
-        total_vehicle_work_time = vehicles.map{ |vehicle| vehicle[:duration] || vehicle[:timewindow][:end] - vehicle[:timewindow][:start] }.reduce(:+)
+        total_vehicle_work_time = vehicles.map{ |vehicle| vehicle.duration || vehicle.timewindow.end - vehicle.timewindow.start }.reduce(:+)
         average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
-        total_service_time = services.map{ |service| service[:activity][:duration].to_i }.reduce(:+)
+        total_service_time = services.map{ |service| service.activity.duration.to_i }.reduce(:+)
 
         # TODO: It assumes there is only one uniq location for all vehicle starts and ends
         depot = vehicles.collect(&:start_point).compact[0]
-        approx_depot_time_correction = if depot.nil?
-                                         0
-                                       else
-                                         average_loc = points.inject([0, 0]) { |sum, point| [sum[0] + point.location.lat, sum[1] + point.location.lon] }
-                                         average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
+        approx_depot_time_correction =
+          if depot.nil?
+            0
+          else
+            average_loc = points.inject([0, 0]) { |sum, point|
+              [sum[0] + point.location.lat, sum[1] + point.location.lon]
+            }
+            average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
 
-                                         approximate_number_of_vehicles_used = ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil
+            approximate_number_of_vehicles_used =
+              ((total_service_time.to_f + total_travel_time) / average_vehicles_work_time).ceil
 
-                                         approximate_number_of_vehicles_used * 2 * Helper.flying_distance(average_loc, [depot.location.lat, depot.location.lon])
+            approximate_number_of_vehicles_used * 2 *
+              Helper.flying_distance(average_loc, [depot.location.lat, depot.location.lon])
 
-                                         # TODO: Here we use flying_distance for approx_depot_time_correction; however, this value is in terms of meters
-                                         # instead of seconds. Still since all dicho paramters    -- i.e.,  resolution_dicho_exclusion_scaling_angle, resolution_dicho_exclusion_rate, etc. --
-                                         # are calculated with this functionality, correcting this bug makes the calculated parameters perform less effective.
-                                         # We need to calculate new parameters after correcting the bug.
-                                         #
+            # TODO: Here we use flying_distance for approx_depot_time_correction;
+            # however, this value is in terms of meters instead of seconds. Still since all dicho parameters
+            # (i.e.: resolution_dicho_exclusion_scaling_angle, resolution_dicho_exclusion_rate, etc.)
+            # are calculated with this functionality, correcting this bug makes the calculated parameters perform
+            # less effective. We need to calculate new parameters after correcting the bug.
 
-                                         # point_closest_to_center = points.min_by{ |point| Helper::flying_distance(average_loc, [point.location.lat, point.location.lon]) }
-                                         # ave_dist_to_depot = matrices[0][:time][point_closest_to_center.matrix_index][depot.matrix_index]
-                                         # ave_dist_from_depot = matrices[0][:time][depot.matrix_index][point_closest_to_center.matrix_index]
-                                         # approximate_number_of_vehicles_used * (ave_dist_to_depot + ave_dist_from_depot)
-                                       end
+            # point_closest_to_center =
+            # points.min_by{ |point| Helper::flying_distance(average_loc, [point.location.lat, point.location.lon]) }
+            # ave_dist_to_depot = matrices[0][:time][point_closest_to_center.matrix_index][depot.matrix_index]
+            # ave_dist_from_depot = matrices[0][:time][depot.matrix_index][point_closest_to_center.matrix_index]
+            # approximate_number_of_vehicles_used * (ave_dist_to_depot + ave_dist_from_depot)
+          end
 
         total_time_load = total_service_time + total_travel_time + approx_depot_time_correction
 
         average_service_load = total_time_load / services.size.to_f
         average_number_of_services_per_vehicle = average_vehicles_work_time / average_service_load
         exclusion_rate = resolution_dicho_exclusion_rate * average_number_of_services_per_vehicle
-        angle = resolution_dicho_exclusion_scaling_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
+         # Angle needs to be in between 0 and 45 - 0 means only uniform cost is used -
+         # 45 means only variable cost is used
+        angle = resolution_dicho_exclusion_scaling_angle
         tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
         coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
         coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
 
         services.each{ |service|
-          service.exclusion_cost = (coeff_variable_cost * (max_fixed_cost / exclusion_rate * service[:activity][:duration] / average_service_load) + coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
+          service.exclusion_cost = (coeff_variable_cost *
+            (max_fixed_cost / exclusion_rate * service.activity.duration / average_service_load) +
+            coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
         }
       when :distance
         raise 'Distance based exclusion cost calculation is not ready'

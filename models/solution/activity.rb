@@ -30,6 +30,7 @@ module Models
     field :pickup_shipment_id
     field :delivery_shipment_id
     field :rest_id
+    field :skills
 
     has_many :loads, class_name: 'Models::Load'
     belongs_to :detail, class_name: 'Models::Activity'

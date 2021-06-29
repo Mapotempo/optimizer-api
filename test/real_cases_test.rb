@@ -423,13 +423,13 @@ class RealCasesTest < Minitest::Test
       result_num = {
         points: routes.flat_map{ |route| route.activities.map{ |act| act.detail.point.id } } +
                 unassigned.map{ |un| un.detail.point.id },
-        services: routes.flat_map{ |route| route.activities.select{ |act| act.service_id } } +
-                  unassigned.select{ |un| un.service_id },
+        services: routes.flat_map{ |route| route.activities.select{ |act| act.type == :service && act.service_id } } +
+                  unassigned.select{ |act| act.type == :service && act.service_id },
         shipments: routes.flat_map{ |route|
           route.activities.select{ |act| act.delivery_shipment_id || act.pickup_shipment_id }
         } + unassigned.select{ |un| un.delivery_shipment_id || un.pickup_shipment_id },
-        rests: routes.flat_map{ |route| route.activities.select{ |act| act.rest_id } } +
-               unassigned.select{ |una| un.rest_id },
+        rests: routes.flat_map{ |route| route.activities.select(&:rest_id) } +
+               unassigned.select(&:rest_id),
       }
 
       result_num.each{ |k, v|
@@ -437,16 +437,15 @@ class RealCasesTest < Minitest::Test
         v.uniq!
         result_num[k] = v.size
       }
-
       %i[services shipments rests].each { |type|
         if vrp[type].nil?
           assert result_num[type].zero?, "Created additional #{type}"
         else
-          assert result_num[type] <= vrp[type].size, "Created additional #{type}"
-          assert result_num[type] >= vrp[type].size, "Lost some #{type}"
+          assert_operator result_num[type], :<=, vrp[type].size, "Created additional #{type}"
+          assert_operator result_num[type], :>=, vrp[type].size, "Lost some #{type}"
         end
       }
-      assert result_num[:points] <= vrp[:points].size, 'Created additional points'
+      assert_operator result_num[:points], :<=, vrp[:points].size, 'Created additional points'
     end
 
     # North West of France - at the fastest with distance minimization
