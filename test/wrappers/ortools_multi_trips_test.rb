@@ -30,7 +30,7 @@ class MultiTripsTest < Minitest::Test
     vrp[:vehicles] << vrp[:vehicles].first.dup
     vrp[:vehicles].last[:id] += '_second_trip'
     vrp[:relations] = [{
-      type: 'vehicle_trips',
+      type: :vehicle_trips,
       linked_vehicle_ids: [vrp[:vehicles].first[:id], vrp[:vehicles].last[:id]]
     }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
@@ -67,7 +67,7 @@ class MultiTripsTest < Minitest::Test
     vrp[:vehicles] << vrp[:vehicles].first.dup
     vrp[:vehicles].last[:id] += '_second_trip'
     vrp[:relations] = [{
-      type: 'vehicle_trips',
+      type: :vehicle_trips,
       linked_vehicle_ids: [vrp[:vehicles].first[:id], vrp[:vehicles].last[:id]]
     }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
