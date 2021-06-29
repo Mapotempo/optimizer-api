@@ -39,7 +39,7 @@ module Models
       hash.merge(details.as_json(options))
     end
 
-    def parse_solution(vrp)
+    def parse_solution(vrp, options = {})
       tic_parse_result = Time.now
       vrp.vehicles.each{ |vehicle|
         route = routes.find{ |r| r.vehicle.id == vehicle.id }
@@ -49,7 +49,7 @@ module Models
           routes << route
         end
         matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
-        route.fill_missing_route_data(vrp, matrix)
+        route.fill_missing_route_data(vrp, matrix, options)
       }
       compute_result_total_dimensions_and_round_route_stats
 

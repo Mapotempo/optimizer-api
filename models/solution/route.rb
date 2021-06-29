@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
+require './models/solution/route_detail'
 
 module Models
   class SolutionRoute < Base
@@ -25,18 +26,13 @@ module Models
     has_many :initial_loads, class_name: 'Models::Load'
 
     belongs_to :cost_details, class_name: 'Models::CostDetails', default: Models::CostDetails.new({})
-    belongs_to :detail, class_name: 'Models::RouteDetail'
+    belongs_to :detail, class_name: 'Models::RouteDetail', default: Models::RouteDetail.new({})
     belongs_to :vehicle, class_name: 'Models::Vehicle'
 
     def as_json(options = {})
       hash = super(options)
       hash.delete('detail')
       hash.merge(detail.as_json(options))
-    end
-
-    def activities=(_acts)
-      compute_route_waiting_times
-      compute_total_time
     end
 
     def compute_total_time
@@ -49,7 +45,10 @@ module Models
       detail.total_time = detail.end_time - detail.start_time
     end
 
-    def fill_missing_route_data(vrp, matrix)
+    def fill_missing_route_data(vrp, matrix, options = {})
+      compute_missing_dimensions(matrix) if options[:compute_dimensions]
+      compute_route_waiting_times
+      compute_total_time
       details = compute_route_travel_distances(vrp, matrix)
       compute_route_waiting_times unless activities.empty?
 
@@ -97,6 +96,56 @@ module Models
       return unless activities.all?{ |a| a.timing.waiting_time }
 
       detail.total_waiting_time = activities.collect{ |a| a.timing.waiting_time }.sum.round
+    end
+
+    def compute_missing_dimensions(matrix)
+      dimensions = %i[time distance value]
+      dimensions.each{ |dimension|
+        next unless matrix&.send(dimension)&.any?
+
+        next if activities.any?{ |activity| activity.timing.send("travel_#{dimension}") > 0 }
+
+        previous_departure = 0
+        previous_index = nil
+        activities.each{ |activity|
+          current_index = activity.detail.point&.matrix_index
+          if previous_index && current_index
+            activity.timing.send("travel_#{dimension}=",
+                                 matrix.send(dimension)[previous_index][current_index])
+          end
+          case dimension
+          when :time
+            previous_departure = compute_time_timing(
+              activity,
+              previous_departure,
+              previous_index && current_index && matrix.send(dimension)[previous_index][current_index] || 0
+            )
+          when :distance
+            activity.timing.current_distance = previous_departure
+            if previous_index && current_index
+              previous_departure += matrix.send(dimension)[previous_index][current_index]
+            end
+          end
+
+          previous_index = current_index unless activity.type == :rest
+        }
+      }
+    end
+
+    def compute_time_timing(activity, previous_departure, travel_time)
+      earliest_arrival =
+        [
+          activity.detail.timewindows&.find{ |tw| (tw.end || 2**32) > previous_departure }&.start || 0,
+          previous_departure + travel_time
+        ].max || 0
+      if travel_time > 0
+        earliest_arrival += activity.detail.setup_duration * vehicle.coef_setup + vehicle.additional_setup
+      end
+      activity.timing.begin_time = earliest_arrival
+      activity.timing.end_time = earliest_arrival +
+                                 (activity.detail.duration * vehicle.coef_service + vehicle.additional_service)
+      activity.timing.departure_time = activity.timing.end_time
+      earliest_arrival
     end
 
     def compute_route_waiting_times
