@@ -35,6 +35,10 @@ module Models
       hash.merge(detail.as_json(options))
     end
 
+    def count_services
+      activities.count(&:service_id)
+    end
+
     def compute_total_time
       return if activities.empty?
 

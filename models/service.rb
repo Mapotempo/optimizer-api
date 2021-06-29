@@ -73,8 +73,8 @@ module Models
       Models::RouteActivity.new(
         id: self.original_id,
         service_id: options[:service_id] || self.id,
-        pickup_shipment_id: self.type == :pickup && self.original_id || self.id,
-        delivery_shipment_id: self.type == :delivery && self.original_id || self.id,
+        pickup_shipment_id: self.type == :pickup && (self.original_id || self.id),
+        delivery_shipment_id: self.type == :delivery && (self.original_id || self.id),
         type: self.type,
         alternative: options[:index],
         loads: loads(options),

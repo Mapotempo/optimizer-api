@@ -70,6 +70,18 @@ module Models
       }
     end
 
+    def count_assigned_services
+      routes.sum(&:count_services)
+    end
+
+    def count_unassigned_services
+      unassigned.count(&:service_id)
+    end
+
+    def count_used_routes
+      routes.count{ |route| route.count_services.positive? }
+    end
+
     def +(other)
       self.cost += other.cost
       self.elapsed += other.elapsed
