@@ -62,22 +62,21 @@ module Interpreters
           }
 
           # add associated cluster as skill
-          [solution].each{ |solution|
-            next if solution.nil? || solution.empty?
+          next if solution.nil?
 
-            solution.routes.each{ |route|
-              route.activities.each do |stop|
-                next unless stop.service_id
-
-                stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
-              end
-            }
-            solution.unassigned.each do |stop|
-              next if stop.service_id.nil?
+          solution.routes.each{ |route|
+            route.activities.each do |stop|
+              next unless stop.service_id
 
               stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
             end
           }
+          solution.unassigned.each do |stop|
+            next if stop.service_id.nil?
+
+            stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
+          end
+          solution
         }
 
         # merge expanded vehicles, services and relations
