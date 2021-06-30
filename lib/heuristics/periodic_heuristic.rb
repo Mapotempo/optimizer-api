@@ -46,7 +46,7 @@ module Wrappers
 
       @candidate_routes = {}
       @points_vehicles_and_days = {}
-      vrp.vehicles.group_by{ |vehicle| vehicle.id.split('_')[0..-2].join('_') }.each{ |vehicle_id, _set|
+      vrp.vehicles.group_by(&:original_id).each{ |vehicle_id, _set|
         @candidate_routes[vehicle_id] = {}
       }
 
@@ -399,7 +399,7 @@ module Wrappers
         all_routes.each{ |day, route_data|
           next if route_data[:stops].uniq{ |s| s[:point_id] }.size <= 1
 
-          corresponding_vehicle = vrp.vehicles.find{ |v| v.id == "#{vehicle_id}_#{day}" }
+          corresponding_vehicle = vrp.vehicles.find{ |v| v.id.match?(/#{vehicle_id}.*_#{day}/) }
           corresponding_vehicle.timewindow.start = route_data[:tw_start]
           corresponding_vehicle.timewindow.end = route_data[:tw_end]
           route_vrp = construct_sub_vrp(vrp, corresponding_vehicle, route_data[:stops])
