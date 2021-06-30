@@ -229,11 +229,11 @@ module ValidateData
   end
 
   def check_relations(periodic_heuristic)
-    return unless @hash[:relations].to_a.any?
+    return unless @hash[:relations]&.any?
 
     @hash[:relations].group_by{ |relation| relation[:type] }.each{ |type, relations|
-      case type
-      when 'vehicle_trips'
+      case type.to_sym
+      when :vehicle_trips
         relations.each{ |relation|
           relation_vehicles =
             relation[:linked_vehicle_ids].to_a.collect{ |v_id| @hash[:vehicles].find{ |v| v[:id] == v_id } }
@@ -322,7 +322,7 @@ module ValidateData
   end
 
   def check_clustering_parameters(configuration)
-    if @hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_trips' }
+    if @hash[:relations]&.any?{ |relation| relation[:type].to_sym == :vehicle_trips }
       if configuration[:preprocessing][:partitions]&.any?
         raise OptimizerWrapper::UnsupportedProblemError.new(
           'Partitioning is not currently available with vehicle_trips relation'
@@ -363,7 +363,7 @@ module ValidateData
   end
 
   def check_periodic_consistency(configuration)
-    if @hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
+    if @hash[:relations].to_a.any?{ |relation| relation[:type] == :vehicle_group_duration_on_months } &&
        (!configuration[:schedule] || configuration[:schedule][:range_indice])
       raise OptimizerWrapper::DiscordantProblemError.new(
         'Vehicle group duration on weeks or months is not available without range_date'

@@ -40,13 +40,15 @@ module Models
 
     def test_reject_if_periodic_with_any_relation
       vrp = VRP.scheduling
+      vrp[:vehicles].first[:end_point_id] = 'point_0' # vehicle_trips
       %i[shipment meetup same_route sequence order vehicle_trips
          minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse
          vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].each{ |relation_type|
         vrp[:relations] = [{
             type: relation_type,
             lapse: 1,
-            linked_ids: ['service_1', 'service_2']
+            linked_ids: ['service_1', 'service_2'],
+            linked_vehicle_ids: ['vehicle_0']
         }]
 
         assert_raises OptimizerWrapper::UnsupportedProblemError do
@@ -411,7 +413,7 @@ module Models
     def test_vehicle_trips_relation_must_have_linked_vehicle_ids
       vrp = VRP.lat_lon_two_vehicles
       vrp[:relations] = [{
-        type: 'vehicle_trips'
+        type: :vehicle_trips
       }]
       assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)

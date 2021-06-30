@@ -205,7 +205,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
   def self.vehicle_trips_relation(vrp)
     {
-      type: 'vehicle_trips',
+      type: :vehicle_trips,
       linked_vehicle_ids: vrp[:vehicles].collect{ |v| v[:id] }
     }
   end
