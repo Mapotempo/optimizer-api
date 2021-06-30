@@ -164,6 +164,12 @@ class HeuristicTest < Minitest::Test
 
     def test_add_missing_visits
       vrp = TestHelper.load_vrp(self, fixture_file: 'periodic_with_post_process')
+
+      # to check capacity violation within this function :
+      vrp.units << Models::Unit.create(label: 'visit')
+      vrp.services.each{ |s| s.quantities << Models::Quantity.create(value: 1, unit: vrp.units.last) }
+      vrp.vehicles.each{ |v| v.capacities << Models::Capacity.create(limit: 20, unit: vrp.units.last) }
+
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump'))) # rubocop: disable Security/MarshalLoad
@@ -177,11 +183,23 @@ class HeuristicTest < Minitest::Test
       s.send(:add_missing_visits)
 
       candidate_routes = s.instance_variable_get(:@candidate_routes)
+
+      # check capacity violation :
+      candidate_routes.each{ |_v_id, data|
+        data.each{ |_day, route_data|
+          # negative capacity left implies capacity violation :
+          assert(route_data[:capacity_left].all?{ |_k, v| v >= 0 })
+        }
+      }
+
+      # no visit added nor lost :
       uninserted = s.instance_variable_get(:@uninserted)
       candidate_services_ids = s.instance_variable_get(:@candidate_services_ids)
       assert_equal vrp.visits, candidate_routes.sum{ |_v, d| d.sum{ |_day, route| route[:stops].size } } +
                                uninserted.size +
                                candidate_services_ids.sum{ |id| s.instance_variable_get(:@services_data)[id][:raw].visits_number }
+
+      # we did assign more visits in end_phase
       assert starting_with >= s.instance_variable_get(:@uninserted).size
 
       all_ids = (uninserted.keys +
