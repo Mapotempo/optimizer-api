@@ -127,7 +127,6 @@ module Wrappers
         unassigned: unassigneds
       )
       solution.parse_solution(vrp)
-      solution
     end
 
     private

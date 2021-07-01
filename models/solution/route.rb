@@ -25,9 +25,15 @@ module Models
     has_many :activities, class_name: 'Models::RouteActivity'
     has_many :initial_loads, class_name: 'Models::Load'
 
-    belongs_to :cost_details, class_name: 'Models::CostDetails', default: Models::CostDetails.new({})
-    belongs_to :detail, class_name: 'Models::RouteDetail', default: Models::RouteDetail.new({})
+    belongs_to :cost_details, class_name: 'Models::CostDetails'
+    belongs_to :detail, class_name: 'Models::RouteDetail'
     belongs_to :vehicle, class_name: 'Models::Vehicle'
+
+    def initialize(options = {})
+      super(options)
+      self.detail = Models::RouteDetail.new({}) unless options.key? :detail
+      self.cost_details = Models::CostDetails.new({}) unless options.key? :cost_details
+    end
 
     def as_json(options = {})
       hash = super(options)
@@ -50,23 +56,19 @@ module Models
     end
 
     def fill_missing_route_data(vrp, matrix, options = {})
+      return if activities.empty?
+
       compute_missing_dimensions(matrix) if options[:compute_dimensions]
       compute_route_waiting_times
+      route_data = compute_route_travel_distances(vrp, matrix)
       compute_total_time
-      details = compute_route_travel_distances(vrp, matrix)
       compute_route_waiting_times unless activities.empty?
-
-      if detail.end_time && detail.start_time
-        detail.total_time = detail.end_time - detail.start_time
-      end
-
       compute_route_total_dimensions(matrix)
-
       return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? &&
-                    activities.any?(&:service_id)
+                         activities.any?(&:service_id)
 
-      details ||= route_details(vrp)
-      geometry = details&.map(&:last)
+      route_data ||= route_details(vrp)
+      geometry = route_data&.map(&:last)
     end
 
     def compute_route_total_dimensions(matrix)
@@ -90,16 +92,16 @@ module Models
         previous_index = matrix_index
       }
 
-      if detail.end_time && detail.start_time
-        detail.total_time = detail.end_time - detail.start_time
+      if self.detail.end_time && self.detail.start_time
+        self.detail.total_time = self.detail.end_time - self.detail.start_time
       end
-      detail.total_travel_time = total[:time].round if dimensions.include?(:time)
-      detail.total_distance = total[:distance].round if dimensions.include?(:distance)
-      detail.total_travel_value = total[:value].round if dimensions.include?(:value)
+      self.detail.total_travel_time = total[:time].round if dimensions.include?(:time)
+      self.detail.total_distance = total[:distance].round if dimensions.include?(:distance)
+      self.detail.total_travel_value = total[:value].round if dimensions.include?(:value)
 
       return unless activities.all?{ |a| a.timing.waiting_time }
 
-      detail.total_waiting_time = activities.collect{ |a| a.timing.waiting_time }.sum.round
+      self.detail.total_waiting_time = activities.collect{ |a| a.timing.waiting_time }.sum.round
     end
 
     def compute_missing_dimensions(matrix)
@@ -109,7 +111,7 @@ module Models
 
         next if activities.any?{ |activity| activity.timing.send("travel_#{dimension}") > 0 }
 
-        previous_departure = 0
+        previous_departure = dimension == :time ? activities.first.timing.begin_time : 0
         previous_index = nil
         activities.each{ |activity|
           current_index = activity.detail.point&.matrix_index
@@ -231,7 +233,5 @@ module Models
       details&.each{ |d| d[0] = (d[0] / 1000.0).round(4) if d[0] }
       details
     end
-
-
   end
 end

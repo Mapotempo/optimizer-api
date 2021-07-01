@@ -236,7 +236,7 @@ module OptimizerWrapper
       if vrp.schedule?
         periodic = Interpreters::PeriodicVisits.new(vrp)
         vrp = periodic.expand(vrp, job, &block)
-        optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
+        optim_result = vrp.preprocessing_heuristic_result if vrp.periodic_heuristic?
       end
 
       unfeasible_services += sub_unfeasible_services
