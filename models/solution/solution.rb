@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
+require './models/solution/solution_details'
 
 module Models
   class Solution < Base
@@ -30,8 +31,14 @@ module Models
     has_many :routes, class_name: 'Models::SolutionRoute'
     has_many :unassigned, class_name: 'Models::RouteActivity'
 
-    belongs_to :cost_details, class_name: 'Models::CostDetails', default: Models::CostDetails.new({})
-    belongs_to :details, class_name: 'Models::RouteDetail', default: Models::RouteDetail.new({})
+    belongs_to :cost_details, class_name: 'Models::CostDetails'
+    belongs_to :details, class_name: 'Models::SolutionDetails'
+
+    def initialize(options = {})
+      super(options)
+      self.details = Models::SolutionDetails.new({}) unless options.key? :details
+      self.cost_details = Models::CostDetails.new({}) unless options.key? :cost_details
+    end
 
     def as_json(options = {})
       hash = super(options)
@@ -43,8 +50,8 @@ module Models
       tic_parse_result = Time.now
       vrp.vehicles.each{ |vehicle|
         route = routes.find{ |r| r.vehicle.id == vehicle.id }
+        # there should be one route per vehicle in solution :
         unless route
-          # there should be one route per vehicle in solution :
           route = vrp.empty_route(vehicle)
           routes << route
         end
@@ -61,7 +68,7 @@ module Models
     end
 
     def compute_result_total_dimensions_and_round_route_stats
-      [:total_time, :total_travel_time, :total_travel_value, :total_distance, :total_waiting_time].each{ |stat_symbol|
+      %i[total_time total_travel_time total_travel_value total_distance total_waiting_time].each{ |stat_symbol|
         next unless routes.all?{ |r| r.detail.send stat_symbol }
 
         details.send("#{stat_symbol}=", routes.collect{ |r|

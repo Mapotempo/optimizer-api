@@ -34,10 +34,11 @@ module Models
 
     has_many :loads, class_name: 'Models::Load'
     belongs_to :detail, class_name: 'Models::Activity'
-    belongs_to :timing, class_name: 'Models::Timing', default: Models::Timing.new({})
+    belongs_to :timing, class_name: 'Models::Timing'
 
     def initialize(options)
       super(options)
+      self.timing = Models::Timing.new({}) unless options.key? :timing
       set_timing_end_time
     end
 

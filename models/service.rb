@@ -80,7 +80,8 @@ module Models
         loads: loads(options),
         detail: options[:index] && self.activities[options[:index]] || self.activity,
         timing: options[:timing] || Models::Timing.new({}),
-        reason: options[:reason]
+        reason: options[:reason],
+        skills: options[:skills] || self.skills
       )
     end
   end

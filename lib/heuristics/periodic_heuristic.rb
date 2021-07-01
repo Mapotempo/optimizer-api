@@ -79,7 +79,7 @@ module Wrappers
     def compute_initial_solution(vrp, &block)
       if vrp.services.empty?
         # TODO : create and use result structure instead of using wrapper function
-        vrp[:preprocessing_heuristic_result] = empty_result('heuristic', vrp)
+        vrp.preprocessing_heuristic_result = vrp.empty_solution(:heuristic)
         return []
       end
 
@@ -397,9 +397,8 @@ module Wrappers
 
         data[:unassigned_indices].each{ |index|
           unassigned_id = "#{id}_#{index}_#{@services_data[id][:raw].visits_number}"
-          unassigned << get_unassigned_info(unassigned_id,
-                                            @services_data[id][:raw],
-                                            @services_assignment[id][:unassigned_reasons].join(','))
+          unassigned << service_in_vrp.route_activity(service_id: unassigned_id,
+                                                      reason: reason)
         }
       }
 
@@ -1046,20 +1045,6 @@ module Wrappers
       list
     end
 
-    def get_unassigned_info(custom_id, service_in_vrp, reason)
-      {
-        original_service_id: service_in_vrp.id,
-        service_id: custom_id,
-        point_id: service_in_vrp.activity&.point_id,
-        detail: build_detail(service_in_vrp,
-                             service_in_vrp.activity,
-                             service_in_vrp.activity&.point,
-                             nil, nil, nil),
-        type: :service,
-        reason: reason
-      }
-    end
-
     def insert_point_in_route(route_data, point_to_add, first_visit = true)
       ### modify [route_data] such that [point_to_add] is in the route ###
       current_route = route_data[:stops]
@@ -1113,53 +1098,30 @@ module Wrappers
       end
     end
 
-    def get_stop(day, vrp, type, vehicle, data = {})
+    def get_stop(day, type, vehicle, data = {})
       size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
       week = Helper.string_padding(day / 7 + 1, size_weeks)
+      times = Models::Timing.new(begin_time: data[:arrival],
+                                 day_week_num: "#{day % 7}_#{week}",
+                                 day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}")
 
-      service_in_vrp = @services_data[data[:id]][:raw] if type == :service
-      associated_point = vrp.points.find{ |point| point.id == data[:point_id] }
-
-      stop_detail = case type
-                    when :service
-                      build_detail(
-                        service_in_vrp, service_in_vrp.activity || service_in_vrp.activities[data[:activity]],
-                        associated_point, day % 7, nil, vehicle
-                      )
-                    else
-                      build_detail(nil, nil, associated_point, nil, nil, vehicle)
-                    end
-      stop_detail[:setup_duration] = data[:considered_setup_duration]
-      if type == 'service'
-        number_in_sequence =
-          @services_assignment[data[:id]][:assigned_indices][@services_assignment[data[:id]][:days].find_index(day)]
+      case type
+      when 'start'
+        vehicle.start_depot_activity(timing: times)
+      when 'end'
+        vehicle.end_depot_activity(timing: times)
+      when 'service'
+        service = @services_data[data[:id]][:raw] if type == 'service'
+        loads = service.quantities.map{ |quantity|
+          Models::Load.new(quantity: Models::Quantity.new(unit: quantity.unit))
+        }
+        service.route_activity(
+          service_id: "#{data[:id]}_#{data[:number_in_sequence]}_#{service.visits_number}",
+          timing: times,
+          index: data[:activity],
+          loads: loads
+        )
       end
-      {
-        day_week_num: "#{day % 7}_#{week}",
-        day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}",
-        point_id: data[:point_id],
-        service_id: ("#{data[:id]}_#{number_in_sequence}_#{service_in_vrp.visits_number}" if type == :service),
-        original_service_id: service_in_vrp&.id,
-        travel_time: data[:travel_time],
-        travel_distance: data[:travel_distance],
-        begin_time: data[:arrival],
-        end_time: data[:end],
-        departure_time: data[:end],
-        type: type,
-        alternative: (data[:activity] if service_in_vrp&.activities),
-        detail: stop_detail
-      }.delete_if{ |_k, v| !v }
-    end
-
-    def collect_route_stops(route_data, day, vrp, vehicle)
-      previous = route_data[:start_point_id]
-      route_data[:stops].collect{ |stop|
-        stop[:travel_time] = matrix(route_data, previous, stop[:point_id])
-        stop[:travel_distance] = matrix(route_data, previous, stop[:point_id], :distance)
-        previous = stop[:point_id]
-
-        get_stop(day, vrp, 'service', vehicle, stop)
-      }
     end
 
     def get_route_data(route_data)
@@ -1186,22 +1148,13 @@ module Wrappers
       [route_start, route_end, final_travel_time, final_travel_distance]
     end
 
-    def get_activities(day, route_data, vrp, vehicle)
+    def get_activities(day, route_data, vehicle)
       computed_activities = []
-      route_start, route_end, final_travel_time, final_travel_distance = get_route_data(route_data)
+      route_start, route_end, _final_travel_time, _final_travel_distance = get_route_data(route_data)
 
-      if route_data[:start_point_id]
-        computed_activities <<
-          get_stop(day, vrp, 'depot', vehicle,
-                   point_id: route_data[:start_point_id], arrival: route_start, travel_time: 0, travel_distance: 0)
-      end
-      computed_activities += collect_route_stops(route_data, day, vrp, vehicle)
-      if route_data[:end_point_id]
-        computed_activities <<
-          get_stop(day, vrp, 'depot', vehicle,
-                   point_id: route_data[:end_point_id], arrival: route_end,
-                   travel_time: final_travel_time, travel_distance: final_travel_distance)
-      end
+      computed_activities << get_stop(day, 'start', vehicle, arrival: route_start) if route_data[:start_point_id]
+      computed_activities += route_data[:stops].map{ |stop| get_stop(day, 'service', vehicle, stop) }
+      computed_activities << get_stop(day, 'end', vehicle, arrival: route_end) if route_data[:end_point_id]
 
       [computed_activities, route_start, route_end]
     end
@@ -1232,7 +1185,7 @@ module Wrappers
 
     def prepare_output_and_collect_routes(vrp)
       routes = []
-      solution = []
+      solution_routes = []
 
       compute_visits_number
 
@@ -1243,34 +1196,27 @@ module Wrappers
               # in case two vehicles have same global_day_index :
               v.timewindow.start % 86400 == route_data[:tw_start] && v.timewindow.end % 86400 == route_data[:tw_end]
           }
-          computed_activities, start_time, end_time = get_activities(day, route_data, vrp, vrp_vehicle)
+          computed_activities, _start_time, _end_time = get_activities(day, route_data, vrp_vehicle)
 
           routes << {
             vehicle_id: vrp_vehicle.id,
             mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
           }
 
-          solution << {
-            vehicle_id: vrp_vehicle.id,
-            original_vehicle_id: original_vehicle_id,
-            start_time: start_time,
-            end_time: end_time,
-            activities: computed_activities
-          }
+          solution_routes << Models::SolutionRoute.new(activities: computed_activities,
+                                                       vehicle: vrp_vehicle)
         }
       }
-
       unassigned = collect_unassigned
-      vrp[:preprocessing_heuristic_result] = {
-        cost: @cost,
-        cost_details: Models::CostDetails.create({}), # TODO: fulfill with solution costs
-        solvers: ['heuristic'],
-        iterations: 0,
-        routes: solution,
-        unassigned: unassigned,
-        elapsed: (Time.now - @starting_time) * 1000 # ms
-      }
-
+      # TODO: fulfill cost_details with solution_routes costs
+      solution = Models::Solution.new(cost: @cost,
+                                      solvers: [:heuristic],
+                                      routes: solution_routes,
+                                      unassigned: unassigned,
+                                      elapsed: (Time.now - @starting_time) * 1000,
+                                      compute_dimensions: true) # ms
+      solution.parse_solution(vrp)
+      vrp.preprocessing_heuristic_result = solution
       routes
     end
 

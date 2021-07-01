@@ -143,8 +143,13 @@ module Models
       vrp
     end
 
+    def expand_vehicles_for_consistent_empty_result
+      periodic = Interpreters::PeriodicVisits.new(self)
+      periodic.generate_vehicles(self)
+    end
+
     def empty_solution(solver, unassigned_reason = nil, already_expanded = true)
-      self.vehicles = expand_vehicles_for_consistent_empty_result(self) if self.schedule? && !already_expanded
+      self.vehicles = expand_vehicles_for_consistent_empty_result if self.schedule? && !already_expanded
       solution = Models::Solution.new(
         routes: self.vehicles.map{ |v| self.empty_route(v) },
         unassigned: (unassigned_services(unassigned_reason) +
