@@ -42,7 +42,11 @@ module PeriodicEndPhase
 
     return vehicle_routes.keys if used_days.empty?
 
-    vehicle_routes.keys.select{ |day|
+    soonest = max_lapse ? [0, used_days.min - max_lapse].max : 0
+    latest = max_lapse ? [used_days.min + max_lapse * (@services_data[:id].visits_number - 1), @schedule_end].min :
+                         @schedule_end
+
+    ((soonest..latest).to_a & vehicle_routes.keys).select{ |day|
       smaller_lapse_with_other_days = used_days.collect{ |used_day| (used_day - day).abs }.min
       (min_lapse.nil? || smaller_lapse_with_other_days >= min_lapse) &&
         (max_lapse.nil? || smaller_lapse_with_other_days <= max_lapse)

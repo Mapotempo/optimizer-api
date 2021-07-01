@@ -641,5 +641,24 @@ class HeuristicTest < Minitest::Test
       assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
       assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
     end
+
+    def test_lapse_respected_between_first_and_last_day
+      vrp = VRP.scheduling
+      vrp[:services].first[:visits_number] = 4
+
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0]
+
+      assert s.send(:lapse_with_first_and_last_visit_is_acceptable, 'service_1', 1)
+      assert s.send(:lapse_with_first_and_last_visit_is_acceptable, 'service_1', 2)
+      assert s.send(:lapse_with_first_and_last_visit_is_acceptable, 'service_1', 3)
+      assert s.send(:lapse_with_first_and_last_visit_is_acceptable, 'service_1', 4)
+
+      vrp.services.first.maximum_lapse = 1
+      assert s.send(:lapse_with_first_and_last_visit_is_acceptable, 'service_1', 3)
+      refute s.send(:lapse_with_first_and_last_visit_is_acceptable, 'service_1', 4)
+    end
   end
 end

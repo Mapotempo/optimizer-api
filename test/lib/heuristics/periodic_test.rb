@@ -924,5 +924,28 @@ class HeuristicTest < Minitest::Test
         assert_equal expectation, days_with_service, 'Service was not planned at expected days'
       }
     end
+
+    def test_lapse_violation_between_first_and_last_visit
+      problem = VRP.scheduling
+      problem[:units] = [{ id: 'visit' }]
+      problem[:services].first[:visits_number] = 3
+      problem[:services].first[:minimum_lapse] = 2
+      problem[:services].first[:maximum_lapse] = 2
+      problem[:services].each{ |s| s[:quantities] = [{ unit_id: 'visit', value: 1 }] }
+      problem[:vehicles].each{ |v| v[:capacities] = [{ unit_id: 'visit', limit: 1 }] }
+      problem[:configuration][:schedule][:range_indices][:end] = 6
+
+      vrp = TestHelper.create(problem)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::SchedulingHeuristic.new(vrp)
+
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] << 0
+      # second visit can only be planned at day 2
+      # we remove capacity at this day, second visit should not be assigned to any day :
+      s.instance_variable_get(:@candidate_routes)['vehicle_0'][2][:capacity_left]['visit'] = 0
+      s.send(:plan_next_visits, 'vehicle_0', 'service_1', 2)
+      assert_equal [0, 0, 0, 0, 1, 0, 0],
+                   (s.instance_variable_get(:@candidate_routes)['vehicle_0'].collect{ |_day, data| data[:stops].size })
+    end
   end
 end

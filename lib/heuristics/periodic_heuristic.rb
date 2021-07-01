@@ -237,7 +237,7 @@ module Wrappers
       need_to_add_visits = false
       (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |visit_number|
         inserted_day = nil
-        while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
+        if day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
           diff = day_to_insert - next_day.round
           next_day += diff
 
@@ -541,6 +541,9 @@ module Wrappers
         else
           @candidate_routes[vehicle_id].keys
         end
+      prefered_day = first_day + @services_data[service_id][:heuristic_period]
+
+      return prefered_day if potential_days.include?(prefered_day) && find_best_index(service_id, @candidate_routes[vehicle_id][prefered_day], false)
 
       potential_days.sort!
       potential_days.delete_if{ |d|
@@ -548,7 +551,7 @@ module Wrappers
                     first_day + (@services_data[service_id][:raw].maximum_lapse || 2**32))
       }
 
-      potential_days.find{ |d| find_best_index(service_id, @candidate_routes[vehicle_id][d], false) }
+      potential_days.select{ |d| find_best_index(service_id, @candidate_routes[vehicle_id][d], false) }.min_by{ |day| (prefered_day - day).abs }
     end
 
     def same_point_compatibility(service_id, vehicle_id, day)
@@ -856,8 +859,21 @@ module Wrappers
       }.compact.min_by{ |cost| cost[:back_to_depot] }
     end
 
+    def lapse_with_first_and_last_visit_is_acceptable(service_id, day)
+      return true unless @services_data[service_id][:raw].maximum_lapse &&
+                         @services_data[service_id][:raw].visits_number > 1 && @services_data[service_id][:used_days].any?
+
+      first_day = @services_data[service_id][:used_days].min
+      last_day = @services_data[service_id][:used_days].max
+      maximum_lapse_between_first_and_last = (@services_data[service_id][:raw].maximum_lapse || @services_data[service_id][:heuristic_period]) * (@services_data[service_id][:raw].visits_number - 1)
+
+      (day - first_day).abs <= maximum_lapse_between_first_and_last &&
+        (day - last_day).abs <= maximum_lapse_between_first_and_last
+    end
+
     def compatible_days(service_id, day)
-      !@services_data[service_id][:raw].unavailable_days.include?(day)
+      !@services_data[service_id][:raw].unavailable_days.include?(day) &&
+        lapse_with_first_and_last_visit_is_acceptable(service_id, day)
     end
 
     def compatible_vehicle(service_id, route_data)
