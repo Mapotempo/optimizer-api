@@ -76,9 +76,15 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       }
     }
 
+    vrp[:vehicles].each{ |vehicle|
+      vehicle.delete(:original_id)
+    }
+
     [vrp[:services], vrp[:shipments]].each{ |group|
       group&.each{ |s|
         s[:skills]&.map!(&:to_sym)
+
+        s.delete(:original_id)
 
         [s[:activity] || s[:activities] || s[:pickup] || s[:delivery]].flatten.each{ |activity|
           next unless activity[:position]
