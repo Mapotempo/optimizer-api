@@ -24,6 +24,7 @@ module ValidateData
   def check_consistency(hash)
     hash[:services] ||= []
     hash[:vehicles] ||= []
+    hash[:relations] ||= []
     @hash = hash
 
     ensure_uniq_ids
@@ -142,7 +143,7 @@ module ValidateData
   # any timewindows of s1 have started
   def check_relation_consistent_timewindows
     unconsistent_relation_timewindows = []
-    @hash[:relations]&.each{ |relation|
+    @hash[:relations].each{ |relation|
       next unless POSITION_RELATIONS.include?(relation[:type])
 
       latest_sequence_earliest_arrival = nil
@@ -175,7 +176,7 @@ module ValidateData
     ]
 
     unconsistent_position_services = []
-    @hash[:relations]&.each{ |relation|
+    @hash[:relations].each{ |relation|
       next unless POSITION_RELATIONS.include?(relation[:type])
 
       services = relation[:linked_ids].map{ |linked_id|
@@ -272,7 +273,7 @@ module ValidateData
   end
 
   def check_relations(periodic_heuristic)
-    return unless @hash[:relations]&.any?
+    return unless @hash[:relations].any?
 
     @hash[:relations].group_by{ |relation| relation[:type] }.each{ |type, relations|
       case type.to_sym
@@ -299,7 +300,7 @@ module ValidateData
     }
 
     # shipment relation consistency
-    if @hash[:relations]&.any?{ |r| r[:type] == :shipment }
+    if @hash[:relations].any?{ |r| r[:type] == :shipment }
       shipment_relations = @hash[:relations].select{ |r| r[:type] == :shipment }
       service_ids = @hash[:services].map{ |s| s[:id] }
 
@@ -392,7 +393,7 @@ module ValidateData
   end
 
   def check_clustering_parameters(configuration)
-    if @hash[:relations]&.any?{ |relation| relation[:type].to_sym == :vehicle_trips }
+    if @hash[:relations].any?{ |relation| relation[:type].to_sym == :vehicle_trips }
       if configuration[:preprocessing][:partitions]&.any?
         raise OptimizerWrapper::UnsupportedProblemError.new(
           'Partitioning is not currently available with vehicle_trips relation'
@@ -433,7 +434,7 @@ module ValidateData
   end
 
   def check_periodic_consistency(configuration)
-    if @hash[:relations].to_a.any?{ |relation| relation[:type] == :vehicle_group_duration_on_months } &&
+    if @hash[:relations].any?{ |relation| relation[:type] == :vehicle_group_duration_on_months } &&
        (!configuration[:schedule] || configuration[:schedule][:range_indice])
       raise OptimizerWrapper::DiscordantProblemError.new(
         'Vehicle group duration on weeks or months is not available without range_date'

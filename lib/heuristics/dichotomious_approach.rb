@@ -31,7 +31,8 @@ module Interpreters
           (service_vrp[:vrp].resolution_vehicle_limit.nil? || service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit) &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
           !service_vrp[:vrp].schedule? &&
-          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon }
+          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } &&
+          service_vrp[:vrp].relations.empty?
         )
     end
 

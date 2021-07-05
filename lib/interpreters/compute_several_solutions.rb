@@ -258,11 +258,11 @@ module Interpreters
         end
       }
       size_mtws = services.count{ |service| service.activity.timewindows.size > 1 }
-      size_rest = vehicles.map{ |vehicle| vehicle.rests.size }.sum
-      unique_configuration = vehicles.map(&:router_mode).uniq.size == 1 &&
-                             vehicles.map(&:router_dimension).uniq.size == 1 &&
-                             vehicles.map{ |vehicle| vehicle.start_point.id }.uniq.size == 1 &&
-                             vehicles.map{ |vehicle| vehicle.end_point.id }.uniq.size == 1
+      size_rest = vehicles.sum{ |vehicle| vehicle.rests.size }
+      unique_configuration = vehicles.uniq(&:router_mode).size == 1 &&
+                             vehicles.uniq(&:router_dimension).size == 1 &&
+                             vehicles.uniq(&:start_point_id).size == 1 &&
+                             vehicles.uniq(&:end_point_id).size == 1
 
       # TODO: The conditions below should be reworked
       if vehicles.any?(&:overall_duration)
