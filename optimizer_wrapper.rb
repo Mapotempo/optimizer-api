@@ -174,8 +174,12 @@ module OptimizerWrapper
     vrp = service_vrp[:vrp]
     dicho_level = service_vrp[:dicho_level].to_i
     split_level = service_vrp[:split_level].to_i
-    log "--> define_process VRP (service: #{vrp.services.size}, vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.resolution_vehicle_limit}) with levels (dicho: #{dicho_level}, split: #{split_level})", level: :info
-    log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}", level: :info
+    shipment_size = vrp.relations.count{ |r| r.type == :shipment }
+    log "--> define_process VRP (service: #{vrp.services.size} including #{shipment_size} shipment relations, " \
+        "vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.resolution_vehicle_limit}) " \
+        "with levels (dicho: #{dicho_level}, split: #{split_level})", level: :info
+    log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}",
+        level: :info
 
     tic = Time.now
     expected_activity_count = vrp.visits
@@ -197,7 +201,10 @@ module OptimizerWrapper
     vrp = service_vrp[:vrp]
     service = service_vrp[:service]
     dicho_level = service_vrp[:dicho_level]
-    log "--> optim_wrap::solve VRP (service: #{vrp.services.size}, vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with levels (dicho: #{service_vrp[:dicho_level]}, split: #{service_vrp[:split_level].to_i})", level: :debug
+    shipment_size = vrp.relations.count{ |r| r.type == :shipment }
+    log "--> optim_wrap::solve VRP (service: #{vrp.services.size} including #{shipment_size} shipment relations, " \
+        "vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with levels " \
+        "(dicho: #{service_vrp[:dicho_level]}, split: #{service_vrp[:split_level].to_i})", level: :debug
 
     tic = Time.now
 
