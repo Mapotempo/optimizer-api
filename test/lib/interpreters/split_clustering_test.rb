@@ -205,7 +205,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_work_day_without_vehicle_entity_small
-      vrp = VRP.lat_lon_scheduling
+      vrp = VRP.lat_lon_periodic
       vrp[:vehicles].each{ |v|
         v[:sequence_timewindows] = []
       }
@@ -243,7 +243,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_work_day_without_vehicle_entity
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       vrp[:configuration][:preprocessing][:partitions].each{ |partition|
         partition[:metric] = :visits
@@ -269,7 +269,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_unavailable_days_taken_into_account_work_day
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [{
         method: 'balanced_kmeans',
         metric: 'duration',
@@ -299,7 +299,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_unavailable_days_taken_into_account_vehicle_work_day
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
@@ -327,7 +327,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_skills_taken_into_account
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       vrp[:vehicles][0][:skills] = [['hot']]
@@ -357,7 +357,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_good_vehicle_assignment
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [{
         method: 'balanced_kmeans',
         metric: 'duration',
@@ -375,7 +375,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_good_vehicle_assignment_two_phases
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
@@ -388,7 +388,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_good_vehicle_assignment_skills
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [{
         method: 'balanced_kmeans',
         metric: 'duration',
@@ -461,7 +461,7 @@ class SplitClusteringTest < Minitest::Test
       # and then max_split again during solution process
       # should not raise "Wrong number of visits returned in result" error
       vrp = VRP.independent_skills
-      vrp[:points] = VRP.lat_lon_scheduling[:points]
+      vrp[:points] = VRP.lat_lon_periodic[:points]
       vrp[:services].first[:skills] = ['D']
       vrp[:configuration][:preprocessing] = {
         max_split_size: 4
@@ -860,7 +860,7 @@ class SplitClusteringTest < Minitest::Test
       assert result
     end
 
-    def test_scheduling_partitions_without_recurrence
+    def test_periodic_partitions_without_recurrence
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.preprocessing_first_solution_strategy = nil
 

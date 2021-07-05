@@ -92,7 +92,7 @@ module OptimizerWrapper
     },
     debug: {
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
-      output_schedule: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
+      output_periodic: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
     },
     redis_count: REDIS_COUNT,

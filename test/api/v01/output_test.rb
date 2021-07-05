@@ -36,7 +36,7 @@ class Api::V01::OutputTest < Minitest::Test
     current = {
       dump_vrp_dir: OptimizerWrapper.dump_vrp_dir,
       output_clusters: OptimizerWrapper.config[:debug][:output_clusters],
-      output_schedule: OptimizerWrapper.config[:debug][:output_schedule]
+      output_periodic: OptimizerWrapper.config[:debug][:output_periodic]
     }
 
     Dir.mktmpdir('temp_', 'test/') { |tmpdir|
@@ -50,12 +50,12 @@ class Api::V01::OutputTest < Minitest::Test
     # Reset settings back to current
     OptimizerWrapper.dump_vrp_dir = current[:dump_vrp_dir]
     OptimizerWrapper.config[:debug][:output_clusters] = current[:output_clusters]
-    OptimizerWrapper.config[:debug][:output_schedule] = current[:output_schedule]
+    OptimizerWrapper.config[:debug][:output_periodic] = current[:output_periodic]
     # tmpdir and generated files are already deleted
   end
 
-  def test_day_week_num_and_other_scheduling_fields
-    vrp = VRP.scheduling
+  def test_day_week_num_and_other_periodic_fields
+    vrp = VRP.periodic
     vrp[:services].first[:visits_number] = 2
     vrp[:configuration][:restitution] = { csv: true }
 
@@ -78,7 +78,7 @@ class Api::V01::OutputTest < Minitest::Test
     assert(result['solutions'].first['routes'].none?{ |route| route['day'] })
     assert(result['solutions'].first['routes'].none?{ |route| route['activities'].any?{ |a| a['visit_index'] } })
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)
     assert_equal [0, 1, 2, 3], result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
@@ -87,7 +87,7 @@ class Api::V01::OutputTest < Minitest::Test
     }.compact
     assert_equal [1], visit_indices.uniq
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = {
       range_date: {
         start: Date.new(2021, 2, 10),
@@ -195,13 +195,13 @@ class Api::V01::OutputTest < Minitest::Test
     assert_equal [nil], csv.collect(&:last).uniq! - ['vehicle_tw_if_only_one']
   end
 
-  def test_scheduling_generated_file
+  def test_periodic_generated_file
     name = 'test'
     job = 'fake_job'
     schedule_end = 5
 
-    output_tool = OutputHelper::Scheduling.new(name, 'fake_vehicles', job, schedule_end)
-    file = 'scheduling_construction_test_fake_job'
+    output_tool = OutputHelper::PeriodicHeuristic.new(name, 'fake_vehicles', job, schedule_end)
+    file = 'periodic_construction_test_fake_job'
     filepath = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
     refute File.exist?(filepath), 'File created before end of generation'
@@ -226,14 +226,14 @@ class Api::V01::OutputTest < Minitest::Test
   def test_files_generated
     name = 'test_files_generated'
     OptimizerWrapper.config[:debug][:output_clusters] = true
-    OptimizerWrapper.config[:debug][:output_schedule] = true
+    OptimizerWrapper.config[:debug][:output_periodic] = true
 
     vrp = TestHelper.load_vrp(self, fixture_file: 'instance_clustered')
     vrp.resolution_repetition = 1
     vrp[:name] = name
     vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
 
-    Wrappers::SchedulingHeuristic.stub_any_instance(
+    Wrappers::PeriodicHeuristic.stub_any_instance(
       :compute_initial_solution,
       lambda { |vrp_in|
         @starting_time = Time.now
@@ -253,7 +253,7 @@ class Api::V01::OutputTest < Minitest::Test
     }
 
     assert_equal 3, files.size
-    assert_includes files, File.join(OptimizerWrapper.dump_vrp_dir.cache, "scheduling_construction_#{name}")
+    assert_includes files, File.join(OptimizerWrapper.dump_vrp_dir.cache, "periodic_construction_#{name}")
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('csv') }, 'Geojson file not found')
     assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('json') }, 'Csv file not found')
   end
@@ -374,22 +374,22 @@ class Api::V01::OutputTest < Minitest::Test
       vroom: {
         problem: VRP.lat_lon,
         solver_name: 'vroom',
-        scheduling_keys: []
+        periodic_keys: []
       },
       ortools: {
         problem: VRP.lat_lon,
         solver_name: 'ortools',
-        scheduling_keys: []
+        periodic_keys: []
       },
       periodic_ortools: {
         problem: VRP.lat_lon,
         solver_name: 'ortools',
-        scheduling_keys: %w[day_week_num day_week day visit_index]
+        periodic_keys: %w[day_week_num day_week day visit_index]
       },
       periodic_heuristic: {
-        problem: VRP.lat_lon_scheduling,
+        problem: VRP.lat_lon_periodic,
         solver_name: 'heuristic',
-        scheduling_keys: %w[day_week_num day_week day visit_index]
+        periodic_keys: %w[day_week_num day_week day visit_index]
       }
     }
 
@@ -415,22 +415,22 @@ class Api::V01::OutputTest < Minitest::Test
       response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: problem }.to_json, 'CONTENT_TYPE' => 'application/json'
       headers = response.body.slice(1..-1).split('\n').map{ |line| line.split(',') }.first
       assert_empty (expected_activities_keys - headers), "#{expected_activities_keys - headers} activity keys are missing in #{method}"
-      assert_empty (expected_route_keys - headers - data[:scheduling_keys]), "#{expected_route_keys - headers} route keys are missing in #{method} result"
+      assert_empty (expected_route_keys - headers - data[:periodic_keys]), "#{expected_route_keys - headers} route keys are missing in #{method} result"
       assert_empty (expected_unassigned_keys - headers), "#{expected_unassigned_keys - headers} unassigned keys are missing in #{method}"
 
-      undocumented = headers - expected_route_keys - expected_activities_keys - expected_unassigned_keys - data[:scheduling_keys]
+      undocumented = headers - expected_route_keys - expected_activities_keys - expected_unassigned_keys - data[:periodic_keys]
       assert_empty undocumented, "#{undocumented} keys are not documented, found in #{method}"
     }
   end
 
   def test_geojsons_returned
     asynchronously start_worker: true do
-      vrp = VRP.lat_lon_scheduling
+      vrp = VRP.lat_lon_periodic
       @job_id = submit_vrp api_key: 'demo', vrp: vrp
       result = wait_status @job_id, 'completed', api_key: 'demo'
       assert_nil(result['geojsons'])
 
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [TestHelper.vehicle_and_days_partitions[0]]
       vrp[:configuration][:restitution] = { geometry: [:partitions] }
       @job_id = submit_vrp api_key: 'ortools', vrp: vrp
@@ -464,7 +464,7 @@ class Api::V01::OutputTest < Minitest::Test
           [4.951164, 45.288722], [4.951455, 45.288769], [4.951508, 45.28878]]]
       ]
     }) do
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       vrp[:configuration][:restitution] = { geometry: [:polylines, :partitions] }
       assert submit_vrp api_key: 'ortools', vrp: vrp

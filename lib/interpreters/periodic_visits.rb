@@ -15,7 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './lib/heuristics/scheduling_heuristic.rb'
+require './lib/heuristics/periodic_heuristic.rb'
 
 module Interpreters
   class PeriodicVisits
@@ -24,7 +24,7 @@ module Interpreters
       @equivalent_vehicles = {}
       @epoch = Date.new(1970, 1, 1)
 
-      if vrp.scheduling?
+      if vrp.schedule?
         have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
         have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.any?{ |shipment| shipment.pickup.timewindows.any?(&:day_index) || shipment.delivery.timewindows.any?(&:day_index) }
         have_vehicles_day_index = vrp.vehicles.any?{ |vehicle| (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows ).any?(&:day_index) }
@@ -39,7 +39,7 @@ module Interpreters
     end
 
     def expand(vrp, job, &block)
-      return vrp unless vrp.scheduling?
+      return vrp unless vrp.schedule?
 
       vehicles_linking_relations = save_vehicle_linking_relations(vrp)
       vrp.relations = generate_relations(vrp)
@@ -49,8 +49,8 @@ module Interpreters
       }
 
       if vrp.periodic_heuristic?
-        scheduling_heuristic = Wrappers::SchedulingHeuristic.new(vrp, job)
-        vrp.routes = scheduling_heuristic.compute_initial_solution(vrp, &block)
+        periodic_heuristic = Wrappers::PeriodicHeuristic.new(vrp, job)
+        vrp.routes = periodic_heuristic.compute_initial_solution(vrp, &block)
       end
 
       vrp.services = generate_services(vrp)

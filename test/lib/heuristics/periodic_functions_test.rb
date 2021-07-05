@@ -18,20 +18,20 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
-  if !ENV['SKIP_SCHEDULING']
+  if !ENV['SKIP_PERIODIC']
     def test_compute_best_common_tw_when_empty_tw
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp[:configuration][:resolution][:same_point_day] = true
       vrp[:services][1][:activity][:point_id] = 'point_1'
       vrp = TestHelper.create(vrp)
 
       vrp.vehicles = []
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       assert_empty s.instance_variable_get(:@uninserted)
     end
 
     def test_compute_best_common_tw_when_conflict_tw
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp[:configuration][:resolution][:same_point_day] = true
       vrp[:services][0][:activity][:timewindows] = [{
         start: 0,
@@ -45,12 +45,12 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
 
       vrp.vehicles = []
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       assert_equal 2, s.instance_variable_get(:@uninserted).size
     end
 
     def test_compute_best_common_tw_when_no_conflict_tw
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp[:configuration][:resolution][:same_point_day] = true
       vrp[:services][0][:activity][:timewindows] = [{
         start: 0,
@@ -64,14 +64,14 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
 
       vrp.vehicles = []
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert(data_services['service_1'][:tws_sets].first.all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
       assert_equal 0, s.instance_variable_get(:@uninserted).size
     end
 
     def test_compute_service_lapse
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp[:services][0][:visits_number] = 1
       vrp[:services][0][:minimum_lapse] = 10
 
@@ -85,7 +85,7 @@ class HeuristicTest < Minitest::Test
       vrp[:services][3][:minimum_lapse] = 6
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 6, data_services.size
       assert_nil data_services['service_1'][:heuristic_period]
@@ -95,13 +95,13 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_clean_stops
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp[:services][0][:visits_number] = 2
       vrp[:services][0][:minimum_lapse] = 7
 
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 7, data_services['service_1'][:heuristic_period]
 
@@ -125,7 +125,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_clean_stops_small_lapses
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp[:services][0][:visits_number] = 4
       vrp[:services][0][:minimum_lapse] = 3
       vrp[:configuration][:schedule] = {
@@ -137,7 +137,7 @@ class HeuristicTest < Minitest::Test
 
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       p_v_d = {}
       vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
       s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
@@ -163,9 +163,9 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_add_missing_visits
-      vrp = TestHelper.load_vrp(self, fixture_file: 'scheduling_with_post_process')
+      vrp = TestHelper.load_vrp(self, fixture_file: 'periodic_with_post_process')
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.bindump'))) # rubocop: disable Security/MarshalLoad
       services_data = Marshal.load(File.binread('test/fixtures/add_missing_visits_services_data.bindump')) # rubocop: disable Security/MarshalLoad
@@ -192,9 +192,9 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_clean_stops_with_position_requirement_never_first
-      vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
 
       vehicule = { matrix_id: vrp.vehicles.first.start_point.matrix_index }
       p_v_d = {}
@@ -217,9 +217,9 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_clean_stops_with_position_requirement_never_last
-      vrp = TestHelper.create(VRP.scheduling_seq_timewindows)
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
 
       vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
       p_v_d = {}
@@ -239,11 +239,11 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_check_validity
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300 }]
       vrp = TestHelper.create(vrp)
       vrp.vehicles = []
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
@@ -262,7 +262,7 @@ class HeuristicTest < Minitest::Test
       assert s.check_solution_validity
 
       s.instance_variable_set(:@duration_in_tw, true)
-      assert_raises OptimizerWrapper::SchedulingHeuristicError do
+      assert_raises OptimizerWrapper::PeriodicHeuristicError do
         s.check_solution_validity
       end
 
@@ -281,7 +281,7 @@ class HeuristicTest < Minitest::Test
                                   tw_end: 400
                                 }
                             })
-      assert_raises OptimizerWrapper::SchedulingHeuristicError do
+      assert_raises OptimizerWrapper::PeriodicHeuristicError do
         s.check_solution_validity
       end
     end
@@ -290,7 +290,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(VRP.basic)
       vrp.schedule_range_indices = { start: 0, end: 365 }
       vrp.vehicles = []
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
 
       service = { id: 'service_2', point_id: 'point_2', duration: 0 }
       timewindow = { start_time: 47517.6, arrival_time: 48559.4, final_time: 48559.4, setup_duration: 0 }
@@ -308,9 +308,9 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_compute_shift_two_potential_tws
-      vrp = TestHelper.create(VRP.scheduling)
+      vrp = TestHelper.create(VRP.periodic)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_shift_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_shift_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@indices, '1028167' => 0, 'endvehicule8' => 270)
@@ -332,10 +332,10 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_positions_provided
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
 
       assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [])
       assert_equal [0, 1], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
@@ -394,10 +394,10 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_insertion_cost_with_tw_choses_best_value
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp = TestHelper.create(vrp)
       vrp.vehicles = []
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
 
       s.instance_variable_set(:@services_data, 'service_with_activities' => { nb_activities: 2,
                                                                               setup_durations: [0, 0],
@@ -418,12 +418,12 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_empty_underfilled_routes
-      vrp = VRP.lat_lon_scheduling
+      vrp = VRP.lat_lon_periodic
       vrp[:vehicles].each{ |v| v[:cost_fixed] = 2 }
       vrp[:services].each{ |s| s[:exclusion_cost] = 1 }
       vrp_to_solve = TestHelper.create(vrp)
       vrp_to_solve.vehicles = TestHelper.expand_vehicles(vrp_to_solve)
-      s = Wrappers::SchedulingHeuristic.new(vrp_to_solve)
+      s = Wrappers::PeriodicHeuristic.new(vrp_to_solve)
 
       route_with_one = [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
       route_with_two = route_with_one + [{ id: 'service_2', point_id: 'point_2', start: 0, arrival: 0, end: 0, setup_duration: 0, activity: 0 }]
@@ -450,7 +450,7 @@ class HeuristicTest < Minitest::Test
       vrp[:configuration][:resolution][:allow_partial_assignment] = false
       vrp_to_solve = TestHelper.create(vrp)
       vrp_to_solve.vehicles = TestHelper.expand_vehicles(vrp_to_solve)
-      s = Wrappers::SchedulingHeuristic.new(vrp_to_solve)
+      s = Wrappers::PeriodicHeuristic.new(vrp_to_solve)
       s.instance_variable_set(:@candidate_routes, candidate_route)
       s.send(:empty_underfilled)
       (0..3).each{ |day|
@@ -475,7 +475,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_reaffecting_without_allow_partial_assignment
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:vehicles] = [vrp[:vehicles].first]
       vrp[:vehicles].first[:sequence_timewindows] = nil
       vrp[:vehicles].first[:timewindow] = { start: 28800, end: 54000 }
@@ -492,7 +492,7 @@ class HeuristicTest < Minitest::Test
       vrp[:configuration][:resolution][:allow_partial_assignment] = false
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
 
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/reaffecting_without_allow_partial_assignment_routes.bindump'))) # rubocop: disable Security/MarshalLoad
 
@@ -519,7 +519,7 @@ class HeuristicTest < Minitest::Test
 
     def test_compute_latest_authorized_day
       [10, 14].each{ |visits_number|
-        vrp = TestHelper.create(VRP.scheduling)
+        vrp = TestHelper.create(VRP.periodic)
         vrp.schedule_range_indices[:end] = 13
 
         if visits_number == 10
@@ -538,7 +538,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_compute_latest_authorized_day_2
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:vehicles].first.delete(:timewindow)
       vrp[:vehicles].first[:sequence_timewindows] = [
         { start: 0, end: 20, day_index: 0 },
@@ -558,10 +558,10 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_exist_possible_first_route_according_to_same_point_day
-      vrp = TestHelper.create(VRP.lat_lon_scheduling)
+      vrp = TestHelper.create(VRP.lat_lon_periodic)
       vrp.resolution_same_point_day = true
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
 
       s.instance_variable_set(:@points_vehicles_and_days, { 'point_0' => { days: [0, 2, 4, 6] }})
       s.instance_variable_set(:@unlocked, ['id'])
@@ -578,7 +578,7 @@ class HeuristicTest < Minitest::Test
     end
 
     def test_lapse_when_only_one_working_week_day
-      raw_vrp = VRP.scheduling
+      raw_vrp = VRP.periodic
       raw_vrp[:services][0][:visits_number] = 2
       raw_vrp[:services][0][:minimum_lapse] = 6
       raw_vrp[:services][0][:maximum_lapse] = 10
@@ -592,14 +592,14 @@ class HeuristicTest < Minitest::Test
 
       vrp = TestHelper.create(raw_vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       assert_equal [6, 5, 2], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
 
       raw_vrp[:vehicles].first.delete(:timewindow)
       raw_vrp[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 20, day_index: 0 }]
       vrp = TestHelper.create(raw_vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       # only one route per week, lapse should be multiple of 7
       assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
       assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
@@ -611,7 +611,7 @@ class HeuristicTest < Minitest::Test
       }
       vrp = TestHelper.create(raw_vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       # all days are allowed again
       assert_equal [6, 5, 2], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
 
@@ -619,7 +619,7 @@ class HeuristicTest < Minitest::Test
       raw_vrp[:vehicles][1][:sequence_timewindows] = [{ start: 0, end: 20, day_index: 2 }]
       vrp = TestHelper.create(raw_vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::SchedulingHeuristic.new(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
       assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
       assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
     end

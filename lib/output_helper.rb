@@ -21,7 +21,7 @@ module OutputHelper
   # For result output
   class Result
     def self.generate_header(solutions_set)
-      scheduling, scheduling_header = generate_scheduling_header(solutions_set)
+      periodic, periodic_header = generate_periodic_header(solutions_set)
       unit_ids, quantities_header = generate_quantities_header(solutions_set)
       max_timewindows_size, timewindows_header = generate_timewindows_header(solutions_set)
       unassigned_header =
@@ -31,17 +31,17 @@ module OutputHelper
           []
         end
 
-      header = scheduling_header +
+      header = periodic_header +
                basic_header +
                quantities_header +
                timewindows_header +
                unassigned_header +
                complementary_header(solutions_set.any?{ |solution| solution[:routes].any?{ |route| route[:day] } })
 
-      [header, unit_ids, max_timewindows_size, scheduling, !unassigned_header.empty?]
+      [header, unit_ids, max_timewindows_size, periodic, !unassigned_header.empty?]
     end
 
-    def self.generate_scheduling_header(solutions_set)
+    def self.generate_periodic_header(solutions_set)
       if solutions_set.any?{ |solution|
            solution[:routes].any?{ |route| route[:original_vehicle_id] != route[:vehicle_id] }
          }
@@ -131,8 +131,8 @@ module OutputHelper
       ]
     end
 
-    def self.activity_line(activity, route, name, unit_ids, max_timewindows_size, scheduling, reason)
-      days_info = scheduling ? [activity[:day_week_num], activity[:day_week]] : []
+    def self.activity_line(activity, route, name, unit_ids, max_timewindows_size, periodic, reason)
+      days_info = periodic ? [activity[:day_week_num], activity[:day_week]] : []
       common = build_csv_activity(name, route, activity)
       timewindows = build_csv_timewindows(activity, max_timewindows_size)
       quantities = unit_ids.collect{ |unit_id|
@@ -209,7 +209,7 @@ module OutputHelper
       return unless solutions
 
       I18n.locale = :legacy if solutions.any?{ |s| s[:use_deprecated_csv_headers] }
-      header, unit_ids, max_timewindows_size, scheduling, any_unassigned = generate_header(solutions)
+      header, unit_ids, max_timewindows_size, periodic, any_unassigned = generate_header(solutions)
 
       CSV.generate{ |output_csv|
         output_csv << header
@@ -218,12 +218,12 @@ module OutputHelper
             route[:activities].each{ |activity|
               reason = any_unassigned ? [nil] : []
               output_csv << activity_line(
-                activity, route, solution[:name], unit_ids, max_timewindows_size, scheduling, reason)
+                activity, route, solution[:name], unit_ids, max_timewindows_size, periodic, reason)
             }
           }
           solution[:unassigned].each{ |activity|
             output_csv << activity_line(
-              activity, nil, solution[:name], unit_ids, max_timewindows_size, scheduling, [activity[:reason]])
+              activity, nil, solution[:name], unit_ids, max_timewindows_size, periodic, [activity[:reason]])
           }
         }
       }
@@ -485,20 +485,20 @@ module OutputHelper
     end
   end
 
-  # To output data about scheduling heuristic process
-  class Scheduling
+  # To output data about periodic heuristic process
+  class PeriodicHeuristic
     def initialize(name, vehicle_names, job, schedule_end)
-      @file_name = "scheduling_construction#{"_#{name}" if name}#{"_#{job}" if job}".parameterize
+      @file_name = "periodic_construction#{"_#{name}" if name}#{"_#{job}" if job}".parameterize
       @nb_days = schedule_end
 
-      @scheduling_file = ''
-      @scheduling_file << 'customer_id,nb_visits,'
+      @periodic_file = ''
+      @periodic_file << 'customer_id,nb_visits,'
       (0..@nb_days).each{ |day|
-        @scheduling_file << "#{day},"
+        @periodic_file << "#{day},"
       }
-      @scheduling_file << "\n"
+      @periodic_file << "\n"
 
-      @scheduling_file << "CLUSTER WITH VEHICLES #{vehicle_names} ------\n"
+      @periodic_file << "CLUSTER WITH VEHICLES #{vehicle_names} ------\n"
     end
 
     def insert_visits(days, inserted_id, nb_visits)
@@ -506,49 +506,47 @@ module OutputHelper
 
       line = "#{inserted_id},#{nb_visits}"
       (0..@nb_days).each{ |day|
-        line << if days.include?(day)
-          ',X'
-        else
-          ','
-        end
+        line += days.include?(day) ? ',X' : ','
       }
-      @scheduling_file << "#{line}\n"
+      @periodic_file << "#{line}\n"
     end
 
     def remove_visits(removed_days, all_inserted_days, inserted_id, nb_visits)
       line = "#{inserted_id},#{nb_visits}"
       (0..@nb_days).each{ |day|
-        line << if removed_days.include?(day)
-          ',-'
-        elsif all_inserted_days.include?(day)
-          ',~'
-        else
-          ','
-        end
+        line <<
+          if removed_days.include?(day)
+            ',-'
+          elsif all_inserted_days.include?(day)
+            ',~'
+          else
+            ','
+          end
       }
-      @scheduling_file << "#{line}\n"
+      @periodic_file << "#{line}\n"
     end
 
     def add_single_visit(inserted_day, all_inserted_days, inserted_id, nb_visits)
       line = "#{inserted_id},#{nb_visits}"
       (0..@nb_days).each{ |day|
-        line << if day == inserted_day
-          ',X'
-        elsif all_inserted_days.include?(day)
-          ',~'
-        else
-          ','
-        end
+        line <<
+          if day == inserted_day
+            ',X'
+          elsif all_inserted_days.include?(day)
+            ',~'
+          else
+            ','
+          end
       }
-      @scheduling_file << "#{line}\n"
+      @periodic_file << "#{line}\n"
     end
 
     def add_comment(comment)
-      @scheduling_file << "#{comment}\n"
+      @periodic_file << "#{comment}\n"
     end
 
     def close_file
-      Api::V01::APIBase.dump_vrp_dir.write(@file_name, @scheduling_file, mode: 'a')
+      Api::V01::APIBase.dump_vrp_dir.write(@file_name, @periodic_file, mode: 'a')
     end
   end
 end

@@ -26,7 +26,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_global_periodic_expand
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |service|
       service[:visits_number] = 2
     }
@@ -40,7 +40,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_expand_vrp_schedule_range_date
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |service|
       service[:visits_number] = 2
     }
@@ -55,20 +55,20 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_generated_service_timewindows_after_periodic_expand
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
 
     expanded_vrp = periodic_expand(problem)
     assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 1 }, 'There are no day index so we can keep original service timewindows'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200, day_index: 0 }] }
     problem[:configuration][:schedule][:range_indices][:end] = 10
 
     expanded_vrp = periodic_expand(problem)
     assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 2 }, 'There are two mondays and service is only available on mondays so there should be two timewindows'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:configuration][:schedule][:range_indices][:end] = 10
     problem[:vehicles].each{ |v| v[:timewindow] = { start: 0, end: 10, day_index: 3 } }
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
@@ -78,20 +78,20 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_generated_vehicle_timewindow_after_periodic_expand
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
     expanded_vrp = periodic_expand(problem)
     assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
     assert_equal 1, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'No need to expand timewindows when no day_index are provided'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
     problem[:services].first[:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
     expanded_vrp = periodic_expand(problem)
     assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
     assert_equal 4, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'There should be as many vehicles as days in schedule because at least one day_index has been specified'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10, day_index: 1 }
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.vehicles.size, 'There should be only one vehicle because there is only one tuesday and this vehicle is not available other days'
@@ -99,7 +99,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_expand_vrp_unavailable_visits
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |s| s[:visits_number] = 2 }
     expanded_vrp = periodic_expand(problem)
 
@@ -111,12 +111,12 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_date_and_unavailable_date
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
     expanded_vrp = periodic_expand(vrp)
     assert_equal 15, expanded_vrp.vehicles.size
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:vehicles][0][:unavailable_work_date] = [Date.new(2020, 1, 6)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
     vrp = TestHelper.create(vrp)
@@ -129,12 +129,12 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_indices_and_unavailable_indices
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 16 }}
     expanded_vrp = periodic_expand(vrp)
     assert_equal 17, expanded_vrp.vehicles.size
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = {
       range_indices: { start: 0, end: 16 },
       unavailable_indices: [7]
@@ -147,7 +147,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_multiple_reference_to_same_rests
-    skip 'Should rework this test with new rests and maybe move to the new scheduling heuristic'
+    skip 'Should rework this test with new rests and maybe move to the new periodic heuristic'
     problem = {
       matrices: [{
         id: 'm1',
@@ -1499,7 +1499,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_expand_rests
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:rests] = [{
       id: 'rest',
       timewindows: [{ start: 1, end: 1, day_index: 0 }],
@@ -1520,7 +1520,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_first_last_possible_days
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 6 }
     vrp[:services].first[:visits_number] = 3
     vrp[:services].first[:minimum_lapse] = 1

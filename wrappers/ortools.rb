@@ -44,11 +44,11 @@ module Wrappers
         :assert_vehicles_no_zero_duration,
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_square_matrix,
-        :assert_vehicle_tw_if_schedule,
+        :assert_vehicle_tw_if_periodic,
         :assert_if_sequence_tw_then_schedule,
         :assert_if_periodic_heuristic_then_schedule,
         :assert_only_force_centroids_if_kmeans_method,
-        :assert_no_scheduling_if_evaluation,
+        :assert_no_periodic_if_evaluation,
         :assert_route_if_evaluation,
         :assert_no_shipments_if_evaluation,
         :assert_wrong_vehicle_shift_preference_with_heuristic,
@@ -62,7 +62,7 @@ module Wrappers
         :assert_solver_if_not_periodic,
         :assert_first_solution_strategy_is_possible,
         :assert_first_solution_strategy_is_valid,
-        :assert_clustering_compatible_with_scheduling_heuristic,
+        :assert_clustering_compatible_with_periodic_heuristic,
         :assert_lat_lon_for_partition,
         :assert_vehicle_entity_only_before_work_day,
         :assert_deprecated_partitions,
@@ -478,7 +478,7 @@ module Wrappers
     end
 
     def check_services_compatible_days(vrp, vehicle, service)
-      !vrp.scheduling? || (!service.minimum_lapse && !service.maximum_lapse) ||
+      !vrp.schedule? || (!service.minimum_lapse && !service.maximum_lapse) ||
         vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
     end
 

@@ -611,7 +611,7 @@ module Models
       vehicles.count * points.count
     end
 
-    def scheduling?
+    def schedule?
       !self.schedule_range_indices.nil?
     end
 

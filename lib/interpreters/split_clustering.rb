@@ -141,7 +141,7 @@ module Interpreters
       if service_vrp[:split_level].nil?
         empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
 
-        !vrp.scheduling? &&
+        !vrp.schedule? &&
           vrp.preprocessing_max_split_size &&
           vrp.vehicles.size > 1 &&
           (vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit > 1) &&
@@ -543,7 +543,7 @@ module Interpreters
       vrp = service_vrp[:vrp]
       sub_vrp = Marshal.load(Marshal.dump(vrp))
       sub_vrp.id = Random.new
-      # TODO: Within Scheduling Vehicles require to have unduplicated ids
+      # TODO: Within Periodic Vehicles require to have unduplicated ids
       if available_vehicles_indices
         sub_vrp.vehicles.delete_if.with_index{ |_v, v_i| !available_vehicles_indices.include?(v_i) }
         sub_vrp.routes.delete_if{ |r|
@@ -803,13 +803,13 @@ module Interpreters
       # collecting vehicles then eliminating to have nb_clusters vehicles,
       # we can create one with nb_clusters items directly.
 
-      r_start = vrp.scheduling? ? vrp.schedule_range_indices[:start] : 0
-      r_end = vrp.scheduling? ? vrp.schedule_range_indices[:end] : 0
+      r_start = vrp.schedule? ? vrp.schedule_range_indices[:start] : 0
+      r_end = vrp.schedule? ? vrp.schedule_range_indices[:end] : 0
 
       vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
-        total_work_days = vrp.scheduling? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
+        total_work_days = vrp.schedule? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
         capacities = {
-          duration: vrp.scheduling? ? vrp.total_work_times[v_i] : vehicle.work_duration,
+          duration: vrp.schedule? ? vrp.total_work_times[v_i] : vehicle.work_duration,
           visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
         }
         vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
@@ -1186,7 +1186,7 @@ module Interpreters
               duration_from = time_matrix_from_depot[v_index[:from][v_i]][p_index] if v_index[:from][v_i]
               duration_to = time_matrix_to_depot[p_index][v_index[:to][v_i]] if v_index[:to][v_i]
 
-              point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) # TODO: investigate why division by vehicle.router_options[:speed_multiplier] detoriarates the performance of scheduling
+              point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) # TODO: investigate why division by vehicle.router_options[:speed_multiplier] detoriarates the performance of periodic
             }
           }
         else

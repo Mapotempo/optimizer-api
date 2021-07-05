@@ -22,7 +22,7 @@ module Models
     include Rack::Test::Methods
 
     def test_deduced_range_indices
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:configuration][:schedule] = {
         range_date: {
           start: Date.new(2020, 1, 1), # wednesday
@@ -44,12 +44,12 @@ module Models
     end
 
     def test_visits_computation
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
 
       assert_equal vrp.services.size, vrp.visits
 
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
       vrp.services.each{ |service| service[:visits_number] *= 2 }
 
@@ -59,12 +59,12 @@ module Models
       assert_equal vrp.services.sum{ |s| s[:visits_number] }, vrp.visits
     end
 
-    def test_vrp_scheduling
+    def test_vrp_periodic
       vrp = VRP.toy
       vrp = TestHelper.create(vrp)
       refute vrp.schedule_range_indices
 
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
       assert vrp.schedule_range_indices
     end
@@ -230,7 +230,7 @@ module Models
     end
 
     def test_vrp_creation_if_route_and_partitions
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:routes] = [{
         vehicle_id: 'vehicle_0',
         mission_ids: ['service_1']
@@ -249,7 +249,7 @@ module Models
     end
 
     def test_transform_route_indice_into_index
-      original_vrp = VRP.lat_lon_scheduling_two_vehicles
+      original_vrp = VRP.lat_lon_periodic_two_vehicles
       original_vrp[:routes] = [{
         vehicle_id: 'vehicle_0',
         mission_ids: ['service_1'],
@@ -268,7 +268,7 @@ module Models
     end
 
     def test_available_interval
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 2, 5),
                                                        end: Date.new(2021, 2, 11)}}
       vrp[:services].first[:unavailable_visit_day_indices] = [9]

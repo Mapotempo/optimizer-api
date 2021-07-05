@@ -18,8 +18,8 @@
 require './test/test_helper'
 
 class HeuristicTest < Minitest::Test
-  if !ENV['SKIP_REAL_SCHEDULING'] && !ENV['SKIP_SCHEDULING']
-    def test_scheduling_and_ortools
+  if !ENV['SKIP_REAL_PERIODIC'] && !ENV['SKIP_PERIODIC']
+    def test_periodic_and_ortools
       vrps = TestHelper.load_vrps(self)
 
       vrps.each{ |vrp|

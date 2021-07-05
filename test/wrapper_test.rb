@@ -1860,61 +1860,14 @@ class WrapperTest < Minitest::Test
   end
 
   def test_impossible_service_tw_periodic
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        sequence_timewindows: [
-          { start: 6, end: 10, day_index: 2 },
-          { start: 0, end: 5, day_index: 0 }
-        ]
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1',
-          timewindows: [
-            { start: 0, end: 5, day_index: 1 }
-          ]
-        },
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 100,
-        },
-        schedule: {
-          range_indices: {
-            start: 0,
-            end: 2
-          }
-        }
-      }
-    }
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    vrp = VRP.periodic
+    vrp[:vehicles].first.delete(:timewindow)
+    vrp[:vehicles].first[:sequence_timewindows] = [
+      { start: 6, end: 10, day_index: 2 },
+      { start: 0, end: 5, day_index: 0 }
+    ]
+    vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 5, day_index: 1 }]
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal(1, result[:unassigned].count{ |un| un[:reason] == 'No vehicle with compatible timewindow' })
   end
 
@@ -2630,7 +2583,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_work_day_entity_after_eventual_vehicle
-    problem = VRP.lat_lon_scheduling_two_vehicles
+    problem = VRP.lat_lon_periodic_two_vehicles
     problem[:configuration][:preprocessing][:partitions] = [{
       method: 'balanced_kmeans',
       metric: 'duration',
@@ -2691,7 +2644,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_add_unassigned
-    vrp = TestHelper.create(VRP.scheduling)
+    vrp = TestHelper.create(VRP.periodic)
     vrp[:services].first.visits_number = 4
 
     unfeasible = []
@@ -2750,8 +2703,8 @@ class WrapperTest < Minitest::Test
   end
 
   def test_default_repetition
-    [[VRP.scheduling, nil, 1],
-     [VRP.scheduling, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 3],
+    [[VRP.periodic, nil, 1],
+     [VRP.periodic, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 3],
      [VRP.basic, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 1],
      [VRP.basic, nil, 1]
     ].each{ |problem_set|
@@ -2767,7 +2720,7 @@ class WrapperTest < Minitest::Test
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
       end
       assert_equal expected_repetitions, solve_call,
-        "#{expected_repetitions} repetitions expected, with#{vrp.preprocessing_partitions ? '' : 'no'} partitions and#{vrp.scheduling? ? '' : 'no'} scheduling"
+                   "#{expected_repetitions} repetitions expected, with#{vrp.preprocessing_partitions ? '' : 'no'} partitions and #{vrp.schedule? ? '' : 'no'} periodic"
     }
   end
 
@@ -2784,7 +2737,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_impossible_minimum_lapse_opened_days
-    vrp = VRP.lat_lon_scheduling_two_vehicles
+    vrp = VRP.lat_lon_periodic_two_vehicles
     vrp[:services].first[:visits_number] = 2
     vrp[:services].first[:minimum_lapse] = 2
 
@@ -2941,7 +2894,7 @@ class WrapperTest < Minitest::Test
     assert_equal expected_number_of_vehicles, services_vrps.collect{ |sub_vrp| sub_vrp.vehicles.size }.sum, 'some vehicles disapear because of split_independent_vrp_by_sticky_vehicle function'
   end
 
-  def test_ensure_original_id_provided_if_scheduling_optimization
+  def test_ensure_original_id_provided_if_periodic_optimization
     [['periodic', false], ['savings', true]].each{ |parameters|
       strategy, solver = parameters
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia2')
@@ -2984,7 +2937,7 @@ class WrapperTest < Minitest::Test
     }
 
     # ensure timewindows are returned even if they have work day
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
     vrp[:services][1][:activity][:timewindows] = [{ start: 30, end: 40, day_index: 5 }]
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
@@ -3002,7 +2955,7 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 2, result[:routes].size
 
-    vrp = TestHelper.create(VRP.scheduling)
+    vrp = TestHelper.create(VRP.periodic)
     vrp.services = []
     expected_days = vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1
     nb_vehicles = vrp.vehicles.size
@@ -3020,7 +2973,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_assert_inapplicable_vroom_with_periodic_heuristic
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].first[:visits_number] = 2
 
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(TestHelper.create(problem)), :assert_only_one_visit

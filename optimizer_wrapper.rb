@@ -229,7 +229,7 @@ module OptimizerWrapper
       }
 
       # TODO: refactor with dedicated class
-      if vrp.scheduling?
+      if vrp.schedule?
         periodic = Interpreters::PeriodicVisits.new(vrp)
         vrp = periodic.expand(vrp, job, &block)
         optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
@@ -613,7 +613,7 @@ module OptimizerWrapper
   end
 
   def self.provide_day(vrp, route)
-    return unless vrp.scheduling?
+    return unless vrp.schedule?
 
     route_index = route[:vehicle_id].split('_').last.to_i
 
@@ -626,7 +626,7 @@ module OptimizerWrapper
   end
 
   def self.provide_visits_index(vrp, set)
-    return unless vrp.scheduling?
+    return unless vrp.schedule?
 
     set.each{ |activity|
       id = activity[:service_id] || activity[:rest_id] ||
@@ -797,14 +797,20 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    if vrp.matrices.size.positive? && vrp.shipments.size.zero? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
-      raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.') if vrp.services.any?{ |s| s.activities.size.positive? }
+    zip_condition = vrp.matrices.any? && vrp.shipments.empty? &&
+                    (cluster_threshold.to_f.positive? || force_cluster) &&
+                    !vrp.schedule?
+
+    if zip_condition
+      if vrp.services.any?{ |s| s.activities.any? }
+        raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.')
+      end
 
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if !vrp.matrices.empty? && vrp.shipments.empty? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.scheduling?
+    if zip_condition
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else
