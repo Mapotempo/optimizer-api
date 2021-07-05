@@ -59,15 +59,15 @@ module Interpreters
         if service_vrp[:dicho_level].zero?
           service_vrp[:vrp].compute_matrix
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
-          update_exlusion_cost(service_vrp)
+          update_exclusion_cost(service_vrp)
         # Do not solve if vrp has too many vehicles or services - init_duration is set in set_config()
         elsif service_vrp[:vrp].resolution_init_duration.nil?
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
-          update_exlusion_cost(service_vrp)
+          update_exclusion_cost(service_vrp)
           solution = OptimizerWrapper.solve(service_vrp, job, block)
         else
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
-          update_exlusion_cost(service_vrp)
+          update_exclusion_cost(service_vrp)
         end
 
         if (solution.nil? || solution.unassigned.size >= 0.7 * service_vrp[:vrp].services.size) &&
@@ -123,7 +123,6 @@ module Interpreters
 
           solution = end_stage_insert_unassigned(service_vrp, solution, job)
           Interpreters::SplitClustering.remove_empty_routes(solution)
-          solution.parse_solution(vrp)
 
           if service_vrp[:dicho_level].zero?
             # Remove vehicles which are half empty
@@ -254,7 +253,7 @@ module Interpreters
       service_vrp
     end
 
-    def self.update_exlusion_cost(service_vrp)
+    def self.update_exclusion_cost(service_vrp)
       return if service_vrp[:dicho_level].zero?
 
       average_exclusion_cost = service_vrp[:vrp].services.sum(&:exclusion_cost) / service_vrp[:vrp].services.size
@@ -316,14 +315,17 @@ module Interpreters
 
       sticky_vehicle_ids = @unassigned_services.flat_map(&:sticky_vehicles).compact.map(&:id)
 
-      vehicles_with_skills = solution.routes.map.with_index{ |route, r_index|
-        if sticky_vehicle_ids.empty? &&
-           (skills.empty? || route.vehicle.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }) ||
-           sticky_vehicle_ids.include?(route.vehicle.id)
-          v_index = vrp.vehicles.index{ |v| v.id == route.vehicle.id }
-          [route.vehicle.id, r_index, v_index]
-        end
-      }
+      vehicles_with_skills = vrp.vehicles.map.with_index{ |vehicle, v_index|
+        r_index = solution.routes.index{ |route| route.vehicle.id == vehicle.id }
+        compatible = if sticky_vehicle_ids.any?
+                       sticky_vehicle_ids.include?(vehicle.id)
+                     elsif skills.any?
+                       vehicle.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
+                     else
+                       true
+                     end
+        [vehicle.id, r_index, v_index] if compatible
+      }.compact
 
       # Shuffle so that existing routes will be distributed randomly
       # Otherwise we might have a sub_vrp with 6 existing routes (no empty routes) and
@@ -363,7 +365,7 @@ module Interpreters
           end
         end
 
-        assigned_service_ids = vehicles_indices.map{ |_v, r_i, _v_i| r_i }.flat_map{ |r_i|
+        assigned_service_ids = vehicles_indices.map{ |_v, r_i, _v_i| r_i }.compact.flat_map{ |r_i|
           solution.routes[r_i].activities.map(&:service_id)
         }.compact
 
@@ -376,13 +378,14 @@ module Interpreters
           vehicle.cost_distance_multiplier = 0.05 if vehicle.cost_distance_multiplier.zero?
         }
 
-        sub_vrp&.resolution_minimum_duration = sub_vrp_resolution_minimum_duration
+        sub_vrp.resolution_minimum_duration = sub_vrp_resolution_minimum_duration if sub_vrp.resolution_minimum_duration
         sub_vrp.resolution_duration = sub_vrp_resolution_duration if sub_vrp.resolution_duration
         sub_vrp.resolution_vehicle_limit = sub_vrp_vehicle_limit  if vrp.resolution_vehicle_limit
 
         sub_vrp.restitution_allow_empty_result = true
         solution_loop = OptimizerWrapper.solve(sub_service_vrp, job)
 
+        Interpreters::SplitClustering.remove_empty_routes(solution_loop)
         next unless solution_loop
 
         solution.elapsed += solution_loop.elapsed.to_f
@@ -399,8 +402,7 @@ module Interpreters
 
         remove_bad_skills(sub_service_vrp, solution_loop)
 
-        Helper.replace_routes_in_result(solution, solution_loop)
-
+        Helper.replace_routes_in_result(vrp, solution, solution_loop)
         sub_solutions << solution_loop
       end
       new_routes = build_initial_routes(sub_solutions)
@@ -465,9 +467,10 @@ module Interpreters
           cluster_index = nil
         end
         cluster_index ||= if vehicles_by_clusters[0].empty? || vehicles_by_clusters[1].empty?
-                            (vehicles_by_clusters[0].size <= vehicles_by_clusters[1].size) ? 0 : 1
+                            vehicles_by_clusters[0].size <= vehicles_by_clusters[1].size ? 0 : 1
                           else
-                            (services_by_cluster[0].size / vehicles_by_clusters[0].size >= services_by_cluster[1].size / vehicles_by_clusters[1].size) ? 0 : 1
+                            (services_by_cluster[0].size / vehicles_by_clusters[0].size) >=
+                              (services_by_cluster[1].size / vehicles_by_clusters[1].size) ? 0 : 1
                           end
         vehicles_by_clusters[cluster_index] << v_i
       }

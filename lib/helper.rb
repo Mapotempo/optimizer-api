@@ -139,7 +139,7 @@ module Helper
     end
   end
 
-  def self.replace_routes_in_result(solution, new_solution)
+  def self.replace_routes_in_result(vrp, solution, new_solution)
     # Updates the routes of solution with the ones in new_solution and corrects the total stats
     # TODO: Correct total cost (needs cost per route!!!)
 
@@ -148,35 +148,28 @@ module Helper
                       new_solution.unassigned.map(&:service_id).compact
 
     solution.unassigned.delete_if{ |activity|
-      # Remove from unassigned if they appear in new unasigned or if they are served in new routes
+      # Remove from unassigned if they appear in new unassigned or if they are served in new routes
       new_service_ids.include?(activity.service_id)
     }
-
     solution.unassigned += new_solution.unassigned
+
     # Correct total stats and delete old routes
     new_solution.routes.each{ |new_route|
       # This vehicle might not be used in the old solutions
-      old_route = solution.routes.find{ |r| r.vehicle.id == new_route.vehicle.id } || {}
-
-      # TODO: Determine why some previously assigned services are missing from new routes and new unassigned
-      old_route_activities = old_route.activities
-      old_route_activities.reject!{ |act| new_service_ids.include? act.service_id }
-      solution.unassigned += old_route_activities
+      old_index = solution.routes.index{ |r| r.vehicle.id == new_route.vehicle.id }
+      # old_route_activities = old_index ? solution.routes[old_index].activities : []
+      solution.routes[old_index] = new_route if old_index
+      solution.routes << new_route unless old_index
 
       [:total_time, :total_travel_time, :total_travel_value, :total_distance].each{ |stat|
         # If both nil no correction necessary
-        next if new_route.detail.send(stat).nil? && old_route.detail.send(stat).nil?
+        next if new_route.detail.send(stat).nil? && solution.routes[old_index].detail.send(stat).nil?
 
         solution.details.send("#{stat}=",
-                              solution.details.send(stat) + new_route.detail.send(stat) - old_route.detail.send(stat))
+                              solution.details.send(stat) + new_route.detail.send(stat) -
+                              solution.routes[old_index].detail.send(stat))
       }
-
-      solution.routes.delete(old_route)
     }
-
-    # Add the new routes
-    solution.routes += new_solution.routes
-
     solution
   end
 

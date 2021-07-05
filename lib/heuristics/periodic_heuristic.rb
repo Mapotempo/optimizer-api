@@ -1213,9 +1213,8 @@ module Wrappers
                                       solvers: [:heuristic],
                                       routes: solution_routes,
                                       unassigned: unassigned,
-                                      elapsed: (Time.now - @starting_time) * 1000,
-                                      compute_dimensions: true) # ms
-      solution.parse_solution(vrp)
+                                      elapsed: (Time.now - @starting_time) * 1000) # ms
+      solution.parse_solution(vrp, compute_dimensions: true)
       vrp.preprocessing_heuristic_result = solution
       routes
     end
