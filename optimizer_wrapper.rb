@@ -634,7 +634,7 @@ module OptimizerWrapper
 
       next unless id
 
-      activity[:visit_index] = id.split('_').last.to_i
+      activity[:visit_index] = id.split('_')[-2].to_i
     }
   end
 
