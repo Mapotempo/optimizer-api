@@ -215,10 +215,13 @@ module Wrappers
     def compute_route_data(vrp, point, step)
       return {} if step['type'].nil?
 
+      return { travel_time: 0, travel_distance: 0, travel_value: 0 } unless @previous && point.matrix_index
+
+      matrix = vrp.matrices[0]
       {
-        travel_time: (@previous && point.matrix_index && vrp.matrices[0][:time] ? vrp.matrices[0][:time][@previous.matrix_index][point.matrix_index] : 0),
-        travel_distance: (@previous && point.matrix_index && vrp.matrices[0][:distance] ? vrp.matrices[0][:distance][@previous.matrix_index][point.matrix_index] : 0),
-        travel_value: (@previous && point.matrix_index && vrp.matrices[0][:value] ? vrp.matrices[0][:value][@previous.matrix_index][point.matrix_index] : 0)
+        travel_time: matrix[:time] ? matrix[:time][@previous.matrix_index][point.matrix_index] : 0,
+        travel_distance: matrix[:distance] ? matrix[:distance][@previous.matrix_index][point.matrix_index] : 0,
+        travel_value: matrix[:value] ? matrix[:value][@previous.matrix_index][point.matrix_index] : 0
       }
     end
 

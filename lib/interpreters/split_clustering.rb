@@ -341,13 +341,15 @@ module Interpreters
       points = []
       services = []
       relations = []
+      visit_counts = []
       split_solve_data[:service_vehicle_assignments].each{ |vehicle_id, vehicle_services|
         average_lat = vehicle_services.sum{ |s| s.activity.point.location.lat } / vehicle_services.size.to_f
         average_lon = vehicle_services.sum{ |s| s.activity.point.location.lon } / vehicle_services.size.to_f
         points << { id: "0_representative_vrp_p_#{vehicle_id}", location: { lat: average_lat, lon: average_lon }}
+        visit_counts << vehicle_services.size
         services << {
           id: "0_representative_vrp_s_#{vehicle_id}", # vehicle_id used to find the original service-vehicle assignment
-          visits_number: vehicle_services.size,
+          visits_number: 1,
           activity: {
             point_id: "0_representative_vrp_p_#{vehicle_id}",
             duration: vehicle_services.sum{ |s| s.activity.duration.to_f } / Math.sqrt(vehicle_services.size)
@@ -365,6 +367,7 @@ module Interpreters
         linked_ids = ["0_representative_vrp_s_#{vehicle_id}"]
         extreme_points.each_with_index{ |lat_lon, index|
           points << { id: "#{index + 1}_representative_vrp_p_#{vehicle_id}", location: { lat: lat_lon[0], lon: lat_lon[1] }}
+          visit_counts << 1
           services << {
             id: "#{index + 1}_representative_vrp_s_#{vehicle_id}", # vehicle_id used to find the original service-vehicle assignment
             visits_number: 1,
@@ -404,13 +407,20 @@ module Interpreters
       #       depots from the list that "split" the depots into two groups and minimize the total
       #       distance between the selected depots. Then these two depots can be used as the
       #       depots for these two "fake" vehicles.
-      ::Models::Vrp.create({
+      representative_vrp = ::Models::Vrp.create({
         name: 'representative_vrp',
         points: points,
         vehicles: Array.new(2){ |i| { id: "v#{i}", router_mode: 'car' } },
         services: services,
         relations: relations
       }, false)
+
+      # To make sure that each point reflects the "weight" of all the points merged under this point
+      # Due to the fact that visits_number is available only with scheduling, we set the visits_number
+      # after the vrp is created.
+      visit_counts.each_with_index{ |visit, index| representative_vrp[:services][index].visits_number = visit }
+
+      representative_vrp
     end
 
     def self.create_representative_sub_vrp(split_solve_data)

@@ -38,10 +38,7 @@ module ValidateData
     check_matrices
     check_vehicles(periodic_heuristic)
     check_relations(periodic_heuristic)
-    # TODO : this should be replaced by schedule when max_split does not use visits_number > 1 without schedule anymore
-    # indeed, no configuration implies no schedule and there should be no visits_number > 1 in this case
-    # check_services(schedule)
-    check_services(configuration, schedule)
+    check_services(schedule)
 
     check_routes(periodic_heuristic)
     check_configuration(configuration, periodic_heuristic) if configuration
@@ -125,15 +122,13 @@ module ValidateData
     }
   end
 
-  def check_services(configuration, schedule)
-    @hash[:services].each{ |mission|
+  def check_services(schedule)
+    @hash[:services]&.each{ |mission|
       if (mission[:minimum_lapse] || 0) > (mission[:maximum_lapse] || 2**32)
         raise OptimizerWrapper::DiscordantProblemError.new('Minimum lapse can not be bigger than maximum lapse')
       end
 
-      # TODO : this should be replaced next line when max_split does not use visits_number > 1 without schedule anymore
-      # next if schedule && schedule[:range_indices] || mission[:visits_number].to_i <= 1
-      next if configuration.nil? || schedule && schedule[:range_indices] || mission[:visits_number].to_i <= 1
+      next if schedule && schedule[:range_indices] || mission[:visits_number].to_i <= 1
 
       raise OptimizerWrapper::DiscordantProblemError.new('There can not be more than one visit without schedule')
     }

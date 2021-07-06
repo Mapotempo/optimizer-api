@@ -19,6 +19,25 @@ require './test/test_helper'
 
 module TestHelper
   include Rack::Test::Methods
+  def wait_avancement_match(job_id, avancement_regexp, options)
+    puts "#{job_id} #{Time.now} waiting avancement to match '#{avancement_regexp}'"
+    last_response_body = nil
+    loop do
+      get "0.1/vrp/jobs/#{job_id}.json", options
+
+      assert_equal 200, last_response.status, last_response.body
+      last_response_body = JSON.parse(last_response.body)
+      assert_includes ['queued', 'working', 'completed'], last_response_body['job']['status']
+
+      puts "Empty response body: #{last_response_body}" if last_response_body.nil? || last_response_body['job'].nil?
+
+      break if avancement_regexp.match?(last_response_body['job']['avancement'])
+
+      sleep 0.1
+    end
+    puts "#{job_id} #{Time.now} got avancement '#{last_response_body['job']['avancement']}' to match #{avancement_regexp}"
+    last_response_body
+  end
 
   def wait_status(job_id, status, options)
     puts "#{job_id} #{Time.now} waiting #{status} status"
