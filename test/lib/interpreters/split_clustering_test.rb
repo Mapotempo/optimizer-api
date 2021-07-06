@@ -548,7 +548,7 @@ class SplitClusteringTest < Minitest::Test
       result = Marshal.load(File.binread('test/fixtures/max_split_poorly_populated_route_limit_result.bindump')) # rubocop: disable Security/MarshalLoad
       Interpreters::SplitClustering.remove_poor_routes(vrp, result)
 
-      assert_equal 0, result[:unassigned].size, 'remove_poor_routes should not remove any services from this result'
+      assert_equal 0, result.unassigned.size, 'remove_poor_routes should not remove any services from this result'
     end
 
     def test_max_split_functionality

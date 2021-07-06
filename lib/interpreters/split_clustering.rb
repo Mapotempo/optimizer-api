@@ -570,7 +570,6 @@ module Interpreters
                            vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start)
         route_duration = route.detail.total_time ||
                          (route.activities.last.timing.begin_time - route.activities.first.timing.begin_time)
-
         log "route #{route.vehicle.id} time: #{route_duration}/#{vehicle_worktime} percent: " \
             "#{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :info
 
