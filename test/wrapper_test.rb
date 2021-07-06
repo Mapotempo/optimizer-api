@@ -3080,6 +3080,11 @@ class WrapperTest < Minitest::Test
     assert vrp.vehicles.first[:rest_ids].none?
     assert_equal original_rests, vrp.vehicles.first[:simplified_rests]
     assert_equal original_rests.collect(&:id).sort, vrp.vehicles.first[:simplified_rest_ids].sort
+
+    problem[:vehicles].first[:timewindow] = { start: 0, end: 100 }
+    problem[:vehicles].first[:cost_late_multiplier] = 0.3
+    vrp = OptimizerWrapper.config[:services][:demo].simplify_constraints(TestHelper.create(problem))
+    refute vrp.vehicles.first.rests.none?, 'Should not have removed this rest because there is cost_late_multiplier'
   end
 
   def test_simplified_pause_returns_the_same_cost
