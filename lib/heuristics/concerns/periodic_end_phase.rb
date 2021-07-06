@@ -35,14 +35,14 @@ module PeriodicEndPhase
     end
   end
 
-  def days_respecting_lapse(id, vehicle_id)
+  def days_respecting_lapse(id, vehicle_routes)
     min_lapse = @services_data[id][:raw].minimum_lapse
     max_lapse = @services_data[id][:raw].maximum_lapse
     used_days = @services_data[id][:used_days]
 
-    return @candidate_routes[vehicle_id].keys if used_days.empty?
+    return vehicle_routes.keys if used_days.empty?
 
-    @candidate_routes[vehicle_id].keys.select{ |day|
+    vehicle_routes.keys.select{ |day|
       smaller_lapse_with_other_days = used_days.collect{ |used_day| (used_day - day).abs }.min
       (min_lapse.nil? || smaller_lapse_with_other_days >= min_lapse) &&
         (max_lapse.nil? || smaller_lapse_with_other_days <= max_lapse)
@@ -99,7 +99,7 @@ module PeriodicEndPhase
     until costs.empty?
       # select best visit to insert
       max_priority = costs.keys.collect{ |id| @services_data[id][:raw].priority + 1 }.max
-      best_cost = costs.min_by{ |id, info| ((@services_data[id][:raw].priority.to_f + 1) / max_priority) * (info[:cost][:additional_route_time] / @services_data[id][:raw].visits_number**2) }
+      best_cost = costs.min_by{ |id, info| ((@services_data[id][:raw].priority.to_f + 1) / max_priority) * (info[:additional_route_time] / @services_data[id][:raw].visits_number**2) }
 
       id = best_cost[0]
       day = best_cost[1][:day]
@@ -107,7 +107,7 @@ module PeriodicEndPhase
       log "It is interesting to add #{id} at day #{day} on #{vehicle_id}", level: :debug
 
       @ids_to_renumber |= [id]
-      insert_point_in_route(@candidate_routes[vehicle_id][day], best_cost[1][:cost])
+      insert_point_in_route(@candidate_routes[vehicle_id][day], best_cost[1])
       @output_tool&.add_single_visit(day, @services_data[id][:used_days], id, @services_data[id][:raw].visits_number)
 
       costs = update_costs(costs, best_cost)
@@ -121,13 +121,12 @@ module PeriodicEndPhase
     uninserted_set = @uninserted.select{ |_key, info| info[:original_id] == best_cost[0] }.keys
     @uninserted.delete(uninserted_set.first)
     if uninserted_set.size > 1
-      available_days = days_respecting_lapse(best_cost[0], best_cost[1][:vehicle])
+      available_days = days_respecting_lapse(best_cost[0], @candidate_routes[best_cost[1][:vehicle]])
 
-      day, cost = find_best_day_cost(available_days, @candidate_routes[best_cost[1][:vehicle]], best_cost[0])
+      cost = find_best_day_cost(@candidate_routes[best_cost[1][:vehicle]], best_cost[0], available_days)
 
       if cost
-        costs[best_cost[0]][:day] = day
-        costs[best_cost[0]][:cost] = cost
+        costs[best_cost[0]] = cost
       else
         costs.delete(best_cost[0])
       end
@@ -139,14 +138,10 @@ module PeriodicEndPhase
     costs.each{ |id, info|
       next if info[:day] != best_cost[1][:day] && info[:vehicle] != best_cost[1][:vehicle]
 
-      day, cost = find_best_cost(id, info[:vehicle])
+      cost = find_best_day_cost(@candidate_routes[info[:vehicle]], id)
 
       if cost
-        costs[id] = {
-          day: day,
-          vehicle: info[:vehicle],
-          cost: cost
-        }
+        costs[id] = cost
       else
         costs.delete(id)
       end
@@ -155,32 +150,19 @@ module PeriodicEndPhase
     costs
   end
 
-  def find_best_day_cost(available_days, vehicle_routes, id)
-    return [nil, nil] if available_days.empty?
+  def find_best_day_cost(vehicle_routes, id, available_days = nil)
+    available_days ||= days_respecting_lapse(id, vehicle_routes)
 
-    day = available_days[0]
-    if @same_point_day && @services_data[id][:group_capacity].all?{ |need, quantity| quantity <= vehicle_routes[day][:capacity_left][need] } ||
-       !@same_point_day && @services_data[id][:capacity].all?{ |need, quantity| quantity <= vehicle_routes[day][:capacity_left][need] }
-      cost = find_best_index(id, vehicle_routes[day])
-    end
+    return [nil, nil] unless available_days.any?
 
-    index = 1
+    index = 0
+    cost = nil
     while cost.nil? && index < available_days.size
-      day = available_days[index]
-
-      if @same_point_day && @services_data[id][:group_capacity].all?{ |need, quantity| quantity <= vehicle_routes[day][:capacity_left][need] } ||
-         !@same_point_day && @services_data[id][:capacity].all?{ |need, quantity| quantity <= vehicle_routes[day][:capacity_left][need] }
-        cost = find_best_index(id, vehicle_routes[day])
-      end
+      cost = find_best_index(id, vehicle_routes[available_days[index]], false)
       index += 1
     end
 
-    [day, cost]
-  end
-
-  def find_best_cost(id, vehicle_id)
-    available_days = days_respecting_lapse(id, vehicle_id)
-    find_best_day_cost(available_days, @candidate_routes[vehicle_id], id)
+    cost
   end
 
   def compute_first_costs
@@ -188,15 +170,8 @@ module PeriodicEndPhase
 
     @missing_visits.collect{ |vehicle, list|
       list.collect{ |service_id|
-        day, cost = find_best_cost(service_id, vehicle)
-
-        next if cost.nil?
-
-        costs[service_id] = {
-          day: day,
-          vehicle: vehicle,
-          cost: cost
-        }
+        cost = find_best_day_cost(@candidate_routes[vehicle], service_id)
+        costs[service_id] = cost if cost
       }
     }
 
@@ -308,7 +283,7 @@ module PeriodicEndPhase
             referent_route ||= route_data
             insertion_costs = compute_costs_for_route(route_data, remaining_ids)
             insertion_costs.each{ |cost|
-              cost[:vehicle] = vehicle
+              cost[:vehicle] = vehicle_id
               cost[:day] = day
             }
             insertion_costs
@@ -332,7 +307,7 @@ module PeriodicEndPhase
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
         @output_tool&.add_single_visit(point_to_add[:day], @services_data[point_to_add[:id]][:used_days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
         still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
-        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == to_plan[:service] }[0])
+        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == point_to_add[:id] }[0])
       end
     end
 
