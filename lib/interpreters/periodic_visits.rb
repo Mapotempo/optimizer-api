@@ -26,10 +26,9 @@ module Interpreters
 
       if vrp.schedule?
         have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
-        have_shipments_day_index = !vrp.shipments.empty? && vrp.shipments.any?{ |shipment| shipment.pickup.timewindows.any?(&:day_index) || shipment.delivery.timewindows.any?(&:day_index) }
         have_vehicles_day_index = vrp.vehicles.any?{ |vehicle| (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows ).any?(&:day_index) }
         have_rest_day_index = vrp.rests.any?{ |rest| rest.timewindows.any?(&:day_index) }
-        @have_day_index = have_services_day_index || have_shipments_day_index || have_vehicles_day_index || have_rest_day_index
+        @have_day_index = have_services_day_index || have_vehicles_day_index || have_rest_day_index
 
         @schedule_start = vrp.schedule_range_indices[:start]
         @schedule_end = vrp.schedule_range_indices[:end]
@@ -54,7 +53,6 @@ module Interpreters
       end
 
       vrp.services = generate_services(vrp)
-      vrp.shipments = generate_shipments(vrp)
 
       @periods.uniq!
       generate_relations_on_periodic_vehicles(vrp, vehicles_linking_relations)
@@ -92,31 +90,17 @@ module Interpreters
 
     def generate_relations(vrp)
       vrp.relations.collect{ |relation|
-        first_service = vrp.services.find{ |service| service.id == relation.linked_ids.first } ||
-                        vrp.shipments.find{ |shipment| ["#{shipment.id}pickup", "#{shipment.id}delivery"].include?(relation.linked_ids.first) }
-        relation_linked_ids = relation.linked_ids.select{ |mission_id|
-          vrp.services.one? { |service| service.id == mission_id } ||
-            vrp.shipments.one? { |shipment| ["#{shipment.id}pickup", "#{shipment.id}delivery"].include?(relation.linked_ids.first) }
-        }
-        related_missions = relation_linked_ids.collect{ |mission_id|
-          vrp.services.find{ |service| service.id == mission_id } ||
-            vrp.shipments.find{ |shipment|  ["#{shipment.id}pickup", "#{shipment.id}delivery"].include?(mission_id) }
-        }
-        next unless first_service && first_service.visits_number &&
-                    related_missions.all?{ |mission| mission.visits_number == first_service.visits_number }
+        related_missions = relation.linked_services
 
-        (1..(first_service.visits_number || 1)).collect{ |relation_index|
-          new_relation = Marshal.load(Marshal.dump(relation))
-          new_relation.linked_ids = relation_linked_ids.collect.with_index{ |mission_id, index|
-            additional_tag = if mission_id == "#{related_missions[index].id}pickup"
-              'pickup'
-            elsif mission_id == "#{related_missions[index].id}delivery"
-              'delivery'
-            else
-              ''
-            end
-            "#{related_missions[index].id}_#{relation_index}_#{first_service.visits_number || 1}#{additional_tag}"
+        visits_number = related_missions.first&.visits_number
+        next unless related_missions.any? && related_missions.all?{ |mission| mission.visits_number == visits_number }
+
+        (1..visits_number).collect{ |relation_index|
+          linked_ids = related_missions.collect{ |mission|
+            "#{mission.id}_#{relation_index}_#{mission.visits_number}"
           }
+          new_relation = Models::Relation.create(type: relation.type, linked_ids: linked_ids,
+                                                 lapse: relation.lapse, periodicity: relation.periodicity)
           new_relation
         }
       }.compact.flatten
@@ -185,32 +169,6 @@ module Interpreters
       }.flatten
     end
 
-    def generate_shipments(vrp)
-      vrp.shipments.collect{ |shipment|
-        # transform shipment data into periodic data
-        shipment.pickup.timewindows = generate_timewindows(shipment.pickup.timewindows)
-        shipment.delivery.timewindows = generate_timewindows(shipment.delivery.timewindows)
-
-        # generate one shipment per visit
-        # TODO : create model for visits
-        generate_relations_between_visits(vrp, shipment)
-        @periods << shipment.visits_number
-
-        (0..shipment.visits_number - 1).collect{ |visit_index|
-          next if shipment.unavailable_visit_indices.include?(visit_index)
-
-          new_shipment = duplicate_safe(
-            shipment,
-            id: "#{shipment.id}_#{visit_index + 1}_#{shipment.visits_number}",
-            visits_number: 1
-          )
-          new_shipment.skills += ["#{visit_index + 1}_f_#{shipment.visits_number}"] if !shipment.minimum_lapse && !shipment.maximum_lapse && shipment.visits_number > 1
-
-          new_shipment
-        }.compact
-      }.flatten
-    end
-
     def build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
       new_vehicle = duplicate_safe(
         vehicle,
@@ -224,9 +182,6 @@ module Interpreters
       vrp.rests += new_vehicle.rests
       vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |service|
         service.sticky_vehicles.insert(-1, new_vehicle)
-      }
-      vrp.shipments.select{ |shipment| shipment.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |shipment|
-        shipment.sticky_vehicles.insert(-1, new_vehicle)
       }
       new_vehicle
     end
@@ -418,7 +373,6 @@ module Interpreters
 
     def compute_possible_days(vrp)
       # for each of this service's visits, computes first and last possible day to be assigned
-      # TODO : this should also be computed for shipments. This will probably be done automatically when implementing visits model
       vrp.services.each{ |service|
         day = @schedule_start
         nb_services_seen = 0
@@ -524,8 +478,6 @@ module Interpreters
       # TODO : replace by implementing initialize_copy function for shallow copy + create model for visits
       if original.is_a?(Models::Service)
         Models::Service.new(get_original_values(original, options))
-      elsif original.is_a?(Models::Shipment)
-        Models::Shipment.new(get_original_values(original, options))
       elsif original.is_a?(Models::Vehicle)
         Models::Vehicle.new(get_original_values(original, options))
       end

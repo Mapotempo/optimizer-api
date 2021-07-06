@@ -557,5 +557,19 @@ module Models
       assert_equal 'Vehicle timewindows are infeasible',
                    error.message, 'Error message does not match'
     end
+
+    def test_pickup_timewindow_after_delivery_timewindow
+      problem = VRP.pud
+
+      problem[:shipments].first[:pickup][:timewindows] = [{ start: 6, end: 9}]
+      problem[:shipments].first[:delivery][:timewindows] = [{ start: 1, end: 5}]
+
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+      end
+      problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
+
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
+    end
   end
 end

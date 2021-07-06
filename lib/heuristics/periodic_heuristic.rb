@@ -46,7 +46,7 @@ module Wrappers
 
       @candidate_routes = {}
       @points_vehicles_and_days = {}
-      vrp.vehicles.group_by{ |vehicle| vehicle.id.split('_')[0..-2].join('_') }.each{ |vehicle_id, _set|
+      vrp.vehicles.group_by(&:original_id).each{ |vehicle_id, _set|
         @candidate_routes[vehicle_id] = {}
       }
 

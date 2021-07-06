@@ -126,6 +126,17 @@ module Models
       }
     end
 
+    def test_shipment_conversion_into_services
+      vrp = VRP.pud
+      generated_vrp = TestHelper.create(vrp)
+
+      refute_respond_to generated_vrp, :shipments
+      assert_equal 4, generated_vrp.services.size
+      assert_equal(
+        2, generated_vrp.relations.count{ |relation| relation.type == :shipment && relation.linked_services.size == 2 }
+      )
+    end
+
     def test_deduce_consistent_relations
       vrp = VRP.pud
 
@@ -136,11 +147,11 @@ module Models
           lapse: 3
         }]
 
-        generated_vrp = TestHelper.create(vrp)
-        assert_equal 1, generated_vrp.relations.size
+        generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
+        assert_equal 3, generated_vrp.relations.size
         assert_equal 2, generated_vrp.relations.first.linked_ids.size
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0delivery'
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_delivery'
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
       }
 
       vrp[:services] = [{
@@ -152,32 +163,32 @@ module Models
         linked_ids: ['service', 'shipment_1'],
         lapse: 3
       }]
-      generated_vrp = TestHelper.create(vrp)
+      generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
       assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
 
       vrp[:relations] = [{
         type: :same_route,
         linked_ids: ['service', 'shipment_0', 'shipment_1'],
         lapse: 3
       }]
-      generated_vrp = TestHelper.create(vrp)
+      generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
       assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0pickup'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
 
       %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
         vrp[:relations].first[:linked_ids] = ['service', 'shipment_1']
         assert_raises OptimizerWrapper::DiscordantProblemError do
-          TestHelper.create(vrp)
+          TestHelper.create(Oj.load(Oj.dump(vrp)))
         end
       }
 
       vrp[:relations].first[:linked_ids] = ['service']
       %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
-        TestHelper.create(vrp) # check no error provided
+        TestHelper.create(Oj.load(Oj.dump(vrp))) # check no error provided
       }
     end
 

@@ -31,8 +31,8 @@ module Interpreters
           (service_vrp[:vrp].resolution_vehicle_limit.nil? || service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit) &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r[:mission_ids].size }.sum > service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
           !service_vrp[:vrp].schedule? &&
-          service_vrp[:vrp].shipments.empty? && # TODO: check dicho with a P&D instance to remove this condition
-          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon }
+          service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } &&
+          service_vrp[:vrp].relations.empty?
         )
     end
 
@@ -44,7 +44,7 @@ module Interpreters
       if dichotomious_candidate?(service_vrp)
         vrp = service_vrp[:vrp]
         message = "dicho - level(#{service_vrp[:dicho_level]}) "\
-                  "activities: #{vrp.services.size + vrp.shipments.size * 2} "\
+                  "activities: #{vrp.services.size} "\
                   "vehicles (limit): #{vrp.vehicles.size}(#{vrp.resolution_vehicle_limit})"\
                   "duration [min, max]: [#{vrp.resolution_minimum_duration&.round},#{vrp.resolution_duration&.round}]"
         log message, level: :info
@@ -339,7 +339,7 @@ module Interpreters
           next if remaining_service_ids.size < result_loop[:unassigned].size # Initial routes can be refused... check unassigned size before take into account solution
 
           if vrp.resolution_vehicle_limit # correct the lefover vehicle limit count
-            leftover_vehicle_limit -= result_loop[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } } - used_vehicle_count
+            leftover_vehicle_limit -= result_loop[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } } - used_vehicle_count
           end
 
           remove_bad_skills(sub_service_vrp, result_loop)

@@ -804,7 +804,7 @@ class HeuristicTest < Minitest::Test
       assert_equal expected, result[:unassigned].size # automatically checked within define_process call
 
       vrp = TestHelper.create(VRP.pud)
-      vrp.shipments.first.visits_number = 10
+      vrp.relations.first.linked_services.each{ |s| s.visits_number = 10 }
       vrp.vehicles = []
       vrp.schedule_range_indices = { start: 0, end: 4 }
       expected = vrp.visits

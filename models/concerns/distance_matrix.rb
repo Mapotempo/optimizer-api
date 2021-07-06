@@ -93,10 +93,6 @@ module DistanceMatrix
         !activity.timewindows.empty? || activity&.late_multiplier != 0
       }
     } ||
-    shipments.find{ |shipment|
-      !shipment.pickup.timewindows.empty? || shipment.pickup.late_multiplier && shipment.pickup.late_multiplier != 0 ||
-      !shipment.delivery.timewindows.empty? || shipment.delivery.late_multiplier && shipment.delivery.late_multiplier != 0
-    } ||
     vehicles.find(&:need_matrix_time?)).nil?
   end
 

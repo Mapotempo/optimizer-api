@@ -120,7 +120,7 @@ module OptimizerWrapper
 
   def self.define_main_process(services_vrps, job = nil, &block)
     log "--> define_main_process #{services_vrps.size} VRPs", level: :info
-    log "activities: #{services_vrps.map{ |sv| sv[:vrp].services.size + sv[:vrp].shipments.size * 2 }}", level: :info
+    log "activities: #{services_vrps.map{ |sv| sv[:vrp].services.size}}", level: :info
     log "vehicles: #{services_vrps.map{ |sv| sv[:vrp].vehicles.size }}", level: :info
     log "resolution_vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].resolution_vehicle_limit }}", level: :info
     log "min_durations: #{services_vrps.map{ |sv| sv[:vrp].resolution_minimum_duration&.round }}", level: :info
@@ -157,7 +157,7 @@ module OptimizerWrapper
 
     check_result_consistency(expected_activity_count, several_results) if services_vrps.collect{ |sv| sv[:service] } != [:demo] # demo solver returns a fixed solution
 
-    nb_routes = several_results.sum{ |result| result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:original_shipment_id] } } }
+    nb_routes = several_results.sum{ |result| result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } } }
     nb_unassigned = several_results.sum{ |result| result[:unassigned].size }
     percent_unassigned = (100.0 * nb_unassigned / expected_activity_count).round(1)
 
@@ -174,8 +174,12 @@ module OptimizerWrapper
     vrp = service_vrp[:vrp]
     dicho_level = service_vrp[:dicho_level].to_i
     split_level = service_vrp[:split_level].to_i
-    log "--> define_process VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size}, vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.resolution_vehicle_limit}) with levels (dicho: #{dicho_level}, split: #{split_level})", level: :info
-    log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}", level: :info
+    shipment_size = vrp.relations.count{ |r| r.type == :shipment }
+    log "--> define_process VRP (service: #{vrp.services.size} including #{shipment_size} shipment relations, " \
+        "vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.resolution_vehicle_limit}) " \
+        "with levels (dicho: #{dicho_level}, split: #{split_level})", level: :info
+    log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}",
+        level: :info
 
     tic = Time.now
     expected_activity_count = vrp.visits
@@ -197,7 +201,10 @@ module OptimizerWrapper
     vrp = service_vrp[:vrp]
     service = service_vrp[:service]
     dicho_level = service_vrp[:dicho_level]
-    log "--> optim_wrap::solve VRP (service: #{vrp.services.size}, shipment: #{vrp.shipments.size} vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with levels (dicho: #{service_vrp[:dicho_level]}, split: #{service_vrp[:split_level].to_i})", level: :debug
+    shipment_size = vrp.relations.count{ |r| r.type == :shipment }
+    log "--> optim_wrap::solve VRP (service: #{vrp.services.size} including #{shipment_size} shipment relations, " \
+        "vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with levels " \
+        "(dicho: #{service_vrp[:dicho_level]}, split: #{service_vrp[:split_level].to_i})", level: :debug
 
     tic = Time.now
 
@@ -208,7 +215,7 @@ module OptimizerWrapper
     if !vrp.subtours.empty?
       multi_modal = Interpreters::MultiModal.new(vrp, service)
       optim_result = multi_modal.multimodal_routes
-    elsif vrp.vehicles.empty? || (vrp.services.empty? && vrp.shipments.empty?)
+    elsif vrp.vehicles.empty? || vrp.services.empty?
       optim_result = config[:services][service].empty_result(
         service.to_s, vrp, 'No vehicle available for this service', false)
     else
@@ -313,18 +320,13 @@ module OptimizerWrapper
   end
 
   def self.split_independent_vrp_by_skills(vrp)
-    mission_skills = (vrp.services.map(&:skills) + vrp.shipments.map(&:skills)).uniq
+    mission_skills = vrp.services.map(&:skills).uniq
     return [vrp] if mission_skills.include?([])
 
     # Generate Services data
     grouped_services = vrp.services.group_by(&:skills)
     skill_service_ids = Hash.new{ [] }
     grouped_services.each{ |skills, missions| skill_service_ids[skills] += missions.map(&:id) }
-
-    # Generate Shipments data
-    grouped_shipments = vrp.shipments.group_by(&:skills)
-    skill_shipment_ids = Hash.new{ [] }
-    grouped_shipments.each{ |skills, missions| skill_shipment_ids[skills] += missions.map(&:id) }
 
     # Generate Vehicles data
     ### Be careful in case the alternative skills are supported again !
@@ -370,21 +372,20 @@ module OptimizerWrapper
       vehicles_indices = skills_set.flat_map{ |skills| skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v } }.uniq
       vehicles_indices.each{ |index| unused_vehicles_indices.delete(index) }
       service_ids = skills_set.flat_map{ |skills| skill_service_ids[skills] }
-      shipment_ids = skills_set.flat_map{ |skills| skill_shipment_ids[skills] }
       service_vrp = {
         service: nil,
         vrp: vrp,
       }
 
-      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, vehicles_indices)
+      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids, vehicles_indices)
       sub_service_vrp[:vrp]
     }
 
-    total_size = independent_vrps.collect{ |s_s_v| (s_s_v.services.size + s_s_v.shipments.size) * [1, s_s_v.vehicles.size].min }.sum
+    total_size = independent_vrps.collect{ |s_s_v| s_s_v.services.size * [1, s_s_v.vehicles.size].min }.sum
     independent_vrps.each{ |sub_service_vrp|
       # If one sub_service_vrp has no vehicle or no service, duration can be zero.
       # We only split duration among sub_service_vrps that have at least one vehicle and one service.
-      this_sub_vrp_size = (sub_service_vrp.services.size + sub_service_vrp.shipments.size) * [1, sub_service_vrp.vehicles.size].min
+      this_sub_vrp_size = sub_service_vrp.services.size * [1, sub_service_vrp.vehicles.size].min
 
       split_ratio = this_sub_vrp_size / total_size.to_f
       sub_service_vrp.resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
@@ -405,13 +406,11 @@ module OptimizerWrapper
     vrp.vehicles.map.with_index{ |vehicle, v_i|
       vehicle_id = vehicle.id
       service_ids = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
-      shipment_ids = vrp.shipments.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
-
       service_vrp = {
         service: nil,
         vrp: vrp,
       }
-      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids + shipment_ids, [v_i])
+      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids, [v_i])
       split_ratio = 1.0 / vrp.vehicles.size
       sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
       sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
@@ -422,16 +421,13 @@ module OptimizerWrapper
 
   def self.split_independent_vrp(vrp)
     # Don't split vrp if
-    return [vrp] if (vrp.vehicles.size <= 1) ||
-                    (vrp.services.empty? && vrp.shipments.empty?) # there might be zero services or shipments (check together)
+    return [vrp] if (vrp.vehicles.size <= 1) || vrp.services.empty? # there might be zero services
 
-    if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 } && vrp.shipments.all?{ |s| s.sticky_vehicles.size == 1 }
+    if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }
       return split_independent_vrp_by_sticky_vehicle(vrp)
     end
-
-    if !vrp.subtours&.any? && # Cannot split if there is multimodal subtours
-       vrp.services.all?{ |s| s.sticky_vehicles.empty? } &&
-       vrp.shipments.all?{ |s| s.sticky_vehicles.empty? }
+    # Cannot split if there is multimodal subtours
+    if !vrp.subtours&.any? && vrp.services.all?{ |s| s.sticky_vehicles.empty? }
       return split_independent_vrp_by_skills(vrp)
     end
 
@@ -501,8 +497,8 @@ module OptimizerWrapper
 
   def self.check_result_consistency(expected_value, results)
     [results].flatten(1).each{ |result|
-      nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }
-      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:pickup_shipment_id] || unassigned[:delivery_shipment_id] }
+      nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] } }
+      nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] }
 
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
@@ -695,8 +691,8 @@ module OptimizerWrapper
 
     compute_route_total_dimensions(vrp, route, matrix)
 
-    return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? && route[:activities].size > 1 &&
-                  route[:activities].count{ |i| ['service', 'pickup', 'delivery'].include?(i[:type]) } > 0
+    return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? &&
+                  route[:activities].any?{ |act| act[:service_id] }
 
     details ||= route_details(vrp, route, vehicle)
     route[:geometry] = details&.map(&:last)
@@ -733,8 +729,8 @@ module OptimizerWrapper
     provide_visits_index(vrp, result[:unassigned])
     compute_result_total_dimensions_and_round_route_stats(result)
 
-    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.visits}, ship: #{vrp.shipments.size}) (#{(result[:unassigned].size.to_f / (vrp.visits + 2 * vrp.shipments.size) * 100).round(1)}%)"
-    used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] || a[:pickup_shipment_id] } }
+    log "result - unassigned rate: #{result[:unassigned].size} of (ser: #{vrp.visits} (#{(result[:unassigned].size.to_f / vrp.visits * 100).round(1)}%)"
+    used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } }
     log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicle_count}"
     log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
 
@@ -770,22 +766,6 @@ module OptimizerWrapper
         service.id
       }.compact
 
-      related_ids += vrp.shipments.collect{ |shipment|
-        shipments_ids = []
-        pickup_loc = shipment.pickup.point.location
-        delivery_loc = shipment.delivery.point.location
-
-        if zone.inside(pickup_loc[:lat], pickup_loc[:lon])
-          shipment.skills += [zone[:id]]
-          shipments_ids << shipment.id + 'pickup'
-        end
-        if zone.inside(delivery_loc[:lat], delivery_loc[:lon])
-          shipment.skills += [zone[:id]]
-          shipments_ids << shipment.id + 'delivery'
-        end
-        shipments_ids.uniq
-      }.compact
-
       # Remove zone allocation verification if we need to assign zone without vehicle affectation together
       next unless zone.allocations.size > 1 && related_ids.size > 1
 
@@ -797,9 +777,7 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    zip_condition = vrp.matrices.any? && vrp.shipments.empty? &&
-                    (cluster_threshold.to_f.positive? || force_cluster) &&
-                    !vrp.schedule?
+    zip_condition = vrp.matrices.any? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.schedule?
 
     if zip_condition
       if vrp.services.any?{ |s| s.activities.any? }

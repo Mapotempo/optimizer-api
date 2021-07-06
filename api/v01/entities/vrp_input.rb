@@ -379,7 +379,7 @@ module VrpMissions
     optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
     optional(:maximum_lapse, type: Float, desc: 'Maximum day lapse between two visits')
 
-    optional(:maximum_inroute_duration, type: Integer, desc: 'Maximum in route duration of this particular shipment (Must be feasible !)')
+    optional(:maximum_inroute_duration, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum in route duration of this particular shipment (Must be a positive integer)')
     optional(:sticky_vehicle_ids, type: Array[String], desc: 'Defined to which vehicle the shipment is assigned', coerce_with: ->(val) { val.is_a?(String) ? val&.split(/,/) : val })
     optional(:skills, type: Array[Symbol],
                       coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val.map(&:to_sym) },
