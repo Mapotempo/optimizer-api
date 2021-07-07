@@ -103,6 +103,7 @@ module Models
     has_many :capacities, class_name: 'Models::Capacity'
     # include ValidateTimewindows # <- This doesn't work
     has_many :rests, class_name: 'Models::Rest'
+    has_many :relations, class_name: 'Models::Relation'
 
     def self.create(hash)
       if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_days]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
