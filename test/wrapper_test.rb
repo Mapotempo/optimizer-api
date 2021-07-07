@@ -3265,4 +3265,15 @@ class WrapperTest < Minitest::Test
     unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
     assert_equal 1, (unfeasible_services.count{ |un| un[:reason] == 'Service timewindows are infeasible' })
   end
+
+  def test_multiple_reason
+    problem = VRP.lat_lon_periodic
+    problem[:services][5][:activity][:duration] = 28000
+    problem[:services][5][:quantities] = [{ unit_id: 'kg', value: 5000 }]
+    problem[:vehicles].first[:timewindow] = { start: 0, end: 24500 }
+    problem[:vehicles].first[:capacities] = [{ unit_id: 'kg', limit: 1100 }]
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
+    assert(result[:unassigned].collect{ |una| una[:reason].include?('&&') })
+  end
 end
