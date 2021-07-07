@@ -584,7 +584,7 @@ module Wrappers
       if @thread.value.success?
         if result == 'No solution found...'
           cost = Helper.fixnum_max
-          @previous_result = empty_result('ortools', vrp)
+          @previous_result = vrp.empty_solution(:ortools)
           @previous_result[:cost] = cost
         else
           @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)

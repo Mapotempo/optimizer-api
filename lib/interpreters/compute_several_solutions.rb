@@ -153,7 +153,9 @@ module Interpreters
       several_service_vrps = [service_vrps]
 
       (service_vrps.first[:vrp].resolution_several_solutions - 1).times{ |i|
-        several_service_vrps << variate_service_vrp(Marshal.load(Marshal.dump(service_vrp)), i)
+        several_service_vrps << service_vrps.map{ |service_vrp|
+          variate_service_vrp(Marshal.load(Marshal.dump(service_vrp)), i)
+        }
       }
 
       several_service_vrps

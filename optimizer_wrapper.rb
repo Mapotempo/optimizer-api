@@ -104,8 +104,7 @@ module OptimizerWrapper
             config[:services][services_vrps[0][:service]].solve_synchronous?(vrp)
           )
       # The job seems easy enough to perform it with the server
-      result = define_main_process(services_vrps, job_id)
-      result.size == 1 ? result.first : result
+      define_main_process(services_vrps, job_id)
     else
       # Delegate the job to a worker
       job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
@@ -192,7 +191,7 @@ module OptimizerWrapper
 
     log "<-- define_process levels (dicho: #{dicho_level}, split: #{split_level}) elapsed: #{(Time.now - tic).round(2)} sec", level: :info
     solution.use_deprecated_csv_headers = vrp.restitution_use_deprecated_csv_headers
-    solution
+    solution.parse_solution(vrp)
   end
 
   def self.solve(service_vrp, job = nil, block = nil)

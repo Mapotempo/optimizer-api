@@ -59,6 +59,7 @@ module Models
         route.fill_missing_route_data(vrp, matrix, options)
       }
       compute_result_total_dimensions_and_round_route_stats
+      self.cost_details = routes.map(&:cost_details).reduce(&:+)
 
       log "solution - unassigned rate: #{unassigned.size} of (ser: #{vrp.visits} (#{(unassigned.size.to_f / vrp.visits * 100).round(1)}%)"
       used_vehicle_count = routes.count{ |r| r.activities.any?{ |a| a.service_id } }
@@ -90,15 +91,16 @@ module Models
     end
 
     def +(other)
-      self.cost += other.cost
-      self.elapsed += other.elapsed
-      self.heuristic_synthesis.merge!(other.heuristic_synthesis)
-      self.solvers += other.solvers
-      self.routes += other.routes
-      self.unassigned += other.unassigned
-      self.cost_details += other.cost_details
-      self.details += other.details
-      self
+      solution = Solution.new({})
+      solution.cost = self.cost + other.cost
+      solution.elapsed = self.elapsed + other.elapsed
+      solution.heuristic_synthesis = self.heuristic_synthesis.merge(other.heuristic_synthesis)
+      solution.solvers = self.solvers + other.solvers
+      solution.routes = self.routes + other.routes
+      solution.unassigned = self.unassigned + other.unassigned
+      solution.cost_details = self.cost_details + other.cost_details
+      solution.details = self.details + other.details
+      solution
     end
   end
 end
