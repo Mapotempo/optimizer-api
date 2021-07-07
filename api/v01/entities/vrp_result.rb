@@ -150,6 +150,14 @@ module Api
       expose :job, using: VrpResultJob, documentation: { desc: 'The Job status' }
     end
 
+    class VrpSyncJob < Grape::Entity
+      expose :solutions, using: VrpResultSolution, documentation: { is_array: true, desc: 'The current best solution' }
+    end
+
+    class VrpAsyncJob < Grape::Entity
+      expose :job, using: VrpResultJob, documentation: { desc: 'The Job status' }
+    end
+
     class VrpJobsList < Grape::Entity
       expose :jobs, using: VrpResultJob, documentation: { is_array: true, desc: 'The Jobs' }
     end

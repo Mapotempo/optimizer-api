@@ -8,6 +8,8 @@
 - CSV headers adapts to the language provided through HTTP_ACCEPT_LANGUAGE header to facilitate import in Mapotempo-Web [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 - Return route day/date and visits' index in result [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 
+- Document return codes [#224](https://github.com/Mapotempo/optimizer-api/pull/224)
+
 ### Changed
 
 - Improve cases where a service has two visits in periodic heuristic: ensure that the second visit can be assigned to the right day [#227](https://github.com/Mapotempo/optimizer-api/pull/227)

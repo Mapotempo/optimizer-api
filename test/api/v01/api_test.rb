@@ -27,12 +27,12 @@ class Api::V01::ApiTest < Minitest::Test
   def test_should_not_access
     get '/0.1/vrp/submit'
     assert_equal 401, last_response.status
-    assert_equal '401 Unauthorized', JSON.parse(last_response.body)['error']
+    assert_equal 'Unauthorized', JSON.parse(last_response.body)['error']
   end
 
   def test_should_not_access_if_expired
     get '/0.1/vrp/submit', api_key: 'expired'
     assert_equal 402, last_response.status
-    assert_equal '402 Subscription expired', JSON.parse(last_response.body)['error']
+    assert_equal 'Subscription expired. Please contact support (support@mapotempo.com) or sales (sales@mapotempo.com) to extend your access period.', JSON.parse(last_response.body)['error']
   end
 end
