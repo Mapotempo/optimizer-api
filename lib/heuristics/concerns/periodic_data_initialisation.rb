@@ -55,22 +55,22 @@ module PeriodicDataInitialization
     routes.sort_by(&:day_index).each{ |defined_route|
       associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.day_index.to_i]
       defined_route.mission_ids.each{ |id|
-        next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
+        next if !@services_data.key?(id) # id has been removed when detecting unfeasible services in wrapper
 
         best_index = find_best_index(id, associated_route, false) if associated_route
         considered_ids << id
         if best_index
-          insert_point_in_route(associated_route, best_index, false)
+          insert_point_in_route(associated_route, best_index, false, considered_ids.count(id))
 
           # unlock corresponding services
-          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_id] }
+          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |un_id, _v_nb, _r| un_id }
           @to_plan_service_ids += services_to_add
           @unlocked += services_to_add
         else
-          @uninserted["#{id}_#{considered_ids.count(id)}_#{@services_data[id][:raw].visits_number}"] = {
-            original_id: id,
-            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.day_index}) : already #{associated_route ? associated_route[:stops].size : 0} elements in route"
-          }
+          nb_elements = associated_route ? associated_route[:stops].size : 0
+          @uninserted << [id, considered_ids.count(id),
+                          "Can not add this service to route (vehicle #{defined_route.vehicle_id}," \
+                          "day #{defined_route.day_index}) : already #{nb_elements} elements in route"]
         end
 
         @candidate_services_ids.delete(id)
@@ -83,15 +83,23 @@ module PeriodicDataInitialization
       plan_routes_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
     }
 
+    # some considered_ids may have been assigned to no route
+    # we should reject them all, because constraint on this service is not feasible
+    considered_ids.each{ |id|
+      next if @services_data[id][:used_days].any?
+
+      @uninserted.delete_if{ |u| u[0] == id }
+      reject_all_visits(id, @services_data[id][:raw].visits_number,
+                        'At least one of this service visits could not be assigned to provided route.' \
+                        'Assigning this service might create unconsistency.')
+    }
+
+
     # TODO : try to affect missing visits with add_missing visits functions
 
-    @uninserted.group_by{ |_k, v| v[:original_id] }.each{ |id, set|
-      (set.size + 1..@services_data[id][:raw].visits_number).each{ |visit|
-        @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
-          original_id: id,
-          reason: 'Routes provided do not allow to assign this visit because previous visit could not be planned in specified route'
-        }
-      }
+    @uninserted.each{ |uninserted_info|
+      uninserted_info[2] = 'Routes provided do not allow to assign this visit because' \
+                           'previous visit could not be planned in specified route'
     }
   end
 
@@ -141,7 +149,9 @@ module PeriodicDataInitialization
         points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
         tws_sets: service.activity ? [service.activity.timewindows] : service.activities.collect(&:timewindows),
         used_days: [],
+        already_tested_days: [],
         used_vehicles: [],
+        assigned_visits: [],
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
         positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),
@@ -204,7 +214,11 @@ module PeriodicDataInitialization
     }
 
     @indices.each_key{ |point_id|
-      @points_vehicles_and_days[point_id] = { vehicles: [], days: [], maximum_visits_number: 0 }
+      @assignment_details[point_id] = {
+        vehicles: [],         # vehicles used to assign this point_id
+        days: [],             # days used to assign this point_id
+        ids_visits_number: [] # list of ids at this point that are already assignedn with their visits_number
+      }
     }
   end
 

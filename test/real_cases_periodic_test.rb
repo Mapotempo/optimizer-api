@@ -122,6 +122,7 @@ class HeuristicTest < Minitest::Test
     def test_minimum_stop_in_route
       vrp = TestHelper.load_vrps(self, fixture_file: 'performance_13vl')[25]
       vrp.resolution_allow_partial_assignment = true
+      vrp.resolution_repetition = 1
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result[:routes].any?{ |r| r[:activities].size - 2 < 5 },
              'We expect at least one route with less than 5 services, this test is useless otherwise'
@@ -157,7 +158,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of periodic algorithm performance
       assert_equal expected, seen, 'Do not have the expected number of total visits'
-      assert_equal 279, unassigned_visits.sum, 'Do not have the expected number of unassigned visits'
+      assert_equal 267, unassigned_visits.sum, 'Do not have the expected number of unassigned visits'
     end
 
     def test_fill_days_and_post_processing
