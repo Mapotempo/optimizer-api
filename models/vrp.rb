@@ -189,7 +189,6 @@ module Models
       self.vehicles.flat_map{ |vehicle| vehicle.rests.flat_map(&:route_activity) }
     end
 
-
     def self.convert_shipments_to_services(hash)
       hash[:services] ||= []
       hash[:relations] ||= []

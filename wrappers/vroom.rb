@@ -87,7 +87,7 @@ module Wrappers
 
     def solve(vrp, job = nil, _thread_proc = nil)
       if vrp.vehicles.empty? || vrp.points.empty? || vrp.services.empty?
-        return empty_result('vroom', vrp)
+        return vrp.empty_solution(:vroom)
       end
 
       rest_equivalence(vrp)

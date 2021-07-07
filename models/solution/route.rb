@@ -68,7 +68,7 @@ module Models
                          activities.any?(&:service_id)
 
       route_data ||= route_details(vrp)
-      geometry = route_data&.map(&:last)
+      self.geometry = route_data&.map(&:last)
     end
 
     def compute_route_total_dimensions(matrix)
