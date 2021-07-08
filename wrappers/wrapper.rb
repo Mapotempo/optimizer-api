@@ -941,8 +941,6 @@ module Wrappers
             vehicle.timewindow.end -= rest.duration if vehicle.timewindow&.end
           }
 
-          vehicle[:simplified_rest_ids] = vehicle[:rest_ids].dup
-          vehicle[:rest_ids] = []
           vehicle[:simplified_rests] = vehicle.rests.dup
           vehicle.rests = []
         }
@@ -952,11 +950,9 @@ module Wrappers
       when :rewind
         # take the modifications back in case the vehicle is moved to another sub-problem
         vrp.vehicles&.each{ |vehicle|
-          next unless vehicle[:simplified_rest_ids]&.any?
+          next unless vehicle[:simplified_rests]&.any?
 
-          vehicle[:rest_ids].concat vehicle[:simplified_rest_ids]
-          vehicle[:simplified_rest_ids] = nil
-          vehicle.rests.concat vehicle[:simplified_rests]
+          vehicle.rests += vehicle[:simplified_rests]
           vehicle[:simplified_rests] = nil
 
           vehicle.rests.each{ |rest|
@@ -966,14 +962,14 @@ module Wrappers
         }
 
         if vrp[:simplified_rests]
-          vrp.rests.concat vrp[:simplified_rests]
+          vrp.rests += vrp[:simplified_rests]
           vrp[:simplified_rests] = nil
         end
       when :patch_result
         # correct the result with respect to simplifications
         pause_and_depot = %w[depot rest].freeze
         vrp.vehicles&.each{ |vehicle|
-          next unless vehicle[:simplified_rest_ids]&.any?
+          next unless vehicle[:simplified_rests]&.any?
 
           route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
           no_cost = route[:activities].none?{ |a| pause_and_depot.exclude?(a[:type]) }

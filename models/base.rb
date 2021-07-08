@@ -52,68 +52,49 @@ module Models
     def self.has_many(name, options = {})
       super
 
+      # respect English spelling rules: vehicles -> vehicle_ids | capacities -> capacity_ids
+      ids_function_name =
+        if !(/^[^aeiou]ies/ =~ name[-4..-1].downcase)
+          "#{name[0..-2]}_ids".to_sym
+        else
+          "#{name[0..-4]}y_ids".to_sym
+        end
+
       define_method(name) do
         self[name] ||= []
       end
 
       define_method("#{name}=") do |vals|
+        c = class_from_string(options[:class_name])
         self[name] = vals&.collect{ |val|
-          c = class_from_string(options[:class_name])
           if val.is_a?(c)
             val
           else
             c.create(val) if !val.empty?
           end
         }&.compact || []
+        self[ids_function_name] = self[name]&.map(&:id) if c.module_parent == Models
+        self[name]
       end
 
-      define_method("#{name}+=") do |vals|
-        self[name] = [] if !self[name]
-        self[name] += vals&.collect{ |val|
+      # Array and other objects that are not based on Models::Base class cannot have id methods
+      if options[:class_name]&.start_with? 'Models::'
+        define_method(ids_function_name) do
+          self[ids_function_name] ||= self[name]&.map(&:id) || []
+        end
+
+        define_method("#{ids_function_name}=") do |vals|
           c = class_from_string(options[:class_name])
-          if val.is_a?(c)
-            val
-          else
-            c.create(val) if !val.empty?
-          end
-        }&.compact || []
-      end
-
-      define_method("#{name[0..-2]}_ids=") do |vals|
-        c = class_from_string(options[:class_name])
-        self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
-      end
-
-      define_method("#{name[0..-2]}_ids+=") do |vals|
-        c = class_from_string(options[:class_name])
-        if self[name]
-          self[name] += vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
-        else
-          self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
-        end
-      end
-
-      define_method("#{name[0..-4]}y_ids=") do |vals|
-        c = class_from_string(options[:class_name])
-        if self[name]
-          self[name] += vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
-        else
-          self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
-        end
-      end
-
-      define_method("#{name[0..-4]}y_ids+=") do |vals|
-        c = class_from_string(options[:class_name])
-        if self[name]
-          self[name] += vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
-        else
-          self[name] = vals && vals.split(',').collect{ |val_id| c.find(val_id) }.flatten.compact
+          self[name] = vals && vals.split(',').flat_map{ |val_id| c.find(val_id) }
+          self[ids_function_name] = self[name]&.map(&:id)
         end
       end
     end
 
     def self.belongs_to(name, options = {})
       super
+
+      id_function_name = "#{name}_id".to_sym
 
       define_method(name) do
         self[name]
@@ -122,15 +103,21 @@ module Models
       define_method("#{name}=") do |val|
         c = class_from_string(options[:class_name])
         self[name] = val && (val.is_a?(Hash) ? c.create(val) : val)
+        self[id_function_name] = self[name]&.id if c.module_parent == Models
+        self[name]
       end
 
-      define_method("#{name}_id") do
-        self[name]&.id
-      end
+      # Array and other objects that are not based on Models::Base class cannot have id methods
+      if options[:class_name]&.start_with? 'Models::'
+        define_method(id_function_name) do
+          self[id_function_name] ||= self[name]&.id
+        end
 
-      define_method("#{name}_id=") do |val_id|
-        c = class_from_string(options[:class_name])
-        self[name] = val_id && c.find(val_id)
+        define_method("#{id_function_name}=") do |val_id|
+          c = class_from_string(options[:class_name])
+          self[name] = val_id && c.find(val_id)
+          self[id_function_name] = self[name]&.id
+        end
       end
     end
 

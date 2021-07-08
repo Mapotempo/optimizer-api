@@ -3076,7 +3076,7 @@ class WrapperTest < Minitest::Test
     assert vrp.vehicles.first.rests.none?, 'Simplification should have removed this rest'
     assert vrp.vehicles.first[:rest_ids].none?
     assert_equal original_rests, vrp.vehicles.first[:simplified_rests]
-    assert_equal original_rests.collect(&:id).sort, vrp.vehicles.first[:simplified_rest_ids].sort
+    assert_equal original_rests.collect(&:id).sort, vrp.vehicles.first[:simplified_rests].map(&:id).sort
 
     problem[:vehicles].first[:timewindow] = { start: 0, end: 100 }
     problem[:vehicles].first[:cost_late_multiplier] = 0.3
