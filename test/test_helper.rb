@@ -161,8 +161,10 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       else
         OptimizerWrapper.router.stub(:matrix, lambda { |url, mode, dimensions, row, column, options|
           if ENV['TEST_DUMP_VRP'] == 'true'
+            WebMock.enable_net_connect!
             matrices =
               OptimizerWrapper.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+            WebMock.disable_net_connect!
             write_in_dump <<
               { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }
             matrices
@@ -171,8 +173,8 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
               request[:mode] == mode && request[:dimensions] == dimensions &&
                 request[:options] == options &&
                 # Oj rounds values :
-                request[:row] == row.collect{ |r| r.collect{ |v| v.round(6) } } &&
-                request[:column] == column.collect{ |c| c.collect{ |v| v.round(6) } }
+                request[:row].collect{ |r| r.collect{ |v| v.round(6) } } == row.collect{ |r| r.collect{ |v| v.round(6) } } &&
+                request[:column].collect{ |c| c.collect{ |v| v.round(6) } } == column.collect{ |c| c.collect{ |v| v.round(6) } }
             }
             raise 'Could not find matrix in the dump' unless corresponding_data
 
