@@ -742,6 +742,30 @@ module Wrappers
       unfeasible
     end
 
+    def detect_scheduling_unfeasible_services(vrp)
+      unfeasible = []
+
+      vrp.services.each{ |service|
+        is_unassigned = false
+
+        unless vrp.can_affect_all_visits?(service)
+          add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
+          is_unassigned = true
+        end
+
+        next if service.first_possible_days.uniq.size == service.visits_number &&
+                service.last_possible_days.uniq.size == service.visits_number &&
+                service.visits_number.times.all?{ |v_i|
+                  service.first_possible_days[v_i] <= service.last_possible_days[v_i]
+                } || is_unassigned
+
+        add_unassigned(unfeasible, vrp, service,
+                       'Provided constraints do not allow to find a range of dates for all this service\'s visits')
+      }
+
+      unfeasible
+    end
+
     def check_distances(vrp, unfeasible)
       unfeasible = check(vrp, :time, unfeasible)
       unfeasible = check(vrp, :distance, unfeasible)

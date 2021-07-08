@@ -134,7 +134,7 @@ class HeuristicTest < Minitest::Test
       assert result[:routes].all?{ |r| (r[:activities].size - 2).zero? || r[:activities].size - 2 >= 5 },
              'Expecting no route with less than 5 stops unless it is an empty route'
       assert_operator should_remain_assigned, :<=, (result[:routes].sum{ |r| r[:activities].size - 2 })
-      assert_equal 19, result[:unassigned].size
+      assert_equal 12, result[:unassigned].size
 
       all_ids = (result[:routes].flat_map{ |route| route[:activities].collect{ |stop| stop[:service_id] } }.compact +
                 result[:unassigned].collect{ |un| un[:service_id] }).uniq

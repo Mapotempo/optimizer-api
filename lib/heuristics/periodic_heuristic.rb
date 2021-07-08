@@ -208,6 +208,11 @@ module Wrappers
 
     private
 
+    def day_in_possible_interval(id, day, visit_number)
+      day.between?(@services_data[id][:raw].first_possible_days[visit_number - 1],
+                   @services_data[id][:raw].last_possible_days[visit_number - 1])
+    end
+
     def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
       if @allow_partial_assignment
         @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
@@ -515,7 +520,7 @@ module Wrappers
       update_route(new_route, 0, solver_route.first[:begin_time])
     end
 
-    def compute_costs_for_route(route_data, set = nil)
+    def compute_costs_for_route(route_data, set = nil, consider_as_first_visit = true)
       ### for each remaining service to assign, computes the cost of assigning it to [route_data] ###
       unless set
         set = @to_plan_service_ids
@@ -527,7 +532,7 @@ module Wrappers
         next if @services_data[service_id][:used_days] &&
                 !days_respecting_lapse(service_id, @candidate_routes[route_data[:vehicle_original_id]]).include?(day)
 
-        find_best_index(service_id, route_data)
+        find_best_index(service_id, route_data, consider_as_first_visit)
       }.compact
     end
 
@@ -856,8 +861,13 @@ module Wrappers
       }.compact.min_by{ |cost| cost[:back_to_depot] }
     end
 
-    def compatible_days(service_id, day)
-      !@services_data[service_id][:raw].unavailable_days.include?(day)
+    def compatible_days(service_id, day, first_visit)
+      !@services_data[service_id][:raw].unavailable_days.include?(day) &&
+      # TODO : check for every visit but this may be costly
+      # we need to know which visit number we are inserting
+      # For now this is enough because user can only provide this data for first visit,
+      # unless we call end phase
+        (!first_visit || day_in_possible_interval(service_id, day, 1))
     end
 
     def compatible_vehicle(service_id, route_data)
@@ -897,7 +907,7 @@ module Wrappers
       vehicle_id = route_data[:vehicle_original_id]
       day = route_data[:day]
 
-      compatible_days(service_id, day) &&
+      compatible_days(service_id, day, first_visit) &&
         compatible_vehicle(service_id, route_data) &&
         service_does_not_violate_capacity(service_id, route_data, first_visit) &&
         (!first_visit ||

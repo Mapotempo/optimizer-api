@@ -497,7 +497,7 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/reaffecting_without_allow_partial_assignment_routes.bindump'))) # rubocop: disable Security/MarshalLoad
 
       sequences = s.send(:deduce_sequences, 'service_2', 3, [0, 1, 2, 4, 5, 6])
-      assert_equal [[0, 2, 4], [0, 2, 5], [1, 4, 6], [2, 4, 6], []], sequences
+      assert_equal [[0, 2, 4], [0, 2, 5], [1, 4, 6], [2, 4, 6]], sequences
       s.send(:reaffect, [['service_2', 3]])
       new_routes = s.instance_variable_get(:@candidate_routes)
       # [1, 4, 6] is the only combination such that every day is available for service_2,
@@ -533,7 +533,9 @@ class HeuristicTest < Minitest::Test
 
         periodic = Interpreters::PeriodicVisits.new(vrp)
         periodic.send(:compute_possible_days, vrp)
-        assert_equal 0, vrp.services.first.last_possible_days.first, "There are #{visits_number} working days, hence a service with #{visits_number} visits can only start at day 0"
+        assert_equal 14 - visits_number, vrp.services.first.last_possible_days.first,
+                     "There are 14 working days, hence a service with #{visits_number}"\
+                     " visits should start before day #{13 - visits_number + 1}"
       }
     end
 

@@ -197,6 +197,17 @@ module OptimizerWrapper
     result
   end
 
+  def self.remove_infeasible_services(vrp, sub_unfeasible_services)
+    services_to_reinject = []
+    sub_unfeasible_services.each{ |una_service|
+      index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+      if index
+        services_to_reinject << vrp.services.slice!(index)
+      end
+    }
+    services_to_reinject
+  end
+
   def self.solve(service_vrp, job = nil, block = nil)
     vrp = service_vrp[:vrp]
     service = service_vrp[:service]
@@ -227,17 +238,13 @@ module OptimizerWrapper
       sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
       vrp.clean_according_to(sub_unfeasible_services)
 
-      # Remove infeasible services
-      sub_unfeasible_services.each{ |una_service|
-        index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
-        if index
-          services_to_reinject << vrp.services.slice!(index)
-        end
-      }
+      services_to_reinject += remove_infeasible_services(vrp, sub_unfeasible_services)
 
       # TODO: refactor with dedicated class
       if vrp.schedule?
         periodic = Interpreters::PeriodicVisits.new(vrp)
+        unfeasible_services += config[:services][service].detect_scheduling_unfeasible_services(vrp)
+        services_to_reinject += remove_infeasible_services(vrp, unfeasible_services)
         vrp = periodic.expand(vrp, job, &block)
         optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
       end
@@ -503,17 +510,17 @@ module OptimizerWrapper
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
         log 'Wrong number of visits returned in result', level: :warn
-        raise RuntimeError, 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
+        raise 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
       end
     }
   end
 
   def self.adjust_vehicles_duration(vrp)
-      vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
-        v.rests.each{ |r|
-          v.duration += r.duration
-        }
+    vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
+      v.rests.each{ |r|
+        v.duration += r.duration
       }
+    }
   end
 
   def self.round_route_stats(route)

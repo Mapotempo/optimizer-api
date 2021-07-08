@@ -344,6 +344,7 @@ module Models
       self.remove_unnecessary_relations(hash)
       self.generate_schedule_indices_from_date(hash)
       self.generate_linked_service_ids_for_relations(hash)
+      self.generate_first_last_possible_day_for_first_visit(hash)
     end
 
     def self.remove_unnecessary_units(hash)
@@ -445,10 +446,10 @@ module Models
     def self.detect_date_indices_inconsistency(hash)
       missions_and_vehicles = hash[:services] + hash[:vehicles]
       has_date = missions_and_vehicles.any?{ |m|
-        (m[:unavailable_date_ranges] || m[:unavailable_work_date])&.any?
+        (m[:unavailable_date_ranges] || m[:unavailable_work_date])&.any? || m[:last_performed_visit_date]
       }
       has_index = missions_and_vehicles.any?{ |m|
-        (m[:unavailable_index_ranges] || m[:unavailable_work_day_indices])&.any?
+        (m[:unavailable_index_ranges] || m[:unavailable_work_day_indices])&.any? || m[:last_performed_visit_day_index]
       }
       if (hash[:configuration][:schedule][:range_indices] && has_date) ||
          (hash[:configuration][:schedule][:range_date] && has_index)
@@ -484,6 +485,13 @@ module Models
       hash[:vehicles].each{ |v| deduce_unavailable_days(hash, v, start_index, end_index, :vehicle) }
       hash[:services].each{ |element|
         deduce_unavailable_days(hash, element, start_index, end_index, :visit)
+        next unless element[:last_performed_visit_date]
+
+        element[:last_performed_visit_day_index] =
+          start_index -
+          (hash[:configuration][:schedule][:range_date][:start].to_date - element[:last_performed_visit_date].to_date).to_i
+
+        element.delete(:last_performed_visit_date)
       }
       if hash[:configuration][:schedule]
         deduce_unavailable_days(hash, hash[:configuration][:schedule], start_index, end_index, :schedule)
@@ -535,6 +543,32 @@ module Models
         next unless relation[:linked_ids]&.any?
 
         relation[:linked_service_ids] = relation[:linked_ids].select{ |id| hash[:services]&.any?{ |s| s[:id] == id } }
+      }
+    end
+
+    def self.generate_first_last_possible_day_for_first_visit(hash)
+      [hash[:services], hash[:shipments]].compact.flatten.each{ |s|
+        next unless s[:last_performed_visit_day_index]
+
+        s[:first_possible_days] = [
+          if s[:minimum_lapse]
+            [hash[:configuration][:schedule][:range_indices][:start],
+             s[:last_performed_visit_day_index] + s[:minimum_lapse]].max
+          else
+            hash[:configuration][:schedule][:range_indices][:start]
+          end
+        ]
+
+        s[:last_possible_days] = [
+          if s[:maximum_lapse]
+            [hash[:configuration][:schedule][:range_indices][:end],
+             s[:last_performed_visit_day_index] + s[:maximum_lapse]].min
+          else
+            hash[:configuration][:schedule][:range_indices][:end]
+          end
+        ]
+
+        s.delete(:last_performed_visit_day_index)
       }
     end
 
