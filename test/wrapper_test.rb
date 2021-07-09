@@ -646,8 +646,9 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    vrp = TestHelper.create(problem)
     [:ortools, :vroom].compact.each{ |o|
+      # zip_cluser generates sub problems which register identical objects
+      vrp = TestHelper.create(problem)
       solution = OptimizerWrapper.solve(service: o, vrp: vrp)
       assert_equal size - 1 + 1, solution.routes[0].activities.size, "[#{o}] "
       services = solution.routes[0].activities.map(&:service_id)
