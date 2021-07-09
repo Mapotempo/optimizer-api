@@ -85,7 +85,7 @@ module Models
           dimensions.each{ |dimension|
             activity.timing.send("travel_#{dimension}=", matrix&.send(dimension)[previous_index][matrix_index])
             total[dimension] += activity.timing.send("travel_#{dimension}".to_sym).round
-            activity.timing.current_distance ||= total[dimension].round if dimension == :distance
+            activity.timing.current_distance = total[dimension].round if dimension == :distance
           }
         end
 

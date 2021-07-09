@@ -275,11 +275,9 @@ module Interpreters
         solutions.reduce(&:+)
       else # Stopping condition -- the problem is small enough
         # Finally generate the sub-vrp without hard-copy and solve it
-        result = split_solve_sub_vrp(service_vrp, job, &block)
-
-        transfer_unused_resources(ss_data, service_vrp[:vrp], result)
-
-        result
+        solution = split_solve_sub_vrp(service_vrp, job, &block)
+        transfer_unused_resources(ss_data, service_vrp[:vrp], solution)
+        solution
       end
     end
 
@@ -292,7 +290,8 @@ module Interpreters
 
       service_vrp[:vrp] = create_sub_vrp(ss_data)
 
-      OptimizerWrapper.define_process(service_vrp, job, &block)
+      solution = OptimizerWrapper.define_process(service_vrp, job, &block)
+      solution.parse_solution(service_vrp[:vrp])
     ensure
       log "<-- split_solve_sub_vrp lv: #{split_level}"
     end

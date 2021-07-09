@@ -178,10 +178,9 @@ module OptimizerWrapper
     solution ||= solve(service_vrp, job, block)
 
     check_solutions_consistency(expected_activity_count, [solution]) if service_vrp[:service] != :demo # demo solver returns a fixed solution
-
     log "<-- define_process levels (dicho: #{dicho_level}, split: #{split_level}) elapsed: #{(Time.now - tic).round(2)} sec", level: :info
-    solution.use_deprecated_csv_headers = vrp.restitution_use_deprecated_csv_headers
-    solution.parse_solution(vrp)
+    solution.configuration.deprecated_headers = vrp.restitution_use_deprecated_csv_headers
+    solution
   end
 
   def self.solve(service_vrp, job = nil, block = nil)
@@ -195,15 +194,16 @@ module OptimizerWrapper
 
     tic = Time.now
 
-    optim_result = nil
+    optim_solution = nil
 
     unfeasible_services = {}
 
     if !vrp.subtours.empty?
       multi_modal = Interpreters::MultiModal.new(vrp, service)
-      optim_result = multi_modal.multimodal_routes
+      optim_solution = multi_modal.multimodal_routes
     elsif vrp.vehicles.empty? || vrp.services.empty?
-      optim_result = vrp.empty_solution(service.to_s, 'No vehicle available for this service', false)
+      unassigned_with_reason = vrp.services.map{ |s| s.route_activity(reason: 'No vehicle available for this service') }
+      optim_solution = vrp.empty_solution(service.to_s, unassigned_with_reason, false)
     else
       unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
@@ -224,12 +224,12 @@ module OptimizerWrapper
       if vrp.schedule?
         periodic = Interpreters::PeriodicVisits.new(vrp)
         vrp = periodic.expand(vrp, job, &block)
-        optim_result = vrp.preprocessing_heuristic_result if vrp.periodic_heuristic?
+        optim_solution = vrp.preprocessing_heuristic_result if vrp.periodic_heuristic?
       end
 
       if vrp.resolution_solver && !vrp.periodic_heuristic?
         block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.preprocessing_cluster_threshold.to_f}) ", nil, nil, nil) if vrp.preprocessing_cluster_threshold.to_f.positive?
-        optim_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
+        optim_solution = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
           time_start = Time.now
 
           OptimizerWrapper.config[:services][service].simplify_constraints(cliqued_vrp)
@@ -245,14 +245,11 @@ module OptimizerWrapper
             proc{ |pids|
               next unless job
 
-              current_result = Result.get(job) || { pids: nil }
-              current_result[:configuration] = {
-                csv: cliqued_vrp.restitution_csv,
-                geometry: cliqued_vrp.restitution_geometry
-              }
-              current_result[:pids] = pids
-
-              Result.set(job, current_result)
+              current_solution = Result.get(job) || { pids: nil }
+              current_solution.configuration.csv = cliqued_vrp.restitution_csv
+              current_solution.configuration.geometry = cliqued_vrp.restitution_geometry
+              current_solution[:pids] = pids
+              Result.set(job, current_solution)
             }
           ) { |wrapper, avancement, total, _message, cost, _time, solution|
             solution =
@@ -260,14 +257,14 @@ module OptimizerWrapper
                 OptimizerWrapper.config[:services][service].patch_simplified_constraints_in_result(solution, cliqued_vrp)
               end
             block&.call(wrapper, avancement, total, 'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution) if dicho_level.nil? || dicho_level.zero?
+            solution
           }
-
           OptimizerWrapper.config[:services][service].patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_solution)
 
           if cliqued_solution.is_a?(Models::Solution)
             # cliqued_solution[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
             block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_solution.elapsed) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
-            cliqued_solution.parse_solution(cliqued_vrp)
+            cliqued_solution
           elsif cliqued_solution.status == :killed
             next
           elsif cliqued_solution.is_a?(String)
@@ -283,24 +280,24 @@ module OptimizerWrapper
       vrp.services += services_to_reinject
     end
 
-    if optim_result #Job might have been killed
-      Cleanse.cleanse(vrp, optim_result)
+    if optim_solution # Job might have been killed
+      Cleanse.cleanse(vrp, optim_solution)
+      optim_solution.name = vrp.name
+      optim_solution.configuration.csv = vrp.restitution_csv
+      optim_solution.configuration.geometry = vrp.restitution_geometry
 
-      optim_result[:name] = vrp.name
-      optim_result[:configuration] = {
-        csv: vrp.restitution_csv,
-        geometry: vrp.restitution_geometry
-      }
-      optim_result.unassigned = (optim_result.unassigned || []) + unfeasible_services.values
+      optim_solution.unassigned += unfeasible_services
+      optim_solution.parse_solution(vrp)
 
       if vrp.preprocessing_first_solution_strategy
-        optim_result[:heuristic_synthesis] = vrp.preprocessing_heuristic_synthesis
+        optim_solution.heuristic_synthesis = vrp.preprocessing_heuristic_synthesis
       end
+    else
+      optim_solution = vrp.empty_solution(service, unfeasible_services)
     end
 
     log "<-- optim_wrap::solve elapsed: #{(Time.now - tic).round(2)}sec", level: :debug
-
-    optim_result
+    optim_solution
   end
 
   def self.compute_independent_skills_sets(vrp, mission_skills, vehicle_skills)

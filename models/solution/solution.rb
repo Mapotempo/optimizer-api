@@ -20,24 +20,26 @@ require './models/solution/solution_details'
 
 module Models
   class Solution < Base
+    field :name
     field :status
     field :cost, default: 0
     field :elapsed, default: 0
-    field :heuristic_synthesis, default: {}
+    field :heuristic_synthesis, default: []
     field :iterations
     field :solvers, default: []
-    field :use_deprecated_csv_headers, default: false
 
     has_many :routes, class_name: 'Models::SolutionRoute'
     has_many :unassigned, class_name: 'Models::RouteActivity'
 
     belongs_to :cost_details, class_name: 'Models::CostDetails'
     belongs_to :details, class_name: 'Models::SolutionDetails'
+    belongs_to :configuration, class_name: 'Models::SolutionConfiguration'
 
     def initialize(options = {})
       super(options)
       self.details = Models::SolutionDetails.new({}) unless options.key? :details
       self.cost_details = Models::CostDetails.new({}) unless options.key? :cost_details
+      self.configuration = Models::SolutionConfiguration.new({}) unless options.key? :configuration
     end
 
     def as_json(options = {})
@@ -94,7 +96,7 @@ module Models
       solution = Solution.new({})
       solution.cost = self.cost + other.cost
       solution.elapsed = self.elapsed + other.elapsed
-      solution.heuristic_synthesis = self.heuristic_synthesis.merge(other.heuristic_synthesis)
+      solution.heuristic_synthesis = self.heuristic_synthesis + other.heuristic_synthesis
       solution.solvers = self.solvers + other.solvers
       solution.routes = self.routes + other.routes
       solution.unassigned = self.unassigned + other.unassigned

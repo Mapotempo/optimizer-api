@@ -148,11 +148,12 @@ module Models
       periodic.generate_vehicles(self)
     end
 
-    def empty_solution(solver, unassigned_reason = nil, already_expanded = true)
+    def empty_solution(solver, unassigned_with_reason = [], already_expanded = true)
       self.vehicles = expand_vehicles_for_consistent_empty_result if self.schedule? && !already_expanded
       solution = Models::Solution.new(
+        solvers: [solver],
         routes: self.vehicles.map{ |v| self.empty_route(v) },
-        unassigned: (unassigned_services(unassigned_reason) +
+        unassigned: (unassigned_visits(unassigned_with_reason) +
                      unassigned_rests)
       )
       solution.parse_solution(self)
@@ -176,13 +177,18 @@ module Models
       )
     end
 
-    def unassigned_services(unassigned_reason)
-      self.services.flat_map{ |service|
-        Array.new(service.visits_number) { |visit_index|
-          service_id = self.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id
-          service.route_activity(service_id: service_id, reason: unassigned_reason)
+    def unassigned_visits(unassigned_with_reason)
+      unassigned_hash = unassigned_with_reason.map{ |un| [un.id, un.reason] }.to_h
+      if self.schedule?
+        self.services.flat_map{ |service|
+          Array.new(service.visits_number) { |visit_index|
+            service_id = self.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id
+            service.route_activity(service_id: service_id, reason: unassigned_hash[service.id])
+          }
         }
-      }
+      else
+        self.services.map{ |service| service.route_activity(reason: unassigned_hash[service.id]) }
+      end
     end
 
     def unassigned_rests
@@ -729,7 +735,7 @@ module Models
 
       case type
       when :time
-        tsp = TSPHelper.create_tsp(self, vehicles.first)
+        tsp = TSPHelper.create_tsp(self, end_point: nil)
         solution = TSPHelper.solve(tsp)
         total_travel_time = solution.details.total_travel_time
 

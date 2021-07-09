@@ -380,8 +380,9 @@ module Wrappers
       # if no capacity limitation, would there be a way to assign this service
       # while respecting same_point_day constraints ?
       point_id = @services_data[service_id][:points_ids][0]
-      reason = "All this service's visits can not be assigned with other services at same location" unless exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
-
+      unless exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
+        reason = "All this service's visits can not be assigned with other services at same location"
+      end
       reason
     end
 
@@ -450,22 +451,22 @@ module Wrappers
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route_data[:stops])
           route_vrp.services = provide_group_tws(route_vrp.services, day) if @same_point_day || @relaxed_same_point_day # to have same data in ORtools and periodic. Customers should ensure all timewindows are the same for same points
 
-          result = OptimizerWrapper.solve(service: :ortools, vrp: route_vrp)
+          solution = OptimizerWrapper.solve(service: :ortools, vrp: route_vrp)
 
-          next if result.nil? || !result[:unassigned].empty?
+          next if solution.nil? || !solution.unassigned.empty?
 
           back_to_depot = route_data[:stops].last[:end] +
                           matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
           periodic_route_time = back_to_depot - route_data[:stops].first[:start]
-          solver_route_time = (result[:routes].first[:activities].last[:begin_time] -
-                              result[:routes].first[:activities].first[:begin_time]) # last activity is vehicle depot
+          solver_route_time = (solution.routes.first.activities.last.timing.begin_time -
+                              solution.routes.first.activities.first.timing.begin_time) # last activity is vehicle depot
 
           minimum_duration = @candidate_services_ids.flat_map{ |s| @services_data[s][:durations] }.min
           original_indices = route_data[:stops].collect{ |s| @indices[s[:id]] }
           next if periodic_route_time - solver_route_time < minimum_duration ||
-                  result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == original_indices # we did not change our points order
+                  solution.routes.first.activities.collect{ |act| @indices[act.service_id] }.compact == original_indices # we did not change our points order
 
-          route_data[:stops] = compute_route_from(route_data, result[:routes].first[:activities])
+          route_data[:stops] = compute_route_from(route_data, solution.routes.first.activities)
         }
       }
     end
@@ -550,7 +551,7 @@ module Wrappers
     def compute_route_from(new_route, solver_route)
       solver_order = solver_route.collect{ |s| s[:service_id] }.compact
       new_route[:stops].sort_by!{ |stop| solver_order.find_index(stop[:id]) }.collect{ |s| s[:id] }
-      update_route(new_route, 0, solver_route.first[:begin_time])
+      update_route(new_route, 0, solver_route.first.timing.begin_time)
     end
 
     def compute_costs_for_route(route_data, set = nil)
@@ -1214,7 +1215,7 @@ module Wrappers
                                       routes: solution_routes,
                                       unassigned: unassigned,
                                       elapsed: (Time.now - @starting_time) * 1000) # ms
-      solution.parse_solution(vrp, compute_dimensions: true)
+      solution.parse_solution(vrp)
       vrp.preprocessing_heuristic_result = solution
       routes
     end

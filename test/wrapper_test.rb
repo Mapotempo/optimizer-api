@@ -731,13 +731,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    original_stdout = $stdout
-    $stdout = StringIO.new('', 'w')
     solution = OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem))
-    traces = $stdout.string
-    $stdout = original_stdout
-    puts traces
-    assert_match(/> iter /, traces, "Missing /> iter / in:\n " + traces)
     assert_equal size + 1, solution.routes[0][:activities].size # always return activities for start/end
     points = solution.routes[0].activities.collect{ |a| a.service_id || a.detail.point_id || a.rest_id }
     services_size = problem[:services].size
@@ -1760,7 +1754,7 @@ class WrapperTest < Minitest::Test
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 1, (solutions[0].unassigned.count{ |un|
-      un.reason.include?('Service duration greater than any vehicle timewindow')
+      un.reason&.include?('Service duration greater than any vehicle timewindow')
     })
   end
 
@@ -3018,9 +3012,9 @@ class WrapperTest < Minitest::Test
   def test_consistency_between_current_and_total_route_distance
     vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert(solutions[0].routes.all?{ |route|
-      route.activities.last.timing.current_distance == route.detail.total_distance
-    })
+    solutions[0].routes.each{ |route|
+      assert_equal route.activities.last.timing.current_distance, route.detail.total_distance
+    }
   end
 
   def test_empty_result_when_no_vehicle
@@ -3234,13 +3228,14 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
 
     # solve WITH simplification
-    solution_w_simplification = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
+    solution_w_simplification =
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
     # check if all rests respect their TWs (duplicated below)
-    solution_w_simplification[:routes].each{ |route|
+    solution_w_simplification.routes.each{ |route|
       planned_rest = route.activities.find{ |a| a.type == :rest }
 
-      rest_id = vrp.vehicles.find{ |v| v[:id] == route.vehicle.id }[:rest_ids].first
-      rest = vrp.rests.find{ |r| r[:id] == rest_id }
+      rest_id = vrp.vehicles.find{ |v| v.id == route.vehicle.id }.rests.first.id
+      rest = vrp.rests.find{ |r| r.id == rest_id }
       assert rest, 'Simplification should put back the original rests'
 
       assert_operator planned_rest.timing.begin_time, :>=, rest.timewindows[0].start,
