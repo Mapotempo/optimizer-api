@@ -17,56 +17,56 @@
 #
 
 module Cleanse
-  def self.cleanse(vrp, result)
-    if result
-      cleanse_empties_fills(vrp, result)
-      # cleanse_empty_routes(result)
-    end
+  def self.cleanse(vrp, solution)
+    return unless solution
+
+    cleanse_empties_fills(vrp, solution)
+    # cleanse_empty_routes(result)
   end
 
-  def self.same_position(vrp, previous, current)
-    previous.matrix_index && current.matrix_index && (vrp.matrices.first[:time].nil? || vrp.matrices.first[:time] && vrp.matrices.first[:time][previous.matrix_index][current.matrix_index] == 0) &&
-      (vrp.matrices.first[:distance].nil? || vrp.matrices.first[:distance] && vrp.matrices.first[:distance][previous.matrix_index][current.matrix_index] == 0) ||
-      previous.location && current.location && previous.location.lat == current.location.lat && previous.location.lon == current.location.lon
+  def self.same_position(vrp, current)
+    current.timing.travel_time&.zero? || current.timing.travel_distance&.zero?
   end
 
   def self.same_empty_units(capacities, previous, current)
     if previous && current
       if previous
-        previous_empty_units = previous.quantities.collect{ |quantity|
-          quantity.unit.id if quantity.empty
+        previous_empty_units = previous.loads.map{ |l|
+          l.quantity.unit.id if l.quantity.empty
         }.compact
       end
       if current
-        useful_units = (current.quantities.collect{ |quantity|
-          quantity.unit.id
+        useful_units = (current.loads.map{ |l|
+          l.quantity.unit.id
         }.compact & capacities)
 
-        current_empty_units = current.quantities.collect{ |quantity|
-          quantity.unit.id if quantity.empty
+        current_empty_units = current.loads.map{ |l|
+          l.quantity.unit.id if l.quantity.empty
         }.compact
       end
-      !previous_empty_units.empty? && !current_empty_units.empty? && (useful_units & previous_empty_units & current_empty_units == useful_units)
+      !previous_empty_units.empty? && !current_empty_units.empty? &&
+        (useful_units & previous_empty_units & current_empty_units == useful_units)
     end
   end
 
   def self.same_fill_units(capacities, previous, current)
     if previous && current
       if previous
-        previous_fill_units = previous.load.quantities.collect{ |quantity|
-          quantity.unit.id if quantity.fill
+        previous_fill_units = previous.loads.map{ |l|
+          l.quantity.unit.id if l.quantity.fill
         }.compact
       end
       if current
-        useful_units = (current.load.quantities.collect{ |quantity|
-          quantity.unit.id
+        useful_units = (current.loads.map{ |l|
+          l.quantity.unit.id
         }.compact & capacities)
 
-        current_fill_units = current.load.quantities.collect{ |quantity|
-          quantity.unit.id if quantity.fill
+        current_fill_units = current.loads.map{ |l|
+          l.quantity.unit.id if l.quantity.fill
         }.compact
       end
-      !previous_fill_units.empty? && !current_fill_units.empty? && (useful_units & previous_fill_units & current_fill_units == useful_units)
+      !previous_fill_units.empty? && !current_fill_units.empty? &&
+        (useful_units & previous_fill_units & current_fill_units == useful_units)
     end
   end
 
@@ -76,51 +76,35 @@ module Cleanse
     solution.routes.each{ |route|
       vehicle = route.vehicle
       capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
-      previous = nil
-      previous_point = nil
-      current_service = nil
-      current_point = nil
+      previous_activity = nil
 
-      route.activities.delete_if{ |activity|
-        current_point = activity.detail.point if service_types.include? (activity.type)
+      route.activities.delete_if{ |r_activity|
+        next unless service_types.include?(r_activity.type)
 
-        next unless current_point
-
-        if previous && current_service && same_position(vrp, previous_point, current_point) && same_empty_units(capacities_units, previous, current_service) &&
-           !same_fill_units(capacities_units, previous, current_service)
-          add_unnassigned(solution[:unassigned], current_service, 'Duplicate empty service.')
+        if previous_activity && r_activity && same_position(vrp, r_activity) &&
+           same_empty_units(capacities_units, previous_activity, r_activity) &&
+           !same_fill_units(capacities_units, previous_activity, r_activity)
+          add_unnassigned(solution.unassigned, r_activity, 'Duplicate empty service.')
           true
-        elsif previous && current_service && same_position(vrp, previous_point, current_point) && same_fill_units(capacities_units, previous, current_service) &&
-              !same_empty_units(capacities_units, previous, current_service)
-          add_unnassigned(solution[:unassigned], current_service, 'Duplicate fill service.')
+        elsif previous_activity && r_activity && same_position(vrp, r_activity) &&
+              same_fill_units(capacities_units, previous_activity, r_activity) &&
+              !same_empty_units(capacities_units, previous_activity, r_activity)
+          add_unnassigned(solution.unassigned, r_activity, 'Duplicate fill service.')
           true
         else
-          previous = current_service if previous.nil? || activity[:service_id]
-          previous_point = current_point if previous.nil? || activity[:service_id]
+          previous_activity = r_activity if previous_activity.nil? || r_activity.service_id
           false
         end
       }
     }
   end
 
-  def self.add_unnassigned(unassigned, service, reason)
-    unassigned << {
-      original_service_id: service.id,
-      service_id: service.id,
-      point_id: service.activity&.point_id,
-      detail: {
-        lat: service.activity&.point&.location&.lat,
-        lon: service.activity&.point&.location&.lon,
-        setup_duration: service.activity&.setup_duration,
-        duration: service.activity&.duration,
-        timewindows: service.activity&.timewindows&.collect{ |tw| { start: tw.start, end: tw.end } } || [],
-        quantities: service.quantities&.collect{ |qte| { unit: qte.unit.id, value: qte.value } }
-      },
-      reason: reason
-    }
+  def self.add_unnassigned(unassigned, route_activity, reason)
+    route_activity.reason = reason
+    unassigned << route_activity
   end
 
   def self.cleanse_empty_routes(result)
-    result[:routes].delete_if{ |route| route[:activities].none?{ |activity| activity[:service_id] } }
+    result.routes.delete_if{ |route| route.activities.none?(&:service_id) }
   end
 end

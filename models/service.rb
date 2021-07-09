@@ -61,12 +61,18 @@ module Models
 
     def loads(options = {})
       quantity_hash = quantities.map{ |quantity| [quantity.unit.id, quantity] }.to_h
-      options[:loads]&.map{ |ld|
-        next unless quantity_hash.key? ld.quantity.unit.id
+      if options[:loads]
+        options[:loads]&.map{ |ld|
+          next unless quantity_hash.key? ld.quantity.unit.id
 
-        ld.quantity = quantity_hash[ld.quantity.unit.id]
-        ld
-      }&.compact
+          ld.quantity = quantity_hash[ld.quantity.unit.id]
+          ld
+        }&.compact
+      else
+        quantities.map{ |quantity|
+          Models::Load.new(quantity: quantity)
+        }
+      end
     end
 
     def route_activity(options = {})

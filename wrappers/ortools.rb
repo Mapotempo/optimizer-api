@@ -483,7 +483,7 @@ module Wrappers
     end
 
     def parse_output(vrp, _services, points, _matrix_indices, _cost, _iterations, output)
-      if vrp.vehicles.empty? ||vrp.services.empty?
+      if vrp.vehicles.empty? || vrp.services.empty?
         return vrp.empty_solution(:ortools)
       end
 

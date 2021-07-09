@@ -26,23 +26,23 @@ class RealCasesTest < Minitest::Test
 
       vrp = TestHelper.load_vrp(self)
       t1 = Time.now
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       t2 = Time.now
-      assert result
+      assert solutions[0]
 
       # TODO: remove the logs after dicho overhead problem is fixed
       log "duration_min = #{vrp.resolution_minimum_duration / 1000.to_f}", level: :debug
       log "duration_max = #{vrp.resolution_duration / 1000.to_f}", level: :debug
-      log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug
+      log "duration_optimization = #{solutions[0].elapsed / 1000.to_f}", level: :debug
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
       # Check activities
-      assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
+      assert solutions[0].unassigned.size < 50, "Too many unassigned services #{solutions[0].unassigned.size}"
 
       # Check time
       duration_min = vrp.resolution_minimum_duration / 1000.to_f
       duration_max = vrp.resolution_duration / 1000.to_f
-      duration_optimization = result[:elapsed] / 1000.to_f
+      duration_optimization = solutions[0].elapsed / 1000.to_f
       duration_elapsed =  t2 - t1
 
       # Check time elapsed inside optimization
@@ -62,26 +62,26 @@ class RealCasesTest < Minitest::Test
 
       vrp = TestHelper.load_vrp(self)
       t1 = Time.now
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       t2 = Time.now
-      assert result
+      assert solutions[0]
 
       # TODO: remove the logs after dicho overhead problem is fixed
       log "duration_min = #{vrp.resolution_minimum_duration / 1000.to_f}", level: :debug
       log "duration_max = #{vrp.resolution_duration / 1000.to_f}", level: :debug
-      log "duration_optimization = #{result[:elapsed] / 1000.to_f}", level: :debug
+      log "duration_optimization = #{solutions[0].elapsed / 1000.to_f}", level: :debug
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
       # Check activities
-      assert result[:unassigned].size < 50, "Too many unassigned services #{result[:unassigned].size}"
+      assert solutions[0].unassigned.size < 50, "Too many unassigned services #{solutions[0].unassigned.size}"
 
       # Check routes
-      assert result[:routes].size < 48, "Too many routes: #{result[:routes].size}"
+      assert solutions[0].routes.size < 48, "Too many routes: #{solutions[0].routes.size}"
 
       # Check time
       duration_min = vrp.resolution_minimum_duration / 1000.to_f
       duration_max = vrp.resolution_duration / 1000.to_f
-      duration_optimization = result[:elapsed] / 1000.to_f
+      duration_optimization = solutions[0].elapsed / 1000.to_f
       duration_elapsed =  t2 - t1
 
       # Check time elapsed inside optimization
