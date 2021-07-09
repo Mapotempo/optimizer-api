@@ -31,7 +31,6 @@ gem 'rest-client'
 
 gem 'ai4r'
 gem 'balanced_vrp_clustering', github: 'Mapotempo/balanced_vrp_clustering', branch: 'dev'
-gem 'sim_annealing'
 
 gem 'polylines'
 gem 'rgeo'

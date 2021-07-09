@@ -17,38 +17,49 @@
 #
 
 module TSPHelper
-  def self.create_tsp(vrp, vehicle)
-    services = []
-    vrp.points.each{ |pt|
-      service = vrp.services.find{ |service_| service_.activity.point_id == pt.id }
-      next if !service
+  def self.create_tsp(vrp, options = {})
+    services = options[:services] || vrp.services
+    vehicle = options[:vehicle] || vrp.vehicles.first
+    start_point = options.key?(:start_point) ? options[:start_point] : vehicle.start_point
+    end_point = options.key?(:start_point) ? options[:end_point] : vehicle.end_point
 
-      services << {
-        id: service[:id],
-        activity: {
-          point_id: service.activity.point_id,
-          duration: service.activity.duration
-        }
-      }
+    tsp_points = [convert_point(start_point), convert_point(end_point)].compact
+    tsp_services = services.map{ |service|
+      tsp_points << convert_point(service.activity.point)
+      convert_service(service)
+    }
+    # raise tsp_points.map(&:id).uniq.inspect
+    tsp_vehicle = {
+      id: vehicle.id,
+      start_point_id: start_point&.id,
+      end_point_id: end_point.id,
+      matrix_id: vehicle.matrix_id
     }
 
     problem = {
-      matrices: vrp.matrices,
-      points: vrp.points.collect{ |pt|
-        {
-          id: pt.id,
-          matrix_index: pt.matrix_index
-        }
-      },
-      vehicles: [{
-        id: vehicle.id,
-        start_point_id: vehicle.start_point_id,
-        matrix_id: vehicle.matrix_id
-      }],
-      services: services
+      matrices: [vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }],
+      points: tsp_points.uniq,
+      services: tsp_services,
+      vehicles: [tsp_vehicle]
     }
-
     Models::Vrp.create(problem)
+  end
+
+  def self.convert_point(point)
+    {
+      id: point.id,
+      matrix_index: point.matrix_index
+    }
+  end
+
+  def self.convert_service(service)
+    {
+      id: service.id,
+      activity: {
+        point_id: service.activity.point_id,
+        duration: service.activity.duration
+      }
+    }
   end
 
   def self.solve(tsp)
