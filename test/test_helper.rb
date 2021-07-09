@@ -67,6 +67,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # TODO: Either find a way to call grape validators automatically or add necessary grape coerces here
     [:duration, :setup_duration].each { |symbol|
       vrp[:services]&.each{ |service|
+        service[:type] = nil
         service[:activity][symbol] = ScheduleType.type_cast(service[:activity][symbol] || 0) if service[:activity]
         service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.type_cast(activity[symbol] || 0) if activity }
       }
@@ -209,6 +210,62 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     vrps
   end
 
+  def self.convert_bin_result(vrp, filename)
+    result = Marshal.load(File.binread("test/fixtures/#{filename}.bindump"))
+    solution = hash_result_conversion(vrp, result) if result.is_a?(Hash)
+    bin_dump(filename, solution)
+    solution
+  end
+
+  def self.hash_result_conversion(vrp, result)
+    routes = result[:routes].map{ |route|
+      time_detail = Models::RouteDetail.new(start_time: route[:start_time],
+                                            end_time: route[:end_time],
+                                            total_time: route[:total_time],
+                                            total_travel_time: route[:total_travel_time],
+                                            total_distance: route[:total_distance])
+      loads = route[:initial_loads].map{ |c_load|
+        c_unit = Models::Unit.new(id: c_load[:unit_id])
+        Models::Load.new(current: c_load[:value],
+                         quantity: Models::Quantity.new(unit: c_unit, value: 0))
+      }
+      vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
+      activities = route[:activities].map.with_index{ |act, a_i|
+        times = Models::Timing.new(begin_time: act[:begin_time], end_time: act[:end_time] || act[:departure_time],
+                                   travel_time: act[:travel_time], travel_distance: act[:travel_distance])
+        loads = act[:detail][:quantities]&.map{ |c_load|
+          c_unit = Models::Unit.new(id: c_load[:unit])
+          Models::Load.new(current: c_load[:current_load],
+                           quantity: Models::Quantity.new(unit: c_unit, value: c_load[:value]))
+        }
+
+        if act[:service_id]
+          service = vrp.services.find{ |s| s.id == act[:service_id] }
+          service.route_activity(loads: loads, timing: times)
+        elsif act[:rest_id]
+          c_rest = vrp.rests.find{ |rest| rest.id == act[:rest_id] }
+          c_rest.route_activity(loads: loads)
+        elsif a_i.zero?
+          vehicle.start_depot_activity(loads: loads, timing: times)
+        else
+          vehicle.end_depot_activity(loads: loads, timing: times)
+        end
+      }.compact
+
+      Models::SolutionRoute.new(activities: activities, vehicle: vehicle, initial_loads: loads, detail: time_detail)
+    }
+
+    unassigned = result[:unassigned].map{ |act|
+      service = vrp.services.find{ |s| s.id == act[:service_id] }
+      service.route_activity
+    }
+    Models::Solution.new(routes: routes, unassigned: unassigned)
+  end
+
+  def self.bin_dump(filename, content)
+    File.open("test/fixtures/#{filename}.bindump", 'wb') { |f| f.write(Marshal.dump(content)) }
+  end
+
   def self.expand_vehicles(vrp)
     periodic = Interpreters::PeriodicVisits.new(vrp)
     periodic.generate_vehicles(vrp)
@@ -245,7 +302,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 's1',
-        type: 'service',
         activity: {
           point_id: 'p1'
         }
@@ -448,37 +504,31 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 'service_1',
-        type: 'service',
         activity: {
           point_id: 'point_1'
         }
       }, {
         id: 'service_2',
-        type: 'service',
         activity: {
           point_id: 'point_2'
         }
       }, {
         id: 'service_3',
-        type: 'service',
         activity: {
           point_id: 'point_3'
         }
       }, {
         id: 'service_4',
-        type: 'service',
         activity: {
           point_id: 'point_4'
         }
       }, {
         id: 'service_5',
-        type: 'service',
         activity: {
           point_id: 'point_5'
         }
       }, {
         id: 'service_6',
-        type: 'service',
         activity: {
           point_id: 'point_6'
         }
@@ -745,7 +795,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 'service_1',
-        type: 'service',
         activity: {
           point_id: 'point_1'
         },
@@ -755,7 +804,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_2',
-        type: 'service',
         activity: {
           point_id: 'point_2'
         },
@@ -765,7 +813,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_3',
-        type: 'service',
         activity: {
           point_id: 'point_3'
         },
@@ -775,7 +822,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_4',
-        type: 'service',
         activity: {
           point_id: 'point_4'
         },
@@ -785,7 +831,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_5',
-        type: 'service',
         activity: {
           point_id: 'point_5'
         },
@@ -795,7 +840,6 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         }]
       }, {
         id: 'service_6',
-        type: 'service',
         activity: {
           point_id: 'point_6'
         },
@@ -961,79 +1005,66 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }],
       services: [{
         id: 'service_1',
-        type: 'service',
         activity: {
           point_id: 'point_1'
         }
       }, {
         id: 'service_2',
-        type: 'service',
         activity: {
           point_id: 'point_2'
         }
       }, {
         id: 'service_3',
-        type: 'service',
         activity: {
           point_id: 'point_3'
         }
       }, {
         id: 'service_4',
-        type: 'service',
         activity: {
           point_id: 'point_4'
         }
       }, {
         id: 'service_5',
-        type: 'service',
         activity: {
           point_id: 'point_5'
         }
       }, {
         id: 'service_6',
-        type: 'service',
         activity: {
           point_id: 'point_6'
         }
       }, {
         id: 'service_7',
-        type: 'service',
         activity: {
           point_id: 'point_7'
         }
       }, {
         id: 'service_8',
-        type: 'service',
         activity: {
           point_id: 'point_8'
         }
       }, {
         id: 'service_9',
-        type: 'service',
         activity: {
           point_id: 'point_9'
         }
       }, {
         id: 'service_10',
-        type: 'service',
         activity: {
           point_id: 'point_10'
         }
       }, {
         id: 'service_11',
-        type: 'service',
         activity: {
           point_id: 'point_11'
         }
       }, {
         id: 'service_12',
-        type: 'service',
         activity: {
           point_id: 'point_11_d'
         }
       }, {
         id: 'service_13',
-        type: 'service',
         activity: {
           point_id: 'point_1_d'
         }

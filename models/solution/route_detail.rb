@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2020
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -18,21 +18,24 @@
 require './models/base'
 
 module Models
-  class CostDetails < Base
-    field :total, default: 0
-    field :fixed, default: 0
-    field :time, default: 0
-    field :distance, default: 0
-    field :value, default: 0
-    field :lateness, default: 0
-    field :overload, default: 0
+  class RouteDetail < Base
+    field :total_time, default: 0
+    field :total_travel_time, default: 0
+    field :total_waiting_time, default: 0
+
+    field :total_distance, default: 0
+
+    field :total_travel_value
+
+    field :start_time
+    field :end_time
 
     def +(other)
-      merged_cost = CostDetails.new({})
+      merged_details = RouteDetail.new({})
       self.attributes.each_key{ |key|
-        merged_cost[key] = (self[key] || 0) + (other[key] || 0)
+        merged_details[key] = (self[key] || 0) + (other[key] || 0)
       }
-      merged_cost
+      merged_details
     end
   end
 end

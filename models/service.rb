@@ -58,5 +58,37 @@ module Models
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation'
+
+    def loads(options = {})
+      quantity_hash = quantities.map{ |quantity| [quantity.unit.id, quantity] }.to_h
+      if options[:loads]
+        options[:loads]&.map{ |ld|
+          next unless quantity_hash.key? ld.quantity.unit.id
+
+          ld.quantity = quantity_hash[ld.quantity.unit.id]
+          ld
+        }&.compact
+      else
+        quantities.map{ |quantity|
+          Models::Load.new(quantity: quantity)
+        }
+      end
+    end
+
+    def route_activity(options = {})
+      Models::RouteActivity.new(
+        id: self.original_id,
+        service_id: options[:service_id] || self.id,
+        pickup_shipment_id: self.type == :pickup && (self.original_id || self.id),
+        delivery_shipment_id: self.type == :delivery && (self.original_id || self.id),
+        type: self.type,
+        alternative: options[:index],
+        loads: loads(options),
+        detail: options[:index] && self.activities[options[:index]] || self.activity,
+        timing: options[:timing] || Models::Timing.new({}),
+        reason: options[:reason],
+        skills: options[:skills] || self.skills
+      )
+    end
   end
 end
