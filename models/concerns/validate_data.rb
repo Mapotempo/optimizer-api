@@ -27,7 +27,6 @@ module ValidateData
     hash[:relations] ||= []
     @hash = hash
 
-    ensure_uniq_ids
     ensure_no_conflicting_skills
 
     configuration = @hash[:configuration]
@@ -42,16 +41,6 @@ module ValidateData
 
     check_routes(periodic_heuristic)
     check_configuration(configuration, periodic_heuristic) if configuration
-  end
-
-  def ensure_uniq_ids
-    # TODO: Active Hash should be checking this
-    [:matrices, :units, :points, :rests, :zones, :timewindows,
-     :vehicles, :services, :subtours].each{ |key|
-      next if @hash[key]&.collect{ |v| v[:id] }&.uniq!.nil?
-
-      raise OptimizerWrapper::DiscordantProblemError.new("#{key} IDs should be unique")
-    }
   end
 
   def ensure_no_conflicting_skills

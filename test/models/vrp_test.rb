@@ -321,7 +321,7 @@ module Models
       vrp[:vehicles].first[:skills] = [['skill_to_output']]
       vrp[:services].first[:skills] = ['skill_to_output']
 
-      created_vrp = Models::Vrp.create(vrp)
+      created_vrp = TestHelper.create(vrp)
       assert_equal 1, created_vrp.services.first.skills.size
       assert_equal created_vrp.services.first.original_skills.size, created_vrp.services.first.skills.size
     end
