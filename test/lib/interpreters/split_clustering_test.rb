@@ -29,21 +29,19 @@ class SplitClusteringTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious')
       service_vrp = { vrp: vrp, service: :demo }
       vrp.services.each{ |s| s.skills = [] } # The instance has old "Pas X" style day skills, we purposely ignore them otherwise balance is not possible
+      vrp.vehicles = [vrp.vehicles.first]    # entity: `vehicle` setting only works if the number of clusters is equal to the number of vehicles.
+
       while service_vrp[:vrp].services.size > 100
         total = Hash.new(0)
         service_vrp[:vrp].services.each{ |s| s.quantities.each{ |q| total[q.unit.id] += q.value } }
         service_vrp[:vrp].vehicles.each{ |v|
-          v.capacities = []
-          service_vrp[:vrp].units.each{ |u|
-            v.capacities << Models::Capacity.create(unit: u, limit: total[u.id] * 0.65)
+          v.capacities = service_vrp[:vrp].units.collect{ |u|
+            Models::Capacity.create(unit: u, limit: total[u.id] * 0.65)
           }
         }
 
-        # entity: `vehicle` setting only works if the number of clusters is equal to the number of vehicles.
         original = service_vrp[:vrp].vehicles.first
-        service_vrp[:vrp].vehicles = [original]
         service_vrp[:vrp].vehicles << Models::Vehicle.create(
-          id: "#{original.id}_copy",
           duration: original.duration,
           matrix_id: original.matrix_id,
           skills: original.skills,

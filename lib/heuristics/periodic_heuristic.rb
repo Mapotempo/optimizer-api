@@ -1167,7 +1167,7 @@ module Wrappers
           computed_activities, start_time, end_time = get_activities(day, route_data, vrp, vrp_vehicle)
 
           routes << {
-            vehicle: { id: vrp_vehicle.id },
+            vehicle_id: vrp_vehicle.id,
             mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
           }
 

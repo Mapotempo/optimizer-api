@@ -58,7 +58,6 @@ module DistanceMatrix
       }.uniq
 
       i = 0
-      id = 0
       uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
         block&.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil)
         # set matrix_time and matrix_distance depending of dimensions order
@@ -67,7 +66,6 @@ module DistanceMatrix
         router_matrices = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, matrix_points, matrix_points, options)
         log "matrix computed in #{(Time.now - tic).round(2)} seconds"
         m = Models::Matrix.create(
-          id: 'm' + (id += 1).to_s,
           time: (router_matrices[dimensions.index(:time)] if dimensions.index(:time)),
           distance: (router_matrices[dimensions.index(:distance)] if dimensions.index(:distance)),
           value: (router_matrices[dimensions.index(:value)] if dimensions.index(:value))

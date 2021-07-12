@@ -16,7 +16,7 @@ gem 'grape-swagger-entity'
 gem 'grape_logging'
 
 gem 'actionpack'
-gem 'active_hash', github: 'Mapotempo/active_hash', branch: 'mapo'
+gem 'active_hash', github: 'mapotempo/active_hash', branch: 'dev' # waiting for the following PRs to get merged and "released!" https://github.com/zilkey/active_hash/pull/231 and https://github.com/zilkey/active_hash/pull/233
 gem 'activemodel'
 
 gem 'charlock_holmes'
