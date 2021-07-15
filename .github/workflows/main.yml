@@ -15,7 +15,6 @@ env:
 jobs:
   test_basis:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     env:
       OPTIONS: "COV=false LOG_LEVEL=info SKIP_DICHO=true SKIP_REAL_CASES=true SKIP_PERIODIC=true SKIP_SPLIT_CLUSTERING=true"
     steps:
@@ -30,12 +29,12 @@ jobs:
         run: ./.github/actions/build.sh
         shell: bash
       - name: Starting tests
+        timeout-minutes: 10
         run: ./.github/actions/tests.sh
         shell: bash
 
   test_dicho:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     env:
       OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/dichotomious_test.rb"
     steps:
@@ -50,12 +49,12 @@ jobs:
         run: ./.github/actions/build.sh
         shell: bash
       - name: Starting tests
+        timeout-minutes: 20
         run: ./.github/actions/tests.sh
         shell: bash
 
   test_real:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     env:
       OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_test.rb"
     steps:
@@ -70,12 +69,12 @@ jobs:
         run: ./.github/actions/build.sh
         shell: bash
       - name: Starting tests
+        timeout-minutes: 10
         run: ./.github/actions/tests.sh
         shell: bash
 
   test_real_periodic:
       runs-on: ubuntu-latest
-      timeout-minutes: 30
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_periodic_test.rb"
       steps:
@@ -90,12 +89,12 @@ jobs:
           run: ./.github/actions/build.sh
           shell: bash
         - name: Starting tests
+          timeout-minutes: 30
           run: ./.github/actions/tests.sh
           shell: bash
 
   test_real_periodic_solver:
       runs-on: ubuntu-latest
-      timeout-minutes: 20
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_periodic_solver_test.rb"
       steps:
@@ -110,12 +109,12 @@ jobs:
           run: ./.github/actions/build.sh
           shell: bash
         - name: Starting tests
+          timeout-minutes: 20
           run: ./.github/actions/tests.sh
           shell: bash
 
   test_periodic:
       runs-on: ubuntu-latest
-      timeout-minutes: 5
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/periodic_*"
       steps:
@@ -130,12 +129,12 @@ jobs:
           run: ./.github/actions/build.sh
           shell: bash
         - name: Starting tests
+          timeout-minutes: 5
           run: ./.github/actions/tests.sh
           shell: bash
 
   test_split_clustering:
       runs-on: ubuntu-latest
-      timeout-minutes: 25
       env:
         OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/interpreters/split_clustering_test.rb"
       steps:
@@ -150,5 +149,6 @@ jobs:
           run: ./.github/actions/build.sh
           shell: bash
         - name: Starting tests
+          timeout-minutes: 25
           run: ./.github/actions/tests.sh
           shell: bash
