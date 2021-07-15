@@ -72,7 +72,7 @@ module OptimizerWrapper
             geometry: ask_restitution_geojson
           }
           p[:graph] << { iteration: avancement, cost: cost, time: time }
-          p[:result] = solution if solution
+          p[:result] = [solution.vrp_result].flatten if solution
           Result.set(self.uuid, p)
         end
       }
@@ -83,7 +83,7 @@ module OptimizerWrapper
         csv: ask_restitution_csv,
         geometry: ask_restitution_geojson
       }
-      p[:result] = solution
+      p[:result] = solution.vrp_result
       if services_vrps.size == 1 && p && p[:result].any? && p[:graph]&.any?
         p[:result].first[:iterations] = p[:graph].last[:iteration]
         p[:result].first[:elapsed] = p[:graph].last[:time]

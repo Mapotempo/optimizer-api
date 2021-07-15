@@ -42,10 +42,21 @@ module Models
       self.configuration = Models::SolutionConfiguration.new({}) unless options.key? :configuration
     end
 
-    def as_json(options = {})
+    def vrp_result(options = {})
       hash = super(options)
       hash.delete('details')
-      hash.merge(details.as_json(options))
+      hash.merge!(details.vrp_result(options))
+      edit_route_days(hash)
+      hash
+    end
+
+    def edit_route_days(hash)
+      return unless self.configuration.schedule_start_date
+
+      start_date = self.configuration.schedule_start_date
+      hash['routes'].each{ |r|
+        r['day'] = start_date + r['day'] - (start_date.cwday - 1)
+      }
     end
 
     def parse_solution(vrp, options = {})
@@ -62,6 +73,8 @@ module Models
       }
       compute_result_total_dimensions_and_round_route_stats
       self.cost_details = routes.map(&:cost_details).reduce(&:+)
+      self.configuration.geometry = vrp.restitution_geometry
+      self.configuration.schedule_start_date = vrp.schedule_start_date
 
       log "solution - unassigned rate: #{unassigned.size} of (ser: #{vrp.visits} (#{(unassigned.size.to_f / vrp.visits * 100).round(1)}%)"
       used_vehicle_count = routes.count{ |r| r.activities.any?{ |a| a.service_id } }
@@ -102,6 +115,7 @@ module Models
       solution.unassigned = self.unassigned + other.unassigned
       solution.cost_details = self.cost_details + other.cost_details
       solution.details = self.details + other.details
+      solution.configuration = self.configuration + other.configuration
       solution
     end
   end

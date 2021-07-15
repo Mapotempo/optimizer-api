@@ -17,6 +17,7 @@
 #
 require 'active_hash'
 require 'active_model/validations/numericality'
+require './models/concerns/vrp_result'
 
 module Models
   def self.delete_all
@@ -27,6 +28,7 @@ module Models
     include ActiveModel::Serializers::JSON
     include ActiveModel::Validations
     include ActiveModel::Validations::HelperMethods
+    include Serializers::JSONResult
 
     include ActiveHash::Associations
 

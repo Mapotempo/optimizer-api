@@ -4849,11 +4849,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, solutions[0].cost, 'All eliminated, cost should be 0'
   end
 
-  def test_build_rest
-    rest = Models::Rest.create(duration: 1)
-    assert OptimizerWrapper.config[:services][:ortools].send(:build_rest, rest)
-  end
-
   def test_ortools_performance_when_duration_limit
     # Test agains optim-ortools model regression wrt vehicle duration limit
     vrp = TestHelper.load_vrp(self)

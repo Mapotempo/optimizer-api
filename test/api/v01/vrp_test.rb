@@ -42,7 +42,7 @@ class Api::V01::VrpTest < Minitest::Test
         assert_equal [:skill], services_vrps[0][:vrp][:services][0][:skills]
         assert_equal [[]], services_vrps[0][:vrp][:vehicles][1][:skills]
         assert_equal [], services_vrps[0][:vrp][:services][1][:skills]
-        {}
+        []
       }
     ) do
       vrp = VRP.toy
@@ -365,7 +365,7 @@ class Api::V01::VrpTest < Minitest::Test
           when 7
             assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
           end
-          {}
+          []
         }
       ) do
         vrp = VRP.toy

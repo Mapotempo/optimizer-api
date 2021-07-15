@@ -41,5 +41,12 @@ module Models
         timing: options[:timing] || Models::Timing.new({})
       )
     end
+
+    def vrp_result(options = {})
+      hash = super(options)
+      hash.delete('late_multiplier')
+      hash.delete('exclusion_cost')
+      hash
+    end
   end
 end

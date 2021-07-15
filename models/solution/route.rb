@@ -35,10 +35,14 @@ module Models
       self.cost_details = Models::CostDetails.new({}) unless options.key? :cost_details
     end
 
-    def as_json(options = {})
+    def vrp_result(options = {})
       hash = super(options)
       hash.delete('detail')
-      hash.merge(detail.as_json(options))
+      hash.merge!(detail.vrp_result(options))
+      hash.delete('vehicle')
+      hash.merge!(vehicle.vrp_result(options))
+      hash.delete_if{ |_k, v| v.nil? }
+      hash
     end
 
     def count_services

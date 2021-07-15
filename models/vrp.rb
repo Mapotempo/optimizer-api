@@ -183,7 +183,9 @@ module Models
         self.services.flat_map{ |service|
           Array.new(service.visits_number) { |visit_index|
             service_id = self.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id
-            service.route_activity(service_id: service_id, reason: unassigned_hash[service.id])
+            service.route_activity(service_id: service_id,
+                                   visit_index: visit_index,
+                                   reason: unassigned_hash[service.id])
           }
         }
       else

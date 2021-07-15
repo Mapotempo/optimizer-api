@@ -38,5 +38,17 @@ module Models
                                   # the code would continue to accept invalid time windows thorugh API because
                                   # vrp.valid? doesn't call the validator of activity
                                   # We need to implement a check inside Api::V01::Vrp and fix the ActivityTest::test_timewindows accordingly
+
+    def vrp_result(options = {})
+      hash = super(options)
+      hash.delete('late_multiplier')
+      hash.delete('position')
+      hash.delete('point')
+      if self.point # Rest inherits from activity
+        hash['lat'] = point.location&.lat
+        hash['lon'] = point.location&.lon
+      end
+      hash
+    end
   end
 end

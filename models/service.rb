@@ -35,6 +35,7 @@ module Models
     field :last_possible_days, default: []
 
     field :visits_number, default: 1
+    field :visit_index, default: nil
 
     # validates_numericality_of :visits_number
 
@@ -87,7 +88,9 @@ module Models
         detail: options[:index] && self.activities[options[:index]] || self.activity,
         timing: options[:timing] || Models::Timing.new({}),
         reason: options[:reason],
-        skills: options[:skills] || self.skills
+        skills: options[:skills] || self.skills,
+        original_skills: options[:original_skills] || self.original_skills,
+        visit_index: options[:visit_index] || self.visit_index
       )
     end
   end

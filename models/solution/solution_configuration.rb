@@ -18,21 +18,19 @@
 require './models/base'
 
 module Models
-  class Load < Base
-    field :current, default: 0
+  class SolutionConfiguration < Base
+    field :csv, default: false
+    field :geometry, default: false
+    field :deprecated_headers, default: false
+    field :schedule_start_date
 
-    belongs_to :quantity, class_name: 'Models::Quantity'
-
-    def vrp_result(options = {})
-      hash = super(options)
-      hash.delete('quantity')
-      hash.delete('current')
-      hash['unit'] = quantity.unit_id
-      hash['label'] = quantity.unit.label
-      hash['value'] = quantity.value
-      hash['setup_value'] = quantity.setup_value
-      hash['current_load'] = current
-      hash
+    def +(other)
+      SolutionConfiguration.create(
+        csv: csv || other.csv,
+        geometry: (geometry + other.geometry).uniq,
+        deprecated_headers: deprecated_headers || other.deprecated_headers,
+        schedule_start_date: schedule_start_date
+      )
     end
   end
 end
