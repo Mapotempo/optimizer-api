@@ -1088,14 +1088,9 @@ module Wrappers
             cost_increase = vehicle.cost_time_multiplier.to_f * rest.duration +
                             vehicle.cost_waiting_time_multiplier.to_f * idle_time_created_by_inserted_pause
 
-            if route[:cost_details]
-              route[:cost_details].time += cost_increase
-              route[:cost_details].total += cost_increase
-            end
-            if result[:cost_details]
-              result[:cost_details].time += cost_increase
-              result[:cost_details].total += cost_increase
-            end
+
+            route[:cost_details]&.time += cost_increase
+            result[:cost_details]&.time += cost_increase
             result[:cost] += cost_increase # totals are not calculated yet
           }
         }
@@ -1289,7 +1284,7 @@ module Wrappers
       OptimizerWrapper.parse_result(vrp, {
         solvers: [solver],
         cost: nil,
-        cost_details: Models::CostDetails.new({}),
+        cost_details: Models::CostDetails.create({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle|
           OptimizerWrapper.empty_route(vrp, vehicle)

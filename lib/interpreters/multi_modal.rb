@@ -145,7 +145,7 @@ module Interpreters
             sub_vrp.vehicles += (1..duplicate_vehicles).collect{ |index|
               if vehicle_skills && !vehicle_skills.empty?
                 vehicle_skills.collect{ |alternative|
-                  Models::Vehicle.new(
+                  Models::Vehicle.create(
                     id: "subtour_#{alternative.join('-')}_#{transmodal_id}_#{index}",
                     router_mode: sub_tour.router_mode,
                     router_dimension: sub_tour.router_dimension,
@@ -158,7 +158,7 @@ module Interpreters
                   )
                 }
               else
-                Models::Vehicle.new(
+                Models::Vehicle.create(
                   id: "subtour_#{transmodal_id}_#{index}",
                   router_mode: sub_tour.router_mode,
                   router_dimension: sub_tour.router_dimension,
@@ -227,7 +227,7 @@ module Interpreters
         subresult[:routes].collect{ |route|
           next unless route[:activities].size > 2
 
-          service = Models::Service.new(
+          service = Models::Service.create(
             id: route[:vehicle_id],
             activity: {
               point: @original_vrp.points.find{ |point| point.id == route[:activities].first[:point_id] },

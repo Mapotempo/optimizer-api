@@ -4900,7 +4900,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_build_rest
-    rest = Models::Rest.new(duration: 1)
+    rest = Models::Rest.create(duration: 1)
     assert OptimizerWrapper.config[:services][:ortools].send(:build_rest, rest)
   end
 
@@ -4981,11 +4981,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
     pickup0 = vrp.services.find{ |service| service.id == "#{ordered_pickup_ids[0]}_pickup" }
 
     # add consecutivity :
-    relation = Models::Relation.new(type: :minimum_duration_lapse,
-                                    linked_services: [delivery1, pickup0],
-                                    linked_ids: [delivery1.id, pickup0.id],
-                                    lapse: 1800)
-    vrp.relations << relation
+    vrp.relations << Models::Relation.create(
+      type: :minimum_duration_lapse,
+      linked_ids: [delivery1.id, pickup0.id],
+      lapse: 1800
+    )
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     shipment1_route = result[:routes].find{ |r|
       r[:activities].any?{ |stop| stop[:pickup_shipment_id] == delivery1.original_id }

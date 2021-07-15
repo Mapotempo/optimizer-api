@@ -451,7 +451,7 @@ class InterpreterTest < Minitest::Test
         }
       }],
       services: [{
-        id: 'point_1',
+        id: 'service_1',
         priority: 2,
         visits_number: 3,
         minimum_lapse: 10,

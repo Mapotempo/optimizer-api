@@ -1167,7 +1167,7 @@ module Wrappers
           computed_activities, start_time, end_time = get_activities(day, route_data, vrp, vrp_vehicle)
 
           routes << {
-            vehicle: { id: vrp_vehicle.id },
+            vehicle_id: vrp_vehicle.id,
             mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
           }
 
@@ -1184,7 +1184,7 @@ module Wrappers
       unassigned = collect_unassigned
       vrp[:preprocessing_heuristic_result] = {
         cost: @cost,
-        cost_details: Models::CostDetails.new({}), # TODO: fulfill with solution costs
+        cost_details: Models::CostDetails.create({}), # TODO: fulfill with solution costs
         solvers: ['heuristic'],
         iterations: 0,
         routes: solution,

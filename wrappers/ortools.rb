@@ -385,7 +385,7 @@ module Wrappers
     private
 
     def build_cost_details(cost_details)
-      cost = Models::CostDetails.new(
+      Models::CostDetails.create(
         fixed: cost_details&.fixed || 0,
         time: cost_details && (cost_details.time + cost_details.time_fake + cost_details.time_without_wait) || 0,
         distance: cost_details && (cost_details.distance + cost_details.distance_fake) || 0,
@@ -393,8 +393,6 @@ module Wrappers
         lateness: cost_details&.lateness || 0,
         overload: cost_details&.overload || 0
       )
-      cost.total = cost.attributes.values.sum
-      cost
     end
 
     def check_services_compatible_days(vrp, vehicle, service)

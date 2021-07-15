@@ -209,7 +209,7 @@ module Filters
         # latest_day_index = day_indices.include?(nil) ? nil : day_indices.max
         earliest_start = starts.include?(nil) ? nil : starts.min
         latest_end = ends.include?(nil) ? nil : ends.max
-        new_timewindows << Models::Timewindow.new(start: earliest_start, end: latest_end, day_index: earliest_day_index)
+        new_timewindows << Models::Timewindow.create(start: earliest_start, end: latest_end, day_index: earliest_day_index)
       }
       service.activity.timewindows = new_timewindows
     }

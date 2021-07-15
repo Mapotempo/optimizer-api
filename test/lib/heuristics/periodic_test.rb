@@ -514,8 +514,8 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.routes = [Models::Route.create(vehicle: vrp.vehicles.first, mission_ids: %w[5482 0833 8595 0352 0799 2047 5446 0726 0708], day_index: 0)]
 
-      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] = [Models::Timewindow.new(start: 43500, end: 55500)]
-      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [Models::Timewindow.new(start: 31500, end: 43500)]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] = [Models::Timewindow.create(start: 43500, end: 55500)]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [Models::Timewindow.create(start: 31500, end: 43500)]
 
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       periodic = Wrappers::PeriodicHeuristic.new(vrp)

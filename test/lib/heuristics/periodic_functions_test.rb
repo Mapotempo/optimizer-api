@@ -166,7 +166,9 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'periodic_with_post_process')
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      s.instance_variable_set(:@candidate_routes, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump'))) # rubocop: disable Security/MarshalLoad
+      add_missing_visits_candidate_routes = Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump')) # rubocop: disable Security/MarshalLoad
+      add_missing_visits_candidate_routes.each_value{ |vehicle| vehicle.each_value{ |route| route[:matrix_id] = vrp.vehicles.first.matrix_id } }
+      s.instance_variable_set(:@candidate_routes, add_missing_visits_candidate_routes)
       s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.bindump'))) # rubocop: disable Security/MarshalLoad
       services_data = Marshal.load(File.binread('test/fixtures/add_missing_visits_services_data.bindump')) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@services_data, services_data)
@@ -524,7 +526,7 @@ class HeuristicTest < Minitest::Test
 
         if visits_number == 10
           vrp.vehicles.first.sequence_timewindows = (0..4).collect{ |day_index|
-            Models::Timewindow.new(start: 0, end: 20, day_index: day_index)
+            Models::Timewindow.create(start: 0, end: 20, day_index: day_index)
           }
           vrp.vehicles.first.timewindow = nil
         end
