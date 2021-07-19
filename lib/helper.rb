@@ -139,7 +139,7 @@ module Helper
     end
   end
 
-  def self.replace_routes_in_result(vrp, solution, new_solution)
+  def self.replace_routes_in_result(solution, new_solution)
     # Updates the routes of solution with the ones in new_solution and corrects the total stats
     # TODO: Correct total cost (needs cost per route!!!)
 

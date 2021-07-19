@@ -126,7 +126,6 @@ module Interpreters
 
           if service_vrp[:dicho_level].zero?
             # Remove vehicles which are half empty
-            Interpreters::SplitClustering.remove_empty_routes(solution)
             log "dicho - before remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], solution, 0.5)
             log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
@@ -343,6 +342,7 @@ module Interpreters
 
       sub_solutions = []
       vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
+      impacted_routes = []
       vehicles_with_skills.each_slice(vehicle_count) do |vehicles_indices|
         remaining_service_ids = solution.unassigned.map(&:service_id) & services.map(&:id)
         next if remaining_service_ids.empty?
@@ -374,6 +374,7 @@ module Interpreters
                                                                     vehicles_indices.map{ |_v, _r_i, v_i| v_i })
         sub_vrp = sub_service_vrp[:vrp]
         sub_vrp.vehicles.each{ |vehicle|
+          impacted_routes << vehicle.id
           vehicle.cost_fixed = vehicle.cost_fixed&.positive? ? vehicle.cost_fixed : 1e6
           vehicle.cost_distance_multiplier = 0.05 if vehicle.cost_distance_multiplier.zero?
         }
@@ -385,7 +386,6 @@ module Interpreters
         sub_vrp.restitution_allow_empty_result = true
         solution_loop = OptimizerWrapper.solve(sub_service_vrp, job)
 
-        Interpreters::SplitClustering.remove_empty_routes(solution_loop)
         next unless solution_loop
 
         solution.elapsed += solution_loop.elapsed.to_f
@@ -402,12 +402,11 @@ module Interpreters
 
         remove_bad_skills(sub_service_vrp, solution_loop)
 
-        Helper.replace_routes_in_result(vrp, solution, solution_loop)
+        Helper.replace_routes_in_result(solution, solution_loop)
         sub_solutions << solution_loop
       end
       new_routes = build_initial_routes(sub_solutions)
-      vehicle_ids = sub_solutions.flat_map{ |r| r.routes.map{ |route| route.vehicle_id } }
-      vrp.routes.delete_if{ |r| vehicle_ids.include?(r.vehicle_id) }
+      vrp.routes.delete_if{ |r| impacted_routes.include?(r.vehicle_id) }
       vrp.routes += new_routes
     end
 
