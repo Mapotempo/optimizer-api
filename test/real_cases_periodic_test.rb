@@ -151,7 +151,7 @@ class HeuristicTest < Minitest::Test
       unassigned_visits = []
       expected = vrps.sum(&:visits)
       seen = 0
-      vrps.each_with_index{ |vrp, vrp_i|
+      vrps.each{ |vrp|
         vrp.preprocessing_partitions = nil
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << solutions[0].unassigned.size

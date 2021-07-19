@@ -3251,9 +3251,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert solution
-    assert_equal 4, solution.routes.first.activities.size
-    assert solution[:cost] < 2**32
+    assert_equal 4, solutions[0].routes.first.activities.size
+    assert solutions[0][:cost] < 2**32
   end
 
   def test_initial_load_output

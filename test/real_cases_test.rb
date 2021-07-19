@@ -34,7 +34,8 @@ class RealCasesTest < Minitest::Test
     #   assert_equal vrp.services.size + ***, solutions[0].routes[0].activities.size
 
     #   # Either check total travel time
-    #   assert solutions[0].routes[0][:total_travel_time] < ***, "Too long travel time: #{solutions[0].routes[0][:total_travel_time]}"
+    #   assert solutions[0].routes[0][:total_travel_time] < ***,
+    #          "Too long travel time: #{solutions[0].routes[0][:total_travel_time]}"
 
     #   # Or check distance
     #   assert solutions[0].details.total_distance < ***, "Too long distance: #{solutions[0].details.total_distance}"
@@ -80,7 +81,8 @@ class RealCasesTest < Minitest::Test
       assert solutions[0].elapsed < 10000, "Too long elapsed time: #{solutions[0].elapsed}"
     end
 
-    # Béziers - 203 services with time window - dimension time car - late for services & vehicles - force start and no wait cost
+    # Béziers - 203 services with time window - dimension time car
+    # late for services & vehicles - force start and no wait cost
     def test_ortools_one_route_many_stops
       vrp = TestHelper.load_vrp(self)
       check_vrp_services_size = vrp.services.size
@@ -156,7 +158,7 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
       assert solutions[0]
       # Check activities
-      assert_equal check_vrp_services_size, solutions[0].routes.sum{ |r| r.activities.count(&:service_id) }
+      assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.activities.count(&:service_id) })
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
       services_by_routes.each{ |k, v|
         assert_equal v.size, solutions[0].routes.find{ |r| r.vehicle.id == k[0] }.activities.count(&:service_id)
@@ -164,7 +166,7 @@ class RealCasesTest < Minitest::Test
 
       # Check routes
       assert_equal vrp.vehicles.size,
-                   solutions[0].routes.count{ |r| r.activities.count(&:service_id).positive? }
+                   (solutions[0].routes.count{ |r| r.activities.count(&:service_id).positive? })
 
       # Check total travel time
       assert_operator solutions[0].routes.sum{ |r| r.detail.total_travel_time }, :<=,
@@ -178,7 +180,7 @@ class RealCasesTest < Minitest::Test
       assert solutions[0]
       # Check activities
       assert_equal check_vrp_services_size,
-                   solutions[0].routes.sum{ |r| r.activities.count(&:service_id) }
+                   (solutions[0].routes.sum{ |r| r.activities.count(&:service_id) })
       services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
       services_by_routes.each{ |k, v|
         assert_equal v.size, solutions[0].routes.find{ |r| r.vehicle.id == k[0] }.activities.count(&:service_id)
@@ -186,7 +188,7 @@ class RealCasesTest < Minitest::Test
 
       # Check routes
       assert_equal vrp.vehicles.size,
-                   solutions[0].routes.count{ |r| r.activities.count(&:service_id).positive? }
+                   (solutions[0].routes.count{ |r| r.activities.count(&:service_id).positive? })
 
       # Check total travel time
       assert_operator solutions[0].routes.sum{ |r| r.detail.total_travel_time }, :<=,
@@ -203,7 +205,8 @@ class RealCasesTest < Minitest::Test
       assert solutions[0]
 
       # Check routes
-      assert_equal vrp.vehicles.size, (solutions[0].routes.count{ |r| r.activities.count{ |a| a[:service_id] }.positive? })
+      assert_equal vrp.vehicles.size,
+                   (solutions[0].routes.count{ |r| r.activities.count{ |a| a[:service_id] }.positive? })
 
       # Check total travel time
       assert_operator solutions[0].routes.sum{ |r| r.detail.total_travel_time }, :<=,
@@ -225,7 +228,7 @@ class RealCasesTest < Minitest::Test
       assert solutions[0]
       # Check activities
       assert_equal check_vrp_services_size,
-                   solutions[0].routes.sum{ |r| r.activities.count(&:service_id) }
+                   (solutions[0].routes.sum{ |r| r.activities.count(&:service_id) })
 
       # Check routes
       assert_operator solutions[0].routes.count{ |r| r.activities.count(&:service_id).positive? }, :<=, 4
@@ -254,10 +257,10 @@ class RealCasesTest < Minitest::Test
       assert_operator solutions[0].unassigned.size, :<=, 6
 
       assert_equal check_vrp_services_size,
-                  solutions[0].routes.sum{ |r| r.activities.count(&:service_id) } + solutions[0].unassigned.size
+                   (solutions[0].routes.sum{ |r| r.activities.count(&:service_id) } + solutions[0].unassigned.size)
 
       # Check routes
-      assert_equal 29, solutions[0].routes.count{ |r| r.activities.count(&:service_id).positive? }
+      assert_equal 29, (solutions[0].routes.count{ |r| r.activities.count(&:service_id).positive? })
 
       # Check total times
       assert_operator solutions[0].routes.sum{ |r| r.detail.total_travel_time }, :<=,
@@ -276,7 +279,8 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert solutions[0]
       # Check activities
-      assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.activities.count{ |a| a[:service_id] } }) + solutions[0].unassigned.size
+      assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.activities.count{ |a| a[:service_id] } } +
+                                            solutions[0].unassigned.size)
       assert_equal 1, solutions[0].unassigned.count(&:reason)
 
       # Check total travel time
@@ -303,7 +307,7 @@ class RealCasesTest < Minitest::Test
           begin_time_of_service_with_endless_tw <= (tw.end || Float::INFINITY)
       }
       assert endless_tw_respected, 'Service does not respect endless TW'
-      assert_equal check_vrp_services_size, (result.routes.sum{ |r| r.activities.count{ |a| a.service_id } })
+      assert_equal check_vrp_services_size, (result.routes.sum{ |r| r.activities.count(&:service_id) })
 
       # Check total travel time
       assert solutions[0].routes.sum{ |r| r.detail.total_travel_time } <= 13225,
@@ -346,7 +350,7 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert solutions[0]
       # Check activities
-      assert_equal vrp.services.size, solutions[0].routes.sum{ |r| r.activities.count(&:service_id) }
+      assert_equal vrp.services.size, (solutions[0].routes.sum{ |r| r.activities.count(&:service_id) })
 
       expected_ids = vrp.relations.first.linked_ids
       actual_route = solutions[0].routes.first.activities.map(&:service_id)
@@ -373,7 +377,7 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert solutions[0]
       # Check activities
-      assert_equal check_vrp_services_size, solutions[0].routes.sum{ |r| r.activities.count(&:service_id) }
+      assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.activities.count(&:service_id) })
       assert solutions[0].routes.sum{ |r| r.activities.count{ |a| a.detail.point.id == 'Park_eugene_leroy' } } >= 2
 
       # Check total cost
@@ -393,7 +397,7 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools, :ortools] }}, vrp, nil)
       assert solutions[0]
       # Check activities
-      assert_equal check_vrp_services_size, solutions[0].routes.sum{ |r| r.activities.count(&:service_id) }
+      assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.activities.count(&:service_id) })
       assert solutions[0].routes.sum{ |r| r.activities.count{ |a| a.detail.point.id == 'Park_thiers' } } >= 2
 
       # Check total cost
@@ -412,7 +416,8 @@ class RealCasesTest < Minitest::Test
     end
 
     def test_dichotomious_check_number_of_services
-      # TODO: This test is an old test left here. It doesn't have enough vehicles. It just check if we lose or add services.
+      # TODO: This test is an old test left here. It doesn't have enough vehicles.
+      # It just check if we lose or add services.
       vrp = TestHelper.load_vrp(self)
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
