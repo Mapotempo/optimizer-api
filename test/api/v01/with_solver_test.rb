@@ -42,7 +42,7 @@ class Api::V01::WithSolverTest < Minitest::Test
     asynchronously start_worker: true do
       problem = VRP.lat_lon
       problem[:vehicles].first[:end_point_id] = nil
-      problem[:vehicles] << Marshal.load(Marshal.dump(problem[:vehicles].first))
+      problem[:vehicles] << Oj.load(Oj.dump(problem[:vehicles].first))
       problem[:vehicles].last[:id] = 'vehicle_1'
       problem[:vehicles].last[:start_point_id] = nil
 

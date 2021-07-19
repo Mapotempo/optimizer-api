@@ -143,7 +143,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   end
 
   def self.create(problem)
-    Models::Vrp.create(coerce(problem))
+    Models::Vrp.create(coerce(Oj.load(Oj.dump(problem))))
   end
 
   def self.matrices_required(vrps, filename)
