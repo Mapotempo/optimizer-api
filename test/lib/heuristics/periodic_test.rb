@@ -272,7 +272,7 @@ class HeuristicTest < Minitest::Test
                                             TestHelper.load_vrp(self, problem: problem), nil)
       assert_empty solutions[0].unassigned
       assert(solutions[0].routes.all?{ |route|
-        route.activities.all?{ |activity| activity.skills.nil? || activity.skills.size == 3 }
+        route.activities.all?{ |activity| activity.skills.empty? || activity.skills.size == 3 }
       })
     end
 

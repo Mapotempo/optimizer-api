@@ -406,8 +406,8 @@ module Interpreters
         sub_solutions << solution_loop
       end
       new_routes = build_initial_routes(sub_solutions)
-      vehicle_ids = sub_solutions.flat_map{ |r| r.routes.map{ |route| route.vehicle.id } }
-      vrp.routes.delete_if{ |r| vehicle_ids.include?(r.vehicle.id) }
+      vehicle_ids = sub_solutions.flat_map{ |r| r.routes.map{ |route| route.vehicle_id } }
+      vrp.routes.delete_if{ |r| vehicle_ids.include?(r.vehicle_id) }
       vrp.routes += new_routes
     end
 
