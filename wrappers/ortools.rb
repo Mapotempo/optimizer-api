@@ -110,7 +110,6 @@ module Wrappers
       # FIXME: or-tools can handle no end-point itself
       @job = job
       @previous_result = nil
-      points = Hash[vrp.points.collect{ |point| [point.id, point] }]
       relations = []
       services = []
       services_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
@@ -143,7 +142,7 @@ module Wrappers
             duration: service.activity.duration,
             additional_value: service.activity.additional_value,
             priority: service.priority,
-            matrix_index: points[service.activity.point_id].matrix_index,
+            matrix_index: service.activity.point.matrix_index,
             vehicle_indices: (service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0) ?
               service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
             setup_duration: service.activity.setup_duration,
@@ -176,7 +175,7 @@ module Wrappers
               duration: possible_activity.duration,
               additional_value: possible_activity.additional_value,
               priority: service.priority,
-              matrix_index: points[possible_activity.point_id].matrix_index,
+              matrix_index: possible_activity.point.matrix_index,
               vehicle_indices: (service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0) ?
                 service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
               setup_duration: possible_activity.setup_duration,
@@ -197,9 +196,6 @@ module Wrappers
             services = update_services_positions(services, services_positions, service.id, possible_activity.position, service_index)
           }
         end
-      }
-      matrix_indices = vrp.services.collect{ |service|
-        service.activity ? points[service.activity.point_id].matrix_index : service.activities.collect{ |activity| points[activity.point_id].matrix_index }
       }
 
       matrices = vrp.matrices.collect{ |matrix|
@@ -249,8 +245,8 @@ module Wrappers
           vehicle.skills,
           vehicle.matrix_id,
           vehicle.value_matrix_id,
-          vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
-          vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
+          vehicle.start_point ? vehicle.start_point.matrix_index : -1,
+          vehicle.end_point ? vehicle.end_point.matrix_index : -1,
           vehicle.duration || -1,
           vehicle.distance || -1,
           (vehicle.force_start ? 'force_start' : vehicle.shift_preference.to_s),
@@ -308,8 +304,8 @@ module Wrappers
           },
           matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.matrix_id },
           value_matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.value_matrix_id } || 0,
-          start_index: vehicle.start_point ? points[vehicle.start_point_id].matrix_index : -1,
-          end_index: vehicle.end_point ? points[vehicle.end_point_id].matrix_index : -1,
+          start_index: vehicle.start_point ? vehicle.start_point.matrix_index : -1,
+          end_index: vehicle.end_point ? vehicle.end_point.matrix_index : -1,
           duration: vehicle.duration || -1,
           distance: vehicle.distance || -1,
           shift_preference: (vehicle.force_start ? 'force_start' : vehicle.shift_preference.to_s),
@@ -365,7 +361,7 @@ module Wrappers
       )
 
       log "ortools solve problem creation elapsed: #{Time.now - tic}sec", level: :debug
-      ret = run_ortools(problem, vrp, services, points, matrix_indices, thread_proc, &block)
+      ret = run_ortools(problem, vrp, thread_proc, &block)
       case ret
       when String
         return ret
@@ -414,8 +410,8 @@ module Wrappers
       {}
     end
 
-    def parse_output(vrp, _services, points, _matrix_indices, _cost, _iterations, output)
-      if vrp.vehicles.empty? ||vrp.services.empty?
+    def parse_output(vrp, output)
+      if vrp.vehicles.empty? || vrp.services.empty?
         return empty_result('ortools', vrp)
       end
 
@@ -479,7 +475,7 @@ module Wrappers
                 load_status = build_quantities(nil, activity_loads)
                 route_start_time = earliest_start
                 if vehicle.start_point
-                  previous_matrix_index = points[vehicle.start_point.id].matrix_index
+                  previous_matrix_index = vehicle.start_point.matrix_index
                   current_activity = {
                     point_id: vehicle.start_point.id,
                     type: 'depot',
@@ -584,11 +580,11 @@ module Wrappers
       OptimizerWrapper.parse_result(vrp, result)
     end
 
-    def run_ortools(problem, vrp, services, points, matrix_indices, thread_proc = nil, &block)
-      log "----> run_ortools services(#{services.size}) preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
+    def run_ortools(problem, vrp, thread_proc = nil, &block)
+      log "----> run_ortools services(#{vrp.services.size}) preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
       tic = Time.now
       if vrp.vehicles.empty? || vrp.services.empty?
-        return [0, 0, @previous_result = parse_output(vrp, services, points, matrix_indices, 0, 0, nil)]
+        return [0, 0, @previous_result = parse_output(vrp, nil)]
       end
 
       input = Tempfile.new('optimize-or-tools-input', @tmp_dir, binmode: true)
@@ -657,7 +653,7 @@ module Wrappers
 
         begin
           @previous_result = if vrp.restitution_intermediate_solutions && s && !/Final Iteration :/.match(line)
-                               parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+                               parse_output(vrp, output)
                              end
           block&.call(self, iterations, nil, nil, cost, time, @previous_result) # if @previous_result=nil, it will not override the existing solution
         rescue Google::Protobuf::ParseError => e
@@ -673,7 +669,7 @@ module Wrappers
           @previous_result = empty_result('ortools', vrp)
           @previous_result[:cost] = cost
         else
-          @previous_result = parse_output(vrp, services, points, matrix_indices, cost, iterations, output)
+          @previous_result = parse_output(vrp, output)
         end
         [cost, iterations, @previous_result]
       elsif @thread.value.signaled? && @thread.value.termsig == 9
