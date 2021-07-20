@@ -19,6 +19,7 @@ require 'minitest'
 require 'webmock/minitest'
 WebMock.disable_net_connect!
 
+require 'rake'
 if Rake.application.top_level_tasks.include?('test') && ![ENV['COVERAGE'], ENV['COV']].include?('false')
   require 'simplecov'
   SimpleCov.start
@@ -69,7 +70,6 @@ Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].sort.each{ |file| r
 
 require './util/error.rb'
 require './util/config.rb'
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].sort.each{ |file| require file }
 require './optimizer_wrapper'
 require './api/root'
 
