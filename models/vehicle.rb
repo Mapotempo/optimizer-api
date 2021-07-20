@@ -123,29 +123,6 @@ module Models
       super(hash)
     end
 
-    def start_depot_activity(options = {})
-      return unless start_point
-
-      Models::RouteActivity.new(
-        id: self.start_point&.id,
-        type: :depot,
-        loads: options[:loads],
-        detail: Models::Activity.new(point: self.start_point),
-        timing: options[:timing] || Models::Timing.new({})
-      )
-    end
-
-    def end_depot_activity(options = {})
-      return unless end_point
-      Models::RouteActivity.new(
-        id: self.end_point&.id,
-        type: :depot,
-        loads: options[:loads],
-        detail: Models::Activity.new(point: self.end_point),
-        timing: options[:timing] || Models::Timing.new({})
-      )
-    end
-
     def need_matrix_time?
       cost_time_multiplier.positive? || timewindow&.end || cost_late_multiplier&.positive? ||
         cost_setup_time_multiplier.positive? || !rests.empty? || maximum_ride_time || duration || overall_duration

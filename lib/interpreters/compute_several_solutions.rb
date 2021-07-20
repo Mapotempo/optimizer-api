@@ -195,27 +195,25 @@ module Interpreters
         raise 'No solution found during heuristic selection' if first_results.all?(&:nil?)
 
         synthesis = []
-        first_results.each_with_index{ |result, i|
+        first_results.each_with_index{ |solution, i|
           synthesis << {
             heuristic: custom_heuristics[i],
-            quality: result.nil? ? Float::MAX : result[:cost].to_i + (times[i] / 1000).to_i,
+            quality: solution.nil? ? Float::MAX : solution.cost.to_i + (times[i] / 1000).to_i,
             used: false,
-            cost: result ? result[:cost] : nil,
+            cost: solution ? solution.cost : nil,
             time_spent: times[i],
-            solution: result
+            solution: solution
           }
         }
         best = synthesis.min_by{ |element| element[:quality] }
 
         if best[:heuristic] != 'supplied_initial_routes'
           # if another heuristic is the best, use its solution as the initial route
-          vrp.routes = best[:solution][:routes].collect{ |route|
-            mission_ids = route[:activities].collect{ |a|
-              a[:service_id]
-            }.compact
+          vrp.routes = best[:solution].routes.collect{ |route|
+            mission_ids = route.steps.collect(&:service_id).compact
             next if mission_ids.empty?
 
-            Models::Route.create(vehicle: vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] }, mission_ids: mission_ids)
+            Models::Route.create(vehicle: vrp.vehicles.find{ |v| v.id == route.vehicle_id }, mission_ids: mission_ids)
           }.compact
         end
 

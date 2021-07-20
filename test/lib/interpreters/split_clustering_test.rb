@@ -508,9 +508,9 @@ class SplitClusteringTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 2, solutions[0].solvers.size
       assert_equal([nil, 'service_1', 'service_2'],
-                   solutions[0].routes[0].activities.map(&:service_id))
+                   solutions[0].routes[0].steps.map(&:service_id))
       assert_equal([nil, 'service_3', 'service_4'],
-                   solutions[0].routes[1].activities.map(&:service_id))
+                   solutions[0].routes[1].steps.map(&:service_id))
     end
 
     def test_correct_number_of_visits_when_concurrent_split_independent_and_max_split
@@ -605,7 +605,7 @@ class SplitClusteringTest < Minitest::Test
       end
       assert_equal check_vrp_services_size, problem.services.size
       assert_equal problem.services.size, solutions[0].unassigned.count(&:service_id) +
-                                          solutions[0].routes.sum{ |r| r.activities.count(&:service_id) }
+                                          solutions[0].routes.sum{ |r| r.steps.count(&:service_id) }
     end
 
     def test_max_split_poorly_populated_route_limit_result
@@ -981,10 +981,10 @@ class SplitClusteringTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 2, (solutions[0].routes.find{ |r|
                          r.vehicle.id == 'vehicle_0'
-                       }.activities.map(&:service_id) & ['service_1', 'service_5']).size
+                       }.steps.map(&:service_id) & ['service_1', 'service_5']).size
       assert_equal 1, (solutions[0].routes.find{ |r|
                          r.vehicle.id == 'vehicle_1'
-                       }.activities.map(&:service_id) & ['service_12']).size
+                       }.steps.map(&:service_id) & ['service_12']).size
     end
 
     def test_list_vehicles

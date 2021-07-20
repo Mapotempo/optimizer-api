@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2021
+# Copyright © Mapotempo, 2020
 #
 # This file is part of Mapotempo.
 #
@@ -18,19 +18,29 @@
 require './models/base'
 
 module Models
-  class Timing < Base
-    field :day_week_num
-    field :day_week
+  class Solution < Base
+    class CostInfo < Base
+      field :fixed, default: 0
+      field :time, default: 0
+      field :distance, default: 0
+      field :value, default: 0
+      field :lateness, default: 0
+      field :overload, default: 0
 
-    field :travel_distance, default: 0
-    field :travel_time, default: 0
-    field :travel_value, default: 0
+      def total
+        fixed + time + distance + value + lateness + overload
+      end
 
-    field :waiting_time, default: 0
-    field :begin_time, default: 0
-    field :end_time
-    field :departure_time, default: 0
-
-    field :current_distance, default: 0
+      def +(other)
+        CostInfo.create(
+          fixed: fixed + other.fixed,
+          time: time + other.time,
+          distance: distance + other.distance,
+          value: value + other.value,
+          lateness: lateness + other.lateness,
+          overload: overload + other.overload,
+        )
+      end
+    end
   end
 end

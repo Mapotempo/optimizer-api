@@ -18,21 +18,23 @@
 require './models/base'
 
 module Models
-  class Load < Base
-    field :current, default: 0
+  class Solution < Base
+    class Load < Base
+      field :current, default: 0
 
-    belongs_to :quantity, class_name: 'Models::Quantity'
+      belongs_to :quantity, class_name: 'Models::Quantity'
 
-    def vrp_result(options = {})
-      hash = super(options)
-      hash.delete('quantity')
-      hash.delete('current')
-      hash['unit'] = quantity.unit_id
-      hash['label'] = quantity.unit.label
-      hash['value'] = quantity.value
-      hash['setup_value'] = quantity.setup_value
-      hash['current_load'] = current
-      hash
+      def vrp_result(options = {})
+        hash = super(options)
+        hash.delete('quantity')
+        hash.delete('current')
+        hash['unit'] = quantity.unit_id
+        hash['label'] = quantity.unit.label
+        hash['value'] = quantity.value
+        hash['setup_value'] = quantity.setup_value
+        hash['current_load'] = current
+        hash
+      end
     end
   end
 end

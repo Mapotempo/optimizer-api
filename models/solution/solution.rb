@@ -16,7 +16,6 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
-require './models/solution/solution_details'
 
 module Models
   class Solution < Base
@@ -28,24 +27,24 @@ module Models
     field :iterations
     field :solvers, default: []
 
-    has_many :routes, class_name: 'Models::SolutionRoute'
-    has_many :unassigned, class_name: 'Models::RouteActivity'
+    has_many :routes, class_name: 'Models::Solution::Route'
+    has_many :unassigned, class_name: 'Models::Solution::Step'
 
-    belongs_to :cost_details, class_name: 'Models::CostDetails'
-    belongs_to :details, class_name: 'Models::SolutionDetails'
-    belongs_to :configuration, class_name: 'Models::SolutionConfiguration'
+    belongs_to :cost_info, class_name: 'Models::Solution::CostInfo'
+    belongs_to :info, class_name: 'Models::Solution::Info'
+    belongs_to :configuration, class_name: 'Models::Solution::Configuration'
 
     def initialize(options = {})
+      options = { info: {}, cost_info: {}, configuration: {} }.merge(options)
       super(options)
-      self.details = Models::SolutionDetails.new({}) unless options.key? :details
-      self.cost_details = Models::CostDetails.new({}) unless options.key? :cost_details
-      self.configuration = Models::SolutionConfiguration.new({}) unless options.key? :configuration
     end
 
     def vrp_result(options = {})
       hash = super(options)
-      hash.delete('details')
-      hash.merge!(details.vrp_result(options))
+      hash['cost_details'] = hash['cost_info']
+      hash.delete('cost_info')
+      hash.delete('info')
+      hash.merge!(info.vrp_result(options))
       edit_route_days(hash)
       hash
     end
@@ -72,12 +71,12 @@ module Models
         route.fill_missing_route_data(vrp, matrix, options)
       }
       compute_result_total_dimensions_and_round_route_stats
-      self.cost_details = routes.map(&:cost_details).reduce(&:+)
+      self.cost_info = routes.map(&:cost_info).reduce(&:+)
       self.configuration.geometry = vrp.restitution_geometry
       self.configuration.schedule_start_date = vrp.schedule_start_date
 
       log "solution - unassigned rate: #{unassigned.size} of (ser: #{vrp.visits} (#{(unassigned.size.to_f / vrp.visits * 100).round(1)}%)"
-      used_vehicle_count = routes.count{ |r| r.activities.any?{ |a| a.service_id } }
+      used_vehicle_count = routes.count{ |r| r.steps.any?(&:service_id) }
       log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicle_count}"
       log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
       self
@@ -85,10 +84,10 @@ module Models
 
     def compute_result_total_dimensions_and_round_route_stats
       %i[total_time total_travel_time total_travel_value total_distance total_waiting_time].each{ |stat_symbol|
-        next unless routes.all?{ |r| r.detail.send stat_symbol }
+        next unless routes.all?{ |r| r.info.send stat_symbol }
 
-        details.send("#{stat_symbol}=", routes.collect{ |r|
-          r.detail.send(stat_symbol)
+        info.send("#{stat_symbol}=", routes.collect{ |r|
+          r.info.send(stat_symbol)
         }.reduce(:+))
       }
     end
@@ -113,8 +112,8 @@ module Models
       solution.solvers = self.solvers + other.solvers
       solution.routes = self.routes + other.routes
       solution.unassigned = self.unassigned + other.unassigned
-      solution.cost_details = self.cost_details + other.cost_details
-      solution.details = self.details + other.details
+      solution.cost_info = self.cost_info + other.cost_info
+      solution.info = self.info + other.info
       solution.configuration = self.configuration + other.configuration
       solution
     end

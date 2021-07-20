@@ -41,7 +41,7 @@ class HeuristicTest < Minitest::Test
 
       vrp.services.group_by{ |s| s.activity.point.id }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
-        days_used = solutions[0].routes.count{ |r| r.activities.count{ |act| act.detail.point.id == point_id } > 0 }
+        days_used = solutions[0].routes.count{ |r| r.steps.count{ |act| act.activity.point.id == point_id } > 0 }
         assert_operator days_used, :<=, expected_number_of_days,
                         "Used #{days_used} for point #{point_id} instead of #{expected_number_of_days} expected."
       }

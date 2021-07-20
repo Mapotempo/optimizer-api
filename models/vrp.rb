@@ -162,14 +162,14 @@ module Models
     def empty_route(vehicle)
       route_start_time = [[vehicle.timewindow], vehicle.sequence_timewindows].compact.flatten[0]&.start.to_i
       route_end_time = route_start_time
-      Models::SolutionRoute.new(
+      Models::Solution::Route.new(
         vehicle: vehicle,
-        detail: Models::RouteDetail.new(
+        info: Models::Solution::Route::Info.new(
           start_time: route_start_time,
           end_time: route_end_time
         ),
         initial_loads: self.units.map{ |unit|
-          Models::Load.new({
+          Models::Solution::Load.new({
             current: 0,
             quantity: Models::Quantity.new(unit: unit, value: 0)
           })
@@ -183,18 +183,20 @@ module Models
         self.services.flat_map{ |service|
           Array.new(service.visits_number) { |visit_index|
             service_id = self.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id
-            service.route_activity(service_id: service_id,
-                                   visit_index: visit_index,
-                                   reason: unassigned_hash[service.id])
+            Models::Solution::Step.new(service, service_id: service_id,
+                                                visit_index: visit_index,
+                                                reason: unassigned_hash[service.id])
           }
         }
       else
-        self.services.map{ |service| service.route_activity(reason: unassigned_hash[service.id]) }
+        self.services.map{ |service| Models::Solution::Step.new(service, reason: unassigned_hash[service.id]) }
       end
     end
 
     def unassigned_rests
-      self.vehicles.flat_map{ |vehicle| vehicle.rests.flat_map(&:route_activity) }
+      self.vehicles.flat_map{ |vehicle|
+        vehicle.rests.map{ |rest| Models::Solution::Step.new(rest) }
+      }
     end
 
     def self.convert_shipments_to_services(hash)
@@ -739,7 +741,7 @@ module Models
       when :time
         tsp = TSPHelper.create_tsp(self, end_point: nil)
         solution = TSPHelper.solve(tsp)
-        total_travel_time = solution.details.total_travel_time
+        total_travel_time = solution.info.total_travel_time
 
         total_vehicle_work_time = vehicles.map{ |vehicle| vehicle.duration || vehicle.timewindow.end - vehicle.timewindow.start }.reduce(:+)
         average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f

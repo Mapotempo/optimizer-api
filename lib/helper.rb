@@ -144,7 +144,7 @@ module Helper
     # TODO: Correct total cost (needs cost per route!!!)
 
     # Correct unassigned services
-    new_service_ids = new_solution.routes.flat_map{ |route| route.activities.map(&:service_id) }.compact +
+    new_service_ids = new_solution.routes.flat_map{ |route| route.steps.map(&:service_id) }.compact +
                       new_solution.unassigned.map(&:service_id).compact
 
     solution.unassigned.delete_if{ |activity|
@@ -157,17 +157,17 @@ module Helper
     new_solution.routes.each{ |new_route|
       # This vehicle might not be used in the old solutions
       old_index = solution.routes.index{ |r| r.vehicle.id == new_route.vehicle.id }
-      # old_route_activities = old_index ? solution.routes[old_index].activities : []
+      # old_route_steps = old_index ? solution.routes[old_index].steps : []
       solution.routes[old_index] = new_route if old_index
       solution.routes << new_route unless old_index
 
       [:total_time, :total_travel_time, :total_travel_value, :total_distance].each{ |stat|
         # If both nil no correction necessary
-        next if new_route.detail.send(stat).nil? && solution.routes[old_index].detail.send(stat).nil?
+        next if new_route.info.send(stat).nil? && solution.routes[old_index].info.send(stat).nil?
 
-        solution.details.send("#{stat}=",
-                              solution.details.send(stat) + new_route.detail.send(stat) -
-                              solution.routes[old_index].detail.send(stat))
+        solution.info.send("#{stat}=",
+                              solution.info.send(stat) + new_route.info.send(stat) -
+                              solution.routes[old_index].info.send(stat))
       }
     }
     solution

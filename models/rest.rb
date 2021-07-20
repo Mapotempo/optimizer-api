@@ -32,16 +32,6 @@ module Models
     has_many :timewindows, class_name: 'Models::Timewindow'
     # include ValidateTimewindows
 
-    def route_activity(options = {})
-      Models::RouteActivity.new(
-        id: self.id,
-        rest_id: self.id,
-        type: :rest,
-        detail: self,
-        timing: options[:timing] || Models::Timing.new({})
-      )
-    end
-
     def vrp_result(options = {})
       hash = super(options)
       hash.delete('late_multiplier')

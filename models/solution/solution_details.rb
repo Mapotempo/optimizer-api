@@ -18,21 +18,23 @@
 require './models/base'
 
 module Models
-  class SolutionDetails < Base
-    field :total_time, default: 1
-    field :total_travel_time, default: 0
-    field :total_waiting_time, default: 0
+  class Solution < Base
+    class Info < Base
+      field :total_time, default: 1
+      field :total_travel_time, default: 0
+      field :total_waiting_time, default: 0
 
-    field :total_distance, default: 0
+      field :total_distance, default: 0
 
-    field :total_travel_value
+      field :total_travel_value
 
-    def +(other)
-      merged_details = SolutionDetails.new({})
-      self.attributes.each_key{ |key|
-        merged_details[key] = (self[key] || 0) + (other[key] || 0)
-      }
-      merged_details
+      def +(other)
+        merged_details = Info.new({})
+        self.attributes.each_key{ |key|
+          merged_details[key] = (self[key] || 0) + (other[key] || 0)
+        }
+        merged_details
+      end
     end
   end
 end

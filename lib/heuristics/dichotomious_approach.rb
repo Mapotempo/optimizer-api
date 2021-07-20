@@ -149,7 +149,7 @@ module Interpreters
 
       # First transfer empty vehicles that appear in the routes
       solution.routes.each{ |r|
-        next if r.activities.any?(&:service_id)
+        next if r.steps.any?(&:service_id)
 
         sv_one.vehicles << r.vehicle
         sv_zero.vehicles -= [r.vehicle]
@@ -266,7 +266,7 @@ module Interpreters
         next if solution.nil?
 
         solution.routes.map{ |route|
-          mission_ids = route.activities.map(&:service_id).compact
+          mission_ids = route.steps.map(&:service_id).compact
           next if mission_ids.empty?
 
           Models::Route.create(
@@ -280,7 +280,7 @@ module Interpreters
     def self.remove_bad_skills(service_vrp, solution)
       log '---> remove_bad_skills', level: :debug
       solution.routes.each{ |r|
-        r.activities.each{ |a|
+        r.steps.each{ |a|
           next unless a.service_id
 
           service = service_vrp[:vrp].services.find{ |s| s.id == a.service_id }
@@ -290,7 +290,7 @@ module Interpreters
 
           log "dicho - removed service #{a.service_id} from vehicle #{r.vehicle.id}"
           solution.unassigned << a
-          r.activities.delete(a)
+          r.steps.delete(a)
           # TODO: remove bad sticky?
         }
       }
@@ -366,7 +366,7 @@ module Interpreters
         end
 
         assigned_service_ids = vehicles_indices.map{ |_v, r_i, _v_i| r_i }.compact.flat_map{ |r_i|
-          solution.routes[r_i].activities.map(&:service_id)
+          solution.routes[r_i].steps.map(&:service_id)
         }.compact
 
         sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp,

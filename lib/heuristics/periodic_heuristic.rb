@@ -389,18 +389,19 @@ module Wrappers
     def collect_unassigned
       unassigned = []
 
-      @services_assignment.each{ |id, data|
-        next unless data[:unassigned_indices].any?
-
-        if @candidate_services_ids.include?(id)
-          @services_assignment[id][:unassigned_reasons] = [provide_fair_reason(id)]
-        end
-
-        data[:unassigned_indices].each{ |index|
+      @candidate_services_ids.each{ |id|
+        service_in_vrp = @services_data[id][:raw]
+        (1..service_in_vrp.visits_number).each{ |index|
+          reason = provide_fair_reason(id)
           unassigned_id = "#{id}_#{index}_#{@services_data[id][:raw].visits_number}"
-          unassigned << service_in_vrp.route_activity(service_id: unassigned_id,
-                                                      reason: reason)
+          unassigned << Models::Solution::Step.new(service_in_vrp,
+                                                   service_id: unassigned_id,
+                                                   reason: reason)
         }
+      }
+      @uninserted.each{ |uninserted_id, info|
+        service_in_vrp = @services_data[info[:original_id]][:raw]
+        unassigned << Models::Solution::Step.new(service_in_vrp, service_id: uninserted_id, reason: info[:reason])
       }
 
       unassigned
@@ -458,15 +459,15 @@ module Wrappers
           back_to_depot = route_data[:stops].last[:end] +
                           matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
           periodic_route_time = back_to_depot - route_data[:stops].first[:start]
-          solver_route_time = (solution.routes.first.activities.last.timing.begin_time -
-                              solution.routes.first.activities.first.timing.begin_time) # last activity is vehicle depot
+          solver_route_time = (solution.routes.first.steps.last.info.begin_time -
+                              solution.routes.first.steps.first.info.begin_time) # last activity is vehicle depot
 
           minimum_duration = @candidate_services_ids.flat_map{ |s| @services_data[s][:durations] }.min
           original_indices = route_data[:stops].collect{ |s| @indices[s[:id]] }
           next if periodic_route_time - solver_route_time < minimum_duration ||
-                  solution.routes.first.activities.collect{ |act| @indices[act.service_id] }.compact == original_indices # we did not change our points order
+                  solution.routes.first.steps.collect{ |act| @indices[act.service_id] }.compact == original_indices # we did not change our points order
 
-          route_data[:stops] = compute_route_from(route_data, solution.routes.first.activities)
+          route_data[:stops] = compute_route_from(route_data, solution.routes.first.steps)
         }
       }
     end
@@ -551,7 +552,7 @@ module Wrappers
     def compute_route_from(new_route, solver_route)
       solver_order = solver_route.collect{ |s| s[:service_id] }.compact
       new_route[:stops].sort_by!{ |stop| solver_order.find_index(stop[:id]) }.collect{ |s| s[:id] }
-      update_route(new_route, 0, solver_route.first.timing.begin_time)
+      update_route(new_route, 0, solver_route.first.info.begin_time)
     end
 
     def compute_costs_for_route(route_data, set = nil)
@@ -1102,24 +1103,25 @@ module Wrappers
     def get_stop(day, type, vehicle, data = {})
       size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
       week = Helper.string_padding(day / 7 + 1, size_weeks)
-      times = Models::Timing.new(begin_time: data[:arrival],
-                                 day_week_num: "#{day % 7}_#{week}",
-                                 day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}")
+      times = Models::Solution::Step::Info.new(begin_time: data[:arrival],
+                                               day_week_num: "#{day % 7}_#{week}",
+                                               day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}")
 
       case type
       when 'start'
-        vehicle.start_depot_activity(timing: times)
+        Models::Solution::Step.new(vehicle.start_point, info: times)
       when 'end'
-        vehicle.end_depot_activity(timing: times)
+        Models::Solution::Step.new(vehicle.end_point, info: times)
       when 'service'
         service = @services_data[data[:id]][:raw] if type == 'service'
         loads = service.quantities.map{ |quantity|
-          Models::Load.new(quantity: Models::Quantity.new(unit: quantity.unit))
+          Models::Solution::Load.new(quantity: Models::Quantity.new(unit: quantity.unit))
         }
-        service.route_activity(
+        Models::Solution::Step.new(
+          service,
           service_id: "#{data[:id]}_#{data[:number_in_sequence]}_#{service.visits_number}",
           visit_index: data[:number_in_sequence],
-          timing: times,
+          info: times,
           index: data[:activity],
           loads: loads
         )
@@ -1151,14 +1153,14 @@ module Wrappers
     end
 
     def get_activities(day, route_data, vehicle)
-      computed_activities = []
+      computed_steps = []
       route_start, route_end, _final_travel_time, _final_travel_distance = get_route_data(route_data)
 
-      computed_activities << get_stop(day, 'start', vehicle, arrival: route_start) if route_data[:start_point_id]
-      computed_activities += route_data[:stops].map{ |stop| get_stop(day, 'service', vehicle, stop) }
-      computed_activities << get_stop(day, 'end', vehicle, arrival: route_end) if route_data[:end_point_id]
+      computed_steps << get_stop(day, 'start', vehicle, arrival: route_start) if route_data[:start_point_id]
+      computed_steps += route_data[:stops].map{ |stop| get_stop(day, 'service', vehicle, stop) }
+      computed_steps << get_stop(day, 'end', vehicle, arrival: route_end) if route_data[:end_point_id]
 
-      [computed_activities, route_start, route_end]
+      [computed_steps, route_start, route_end]
     end
 
     # At the end of algorithm, deduces which visit number is assigned
@@ -1198,24 +1200,24 @@ module Wrappers
               # in case two vehicles have same global_day_index :
               v.timewindow.start % 86400 == route_data[:tw_start] && v.timewindow.end % 86400 == route_data[:tw_end]
           }
-          computed_activities, _start_time, _end_time = get_activities(day, route_data, vrp_vehicle)
+          computed_steps, _start_time, _end_time = get_activities(day, route_data, vrp_vehicle)
 
           routes << {
             vehicle_id: vrp_vehicle.id,
-            mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
+            mission_ids: computed_steps.collect{ |stop| stop[:service_id] }.compact
           }
 
-          solution_routes << Models::SolutionRoute.new(activities: computed_activities,
-                                                       vehicle: vrp_vehicle)
+          solution_routes << Models::Solution::Route.new(steps: computed_steps,
+                                                         vehicle: vrp_vehicle)
         }
       }
       unassigned = collect_unassigned
       # TODO: fulfill cost_details with solution_routes costs
       solution = Models::Solution.new(cost: @cost,
-                                      solvers: [:heuristic],
-                                      routes: solution_routes,
-                                      unassigned: unassigned,
-                                      elapsed: (Time.now - @starting_time) * 1000) # ms
+                                                solvers: [:heuristic],
+                                                routes: solution_routes,
+                                                unassigned: unassigned,
+                                                elapsed: (Time.now - @starting_time) * 1000) # ms
       solution.parse_solution(vrp)
       vrp.preprocessing_heuristic_result = solution
       routes

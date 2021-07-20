@@ -404,7 +404,7 @@ module Wrappers
     private
 
     def build_cost_details(cost_details)
-      Models::CostDetails.create(
+      Models::Solution::CostInfo.create(
         fixed: cost_details&.fixed || 0,
         time: cost_details && (cost_details.time + cost_details.time_fake + cost_details.time_without_wait) || 0,
         distance: cost_details && (cost_details.distance + cost_details.distance_fake) || 0,
@@ -414,24 +414,24 @@ module Wrappers
       )
     end
 
-    def build_route_activity(vrp, vehicle, activity)
+    def build_route_step(vrp, vehicle, activity)
       times = { begin_time: activity.start_time, current_distance: activity.current_distance }
       loads = activity.quantities.map.with_index{ |quantity, index|
-        Models::Load.new(quantity: Models::Quantity.new(unit: vrp.units[index]), current: quantity)
+        Models::Solution::Load.new(quantity: Models::Quantity.new(unit: vrp.units[index]), current: quantity)
       }
       case activity.type
       when 'start'
-        vehicle.start_depot_activity(timing: times, loads: loads)
+        Models::Solution::Step.new(vehicle.start_point, info: times, loads: loads) if vehicle.start_point
       when 'end'
-        vehicle.end_depot_activity(timing: times, loads: loads)
+        Models::Solution::Step.new(vehicle.end_point, info: times, loads: loads) if vehicle.end_point
       when 'service'
         service = vrp.services[activity.index]
         @problem_services.delete(service.id)
-        service.route_activity(timing: times, loads: loads, index: activity.alternative)
+        Models::Solution::Step.new(service, info: times, loads: loads, index: activity.alternative)
       when 'break'
         vehicle_rest = @problem_rests[vehicle.id][activity.id]
         @problem_rests[vehicle.id].delete(activity.id)
-        vehicle_rest.route_activity(timing: times, loads: loads)
+        Models::Solution::Step.new(vehicle_rest, info: times, loads: loads)
       end
     end
 
@@ -440,26 +440,26 @@ module Wrappers
       routes.map.with_index{ |route, index|
         vehicle = vrp.vehicles[index]
         route_costs = build_cost_details(route.cost_details)
-        activities = route.activities.map{ |activity|
-          build_route_activity(vrp, vehicle, activity)
+        steps = route.activities.map{ |activity|
+          build_route_step(vrp, vehicle, activity)
         }.compact
-        route_detail = Models::RouteDetail.new({})
+        route_detail = Models::Solution::Route::Info.new({})
         initial_loads = route.activities.first.quantities.map.with_index{ |quantity, q_index|
-          Models::Load.new(quantity: Models::Quantity.new(unit: vrp.units[q_index]), current: quantity)
+          Models::Solution::Load.new(quantity: Models::Quantity.new(unit: vrp.units[q_index]), current: quantity)
         }
-        Models::SolutionRoute.new(
-          activities: activities,
+        Models::Solution::Route.new(
+          steps: steps,
           initial_loads: initial_loads,
-          cost_details: route_costs,
-          detail: route_detail,
+          cost_info: route_costs,
+          info: route_detail,
           vehicle: vehicle
         )
       }
     end
 
     def build_unassigned
-      @problem_services.values.map(&:route_activity) +
-        @problem_rests.flat_map{ |_k, v_rest| v_rest.values.map(&:route_activity) }
+      @problem_services.values.map{ |service| Models::Solution::Step.new(service) } +
+        @problem_rests.flat_map{ |_v_id, v_rests| v_rests.values.map{ |v_rest| Models::Solution::Step.new(v_rest) } }
     end
 
     def build_solution(vrp, content)
@@ -468,10 +468,10 @@ module Wrappers
         [vehicle.id, vehicle.rests.map{ |rest| [rest.id, rest] }.to_h]
       }.to_h
       routes = build_routes(vrp, content.routes)
-      cost_details = routes.map(&:cost_details).sum
+      cost_info = routes.map(&:cost_info).sum
       Models::Solution.new(
         cost: content.cost,
-        cost_details: cost_details,
+        cost_info: cost_info,
         solvers: [:ortools],
         iterations: content.iterations,
         elapsed: content.duration * 1000,

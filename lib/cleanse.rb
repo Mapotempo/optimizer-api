@@ -25,7 +25,7 @@ module Cleanse
   end
 
   def self.same_position(vrp, current)
-    current.timing.travel_time&.zero? || current.timing.travel_distance&.zero?
+    current.info.travel_time&.zero? || current.info.travel_distance&.zero?
   end
 
   def self.same_empty_units(capacities, previous, current)
@@ -78,33 +78,33 @@ module Cleanse
       capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
       previous_activity = nil
 
-      route.activities.delete_if{ |r_activity|
-        next unless service_types.include?(r_activity.type)
+      route.steps.delete_if{ |step|
+        next unless service_types.include?(step.type)
 
-        if previous_activity && r_activity && same_position(vrp, r_activity) &&
-           same_empty_units(capacities_units, previous_activity, r_activity) &&
-           !same_fill_units(capacities_units, previous_activity, r_activity)
-          add_unnassigned(solution.unassigned, r_activity, 'Duplicate empty service.')
+        if previous_activity && step && same_position(vrp, step) &&
+           same_empty_units(capacities_units, previous_activity, step) &&
+           !same_fill_units(capacities_units, previous_activity, step)
+          add_unnassigned(solution.unassigned, step, 'Duplicate empty service.')
           true
-        elsif previous_activity && r_activity && same_position(vrp, r_activity) &&
-              same_fill_units(capacities_units, previous_activity, r_activity) &&
-              !same_empty_units(capacities_units, previous_activity, r_activity)
-          add_unnassigned(solution.unassigned, r_activity, 'Duplicate fill service.')
+        elsif previous_activity && step && same_position(vrp, step) &&
+              same_fill_units(capacities_units, previous_activity, step) &&
+              !same_empty_units(capacities_units, previous_activity, step)
+          add_unnassigned(solution.unassigned, step, 'Duplicate fill service.')
           true
         else
-          previous_activity = r_activity if previous_activity.nil? || r_activity.service_id
+          previous_activity = step if previous_activity.nil? || step.service_id
           false
         end
       }
     }
   end
 
-  def self.add_unnassigned(unassigned, route_activity, reason)
-    route_activity.reason = reason
-    unassigned << route_activity
+  def self.add_unnassigned(unassigned, route_step, reason)
+    route_step.reason = reason
+    unassigned << route_step
   end
 
   def self.cleanse_empty_routes(result)
-    result.routes.delete_if{ |route| route.activities.none?(&:service_id) }
+    result.routes.delete_if{ |route| route.steps.none?(&:service_id) }
   end
 end

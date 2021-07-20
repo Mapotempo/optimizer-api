@@ -28,7 +28,7 @@ class DichotomiousTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       t2 = Time.now
       active_route_size = solutions[0].routes.count{ |route| route.count_services.positive? }
-      # Check activities
+      # Check steps
       activity_assert_message =
         "Too many unassigned services (#{solutions[0].unassigned.size}) for #{active_route_size} routes"
       if active_route_size > 12
@@ -209,8 +209,8 @@ class DichotomiousTest < Minitest::Test
 
     def test_rest_cannot_appear_as_a_mission_in_the_initial_route
       rest = Models::Rest.new(id: 'id')
-      route_rest = rest.route_activity
-      solution_route = Models::SolutionRoute.new(activities: [route_rest])
+      route_rest = Models::Solution::Step.new(rest)
+      solution_route = Models::Solution::Route.new(steps: [route_rest])
       initial_solution = Models::Solution.new(routes: [solution_route])
       assert_empty Interpreters::Dichotomious.send(:build_initial_routes, [initial_solution])
     end

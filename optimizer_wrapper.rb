@@ -202,7 +202,9 @@ module OptimizerWrapper
       multi_modal = Interpreters::MultiModal.new(vrp, service)
       optim_solution = multi_modal.multimodal_routes
     elsif vrp.vehicles.empty? || vrp.services.empty?
-      unassigned_with_reason = vrp.services.map{ |s| s.route_activity(reason: 'No vehicle available for this service') }
+      unassigned_with_reason = vrp.services.map{ |s|
+        Models::Solution::Step.new(s, reason: 'No vehicle available for this service')
+      }
       optim_solution = vrp.empty_solution(service.to_s, unassigned_with_reason, false)
     else
       unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
@@ -498,30 +500,30 @@ module OptimizerWrapper
 
   def self.check_solutions_consistency(expected_value, solutions)
     solutions.each{ |solution|
-      if solution.routes.any?{ |route| route.activities.any?{ |a| a.timings.waiting_time < 0 } }
+      if solution.routes.any?{ |route| route.steps.any?{ |a| a.info.waiting_time < 0 } }
         log 'Computed waiting times are invalid', level: :warn
         raise RuntimeError, 'Computed waiting times are invalid' if ENV['APP_ENV'] != 'production'
       end
 
-      waiting_times = solution.routes.map{ |route| route.detail.total_waiting_time }.compact
+      waiting_times = solution.routes.map{ |route| route.info.total_waiting_time }.compact
       durations = solution.routes.map{ |route|
-        route.activities.map{ |act|
-          act.timings.departure_time && (act.timings.departure_time - act.timings.begin_time)
+        route.steps.map{ |step|
+          step.info.departure_time && (step.info.departure_time - step.info.begin_time)
         }.compact
       }
       setup_durations = solution.routes.map{ |route|
-        route.activities.map{ |act|
-          next if act.type == 'rest'
+        route.steps.map{ |step|
+          next if step.type == :rest
 
-          (act.timings.travel_time.nil? || act.timings.travel_time&.positive?) && act.detail.setup_duration || 0
+          (step.info.travel_time.nil? || step.info.travel_time&.positive?) && step.activity.setup_duration || 0
         }.compact
       }
-      total_time = solution.details.total_time || 0
-      total_travel_time = solution.details.total_travel_time || 0
-      if !@zip_condition && total_time != (total_travel_time || 0) +
-                                           waiting_times.sum +
-                                           (setup_durations.flatten.reduce(&:+) || 0) +
-                                           (durations.flatten.reduce(&:+) || 0)
+      total_time = solution.info.total_time || 0
+      total_travel_time = solution.info.total_travel_time || 0
+      if total_time != (total_travel_time || 0) +
+                       waiting_times.sum +
+                       (setup_durations.flatten.reduce(&:+) || 0) +
+                       (durations.flatten.reduce(&:+) || 0)
 
         log_string = 'Computed times are invalid'
         tags = {
@@ -562,39 +564,6 @@ module OptimizerWrapper
       s = duration.to_i % 60
       [h, m, s].map { |t| t.to_s.rjust(2, '0') }.join(':')
     end
-  end
-
-  def self.compute_route_waiting_times(route)
-    previous_end = route[:activities].first[:begin_time]
-    loc_index = nil
-    consumed_travel_time = 0
-    consumed_setup_time = 0
-    route[:activities].each.with_index{ |act, index|
-      used_travel_time = 0
-      if act[:type] == 'rest'
-        if loc_index.nil?
-          next_index = route[:activities][index..-1].index{ |a| a[:type] != 'rest' }
-          loc_index = index + next_index if next_index
-          consumed_travel_time = 0
-        end
-        shared_travel_time = loc_index && route[:activities][loc_index][:travel_time] || 0
-        potential_setup = shared_travel_time > 0 && route[:activities][loc_index][:detail][:setup_duration] || 0
-        left_travel_time = shared_travel_time - consumed_travel_time
-        used_travel_time = [act[:begin_time] - previous_end, left_travel_time].min
-        consumed_travel_time += used_travel_time
-        # As setup is considered as a transit value, it may be performed before a rest
-        consumed_setup_time  += [act[:begin_time] - previous_end - used_travel_time, potential_setup].min
-      else
-        used_travel_time = (act[:travel_time] || 0) - consumed_travel_time - consumed_setup_time
-        consumed_travel_time = 0
-        consumed_setup_time = 0
-        loc_index = nil
-      end
-      considered_setup = act[:travel_time]&.positive? && (act[:detail][:setup_duration].to_i - consumed_setup_time) || 0
-      arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
-      act[:waiting_time] = act[:begin_time] - arrival_time
-      previous_end = act[:end_time] || act[:begin_time]
-    }
   end
 
   def self.apply_zones(vrp)
@@ -772,34 +741,36 @@ module OptimizerWrapper
 
     new_routes = solution.routes.map{ |route|
       last_point = nil
-      new_activities = route.activities.flat_map.with_index{ |activity, act_index|
+      new_steps = route.steps.flat_map.with_index{ |activity, act_index|
         if activity.service_id
           service_index = original_vrp.services.index{ |s| s.id == activity.service_id }
           cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
           if cluster_index && clusters[cluster_index].data_items.size > 1
             cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
             cluster_services = cluster_data_indices.map{ |index| original_vrp.services[index] }
-            next_point = route.activities[act_index + 1..route.activities.size].find{ |act|
-              act.detail.point
-            }&.detail&.point
+            next_point = route.steps[act_index + 1..route.steps.size].find{ |act|
+              act.activity.point
+            }&.activity&.point
             tsp = TSPHelper.create_tsp(original_vrp,
                                        vehicle: route.vehicle,
                                        services: cluster_services,
                                        start_point: last_point,
                                        end_point: next_point)
             solution = TSPHelper.solve(tsp)
-            last_point = solution.routes[0].activities.reverse.find(&:service_id).detail.point
-            service_ids = solution.routes[0].activities.select{ |a| a.type == :service }.map(&:id).compact
-            service_ids.map{ |service_id| original_vrp.services.find{ |service| service.id == service_id }.route_activity }
+            last_point = solution.routes[0].steps.reverse.find(&:service_id).activity.point
+            service_ids = solution.routes[0].steps.select{ |a| a.type == :service }.map(&:id).compact
+            service_ids.map{ |service_id|
+              Models::Solution::Step.new(original_vrp.services.find{ |service| service.id == service_id })
+            }
           else
             activity
           end
         else
-          last_point = activity.detail.point || last_point
+          last_point = activity.activity.point || last_point
           activity
         end
       }
-      Models::SolutionRoute.new(activities: new_activities, vehicle: route.vehicle)
+      Models::Solution::Route.new(steps: new_steps, vehicle: route.vehicle)
     }
     new_unassigned = solution.unassigned.flat_map{ |un|
       if un.service_id
@@ -807,7 +778,9 @@ module OptimizerWrapper
         cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
         if cluster_index && clusters[cluster_index].data_items.size > 1
           cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
-          cluster_data_indices.map{ |index| original_vrp.services[index].route_activity }
+          cluster_data_indices.map{ |index|
+            Models::Solution::Step.new(original_vrp.services[index])
+          }
         else
           un
         end

@@ -650,12 +650,12 @@ class WrapperTest < Minitest::Test
       # zip_cluser generates sub problems which register identical objects
       vrp = TestHelper.create(problem)
       solution = OptimizerWrapper.solve(service: o, vrp: vrp)
-      assert_equal size - 1 + 1, solution.routes[0].activities.size, "[#{o}] "
-      services = solution.routes[0].activities.map(&:service_id)
+      assert_equal size - 1 + 1, solution.routes[0].steps.size, "[#{o}] "
+      services = solution.routes[0].steps.map(&:service_id)
       1.upto(size - 1).each{ |i|
         assert_includes services, "service_#{i}", "[#{o}] Service missing: #{i}"
       }
-      points = solution.routes[0].activities.map{ |act| act.detail.point.id }
+      points = solution.routes[0].steps.map{ |act| act.activity.point.id }
       assert_includes points, 'point_0', "[#{o}] Point missing: 0"
     }
   end
@@ -732,8 +732,8 @@ class WrapperTest < Minitest::Test
       }
     }
     solution = OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem))
-    assert_equal size + 1, solution.routes[0][:activities].size # always return activities for start/end
-    points = solution.routes[0].activities.collect{ |a| a.service_id || a.detail.point_id || a.rest_id }
+    assert_equal size + 1, solution.routes[0].steps.size # always return steps for start/end
+    points = solution.routes[0].steps.collect{ |a| a.service_id || a.activity.point_id || a.rest_id }
     services_size = problem[:services].size
     services_size.times.each{ |i|
       assert_includes points, "service_#{i + 1}", "Element missing: #{i + 1}"
@@ -1032,7 +1032,7 @@ class WrapperTest < Minitest::Test
       (0..vrp.vehicles.size - 1).collect{ |_| [0, 0, 'trace'] }
     }) do
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 5, solutions[0].routes[0].activities.size
+      assert_equal 5, solutions[0].routes[0].steps.size
       refute_nil solutions[0].routes[0].geometry
     end
   end
@@ -1096,8 +1096,8 @@ class WrapperTest < Minitest::Test
 
     vrp = TestHelper.load_vrp(self, problem: problem)
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 2, solutions[0].routes[0].activities.size
-    assert_equal 2, solutions[0].routes[1].activities.size
+    assert_equal 2, solutions[0].routes[0].steps.size
+    assert_equal 2, solutions[0].routes[1].steps.size
   end
 
   def test_input_zones_shipment
@@ -1164,8 +1164,8 @@ class WrapperTest < Minitest::Test
 
     vrp = TestHelper.load_vrp(self, problem: problem)
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 2, solutions[0].routes[0].activities.size
-    assert_equal 3, solutions[0].routes[1].activities.size
+    assert_equal 2, solutions[0].routes[0].steps.size
+    assert_equal 3, solutions[0].routes[1].steps.size
     assert_equal 0, solutions[0].unassigned.size
   end
 
@@ -1224,11 +1224,11 @@ class WrapperTest < Minitest::Test
     }
 
     solution = OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem))
-    assert solution.routes[0].activities[1].pickup_shipment_id
-    refute solution.routes[0].activities[1].delivery_shipment_id
+    assert solution.routes[0].steps[1].pickup_shipment_id
+    refute solution.routes[0].steps[1].delivery_shipment_id
 
-    refute solution.routes[0].activities[2].pickup_shipment_id
-    assert solution.routes[0].activities[2].delivery_shipment_id
+    refute solution.routes[0].steps[2].pickup_shipment_id
+    assert solution.routes[0].steps[2].delivery_shipment_id
   end
 
   def test_split_vrps_using_two_solver
@@ -2239,7 +2239,7 @@ class WrapperTest < Minitest::Test
     }
 
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 1, (solutions[0].routes.sum{ |route| route.activities.count(&:service_id) })
+    assert_equal 1, (solutions[0].routes.sum{ |route| route.steps.count(&:service_id) })
     assert_equal 5, solutions[0].unassigned.size
   end
 
@@ -2662,7 +2662,7 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert_equal problem[:services].size,
-                 solutions[0].routes.sum{ |r| r.activities.count(&:service_id) } + solutions[0].unassigned.count(&:service_id)
+                 solutions[0].routes.sum{ |r| r.steps.count(&:service_id) } + solutions[0].unassigned.count(&:service_id)
   end
 
   def test_compute_several_solutions
@@ -2745,7 +2745,7 @@ class WrapperTest < Minitest::Test
       vrp.preprocessing_partitions = partition
       OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
         solve_call += 1
-        Models::Solution.new(unassigned: vrp.services.map(&:route_activity))
+        Models::Solution.new(unassigned: vrp.services.map{ |service| Models::Solution::Step.new(service) })
       }) do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
       end
@@ -2826,7 +2826,7 @@ class WrapperTest < Minitest::Test
         total_time += Time.now - start
         Models::Solution.new(unassigned: vrp.services.flat_map{ |service|
           (1..service.visits_number).map{ |visit|
-            service.route_activity(service_id: "#{service.id}_#{visit}")
+            Models::Solution::Step.new(service, service_id: "#{service.id}_#{visit}")
           }
         })
       }
@@ -2996,7 +2996,7 @@ class WrapperTest < Minitest::Test
       refute_empty solutions[0].unassigned
       assert(solutions[0].unassigned.all?(&:id))
       solutions[0].routes.each{ |route|
-        route.activities.each{ |a|
+        route.steps.each{ |a|
           next unless a.service_id
 
           assert a.id, 'Original ID is missing for service'
@@ -3013,7 +3013,7 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     solutions[0].routes.each{ |route|
-      assert_equal route.activities.last.timing.current_distance, route.detail.total_distance
+      assert_equal route.steps.last.info.current_distance, route.info.total_distance
     }
   end
 
@@ -3033,18 +3033,18 @@ class WrapperTest < Minitest::Test
     vrp[:services][1][:activity][:timewindows] = [{ start: 30, end: 40, day_index: 5 }]
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     corresponding_in_route = solutions[0].routes.collect{ |r|
-      r.activities.find{ |a| a.id == vrp[:services][0][:id] }
+      r.steps.find{ |a| a.id == vrp[:services][0][:id] }
     }.first
 
-    assert_equal 0, corresponding_in_route.detail.timewindows.first.start
-    assert_equal 10, corresponding_in_route.detail.timewindows.first.end
+    assert_equal 0, corresponding_in_route.activity.timewindows.first.start
+    assert_equal 10, corresponding_in_route.activity.timewindows.first.end
     # Services which can be served have their timewindows interpreted and the day index is removed
-    assert_nil corresponding_in_route.detail.timewindows.first.day_index
+    assert_nil corresponding_in_route.activity.timewindows.first.day_index
 
     corresponding_unassigned = solutions[0].unassigned.find{ |un| un.id == vrp[:services][1][:id] }
-    assert_equal 30, corresponding_unassigned.detail.timewindows.first.start
-    assert_equal 40, corresponding_unassigned.detail.timewindows.first.end
-    assert_equal 5, corresponding_unassigned.detail.timewindows.first.day_index
+    assert_equal 30, corresponding_unassigned.activity.timewindows.first.start
+    assert_equal 40, corresponding_unassigned.activity.timewindows.first.end
+    assert_equal 5, corresponding_unassigned.activity.timewindows.first.day_index
   end
 
   def test_empty_result_when_no_mission
@@ -3232,15 +3232,15 @@ class WrapperTest < Minitest::Test
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
     # check if all rests respect their TWs (duplicated below)
     solution_w_simplification.routes.each{ |route|
-      planned_rest = route.activities.find{ |a| a.type == :rest }
+      planned_rest = route.steps.find{ |a| a.type == :rest }
 
       rest_id = vrp.vehicles.find{ |v| v.id == route.vehicle.id }.rests.first.id
       rest = vrp.rests.find{ |r| r.id == rest_id }
       assert rest, 'Simplification should put back the original rests'
 
-      assert_operator planned_rest.timing.begin_time, :>=, rest.timewindows[0].start,
+      assert_operator planned_rest.info.begin_time, :>=, rest.timewindows[0].start,
                       'Rest violates its timewindow.start'
-      assert_operator planned_rest.timing.begin_time, :<=, rest.timewindows[0].end,
+      assert_operator planned_rest.info.begin_time, :<=, rest.timewindows[0].end,
                       'Rest violates its timewindow.end'
     }
 
@@ -3250,11 +3250,11 @@ class WrapperTest < Minitest::Test
       vrp.resolution_evaluate_only = true
       vrp.preprocessing_first_solution_strategy = nil
       vrp.routes = solution_w_simplification.routes.collect{ |r|
-        next if r.activities.none?(&:service_id)
+        next if r.steps.none?(&:service_id)
 
         {
           vehicle: vrp.vehicles.find{ |v| v.id == r.vehicle.id },
-          mission_ids: r.activities.map(&:service_id).compact
+          mission_ids: r.steps.map(&:service_id).compact
         }
       }.compact
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
@@ -3269,10 +3269,10 @@ class WrapperTest < Minitest::Test
       # TODO: the delta should be a lot smaller, may be as small as 1e-5 but due to a cost calculation difference
       # or-tools returns a different internal cost when there is a pause, we can decrease the delta when this difference
       # is fixed.
-      assert_in_delta r.cost_details.time, solution_w_simplification.routes[i].cost_details.time, 0.1,
+      assert_in_delta r.cost_info.time, solution_w_simplification.routes[i].cost_info.time, 0.1,
                       'Manually inserting the simplified pause should give the same time cost'
 
-      assert_equal r.detail.total_time, solution_w_simplification.routes[i].detail.total_time,
+      assert_equal r.info.total_time, solution_w_simplification.routes[i].info.total_time,
                    'Manually inserting the simplified pause should give the same route total time'
     }
 
@@ -3281,35 +3281,35 @@ class WrapperTest < Minitest::Test
     vrp.resolution_evaluate_only = true
     vrp.preprocessing_first_solution_strategy = nil
     vrp.routes = solution_wo_simplification.routes.collect{ |r|
-      next if r.activities.none?(&:service_id)
+      next if r.steps.none?(&:service_id)
 
       {
         vehicle: vrp.vehicles.find{ |v| v.id == r.vehicle.id },
-        mission_ids: r.activities.map(&:service_id).compact
+        mission_ids: r.steps.map(&:service_id).compact
       }
     }.compact
     solution_w_simplification = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
 
     # check if all rests respect their TWs
     solution_w_simplification.routes.each{ |route|
-      planned_rest = route.activities.find{ |a| a.type == :rest }
+      planned_rest = route.steps.find{ |a| a.type == :rest }
       rest_id = vrp.vehicles.find{ |v| v.id == route.vehicle.id }.rests.first.id
       rest = vrp.rests.find{ |r| r.id == rest_id }
       assert rest, 'Simplification should put back the original rests'
 
-      assert_operator planned_rest.timing.begin_time, :>=,
+      assert_operator planned_rest.info.begin_time, :>=,
                       rest.timewindows[0].start, 'Rest violates its timewindow.start'
-      assert_operator planned_rest.timing.begin_time, :<=,
+      assert_operator planned_rest.info.begin_time, :<=,
                       rest.timewindows[0].end, 'Rest violates its timewindow.end'
     }
 
     # check if the results with and without simplification are the same
     solution_wo_simplification.routes.each_with_index{ |route_without, i|
       route_with = solution_w_simplification.routes[i]
-      assert_in_delta route_without.cost_details.time.round(2), route_with.cost_details.time.round(2), 0.1,
+      assert_in_delta route_without.cost_info.time.round(2), route_with.cost_info.time.round(2), 0.1,
                       'Manually inserting the simplified pause should give the same time cost'
 
-      assert_equal route_without.detail.total_time, route_with.detail.total_time,
+      assert_equal route_without.info.total_time, route_with.info.total_time,
                    'Manually inserting the simplified pause should give the same route total time'
     }
   end
