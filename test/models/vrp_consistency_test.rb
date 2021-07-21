@@ -281,7 +281,7 @@ module Models
       ].each{ |symbol|
         vrp = Oj.load(vrp_base)
         vrp[symbol] << vrp[symbol].first
-        assert_raises ActiveHash::IdError do TestHelper.create(vrp) end
+        assert_raises OptimizerWrapper::DiscordantProblemError do TestHelper.create(vrp) end
       }
     end
 
@@ -384,7 +384,7 @@ module Models
       vrp = VRP.toy
       vrp[:services] << vrp[:services].first
 
-      assert_raises ActiveHash::IdError do
+      assert_raises OptimizerWrapper::DiscordantProblemError do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
       end
     end

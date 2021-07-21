@@ -48,6 +48,8 @@ module Models
                           Parsers::RestParser.parse(object, options)
                         when 'Models::Point'
                           Parsers::PointParser.parse(object, options)
+                        when 'Hash'
+                          object # Allow direct loading of json solution
                         else
                           raise 'Unknown step class'
                         end
