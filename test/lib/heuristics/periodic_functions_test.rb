@@ -559,6 +559,22 @@ class HeuristicTest < Minitest::Test
       assert_equal 0, vrp.services.first.last_possible_days.first, 'There are 261 working days, hence a service with 261 visits can only start at day 0'
     end
 
+    def test_compute_latest_authorized_day_with_partially_provided_data
+      problem = VRP.periodic
+      problem[:services][0][:visits_number] = 4
+      problem[:services][0][:last_possible_day_indices] = [2, 4]
+      problem[:configuration][:schedule][:range_indices][:end] = 40
+      vrp = TestHelper.create(problem)
+      Interpreters::PeriodicVisits.new(vrp) # call to function compute_possible_days
+      assert_equal [2, 4, 39, 40], vrp.services.first.last_possible_days
+
+      problem[:services][0][:first_possible_day_indices] = [2, 4]
+      problem[:services][0][:minimum_lapse] = 3
+      vrp = TestHelper.create(problem)
+      Interpreters::PeriodicVisits.new(vrp) # call to function compute_possible_days
+      assert_equal [2, 5, 8, 11], vrp.services.first.first_possible_days
+    end
+
     def test_exist_possible_first_route_according_to_same_point_day
       vrp = TestHelper.create(VRP.lat_lon_periodic)
       vrp.resolution_same_point_day = true

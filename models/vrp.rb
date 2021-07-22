@@ -462,6 +462,30 @@ module Models
       collect_unavaible_day_indices(element, start_index, end_index)
     end
 
+    def self.deduce_possible_days(hash, element, start_index)
+      convert_possible_dates_into_indices(element, hash, start_index)
+
+      element[:first_possible_days] = element[:first_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
+      element[:last_possible_days] = element[:last_possible_day_indices].to_a.slice(0..element[:visits_number] || 1 - 1)
+
+      %i[first_possible_day_indices first_possible_dates last_possible_day_indices last_possible_dates].each{ |k|
+        element.delete(k)
+      }
+    end
+
+    def self.convert_possible_dates_into_indices(element, hash, start_index)
+      return unless hash[:configuration][:schedule][:range_date]
+
+      start_value = hash[:configuration][:schedule][:range_date][:start].to_date.ajd.to_i - start_index
+      element[:first_possible_day_indices] ||= element[:first_possible_dates].to_a.collect{ |date|
+        date.to_date.ajd.to_i - start_value
+      }
+
+      element[:last_possible_day_indices] ||= element[:last_possible_dates].to_a.collect{ |date|
+        date.to_date.ajd.to_i - start_value
+      }
+    end
+
     def self.detect_date_indices_inconsistency(hash)
       missions_and_vehicles = hash[:services] + hash[:vehicles]
       has_date = missions_and_vehicles.any?{ |m|
@@ -504,6 +528,7 @@ module Models
       hash[:vehicles].each{ |v| deduce_unavailable_days(hash, v, start_index, end_index, :vehicle) }
       hash[:services].each{ |element|
         deduce_unavailable_days(hash, element, start_index, end_index, :visit)
+        deduce_possible_days(hash, element, start_index)
       }
       if hash[:configuration][:schedule]
         deduce_unavailable_days(hash, hash[:configuration][:schedule], start_index, end_index, :schedule)

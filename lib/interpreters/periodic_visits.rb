@@ -389,33 +389,34 @@ module Interpreters
     def compute_possible_days(vrp)
       # for each of this service's visits, computes first and last possible day to be assigned
       vrp.services.each{ |service|
-        day = @schedule_start
         nb_services_seen = 0
+        day = [service.first_possible_days[nb_services_seen], @schedule_start].compact.max
 
         # first possible day
+        computed_first_possible_days = []
         while day <= @schedule_end && nb_services_seen < service.visits_number
-          if service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
-            day += 1
-          else
-            service.first_possible_days += [day]
-            nb_services_seen += 1
-            day += service.minimum_lapse || 1
-          end
+          day += 1 while service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) } && day <= @schedule_end
+          break if day > @schedule_end
+
+          computed_first_possible_days << day
+          nb_services_seen += 1
+          day = [day + (service.minimum_lapse || 1), service.first_possible_days[nb_services_seen]].compact.max
         end
+        service.first_possible_days = computed_first_possible_days
 
         # last possible day
-        day = @schedule_end
         nb_services_seen = 0
+        day = [service.last_possible_days[service.visits_number - nb_services_seen - 1], @schedule_end].compact.min
+        computed_last_possible_days = []
         while day >= @schedule_start && nb_services_seen < service.visits_number
-          if service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) }
-            day -= 1
-          else
-            service.last_possible_days += [day]
-            nb_services_seen += 1
-            day -= service.minimum_lapse || 1
-          end
+          day -= 1 while service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) } && day >= @schedule_start
+          break if day < @schedule_start
+
+          computed_last_possible_days << day
+          nb_services_seen += 1
+          day = [day - (service.minimum_lapse || 1), service.last_possible_days[service.visits_number - nb_services_seen - 1], @schedule_end].compact.min
         end
-        service.last_possible_days.reverse!
+        service.last_possible_days = computed_last_possible_days.reverse
       }
     end
 

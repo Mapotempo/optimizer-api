@@ -3277,4 +3277,45 @@ class WrapperTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
     assert(result[:unassigned].collect{ |una| una[:reason].include?('&&') })
   end
+
+  def test_possible_days_consistency
+    vrp = TestHelper.create(VRP.lat_lon_periodic_two_vehicles)
+    vrp.services[0].first_possible_days = [3]
+    vrp.services[0].last_possible_days = [0]
+
+    vrp.services[1].first_possible_days = [vrp.schedule_range_indices[:end] + 1]
+
+    vrp.services[2].last_possible_days = [-1]
+
+    unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
+    assert_equal 3, unfeasible_services.size
+    assert(unfeasible_services.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
+  end
+
+  def test_possible_days_consistency_regarding_other_visits_possible_days
+    vrp = TestHelper.create(VRP.lat_lon_periodic_two_vehicles)
+    vrp.schedule_range_indices[:end] = 100
+    vrp.services.each{ |s| s.visits_number = 3 }
+    # this one should not be rejected
+    vrp.services[0].first_possible_days = [0, 1, 0]
+    vrp.services[0].last_possible_days = [7, 6, 5]
+
+    # visit 1 and 2 should both be at day 3, which is not acceptable
+    vrp.services[1].first_possible_days = [3, 3, 4]
+    vrp.services[1].last_possible_days = [6, 3, 8]
+
+    # last visit should be before first one, which is not acceptable
+    vrp.services[2].first_possible_days = [3, 2, 1]
+    vrp.services[2].last_possible_days = [6, 4, 2]
+
+    # these days does not allow to respect minimum lapse
+    vrp.services[3].minimum_lapse = 5
+    vrp.services[3].first_possible_days = [0, 0, 0]
+    vrp.services[3].last_possible_days = [7, 2, 3]
+
+    unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
+    assert_equal 9, unfeasible_services.size
+    assert(unfeasible_services.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
+    refute_includes unfeasible_services.collect{ |un| un[:original_service_id] }, vrp.services.first.id
+  end
 end
