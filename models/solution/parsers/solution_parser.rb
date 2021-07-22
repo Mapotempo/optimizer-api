@@ -29,7 +29,7 @@ module Parsers
           solution.routes << route
         end
         matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
-        route.fill_missing_route_data(vrp, matrix, options)
+        Parsers::RouteParser.parse(route, vrp, matrix, options)
       }
       compute_result_total_dimensions_and_round_route_stats(solution)
       solution.cost_info = solution.routes.map(&:cost_info).reduce(&:+)
