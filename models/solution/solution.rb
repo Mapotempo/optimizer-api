@@ -58,38 +58,8 @@ module Models
       }
     end
 
-    def parse_solution(vrp, options = {})
-      tic_parse_result = Time.now
-      vrp.vehicles.each{ |vehicle|
-        route = routes.find{ |r| r.vehicle.id == vehicle.id }
-        # there should be one route per vehicle in solution :
-        unless route
-          route = vrp.empty_route(vehicle)
-          routes << route
-        end
-        matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id }
-        route.fill_missing_route_data(vrp, matrix, options)
-      }
-      compute_result_total_dimensions_and_round_route_stats
-      self.cost_info = routes.map(&:cost_info).reduce(&:+)
-      self.configuration.geometry = vrp.restitution_geometry
-      self.configuration.schedule_start_date = vrp.schedule_start_date
-
-      log "solution - unassigned rate: #{unassigned.size} of (ser: #{vrp.visits} (#{(unassigned.size.to_f / vrp.visits * 100).round(1)}%)"
-      used_vehicle_count = routes.count{ |r| r.steps.any?(&:service_id) }
-      log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) vehicles used: #{used_vehicle_count}"
-      log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
-      self
-    end
-
-    def compute_result_total_dimensions_and_round_route_stats
-      %i[total_time total_travel_time total_travel_value total_distance total_waiting_time].each{ |stat_symbol|
-        next unless routes.all?{ |r| r.info.send stat_symbol }
-
-        info.send("#{stat_symbol}=", routes.collect{ |r|
-          r.info.send(stat_symbol)
-        }.reduce(:+))
-      }
+    def parse(vrp, options = {})
+      Parsers::SolutionParser.parse(self, vrp, options)
     end
 
     def count_assigned_services

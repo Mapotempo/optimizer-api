@@ -156,7 +156,7 @@ module Models
         unassigned: (unassigned_visits(unassigned_with_reason) +
                      unassigned_rests)
       )
-      solution.parse_solution(self)
+      solution.parse(self)
     end
 
     def empty_route(vehicle)

@@ -291,7 +291,7 @@ module Interpreters
       service_vrp[:vrp] = create_sub_vrp(ss_data)
 
       solution = OptimizerWrapper.define_process(service_vrp, job, &block)
-      solution.parse_solution(service_vrp[:vrp])
+      solution.parse(service_vrp[:vrp])
     ensure
       log "<-- split_solve_sub_vrp lv: #{split_level}"
     end

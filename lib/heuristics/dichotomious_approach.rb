@@ -116,7 +116,7 @@ module Interpreters
 
           remove_bad_skills(service_vrp, solution)
           Interpreters::SplitClustering.remove_empty_routes(solution)
-          solution.parse_solution(vrp)
+          solution.parse(vrp)
           log "dicho - level(#{service_vrp[:dicho_level]}) before end_stage_insert  unassigned rate " \
               "#{solution.unassigned.size}/#{service_vrp[:vrp].services.size}: " \
               "#{(solution.unassigned.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
@@ -129,7 +129,7 @@ module Interpreters
             log "dicho - before remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], solution, 0.5)
             log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
-            solution.parse_solution(vrp)
+            solution.parse(vrp)
           end
 
           log "dicho - level(#{service_vrp[:dicho_level]}) unassigned rate " \

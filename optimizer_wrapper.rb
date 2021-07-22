@@ -287,7 +287,7 @@ module OptimizerWrapper
       optim_solution.configuration.geometry = vrp.restitution_geometry
 
       optim_solution.unassigned += unfeasible_services
-      optim_solution.parse_solution(vrp)
+      optim_solution.parse(vrp)
 
       if vrp.preprocessing_first_solution_strategy
         optim_solution.heuristic_synthesis = vrp.preprocessing_heuristic_synthesis
@@ -789,6 +789,6 @@ module OptimizerWrapper
       end
     }
     solution = Models::Solution.new(routes: new_routes, unassigned: new_unassigned)
-    solution.parse_solution(original_vrp, compute_dimensions: true)
+    solution.parse(original_vrp, compute_dimensions: true)
   end
 end

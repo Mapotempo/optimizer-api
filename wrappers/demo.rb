@@ -39,7 +39,7 @@ module Wrappers
         routes: routes
       )
 
-      solution.parse_solution(vrp, compute_dimensions: true)
+      solution.parse(vrp, compute_dimensions: true)
     end
   end
 end
