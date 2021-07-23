@@ -147,7 +147,7 @@ module Wrappers
             vehicle_indices: (service.sticky_vehicles.size > 0 && service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact.size > 0) ?
               service.sticky_vehicles.collect{ |sticky_vehicle| vrp.vehicles.index(sticky_vehicle) }.compact : vehicles_indices,
             setup_duration: service.activity.setup_duration,
-            id: service.id,
+            id: service.id.to_s,
             late_multiplier: service.activity.late_multiplier || 0,
             setup_quantities: vrp.units.collect{ |unit|
               q = service.quantities.find{ |quantity| quantity.unit == unit }
@@ -272,7 +272,7 @@ module Wrappers
       }
       vehicles = vrp.vehicles.collect{ |vehicle|
         OrtoolsVrp::Vehicle.new(
-          id: vehicle.id,
+          id: vehicle.id.to_s,
           cost_fixed: vehicle.cost_fixed,
           cost_distance_multiplier: vehicle.cost_distance_multiplier,
           cost_time_multiplier: vehicle.cost_time_multiplier,
@@ -301,7 +301,7 @@ module Wrappers
                 OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
               },
               duration: rest.duration,
-              id: rest.id,
+              id: rest.id.to_s,
               late_multiplier: rest.late_multiplier,
               exclusion_cost: rest.exclusion_cost || -1
             )
@@ -333,8 +333,8 @@ module Wrappers
 
         OrtoolsVrp::Relation.new(
           type: relation.type,
-          linked_ids: current_linked_ids,
-          linked_vehicle_ids: current_linked_vehicles,
+          linked_ids: current_linked_ids.map(&:to_s),
+          linked_vehicle_ids: current_linked_vehicles.map(&:to_s),
           lapse: relation.lapse
         )
       }.compact
@@ -346,8 +346,8 @@ module Wrappers
         next if service_ids.empty?
 
         OrtoolsVrp::Route.new(
-          vehicle_id: route.vehicle.id,
-          service_ids: service_ids
+          vehicle_id: route.vehicle.id.to_s,
+          service_ids: service_ids.map(&:to_s)
         )
       }
 
@@ -701,15 +701,15 @@ module Wrappers
     end
 
     def update_services_positions(services, services_positions, id, position, service_index)
-      services_positions[:always_first] << id if position == :always_first
-      services_positions[:never_first] << id if [:never_first, :always_middle].include?(position)
-      services_positions[:never_last] << id if [:never_last, :always_middle].include?(position)
-      services_positions[:always_last] << id if position == :always_last
+      services_positions[:always_first] << id.to_s if position == :always_first
+      services_positions[:never_first] << id.to_s if [:never_first, :always_middle].include?(position)
+      services_positions[:never_last] << id.to_s if [:never_last, :always_middle].include?(position)
+      services_positions[:always_last] << id.to_s if position == :always_last
 
       return services if position != :never_middle
 
       services + services.select{ |s| s.problem_index == service_index }.collect{ |s|
-        services_positions[:always_first] << id
+        services_positions[:always_first] << id.to_s
         services_positions[:always_last] << "#{id}_alternative"
         copy_s = s.dup
         copy_s.id += '_alternative'
