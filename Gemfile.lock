@@ -8,7 +8,7 @@ GIT
 
 GIT
   remote: https://github.com/Mapotempo/balanced_vrp_clustering.git
-  revision: c76cca8fe53bf802aca2f998631f7c24c59cb3c4
+  revision: 4b2b48732604731e1759788eab85f7ac6268835d
   branch: dev
   specs:
     balanced_vrp_clustering (0.2.0)
@@ -166,7 +166,7 @@ GEM
     nokogiri (1.11.4)
       mini_portile2 (~> 2.5.0)
       racc (~> 1.4)
-    oj (3.11.2)
+    oj (3.12.1)
     parallel (1.20.1)
     parser (2.7.2.0)
       ast (~> 2.4.1)
