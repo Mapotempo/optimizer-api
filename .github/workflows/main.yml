@@ -3,30 +3,80 @@ name: Docker Image CI
 on:
   push:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 env:
   NB_SERVICES: ${{ secrets.NB_SERVICES }}
-  OPTIMIZER_ORTOOLS_VERSION: ${{ secrets.OPTIMIZER_ORTOOLS_VERSION }}
   PROJECT: optimizer
-  REGISTRY: ${{ secrets.REGISTRY }}
-  VROOM_VERSION: ${{ secrets.VROOM_VERSION }}
 
 jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Cache layers and gems
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            vendor/bundle
+            /tmp/.buildx-cache
+          key: ${{ runner.os }}-${{ hashFiles('Gemfile.lock') }}
+      - name: Check cached gems
+        run: |
+          echo $(pwd)
+          echo $(ls -lh vendor/bundle)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: docker/Dockerfile
+          build-args: |
+            BUNDLE_WITHOUT=production
+            OPTIMIZER_ORTOOLS_VERSION=${{ secrets.OPTIMIZER_ORTOOLS_VERSION }}
+            VROOM_VERSION=${{ secrets.VROOM_VERSION }}
+          tags: registry.test.com/mapotempo/optimizer-api:latest
+          outputs: type=docker,dest=/tmp/optimizer-api.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
+      - name: Move buildx cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      - name: Extract gems from image to cache folder
+        run: |
+          rm -rf vendor/bundle
+          mkdir -p vendor/bundle
+          docker load --input /tmp/optimizer-api.tar
+          docker cp "$(docker create --rm registry.test.com/mapotempo/optimizer-api:latest)":/srv/app/vendor/bundle/. vendor/bundle
+          echo $(ls -lh vendor/bundle)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          path: /tmp/optimizer-api.tar
+
   test_basis:
+    needs: build
     runs-on: ubuntu-latest
     env:
       OPTIONS: "COV=false LOG_LEVEL=info SKIP_DICHO=true SKIP_REAL_CASES=true SKIP_PERIODIC=true SKIP_SPLIT_CLUSTERING=true"
     steps:
-      - uses: actions/checkout@v2
-      - name: Cache
-        id: cache
-        uses: actions/cache@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v2
         with:
-          path: vendor/bundle
-          key: ${{ runner.os }}
-      - name: Build image
-        run: ./.github/actions/build.sh
+          path: /tmp
+      - name: Load Docker image
+        run: docker load --input /tmp/artifact/optimizer-api.tar
+      - name: Launch Stack
+        run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
         timeout-minutes: 10
@@ -34,19 +84,23 @@ jobs:
         shell: bash
 
   test_dicho:
+    needs: build
     runs-on: ubuntu-latest
     env:
       OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/dichotomious_test.rb"
     steps:
-      - uses: actions/checkout@v2
-      - name: Cache
-        id: cache
-        uses: actions/cache@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v2
         with:
-          path: vendor/bundle
-          key: ${{ runner.os }}
-      - name: Build image
-        run: ./.github/actions/build.sh
+          path: /tmp
+      - name: Load Docker image
+        run: docker load --input /tmp/artifact/optimizer-api.tar
+      - name: Launch Stack
+        run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
         timeout-minutes: 20
@@ -54,19 +108,23 @@ jobs:
         shell: bash
 
   test_real:
+    needs: build
     runs-on: ubuntu-latest
     env:
       OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_test.rb"
     steps:
-      - uses: actions/checkout@v2
-      - name: Cache
-        id: cache
-        uses: actions/cache@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v2
         with:
-          path: vendor/bundle
-          key: ${{ runner.os }}
-      - name: Build image
-        run: ./.github/actions/build.sh
+          path: /tmp
+      - name: Load Docker image
+        run: docker load --input /tmp/artifact/optimizer-api.tar
+      - name: Launch Stack
+        run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
         timeout-minutes: 10
@@ -74,81 +132,97 @@ jobs:
         shell: bash
 
   test_real_periodic:
-      runs-on: ubuntu-latest
-      env:
-        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_periodic_test.rb"
-      steps:
-        - uses: actions/checkout@v2
-        - name: Cache
-          id: cache
-          uses: actions/cache@v2
-          with:
-            path: vendor/bundle
-            key: ${{ runner.os }}
-        - name: Build image
-          run: ./.github/actions/build.sh
-          shell: bash
-        - name: Starting tests
-          timeout-minutes: 30
-          run: ./.github/actions/tests.sh
-          shell: bash
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_periodic_test.rb"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp
+      - name: Load Docker image
+        run: docker load --input /tmp/artifact/optimizer-api.tar
+      - name: Launch Stack
+        run: ./.github/actions/launch_stack.sh
+        shell: bash
+      - name: Starting tests
+        timeout-minutes: 30
+        run: ./.github/actions/tests.sh
+        shell: bash
 
   test_real_periodic_solver:
-      runs-on: ubuntu-latest
-      env:
-        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_periodic_solver_test.rb"
-      steps:
-        - uses: actions/checkout@v2
-        - name: Cache
-          id: cache
-          uses: actions/cache@v2
-          with:
-            path: vendor/bundle
-            key: ${{ runner.os }}
-        - name: Build image
-          run: ./.github/actions/build.sh
-          shell: bash
-        - name: Starting tests
-          timeout-minutes: 20
-          run: ./.github/actions/tests.sh
-          shell: bash
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/real_cases_periodic_solver_test.rb"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp
+      - name: Load Docker image
+        run: docker load --input /tmp/artifact/optimizer-api.tar
+      - name: Launch Stack
+        run: ./.github/actions/launch_stack.sh
+        shell: bash
+      - name: Starting tests
+        timeout-minutes: 20
+        run: ./.github/actions/tests.sh
+        shell: bash
 
   test_periodic:
-      runs-on: ubuntu-latest
-      env:
-        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/periodic_*"
-      steps:
-        - uses: actions/checkout@v2
-        - name: Cache
-          id: cache
-          uses: actions/cache@v2
-          with:
-            path: vendor/bundle
-            key: ${{ runner.os }}
-        - name: Build image
-          run: ./.github/actions/build.sh
-          shell: bash
-        - name: Starting tests
-          timeout-minutes: 5
-          run: ./.github/actions/tests.sh
-          shell: bash
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/periodic_*"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp
+      - name: Load Docker image
+        run: docker load --input /tmp/artifact/optimizer-api.tar
+      - name: Launch Stack
+        run: ./.github/actions/launch_stack.sh
+        shell: bash
+      - name: Starting tests
+        timeout-minutes: 5
+        run: ./.github/actions/tests.sh
+        shell: bash
 
   test_split_clustering:
-      runs-on: ubuntu-latest
-      env:
-        OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/interpreters/split_clustering_test.rb"
-      steps:
-        - uses: actions/checkout@v2
-        - name: Cache
-          id: cache
-          uses: actions/cache@v2
-          with:
-            path: vendor/bundle
-            key: ${{ runner.os }}
-        - name: Build image
-          run: ./.github/actions/build.sh
-          shell: bash
-        - name: Starting tests
-          timeout-minutes: 25
-          run: ./.github/actions/tests.sh
-          shell: bash
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/interpreters/split_clustering_test.rb"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp
+      - name: Load Docker image
+        run: docker load --input /tmp/artifact/optimizer-api.tar
+      - name: Launch Stack
+        run: ./.github/actions/launch_stack.sh
+        shell: bash
+      - name: Starting tests
+        timeout-minutes: 25
+        run: ./.github/actions/tests.sh
+        shell: bash

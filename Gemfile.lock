@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/Mapotempo/active_hash.git
-  revision: 6471576562e2db78fa87f8a1cc6ec848c88ab76e
+  revision: e2b18fedb32aec0cc03f0c747dbc682cbb8fc488
   branch: mapo
   specs:
     active_hash (3.1.0)
@@ -63,7 +63,7 @@ GEM
     charlock_holmes (0.7.7)
     chunky_png (1.4.0)
     color-generator (0.0.4)
-    concurrent-ruby (1.1.7)
+    concurrent-ruby (1.1.9)
     crack (0.4.5)
       rexml
     crass (1.0.6)
@@ -120,7 +120,7 @@ GEM
     http-cookie (1.0.3)
       domain_name (~> 0.5)
     http_accept_language (2.1.1)
-    i18n (1.8.5)
+    i18n (1.8.10)
       concurrent-ruby (~> 1.0)
     jaro_winkler (1.5.4)
     litecable (0.7.0)
@@ -135,7 +135,7 @@ GEM
     mime-types-data (3.2020.0512)
     mini_portile2 (2.5.2)
       net-ftp (~> 0.1)
-    minitest (5.14.2)
+    minitest (5.14.4)
     minitest-around (0.5.0)
       minitest (~> 5.0)
     minitest-bisect (1.5.1)
@@ -272,7 +272,7 @@ GEM
     thread_safe (0.3.6)
     tilt (2.0.10)
     time (0.1.0)
-    tzinfo (1.2.7)
+    tzinfo (1.2.9)
       thread_safe (~> 0.1)
     unf (0.1.4)
       unf_ext
@@ -286,7 +286,7 @@ GEM
       hashdiff (>= 0.4.0, < 2.0.0)
     websocket (1.2.8)
     yard (0.9.25)
-    zeitwerk (2.4.0)
+    zeitwerk (2.4.2)
     zlib (1.0.0)
 
 PLATFORMS
