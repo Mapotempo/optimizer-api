@@ -799,17 +799,21 @@ module Wrappers
       #
       #       def simplify_X(vrp, result = nil, options = { mode: :simplify })
       #         # Description of the simplification
+      #         simplification_active = false
       #         case options[:mode]
       #         when :simplify
       #           # simplifies the constraint
+      #           simplification_active = true if applied
       #         when :rewind
       #           nil # if nothing to do
+      #           simplification_active = true if applied
       #         when :patch_result
       #           # patches the result
+      #           simplification_active = true if applied
       #         else
       #           raise 'Unknown :mode option'
       #         end
-      #         nil # returns nil because the objects are modified and this function is going to be called automatically
+      #         simplification_active # returns true if the simplification is applied/rewinded/patched
       #       end
       #
       # (If some modes are not necessary they can be merged -- e.g. `when :rewind, :patch_result` and have `nil`)
@@ -834,7 +838,8 @@ module Wrappers
 
     def simplify_constraints(vrp)
       simplifications.each{ |simplification|
-        self.send(simplification, vrp, nil, mode: :simplify)
+        simplification_activated = self.send(simplification, vrp, nil, mode: :simplify)
+        log "#{simplification} simplification is activated" if simplification_activated
       }
 
       vrp
@@ -844,7 +849,8 @@ module Wrappers
       return result unless result.is_a?(Hash)
 
       simplifications.reverse_each{ |simplification|
-        self.send(simplification, vrp, result, mode: :patch_result)
+        result_patched = self.send(simplification, vrp, result, mode: :patch_result)
+        log "#{simplification} simplification is active, result is patched" if result_patched
       }
 
       result
@@ -856,7 +862,8 @@ module Wrappers
 
       # then rewind the simplifications
       simplifications.reverse_each{ |simplification|
-        self.send(simplification, vrp, nil, mode: :rewind)
+        simplification_rewinded = self.send(simplification, vrp, nil, mode: :rewind)
+        log "#{simplification} simplification is rewinded" if simplification_rewinded
       }
 
       vrp
@@ -864,11 +871,13 @@ module Wrappers
 
     def simplify_vehicle_duration(vrp, _result = nil, options = { mode: :simplify })
       # Simplify vehicle durations using timewindows if there is force_start
+      simplification_active = false
       case options[:mode]
       when :simplify
         vrp.vehicles&.each{ |vehicle|
           next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') && vehicle.duration && vehicle.timewindow
 
+          simplification_active ||= true
           # Warning: this can make some services infeasible because vehicle cannot work after tw.start + duration
           vehicle.timewindow.end = vehicle.timewindow.start + vehicle.duration
           vehicle.duration = nil
@@ -878,11 +887,12 @@ module Wrappers
       else
         raise 'Unknown :mode option'
       end
-      nil
+      simplification_active
     end
 
     def simplify_vehicle_pause(vrp, result = nil, options = { mode: :simplify })
       # Simplifies vehicle pauses if there is no reason to keep them -- i.e., no services with timewindows
+      simplification_active = false
       case options[:mode]
       when :simplify
         return nil unless !vrp.schedule? &&
@@ -943,6 +953,8 @@ module Wrappers
 
           vehicle[:simplified_rests] = vehicle.rests.dup
           vehicle.rests = []
+
+          simplification_active ||= vehicle[:simplified_rests].any?
         }
 
         vrp[:simplified_rests] = vrp.rests.select{ |r| vrp.vehicles.none?{ |v| v.rests.include?(r) } }
@@ -951,6 +963,8 @@ module Wrappers
         # take the modifications back in case the vehicle is moved to another sub-problem
         vrp.vehicles&.each{ |vehicle|
           next unless vehicle[:simplified_rests]&.any?
+
+          simplification_active ||= true
 
           vehicle.rests += vehicle[:simplified_rests]
           vehicle[:simplified_rests] = nil
@@ -970,6 +984,8 @@ module Wrappers
         pause_and_depot = %w[depot rest].freeze
         vrp.vehicles&.each{ |vehicle|
           next unless vehicle[:simplified_rests]&.any?
+
+          simplification_active ||= true
 
           route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
           no_cost = route[:activities].none?{ |a| pause_and_depot.exclude?(a[:type]) }
@@ -1057,7 +1073,7 @@ module Wrappers
       else
         raise 'Unknown :mode option'
       end
-      nil
+      simplification_active
     end
 
     def simplify_service_setup_duration_and_vehicle_setup_modifiers(vrp, result = nil, options = { mode: :simplify })
@@ -1069,6 +1085,7 @@ module Wrappers
       # and the setup duration s_p can be removed from the problem.
       # This way solvers like vroom which does not support setup duration can be used.
       return nil if vrp.periodic_heuristic?
+      simplification_active = false
 
       case options[:mode]
       when :simplify
@@ -1108,6 +1125,8 @@ module Wrappers
 
         return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
 
+        simplification_active = true
+
         vrp.vehicles.each{ |vehicle|
           vehicle[:simplified_coef_setup] = vehicle.coef_setup
           vehicle[:simplified_additional_setup] = vehicle.additional_setup
@@ -1117,6 +1136,8 @@ module Wrappers
       when :rewind
         # take it back in case in dicho and there will be re-optimization
         return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+
+        simplification_active = true
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
 
@@ -1152,6 +1173,8 @@ module Wrappers
         # the travel_times need to be decreased and setup_duration need to be increased by
         # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
         return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+
+        simplification_active = true
 
         vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
         services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point }
@@ -1190,7 +1213,7 @@ module Wrappers
       else
         raise 'Unknown :mode option'
       end
-      nil
+      simplification_active
     end
 
     def shift_route_times(route, shift_amount, shift_start_index = 0)
