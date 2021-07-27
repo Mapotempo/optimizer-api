@@ -106,7 +106,7 @@ class DichotomiousTest < Minitest::Test
 
     def test_infinite_loop_due_to_impossible_to_cluster
       vrp = VRP.lat_lon
-      vrp[:configuration][:resolution][:duration] = 10
+      vrp[:configuration][:resolution][:duration] = 20
       vrp[:points].each{ |p| p[:location] = { lat: 45, lon: 5 } } # all at the same location (impossible to cluster)
 
       vrp[:matrices][0][:time] = Array.new(7){ Array.new(7, 1) }
@@ -201,6 +201,10 @@ class DichotomiousTest < Minitest::Test
       split = Interpreters::Dichotomious.send(:kmeans, vrp, :duration)
       assert_equal 2, split.size
       assert_equal vrp.services.size, split.collect(&:size).sum, 'Wrong number of services will be returned'
+    end
+
+    def test_rest_cannot_appear_as_a_mission_in_the_initial_route
+      assert_empty Interpreters::Dichotomious.send(:build_initial_routes, [{ routes: [activities: [{ rest_id: 'id' }]] }])
     end
   end
 end

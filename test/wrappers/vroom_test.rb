@@ -590,6 +590,26 @@ class Wrappers::VroomTest < Minitest::Test
     assert_equal 6, result[:routes][0][:activities].size
   end
 
+  def test_shipments_timewindows
+    vroom = OptimizerWrapper.config[:services][:vroom]
+    problem = VRP.pud
+    problem[:shipments].map!{ |shipment|
+      shipment[:pickup][:timewindows] = [{start: 5, end: 20}]
+      shipment[:delivery][:timewindows] = [{start: 10, end: 40}]
+      shipment
+    }
+
+    vrp = TestHelper.create(problem)
+    result = vroom.solve(vrp, 'test')
+    assert result
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
   def test_shipments_quantities
     vroom = OptimizerWrapper.config[:services][:vroom]
     problem = {
@@ -755,5 +775,74 @@ class Wrappers::VroomTest < Minitest::Test
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } < result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 5, result[:routes][0][:activities].size
+  end
+
+  def test_correct_route_collection
+    problem = VRP.lat_lon_two_vehicles
+    problem[:services].each{ |service|
+      service[:skills] = ['s1']
+    }
+    problem[:vehicles].last[:skills] = [['s1']]
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, TestHelper.create(problem), nil)
+    assert_equal 2, result[:routes].size
+
+    skilled_route = result[:routes].find{ |route| route[:vehicle_id] == problem[:vehicles].last[:id] }
+    assert_equal problem[:services].size, (skilled_route[:activities].count{ |activity| activity[:service_id] })
+  end
+
+  def test_quantity_precision
+    problem = VRP.basic
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'kg', value: 1.001 }]
+    }
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{ unit_id: 'kg', limit: 3 }]
+    }
+
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, TestHelper.create(problem), nil)
+    assert_equal 1, result[:unassigned].size, 'The result is expected to contain 1 unassigned'
+
+    assert_operator result[:routes].first[:activities].count{ |activity| activity[:service_id] }, :<=, 2,
+                    'The vehicle cannot load more than 2 services and 3 kg'
+    result[:routes].first[:activities].each{ |activity|
+      next unless activity[:service_id]
+
+      assert_equal 1.001, activity[:detail][:quantities].first[:value]
+    }
+  end
+
+  def test_negative_quantities_should_not_raise
+    problem = VRP.basic
+    problem[:units] << { id: 'l' }
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'kg', value: 1 }, { unit_id: 'l', value: -1}]
+    }
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{ unit_id: 'kg', limit: 3 }, { unit_id: 'l', limit: 2}]
+    }
+    OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, TestHelper.create(problem), nil)
+  end
+
+  def test_partially_nil_capacities
+    problem = VRP.basic
+    problem[:services].each{ |service|
+      service[:quantities] = [{ unit_id: 'kg', value: 1 }]
+    }
+    problem[:vehicles] << problem[:vehicles].first.dup
+    problem[:vehicles].first[:capacities] = [{ unit_id: 'kg', limit: 2 }]
+    problem[:vehicles].last[:id] = 'vehicle_1'
+
+    vroom = Wrappers::Vroom.new
+    vroom.stub(
+      :run_vroom, lambda{ |vroom_vrp, _job|
+        assert_equal [2 * Wrappers::Vroom::CUSTOM_QUANTITY_BIGNUM], vroom_vrp[:vehicles].first[:capacity]
+        assert_equal vroom_vrp[:jobs].flat_map{ |job| job[:pickup].first }.sum,
+                     vroom_vrp[:vehicles].last[:capacity].first
+        nil
+      }
+    ) do
+      vroom.solve(TestHelper.create(problem))
+    end
   end
 end

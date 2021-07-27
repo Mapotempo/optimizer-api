@@ -1,0 +1,53 @@
+# Copyright © Mapotempo, 2021
+#
+# This file is part of Mapotempo.
+#
+# Mapotempo is free software. You can redistribute it and/or
+# modify since you respect the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# Mapotempo is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the Licenses for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Mapotempo. If not, see:
+# <http://www.gnu.org/licenses/agpl.html>
+#
+
+legacy:
+  export_file:
+    comment: unassigned_reason
+    plan:
+      name: day_week_num
+      ref: day_week
+    route:
+      day: day
+      id: vehicle_id
+      original_id: original_vehicle_id
+      total_travel_distance: total_travel_distance
+      total_travel_time: total_travel_time
+      total_wait_time: total_waiting_time
+    stop:
+      additional_value: additional_value
+      duration: duration
+      end_time: end_time
+      lat: lat
+      lon: lon
+      name: original_id
+      point_id: point_id
+      quantity: "quantity_%{unit}"
+      reference: id
+      setup: setup_duration
+      skills: skills
+      start_time: begin_time
+      tw_end: "timewindow_end_%{index}"
+      tw_start: "timewindow_start_%{index}"
+      type: type
+      type_rest: rest
+      type_store: store
+      type_visit: visit
+      visit_index: visit_index
+      wait_time: waiting_time
+    tags: tags

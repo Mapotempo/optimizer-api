@@ -22,7 +22,7 @@ module Models
     include Rack::Test::Methods
 
     def test_deduced_range_indices
-      vrp = VRP.scheduling
+      vrp = VRP.periodic
       vrp[:configuration][:schedule] = {
         range_date: {
           start: Date.new(2020, 1, 1), # wednesday
@@ -44,12 +44,12 @@ module Models
     end
 
     def test_visits_computation
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
 
       assert_equal vrp.services.size, vrp.visits
 
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
       vrp.services.each{ |service| service[:visits_number] *= 2 }
 
@@ -59,12 +59,12 @@ module Models
       assert_equal vrp.services.sum{ |s| s[:visits_number] }, vrp.visits
     end
 
-    def test_vrp_scheduling
+    def test_vrp_periodic
       vrp = VRP.toy
       vrp = TestHelper.create(vrp)
       refute vrp.schedule_range_indices
 
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
       assert vrp.schedule_range_indices
     end
@@ -72,7 +72,7 @@ module Models
     def test_month_indice_generation
       problem = VRP.basic
       problem[:relations] = [{
-        type: 'vehicle_group_duration_on_months',
+        type: :vehicle_group_duration_on_months,
         linked_vehicle_ids: ['vehicle_0'],
         lapse: 2,
         periodicity: 1
@@ -92,8 +92,8 @@ module Models
       vrp[:services][0][:unavailable_visit_day_date] = [Date.new(2020, 1, 1)]
       vrp[:services][1][:unavailable_visit_day_date] = [Date.new(2020, 1, 2)]
       created_vrp = TestHelper.create(vrp)
-      assert_equal [2], created_vrp.services[0].unavailable_visit_day_indices
-      assert_equal [3], created_vrp.services[1].unavailable_visit_day_indices
+      assert_equal Set[2], created_vrp.services[0].unavailable_days
+      assert_equal Set[3], created_vrp.services[1].unavailable_days
     end
 
     def test_deduce_sticky_vehicles_if_route_and_clustering
@@ -110,12 +110,12 @@ module Models
       vrp = VRP.basic
       generated_vrp = TestHelper.create(vrp)
       assert generated_vrp.resolution_solver
-      assert_nil generated_vrp.preprocessing_first_solution_strategy
+      assert_empty generated_vrp.preprocessing_first_solution_strategy, 'first_solution_strategy'
 
       vrp[:configuration][:resolution][:solver_parameter] = -1
       generated_vrp = TestHelper.create(vrp)
       refute generated_vrp.resolution_solver
-      assert_nil generated_vrp.preprocessing_first_solution_strategy
+      assert_empty generated_vrp.preprocessing_first_solution_strategy, 'first_solution_strategy'
 
       ['path_cheapest_arc', 'global_cheapest_arc', 'local_cheapest_insertion', 'savings', 'parallel_cheapest_insertion', 'first_unbound', 'christofides'].each_with_index{ |heuristic, heuristic_reference|
         vrp = VRP.basic
@@ -126,21 +126,32 @@ module Models
       }
     end
 
+    def test_shipment_conversion_into_services
+      vrp = VRP.pud
+      generated_vrp = TestHelper.create(vrp)
+
+      refute_respond_to generated_vrp, :shipments
+      assert_equal 4, generated_vrp.services.size
+      assert_equal(
+        2, generated_vrp.relations.count{ |relation| relation.type == :shipment && relation.linked_services.size == 2 }
+      )
+    end
+
     def test_deduce_consistent_relations
       vrp = VRP.pud
 
-      ['minimum_duration_lapse', 'maximum_duration_lapse'].each{ |relation_type|
+      %i[minimum_duration_lapse maximum_duration_lapse].each{ |relation_type|
         vrp[:relations] = [{
           type: relation_type,
           linked_ids: ['shipment_0', 'shipment_1'],
           lapse: 3
         }]
 
-        generated_vrp = TestHelper.create(vrp)
-        assert_equal 1, generated_vrp.relations.size
+        generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
+        assert_equal 3, generated_vrp.relations.size
         assert_equal 2, generated_vrp.relations.first.linked_ids.size
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0delivery'
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_delivery'
+        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
       }
 
       vrp[:services] = [{
@@ -148,36 +159,36 @@ module Models
         activity: { point_id: 'point_1' }
       }]
       vrp[:relations] = [{
-        type: 'minimum_duration_lapse',
+        type: :minimum_duration_lapse,
         linked_ids: ['service', 'shipment_1'],
         lapse: 3
       }]
-      generated_vrp = TestHelper.create(vrp)
+      generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
       assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
 
       vrp[:relations] = [{
-        type: 'same_route',
+        type: :same_route,
         linked_ids: ['service', 'shipment_0', 'shipment_1'],
         lapse: 3
       }]
-      generated_vrp = TestHelper.create(vrp)
+      generated_vrp = TestHelper.create(Oj.load(Oj.dump(vrp)))
       assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0pickup'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_pickup'
+      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
 
-      %w[sequence order].each{ |relation_type|
+      %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
         vrp[:relations].first[:linked_ids] = ['service', 'shipment_1']
         assert_raises OptimizerWrapper::DiscordantProblemError do
-          TestHelper.create(vrp)
+          TestHelper.create(Oj.load(Oj.dump(vrp)))
         end
       }
 
       vrp[:relations].first[:linked_ids] = ['service']
-      %w[sequence order].each{ |relation_type|
+      %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
-        TestHelper.create(vrp) # check no error provided
+        TestHelper.create(Oj.load(Oj.dump(vrp))) # check no error provided
       }
     end
 
@@ -187,36 +198,41 @@ module Models
       problem[:configuration][:schedule] = { range_indices: { start: 0, end: 7 }}
 
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
 
       problem[:vehicles].first[:timewindow] = { start: 0, end: 1000 }
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
 
       problem[:vehicles].first.delete(:timewindow)
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000 }]
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
 
       problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000, day_index: 0 }]
+      problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       vrp = TestHelper.create(problem)
-      assert_empty vrp.vehicles.first.unavailable_work_day_indices, 'This vehicle is only available on mondays, we can ignore unavailable_work_days_indices that are week-end days'
+      assert_empty vrp.vehicles.first.unavailable_days,
+                   'This vehicle is only available on mondays, we can ignore weekd-end unavailable_days'
 
       problem[:vehicles].first[:unavailable_work_day_indices] = [5, 6]
       problem[:vehicles].first.delete(:timewindow)
-      problem[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 1000, day_index: 0 }, { start: 0, end: 1000, day_index: 5 }, { start: 0, end: 1000, day_index: 6 }]
+      problem[:vehicles].first[:sequence_timewindows] =
+        [0, 5, 6].collect{ |day_index| { start: 0, end: 1000, day_index: day_index } }
       vrp = TestHelper.create(problem)
-      assert_equal [5, 6], vrp.vehicles.first.unavailable_work_day_indices
+      assert_equal Set[5, 6], vrp.vehicles.first.unavailable_days
     end
 
-    def test_remove_unecessary_units
+    def test_remove_unnecessary_units
       vrp = TestHelper.load_vrp(self)
       assert_empty vrp.units
       vrp.vehicles.all?{ |v| v.capacities.empty? }
       vrp.services.all?{ |s| s.quantities.empty? }
     end
 
-    def test_remove_unecessary_units_one_needed
+    def test_remove_unnecessary_units_one_needed
       vrp = TestHelper.load_vrp(self)
       assert_equal 1, vrp.units.size
       assert_operator vrp.vehicles.collect{ |v| v.capacities.collect(&:unit_id) }.flatten!.uniq!,
@@ -225,7 +241,7 @@ module Models
     end
 
     def test_vrp_creation_if_route_and_partitions
-      vrp = VRP.lat_lon_scheduling_two_vehicles
+      vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:routes] = [{
         vehicle_id: 'vehicle_0',
         mission_ids: ['service_1']
@@ -244,7 +260,7 @@ module Models
     end
 
     def test_transform_route_indice_into_index
-      original_vrp = VRP.lat_lon_scheduling_two_vehicles
+      original_vrp = VRP.lat_lon_periodic_two_vehicles
       original_vrp[:routes] = [{
         vehicle_id: 'vehicle_0',
         mission_ids: ['service_1'],
@@ -260,6 +276,69 @@ module Models
       end
       assert vrp.routes.first.day_index
       assert_equal 10, vrp.routes.first.day_index
+    end
+
+    def test_available_interval
+      vrp = VRP.periodic
+      vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 2, 5),
+                                                       end: Date.new(2021, 2, 11)}}
+      vrp[:services].first[:unavailable_visit_day_indices] = [9]
+      vrp[:services].first[:unavailable_date_ranges] = [{ start: Date.new(2021, 2, 6),
+                                                          end: Date.new(2021, 2, 8)}]
+
+      assert_equal [5, 6, 7, 9], TestHelper.create(vrp).services.first.unavailable_days.sort
+    end
+
+    def test_no_lapse_in_relation
+      vrp = VRP.basic
+      vrp[:relations] = [{
+        type: :vehicle_group_duration_on_months,
+        linked_vehicle_ids: ['vehicle_0']
+      }]
+
+      Models::Vrp.filter(vrp)
+      assert_empty vrp[:relations] # reject relation because lapse is mandatory
+
+      vrp[:relations] = [{
+        type: :vehicle_group_duration_on_months,
+        linked_vehicle_ids: ['vehicle_0'],
+        lapse: 2
+      }]
+      Models::Vrp.filter(vrp)
+      refute_empty vrp[:relations]
+
+      vrp = VRP.lat_lon_two_vehicles
+      vrp[:relations] = [{
+        type: :vehicle_trips,
+        linked_vehicle_ids: vrp[:vehicles].collect{ |v| v[:id] }
+      }]
+      Models::Vrp.filter(vrp)
+      refute_empty vrp[:relations] # do not reject even if no lapse, lapse is not mandatory
+    end
+
+    def test_original_skills_and_skills_are_equal_after_create
+      vrp = VRP.basic
+      vrp[:vehicles].first[:skills] = [['skill_to_output']]
+      vrp[:services].first[:skills] = ['skill_to_output']
+
+      created_vrp = Models::Vrp.create(vrp)
+      assert_equal 1, created_vrp.services.first.skills.size
+      assert_equal created_vrp.services.first.original_skills.size, created_vrp.services.first.skills.size
+    end
+
+    def test_filter_duplicated_relations
+      vrp = VRP.basic
+      vrp[:relations] = [{
+        type: :shipment,
+        linked_ids: ['service_1', 'service_2']
+      }]
+      Models::Vrp.filter(vrp)
+      assert_equal 1, vrp[:relations].size
+
+      vrp[:relations] << vrp[:relations].first
+      assert_equal 2, vrp[:relations].size
+      Models::Vrp.filter(vrp)
+      assert_equal 1, vrp[:relations].size
     end
   end
 end

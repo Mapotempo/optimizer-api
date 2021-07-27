@@ -175,7 +175,7 @@ module Filters
 
       service.activity.timewindows.each{ |timewindow|
         unified_timewindows[timewindow.id] = {
-          start: timewindow.start && ((timewindow.day_index || 0) * 86400 + timewindow.start) || (0 + (timewindow.day_index || 0) * 86400),
+          start: (timewindow.day_index || 0) * 86400 + timewindow.start,
           end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end) || (0 + (1 + (timewindow.day_index || 6)) * 86400)
         }
         inter[timewindow.id] = []
@@ -219,7 +219,7 @@ module Filters
 
   def self.filter_skills(vrp)
     # Remove duplicate skills and sort
-    (vrp.services + vrp.shipments).each{ |s|
+    vrp.services.each{ |s|
       s.skills = s.skills&.uniq&.sort
     }
 
@@ -228,22 +228,20 @@ module Filters
     }
 
     # Remove infeasible skills
-    filter_infeasible_service_shipment_skills(vrp)
+    filter_infeasible_service_skills(vrp)
     filter_unnecessary_vehicle_skills(vrp)
 
     nil
   end
 
-  def self.filter_infeasible_service_shipment_skills(vrp)
+  def self.filter_infeasible_service_skills(vrp)
     # Eliminate the skills which do not appear in any vehicle
     individual_vehicle_skills = vrp.vehicles.map(&:skills).flatten(2).compact.uniq
 
-    [vrp.services, vrp.shipments].each{ |activity_group|
-      activity_group.each{ |s|
-        next if s.skills.empty?
+    vrp.services.each{ |s|
+      next if s.skills.empty?
 
-        s.skills -= s.skills - individual_vehicle_skills
-      }
+      s.skills -= s.skills - individual_vehicle_skills
     }
 
     nil
@@ -251,7 +249,7 @@ module Filters
 
   def self.filter_unnecessary_vehicle_skills(vrp)
     # Eliminate skills of vehicles if there is no service needing it
-    needed_service_skills = (vrp.services.flat_map(&:skills) + vrp.shipments.flat_map(&:skills)).compact.uniq
+    needed_service_skills = vrp.services.flat_map(&:skills).compact.uniq
 
     vrp.vehicles.each{ |v|
       next if v.skills.empty?

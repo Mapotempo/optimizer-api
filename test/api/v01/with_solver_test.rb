@@ -30,20 +30,10 @@ class Api::V01::WithSolverTest < Minitest::Test
     # using ORtools to make sure that optimization takes enough time to be cut before ending
     asynchronously start_worker: true do
       @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
-      wait_status @job_id, 'working', api_key: 'ortools'
-      puts JSON.parse(last_response.body) if JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-      delete_job @job_id, api_key: 'ortools'
-      puts JSON.parse(last_response.body) if JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-    end
-    delete_completed_job @job_id, api_key: 'ortools' if @job_id
-  end
-
-  def test_delete_completed_job
-    asynchronously start_worker: true do
-      @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
-      wait_status @job_id, 'completed', api_key: 'ortools'
+      response = wait_avancement_match @job_id, /run optimization, iterations [0-9]+/, api_key: 'ortools'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
+      response = delete_job @job_id, api_key: 'ortools'
+      refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
     end
     delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end
@@ -69,5 +59,17 @@ class Api::V01::WithSolverTest < Minitest::Test
       assert_equal 'ortools', result['solutions'][0]['solvers'][1], "result['solutions'][0]['solvers'][1]"
     end
     delete_completed_job @job_id, api_key: 'solvers' if @job_id
+  end
+
+  def test_returned_graph
+    # using ORtools to make sure that optimization generates graph
+    asynchronously start_worker: true do
+      vrp = VRP.lat_lon
+      vrp[:configuration][:resolution][:duration] = 20
+      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
+      result = wait_status @job_id, 'completed', api_key: 'ortools'
+      assert_operator result['job']['graph'].size, :>, 1, 'Graph seems to have been overwritten at each call to blockcall'
+    end
+    delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end
 end

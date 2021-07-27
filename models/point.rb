@@ -27,5 +27,10 @@ module Models
     # validates_numericality_of :matrix_index, allow_nil: true
 
     belongs_to :location, class_name: 'Models::Location'
+
+    def same_location?(other)
+      self.location && other.location && (self.location.lat == other.location.lat) &&
+        (self.location.lon == other.location.lon)
+    end
   end
 end

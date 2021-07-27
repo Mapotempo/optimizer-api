@@ -16,7 +16,6 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
-require './models/concerns/validate_timewindows'
 
 module Models
   class Vehicle < Base
@@ -57,7 +56,6 @@ module Models
 
     field :force_start, default: false
     field :shift_preference, default: :minimize_span
-    field :trips, default: 1
     field :duration, default: nil
     field :overall_duration, default: nil
     field :distance, default: nil
@@ -66,10 +64,11 @@ module Models
     field :matrix_id, default: nil
     field :value_matrix_id, default: nil
 
-    field :unavailable_work_day_indices, default: [] # extends unavailable_work_date
+    field :unavailable_days, default: Set[] # extends unavailable_work_date and unavailable_work_day_indices
     field :global_day_index, default: nil
 
     has_many :skills, class_name: 'Array' # Vehicles can have multiple alternative skillsets
+    has_many :original_skills, class_name: 'Array'
 
     field :free_approach, default: false
     field :free_return, default: false
@@ -91,7 +90,6 @@ module Models
     # validates_numericality_of :global_day_index, allow_nil: true
     # validates_inclusion_of :router_dimension, in: %w( time distance )
     # validates_inclusion_of :shift_preference, in: %w( force_start force_end minimize_span )
-    # validates_numericality_of :trips, greater_than_or_equal_to: 0
     # validates_numericality_of :speed_multiplier
     # validates_numericality_of :duration, greater_than_or_equal_to: 0
     # validates_numericality_of :overall_duration, greater_than_or_equal_to: 0
@@ -107,9 +105,9 @@ module Models
     has_many :rests, class_name: 'Models::Rest'
 
     def self.create(hash)
-      if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_work_day_indices]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
+      if hash[:sequence_timewindows]&.size&.positive? && hash[:unavailable_days]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
         work_day_indices = hash[:sequence_timewindows].collect{ |tw| tw[:day_index] || (0..6).to_a }.flatten.uniq
-        hash[:unavailable_work_day_indices].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
+        hash[:unavailable_days].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
       end
 
       hash[:skills] = [[]] unless hash.has_key?(:skills) # If vehicle has no skills, it has the empty skillset
@@ -166,7 +164,7 @@ module Models
     def dimensions
       d = [:time, :distance]
       dimensions = [d.delete(router_dimension.to_sym)]
-      dimensions << d[0] if send('need_matrix_' + d[0].to_s + '?')
+      dimensions << d[0] if send("need_matrix_#{d[0]}?")
       dimensions
     end
 
@@ -214,7 +212,7 @@ module Models
               timewindow.day_index.nil? || timewindow.day_index == week_day_index
             }.each{ |timewindow|
               timewindow_duration =
-                if timewindow.start && timewindow.end
+                if timewindow.end
                   timewindow.end - timewindow.start
                 else
                   2**32
@@ -233,13 +231,14 @@ module Models
     end
 
     def work_duration
-      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle should not have sequence timewindow if there is no schedule' unless self.sequence_timewindows.empty?
+      raise 'vehicle::work_duration cannot handle sequence_timewindow' if self.sequence_timewindows.any?
 
-      timewindow_duration = if self.timewindow.nil? || self.timewindow.start.nil? || self.timewindow.end.nil?
-        2**32
-      else
-        self.timewindow.end - self.timewindow.start
-      end
+      timewindow_duration =
+        if self.timewindow&.end
+          self.timewindow.end - self.timewindow.start
+        else
+          2**32
+        end
 
       [timewindow_duration, self.duration].compact.min
     end
@@ -253,7 +252,7 @@ module Models
     def available_at(day)
       return false unless working_week_days.include?(day % 7)
 
-      return false if self.unavailable_work_day_indices.to_a.include?(day)
+      return false if self.unavailable_days.include?(day)
 
       true
     end
@@ -276,8 +275,11 @@ module Models
 
       if @working_range_indices[[range_start, range_end]].nil? # if info for this range is not already calculated, calculate
         range = (range_start..range_end).to_a
-        unavail_work_day_indices = self.unavailable_work_day_indices || [] # We do this because unavailable_work_day_indices can be nil instead of []. Normally create function should handle this
-        @working_range_indices[[range_start, range_end]] = (range - unavail_work_day_indices).delete_if{ |range_day| !working_week_days.include?(range_day.modulo(7)) }
+        unavail_work_day_indices = self.unavailable_days
+        @working_range_indices[[range_start, range_end]] =
+          (range - unavail_work_day_indices.to_a).delete_if{ |range_day|
+            !working_week_days.include?(range_day.modulo(7))
+          }
       end
 
       @working_range_indices[[range_start, range_end]]

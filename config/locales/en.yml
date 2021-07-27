@@ -17,3 +17,37 @@
 #
 
 en:
+  export_file:
+    comment: comment
+    plan:
+      name: plan
+      ref: reference plan
+    route:
+      day: day
+      id: route
+      original_id: vehicle
+      total_travel_distance: total travel distance
+      total_travel_time: total travel time
+      total_wait_time: total waiting time
+    stop:
+      additional_value: additional_value
+      duration: visit duration
+      end_time: end time
+      lat: lat
+      lon: lng
+      name: name
+      point_id: reference
+      quantity: "quantity[%{unit}]"
+      reference: reference visit
+      setup: duration per destination
+      skills: tags visit
+      start_time: time
+      tw_end: "time window end %{index}"
+      tw_start: "time window start %{index}"
+      type: stop type
+      type_rest: rest
+      type_store: store
+      type_visit: visit
+      visit_index: visit index
+      wait_time: waiting time
+    tags: tags

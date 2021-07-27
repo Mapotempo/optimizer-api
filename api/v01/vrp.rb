@@ -112,15 +112,14 @@ module Api
               ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.profile(api_key), vrp, checksum)
               count_incr :optimize, transactions: vrp.transactions
               if ret.is_a?(String)
-                # present result, with: VrpResult
                 status 201
-                present({ job: { id: ret, status: :queued }}, with: Grape::Presenters::Presenter)
+                present({ job: { id: ret, status: :queued }}, with: VrpResult)
               elsif ret.is_a?(Hash)
                 status 200
                 if vrp.restitution_csv
-                  present(OptimizerWrapper.build_csv(ret.deep_stringify_keys), type: CSV)
+                  present(OutputHelper::Result.build_csv([ret]), type: CSV)
                 else
-                  present({ solutions: [ret], job: { status: :completed }}, with: Grape::Presenters::Presenter)
+                  present({ solutions: [ret], job: { status: :completed }}, with: VrpResult)
                 end
               else
                 error!('Internal Server Error', 500)
@@ -147,7 +146,7 @@ module Api
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             stored_result = APIBase.dump_vrp_dir.read([id, params[:api_key], 'solution'].join('_'))
-            solution = stored_result && Marshal.load(stored_result) # rubocop:disable Security/MarshalLoad
+            solution = stored_result && Oj.load(stored_result) rescue Marshal.load(stored_result) # rubocop:disable Security/MarshalLoad, Style/RescueModifier
 
             if solution.nil? && (job.nil? || job.killed? || Resque::Plugins::Status::Hash.should_kill?(id) || job['options']['api_key'] != params[:api_key])
               status 404
@@ -155,29 +154,40 @@ module Api
             end
 
             solution ||= OptimizerWrapper::Result.get(id) || {}
-            output_format = params[:format]&.to_sym || ((solution && solution['csv']) ? :csv : env['api.format'])
+            output_format = params[:format]&.to_sym ||
+                            (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
             env['api.format'] = output_format # To override json default format
 
             if job&.completed? # job can still be nil if we have the solution from the dump
+              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Oj.dump(solution)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
               OptimizerWrapper.job_remove(params[:api_key], id)
-              APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Marshal.dump(solution)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
             end
 
             status 200
 
+            unless solution.nil? || solution[:result].nil? || solution[:result].is_a?(Array)
+            # TODO: solution[:result] should always be an array, find out why it is not and
+            # remove this check and other similar ones -- i.e.,  [solution[:result]].flatten(1).
+              solution[:result] = [solution[:result]]
+            end
+
             if output_format == :csv && (job.nil? || job.completed?) # At this step, if the job is nil then it has already been retrieved into the result store
-              present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+              present(OutputHelper::Result.build_csv(solution[:result]), type: CSV)
             else
               present({
-                solutions: [solution['result']].flatten(1),
+                solutions: solution[:result],
                 job: {
                   id: id,
                   status: job&.status&.to_sym || :completed, # :queued, :working, :completed, :failed
                   avancement: job&.message,
-                  graph: solution['graph']
-                }
-              }, with: Grape::Presenters::Presenter)
+                  graph: solution[:graph]
+                },
+                geojsons: OutputHelper::Result.generate_geometry(solution)
+              }, with: VrpResult)
             end
+            # set nil to release memory because puma keeps the grape api endpoint object alive
+            stored_result = nil # rubocop:disable Lint/UselessAssignment
+            solution = nil # rubocop:disable Lint/UselessAssignment
           end
 
           desc 'List vrp jobs', {
@@ -209,24 +219,32 @@ module Api
               status 404
               error!({ message: "Job with id='#{id}' not found" }, 404)
             else
-              OptimizerWrapper.job_kill(params[:api_key], id)
-              job.status = 'killed'
+              if job.killable?
+                OptimizerWrapper.job_kill(params[:api_key], id)
+                job.status = 'killed'
+              end
               solution = OptimizerWrapper::Result.get(id)
+              unless solution.nil? || solution[:result].nil? || solution[:result].is_a?(Array)
+              # TODO: solution[:result] should always be an array, find out why it is not and
+              # remove this check and other similar ones -- i.e.,  [solution[:result]].flatten(1).
+                solution[:result] = [solution[:result]]
+              end
               status 202
               if solution && !solution.empty?
-                output_format = params[:format]&.to_sym || (solution['csv'] ? :csv : env['api.format'])
+                output_format = params[:format]&.to_sym || (solution[:configuration] && solution[:configuration][:csv] ? :csv : env['api.format'])
                 if output_format == :csv
-                  present(OptimizerWrapper.build_csv(solution['result']), type: CSV)
+                  present(OutputHelper::Result.build_csv(solution[:result]), type: CSV)
                 else
                   present({
-                    solutions: [solution['result']],
+                    solutions: solution[:result],
                     job: {
                       id: id,
                       status: :killed,
                       avancement: job.message,
-                      graph: solution['graph']
-                    }
-                  }, with: Grape::Presenters::Presenter)
+                      graph: solution[:graph]
+                    },
+                    geojsons: OutputHelper::Result.generate_geometry(solution)
+                  }, with: VrpResult)
                 end
               else
                 present({
@@ -234,8 +252,9 @@ module Api
                     id: id,
                     status: :killed,
                   }
-                }, with: Grape::Presenters::Presenter)
+                }, with: VrpResult)
               end
+              solution = nil # rubocop:disable Lint/UselessAssignment
               OptimizerWrapper.job_remove(params[:api_key], id)
             end
           end

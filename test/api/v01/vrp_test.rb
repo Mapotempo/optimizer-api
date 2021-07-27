@@ -50,8 +50,8 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.stub(
       :define_main_process,
       lambda { |services_vrps, _job|
-        assert_equal [['skill']], services_vrps[0][:vrp][:vehicles][0][:skills]
-        assert_equal ['skill'], services_vrps[0][:vrp][:services][0][:skills]
+        assert_equal [[:skill]], services_vrps[0][:vrp][:vehicles][0][:skills]
+        assert_equal [:skill], services_vrps[0][:vrp][:services][0][:skills]
         assert_equal [[]], services_vrps[0][:vrp][:vehicles][1][:skills]
         assert_equal [], services_vrps[0][:vrp][:services][1][:skills]
         {}
@@ -59,7 +59,9 @@ class Api::V01::VrpTest < Minitest::Test
     ) do
       vrp = VRP.toy
       vrp[:vehicles] << vrp[:vehicles][0].dup
+      vrp[:vehicles].last[:id] += '_bis'
       vrp[:services] << vrp[:services][0].dup
+      vrp[:services].last[:id] += '_bis'
       vrp[:vehicles][0][:skills] = [['skill']]
       vrp[:services][0][:skills] = ['skill']
       submit_vrp api_key: 'demo', vrp: vrp
@@ -229,32 +231,40 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.config[:dump][:solution] = old_config_dump_solution
   end
 
+  def test_get_deletes_completed_job
+    # create a "completed" job with an unused uuid
+    uuid = Resque::Plugins::Status::Hash.generate_uuid until !uuid.nil? && Resque::Plugins::Status::Hash.get(uuid).nil?
+    Resque::Plugins::Status::Hash.create(uuid, { 'status' => 'completed', 'options' => { 'api_key' => 'demo' } })
+
+    wait_status uuid, 'completed', api_key: 'demo'
+
+    delete_completed_job uuid, api_key: 'demo'
+  ensure
+    Resque::Plugins::Status::Hash.remove(uuid)
+  end
+
   def test_block_call_under_clustering
-    @job_ids = []
-    asynchronously start_worker: true do
-      vrp = VRP.lat_lon_scheduling_two_vehicles
-      vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
-      @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
+    vrp1 = VRP.lat_lon_periodic_two_vehicles
+    vrp1[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
-      vrp = VRP.independent_skills
-      vrp[:points] = VRP.lat_lon_scheduling[:points]
-      vrp[:services].first[:skills] = ['D']
-      vrp[:configuration][:preprocessing] = {
-        max_split_size: 4,
-        partitions: [
-          { method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }
-        ]
-      }
-      @job_ids << submit_vrp(api_key: 'demo', vrp: vrp)
-      wait_status @job_ids.last, 'completed', api_key: 'demo'
-      refute JSON.parse(last_response.body)['solutions'].nil? || JSON.parse(last_response.body)['solutions'].empty?
-    end
-
-    @job_ids.each{ |job_id|
-      delete_completed_job job_id, api_key: 'demo'
+    vrp2 = VRP.independent_skills
+    vrp2[:points] = VRP.lat_lon_periodic[:points]
+    vrp2[:services].first[:skills] = ['D']
+    vrp2[:configuration][:preprocessing] = {
+      max_split_size: 4,
+      partitions: [
+        { method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }
+      ]
     }
+
+    asynchronously start_worker: true do
+      [vrp1, vrp2].each{ |vrp|
+        @job_id = submit_vrp(api_key: 'demo', vrp: vrp)
+        response = wait_status @job_id, 'completed', api_key: 'demo'
+        refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
+        delete_completed_job @job_id, api_key: 'demo'
+      }
+    end
   end
 
   def test_unfounded_avancement_message_change
@@ -269,7 +279,7 @@ class Api::V01::VrpTest < Minitest::Test
         OptimizerWrapper.config[:solve][:repetition] = 2
 
         asynchronously start_worker: true do
-          vrp = VRP.lat_lon_scheduling_two_vehicles
+          vrp = VRP.lat_lon_periodic_two_vehicles
           vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
           @job_id = submit_vrp(api_key: 'demo', vrp: vrp)
           wait_status @job_id, 'completed', api_key: 'demo'
@@ -291,7 +301,7 @@ class Api::V01::VrpTest < Minitest::Test
                  "fix this test \n(#{self.class.name}::#{self.name}) to represent the actual functionality."
     # Currently the expected output is in the following form
     # [date time] jobid - INFO: avancement: repetition (1..2)/2 - clustering phase (y: 1..2)/2 - step (1..y)/(y)
-    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving scheduling heuristic
+    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving periodic heuristic
 
     lines_with_avancement.each{ |line|
       date_time_jobid = '\[(?<date>[0-9-]*) (?<hour>[0-9: +]*)\] (?<job_id>[0-9a-z]*)'
@@ -305,7 +315,7 @@ class Api::V01::VrpTest < Minitest::Test
       rest = Regexp.last_match(:rest)
 
       # The rest needs to be either clustering or heuristic solution
-      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/8 - scheduling heuristic } =~ rest
+      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/8 - periodic heuristic } =~ rest
 
       refute_nil Regexp.last_match, assert_msg
     }
@@ -347,5 +357,49 @@ class Api::V01::VrpTest < Minitest::Test
     assert_equal ["application/json; charset=UTF-8", 4, 0, Time.now.utc.to_date.next_day.to_time.to_i], last_response.headers.select{ |key|
       key =~ /(Content-Type|X-RateLimit-Limit|X-RateLimit-Remaining|X-RateLimit-Reset)/
     }.values
+  end
+
+  def test_submit_without_schedule_start_should_break
+    vrp_no_sched_start = VRP.periodic
+    vrp_no_sched_start[:configuration][:schedule] = { range_indices: { start: 0 } }
+    post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp_no_sched_start}.to_json, 'CONTENT_TYPE' => 'application/json'
+    assert_equal 400, last_response.status
+    assert_includes(JSON.parse(last_response.body)['message'], 'vrp[configuration][schedule][range_indices][end] is missing')
+  end
+
+  def test_ask_for_geometry
+    [false, true, true, # boolean
+     ['polylines'], [:polylines], [:polylines, 'partitions'], ['unexistant'], # array of string or symbol
+     'partitions', 'polylines,partitions', 'polylines, encoded_polylines' # string to be converted into an array
+    ].each_with_index{ |geometry_field, case_index|
+      OptimizerWrapper.stub(:define_main_process, lambda { |services_vrps, _job|
+          case case_index
+          when 0
+            assert_empty services_vrps.first[:vrp].restitution_geometry
+          when 1
+            assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
+          when 2
+            assert_equal %i[encoded_polylines], services_vrps.first[:vrp].restitution_geometry
+          when 5 || 8
+            assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
+          when 3 || 4
+            assert_empty services_vrps.first[:vrp].restitution_geometry
+          when 7
+            assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
+          end
+          {}
+        }
+      ) do
+        vrp = VRP.toy
+        vrp[:configuration][:restitution] = { geometry: geometry_field }
+        vrp[:configuration][:restitution][:geometry_polyline] = true if case_index == 2
+        if [6, 9].include?(case_index)
+          post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+          assert_includes [400], last_response.status
+        else
+          submit_vrp api_key: 'demo', vrp: vrp
+        end
+      end
+    }
   end
 end

@@ -16,6 +16,8 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'minitest'
+require 'webmock/minitest'
+WebMock.disable_net_connect!
 
 if Rake.application.top_level_tasks.include?('test') && [ENV['COVERAGE'], ENV['COV']].exclude? 'false'
   require 'simplecov'
@@ -34,11 +36,10 @@ require 'minitest/reporters'
 Minitest::Reporters.use! [
   !ENV['TIME'] ? Minitest::Reporters::ProgressReporter.new : nil,
   ENV['HTML'] && Minitest::Reporters::HtmlReporter.new, # Create an HTML report with more information
-  ENV['TIME'] ? Minitest::Reporters::SpecReporter.new : Minitest::Reporters::ProgressReporter.new , # Generate a report to find slowest tests
+  ENV['TIME'] && Minitest::Reporters::SpecReporter.new, # Generate a report to find slowest tests
 ].compact
 
 require 'grape'
-require 'hashie'
 require 'grape-swagger'
 require 'grape-entity'
 
@@ -49,6 +50,8 @@ require 'byebug'
 require 'rack/test'
 require 'find'
 
+require 'zlib'
+
 module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDisableDirective, Metrics/ModuleLength
   def self.coerce(vrp)
     # This function is called both with a JSON and Models::Vrp
@@ -56,33 +59,65 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # Code needs to be valid both for vrp and json.
     # Thus `if service[:activity] && service[:activity][symbol]` style verificiations.
 
+    vrp[:points]&.each{ |pt|
+      next unless pt[:location]
+
+      pt[:location][:lat] = pt[:location][:lat].to_f
+      pt[:location][:lon] = pt[:location][:lon].to_f
+    }
+
     # TODO: Either find a way to call grape validators automatically or add necessary grape coerces here
     [:duration, :setup_duration].each { |symbol|
       vrp[:services]&.each{ |service|
-        service[:activity][symbol] = ScheduleType.type_cast(service[:activity][symbol]) if service[:activity] && service[:activity][symbol]
-        service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.type_cast(activity[symbol]) if activity && activity[symbol] }
+        service[:activity][symbol] = ScheduleType.type_cast(service[:activity][symbol] || 0) if service[:activity]
+        service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.type_cast(activity[symbol] || 0) if activity }
       }
       vrp[:shipments]&.each{ |shipment|
-        shipment[:pickup][symbol]   = ScheduleType.type_cast(shipment[:pickup][symbol])   if shipment[:pickup] && shipment[:pickup][symbol]
-        shipment[:delivery][symbol] = ScheduleType.type_cast(shipment[:delivery][symbol]) if shipment[:delivery] && shipment[:delivery][symbol]
+        shipment[:pickup][symbol]   = ScheduleType.type_cast(shipment[:pickup][symbol] || 0) if shipment[:pickup]
+        shipment[:delivery][symbol] = ScheduleType.type_cast(shipment[:delivery][symbol] || 0) if shipment[:delivery]
       }
     }
 
-    [vrp[:services], vrp[:shipments]].flatten.each{ |s|
-      next if s.nil?
-      next if vrp.is_a?(Hash) && !s.has_key?(:visits_number)
+    vrp[:vehicles].each{ |vehicle|
+      vehicle.delete(:original_id)
+    }
 
-      raise StandardError, "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid." unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
+    [vrp[:services], vrp[:shipments]].each{ |group|
+      group&.each{ |s|
+        s[:skills]&.map!(&:to_sym)
 
-      [s[:activity] || s[:activities] || s[:pickup] || s[:delivery]].flatten.each{ |activity|
-        next unless activity[:position]
+        s.delete(:original_id)
 
-        activity[:position] = activity[:position].to_sym
+        [s[:activity] || s[:activities] || s[:pickup] || s[:delivery]].flatten.each{ |activity|
+          next unless activity[:position]
+
+          activity[:position] = activity[:position].to_sym
+        }
+
+        next if vrp.is_a?(Hash) && !s.key?(:visits_number)
+
+        unless s[:visits_number].is_a?(Integer) && s[:visits_number].positive?
+          raise StandardError.new(
+            "Service/Shipment #{s[:id]} visits_number (#{s[:visits_number]}) is invalid."
+          )
+        end
       }
     }
 
     if vrp[:configuration] && vrp[:configuration][:preprocessing] && vrp[:configuration][:preprocessing][:first_solution_strategy]
       vrp[:configuration][:preprocessing][:first_solution_strategy] = [vrp[:configuration][:preprocessing][:first_solution_strategy]].flatten
+    end
+
+    if vrp[:configuration] && vrp[:configuration][:restitution] && vrp[:configuration][:restitution][:geometry] == true
+      vrp[:configuration][:restitution][:geometry] = %i[polylines encoded_polylines]
+    end
+
+    if vrp[:configuration]
+      if vrp[:configuration][:restitution]
+        vrp[:configuration][:restitution][:geometry] ||= []
+      else
+        vrp[:configuration][:restitution] = { geometry: [] }
+      end
     end
 
     if vrp.is_a?(Hash) # TODO: make this work for the model as well. So that, it can detect model change and dump incompatibility.
@@ -94,7 +129,15 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
     vrp.preprocessing_partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
 
-    vrp.provide_original_ids unless vrp.is_a?(Hash) # TODO: re-dump with this modification
+    vrp[:relations]&.each{ |r| r[:type] = r[:type]&.to_sym }
+
+    vrp[:vehicles]&.each{ |v|
+      next if v[:skills].to_a.empty?
+
+      raise 'Vehicle skills should be an array of array' unless v[:skills].first&.is_a?(Array)
+
+      v[:skills].each{ |set| set.map!(&:to_sym) }
+    }
 
     vrp
   end
@@ -103,56 +146,69 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     Models::Vrp.create(coerce(problem))
   end
 
-  def self.matrix_required(vrp)
-    if ENV['TEST_DUMP_VRP'].to_s == 'true' && vrp.name
-      vrp.compute_matrix
-      File.binwrite('test/fixtures/' + vrp.name + '.dump', Marshal.dump(vrp))
-    end
-  end
+  def self.matrices_required(vrps, filename)
+    return if vrps.all?{ |vrp| vrp.matrices.any? }
 
-  def self.multipe_matrices_required(vrps, test)
-    if ENV['TEST_DUMP_VRP'].to_s == 'true'
-      vrps.each(&:compute_matrix)
-      File.binwrite('test/fixtures/' + test.name[5..-1] + '.dump', Marshal.dump(vrps))
-    end
+    dump_file = "test/fixtures/#{filename}.dump"
+    dumped_data = Oj.load(Zlib.inflate(File.read(dump_file))) if File.file?(dump_file)
+
+    write_in_dump = []
+    vrps.each{ |vrp|
+      next if vrp.matrices.any?
+
+      if dumped_data.nil? && ENV['TEST_DUMP_VRP'] != 'true'
+        WebMock.enable_net_connect!
+        vrp.compute_matrix
+        WebMock.disable_net_connect!
+      else
+        OptimizerWrapper.router.stub(:matrix, lambda { |url, mode, dimensions, row, column, options|
+          if ENV['TEST_DUMP_VRP'] == 'true'
+            matrices =
+              OptimizerWrapper.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+            write_in_dump <<
+              { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }
+            matrices
+          else
+            corresponding_data = dumped_data.find{ |request|
+              request[:mode] == mode && request[:dimensions] == dimensions &&
+                request[:options] == options &&
+                # Oj rounds values :
+                request[:row] == row.collect{ |r| r.collect{ |v| v.round(6) } } &&
+                request[:column] == column.collect{ |c| c.collect{ |v| v.round(6) } }
+            }
+            raise 'Could not find matrix in the dump' unless corresponding_data
+
+            corresponding_matrices = corresponding_data[:matrices]
+            # TODO: If services are filtered then some test may not find
+            # their corresponding matrices because row and/or column will be different
+            # In this case, we need to modify the above code and filter via lat/lon
+            # to have the same order/content.
+            dimensions.collect.with_index{ |_dim, dim_i| corresponding_matrices[dim_i] }
+          end
+        }) do
+          vrp.compute_matrix
+        end
+      end
+    }
+
+    File.write("test/fixtures/#{filename}.dump", Zlib.deflate(Oj.dump(write_in_dump))) if write_in_dump.any?
   end
 
   def self.load_vrp(test, options = {})
-    filename = options[:fixture_file] || test.name[5..-1]
-    dump_file = 'test/fixtures/' + filename + '.dump'
-    if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrp = Marshal.load(File.binread(dump_file)) # rubocop: disable Security/MarshalLoad
-      coerce(vrp)
-    else
-      vrp = options[:problem] || Hashie.symbolize_keys(JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join)['vrp'])
-      vrp = create(vrp)
-
-      if vrp.matrices.empty?
-        vrp.name = filename
-        matrix_required(vrp)
-      end
-
-      vrp
-    end
+    load_vrps(test, options)[0]
   end
 
   def self.load_vrps(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
-    dump_file = 'test/fixtures/' + filename + '.dump'
-    if File.file?(dump_file) && ENV['TEST_DUMP_VRP'].to_s != 'true'
-      vrps = Marshal.load(File.binread(dump_file)) # rubocop: disable Security/MarshalLoad
-      vrps.map!{ |vrp| coerce(vrp) }
-    else
-      vrps = options[:problem] || JSON.parse(File.open('test/fixtures/' + filename + '.json').to_a.join).map{ |stored_vrp| Hashie.symbolize_keys(stored_vrp['vrp']) }
+    json_file = "test/fixtures/#{filename}.json"
+    vrps = options[:problem] ? { vrp: options[:problem] } :
+                               JSON.parse(File.read(json_file), symbolize_names: true)
+    vrps = [vrps] unless vrps.is_a?(Array)
+    vrps.map!{ |vrp| create(vrp[:vrp]) }
 
-      vrps.map!{ |vrp|
-        create(vrp)
-      }
+    matrices_required(vrps, filename) unless vrps.any?(&:name) # this is a way not to keep track of matrices when it is not needed
 
-      multipe_matrices_required(vrps, test)
-
-      vrps
-    end
+    vrps
   end
 
   def self.expand_vehicles(vrp)
@@ -163,6 +219,13 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   def self.vehicle_and_days_partitions
     [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle },
      { method: 'balanced_kmeans', metric: 'duration', entity: :work_day }]
+  end
+
+  def self.vehicle_trips_relation(vrp)
+    {
+      type: :vehicle_trips,
+      linked_vehicle_ids: vrp[:vehicles].collect{ |v| v[:id] }
+    }
   end
 end
 
@@ -199,7 +262,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
 
   def self.basic
     {
-      units: [],
+      units: [{ id: 'kg' }],
       matrices: [{
         id: 'matrix_0',
         time: [
@@ -549,7 +612,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
-  def self.scheduling
+  def self.periodic
     {
       matrices: [{
         id: 'matrix_0',
@@ -761,7 +824,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp
   end
 
-  def self.lat_lon_scheduling
+  def self.lat_lon_periodic
     vrp = lat_lon_capacitated
     vrp[:vehicles].each{ |v|
       v.delete(:capacities)
@@ -995,7 +1058,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp
   end
 
-  def self.lat_lon_scheduling_two_vehicles
+  def self.lat_lon_periodic_two_vehicles
     vrp = lat_lon_two_vehicles
     vrp[:vehicles].each{ |v|
       v[:sequence_timewindows] = [
@@ -1020,7 +1083,7 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     vrp
   end
 
-  def self.scheduling_seq_timewindows
+  def self.periodic_seq_timewindows
     {
       matrices: [{
         id: 'matrix_0',

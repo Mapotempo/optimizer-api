@@ -26,7 +26,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_global_periodic_expand
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |service|
       service[:visits_number] = 2
     }
@@ -40,7 +40,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_expand_vrp_schedule_range_date
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |service|
       service[:visits_number] = 2
     }
@@ -55,20 +55,20 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_generated_service_timewindows_after_periodic_expand
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
 
     expanded_vrp = periodic_expand(problem)
     assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 1 }, 'There are no day index so we can keep original service timewindows'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200, day_index: 0 }] }
     problem[:configuration][:schedule][:range_indices][:end] = 10
 
     expanded_vrp = periodic_expand(problem)
     assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 2 }, 'There are two mondays and service is only available on mondays so there should be two timewindows'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:configuration][:schedule][:range_indices][:end] = 10
     problem[:vehicles].each{ |v| v[:timewindow] = { start: 0, end: 10, day_index: 3 } }
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
@@ -78,20 +78,20 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_generated_vehicle_timewindow_after_periodic_expand
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
     expanded_vrp = periodic_expand(problem)
     assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
     assert_equal 1, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'No need to expand timewindows when no day_index are provided'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
     problem[:services].first[:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
     expanded_vrp = periodic_expand(problem)
     assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
     assert_equal 4, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'There should be as many vehicles as days in schedule because at least one day_index has been specified'
 
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10, day_index: 1 }
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.vehicles.size, 'There should be only one vehicle because there is only one tuesday and this vehicle is not available other days'
@@ -99,7 +99,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_expand_vrp_unavailable_visits
-    problem = VRP.scheduling
+    problem = VRP.periodic
     problem[:services].each{ |s| s[:visits_number] = 2 }
     expanded_vrp = periodic_expand(problem)
 
@@ -111,27 +111,30 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_date_and_unavailable_date
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
     expanded_vrp = periodic_expand(vrp)
     assert_equal 15, expanded_vrp.vehicles.size
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:vehicles][0][:unavailable_work_date] = [Date.new(2020, 1, 6)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 15) }}
-    assert_equal [7], TestHelper.create(vrp).vehicles.first.unavailable_work_day_indices
-    expanded_vehicles = periodic_expand(vrp).vehicles
+    vrp = TestHelper.create(vrp)
+    assert_equal Set[7], vrp.vehicles.first.unavailable_days
+
+    periodic = Interpreters::PeriodicVisits.new(vrp)
+    expanded_vehicles = periodic.send(:expand, vrp, nil).vehicles
     assert_equal 14, expanded_vehicles.size
     assert_nil expanded_vehicles.find{ |v| v.id == 'vehicle_0_7' }, 'There should be no vehicle generated for day index 7'
   end
 
   def test_indices_and_unavailable_indices
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 16 }}
     expanded_vrp = periodic_expand(vrp)
     assert_equal 17, expanded_vrp.vehicles.size
 
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:configuration][:schedule] = {
       range_indices: { start: 0, end: 16 },
       unavailable_indices: [7]
@@ -144,7 +147,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_multiple_reference_to_same_rests
-    skip 'Should rework this test with new rests and maybe move to the new scheduling heuristic'
+    skip 'Should rework this test with new rests and maybe move to the new periodic heuristic'
     problem = {
       matrices: [{
         id: 'm1',
@@ -700,8 +703,8 @@ class InterpreterTest < Minitest::Test
       }],
       relations: [{
         id: 'id_rel',
-        type: 'meetup',
-        linked_ids: ['shipment_0delivery', 'shipment_1delivery']
+        type: :meetup,
+        linked_ids: ['shipment_0_delivery', 'shipment_1_delivery']
       }],
       configuration: {
         preprocessing: {
@@ -818,8 +821,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -926,8 +928,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -1019,8 +1020,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -1103,8 +1103,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -1191,8 +1190,7 @@ class InterpreterTest < Minitest::Test
       }],
       configuration: {
         preprocessing: {
-          prefer_short_segment: true,
-          max_split_size: 500
+          prefer_short_segment: true
         },
         resolution: {
           duration: 1000
@@ -1398,7 +1396,7 @@ class InterpreterTest < Minitest::Test
     problem = VRP.basic
     problem[:vehicles] << { id: 'vehicle_1' }
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
       lapse: 10,
       periodicity: 1
@@ -1409,18 +1407,18 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
 
-    problem[:relations].first[:type] = 'vehicle_group_duration'
-    expanded_vrp = periodic_expand(vrp)
+    problem[:relations].first[:type] = :vehicle_group_duration
+    expanded_vrp = periodic_expand(problem)
     assert_equal 1,  expanded_vrp.relations.size
     assert_equal 4,  expanded_vrp.relations.first[:linked_vehicle_ids].size
 
-    problem[:relations].first[:type] = 'vehicle_group_duration_on_months'
+    problem[:relations].first[:type] = :vehicle_group_duration_on_months
     problem[:configuration][:schedule] = {
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     vrp = TestHelper.create(problem)
     refute_empty vrp.schedule_months_indices
-    expanded_vrp = periodic.send(:expand, vrp, nil)
+    expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
   end
 
@@ -1428,7 +1426,7 @@ class InterpreterTest < Minitest::Test
     problem = VRP.basic
     problem[:vehicles] << { id: 'vehicle_1' }
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
       lapse: 10,
       periodicity: 2
@@ -1439,7 +1437,7 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
 
-    problem[:relations].first[:type] = 'vehicle_group_duration_on_months'
+    problem[:relations].first[:type] = :vehicle_group_duration_on_months
     problem[:configuration][:schedule] = {
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
@@ -1452,7 +1450,7 @@ class InterpreterTest < Minitest::Test
   def test_expand_relations_of_one_week_and_one_day
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_weeks',
+      type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 10
     }]
@@ -1476,7 +1474,7 @@ class InterpreterTest < Minitest::Test
   def test_expand_relations_of_one_month_and_one_day
     problem = VRP.basic
     problem[:relations] = [{
-      type: 'vehicle_group_duration_on_months',
+      type: :vehicle_group_duration_on_months,
       linked_vehicle_ids: ['vehicle_0'],
       lapse: 10
     }]
@@ -1486,6 +1484,9 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
 
+    problem[:configuration][:schedule] = {
+      range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 2, 1) }
+    }
     problem[:relations].first[:periodicity] = 2
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
@@ -1498,7 +1499,7 @@ class InterpreterTest < Minitest::Test
   end
 
   def test_expand_rests
-    vrp = VRP.scheduling
+    vrp = VRP.periodic
     vrp[:rests] = [{
       id: 'rest',
       timewindows: [{ start: 1, end: 1, day_index: 0 }],
@@ -1516,5 +1517,79 @@ class InterpreterTest < Minitest::Test
     vrp[:rests].first[:timewindows].each{ |tw| tw.delete(:day_index) }
     expanded_vrp = periodic_expand(vrp)
     assert_equal 10, expanded_vrp.rests.size, 'We are expecting ten rests because vehicle has rests everyday and there are ten days in schedule'
+  end
+
+  def test_first_last_possible_days
+    vrp = VRP.periodic
+    vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 6 }
+    vrp[:services].first[:visits_number] = 3
+    vrp[:services].first[:minimum_lapse] = 1
+
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 4, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:minimum_lapse] = 2
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:minimum_lapse] = 3
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 0, expanded_vrp.services.first.last_possible_days[0]
+
+    # with unavailable days
+    vrp[:services].first[:minimum_lapse] = 2
+
+    # possible combinations :
+    # 0 - 1 - 2 - 3 - 4 - 5 - 6
+    # X -   - X -   - X -   -
+    #   - X -   - X -   - X -
+    #   -   - X -   - X -   - X
+    vrp[:services].first[:unavailable_visit_day_indices] = [6]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 1, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:unavailable_visit_day_indices] = [3, 4, 5]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 0, expanded_vrp.services.first.last_possible_days[0]
+
+    vrp[:services].first[:unavailable_visit_day_indices] = [0, 1]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.services.first.first_possible_days[0]
+    assert_equal 2, expanded_vrp.services.first.last_possible_days[0]
+  end
+
+  def test_expand_multitrips_relations
+    # If two vehicles are in vehicle_trips relation,
+    # VRP is only valid if they available at same days
+    # In this case, vehicle_trip relation should be repeated
+    # every day those vehicles are available
+    vrp = VRP.lat_lon_two_vehicles
+    vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
+    vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+    vrp[:vehicles].each{ |v|
+      v.delete(:sequence_timewindows)
+      v[:timewindow] = { start: 0, end: 10 }
+    }
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 8, expanded_vrp.vehicles.size
+    assert_equal 4, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
+
+    vrp[:vehicles].each{ |v|
+      v[:timewindow] = { start: 0, end: 10, day_index: 0 }
+    }
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 2, expanded_vrp.vehicles.size
+    assert_equal 1, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
+
+    vrp[:vehicles].each{ |v|
+      v.delete(:timewindow)
+    }
+    vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 },
+                                                { start: 20, end: 30, day_index: 1 }]
+    vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 },
+                                                { start: 17, end: 45, day_index: 1 }]
+    expanded_vrp = periodic_expand(vrp)
+    assert_equal 4, expanded_vrp.vehicles.size
+    assert_equal 2, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
   end
 end

@@ -39,7 +39,7 @@ module Models
     # validates_numericality_of :visits_number
 
     field :unavailable_visit_indices, default: []
-    field :unavailable_visit_day_indices, default: [] # extends unavailable_visit_day_date
+    field :unavailable_days, default: Set[] # extends unavailable_visit_day_date and unavailable_visit_day_indices
 
     field :minimum_lapse, default: nil
     field :maximum_lapse, default: nil
@@ -50,11 +50,13 @@ module Models
     # validates_inclusion_of :type, :in => %i(service pickup delivery)
 
     field :skills, default: []
+    field :original_skills, default: []
 
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :activities, class_name: 'Models::Activity'
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
+    has_many :relations, class_name: 'Models::Relation'
   end
 end

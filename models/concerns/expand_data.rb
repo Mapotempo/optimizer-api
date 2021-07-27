@@ -21,27 +21,11 @@ require 'active_support/concern'
 module ExpandData
   extend ActiveSupport::Concern
 
-  def adapt_relations_between_shipments
-    services_ids = self.services.collect(&:id)
-    self.shipments.each{ |shipment|
-      services_ids << "#{shipment.id}pickup"
-      services_ids << "#{shipment.id}delivery"
-    }
+  def add_relation_references
     self.relations.each{ |relation|
-      if %w[minimum_duration_lapse maximum_duration_lapse].include?(relation.type)
-        relation.linked_ids[0] = "#{relation.linked_ids[0]}delivery" unless services_ids.include?(relation.linked_ids[0])
-        relation.linked_ids[1] = "#{relation.linked_ids[1]}pickup" unless services_ids.include?(relation.linked_ids[1])
-
-        relation.lapse ||= 0
-      elsif relation.type == 'same_route'
-        relation.linked_ids.each_with_index{ |id, id_i|
-          next if services_ids.include?(id)
-
-          relation.linked_ids[id_i] = "#{id}pickup" # which will be in same_route as id_delivery
-        }
-      elsif %w[sequence order].include?(relation.type)
-        raise OptimizerWrapper::DiscordantProblemError, 'Relation between shipment pickup and delivery should be explicitly specified for relation.' unless (relation.linked_ids - services_ids).empty?
-      end
+      relation.linked_services.each{ |service|
+        service.relations << relation
+      }
     }
   end
 
@@ -50,7 +34,7 @@ module ExpandData
 
     self.routes.each{ |route|
       route.mission_ids.each{ |id|
-        corresponding = [self.services, self.shipments].compact.flatten.find{ |s| s.id == id }
+        corresponding = self.services.find{ |s| s.id == id }
         corresponding.sticky_vehicle_ids = [route.vehicle_id]
       }
     }
@@ -64,22 +48,23 @@ module ExpandData
     }
   end
 
-  def expand_unavailable_indices
-    unavailable_indices = self.schedule_unavailable_indices.select{ |unavailable_index|
+  def expand_unavailable_days
+    unavailable_days = self.schedule_unavailable_days.select{ |unavailable_index|
       unavailable_index >= self.schedule_range_indices[:start] && unavailable_index <= self.schedule_range_indices[:end]
     }
 
     self.vehicles.each{ |vehicle|
-      vehicle.unavailable_work_day_indices |= unavailable_indices
+      vehicle.unavailable_days |= unavailable_days
     }
-    [self.services + self.shipments].flatten.each{ |mission|
-      mission.unavailable_visit_day_indices |= unavailable_indices
+    self.services.each{ |mission|
+      mission.unavailable_days |= unavailable_days
     }
   end
 
-  def provide_original_ids
-    (self.services + self.shipments + self.vehicles).each{ |element|
-      element.original_id = element.id
+  def provide_original_info
+    (self.services + self.vehicles).each{ |element|
+      element.original_id ||= element.id
+      element.original_skills = element.skills.dup
     }
   end
 end

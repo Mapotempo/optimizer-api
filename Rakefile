@@ -14,7 +14,7 @@ namespace :resque do
     puts "#{Time.now} Cleaning existing jobs with #{Resque::Plugins::Status::STATUS_WORKING} status..."
 
     Resque::Plugins::Status::Hash.statuses.each{ |job|
-      next unless job.status == Resque::Plugins::Status::STATUS_WORKING
+      next unless job.status == Resque::Plugins::Status::STATUS_WORKING && job.time < Time.now - 10.seconds
 
       # Protect the jobs running on other queues
       running_job_ids = Resque.workers.map{ |w|
@@ -37,7 +37,6 @@ require 'rake/testtask'
 Rake::TestTask.new do |t|
   $stdout.sync = true
   $stderr.sync = true
-  ENV['APP_ENV'] ||= 'test'
   t.pattern = 'test/**/*_test.rb'
 end
 
@@ -56,12 +55,10 @@ namespace :test do
 end
 
 task clean_tmp_dir: :environment do
-  require './environment'
   OptimizerWrapper.tmp_vrp_dir.cleanup
 end
 
 task clean_dump_dir: :environment do
-  require './environment'
   OptimizerWrapper.dump_vrp_dir.cleanup
 end
 

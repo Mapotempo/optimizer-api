@@ -17,3 +17,37 @@
 #
 
 fr:
+  export_file:
+    comment: commentaire
+    plan:
+      name: plan
+      ref: référence plan
+    route:
+      day: jour
+      id: tournée
+      original_id: véhicule
+      total_travel_distance: distance totale
+      total_travel_time: temps de trajet total
+      total_wait_time: temps d'attente total
+    stop:
+      additional_value: valeur additionnelle
+      duration: durée visite
+      end_time: fin de la mission
+      lat: lat
+      lon: lng
+      name: nom
+      point_id: référence
+      quantity: "quantité[%{unit}]"
+      reference: référence visite
+      setup: durée client
+      skills: libellés visite
+      start_time: heure
+      tw_end: "horaire fin %{index}"
+      tw_start: "horaire début %{index}"
+      type: type arrêt
+      type_rest: pause
+      type_store: dépôt
+      type_visit: visite
+      visit_index: indice de la visite
+      wait_time: attente
+    tags: libellés

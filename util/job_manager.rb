@@ -48,6 +48,7 @@ module OptimizerWrapper
       OptimizerWrapper::REDIS.set(Resque::Plugins::Status::Hash.status_key(self.uuid), Resque::Plugins::Status::Hash.encode(value))
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
+      ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].restitution_geometry }.uniq
       result = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
           tick # call tick in case job is killed
@@ -58,22 +59,28 @@ module OptimizerWrapper
         @wrapper = wrapper
         log "avancement: #{message} #{avancement}"
         if avancement && cost
-          p = Result.get(self.uuid) || { 'graph' => [] }
-          p['graph'] = [] if !p.has_key?('graph')
-          p['csv'] = true if ask_restitution_csv
-          p['graph'] << { iteration: avancement, cost: cost, time: time }
-          p['result'] = solution if solution
+          p = Result.get(self.uuid) || { graph: [] }
+          p[:graph] ||= []
+          p[:configuration] = {
+            csv: ask_restitution_csv,
+            geometry: ask_restitution_geojson
+          }
+          p[:graph] << { iteration: avancement, cost: cost, time: time }
+          p[:result] = solution if solution
           Result.set(self.uuid, p)
         end
       }
 
       # Add values related to the current solve status
       p = Result.get(self.uuid) || {}
-      p['csv'] = true if ask_restitution_csv
-      p['result'] = result
-      if services_vrps.size == 1 && p && !p['result'].empty? && p['graph'] && !p['graph'].empty?
-        p['result'].first['iterations'] = p['graph'].last['iteration']
-        p['result'].first['elapsed'] = p['graph'].last['time']
+      p[:configuration] = {
+        csv: ask_restitution_csv,
+        geometry: ask_restitution_geojson
+      }
+      p[:result] = result
+      if services_vrps.size == 1 && p && p[:result].any? && p[:graph]&.any?
+        p[:result].first[:iterations] = p[:graph].last[:iteration]
+        p[:result].first[:elapsed] = p[:graph].last[:time]
       end
       Result.set(self.uuid, p)
     rescue Resque::Plugins::Status::Killed, JobKilledError
@@ -81,7 +88,7 @@ module OptimizerWrapper
       tick('Job Killed')
       nil
     rescue StandardError => e
-      log "\n\n#{e}\n\t#{e.backtrace.join("\n\t")}", level: :fatal
+      log "#{e.class.name}: #{e}\n\t#{e.backtrace.join("\n\t")}", level: :fatal
       raise
     end
 
@@ -105,7 +112,7 @@ module OptimizerWrapper
   class ClusteringError             < StandardError; end
   class DiscordantProblemError      < StandardError; end
   class JobKilledError              < StandardError; end
-  class SchedulingHeuristicError    < StandardError; end
+  class PeriodicHeuristicError      < StandardError; end
   class UnsupportedRouterModeError  < StandardError; end
 
   class Result
@@ -121,9 +128,9 @@ module OptimizerWrapper
 
     def self.get(key)
       result = OptimizerWrapper::REDIS.get(key)
-      if result
-        JSON.parse(result.force_encoding(Encoding::UTF_8)) # On some env string is encoded as ASCII
-      end
+      return unless result
+
+      JSON.parse(result.force_encoding(Encoding::UTF_8), symbolize_names: true)
     end
 
     def self.exist(key)

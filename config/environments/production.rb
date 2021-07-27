@@ -34,8 +34,9 @@ module OptimizerWrapper
   @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
   HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides].freeze
+  WEEKDAYS = %i[mon tue wed thu fri sat sun].freeze
   DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR, threads: 4)
-  VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR, threads: 4)
+  VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR, threads: 1)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
   ORTOOLS_EXEC = 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC, threads: 4)
@@ -51,9 +52,6 @@ module OptimizerWrapper
   # OptimizerLogger.level = :info
   OptimizerLogger.with_datetime = true
   # OptimizerLogger.caller_location = nil => nil is default
-
-  I18n.available_locales = [:en, :fr]
-  I18n.default_locale = :en
 
   @@c = {
     product_title: 'Optimizers API',
@@ -91,7 +89,7 @@ module OptimizerWrapper
     },
     debug: {
       output_clusters: ENV['OPTIM_DBG_OUTPUT_CLUSTERS'] == 'true',
-      output_schedule: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
+      output_periodic: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
     },
     redis_count: REDIS_COUNT,

@@ -1,10 +1,41 @@
 # Changelog
 
-## [Unreleased]
+## [v1.8.0-dev] - Unreleased
+
+### Added
+- Support skills in periodic heuristic (`first_solution_strategy='periodic'`) [#194](https://github.com/Mapotempo/optimizer-api/pull/194)
+- Implementation of `vehicle_trips` relation: the routes can be successive or with a minimum duration `lapse` in between [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
+- CSV headers adapts to the language provided through HTTP_ACCEPT_LANGUAGE header to facilitate import in Mapotempo-Web [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
+- Return route day/date and visits' index in result [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
+
+### Changed
+
+- Improve cases where a service has two visits in periodic heuristic: ensure that the second visit can be assigned to the right day [#227](https://github.com/Mapotempo/optimizer-api/pull/227)
+
+### Removed
+
+- Field `trips` in vehicle model. Use `vehicle_trips` relation instead [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
+
+### Fixed
+
+- VROOM was used incorrectly in various cases: negative quantities, vehicle duration, activity position [#223](https://github.com/Mapotempo/optimizer-api/pull/223) [#242](https://github.com/Mapotempo/optimizer-api/pull/242)
+- Capacity violation in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#227](https://github.com/Mapotempo/optimizer-api/pull/227)
+
+## [v1.7.1] - 2021-05-20
+
+### Added
+
+- Remove simple pauses before optimization and reinsert them back into the solution to increase solver performance [#211](https://github.com/Mapotempo/optimizer-api/pull/211)
+
+## [v1.7.0] - 2021-05-03
 
 ### Added
 
 - Corresponding vehicle_id is returned within each service's skills if problem is partitioned with vehicle entity [#110](https://github.com/Mapotempo/optimizer-api/pull/110)
+- Support initial routes and skills in split_solve (`max_split_size`) algorithm [#140](https://github.com/Mapotempo/optimizer-api/pull/140)
+- Support relations (`order`, `same_route`, `sequence`, `shipment`) in split_solve algorithm (`max_split_size`) and partitions (`[:configuration][:preprocessing][:partitions]`) [#145](https://github.com/Mapotempo/optimizer-api/pull/145)
+- split_solve algorithm (`max_split_size`) respects relations (`vehicle_trips`, `meetup`, `minimum_duration_lapse`, `maximum_duration_lapse`, `minimum_day_lapse`, `maximum_day_lapse`) [#145](https://github.com/Mapotempo/optimizer-api/pull/145)
+- Return `geojsons` structure according to `geometry` parameter [#165](https://github.com/Mapotempo/optimizer-api/pull/165)
 
 ### Changed
 
@@ -14,18 +45,21 @@
 - Bump VROOM to v1.8.0 and start using the features integrated since v1.3.0 [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - Bump OR-Tools v7.8 [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - VROOM were previously always called synchronously, it is now reserved to a set of effective `router_mode` (:car, :truck_medium) within a limit of points (<200). [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
+- Heuristic selection (`first_solution_strategy='self_selection'`) takes into account the supplied initial routes (`routes`) and the best solution is used as the initial route [#159](https://github.com/Mapotempo/optimizer-api/pull/159)
 
 ### Removed
 
+- `geometry_polyline` parameter now be provided through `geometry` parameter [#165](https://github.com/Mapotempo/optimizer-api/pull/165)
 
 ### Fixed
 
 - `unassigned` output were in some cases returning the key `shipment_id` instead of `pickup_shipment_id` and `delivery_shipment_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - Uniformize route content and always return `original_vehicle_id` [#107](https://github.com/Mapotempo/optimizer-api/pull/107)
 - Infeasibility detection of services with negative quantity [#111](https://github.com/Mapotempo/optimizer-api/pull/111)
+- Correctly display when an error occurs in `scheduling` page [#207](https://github.com/Mapotempo/optimizer-api/pull/207)
 
 
-## [v0.1.5] - 2021-01-05
+## [v1.6.0] - 2021-02-10
 
 ### Added
 

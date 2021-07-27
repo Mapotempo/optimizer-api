@@ -22,12 +22,12 @@ module Models
     include Rack::Test::Methods
 
     def test_work_duration
-      vrp = VRP.scheduling_seq_timewindows
+      vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
 
       # work duration is only supposed to be called when there is no schedule
       # therefore, work_duration should not be called if vehicle has sequence_timewindows
-      assert_raises OptimizerWrapper::DiscordantProblemError do
+      assert_raises do
         vrp.vehicles.first.work_duration
       end
 
@@ -38,7 +38,7 @@ module Models
       assert_equal 2**32, vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.timewindow = { end: 10 }
-      assert_equal 2**32, vrp.vehicles.first.work_duration
+      assert_equal 10, vrp.vehicles.first.work_duration
 
       vrp.vehicles.first.timewindow = { start: 10, end: 20 }
       assert_equal 10, vrp.vehicles.first.work_duration
@@ -48,7 +48,7 @@ module Models
     end
 
     def test_total_work_time_in_range
-      vrp = VRP.lat_lon_scheduling
+      vrp = VRP.lat_lon_periodic
       vrp = TestHelper.create(vrp)
       assert_equal 32400 * 4, vrp.vehicles.first.total_work_time_in_range(0, 3)
 

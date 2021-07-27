@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/Mapotempo/active_hash.git
-  revision: 6471576562e2db78fa87f8a1cc6ec848c88ab76e
+  revision: e2b18fedb32aec0cc03f0c747dbc682cbb8fc488
   branch: mapo
   specs:
     active_hash (3.1.0)
@@ -8,13 +8,20 @@ GIT
 
 GIT
   remote: https://github.com/Mapotempo/balanced_vrp_clustering.git
-  revision: 972c1c393f3a259539f6eadf80f867f89f3766e7
+  revision: c76cca8fe53bf802aca2f998631f7c24c59cb3c4
   branch: dev
   specs:
-    balanced_vrp_clustering (0.1.7)
+    balanced_vrp_clustering (0.2.0)
       awesome_print
       color-generator
       geojson2image
+
+GIT
+  remote: https://github.com/senhalil/rack.git
+  revision: a23188bb32972dde155977655f57dea035eee6ea
+  branch: improved-asserts
+  specs:
+    rack (2.2.3)
 
 GEM
   remote: https://rubygems.org/
@@ -40,12 +47,14 @@ GEM
       minitest (~> 5.1)
       tzinfo (~> 1.1)
       zeitwerk (~> 2.2, >= 2.2.2)
+    addressable (2.7.0)
+      public_suffix (>= 2.0.2, < 5.0)
     ai4r (1.13)
     ansi (1.5.0)
     anyway_config (2.0.6)
       ruby-next-core (>= 0.8.0)
     ast (2.4.1)
-    awesome_print (1.8.0)
+    awesome_print (1.9.2)
     backport (1.1.2)
     benchmark (0.1.0)
     benchmark-ips (2.8.3)
@@ -54,13 +63,15 @@ GEM
     charlock_holmes (0.7.7)
     chunky_png (1.4.0)
     color-generator (0.0.4)
-    concurrent-ruby (1.1.7)
+    concurrent-ruby (1.1.9)
+    crack (0.4.5)
+      rexml
     crass (1.0.6)
     daemons (1.3.1)
     docile (1.3.2)
     domain_name (0.5.20190701)
       unf (>= 0.0.5, < 1.0.0)
-    dry-configurable (0.12.0)
+    dry-configurable (0.12.1)
       concurrent-ruby (~> 1.0)
       dry-core (~> 0.5, >= 0.5.0)
     dry-container (0.7.2)
@@ -72,7 +83,7 @@ GEM
     dry-logic (1.1.0)
       concurrent-ruby (~> 1.0)
       dry-core (~> 0.5, >= 0.5)
-    dry-types (1.5.0)
+    dry-types (1.5.1)
       concurrent-ruby (~> 1.0)
       dry-container (~> 0.3)
       dry-core (~> 0.5, >= 0.5)
@@ -85,7 +96,7 @@ GEM
       chunky_png (~> 1.3)
       oj (~> 3.6)
     google-protobuf (3.13.0)
-    grape (1.5.1)
+    grape (1.5.3)
       activesupport
       builder
       dry-types (>= 1.1)
@@ -103,12 +114,13 @@ GEM
     grape_logging (1.8.4)
       grape
       rack
-    hashie (4.1.0)
+    hashdiff (1.0.1)
+    heap-profiler (0.4.0)
     http-accept (1.7.0)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
     http_accept_language (2.1.1)
-    i18n (1.8.5)
+    i18n (1.8.10)
       concurrent-ruby (~> 1.0)
     jaro_winkler (1.5.4)
     litecable (0.7.0)
@@ -117,11 +129,13 @@ GEM
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
     maruku (0.7.3)
+    memory_profiler (1.0.0)
     mime-types (3.3.1)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2020.0512)
-    mini_portile2 (2.4.0)
-    minitest (5.14.2)
+    mini_portile2 (2.5.2)
+      net-ftp (~> 0.1)
+    minitest (5.14.4)
     minitest-around (0.5.0)
       minitest (~> 5.0)
     minitest-bisect (1.5.1)
@@ -143,19 +157,25 @@ GEM
       ruby2_keywords (~> 0.0.1)
     mustermann-grape (1.0.1)
       mustermann (>= 1.0.0)
+    net-ftp (0.1.2)
+      net-protocol
+      time
+    net-protocol (0.1.0)
     netrc (0.11.0)
-    nio4r (2.5.4)
-    nokogiri (1.10.10)
-      mini_portile2 (~> 2.4.0)
-    oj (3.11.0)
+    nio4r (2.5.7)
+    nokogiri (1.11.4)
+      mini_portile2 (~> 2.5.0)
+      racc (~> 1.4)
+    oj (3.11.2)
     parallel (1.20.1)
     parser (2.7.2.0)
       ast (~> 2.4.1)
     path_expander (1.1.0)
     polylines (0.3.0)
-    puma (5.0.0)
+    public_suffix (4.0.6)
+    puma (5.3.1)
       nio4r (~> 2.0)
-    rack (2.2.3)
+    racc (1.5.2)
     rack-accept (0.4.5)
       rack (>= 0.4)
     rack-contrib (2.3.0)
@@ -251,7 +271,8 @@ GEM
     thor (1.0.1)
     thread_safe (0.3.6)
     tilt (2.0.10)
-    tzinfo (1.2.7)
+    time (0.1.0)
+    tzinfo (1.2.9)
       thread_safe (~> 0.1)
     unf (0.1.4)
       unf_ext
@@ -259,9 +280,14 @@ GEM
     unicode-display_width (1.7.0)
     vegas (0.1.11)
       rack (>= 1.0.0)
+    webmock (3.13.0)
+      addressable (>= 2.3.6)
+      crack (>= 0.3.2)
+      hashdiff (>= 0.4.0, < 2.0.0)
     websocket (1.2.8)
     yard (0.9.25)
-    zeitwerk (2.4.0)
+    zeitwerk (2.4.2)
+    zlib (1.0.0)
 
 PLATFORMS
   ruby
@@ -276,14 +302,15 @@ DEPENDENCIES
   byebug
   charlock_holmes
   google-protobuf (>= 3)
-  grape (>= 1.5.1)
+  grape (>= 1.5.3)
   grape-entity
   grape-swagger
   grape-swagger-entity
   grape_logging
-  hashie
+  heap-profiler
   http_accept_language
   i18n
+  memory_profiler
   minitest
   minitest-around
   minitest-bisect
@@ -291,9 +318,10 @@ DEPENDENCIES
   minitest-reporters
   minitest-stub_any_instance
   nokogiri
+  oj
   polylines
   puma
-  rack
+  rack!
   rack-contrib
   rack-cors
   rack-test
@@ -314,9 +342,11 @@ DEPENDENCIES
   simplecov
   solargraph
   thin
+  webmock
+  zlib
 
 RUBY VERSION
    ruby 2.5.7p206
 
 BUNDLED WITH
-   2.1.4
+   2.2.16

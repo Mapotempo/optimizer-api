@@ -54,16 +54,16 @@ $(document).ready(function() {
               displaySolution(job.job.id, job.solutions[0], { downloadButton: true });
               clearInterval(timer);
             } else if (xhr.status == 500) {
-              $('#optim-infos').html(i18n.optimizeFinishedError);
               initForm();
+              $('#optim-infos').html(i18n.optimizeFinishedError);
               clearInterval(timer);
               if (debug) console.log(job);
             }
           })
         }
       }).fail(function (error) {
-        $('#optim-infos').html(i18n.failureCallOptim('Vérification des fichiers requise'));
         initForm();
+        $('#optim-infos').html(i18n.failureCallOptim('Vérification des fichiers requise - ' + error.responseJSON.message ));
         clearInterval(timer);
         if (debug) console.log(error.responseText);
       });

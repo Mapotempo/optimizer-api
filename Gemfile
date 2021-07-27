@@ -4,17 +4,16 @@ ruby '~> 2.5'
 gem 'require_all'
 
 gem 'puma'
-gem 'rack'
+gem 'rack', github: 'senhalil/rack', branch: 'improved-asserts' # remove the custom github definition after the following PR commit is on the stable branch https://github.com/rack/rack/commit/1970771c7e01d54cb631dae0bc7618e2561ad1c7
 gem 'rack-cors'
 gem 'rake'
 gem 'thin'
 
-gem 'grape', '>=1.5.1' # Important fixes are introduced in v1.5.1 (see PRs #2013, #2096 & #2098)
+gem 'grape', '>=1.5.3' # Important fix introduced v1.5.3 (see PR #PR2164)
 gem 'grape-entity'
 gem 'grape-swagger'
 gem 'grape-swagger-entity'
 gem 'grape_logging'
-gem 'hashie'
 
 gem 'actionpack'
 gem 'active_hash', github: 'Mapotempo/active_hash', branch: 'mapo'
@@ -40,6 +39,9 @@ gem 'rgeo-geojson'
 
 gem 'google-protobuf', '>=3'
 
+gem 'oj'
+gem 'zlib'
+
 group :development, :test do
   gem 'benchmark-ips' # to in-place benchmark of different implementations
   gem 'byebug'
@@ -52,6 +54,10 @@ group :development, :test do
 
   # For creating dependency graphs
   gem 'rubrowser'
+
+  # For debugging memory issues
+  gem 'heap-profiler'
+  gem 'memory_profiler'
 
   ## Next gems to use the debuger of vscode directly
   ## but due to a bug in rubyide/vscode-ruby it doesn't
@@ -70,6 +76,7 @@ group :test do
   gem 'minitest-stub_any_instance'
   gem 'rack-test'
   gem 'simplecov', require: false
+  gem 'webmock'
 end
 
 group :production do

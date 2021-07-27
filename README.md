@@ -1,4 +1,5 @@
-# Mapotempo Optimizer API [![Build Status](https://travis-ci.com/Mapotempo/optimizer-api.svg?branch=master)](https://travis-ci.com/Mapotempo/optimizer-api)
+# Mapotempo Optimizer API ![Build Status](https://github.com/Mapotempo/optimizer-api/actions/workflows/main.yml/badge.svg?branch=master)
+
 
 Run an optimizer REST API depending of many contraints for a Vehicle Routing Problem (VRP).
 
@@ -8,6 +9,18 @@ For ruby, bundler and gems, rbenv or rvm are recommanded.
 
 ### On Ubuntu
 
+```
+sudo apt install libssl-dev libyaml-dev
+```
+
+* Depending on the Ubuntu version, libssl 1.0 may not be available. Then the following may fix the issue.
+
+```
+sudo add-apt-repository 'deb http://security.ubuntu.com/ubuntu bionic-security main'
+sudo apt update
+sudo apt install libssl1.0-dev
+```
+
 * Ruby 2.5.5 (if not using rbenv/rvm)
 ```
 sudo apt install ruby-full
@@ -16,6 +29,11 @@ sudo apt install ruby-full
 ```
 sudo apt install redis-server
 ```
+* Start redis service
+```
+sudo systemctl enable redis-server.service
+```
+
 * libgeos-dev
 ```
 sudo apt install libgeos-dev libgeos-3.7.1
@@ -36,13 +54,25 @@ brew install geos
 ## Installation
 
 ```
+gem install bundler
 bundle install
 ```
 
 This project requires some solver and interface projects in order to be fully functionnal!
 * [Vroom v1.8.0](https://github.com/VROOM-Project/vroom/releases/tag/v1.8.0)
-* [Optimizer-ortools](https://github.com/Mapotempo/optimizer-ortools) & [OR-tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8)
-* (optional / not supported anymore) [Optimizer-jsprit](https://github.com/Mapotempo/optimizer-jsprit) & [Jsprit](https://github.com/Mapotempo/jsprit)
+* [Optimizer-ortools v1.5.0](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8) (use the version corresponding to your system operator, not source code).
+
+Note : when updating OR-Tools you should to recompile optimizer-ortools.
+
+By default, Optimizer-API and the related projects are supposed to be in parallel folders as follows:
+
+![Project folders](/public/images/folders.png?raw=true)
+
+We recommand to use a symbolic link to point the OR-Tools asset.
+
+```
+  ln -s or-tools_Debian-10-64bit_v7.8.7959 or-tools
+```
 
 ## Configuration
 
@@ -90,9 +120,9 @@ TIME=true HTML=true APP_ENV=test bundle exec rake test
 This generates a report with test times. You can find the report in optimizer-api/test/html_reports folder.
 
 
-If you want to run a specific test file (let's say real_cases_scheduling_test.rb file only):
+If you want to run a specific test file (let's say real_cases_periodic_test.rb file only):
 ```
-APP_ENV=test bundle exec rake test TEST=test/real_cases_scheduling_test.rb
+APP_ENV=test bundle exec rake test TEST=test/real_cases_periodic_test.rb
 ```
 If you want to run only one specific test (let's say test_instance_clustered test only) you can use `focus` or call:
 ```
@@ -136,5 +166,5 @@ If you don't want to run some long real cases tests you can deactive them:
 SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
 ```
 
-# Travis
-To test on travis with a optimizer-ortools different than the latest version, specify in your travis configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you travis owner nick.
+# Github Actions
+To test on Github Actions with a optimizer-ortools different than the latest version, specify in your Actions configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you github owner nick.

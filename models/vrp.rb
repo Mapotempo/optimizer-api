@@ -18,12 +18,14 @@
 require './lib/tsp_helper.rb'
 require './models/base'
 require './models/concerns/distance_matrix'
+require './models/concerns/validate_data'
 require './models/concerns/expand_data'
 require './models/concerns/periodic_service'
 
 module Models
   class Vrp < Base
     include DistanceMatrix
+    include ValidateData
     include ExpandData
     include PeriodicService
 
@@ -38,7 +40,7 @@ module Models
     field :preprocessing_neighbourhood_size, default: nil
     field :preprocessing_heuristic_result, default: {}
     field :preprocessing_heuristic_synthesis, default: nil
-    field :preprocessing_first_solution_strategy, default: nil
+    field :preprocessing_first_solution_strategy, default: []
     has_many :preprocessing_partitions, class_name: 'Models::Partition'
 
     # The following 7 variables are used for dicho development
@@ -74,16 +76,16 @@ module Models
     field :resolution_batch_heuristic, default: false
     field :resolution_repetition, default: nil
 
-    field :restitution_geometry, default: false
-    field :restitution_geometry_polyline, default: false
+    field :restitution_geometry, default: []
     field :restitution_intermediate_solutions, default: true
     field :restitution_csv, default: false
+    field :restitution_use_deprecated_csv_headers, default: false
     field :restitution_allow_empty_result, default: false
 
     field :schedule_range_indices, default: nil # extends schedule_range_date
-    field :schedule_unavailable_indices, default: [] # extends unavailable_date
+    field :schedule_start_date, default: nil
+    field :schedule_unavailable_days, default: Set[] # extends unavailable_date and schedule_unavailable_indices
     field :schedule_months_indices, default: []
-    field :schedule_expanded_vehicles, default: false
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -113,22 +115,23 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :vehicles, class_name: 'Models::Vehicle'
     has_many :services, class_name: 'Models::Service'
-    has_many :shipments, class_name: 'Models::Shipment'
     has_many :relations, class_name: 'Models::Relation'
     has_many :routes, class_name: 'Models::Route'
     has_many :subtours, class_name: 'Models::Subtour'
     has_many :zones, class_name: 'Models::Zone'
+    belongs_to :config, class_name: 'Models::Configuration' # can be renamed to configuration after the transition if wanted
 
     def self.create(hash, delete = true)
       Models.delete_all if delete
 
       vrp = super({})
+      self.convert_shipments_to_services(hash)
       self.filter(hash) # TODO : add filters.rb here
       # moved filter here to make sure we do have schedule_indices (not date) to do work_day check with lapses
-      self.check_consistency(hash)
+      vrp.check_consistency(hash)
       self.ensure_retrocompatibility(hash)
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
-       :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration].each{ |key|
+       :vehicles, :services, :relations, :subtours, :routes, :configuration].each{ |key|
         vrp.send("#{key}=", hash[key]) if hash[key]
       }
 
@@ -137,126 +140,127 @@ module Models
       vrp
     end
 
-    def self.check_consistency(hash)
-      # vehicle time cost consistency
-      if hash[:vehicles]&.any?{ |v| v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1) }
-        raise OptimizerWrapper::DiscordantProblemError, 'cost_waiting_time_multiplier cannot be greater than cost_time_multiplier'
-      end
-
-      # matrix_id consistency
-      hash[:vehicles]&.each{ |v|
-        if v[:matrix_id] && (hash[:matrices].nil? || hash[:matrices].none?{ |m| m[:id] == v[:matrix_id] })
-          raise OptimizerWrapper::DiscordantProblemError, 'There is no matrix with id vehicle[:matrix_id]'
-        end
-      }
-
-      # matrix_index consistency
-      if hash[:matrices].nil? || hash[:matrices].empty?
-        raise OptimizerWrapper::DiscordantProblemError, 'There is a point with point[:matrix_index] defined but there is no matrix' if hash[:points]&.any?{ |p| p[:matrix_index] }
-      else
-        max_matrix_index = hash[:points].max{ |p| p[:matrix_index] || -1 }[:matrix_index] || -1
-        matrix_not_big_enough = hash[:matrices].any?{ |matrix_group|
-          Models::Matrix.field_names.any?{ |dimension|
-            matrix_group[dimension] && (matrix_group[dimension].size <= max_matrix_index || matrix_group[dimension].any?{ |col| col.size <= max_matrix_index })
-          }
-        }
-        raise OptimizerWrapper::DiscordantProblemError, 'All matrices should have at least maximum(point[:matrix_index]) number of rows and columns' if matrix_not_big_enough
-      end
-
-      # shipment position consistency
-      forbidden_position_pairs = [[:always_middle, :always_first], [:always_last, :always_middle], [:always_last, :always_first]]
+    def self.convert_shipments_to_services(hash)
+      hash[:services] ||= []
+      hash[:relations] ||= []
+      @linked_ids = {}
+      service_ids = hash[:services].map{ |service| service[:id] }
       hash[:shipments]&.each{ |shipment|
-        raise OptimizerWrapper::DiscordantProblemError, 'Unconsistent positions in shipments.' if forbidden_position_pairs.include?([shipment[:pickup][:position], shipment[:delivery][:position]])
-      }
+        @linked_ids[shipment[:id]] = []
+        %i[pickup delivery].each{ |part|
+          service = Oj.load(Oj.dump(shipment))
+          service[:original_id] = shipment[:id]
+          service[:id] += "_#{part}"
+          service[:id] += '_conv' while service_ids.any?{ |id| id == service[:id] } # protect against id clash
+          @linked_ids[shipment[:id]] << service[:id]
+          service[:type] = part.to_sym
+          service[:activity] = service[part]
+          %i[pickup delivery direct maximum_inroute_duration].each{ |key| service.delete(key) }
 
-      # routes consistency
-      periodic = hash[:configuration] && hash[:configuration][:preprocessing] && hash[:configuration][:preprocessing][:first_solution_strategy].to_a.include?('periodic')
-      hash[:routes]&.each{ |route|
-        route[:mission_ids].each{ |id|
-          corresponding_service = hash[:services]&.find{ |s| s[:id] == id } || hash[:shipments]&.find{ |s| s[:id] == id }
-
-          raise OptimizerWrapper::DiscordantProblemError, 'Each mission_ids should refer to an existant service or shipment' if corresponding_service.nil?
-          raise OptimizerWrapper::UnsupportedProblemError, 'Services in initialize routes should have only one activity' if corresponding_service[:activities] && periodic
-        }
-      }
-
-      configuration = hash[:configuration]
-      return unless configuration
-
-      # configuration consistency
-      if configuration[:preprocessing]
-        if configuration[:preprocessing][:partitions]&.any?{ |partition| partition[:entity].to_sym == :work_day }
-          if hash[:services].any?{ |s|
-              if hash[:configuration][:schedule][:range_indices][:end] <= 6
-                (s[:visits_number] || 1) > 1
-              else
-                (s[:visits_number] || 1) > 1 &&
-                ((s[:minimum_lapse]&.floor || 1)..(s[:maximum_lapse]&.ceil || hash[:configuration][:schedule][:range_indices][:end])).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
-              end
+          if part == :delivery
+            service[:quantities]&.each{ |quantity|
+              quantity[:value] = -quantity[:value] if quantity[:value]
+              quantity[:setup_value] = -quantity[:setup_value] if quantity[:setup_value]
             }
+          end
+          hash[:services] << service
+        }
+        convert_relations_of_shipment_to_services(hash,
+                                                  shipment[:id],
+                                                  @linked_ids[shipment[:id]][0],
+                                                  @linked_ids[shipment[:id]][1])
+        hash[:relations] << { type: :shipment, linked_ids: @linked_ids[shipment[:id]] }
+        hash[:relations] << { type: :sequence, linked_ids: @linked_ids[shipment[:id]] } if shipment[:direct]
+        max_lapse = shipment[:maximum_inroute_duration]
+        next unless max_lapse
 
-            raise OptimizerWrapper::DiscordantProblemError, 'Work day partition implies that lapses of all services can be a multiple of 7. There are services whose minimum and maximum lapse do not permit such lapse'
+        hash[:relations] << { type: :maximum_duration_lapse, linked_ids: @linked_ids[shipment[:id]], lapse: max_lapse }
+      }
+      convert_shipment_within_routes(hash)
+      hash.delete(:shipments)
+    end
+
+    def self.convert_relations_of_shipment_to_services(hash, shipment_id, pickup_service_id, delivery_service_id)
+      hash[:relations].each{ |relation|
+        case relation[:type]
+        when :minimum_duration_lapse, :maximum_duration_lapse
+          relation[:linked_ids][0] = delivery_service_id if relation[:linked_ids][0] == shipment_id
+          relation[:linked_ids][1] = pickup_service_id if relation[:linked_ids][1] == shipment_id
+          relation[:lapse] ||= 0
+        when :same_route
+          relation[:linked_ids].each_with_index{ |id, id_i|
+            next unless id == shipment_id
+
+            relation[:linked_ids][id_i] = pickup_service_id # which will be in same_route as delivery
+          }
+        when :sequence, :order
+          if relation[:linked_ids].any?{ |id| id == shipment_id }
+            msg = 'Relation between shipment pickup and delivery should be explicitly specified for `:sequence` and `:order` relations.'
+            raise OptimizerWrapper::DiscordantProblemError.new(msg)
+          end
+        else
+          if relation[:linked_ids].any?{ |id| id == shipment_id }
+            msg = "Relations of type #{relation[:type]} cannot be linked using the shipment object."
+            raise OptimizerWrapper::DiscordantProblemError.new(msg)
           end
         end
-      end
+      }
+    end
 
-      # number of visits consistency
-      if !configuration[:schedule]
-        (hash[:services].to_a + hash[:shipments].to_a).each{ |s|
-          raise OptimizerWrapper::DiscordantProblemError, 'There can not be more than one visit if no schedule is provided' unless s[:visits_number].to_i <= 1
+    def self.convert_shipment_within_routes(hash)
+      return unless hash[:shipments]
+
+      shipment_ids = {}
+      hash[:shipments].each{ |shipment| shipment_ids[shipment[:id]] = 0 }
+      hash[:routes]&.each{ |route|
+        route[:mission_ids].map!{ |mission_id|
+          if shipment_ids.key?(mission_id)
+            if shipment_ids[mission_id].zero?
+              shipment_ids[mission_id] += 1
+              @linked_ids[mission_id][0]
+            elsif shipment_ids[mission_id] == 1
+              shipment_ids[mission_id] += 1
+              @linked_ids[mission_id][1]
+            else
+              raise OptimizerWrapper::DiscordantProblemError.new('A shipment could only appear twice in routes.')
+            end
+          else
+            mission_id
+          end
         }
-      end
-
-      # periodic consistency
-      return unless periodic
-
-      if hash[:relations]
-        incompatible_relation_types = hash[:relations].collect{ |r| r[:type] }.uniq - ['force_first', 'never_first', 'force_end']
-        raise OptimizerWrapper::DiscordantProblemError, "#{incompatible_relation_types} relations not available with specified first_solution_strategy" unless incompatible_relation_types.empty?
-      end
-
-      raise OptimizerWrapper::DiscordantProblemError, 'Vehicle group duration on weeks or months is not available with schedule_range_date.' if hash[:relations].to_a.any?{ |relation| relation[:type] == 'vehicle_group_duration_on_months' } &&
-                                                                                                                                                (!configuration[:schedule] || configuration[:schedule][:range_indice])
-
-      raise OptimizerWrapper::DiscordantProblemError, 'Shipments are not available with periodic heuristic.' unless hash[:shipments].to_a.empty?
-
-      raise OptimizerWrapper::DiscordantProblemError, 'Rests are not available with periodic heuristic.' unless hash[:vehicles].all?{ |vehicle| vehicle[:rests].to_a.empty? }
-
-      if hash[:configuration][:resolution][:same_point_day]
-        raise OptimizerWrapper.UnsupportedProblemError, 'Same_point_day is not supported if a set has one service with several activities' if hash[:services].any?{ |service| service[:activities].to_a.size.positive? }
-      end
+      }
     end
 
     def self.expand_data(vrp)
+      vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
-      vrp.adapt_relations_between_shipments
-      vrp.expand_unavailable_indices
-      vrp.provide_original_ids
+      vrp.expand_unavailable_days
+      vrp.provide_original_info
     end
 
     def self.convert_position_relations(hash)
       relations_to_remove = []
       hash[:relations]&.each_with_index{ |r, r_i|
         case r[:type]
-        when 'force_first'
+        when :force_first
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_first
           }
           relations_to_remove << r_i
-        when 'never_first'
+        when :never_first
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Never first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :never_first
           }
           relations_to_remove << r_i
-        when 'force_end'
+        when :force_end
           r[:linked_ids].each{ |id|
-            to_modify = [hash[:services], hash[:shipments]].flatten.find{ |s| s[:id] == id }
+            to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force end relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_last
@@ -268,19 +272,37 @@ module Models
       relations_to_remove.reverse_each{ |index| hash[:relations].delete_at(index) }
     end
 
+    def self.deduce_first_solution_strategy(hash)
+      preprocessing = hash[:configuration] && hash[:configuration][:preprocessing]
+      return unless preprocessing
+
+      # To make sure that internal vrp conforms with the Grape vrp.
+      preprocessing[:first_solution_strategy] ||= []
+      preprocessing[:first_solution_strategy] = [preprocessing[:first_solution_strategy]].flatten
+    end
+
+    def self.deduce_minimum_duration(hash)
+      resolution = hash[:configuration] && hash[:configuration][:resolution]
+      return unless resolution && resolution[:initial_time_out]
+
+      log 'initial_time_out and minimum_duration parameters are mutually_exclusive', level: :warn if resolution[:minimum_duration]
+      resolution[:minimum_duration] = resolution[:initial_time_out]
+      resolution.delete(:initial_time_out)
+    end
+
     def self.deduce_solver_parameter(hash)
       resolution = hash[:configuration] && hash[:configuration][:resolution]
       return unless resolution
 
       if resolution[:solver_parameter] == -1
         resolution[:solver] = false
-        resolution[:solver_parameter] = nil
+        resolution.delete(:solver_parameter)
       elsif resolution[:solver_parameter]
-          correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
-          hash[:configuration][:preprocessing] ||= {}
-          hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
-          resolution[:solver] = true
-          resolution[:solver_parameter] = nil
+        correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
+        hash[:configuration][:preprocessing] ||= {}
+        hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
+        resolution[:solver] = true
+        resolution.delete(:solver_parameter)
       end
     end
 
@@ -294,92 +316,186 @@ module Models
       }
     end
 
+    def self.convert_geometry_polylines_to_geometry(hash)
+      return unless hash[:configuration] && hash[:configuration][:restitution].to_h[:geometry]
+
+      hash[:configuration][:restitution][:geometry] -=
+        if hash[:configuration][:restitution][:geometry_polyline]
+          [:polylines]
+        else
+          [:encoded_polylines]
+        end
+      hash[:configuration][:restitution].delete(:geometry_polyline)
+    end
+
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
+      self.deduce_first_solution_strategy(hash)
+      self.deduce_minimum_duration(hash)
       self.deduce_solver_parameter(hash)
       self.convert_route_indice_into_index(hash)
+      self.convert_geometry_polylines_to_geometry(hash)
     end
 
     def self.filter(hash)
       return hash if hash.empty?
 
-      self.remove_unecessary_units(hash)
+      self.remove_unnecessary_units(hash)
+      self.remove_unnecessary_relations(hash)
       self.generate_schedule_indices_from_date(hash)
+      self.generate_linked_service_ids_for_relations(hash)
     end
 
-    def self.remove_unecessary_units(hash)
-      return hash if !hash[:units] || !hash[:vehicles] || (!hash[:services] && !hash[:shipments])
+    def self.remove_unnecessary_units(hash)
+      return hash if !hash[:units]
 
-      vehicle_capacities = hash[:vehicles]&.map{ |v| v[:capacities] || [] }&.flatten&.uniq
-      service_quantities = hash[:services]&.map{ |s| s[:quantities] || [] }&.flatten&.uniq
-      shipment_quantities = hash[:shipments]&.map{ |s| s[:quantities] || [] }&.flatten&.uniq
+      vehicle_units = hash[:vehicles]&.flat_map{ |v| v[:capacities]&.map{ |c| c[:unit_id] } || [] } || []
+      subtour_units = hash[:subtours]&.flat_map{ |v| v[:capacities]&.map{ |c| c[:unit_id] } || [] } || []
+      service_units = hash[:services]&.flat_map{ |s| s[:quantities]&.map{ |c| c[:unit_id] } || [] } || []
 
-      capacities_units = hash[:capacities]&.map{ |c| c[:unit_id] } || vehicle_capacities&.map{ |c| c[:unit_id] }
-      quantities_units = (hash[:quantities]&.map{ |q| q[:unit_id] } || []) +
-                         (service_quantities&.map{ |q| q[:unit_id] } || []) +
-                         (shipment_quantities&.map{ |q| q[:unit_id] } || [])
+      capacity_units = (hash[:capacities]&.map{ |c| c[:unit_id] } || []) | vehicle_units | subtour_units
+      quantity_units = (hash[:quantities]&.map{ |q| q[:unit_id] } || []) | service_units
+      needed_units = capacity_units & quantity_units
 
-      needed_units = capacities_units & quantities_units.uniq
       hash[:units].delete_if{ |u| needed_units.exclude? u[:id] }
 
       rejected_capacities = hash[:capacities]&.select{ |capacity| needed_units.exclude? capacity[:unit_id] }&.map{ |capacity| capacity[:id] } || []
       rejected_quantities = hash[:quantities]&.select{ |quantity| needed_units.exclude? quantity[:unit_id] }&.map{ |quantity| quantity[:id] } || []
 
-      hash[:vehicles]&.map{ |v| rejected_capacities.each { |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
-      hash[:services]&.map{ |s| rejected_quantities.each { |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
-      hash[:shipments]&.map{ |s| rejected_quantities.each { |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
+      hash[:vehicles]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
+      hash[:subtours]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
+      hash[:services]&.each{ |s| rejected_quantities.each{ |r_q| s[:quantity_ids]&.gsub!(/\b#{r_q}\b/, '') } }
 
       hash[:capacities]&.delete_if{ |capacity| rejected_capacities.include? capacity[:id] }
       hash[:quantities]&.delete_if{ |quantity| rejected_quantities.include? quantity[:id] }
 
-      hash[:vehicles]&.map{ |v| (v[:capacities] || []).delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
-      hash[:services]&.map{ |v| (v[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
-      hash[:shipments]&.map{ |s| (s[:quantities] || []).delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
+      hash[:vehicles]&.each{ |v| v[:capacities]&.delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
+      hash[:subtours]&.each{ |v| v[:capacities]&.delete_if{ |capacity| needed_units.exclude? capacity[:unit_id] } }
+      hash[:services]&.each{ |v| v[:quantities]&.delete_if{ |quantity| needed_units.exclude? quantity[:unit_id] } }
+    end
+
+    def self.remove_unnecessary_relations(hash)
+      return hash unless hash[:relations]&.any?
+
+      types_with_duration =
+        %i[minimum_day_lapse maximum_day_lapse
+           minimum_duration_lapse maximum_duration_lapse
+           vehicle_group_duration vehicle_group_duration_on_weeks
+           vehicle_group_duration_on_months vehicle_group_number]
+
+      hash[:relations].delete_if{ |r| r[:lapse].nil? && types_with_duration.include?(r[:type]) }
+
+      # TODO : remove this filter, VRP with duplicated relations should not be accepted
+      uniq_relations = []
+      hash[:relations].group_by{ |r| r[:type] }.each{ |_type, relations_set|
+        uniq_relations += relations_set.uniq
+      }
+      hash[:relations] = uniq_relations
+    end
+
+    def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
+      unavailable_indices_key, unavailable_dates_key =
+        case type
+        when :visit
+          [:unavailable_visit_day_indices, :unavailable_visit_day_date]
+        when :vehicle
+          [:unavailable_work_day_indices, :unavailable_work_date]
+        when :schedule
+          [:unavailable_indices, :unavailable_date]
+        end
+
+      element[:unavailable_days] = (element[unavailable_indices_key] || []).to_set
+      element.delete(unavailable_indices_key)
+
+      return unless hash[:configuration][:schedule][:range_date]
+
+      start_value = hash[:configuration][:schedule][:range_date][:start].to_date.ajd.to_i - start_index
+      element[unavailable_dates_key].to_a.each{ |unavailable_date|
+        new_index = unavailable_date.to_date.ajd.to_i - start_value
+        element[:unavailable_days] |= [new_index] if new_index.between?(start_index, end_index)
+      }
+      element.delete(unavailable_dates_key)
+
+      return unless element[:unavailable_date_ranges]
+
+      element[:unavailable_index_ranges] ||= []
+      element[:unavailable_index_ranges] += element[:unavailable_date_ranges].collect{ |range|
+        {
+          start: range[:start].to_date.ajd.to_i - start_value,
+          end: range[:end].to_date.ajd.to_i - start_value,
+        }
+      }
+      element.delete(:unavailable_date_ranges)
+    end
+
+    def self.collect_unavaible_day_indices(element, start_index, end_index)
+      return [] unless element[:unavailable_index_ranges].to_a.size.positive?
+
+      element[:unavailable_days] += element[:unavailable_index_ranges].collect{ |range|
+        ([range[:start], start_index].max..[range[:end], end_index].min).to_a
+      }.flatten.uniq
+      element.delete(:unavailable_index_ranges)
+    end
+
+    def self.deduce_unavailable_days(hash, element, start_index, end_index, type)
+      convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
+      collect_unavaible_day_indices(element, start_index, end_index)
+    end
+
+    def self.detect_date_indices_inconsistency(hash)
+      missions_and_vehicles = hash[:services] + hash[:vehicles]
+      has_date = missions_and_vehicles.any?{ |m|
+        (m[:unavailable_date_ranges] || m[:unavailable_work_date])&.any?
+      }
+      has_index = missions_and_vehicles.any?{ |m|
+        (m[:unavailable_index_ranges] || m[:unavailable_work_day_indices])&.any?
+      }
+      if (hash[:configuration][:schedule][:range_indices] && has_date) ||
+         (hash[:configuration][:schedule][:range_date] && has_index)
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          'Date intervals are not compatible with schedule range indices'
+        )
+      end
     end
 
     def self.generate_schedule_indices_from_date(hash)
-      return hash if !hash[:configuration] || !hash[:configuration][:schedule] ||
-                     hash[:configuration][:schedule][:range_indices]
+      return hash if !hash[:configuration] || !hash[:configuration][:schedule]
 
-      start_indice = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1
-      end_indice = (hash[:configuration][:schedule][:range_date][:end].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
-
-      # remove service unavailable_visit_day_date
-      [hash[:services].to_a + hash[:shipments].to_a].flatten.each{ |s|
-        next if s[:unavailable_visit_day_date].to_a.empty?
-
-        s[:unavailable_visit_day_indices] = [] unless s[:unavailable_visit_day_indices]
-        s[:unavailable_visit_day_indices] += s[:unavailable_visit_day_date].to_a.collect{ |unavailable_date|
-          (unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
-        }.compact
-        s.delete(:unavailable_visit_day_date)
-      }
-
-      # remove vehicle unavailable_work_date
-      hash[:vehicles].each{ |vehicle|
-        next if vehicle[:unavailable_work_date].to_a.empty?
-
-        vehicle[:unavailable_work_day_indices] = [] unless vehicle[:unavailable_work_day_indices]
-        vehicle[:unavailable_work_day_indices] += vehicle[:unavailable_work_date].collect{ |unavailable_date|
-          (unavailable_date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
-        }.compact
-        vehicle.delete(:unavailable_work_date)
-      }
-
-      # remove schedule unavailable_date
-      if hash[:configuration][:schedule]
-        hash[:configuration][:schedule][:unavailable_indices] = [] unless hash[:configuration][:schedule][:unavailable_indices]
-        hash[:configuration][:schedule][:unavailable_indices] += hash[:configuration][:schedule][:unavailable_date].to_a.collect{ |date|
-          (date.to_date - hash[:configuration][:schedule][:range_date][:start]).to_i + start_indice
-        }.compact
-        hash[:configuration][:schedule].delete(:unavailable_date)
+      schedule = hash[:configuration][:schedule]
+      if (!schedule[:range_indices] || schedule[:range_indices][:start].nil? || schedule[:range_indices][:end].nil?) &&
+         (!schedule[:range_date] || schedule[:range_date][:start].nil? || schedule[:range_date][:end].nil?)
+        raise OptimizerWrapper::DiscordantProblemError.new('Schedule need range indices or range dates')
       end
+
+      detect_date_indices_inconsistency(hash)
+
+      start_index, end_index =
+        if hash[:configuration][:schedule][:range_indices]
+          [hash[:configuration][:schedule][:range_indices][:start],
+           hash[:configuration][:schedule][:range_indices][:end]]
+        else
+          start_ = hash[:configuration][:schedule][:range_date][:start].to_date.cwday - 1
+          end_ = (hash[:configuration][:schedule][:range_date][:end].to_date -
+                  hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_
+          [start_, end_]
+        end
+
+      # remove unavailable dates and ranges :
+      hash[:vehicles].each{ |v| deduce_unavailable_days(hash, v, start_index, end_index, :vehicle) }
+      hash[:services].each{ |element|
+        deduce_unavailable_days(hash, element, start_index, end_index, :visit)
+      }
+      if hash[:configuration][:schedule]
+        deduce_unavailable_days(hash, hash[:configuration][:schedule], start_index, end_index, :schedule)
+      end
+
+      return hash if hash[:configuration][:schedule][:range_indices]
 
       # provide months
       months_indices = []
       current_month = hash[:configuration][:schedule][:range_date][:start].to_date.month
       current_indices = []
-      current_index = start_indice
+      current_index = start_index
       (hash[:configuration][:schedule][:range_date][:start].to_date..hash[:configuration][:schedule][:range_date][:end].to_date).each{ |date|
         if date.month == current_month
           current_indices << current_index
@@ -392,27 +508,38 @@ module Models
         current_index += 1
       }
       months_indices << current_indices
-      hash[:configuration][:schedule][:month_indices] = months_indices
+      hash[:configuration][:schedule][:months_indices] = months_indices
 
       # convert route dates into indices
       hash[:routes]&.each{ |route|
         next if route[:day_index]
 
-        route[:day_index] = (route[:date].to_date - hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_indice
+        route[:day_index] = (route[:date].to_date -
+                            hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_index
         route.delete(:date)
       }
 
       # remove schedule_range_date
       hash[:configuration][:schedule][:range_indices] = {
-        start: start_indice,
-        end: end_indice
+        start: start_index,
+        end: end_index
       }
+      hash[:configuration][:schedule][:start_date] = hash[:configuration][:schedule][:range_date][:start]
       hash[:configuration][:schedule].delete(:range_date)
 
       hash
     end
 
+    def self.generate_linked_service_ids_for_relations(hash)
+      hash[:relations]&.each{ |relation|
+        next unless relation[:linked_ids]&.any?
+
+        relation[:linked_service_ids] = relation[:linked_ids].select{ |id| hash[:services]&.any?{ |s| s[:id] == id } }
+      }
+    end
+
     def configuration=(configuration)
+      self.config = configuration
       self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
       self.resolution = configuration[:resolution] if configuration[:resolution]
       self.schedule = configuration[:schedule] if configuration[:schedule]
@@ -421,9 +548,9 @@ module Models
 
     def restitution=(restitution)
       self.restitution_geometry = restitution[:geometry]
-      self.restitution_geometry_polyline = restitution[:geometry_polyline]
       self.restitution_intermediate_solutions = restitution[:intermediate_solutions]
       self.restitution_csv = restitution[:csv]
+      self.restitution_use_deprecated_csv_headers = restitution[:use_deprecated_csv_headers]
       self.restitution_allow_empty_result = restitution[:allow_empty_result]
     end
 
@@ -434,7 +561,7 @@ module Models
       self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
       self.resolution_stable_iterations = resolution[:stable_iterations]
       self.resolution_stable_coefficient = resolution[:stable_coefficient]
-      self.resolution_minimum_duration = resolution[:initial_time_out] || resolution[:minimum_duration]
+      self.resolution_minimum_duration = resolution[:minimum_duration]
       self.resolution_init_duration = resolution[:init_duration]
       self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
       self.resolution_vehicle_limit = resolution[:vehicle_limit]
@@ -461,15 +588,16 @@ module Models
       self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
       self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
       self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
-      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy].nil? ? nil : [preprocessing[:first_solution_strategy]].flatten # To make sure that internal vrp conforms with the Grape vrp.
+      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
       self.preprocessing_partitions = preprocessing[:partitions]
       self.preprocessing_heuristic_result = {}
     end
 
     def schedule=(schedule)
       self.schedule_range_indices = schedule[:range_indices]
-      self.schedule_unavailable_indices = schedule[:unavailable_indices]
-      self.schedule_months_indices = schedule[:month_indices]
+      self.schedule_start_date = schedule[:start_date]
+      self.schedule_unavailable_days = schedule[:unavailable_days]
+      self.schedule_months_indices = schedule[:months_indices]
     end
 
     def services_duration
@@ -477,7 +605,7 @@ module Models
     end
 
     def visits
-      Helper.visits(self.services, self.shipments)
+      Helper.visits(self.services)
     end
 
     def total_work_times
@@ -570,7 +698,7 @@ module Models
       vehicles.count * points.count
     end
 
-    def scheduling?
+    def schedule?
       !self.schedule_range_indices.nil?
     end
 
