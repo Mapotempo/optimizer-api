@@ -19,8 +19,10 @@ require 'minitest'
 require 'webmock/minitest'
 WebMock.disable_net_connect!
 
-require 'simplecov'
-SimpleCov.start if (!ENV.has_key?('COV') && !ENV.has_key?('COVERAGE')) || (ENV['COV'] != 'false' && ENV['COVERAGE'] != 'false')
+if Rake.application.top_level_tasks.include?('test') && ![ENV['COVERAGE'], ENV['COV']].include?('false')
+  require 'simplecov'
+  SimpleCov.start
+end
 
 ENV['APP_ENV'] ||= 'test'
 require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
@@ -32,7 +34,7 @@ require './api/root'
 
 require 'minitest/reporters'
 Minitest::Reporters.use! [
-  Minitest::Reporters::ProgressReporter.new,
+  !ENV['TIME'] ? Minitest::Reporters::ProgressReporter.new : nil,
   ENV['HTML'] && Minitest::Reporters::HtmlReporter.new, # Create an HTML report with more information
   ENV['TIME'] && Minitest::Reporters::SpecReporter.new, # Generate a report to find slowest tests
 ].compact

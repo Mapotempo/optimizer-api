@@ -119,6 +119,26 @@ TIME=true HTML=true APP_ENV=test bundle exec rake test
 ```
 This generates a report with test times. You can find the report in optimizer-api/test/html_reports folder.
 
+
+If you want to run a specific test file (let's say real_cases_periodic_test.rb file only):
+```
+APP_ENV=test bundle exec rake test TEST=test/real_cases_periodic_test.rb
+```
+If you want to run only one specific test (let's say test_instance_clustered test only) you can use `focus` or call:
+```
+APP_ENV=test bundle exec rake test TESTOPTS="--name=test_instance_clustered"
+```
+Tests are splitted into several sets and you can replay only one or more set(s):
+```
+APP_ENV=test bundle exec rake test:api
+APP_ENV=test bundle exec rake test:api test:models
+```
+You can list all available tasks with:
+```
+bundle exec rake -T
+```
+
+
 You can add your own tests on specific Vehicle Routing Problem (for instance data from real cases). Let's see how to create a new test called "new_test".
 You will find template for test in `test/real_cases_test.rb`
 
@@ -144,14 +164,6 @@ curl -X POST --header "Content-Type:application/json" --data @test/fixtures/my_t
 If you don't want to run some long real cases tests you can deactive them:
 ```
 SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
-```
-If you want to run a specific test file (let's say real_cases_periodic_test.rb file only):
-```
-APP_ENV=test bundle exec rake test TEST=test/real_cases_periodic_test.rb
-```
-If you want to run only one specific test (let's say test_instance_clustered test only) you can use focus or call:
-```
-APP_ENV=test bundle exec rake test TESTOPTS="--name=test_instance_clustered"
 ```
 
 # Github Actions
