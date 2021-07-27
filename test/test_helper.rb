@@ -19,7 +19,7 @@ require 'minitest'
 require 'webmock/minitest'
 WebMock.disable_net_connect!
 
-if Rake.application.top_level_tasks.include?('test') && [ENV['COVERAGE'], ENV['COV']].exclude? 'false'
+if Rake.application.top_level_tasks.include?('test') && ![ENV['COVERAGE'], ENV['COV']].include?('false')
   require 'simplecov'
   SimpleCov.start
 end
