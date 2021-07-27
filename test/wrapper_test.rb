@@ -1412,7 +1412,7 @@ class WrapperTest < Minitest::Test
 
     problem[:vehicles][0][:skills] = [['A']]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 1, (result[:unassigned].count{ |un| un[:reason] == 'Incompatibility between service skills and sticky vehicles' })
+    assert_equal 1, (result[:unassigned].count{ |un| un[:reason].include?('No compatible vehicle can reach this service while respecting all constraints') })
   end
 
   def test_impossible_service_too_far_time
@@ -1463,7 +1463,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal(1, result[:unassigned].count{ |un| un[:reason] == 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.' })
+    assert_equal(1, result[:unassigned].count{ |un| un[:reason] == 'No compatible vehicle can reach this service while respecting all constraints' })
   end
 
   def test_impossible_service_too_far_distance
@@ -1522,7 +1522,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal(1, result[:unassigned].count{ |un| un[:reason] == 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.' })
+    assert_equal(1, result[:unassigned].count{ |un| un[:reason] == 'No compatible vehicle can reach this service while respecting all constraints' })
   end
 
   def test_impossible_service_capacity
@@ -2688,17 +2688,14 @@ class WrapperTest < Minitest::Test
       { type: :shipment, linked_ids: problem[:services][5..6].collect{ |s| s[:id] } },
     ]
     vrp = TestHelper.create(problem)
-    assert_equal 2, services_demo.add_unassigned([], vrp, vrp[:services][5], 'reason').size # only 1 shipment
-    unassigned = services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason') # shipment + meetup
-    assert_equal 4, unassigned.size
+    unassigned = []
+    assert_equal 2, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'reason').size # only 1 shipment
+    services_demo.add_unassigned(unassigned, vrp, vrp[:services][0], 'reason') # shipment + meetup
+    assert_equal 6, unassigned.size
     in_relation_msg = 'In a relation with an unfeasible service: '
     expected_reasons = { service_0: 'reason', service_1: "#{in_relation_msg}service_0",
-                         service_2: "#{in_relation_msg}service_0", service_3: "#{in_relation_msg}service_2" }
-    assert_equal expected_reasons, unassigned.collect{ |u| [u[:service_id], u[:reason]] }.to_h.symbolize_keys
-
-    # add more unassigned
-    assert_equal 6, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'reason').size
-    expected_reasons[:service_5], expected_reasons[:service_6] = 'reason', "#{in_relation_msg}service_5"
+                         service_2: "#{in_relation_msg}service_0", service_3: "#{in_relation_msg}service_2",
+                         service_5: 'reason', service_6: "#{in_relation_msg}service_5" }
     assert_equal expected_reasons, unassigned.collect{ |u| [u[:service_id], u[:reason]] }.to_h.symbolize_keys
   end
 

@@ -333,7 +333,7 @@ module ValidateData
     check_relation_consistent_timewindows
     check_sticky_relation_consistency
 
-    incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end]
+    incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end same_vehicle]
     return unless periodic_heuristic && incompatible_relation_types.any?
 
     raise OptimizerWrapper::UnsupportedProblemError.new(

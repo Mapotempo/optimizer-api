@@ -225,7 +225,6 @@ module OptimizerWrapper
       vrp.compute_matrix(&block)
 
       sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
-      vrp.clean_according_to(sub_unfeasible_services)
 
       # Remove infeasible services
       sub_unfeasible_services.each{ |una_service|

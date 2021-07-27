@@ -697,7 +697,6 @@ module Wrappers
       unfeasible = []
       vehicle_max_shift = compute_vehicles_shift(vrp.vehicles)
       vehicle_max_capacities = compute_vehicles_capacity(vrp)
-      available_vehicle_skillsets = vrp.vehicles.flat_map(&:skills).uniq
 
       vrp.services.each{ |service|
         service.quantities.each{ |qty|
@@ -707,18 +706,7 @@ module Wrappers
           end
         }
 
-        if !service.skills.empty?
-          if service.sticky_vehicles.empty?
-            if available_vehicle_skillsets.none?{ |skillset| (service.skills - skillset).empty? }
-              add_unassigned(unfeasible, vrp, service, 'Service skill combination is not available on any vehicle')
-            end
-          elsif service.sticky_vehicles.all?{ |vehicle| vehicle.skills.none?{ |skillset| (service.skills - skillset).empty? } }
-            add_unassigned(unfeasible, vrp, service, 'Incompatibility between service skills and sticky vehicles')
-          end
-        end
-
         activities = [service.activity, service.activities].compact.flatten
-
         if activities.any?{ |a| a.timewindows.any?{ |tw| tw.start && tw.end && tw.start > tw.end } }
           add_unassigned(unfeasible, vrp, service, 'Service timewindows are infeasible')
         end
@@ -742,89 +730,65 @@ module Wrappers
       unfeasible
     end
 
+    def service_reachable_by_vehicle_within_timewindows(vrp, activity, vehicle)
+      vehicle_start = vehicle.timewindow&.start || vehicle.sequence_timewindows.collect(&:start).min || 0
+      vehicle_end = vehicle.timewindow&.end || vehicle.sequence_timewindows.collect(&:end).max
+      matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
+
+      time_to_go = vehicle.start_point&.matrix_index ? matrix.time[vehicle.start_point&.matrix_index][activity.point.matrix_index] : 0
+      time_back = vehicle.end_point&.matrix_index ? matrix.time[activity.point.matrix_index][vehicle.end_point&.matrix_index] : 0
+
+      earliest_arrival = vehicle_start + time_to_go
+      earliest_back = earliest_arrival + activity.duration + time_back
+      latest_arrival = vehicle_end - time_back - activity.duration if vehicle_end
+
+      if activity.timewindows.any?
+        if !activity.late_multiplier&.positive? # if service lateness is not allowed
+          return false if activity.timewindows.none?{ |tw| tw.end.nil? || earliest_arrival <= tw.end }
+          return false if latest_arrival && activity.timewindows.all?{ |tw| latest_arrival < tw.start }
+        end
+      end
+
+      if vehicle.cost_time_multiplier&.positive?
+        return false if vehicle_end && earliest_back > vehicle_end && !vehicle.cost_late_multiplier&.positive? # lateness is not allowed
+        return false if vehicle.duration && earliest_back - earliest_arrival > vehicle.duration
+      end
+
+      if vehicle.distance && vehicle.cost_distance_multiplier&.positive?
+        # check distances constraints
+        dist_to_go = vehicle.start_point&.matrix_index ? matrix.distance[vehicle.start_point&.matrix_index][activity.point.matrix_index] : 0
+        dist_back = vehicle.end_point&.matrix_index ? matrix.distance[activity.point.matrix_index][vehicle.end_point&.matrix_index] : 0
+
+        return false if dist_to_go + dist_back > vehicle.distance
+      end
+
+      true
+    end
+
     def check_distances(vrp, unfeasible)
       unfeasible = check(vrp, :time, unfeasible)
       unfeasible = check(vrp, :distance, unfeasible)
       unfeasible = check(vrp, :value, unfeasible)
 
-      # check distances from vehicle depot is feasible
       vrp.services.each{ |service|
-        # Check via vehicle time-windows
-        reachable_by_a_vehicle = (service.activity ? [service.activity] : service.activities).any?{ |activity|
-          index = activity.point.matrix_index
-          vrp.vehicles.find{ |vehicle|
-            feasible = true
-
-            start_index = vehicle.start_point&.matrix_index
-            end_index = vehicle.end_point&.matrix_index
-            matrix = vrp.matrices.find{ |mat| mat.id == vehicle.matrix_id } if start_index || end_index
-
-            if vehicle.cost_time_multiplier&.positive? &&
-               !vehicle.cost_late_multiplier&.positive? &&
-               ((vehicle.timewindow&.start && vehicle.timewindow&.end) || vehicle.sequence_timewindows&.size&.positive?)
-              vehicle_available_time = vehicle.timewindow.end - vehicle.timewindow.start if vehicle.timewindow
-              vehicle_available_time = vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max if vehicle.sequence_timewindows&.size&.positive?
-
-              min_time = (start_index && matrix[:time][start_index][index]).to_f + (end_index && matrix[:time][index][end_index]).to_f + activity.duration
-
-              feasible &&= (vehicle_available_time >= min_time)
-            end
-
-            if feasible &&
-               (start_index || end_index) &&
-               vehicle.cost_distance_multiplier&.positive? &&
-               vehicle.distance
-              min_dist = (start_index && matrix[:distance][start_index][index]).to_f + (end_index && matrix[:distance][index][end_index]).to_f
-
-              feasible &&= (vehicle.distance >= min_dist)
-            end
-
-            feasible
-          }
-        }
-
-        if !reachable_by_a_vehicle
-          add_unassigned(unfeasible, vrp, service, 'Service cannot be served due to vehicle parameters -- e.g., timewindow, distance limit, etc.')
-          next
-        end
-
-        # Check via service time-windows
-        service_unreachable_within_its_tw = false
-        if !(service.activity ? service.activity.timewindows : service.activities.collect(&:timewindows).flatten).empty?
-          service_unreachable_within_its_tw = vrp.matrices.all?{ |matrix| matrix[:time] } && (service.activity ? [service.activity] : service.activites).all?{ |activity|
-            index = activity.point.matrix_index
-
-            vrp.vehicles.all?{ |vehicle|
-              matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
-
-              if !activity.late_multiplier&.positive? # if service tw_violation is not allowed
-                earliest_arrival = 0
-                earliest_arrival += vehicle.timewindow.start                               if vehicle.timewindow&.start
-                earliest_arrival += matrix[:time][vehicle.start_point.matrix_index][index] if vehicle.start_point_id
-                timely_arrival_not_possible = activity.timewindows.all?{ |tw|
-                  tw.end && earliest_arrival && earliest_arrival > tw.end
-                }
-              end
-
-              if !vehicle.cost_late_multiplier&.positive? && (vehicle.timewindow&.end || vehicle.sequence_timewindows&.size&.positive?) # if vehicle tw_violation is not allowed
-                vehicle_end = vehicle.timewindow&.end || vehicle.sequence_timewindows.collect(&:end).max
-                latest_arrival = vehicle_end - activity.duration
-                latest_arrival -= matrix[:time][index][vehicle.end_point.matrix_index] if vehicle.end_point_id
-                timely_return_not_possible = activity.timewindows.all?{ |tw|
-                  latest_arrival && latest_arrival < tw.start
-                }
-              end
-              timely_arrival_not_possible || timely_return_not_possible
+        no_vehicle_compatible =
+          vrp.vehicles.none?{ |vehicle|
+            (service.activity ? [service.activity] : service.activities).any?{ |activity|
+              (service.skills.empty? || vehicle.skills.any?{ |skill_set| (service.skills - skill_set).empty? }) &&
+                (service.sticky_vehicles.empty? || service.sticky_vehicles.include?(vehicle)) &&
+                service_reachable_by_vehicle_within_timewindows(vrp, activity, vehicle)
             }
           }
-        end
 
-        add_unassigned(unfeasible, vrp, service, 'Service cannot be reached within its timewindows') if service_unreachable_within_its_tw
+        next unless no_vehicle_compatible
+
+        add_unassigned(unfeasible, vrp, service, 'No compatible vehicle can reach this service while respecting all constraints')
       }
 
-      log "Following services marked as infeasible:\n#{unfeasible.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug unless unfeasible.empty?
-
-      log "#{unfeasible.size} services marked as infeasible with the following reasons: #{unfeasible.collect{ |u| u[:reason] }.uniq.join(', ')}", level: :info unless unfeasible.empty?
+      unless unfeasible.empty?
+        log "Following services marked as infeasible:\n#{unfeasible.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug
+        log "#{unfeasible.size} services marked as infeasible with the following reasons: #{unfeasible.collect{ |u| u[:reason] }.uniq.join(', ')}", level: :info
+      end
 
       unfeasible
     end

@@ -187,7 +187,7 @@ module Models
           relation[:linked_ids][0] = delivery_service_id if relation[:linked_ids][0] == shipment_id
           relation[:linked_ids][1] = pickup_service_id if relation[:linked_ids][1] == shipment_id
           relation[:lapse] ||= 0
-        when :same_route
+        when :same_route, :same_vehicle
           relation[:linked_ids].each_with_index{ |id, id_i|
             next unless id == shipment_id
 
@@ -392,7 +392,7 @@ module Models
       }
       hash[:relations] = uniq_relations
 
-      return if hash[:configuration][:preprocessing].to_h[:partitions].to_a.any?{ |p| p[:entity] == :vehicle } ||
+      return if hash[:configuration].to_h[:preprocessing].to_h[:partitions].to_a.any?{ |p| p[:entity] == :vehicle } ||
                 hash[:relations].none?{ |r| r[:type] == :same_vehicle }
 
       hash[:relations].each{ |relation|
