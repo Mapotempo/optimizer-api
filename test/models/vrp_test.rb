@@ -340,5 +340,20 @@ module Models
       Models::Vrp.filter(vrp)
       assert_equal 1, vrp[:relations].size
     end
+
+    def test_same_vehicle_relation_converted_into_same_route_if_no_vehicle_partition
+      problem = VRP.lat_lon_two_vehicles
+      problem[:relations] = [{ type: :same_vehicle, linked_ids: ['service_1', 'service_2'] }]
+
+      created_vrp = Models::Vrp.create(problem)
+      assert(created_vrp.relations.none?{ |relation| relation.type == :same_vehicle })
+      assert(created_vrp.relations.any?{ |relation| relation.type == :same_route })
+
+      problem[:relations] = [{ type: :same_vehicle, linked_ids: ['service_1', 'service_2'] }]
+      problem[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
+      created_vrp = Models::Vrp.create(problem)
+      assert(created_vrp.relations.any?{ |relation| relation.type == :same_vehicle })
+      assert(created_vrp.relations.none?{ |relation| relation.type == :same_route })
+    end
   end
 end

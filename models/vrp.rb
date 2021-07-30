@@ -187,7 +187,7 @@ module Models
           relation[:linked_ids][0] = delivery_service_id if relation[:linked_ids][0] == shipment_id
           relation[:linked_ids][1] = pickup_service_id if relation[:linked_ids][1] == shipment_id
           relation[:lapse] ||= 0
-        when :same_route
+        when :same_route, :same_vehicle
           relation[:linked_ids].each_with_index{ |id, id_i|
             next unless id == shipment_id
 
@@ -375,7 +375,7 @@ module Models
     end
 
     def self.remove_unnecessary_relations(hash)
-      return hash unless hash[:relations]&.any?
+      return unless hash[:relations]&.any?
 
       types_with_duration =
         %i[minimum_day_lapse maximum_day_lapse
@@ -391,6 +391,16 @@ module Models
         uniq_relations += relations_set.uniq
       }
       hash[:relations] = uniq_relations
+
+      return if hash[:configuration].to_h[:preprocessing].to_h[:partitions].to_a.any?{ |p| p[:entity] == :vehicle } ||
+                hash[:relations].none?{ |r| r[:type] == :same_vehicle }
+
+      hash[:relations].each{ |relation|
+        next unless relation[:type] == :same_vehicle
+
+        # when no partition with vehicle entity is provided then :same_vehicle corresponds to same_route
+        relation[:type] = :same_route
+      }
     end
 
     def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)

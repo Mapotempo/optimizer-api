@@ -250,7 +250,8 @@ module VrpMisc
   end
 
   params :vrp_request_relation do
-    requires(:type, type: Symbol, allow_blank: false, values: %i[same_route sequence order minimum_day_lapse maximum_day_lapse
+    requires(:type, type: Symbol, allow_blank: false, values: %i[same_vehicle same_route sequence order
+                                                                 minimum_day_lapse maximum_day_lapse
                                                                  shipment meetup
                                                                  minimum_duration_lapse maximum_duration_lapse
                                                                  force_first never_first force_end
@@ -258,7 +259,7 @@ module VrpMisc
                                                                  vehicle_group_duration vehicle_group_duration_on_weeks
                                                                  vehicle_group_duration_on_months vehicle_group_number],
                     desc: 'Relations allow to define constraints explicitly between activities and/or vehicles.
-                           It could be the following types: same_route, sequence, order, minimum_day_lapse, maximum_day_lapse,
+                           It could be the following types: same_vehicle, same_route, sequence, order, minimum_day_lapse, maximum_day_lapse,
                            shipment, meetup, minimum_duration_lapse, maximum_duration_lapse, vehicle_trips')
     optional(:lapse,
              type: Integer, values: ->(v) { v >= 0 },

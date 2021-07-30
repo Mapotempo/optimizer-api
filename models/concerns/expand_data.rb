@@ -40,14 +40,6 @@ module ExpandData
     }
   end
 
-  def clean_according_to(unfeasible_services)
-    unfeasible_services.each{ |unfeasible_service|
-      self.routes.each{ |route|
-        route.mission_ids.delete_if{ |id| id == unfeasible_service[:original_service_id] }
-      }
-    }
-  end
-
   def expand_unavailable_days
     unavailable_days = self.schedule_unavailable_days.select{ |unavailable_index|
       unavailable_index >= self.schedule_range_indices[:start] && unavailable_index <= self.schedule_range_indices[:end]

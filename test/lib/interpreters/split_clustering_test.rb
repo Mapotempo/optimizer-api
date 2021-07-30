@@ -638,6 +638,7 @@ class SplitClusteringTest < Minitest::Test
         same_route
         sequence
         shipment
+        same_vehicle
       ], Interpreters::SplitClustering::LINKING_RELATIONS, 'Linking relation constant has changed'
 
       assert_equal %i[
@@ -655,6 +656,9 @@ class SplitClusteringTest < Minitest::Test
       dummy_service = problem[:services].first
       problem[:services] = []
       problem[:relations] = []
+      # we need to call vehicle partitions, other wise same_vehicle is transformed into same_route relation
+      # in this case, same_vehicle and same_route items are grouped
+      problem[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
       expected_linked_items = Hash.new{ |h, k| h[k] = [] }
       n_service_per_relation = 2
       # create all types of linking relation, all at the same location, and check if they are merged
@@ -675,7 +679,7 @@ class SplitClusteringTest < Minitest::Test
                                                                           vrp,
                                                                           Hash.new(0),
                                                                           { group_points: true, basic_split: false })
-      assert_equal 8, data_items.size, 'Services with linking relations should not be grouped with others'
+      assert_equal 10, data_items.size, 'Services with linking relations should not be grouped with others'
       assert_equal expected_linked_items, linked_items, 'Linking relations should link data_items together'
     end
 
@@ -978,17 +982,67 @@ class SplitClusteringTest < Minitest::Test
       end
       assert_equal 'Cannot use balanced kmeans if there are vehicles with alternative skills', error.message
     end
-  end
 
-  def test_select_existing_relations
-    problem = VRP.basic
-    problem[:relations] = [
-      { type: :same_route, linked_ids: ['service_1', 'service_2'] },
-      { type: :same_route, linked_ids: ['service_3'] }
-    ]
-    vrp = TestHelper.create(problem)
-    vrp.services.delete_if{ |s| problem[:relations].first[:linked_ids].include?(s.id) }
-    selected_relations = Interpreters::SplitClustering.select_existing_relations(vrp.relations, vrp)
-    assert_equal 1, selected_relations.size, 'Only the relations of existing services should be selected'
+    def test_select_existing_relations
+      problem = VRP.basic
+      problem[:relations] = [
+        { type: :same_route, linked_ids: ['service_1', 'service_2'] },
+        { type: :same_route, linked_ids: ['service_3'] }
+      ]
+      vrp = TestHelper.create(problem)
+      vrp.services.delete_if{ |s| problem[:relations].first[:linked_ids].include?(s.id) }
+      selected_relations = Interpreters::SplitClustering.select_existing_relations(vrp.relations, vrp)
+      assert_equal 1, selected_relations.size, 'Only the relations of existing services should be selected'
+    end
+
+    def test_same_vehicle_relation
+      problem = VRP.lat_lon_two_vehicles
+      problem[:configuration][:preprocessing] = { partitions: [TestHelper.vehicle_and_days_partitions[0]] }
+      clusters = Interpreters::SplitClustering.generate_split_vrps({ service: :demo, vrp: TestHelper.create(problem) })
+
+      expected_linked_ids = [clusters[0][:vrp].services.last.id, clusters[1][:vrp].services.last.id]
+      problem[:relations] = [{
+        type: :same_vehicle,
+        linked_ids: expected_linked_ids
+      }]
+
+      vrp = TestHelper.create(problem)
+      clusters = Interpreters::SplitClustering.generate_split_vrps({ service: :demo, vrp: vrp })
+      first_cluster = clusters[0][:vrp].services.collect(&:id)
+      second_cluster = clusters[1][:vrp].services.collect(&:id)
+      assert (expected_linked_ids - first_cluster).empty? || (expected_linked_ids - second_cluster).empty?,
+             'Same cluster relation was violated'
+    end
+
+    def test_same_cluster_relation_two_partitions
+      problem = VRP.lat_lon_periodic_two_vehicles
+      problem[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
+      clusters = Interpreters::SplitClustering.generate_split_vrps({ service: :demo, vrp: TestHelper.create(problem) })
+      assert_equal 2, clusters.group_by{ |c| c[:vrp].vehicles.collect(&:original_id) }.size
+      expected_linked_ids =
+        clusters.group_by{ |c|
+          c[:vrp].vehicles.collect(&:original_id)
+        }.collect{ |_id, set| set.first[:vrp].services.last.id }
+
+      expected_linked_ids.each_with_index{ |id, index|
+        problem[:services].find{ |s| s[:id] == id }[:activity][:timewindows] = [{ day_index: index }]
+      }
+      problem[:relations] = [{
+        type: :same_vehicle,
+        linked_ids: expected_linked_ids
+      }]
+
+      clusters = Interpreters::SplitClustering.generate_split_vrps({ service: :demo, vrp: TestHelper.create(problem) })
+      service_clusters =
+        expected_linked_ids.collect{ |id|
+          clusters.find{ |c| c[:vrp].services.any?{ |s| s.id == id } }[:vrp].services.first.skills
+        }
+      vehicle_data = service_clusters.collect{ |data| data.select{ |d| d.to_s.include?('vehicle_partition') } }
+      day_data = service_clusters.collect{ |data| data.select{ |d| d.to_s.include?('work_day_partition') } }
+      # those services should be assigned to same vehicle
+      assert_equal 1, vehicle_data.uniq.size
+      # those services should be assigned to different days
+      assert_equal 2, day_data.uniq.size
+    end
   end
 end
