@@ -571,5 +571,24 @@ module Models
 
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
     end
+
+    def test_uniqueness_of_provided_services_or_vehicles_in_relation
+      problem = VRP.basic
+      problem[:relations] = [{
+        linked_ids: ['service_1', 'service_1'],
+        type: :same_route
+      }]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+      end
+
+      problem[:relations] = [{
+        linked_vehicle_ids: ['service_1', 'service_1'],
+        type: :vehicle_trips
+      }]
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+      end
+    end
   end
 end

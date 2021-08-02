@@ -139,6 +139,14 @@ module ValidateData
   def check_relation_consistent_timewindows
     unconsistent_relation_timewindows = []
     @hash[:relations].each{ |relation|
+      unless relation[:linked_ids]&.uniq == relation[:linked_ids]
+        raise OptimizerWrapper::DiscordantProblemError.new('Same ID is provided multiple times in one relation.')
+      end
+
+      unless relation[:linked_vehicle_ids]&.uniq == relation[:linked_vehicle_ids]
+        raise OptimizerWrapper::DiscordantProblemError.new('Same vehicle ID is provided multiple times in one relation.')
+      end
+
       next unless POSITION_RELATIONS.include?(relation[:type])
 
       latest_sequence_earliest_arrival = nil
