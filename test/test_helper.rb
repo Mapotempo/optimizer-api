@@ -163,8 +163,13 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       else
         OptimizerWrapper.router.stub(:matrix, lambda { |url, mode, dimensions, row, column, options|
           if ENV['TEST_DUMP_VRP'] == 'true'
+            warn 'Overwriting the existing matrix dump' if dumped_data
+
+            WebMock.enable_net_connect!
             matrices =
               OptimizerWrapper.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+            WebMock.disable_net_connect!
+
             write_in_dump <<
               { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }
             matrices
