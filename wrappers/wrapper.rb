@@ -832,6 +832,7 @@ module Wrappers
       [
         :simplify_vehicle_duration,
         :simplify_vehicle_pause,
+        :simplify_complex_multi_pickup_or_delivery_shipments,
         :simplify_service_setup_duration_and_vehicle_setup_modifiers,
       ].freeze
     end
@@ -867,6 +868,199 @@ module Wrappers
       }
 
       vrp
+    end
+
+    def simplify_complex_multi_pickup_or_delivery_shipments(vrp, result = nil, options = { mode: :simplify })
+      # Simplify vehicle durations using timewindows if there is force_start
+      simplification_active = false
+      case options[:mode]
+      when :simplify
+        return nil if vrp.services.any?{ |s| s.activities.any? } # alternative activities is not yet supported
+
+        services_in_multi_shipment_relations, vrp.services =
+          vrp.services.partition{ |s| s.relations.count{ |r| r.type == :shipment } > 1 }
+
+        return nil unless services_in_multi_shipment_relations.any?
+
+        # TODO: if needed the following check can be removed by extending the logic to initial solutions by replacing
+        # the original service id with the new expanded service ids in the routes (and rewind it afterwards)
+        # but if the complex relations are already in feasible initial routes then it might not worth it.
+        # So we can wait for a real use case arrives and we have an instance to test.
+        return nil if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.includes?(s.id) }}
+
+        simplification_active = true
+
+        expanded_services = []
+        expanded_relations = []
+        sequence_relations = []
+
+        multi_shipment_relations, vrp.relations =
+          vrp.relations.partition{ |r| services_in_multi_shipment_relations.any?{ |s| s.relations.include?(r) } }
+
+        services_in_multi_shipment_relations.each{ |service|
+          shipment_relations, non_shipment_relations = service.relations.partition{ |r| r.type == :shipment }
+
+          if non_shipment_relations.any?
+            raise 'Cannot handle complex (multi-pickup-single-delivery, single-pickup-multi-delivery) ' \
+                  'shipments if the services appear in other relations.'
+            # TODO: it is not hard to lift this limitation;
+            # if needed these non_shipment_relations can be
+            # duplicated for each new service created for shipment_relations
+          end
+
+          total_quantity_per_unit_id = Hash.new(0)
+          all_shipment_quantities = shipment_relations.collect{ |relation|
+            # WARNING: Here we assume that there are two services in the relation -- a pair of pickup and delivery
+            relation.linked_services.find{ |i| i != service }.quantities.each{ |quantity|
+              total_quantity_per_unit_id[quantity.unit_id] += quantity.value
+            }
+          }
+          extra_per_quantity = service.quantities.collect{ |quantity|
+            (quantity.value + total_quantity_per_unit_id[quantity.unit_id]) / shipment_relations.size.to_f
+          }
+
+          sequence_relation_ids = []
+
+          shipment_relations.each_with_index{ |relation, index|
+            new_service = Helper.deep_copy(service,
+                                           override: { relations: [] },
+                                           shallow_copy: [:unit, :point])
+            sequence_relation_ids << new_service.id
+
+            if index > 0
+              # all timing will be handled by the first service (of the sequence relation)
+              # correct the TW.end for the succeeding services (so that they can start)
+              activity = new_service.activity
+              activity.timewindows.each{ |tw| tw.end += activity.duration if tw&.end }
+              activity.additional_value = 0
+              activity.duration = 0
+              activity.setup_duration = 0
+
+              # inserting the remaining parts of a multipart service should be of highest priority
+              new_service.priority = 0 # 0 is the highest priority
+            end
+
+            # share the quantity between the duplicated services (including the left-overs)
+            new_service.quantities.each_with_index{ |quantity, q_index|
+              shipment_quantity = all_shipment_quantities[index].find{ |q| q.unit_id == quantity.unit_id }&.value.to_f
+              quantity.value = -shipment_quantity + extra_per_quantity[q_index]
+            }
+
+            new_shipment_relation = Helper.deep_copy(
+              relation,
+              override: {
+                linked_ids: nil, # this line can be removed when linked_ids is replaced with linked_service_ids
+                linked_services: relation.linked_services.map{ |s| s.id == service.id ? new_service : s }
+              }
+            )
+
+            new_service.relations << new_shipment_relation
+
+            expanded_relations << new_shipment_relation
+            expanded_services << new_service
+          }
+
+          sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids)
+        }
+
+        vrp[:simplified_complex_shipments] = {
+          original_services: services_in_multi_shipment_relations,
+          original_relations: multi_shipment_relations,
+          expanded_services: expanded_services,
+          expanded_relations: expanded_relations,
+          sequence_relations: sequence_relations,
+        }
+
+        # TODO: old services still point to the old relations
+        # but the vrp.relations.linked_ids returns the correct services
+        vrp.services.concat(expanded_services)
+        vrp.relations.concat(sequence_relations)
+        vrp.relations.concat(expanded_relations)
+      when :rewind
+        return nil unless vrp[:simplified_complex_shipments]
+
+        simplification_active = true
+
+        vrp.services -= vrp[:simplified_complex_shipments][:expanded_services]
+        vrp.relations -= vrp[:simplified_complex_shipments][:expanded_relations]
+        vrp.relations -= vrp[:simplified_complex_shipments][:sequence_relations]
+        vrp.services.concat(vrp[:simplified_complex_shipments][:original_services])
+        vrp.relations.concat(vrp[:simplified_complex_shipments][:original_relations])
+      when :patch_result
+        return nil unless vrp[:simplified_complex_shipments]
+
+        simplification_active = true
+
+        simplification_data = vrp[:simplified_complex_shipments]
+
+        simplification_data[:original_services].each{ |service|
+          # delete the unassigned expanded version of service and calculate how many of them planned/unassigned
+          unassigned_exp_ser_count = result[:unassigned].size
+          unassigned_exp_ser_count -= result[:unassigned].delete_if{ |uns| uns[:original_service_id] == service.original_id }.size
+          planned_exp_ser_count = simplification_data[:expanded_services].count{ |s| s.original_id == service.original_id } - unassigned_exp_ser_count
+
+          if planned_exp_ser_count == 0
+            # if all of them were unplanned
+            # replace the deleted unassigned expanded ones with one single original un-expanded service
+            result[:unassigned] << {
+              original_service_id: service.original_id,
+              service_id: service.id,
+              point_id: service.activity.point_id,
+              detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
+            }
+          else
+            # replace the planned one(s) into one single unexpanded original service
+            first_exp_ser_activity = nil
+            last_exp_ser_activity = nil
+            insert_location = nil
+            deleted_exp_ser_count = 0
+            result[:routes].each{ |route|
+              route[:activities].delete_if.with_index{ |activity, index|
+                if activity[:original_service_id] == service.original_id
+                  insert_location ||= index
+                  first_exp_ser_activity ||= activity # first_exp_ser_activity has the travel and timing info
+                  last_exp_ser_activity = activity # last_exp_ser_activity has the quantity info
+                  deleted_exp_ser_count += 1
+                  true
+                elsif deleted_exp_ser_count == planned_exp_ser_count
+                  break
+                end
+              }
+
+              next unless insert_location # expanded activity(ies) of service is found in this route
+
+              merged_activity = first_exp_ser_activity.merge(last_exp_ser_activity) { |key, first, last|
+                if key == :service_id
+                  service.id
+                elsif key == :detail && first != last
+                  # if only one expanded service is planned (i.e., first == last), then first will be correct
+                  # if not correct the quantities
+                  first[:quantities].each_with_index{ |first_quantity, q_ind|
+                    last_quantity = last[:quantities][q_ind][:unit] == first_quantity[:unit] && last[:quantities][q_ind]
+                    last_quantity ||= last[:quantities].find{ |q| q[:unit] == first_quantity[:unit] }
+                    value_correction = last_quantity[:current_load] - first_quantity[:current_load]
+                    first_quantity[:current_load] = last_quantity[:current_load]
+
+                    next if first_quantity[:value].nil? && value_correction == 0
+
+                    first_quantity[:value] = first_quantity[:value].to_f + value_correction
+                  }
+                  first
+                else
+                  first
+                end
+              }
+
+              route[:activities].insert(insert_location, merged_activity)
+
+              break
+            }
+          end
+        }
+      else
+        raise 'Unknown :mode option'
+      end
+      simplification_active
     end
 
     def simplify_vehicle_duration(vrp, _result = nil, options = { mode: :simplify })

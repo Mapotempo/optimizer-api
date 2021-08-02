@@ -3224,6 +3224,40 @@ class WrapperTest < Minitest::Test
     }
   end
 
+  def test_simplify_complex_multi_pickup_or_delivery_shipments
+    # check service count after simplification
+    vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
+    service_count = vrp.services.size
+    OptimizerWrapper.config[:services][:demo].simplify_complex_multi_pickup_or_delivery_shipments(vrp)
+    assert_equal service_count + 7, vrp.services.size, 'simplify should have created 7 new services'
+
+    # Solve WITHOUT simplification
+    simplifier_called = false
+    result_wo_simplify = Wrappers::Wrapper.stub_any_instance(:simplify_complex_multi_pickup_or_delivery_shipments,
+                                                             proc{
+                                                               simplifier_called = true
+                                                               nil
+                                                             }) do
+      vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+    assert simplifier_called, 'simplify_complex_multi_pickup_or_delivery_shipments should have been called'
+    # if there are no unassigned; maybe or-tools improved its performance
+    # and this simplification might not be necessary anymore,
+    # or this instance is too small and timing needs to be fixed.
+    # In any case, testing with a bigger instance might be necessary if the following condition fails regularly.
+    refute_empty result_wo_simplify[:unassigned], 'There should have been some unassigned'
+
+    # Solve WITH simplification
+    vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
+    result_w_simplify = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_operator result_w_simplify[:unassigned].size, :<, result_wo_simplify[:unassigned].size,
+                    'Simplification should improve performance'
+    # if there are unassigned services; this might be due to computer performance
+    # but normally even 0.5 seconds is enough, so it might be due to a change in or-tools or optimizer-ortools
+    assert_empty result_w_simplify[:unassigned], 'Simplification should plan all services'
+  end
+
   def test_reject_when_unfeasible_timewindows
     vrp = VRP.toy
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }, { start: 20, end: 15 }]
