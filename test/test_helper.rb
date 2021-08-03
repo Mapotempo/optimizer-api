@@ -139,6 +139,15 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       v[:skills].each{ |set| set.map!(&:to_sym) }
     }
 
+    # trips parameter does not exist anymore
+    vrp[:vehicles]&.each{ |v|
+      next unless v[:trips]
+
+      raise 'vehicle[:trips] parameter does not exist' if v[:trips] > 1
+
+      v.delete(:trips)
+    }
+
     vrp
   end
 
