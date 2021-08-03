@@ -5272,4 +5272,36 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert(result[:routes].first[:activities].any?{ |stop| stop[:type] == 'rest' })
     assert_empty result[:unassigned]
   end
+
+  def test_respect_timewindows_without_end
+    # first two services are forced to be performed at 5 and 10 due to travel time and their TW
+    # this pushes the third service out of its first TW (i.e., {start:5, end:10}) and
+    # forces it to be processed after 20 because of its second TW (i.e., {start:20})
+    # even though the vehicle arrives there at 15.
+    problem = VRP.basic
+    problem[:matrices][0][:time] = [
+      [0, 5, 5, 5],
+      [5, 0, 5, 5],
+      [5, 5, 0, 5],
+      [5, 5, 5, 0]
+    ]
+    problem[:services].each{ |s|
+      s[:activity][:timewindows] = [{ start: 5, end: 10 }]
+    }
+    problem[:services].last[:activity][:timewindows] << { start: 20 }
+
+    vrp = TestHelper.create(problem)
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+
+    assert_empty result[:unassigned], 'All three services should be planned. There is an obvious feasible solution.'
+
+    vrp.services.each{ |service|
+      planned_begin_time = result[:routes][0][:activities].find{ |a| a[:service_id] == service.id }[:begin_time]
+      assert service.activity.timewindows.one?{ |tw|
+        planned_begin_time >= tw.start && (tw.end.nil? || planned_begin_time <= tw.end)
+      }, 'Services should respect the TW without end and fall within exactly one of its TW ranges'
+    }
+
+    assert_equal 20, result[:routes][0][:activities].last[:begin_time], 'Third service should be planned at 20'
+  end
 end
