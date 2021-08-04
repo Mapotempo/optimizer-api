@@ -489,25 +489,29 @@ class Api::V01::OutputTest < Minitest::Test
       en: ['plan', 'reference plan', 'route', 'name', 'lat', 'lng', 'stop type', 'time', 'end time',
            'duration per destination', 'visit duration', 'tags visit', 'tags', 'quantity[kg]',
            'time window start 1', 'time window end 1', 'vehicle', 'reference'],
-      es: [
-        'plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'hora', 'fin',
-        'horario inicio 1', 'horario fin 1', 'duración de preparación', 'duración visita', 'cantidad[kg]',
-        'etiquetas visita', 'etiquetas', 'vehículo', 'referencia visita'],
+      es: ['plan', 'referencia del plan', 'gira', 'nombre', 'tipo parada', 'lat', 'lng', 'hora', 'fin',
+           'horario inicio 1', 'horario fin 1', 'duración de preparación', 'duración visita', 'cantidad[kg]',
+           'etiquetas visita', 'etiquetas', 'vehículo', 'referencia visita'],
       fr: ['plan', 'référence plan', 'tournée', 'nom', 'lat', 'lng', 'type arrêt', 'heure',
            'fin de la mission', 'durée client', 'durée visite', 'libellés visite', 'libellés',
            'quantité[kg]', 'horaire début 1', 'horaire fin 1', 'véhicule', 'référence visite']
     }
 
-    asynchronously start_worker: true do
-      expected_headers.each{ |languague, expected_list|
-        @job_id = submit_csv api_key: 'ortools', vrp: vrp
-        wait_status_csv @job_id, 200, api_key: 'ortools', http_accept_language: languague
-        current_headers = last_response.body.split("\n").first.split(',')
-        assert_empty expected_list - current_headers
+    old_config_dump_solution = OptimizerWrapper.config[:dump][:solution]
+    OptimizerWrapper.config[:dump][:solution] = true
 
-        delete_completed_job @job_id, api_key: 'ortools'
+    asynchronously start_worker: true do
+      @job_id = submit_csv api_key: 'ortools', vrp: vrp
+      expected_headers.each{ |language, expected_list|
+        wait_status_csv @job_id, 200, api_key: 'ortools', http_accept_language: language
+        current_headers = last_response.body.split("\n").first.split(',')
+        assert_empty expected_list - current_headers, 'Header misses labels'
+        # assert_empty current_headers - expected_list, 'Header has extra labels' # TODO: this should be checked
       }
+      delete_completed_job @job_id, api_key: 'ortools'
     end
+  ensure
+    OptimizerWrapper.config[:dump][:solution] = old_config_dump_solution if old_config_dump_solution
   end
 
   def test_use_deprecated_csv_headers_asynchronously
