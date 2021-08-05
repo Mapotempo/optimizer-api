@@ -641,5 +641,72 @@ class HeuristicTest < Minitest::Test
       assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
       assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
     end
+
+    def test_day_in_possible_interval
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.services.first.visits_number = 4
+      vrp.schedule_range_indices[:end] = 40
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      vrp.services.first.first_possible_days = [0, 1, 2, 3]
+      vrp.services.first.last_possible_days = [4, 2, 3, 8]
+      assert s.send(:day_in_possible_interval, 'service_1', 0)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0]
+      refute s.send(:day_in_possible_interval, 'service_1', 0) # only one visit can be assigned to a given day / in a given set
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0, 1, 2]
+      refute s.send(:day_in_possible_interval, 'service_1', 2)
+      assert s.send(:day_in_possible_interval, 'service_1', 4)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0, 1, 2, 4]
+      refute s.send(:day_in_possible_interval, 'service_1', 7)
+
+      vrp.services.first.first_possible_days = [0, 1, 2, 5]
+      vrp.services.first.last_possible_days = [4, 3, 3, 8]
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = []
+      assert s.send(:day_in_possible_interval, 'service_1', 1)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [1]
+      assert s.send(:day_in_possible_interval, 'service_1', 1) # this case will be avoided by compute days
+      refute s.send(:compatible_days, 'service_1', 1)
+
+      # some visits are assigned, only two can be assigned in interval [0, 1]
+      vrp.services.first.first_possible_days = [0, 0, 4, 6]
+      vrp.services.first.last_possible_days = [1, 1, 5, 7]
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = []
+      assert s.send(:day_in_possible_interval, 'service_1', 0)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0]
+      assert s.send(:day_in_possible_interval, 'service_1', 1)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0, 1]
+      refute s.send(:day_in_possible_interval, 'service_1', 1), 'Number of visits in [0, 1] days has been reached'
+    end
+
+    def test_clean_sets_function
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      assert_equal [[[0, 4]], [[2, 3]]].sort,
+                   s.send(:clean_sets, [[[0, 4], [2, 3]], [[0, 4], [2, 3]]]).sort
+      assert_equal [[[0, 4]], [[2, 3]], []].sort,
+                   s.send(:clean_sets, [[[0, 4], [2, 3]], [[0, 4], [2, 3]], [[0, 4], [2, 3]]]).sort
+      assert_equal [[[1, 2]], [[3, 4]], [[5, 6]]].sort,
+                   s.send(:clean_sets, [[[1, 2]], [[3, 4]], [[5, 6]]]).sort
+      assert_equal [[[3, 4]], [[5, 6]], [[1, 2]]].sort,
+                   s.send(:clean_sets, [[[1, 2], [3, 4]], [[1, 2], [5, 6]], [[1, 2]]]).sort
+      assert_equal [[[5, 6]], [[3, 4]], [[1, 2]], []].sort,
+                   s.send(:clean_sets, [[[1, 2], [3, 4], [5, 6]], [[1, 2]], [[3, 4]], [[5, 6]]]).sort
+      assert_equal [[[5, 6]], [[3, 4]], [[1, 2]], [[7, 8]]].sort,
+                   s.send(:clean_sets, [[[1, 2], [3, 4], [5, 6], [7, 8]], [[1, 2]], [[3, 4]], [[5, 6]]]).sort
+      assert_equal [[[7, 8]], [[1, 2]], [[3, 4]], [[5, 6]]].sort,
+                   s.send(:clean_sets, [[[1, 2], [3, 4], [5, 6], [7, 8]], [[1, 2], [7, 8]], [[3, 4]], [[5, 6]]]).sort
+      assert_equal [[[1, 2]], [[3, 4]], []].sort, s.send(:clean_sets, [[[1, 2]], [[1, 2]], [[3, 4]]]).sort
+      assert_equal [[[1, 2]], [[3, 4]], [[5, 6]]],
+                   s.send(:clean_sets, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[3, 4], [5, 6]]]).sort
+      assert_equal [[[1, 2]], [[3, 4]], [[5, 6]], []].sort,
+                   s.send(:clean_sets, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[3, 4], [5, 6]], [[3, 4], [5, 6]]]).sort
+      assert_equal [[[1, 2]], [[7, 8]], [[9, 10]], [[3, 4]], [[5, 6]]].sort,
+                   s.send(:clean_sets, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4]], [[3, 4], [7, 8], [9, 10]], [[3, 4], [7, 8], [9, 10]]]).sort
+      assert_equal [[[18, 207]], [[25, 214]], [[4, 193]]].sort,
+                   s.send(:clean_sets, [[[18, 207], [25, 214]], [[18, 207], [25, 214]], [[4, 193], [11, 200]]]).sort
+    end
   end
 end

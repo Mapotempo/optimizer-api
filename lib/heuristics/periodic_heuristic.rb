@@ -208,6 +208,82 @@ module Wrappers
 
     private
 
+    # Returns true if day can be used for service with corresponding `id`
+    # This is, regarding first and last_possible_days available combinations
+    def compatible_ranges_for_day(id, day)
+      (0..@services_data[id][:raw].visits_number - 1).collect{ |v_i|
+        next unless day.between?(@services_data[id][:raw].first_possible_days[v_i],
+                                 @services_data[id][:raw].last_possible_days[v_i])
+
+        [@services_data[id][:raw].first_possible_days[v_i], @services_data[id][:raw].last_possible_days[v_i]]
+      }.compact
+    end
+
+    # Returns clean set with all `value_to_remove` removed
+    def clean_value_from_sets(sets, value_to_remove)
+      clean_sets(sets.each{ |set| set.delete(value_to_remove) })
+    end
+
+    # From a set of sets of Arrays (three dimension array)
+    # returns only one Array per set such that no set contains the same array
+    # than the other one
+    def clean_sets(sets)
+      if sets.uniq.size == 1
+        return sets.first.collect{ |s| [s] }.slice(0..sets.size - 1) + Array.new([sets.size - sets.first.size, 0].max, [])
+      end
+
+      considered_single_sets = []
+      non_reducable = (sets - considered_single_sets).find{ |s| s.size == 1 }&.first
+      # if a set contains only one Array, then this array can not be used in any other set
+      # this array is removed from every set with more than one array
+      while non_reducable
+        seen = false
+        sets.each{ |set|
+          if !seen && set.size == 1 && set.include?(non_reducable)
+            seen = true
+          else
+            set.delete(non_reducable)
+          end
+        }
+        considered_single_sets << [non_reducable]
+        non_reducable = (sets - considered_single_sets).find{ |s| s.size == 1 }&.first
+      end
+
+      return sets if sets.all?{ |set| set.size <= 1 }
+
+      set, copies = sets.group_by{ |s| s }.min_by{ |s, _copy_sets| s.size }
+      one_per_set = nil
+      set.each{ |value|
+        # only one set can keep this value
+        clean_copies = [[value]] + (copies.size > 1 ? copies[1..-1].collect{ |subset| subset - [value] } : [])
+        clean_remaining_set = clean_value_from_sets((sets - copies).dup, value)
+        to_return = clean_sets(clean_copies + clean_remaining_set)
+
+        next unless to_return&.all?{ |s| s.size <= 1 } &&
+                    to_return.to_a.size == sets.size
+
+        one_per_set = to_return
+        break
+      }
+
+      one_per_set
+    end
+
+    # Ensures `day` is compatible with other already assigned visits with this ID
+    # regarding first/last_possible_days available ranges
+    def day_in_possible_interval(id, day)
+      day_sets = compatible_ranges_for_day(id, day)
+
+      if @services_data[id][:used_days].empty?
+        return true if day_sets.any?
+      end
+
+      all_visits_sets = @services_data[id][:used_days].collect{ |d| compatible_ranges_for_day(id, d) }
+      each_day_only_set = clean_sets(all_visits_sets.insert(0, day_sets))
+      each_day_only_set.all?{ |set| set.size == 1 } &&
+        each_day_only_set.size == @services_data[id][:used_days].size + 1
+    end
+
     def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
       if @allow_partial_assignment
         @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
@@ -857,7 +933,9 @@ module Wrappers
     end
 
     def compatible_days(service_id, day)
-      !@services_data[service_id][:raw].unavailable_days.include?(day)
+      !@services_data[service_id][:raw].unavailable_days.include?(day) &&
+        !@services_data[service_id][:used_days].include?(day) &&
+        day_in_possible_interval(service_id, day)
     end
 
     def compatible_vehicle(service_id, route_data)

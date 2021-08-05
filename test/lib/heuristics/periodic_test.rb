@@ -664,5 +664,40 @@ class HeuristicTest < Minitest::Test
         assert_equal expectation, days_with_service, 'Service was not planned at expected days'
       }
     end
+
+    def test_when_providing_possible_days
+      problem = VRP.periodic
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(Oj.load(Oj.dump(problem))), nil)
+      service_at_first_day_by_default = result[:routes].first[:activities].find{ |a| a[:service_id] }[:original_service_id]
+
+      problem[:services].find{ |s| s[:id] == service_at_first_day_by_default }[:first_possible_day_indices] = [2]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      refute_includes result[:routes].first[:activities].collect{ |a| a[:original_service_id] }, service_at_first_day_by_default
+
+      problem[:services].each{ |s| s[:first_possible_day_indices] = [] }
+      problem[:services].each{ |s| s[:last_possible_day_indices] = [0] }
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      assert_equal 3, (result[:routes].first[:activities].count{ |a| a[:service_id] })
+    end
+
+    def test_first_last_possible_day_respected
+      vrp = VRP.periodic
+      vrp[:services][1][:visits_number] = 2
+      vrp[:services][1][:minimum_lapse] = 1
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      second_route = result[:routes].find{ |r| r[:vehicle_id] == 'vehicle_0_1' }
+      assert second_route[:activities].any?{ |a| a[:service_id] == 'service_2_2_2' },
+             'This test is not consistent if this fails'
+      assert result[:routes][-1][:activities].any?{ |a| a[:service_id] == 'service_1_1_1' },
+             'This test is not consistent if this fails'
+
+      vrp[:services][0][:last_possible_day_indices] = [1]
+      vrp[:services][1][:first_possible_day_indices] = [1]
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert [0, 1].any?{ |r_i| result[:routes][r_i][:activities].any?{ |a| a[:service_id] == 'service_1_1_1' } },
+             'Service_1 can not take place after day index 1'
+      assert result[:routes][0][:activities].none?{ |a| a[:service_id] == 'service_2_1_2' },
+             'Service_2 can not take before day index 1'
+    end
   end
 end
