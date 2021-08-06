@@ -263,7 +263,11 @@ module VrpMisc
                            shipment, meetup, minimum_duration_lapse, maximum_duration_lapse, vehicle_trips')
     optional(:lapse,
              type: Integer, values: ->(v) { v >= 0 },
-             desc: 'Only used for relations implying a duration constraint. Lapse expressed in days for minimum/maximum day lapse, in seconds for minimum/maximum_duration_lapse and vehicle_trips.')
+             desc: '[ DEPRECATED ]')
+    optional(:lapses,
+             type: Array[Integer], values: ->(v) { v >= 0 },
+             desc: 'For some relation types, specifies duration or number constraint. Lapse expressed in days for minimum/maximum day lapse, in seconds for minimum/maximum_duration_lapse and vehicle_trips. For consistent relation types, lapse can be specified for every consecutive elements.')
+    mutually_exclusive :lapse, :lapses
     optional(:linked_ids, type: Array[String], allow_blank: false, desc: 'List of activities involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:linked_vehicle_ids, type: Array[String], allow_blank: false, desc: 'List of vehicles involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:periodicity, type: Integer, documentation: { hidden: true }, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')

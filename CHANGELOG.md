@@ -12,6 +12,7 @@
 ### Changed
 
 - Improve cases where a service has two visits in periodic heuristic: ensure that the second visit can be assigned to the right day [#227](https://github.com/Mapotempo/optimizer-api/pull/227)
+- Relation `lapse` becomes `lapses` : we can now provide a specific lapse for every consecutive ID in the relation [#265](https://github.com/Mapotempo/optimizer-api/pull/265)
 
 ### Removed
 

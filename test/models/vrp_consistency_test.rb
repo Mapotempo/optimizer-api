@@ -40,20 +40,33 @@ module Models
 
     def test_reject_if_periodic_with_any_relation
       vrp = VRP.periodic
-      vrp[:vehicles].first[:end_point_id] = 'point_0' # vehicle_trips
-      %i[shipment meetup same_route sequence order vehicle_trips
-         minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse
-         vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].each{ |relation_type|
-        vrp[:relations] = [{
-            type: relation_type,
-            lapse: 1,
-            linked_ids: ['service_1', 'service_2'],
-            linked_vehicle_ids: ['vehicle_0']
-        }]
+      vrp[:vehicles] << vrp[:vehicles].first.dup
+      vrp[:vehicles].last[:id] += '_dup'
+      vrp[:vehicles].first[:end_point_id] = 'point_0' # for vehicle_trips
 
-        assert_raises OptimizerWrapper::UnsupportedProblemError do
-          TestHelper.create(vrp)
-        end
+      [Models::Relation::NO_LAPSE_TYPES,
+       Models::Relation::ONE_LAPSE_TYPES,
+       Models::Relation::SEVERAL_LAPSE_TYPES].each_with_index{ |types, index|
+        lapses = index.zero? ? [] : [1]
+        types.each{ |relation_type|
+          next if %i[force_end force_first never_first].include?(relation_type) # those are supported with periodic heuristic
+
+          linked_ids = ['service_1', 'service_2'] if Models::Relation::ON_SERVICES_TYPES.include?(relation_type)
+          linked_vehicle_ids = ['vehicle_0', 'vehicle_0_dup'] if Models::Relation::ON_VEHICLES_TYPES.include?(relation_type)
+
+          vrp[:relations] = [
+            {
+              type: relation_type,
+              lapses: lapses,
+              linked_ids: linked_ids,
+              linked_vehicle_ids: linked_vehicle_ids
+            }
+          ]
+
+          assert_raises OptimizerWrapper::UnsupportedProblemError do
+            TestHelper.create(vrp)
+          end
+        }
       }
     end
 
@@ -555,6 +568,82 @@ module Models
       assert_raises OptimizerWrapper::DiscordantProblemError do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
       end
+    end
+
+    def test_relations_provided_lapse_consistency
+      problem = VRP.basic
+      service_ids = problem[:services].map{ |s| s[:id] }
+      vehicle_ids = problem[:vehicles].map{ |v| v[:id] }
+
+      Models::Relation::NO_LAPSE_TYPES.each{ |type|
+        problem[:relations] = [{ type: type, lapse: 3 }]
+        Models::Relation::ON_SERVICES_TYPES.include?(type) ?
+          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(problem)
+        end
+
+        problem[:relations] = [{ type: type, lapses: [3, 4] }]
+        Models::Relation::ON_SERVICES_TYPES.include?(type) ?
+          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(problem)
+        end
+      }
+
+      Models::Relation::ONE_LAPSE_TYPES.each{ |type|
+        problem[:relations] = [{ type: type, lapse: 3 }]
+        Models::Relation::ON_SERVICES_TYPES.include?(type) ?
+          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
+        check_consistency(problem)
+
+        problem[:relations] = [{ type: type, lapses: [3, 4] }]
+        Models::Relation::ON_SERVICES_TYPES.include?(type) ?
+          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(problem)
+        end
+      }
+    end
+
+    def test_relations_number_of_lapses_consistency_when_authorized_lapses
+      problem = VRP.lat_lon_two_vehicles
+
+      [:vehicle_trips, Models::Relation::SEVERAL_LAPSE_TYPES].flatten.each{ |type|
+        problem[:relations] = [{ type: type, lapse: 3 }]
+        if Models::Relation::ON_SERVICES_TYPES.include?(type)
+          problem[:relations].first[:linked_ids] = problem[:services].map{ |s| s[:id] }
+        else
+          problem[:relations].first[:linked_vehicle_ids] = [problem[:vehicles].first[:id]]
+        end
+        check_consistency(problem)
+
+        case type
+        when :vehicle_trips
+          problem[:relations] = [TestHelper.vehicle_trips_relation(problem)]
+          problem[:relations].first[:lapses] = [2]
+          check_consistency(problem)
+
+          problem[:relations].first[:lapses] = [2, 4]
+        else
+          problem[:relations] = [{ type: type, linked_ids: problem[:services][0..2].collect{ |s| s[:id] } }]
+          problem[:relations].first[:lapses] = [2]
+          check_consistency(problem)
+
+          problem[:relations].first[:lapses] = [2, 2]
+          check_consistency(problem)
+
+          problem[:relations].first[:lapses] = [2, 3, 2]
+        end
+
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(problem)
+        end
+      }
     end
   end
 end

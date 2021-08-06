@@ -2990,14 +2990,16 @@ class WrapperTest < Minitest::Test
     problem = VRP.basic
     problem[:relations] = [{
       type: :vehicle_group_duration,
-      linked_ids: [],
-      linked_vehicle_ids: [],
-      lapse: 1
+      linked_vehicle_ids: ['vehicle_0']
     }, {
       type: :shipment,
       linked_ids: ['service_1', 'service_2']
     }]
 
+    assert_raises OptimizerWrapper::DiscordantProblemError do
+      TestHelper.create(problem)
+    end
+    problem[:relations] = [problem[:relations][1]]
     vrp = TestHelper.create(problem)
     refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
                     :assert_no_relations_except_simple_shipments
@@ -3006,9 +3008,8 @@ class WrapperTest < Minitest::Test
 
     problem[:relations] = [{
       type: :vehicle_group_duration,
-      linked_ids: [],
       linked_vehicle_ids: ['vehicle_0'],
-      lapse: 1
+      lapses: [1]
     }]
 
     vrp = TestHelper.create(problem)

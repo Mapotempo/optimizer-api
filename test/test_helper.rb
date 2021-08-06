@@ -129,7 +129,25 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
     vrp.preprocessing_partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
 
-    vrp[:relations]&.each{ |r| r[:type] = r[:type]&.to_sym }
+    vrp[:relations]&.each{ |r|
+      r[:type] = r[:type]&.to_sym
+      next if [Models::Relation::NO_LAPSE_TYPES,
+               Models::Relation::ONE_LAPSE_TYPES,
+               Models::Relation::SEVERAL_LAPSE_TYPES].any?{ |set|
+                set.include?(r[:type])
+              }
+
+      raise 'This relation does not exit in any of NO_LAPSE_RELATIONS ONE_LAPSE_RELATIONS SEVERAL_LAPSE_RELATIONS, there is a risk of incorrect management'
+    }
+
+    vrp[:relations]&.each{ |r|
+      r[:type] = r[:type]&.to_sym
+      next if [Models::Relation::ON_VEHICLES_TYPES, Models::Relation::ON_SERVICES_TYPES].any?{ |set|
+                set.include?(r[:type])
+              }
+
+      raise 'This relation does not exit in any of ON_VEHICLES_TYPES ON_SERVICES_TYPES there is a risk of incorrect management'
+    }
 
     vrp[:vehicles]&.each{ |v|
       next if v[:skills].to_a.empty?

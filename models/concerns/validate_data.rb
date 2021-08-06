@@ -264,30 +264,77 @@ module ValidateData
     }
   end
 
+  def check_consistent_ids_provided(relation)
+    case relation[:type]
+    when *Models::Relation::ON_VEHICLES_TYPES
+      if relation[:linked_ids].to_a.any? || relation[:linked_vehicle_ids].to_a.empty?
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          "#{relation[:type]} relations do not support linked_ids and expect linked_vehicle_ids"
+        )
+      end
+    when *Models::Relation::ON_SERVICES_TYPES
+      if relation[:linked_vehicle_ids].to_a.any? || relation[:linked_ids].to_a.empty?
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          "#{relation[:type]} relations do not support linked_vehicle_ids and expect linked_ids"
+        )
+      end
+    else
+      raise 'Unknown relation type' # in case we ever forget to handle a new relation type
+    end
+  end
+
+  def check_consistent_lapses_provided(relation)
+    case relation[:type]
+    when *Models::Relation::NO_LAPSE_TYPES
+      if relation[:lapse] || relation[:lapses].to_a.any?
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          "#{relation[:type]} relations do not expect any lapse"
+        )
+      end
+    when *Models::Relation::ONE_LAPSE_TYPES
+      if relation[:lapse].nil? && relation[:lapses].to_a.size != 1
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          "#{relation[:type]} relations expect exactly one lapse"
+        )
+      end
+    when *Models::Relation::SEVERAL_LAPSE_TYPES
+      relation[:lapses] = [0] if relation[:type] == :vehicle_trips && relation[:lapse].nil? && relation[:lapses].nil?
+      if relation[:lapse].nil? && relation[:lapses].to_a.size != 1
+        exp_lapse_count = (relation[:linked_ids]&.size || relation[:linked_vehicle_ids]&.size) - 1
+        if relation[:lapses].to_a.size != exp_lapse_count
+          raise OptimizerWrapper::DiscordantProblemError.new(
+            "#{relation[:type]} relations expect at least one lapse"
+          )
+        end
+      end
+    else
+      raise 'Unknown relation type' # in case we ever forget to handle a new relation type
+    end
+  end
+
   def check_relations(periodic_heuristic)
     return unless @hash[:relations].any?
 
-    @hash[:relations].group_by{ |relation| relation[:type] }.each{ |type, relations|
-      case type.to_sym
+    @hash[:relations].each{ |relation|
+      relation_services =
+        relation[:linked_ids].to_a.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } }
+      relation_vehicles =
+        relation[:linked_vehicle_ids].to_a.collect{ |v_id| @hash[:vehicles].find{ |v| v[:id] == v_id } }
+
+      if relation_vehicles.any?(&:nil?) || relation_services.any?(&:nil?)
+        # FIXME: linked_vehicle_ids should be directly related to vehicle objects of the model
+        raise OptimizerWrapper::DiscordantProblemError.new(
+          'At least one ID in relations does not match with any provided vehicle or service from the data'
+        )
+      end
+
+      check_consistent_ids_provided(relation)
+      check_consistent_lapses_provided(relation)
+
+      case relation[:type].to_sym
       when :vehicle_trips
-        relations.each{ |relation|
-          relation_vehicles =
-            relation[:linked_vehicle_ids].to_a.collect{ |v_id| @hash[:vehicles].find{ |v| v[:id] == v_id } }
-
-          if relation_vehicles.empty?
-            raise OptimizerWrapper::DiscordantProblemError.new(
-              'A non empty list of vehicles IDs should be provided for vehicle_trips relations'
-            )
-          elsif relation_vehicles.any?(&:nil?)
-            # FIXME: linked_vehicle_ids should be directly related to vehicle objects of the model
-            raise OptimizerWrapper::DiscordantProblemError.new(
-              'At least one vehicle ID in relations does not match with any provided vehicle'
-            )
-          end
-
-          check_vehicle_trips_stores_consistency(relation_vehicles)
-          check_trip_timewindows_consistency(relation_vehicles)
-        }
+        check_vehicle_trips_stores_consistency(relation_vehicles)
+        check_trip_timewindows_consistency(relation_vehicles)
       end
     }
 
