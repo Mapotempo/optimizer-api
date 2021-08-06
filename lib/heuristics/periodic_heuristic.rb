@@ -219,54 +219,27 @@ module Wrappers
       }.compact
     end
 
-    # Returns clean set with all `value_to_remove` removed
-    def clean_value_from_sets(sets, value_to_remove)
-      clean_sets(sets.each{ |set| set.delete(value_to_remove) })
-    end
-
-    # From a set of sets of Arrays (three dimension array)
-    # returns only one Array per set such that no set contains the same array
-    # than the other one
-    def clean_sets(sets)
-      if sets.uniq.size == 1
-        return sets.first.collect{ |s| [s] }.slice(0..sets.size - 1) + Array.new([sets.size - sets.first.size, 0].max, [])
+    # Checks if it is possible to select an array from each set (of sets)
+    # such that all selected arrays are different from each other
+    def can_find_a_distinct_array_per_set(sets)
+      if sets.any?{ |set| set.uniq.size != set.size }
+        # since we want each set to contain values that are in no other set, if a value appears twice in a set
+        # this implies that we can use this value twice and hence we will not be able to return expected output.
+        # Moreover, sets comme from first/last_possible_days which can not be the exact same for two diffent
+        # visits of the same service (because visit 2 can not start/end at same day as visit 1)
+        raise OptimizerWrapper::PeriodicHeuristicError.new('Function called with inconsistent parameters')
       end
 
-      considered_single_sets = []
-      non_reducable = (sets - considered_single_sets).find{ |s| s.size == 1 }&.first
-      # if a set contains only one Array, then this array can not be used in any other set
-      # this array is removed from every set with more than one array
-      while non_reducable
-        seen = false
-        sets.each{ |set|
-          if !seen && set.size == 1 && set.include?(non_reducable)
-            seen = true
-          else
-            set.delete(non_reducable)
-          end
-        }
-        considered_single_sets << [non_reducable]
-        non_reducable = (sets - considered_single_sets).find{ |s| s.size == 1 }&.first
-      end
+      return false if sets.any?(&:empty?)
 
-      return sets if sets.all?{ |set| set.size <= 1 }
+      return true if sets.size == 1
 
-      set, copies = sets.group_by{ |s| s }.min_by{ |s, _copy_sets| s.size }
-      one_per_set = nil
-      set.each{ |value|
-        # only one set can keep this value
-        clean_copies = [[value]] + (copies.size > 1 ? copies[1..-1].collect{ |subset| subset - [value] } : [])
-        clean_remaining_set = clean_value_from_sets((sets - copies).dup, value)
-        to_return = clean_sets(clean_copies + clean_remaining_set)
-
-        next unless to_return&.all?{ |s| s.size <= 1 } &&
-                    to_return.to_a.size == sets.size
-
-        one_per_set = to_return
-        break
+      sets.sort_by!(&:size)
+      sets.first.any?{ |subset|
+        new_sets = sets[1..-1].collect{ |set| set - [subset] }
+        new_sets.each{ |set| set.delete(subset) }
+        can_find_a_distinct_array_per_set(new_sets)
       }
-
-      one_per_set
     end
 
     # Ensures `day` is compatible with other already assigned visits with this ID
@@ -279,9 +252,7 @@ module Wrappers
       end
 
       all_visits_sets = @services_data[id][:used_days].collect{ |d| compatible_ranges_for_day(id, d) }
-      each_day_only_set = clean_sets(all_visits_sets.insert(0, day_sets))
-      each_day_only_set.all?{ |set| set.size == 1 } &&
-        each_day_only_set.size == @services_data[id][:used_days].size + 1
+      can_find_a_distinct_array_per_set(all_visits_sets.insert(0, day_sets))
     end
 
     def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
