@@ -76,6 +76,7 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/artifact/optimizer-api.tar
       - name: Launch Stack
+        timeout-minutes: 2
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
@@ -100,6 +101,7 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/artifact/optimizer-api.tar
       - name: Launch Stack
+        timeout-minutes: 2
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
@@ -124,6 +126,7 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/artifact/optimizer-api.tar
       - name: Launch Stack
+        timeout-minutes: 2
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
@@ -148,6 +151,7 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/artifact/optimizer-api.tar
       - name: Launch Stack
+        timeout-minutes: 2
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
@@ -172,6 +176,7 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/artifact/optimizer-api.tar
       - name: Launch Stack
+        timeout-minutes: 2
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
@@ -196,6 +201,7 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/artifact/optimizer-api.tar
       - name: Launch Stack
+        timeout-minutes: 2
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
@@ -220,6 +226,7 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/artifact/optimizer-api.tar
       - name: Launch Stack
+        timeout-minutes: 2
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
