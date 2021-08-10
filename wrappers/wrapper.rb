@@ -799,17 +799,21 @@ module Wrappers
       #
       #       def simplify_X(vrp, result = nil, options = { mode: :simplify })
       #         # Description of the simplification
+      #         simplification_active = false
       #         case options[:mode]
       #         when :simplify
       #           # simplifies the constraint
+      #           simplification_active = true if applied
       #         when :rewind
       #           nil # if nothing to do
+      #           simplification_active = true if applied
       #         when :patch_result
       #           # patches the result
+      #           simplification_active = true if applied
       #         else
       #           raise 'Unknown :mode option'
       #         end
-      #         nil # returns nil because the objects are modified and this function is going to be called automatically
+      #         simplification_active # returns true if the simplification is applied/rewinded/patched
       #       end
       #
       # (If some modes are not necessary they can be merged -- e.g. `when :rewind, :patch_result` and have `nil`)
@@ -828,13 +832,15 @@ module Wrappers
       [
         :simplify_vehicle_duration,
         :simplify_vehicle_pause,
+        :simplify_complex_multi_pickup_or_delivery_shipments,
         :simplify_service_setup_duration_and_vehicle_setup_modifiers,
       ].freeze
     end
 
     def simplify_constraints(vrp)
       simplifications.each{ |simplification|
-        self.send(simplification, vrp, nil, mode: :simplify)
+        simplification_activated = self.send(simplification, vrp, nil, mode: :simplify)
+        log "#{simplification} simplification is activated" if simplification_activated
       }
 
       vrp
@@ -844,7 +850,8 @@ module Wrappers
       return result unless result.is_a?(Hash)
 
       simplifications.reverse_each{ |simplification|
-        self.send(simplification, vrp, result, mode: :patch_result)
+        result_patched = self.send(simplification, vrp, result, mode: :patch_result)
+        log "#{simplification} simplification is active, result is patched" if result_patched
       }
 
       result
@@ -856,19 +863,215 @@ module Wrappers
 
       # then rewind the simplifications
       simplifications.reverse_each{ |simplification|
-        self.send(simplification, vrp, nil, mode: :rewind)
+        simplification_rewinded = self.send(simplification, vrp, nil, mode: :rewind)
+        log "#{simplification} simplification is rewinded" if simplification_rewinded
       }
 
       vrp
     end
 
+    def simplify_complex_multi_pickup_or_delivery_shipments(vrp, result = nil, options = { mode: :simplify })
+      # Simplify vehicle durations using timewindows if there is force_start
+      simplification_active = false
+      case options[:mode]
+      when :simplify
+        return nil if vrp.services.any?{ |s| s.activities.any? } # alternative activities is not yet supported
+
+        services_in_multi_shipment_relations, vrp.services =
+          vrp.services.partition{ |s| s.relations.count{ |r| r.type == :shipment } > 1 }
+
+        return nil unless services_in_multi_shipment_relations.any?
+
+        # TODO: if needed the following check can be removed by extending the logic to initial solutions by replacing
+        # the original service id with the new expanded service ids in the routes (and rewind it afterwards)
+        # but if the complex relations are already in feasible initial routes then it might not worth it.
+        # So we can wait for a real use case arrives and we have an instance to test.
+        return nil if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.includes?(s.id) }}
+
+        simplification_active = true
+
+        expanded_services = []
+        expanded_relations = []
+        sequence_relations = []
+
+        multi_shipment_relations, vrp.relations =
+          vrp.relations.partition{ |r| services_in_multi_shipment_relations.any?{ |s| s.relations.include?(r) } }
+
+        services_in_multi_shipment_relations.each{ |service|
+          shipment_relations, non_shipment_relations = service.relations.partition{ |r| r.type == :shipment }
+
+          if non_shipment_relations.any?
+            raise 'Cannot handle complex (multi-pickup-single-delivery, single-pickup-multi-delivery) ' \
+                  'shipments if the services appear in other relations.'
+            # TODO: it is not hard to lift this limitation;
+            # if needed these non_shipment_relations can be
+            # duplicated for each new service created for shipment_relations
+          end
+
+          total_quantity_per_unit_id = Hash.new(0)
+          all_shipment_quantities = shipment_relations.collect{ |relation|
+            # WARNING: Here we assume that there are two services in the relation -- a pair of pickup and delivery
+            relation.linked_services.find{ |i| i != service }.quantities.each{ |quantity|
+              total_quantity_per_unit_id[quantity.unit_id] += quantity.value
+            }
+          }
+          extra_per_quantity = service.quantities.collect{ |quantity|
+            (quantity.value + total_quantity_per_unit_id[quantity.unit_id]) / shipment_relations.size.to_f
+          }
+
+          sequence_relation_ids = []
+
+          shipment_relations.each_with_index{ |relation, index|
+            new_service = Helper.deep_copy(service,
+                                           override: { relations: [] },
+                                           shallow_copy: [:unit, :point])
+            sequence_relation_ids << new_service.id
+
+            if index > 0
+              # all timing will be handled by the first service (of the sequence relation)
+              # correct the TW.end for the succeeding services (so that they can start)
+              activity = new_service.activity
+              activity.timewindows.each{ |tw| tw.end += activity.duration if tw&.end }
+              activity.additional_value = 0
+              activity.duration = 0
+              activity.setup_duration = 0
+
+              # inserting the remaining parts of a multipart service should be of highest priority
+              new_service.priority = 0 # 0 is the highest priority
+            end
+
+            # share the quantity between the duplicated services (including the left-overs)
+            new_service.quantities.each_with_index{ |quantity, q_index|
+              shipment_quantity = all_shipment_quantities[index].find{ |q| q.unit_id == quantity.unit_id }&.value.to_f
+              quantity.value = -shipment_quantity + extra_per_quantity[q_index]
+            }
+
+            new_shipment_relation = Helper.deep_copy(
+              relation,
+              override: {
+                linked_ids: nil, # this line can be removed when linked_ids is replaced with linked_service_ids
+                linked_services: relation.linked_services.map{ |s| s.id == service.id ? new_service : s }
+              }
+            )
+
+            new_service.relations << new_shipment_relation
+
+            expanded_relations << new_shipment_relation
+            expanded_services << new_service
+          }
+
+          sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids)
+        }
+
+        vrp[:simplified_complex_shipments] = {
+          original_services: services_in_multi_shipment_relations,
+          original_relations: multi_shipment_relations,
+          expanded_services: expanded_services,
+          expanded_relations: expanded_relations,
+          sequence_relations: sequence_relations,
+        }
+
+        # TODO: old services still point to the old relations
+        # but the vrp.relations.linked_ids returns the correct services
+        vrp.services.concat(expanded_services)
+        vrp.relations.concat(sequence_relations)
+        vrp.relations.concat(expanded_relations)
+      when :rewind
+        return nil unless vrp[:simplified_complex_shipments]
+
+        simplification_active = true
+
+        vrp.services -= vrp[:simplified_complex_shipments][:expanded_services]
+        vrp.relations -= vrp[:simplified_complex_shipments][:expanded_relations]
+        vrp.relations -= vrp[:simplified_complex_shipments][:sequence_relations]
+        vrp.services.concat(vrp[:simplified_complex_shipments][:original_services])
+        vrp.relations.concat(vrp[:simplified_complex_shipments][:original_relations])
+      when :patch_result
+        return nil unless vrp[:simplified_complex_shipments]
+
+        simplification_active = true
+
+        simplification_data = vrp[:simplified_complex_shipments]
+
+        simplification_data[:original_services].each{ |service|
+          # delete the unassigned expanded version of service and calculate how many of them planned/unassigned
+          unassigned_exp_ser_count = result[:unassigned].size
+          unassigned_exp_ser_count -= result[:unassigned].delete_if{ |uns| uns[:original_service_id] == service.original_id }.size
+          planned_exp_ser_count = simplification_data[:expanded_services].count{ |s| s.original_id == service.original_id } - unassigned_exp_ser_count
+
+          if planned_exp_ser_count == 0
+            # if all of them were unplanned
+            # replace the deleted unassigned expanded ones with one single original un-expanded service
+            result[:unassigned] << {
+              original_service_id: service.original_id,
+              service_id: service.id,
+              point_id: service.activity.point_id,
+              detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
+            }
+          else
+            # replace the planned one(s) into one single unexpanded original service
+            first_exp_ser_activity = nil
+            last_exp_ser_activity = nil
+            insert_location = nil
+            deleted_exp_ser_count = 0
+            result[:routes].each{ |route|
+              route[:activities].delete_if.with_index{ |activity, index|
+                if activity[:original_service_id] == service.original_id
+                  insert_location ||= index
+                  first_exp_ser_activity ||= activity # first_exp_ser_activity has the travel and timing info
+                  last_exp_ser_activity = activity # last_exp_ser_activity has the quantity info
+                  deleted_exp_ser_count += 1
+                  true
+                elsif deleted_exp_ser_count == planned_exp_ser_count
+                  break
+                end
+              }
+
+              next unless insert_location # expanded activity(ies) of service is found in this route
+
+              merged_activity = first_exp_ser_activity.merge(last_exp_ser_activity) { |key, first, last|
+                if key == :service_id
+                  service.id
+                elsif key == :detail && first != last
+                  # if only one expanded service is planned (i.e., first == last), then first will be correct
+                  # if not correct the quantities
+                  first[:quantities].each_with_index{ |first_quantity, q_ind|
+                    last_quantity = last[:quantities][q_ind][:unit] == first_quantity[:unit] && last[:quantities][q_ind]
+                    last_quantity ||= last[:quantities].find{ |q| q[:unit] == first_quantity[:unit] }
+                    value_correction = last_quantity[:current_load] - first_quantity[:current_load]
+                    first_quantity[:current_load] = last_quantity[:current_load]
+
+                    next if first_quantity[:value].nil? && value_correction == 0
+
+                    first_quantity[:value] = first_quantity[:value].to_f + value_correction
+                  }
+                  first
+                else
+                  first
+                end
+              }
+
+              route[:activities].insert(insert_location, merged_activity)
+
+              break
+            }
+          end
+        }
+      else
+        raise 'Unknown :mode option'
+      end
+      simplification_active
+    end
+
     def simplify_vehicle_duration(vrp, _result = nil, options = { mode: :simplify })
       # Simplify vehicle durations using timewindows if there is force_start
+      simplification_active = false
       case options[:mode]
       when :simplify
         vrp.vehicles&.each{ |vehicle|
           next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') && vehicle.duration && vehicle.timewindow
 
+          simplification_active ||= true
           # Warning: this can make some services infeasible because vehicle cannot work after tw.start + duration
           vehicle.timewindow.end = vehicle.timewindow.start + vehicle.duration
           vehicle.duration = nil
@@ -878,11 +1081,12 @@ module Wrappers
       else
         raise 'Unknown :mode option'
       end
-      nil
+      simplification_active
     end
 
     def simplify_vehicle_pause(vrp, result = nil, options = { mode: :simplify })
       # Simplifies vehicle pauses if there is no reason to keep them -- i.e., no services with timewindows
+      simplification_active = false
       case options[:mode]
       when :simplify
         return nil unless !vrp.schedule? &&
@@ -943,6 +1147,8 @@ module Wrappers
 
           vehicle[:simplified_rests] = vehicle.rests.dup
           vehicle.rests = []
+
+          simplification_active ||= vehicle[:simplified_rests].any?
         }
 
         vrp[:simplified_rests] = vrp.rests.select{ |r| vrp.vehicles.none?{ |v| v.rests.include?(r) } }
@@ -951,6 +1157,8 @@ module Wrappers
         # take the modifications back in case the vehicle is moved to another sub-problem
         vrp.vehicles&.each{ |vehicle|
           next unless vehicle[:simplified_rests]&.any?
+
+          simplification_active ||= true
 
           vehicle.rests += vehicle[:simplified_rests]
           vehicle[:simplified_rests] = nil
@@ -970,6 +1178,8 @@ module Wrappers
         pause_and_depot = %w[depot rest].freeze
         vrp.vehicles&.each{ |vehicle|
           next unless vehicle[:simplified_rests]&.any?
+
+          simplification_active ||= true
 
           route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
           no_cost = route[:activities].none?{ |a| pause_and_depot.exclude?(a[:type]) }
@@ -1057,7 +1267,7 @@ module Wrappers
       else
         raise 'Unknown :mode option'
       end
-      nil
+      simplification_active
     end
 
     def simplify_service_setup_duration_and_vehicle_setup_modifiers(vrp, result = nil, options = { mode: :simplify })
@@ -1069,6 +1279,7 @@ module Wrappers
       # and the setup duration s_p can be removed from the problem.
       # This way solvers like vroom which does not support setup duration can be used.
       return nil if vrp.periodic_heuristic?
+      simplification_active = false
 
       case options[:mode]
       when :simplify
@@ -1108,6 +1319,8 @@ module Wrappers
 
         return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
 
+        simplification_active = true
+
         vrp.vehicles.each{ |vehicle|
           vehicle[:simplified_coef_setup] = vehicle.coef_setup
           vehicle[:simplified_additional_setup] = vehicle.additional_setup
@@ -1117,6 +1330,8 @@ module Wrappers
       when :rewind
         # take it back in case in dicho and there will be re-optimization
         return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+
+        simplification_active = true
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
 
@@ -1152,6 +1367,8 @@ module Wrappers
         # the travel_times need to be decreased and setup_duration need to be increased by
         # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
         return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+
+        simplification_active = true
 
         vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
         services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point }
@@ -1190,7 +1407,7 @@ module Wrappers
       else
         raise 'Unknown :mode option'
       end
-      nil
+      simplification_active
     end
 
     def shift_route_times(route, shift_amount, shift_start_index = 0)

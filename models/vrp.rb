@@ -343,7 +343,6 @@ module Models
       self.remove_unnecessary_units(hash)
       self.remove_unnecessary_relations(hash)
       self.generate_schedule_indices_from_date(hash)
-      self.generate_linked_service_ids_for_relations(hash)
     end
 
     def self.remove_unnecessary_units(hash)
@@ -538,14 +537,6 @@ module Models
       hash[:configuration][:schedule].delete(:range_date)
 
       hash
-    end
-
-    def self.generate_linked_service_ids_for_relations(hash)
-      hash[:relations]&.each{ |relation|
-        next unless relation[:linked_ids]&.any?
-
-        relation[:linked_service_ids] = relation[:linked_ids].select{ |id| hash[:services]&.any?{ |s| s[:id] == id } }
-      }
     end
 
     def configuration=(configuration)

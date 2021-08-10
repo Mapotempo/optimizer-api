@@ -7,6 +7,7 @@
 - Implementation of `vehicle_trips` relation: the routes can be successive or with a minimum duration `lapse` in between [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
 - CSV headers adapts to the language provided through HTTP_ACCEPT_LANGUAGE header to facilitate import in Mapotempo-Web [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 - Return route day/date and visits' index in result [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
+- Treat complex shipments (multi-pickup-single-delivery and single-pickup-multi-delivery) as multiple simple shipments internally to increase performance [#261](https://github.com/Mapotempo/optimizer-api/pull/261)
 
 ### Changed
 

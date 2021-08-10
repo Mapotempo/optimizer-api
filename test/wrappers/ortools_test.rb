@@ -3863,7 +3863,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     OptimizerWrapper.config[:services][:ortools].stub(
       :run_ortools,
-      lambda { |problem, _, _, _, _, _|
+      lambda { |problem, _, _|
         # check no service has been filtered :
         assert_equal expecting, (problem.routes.collect{ |r| r.service_ids.size })
 

@@ -322,12 +322,47 @@ module ValidateData
     check_relation_consistent_timewindows
     check_sticky_relation_consistency
 
-    incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end same_vehicle]
-    return unless periodic_heuristic && incompatible_relation_types.any?
+    if periodic_heuristic
+      incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end same_vehicle]
+      err_msg = "#{incompatible_relation_types} relations not available with specified first_solution_strategy"
+      raise OptimizerWrapper::UnsupportedProblemError.new(err_msg) if incompatible_relation_types.any?
+    end
 
-    raise OptimizerWrapper::UnsupportedProblemError.new(
-      "#{incompatible_relation_types} relations not available with specified first_solution_strategy"
-    )
+    check_relation_visits_number_lapse_consistency
+  end
+
+  def check_relation_visits_number_lapse_consistency
+    # Do the check from exclusion point of view so that new relations can be considered automatically
+    relations_not_needing_matching_visits_number_and_lapses = %i[
+      force_end
+      force_first
+      never_first
+      same_vehicle
+      vehicle_trips
+      vehicle_group_duration
+      vehicle_group_duration_on_weeks
+      vehicle_group_duration_on_months
+      vehicle_group_number
+    ].freeze
+
+    @hash[:relations]&.each{ |relation|
+      next if relations_not_needing_matching_visits_number_and_lapses.include?(relation[:type].to_sym)
+
+      services_in_relation = relation[:linked_ids]&.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } } || []
+      if services_in_relation.uniq{ |s| s[:visits_number] || 1 }.size > 1
+        raise OptimizerWrapper::UnsupportedProblemError.new(
+          'Services in relations should have the same visits_number. '\
+          'Following services in relation but they have different visits_number values: ',
+          [relation[:linked_ids]]
+        )
+      elsif services_in_relation.uniq{ |s| [s[:minimum_lapse] || 1, s[:maximum_lapse].to_i] }.size > 1
+        raise OptimizerWrapper::UnsupportedProblemError.new(
+          'Services in relations should have the same minimum_lapse and maximum_lapse. '\
+          'Following services in relation but they have different lapse values: ',
+          [relation[:linked_ids]]
+        )
+      end
+    }
   end
 
   def check_sticky_relation_consistency

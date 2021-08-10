@@ -33,6 +33,19 @@ module Models
     # validates_inclusion_of :type, :in => %i(same_vehicle same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months vehicle_trips)
 
     def self.create(hash)
+      # TODO: remove it after the linked_ids is replaced with linked_service_ids in the api definition
+      exclusive = [:linked_service_ids, :linked_ids, :linked_services].freeze
+      raise "#{exclusive} fields are mutually exclusive" if hash.keys.count{ |k| exclusive.include? k } > 1
+
+      # TODO: remove it after the linked_ids is replaced with linked_service_ids in the api definition
+      if hash.key?(:linked_ids)
+        hash[:linked_service_ids] = hash[:linked_ids]
+      elsif hash.key?(:linked_service_ids)
+        hash[:linked_ids] = hash[:linked_service_ids]
+      elsif hash.key?(:linked_services)
+        hash[:linked_ids] = hash[:linked_services].map(&:id)
+      end
+
       hash[:type] = hash[:type]&.to_sym if hash.key?(:type)
       super(hash)
     end
