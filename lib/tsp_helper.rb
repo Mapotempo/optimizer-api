@@ -19,14 +19,17 @@
 module TSPHelper
   def self.create_tsp(vrp, vehicle)
     services = []
+    tsp_prefix = Digest::MD5.hexdigest(
+      (vrp.points.map(&:id) + vrp.services.map(&:id) + vrp.vehicles.map(&:id) + [Time.now.to_f, rand]).join(' ')
+    )
     vrp.points.each{ |pt|
       service = vrp.services.find{ |service_| service_.activity.point_id == pt.id }
       next if !service
 
       services << {
-        id: service[:id],
+        id: "#{tsp_prefix}_#{service[:id]}",
         activity: {
-          point_id: service.activity.point_id,
+          point_id: "#{tsp_prefix}_#{service.activity.point_id}",
           duration: service.activity.duration
         }
       }
@@ -36,19 +39,19 @@ module TSPHelper
       matrices: vrp.matrices,
       points: vrp.points.collect{ |pt|
         {
-          id: pt.id,
+          id: "#{tsp_prefix}_#{pt.id}",
           matrix_index: pt.matrix_index
         }
       },
       vehicles: [{
-        id: vehicle.id,
-        start_point_id: vehicle.start_point_id,
+        id: "#{tsp_prefix}_#{vehicle.id}",
+        start_point_id: "#{tsp_prefix}_#{vehicle.start_point_id}",
         matrix_id: vehicle.matrix_id
       }],
       services: services
     }
 
-    Models::Vrp.create(problem)
+    Models::Vrp.create(problem, false)
   end
 
   def self.solve(tsp)

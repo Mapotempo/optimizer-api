@@ -154,7 +154,7 @@ module Models
       exception = assert_raises ActiveHash::RecordNotFound do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
       end
-      assert_equal('Couldn\'t find Models::Point with ID=missing_point_id', exception.message)
+      assert_equal("Couldn't find Models::Point with ID=#{vrp[:services][0][:activity][:point_id].inspect}", exception.message)
     end
 
     def test_reject_if_shipments_and_periodic_heuristic
@@ -246,64 +246,30 @@ module Models
     end
 
     def test_duplicated_ids_are_not_allowed
-      assert TestHelper.create(VRP.basic) # this should not produce any error
+      vrp_base = VRP.basic
+      # add missing fields so that they can be duplicated for the test
+      vrp_base[:rests] = [{ id: 'rest', timewindows: [{ start: 1, end: 2 }], duration: 1 }]
+      vrp_base[:shipments] = [{
+        id: 'shipment',
+        pickup: { point_id: 'point_3', duration: 3 },
+        delivery: { point_id: 'point_2', duration: 3 },
+        quantities: [{ unit_id: 'unit', value: 3 }]
+      }]
+      vrp_base[:zones] = [{ id: 'zone', polygon: { type: 'Polygon', coordinates: [[[0.5, 48.5], [1.5, 48.5]]] }}]
+      vrp_base[:subtours] = [{ id: 'tour', time_bounds: 180 }]
+      vrp_base[:units] = [{ id: 'unit' }]
+      vrp_base[:vehicles].first[:capacities] = [{ unit_id: 'unit', limit: 10 }]
+      vrp_base = Oj.dump(vrp_base)
 
-      vrp = VRP.basic
-      vrp[:vehicles] << vrp[:vehicles].first
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
+      assert TestHelper.create(Oj.load(vrp_base)) # this should not produce any errors
 
-      vrp = VRP.basic
-      vrp[:services] << vrp[:services].first
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp = VRP.basic
-      vrp[:matrices] << vrp[:matrices].first
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp = VRP.basic
-      vrp[:points] << vrp[:points].first
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp = VRP.basic
-      vrp[:rests] = Array.new(2){ |_rest| { id: 'same_id', timewindows: [{ start: 1, end: 2 }], duration: 1 } }
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      assert TestHelper.create(VRP.pud) # this should not produce any error
-      vrp = VRP.pud
-      vrp[:shipments] << vrp[:shipments].first
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp = VRP.pud
-      vrp[:vehicles].first[:capacities] = [{ unit_id: 'unit_0', value: 10 }]
-      vrp[:shipments].first[:quantities] = [{ unit_id: 'unit_0', value: -5 }]
-      vrp[:units] << vrp[:units].first
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp = VRP.pud
-      vrp[:zones] = Array.new(2){ |_zone| { id: 'same_zone', polygon: { type: 'Polygon', coordinates: [[[0.5, 48.5], [1.5, 48.5]]] }} }
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
-
-      vrp = VRP.pud
-      vrp[:subtours] = Array.new(2){ |_tour| { id: 'same_tour', time_bouds: 180 } }
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(vrp)
-      end
+      %i[
+        matrices points rests services shipments units vehicles zones
+      ].each{ |symbol|
+        vrp = Oj.load(vrp_base)
+        vrp[symbol] << vrp[symbol].first
+        assert_raises ActiveHash::IdError do TestHelper.create(vrp) end
+      }
     end
 
     def test_dates_cannot_be_mixed_with_indices
@@ -370,7 +336,7 @@ module Models
                          { type: 'shipment', linked_ids: ['service_2'] },
                          { type: 'shipment', linked_ids: ['service_1', 'service_3'] }]
       error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        Models::Vrp.create(TestHelper.coerce(vrp))
+        TestHelper.create(TestHelper.coerce(vrp))
       end
       assert_equal 'Shipment relations need to have two services -- a pickup and a delivery. ' \
                    'Relations of following services does not have exactly two linked_ids: ' \
@@ -384,12 +350,12 @@ module Models
       # multi-pickup single delivery
       vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
                          { type: 'shipment', linked_ids: ['service_2', 'service_3'] }]
-      assert Models::Vrp.create(TestHelper.coerce(vrp)), 'Multi-pickup shipment should not be rejected'
+      assert TestHelper.create(TestHelper.coerce(vrp)), 'Multi-pickup shipment should not be rejected'
 
       # single pickup multi-delivery
       vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
                          { type: 'shipment', linked_ids: ['service_1', 'service_2'] }]
-      assert Models::Vrp.create(TestHelper.coerce(vrp)), 'Multi-delivery shipment should not be rejected'
+      assert TestHelper.create(TestHelper.coerce(vrp)), 'Multi-delivery shipment should not be rejected'
     end
 
     def test_ensure_no_skill_matches_with_internal_skills_format
@@ -405,7 +371,7 @@ module Models
       vrp = VRP.toy
       vrp[:services] << vrp[:services].first
 
-      assert_raises OptimizerWrapper::DiscordantProblemError do
+      assert_raises ActiveHash::IdError do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
       end
     end
@@ -567,7 +533,7 @@ module Models
       assert_raises OptimizerWrapper::DiscordantProblemError do
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
       end
-      problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.new(start: 1, end: 9)]
+      problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.create(start: 1, end: 9)]
 
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
     end

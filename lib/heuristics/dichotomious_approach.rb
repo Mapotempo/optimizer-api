@@ -89,15 +89,15 @@ module Interpreters
             if sub_service_vrp[:vrp].resolution_minimum_duration
               sub_service_vrp[:vrp].resolution_minimum_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             end
+            matrix_indices = sub_service_vrp[:vrp].points.map{ |point|
+              service_vrp[:vrp].points.find{ |r_point| point.id == r_point.id }.matrix_index
+            }
+            SplitClustering.update_matrix_index(sub_service_vrp[:vrp])
+            SplitClustering.update_matrix(service_vrp[:vrp].matrices, sub_service_vrp[:vrp], matrix_indices)
             result = OptimizerWrapper.define_process(sub_service_vrp, job, &block)
-            if index.zero? && result
-              transfer_unused_vehicles(result, sub_service_vrps)
-              matrix_indices = sub_service_vrps[1][:vrp].points.map{ |point|
-                service_vrp[:vrp].points.find{ |r_point| point.id == r_point.id }.matrix_index
-              }
-              SplitClustering.update_matrix_index(sub_service_vrps[1][:vrp])
-              SplitClustering.update_matrix(service_vrp[:vrp].matrices, sub_service_vrps[1][:vrp], matrix_indices)
-            end
+
+            transfer_unused_vehicles(result, sub_service_vrps) if index.zero? && result
+
             result
           }
           service_vrp[:vrp].resolution_split_number = sub_service_vrps[1][:vrp].resolution_split_number
@@ -211,10 +211,8 @@ module Interpreters
           mission_ids = route[:activities].map{ |activity| activity[:service_id] }.compact
           next if mission_ids.empty?
 
-          Models::Route.new(
-            vehicle: {
-              id: route[:vehicle_id]
-            },
+          Models::Route.create(
+            vehicle_id: route[:vehicle_id],
             mission_ids: mission_ids
           )
         }

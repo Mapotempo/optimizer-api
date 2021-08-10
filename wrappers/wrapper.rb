@@ -941,8 +941,6 @@ module Wrappers
             vehicle.timewindow.end -= rest.duration if vehicle.timewindow&.end
           }
 
-          vehicle[:simplified_rest_ids] = vehicle[:rest_ids].dup
-          vehicle[:rest_ids] = []
           vehicle[:simplified_rests] = vehicle.rests.dup
           vehicle.rests = []
         }
@@ -952,11 +950,9 @@ module Wrappers
       when :rewind
         # take the modifications back in case the vehicle is moved to another sub-problem
         vrp.vehicles&.each{ |vehicle|
-          next unless vehicle[:simplified_rest_ids]&.any?
+          next unless vehicle[:simplified_rests]&.any?
 
-          vehicle[:rest_ids].concat vehicle[:simplified_rest_ids]
-          vehicle[:simplified_rest_ids] = nil
-          vehicle.rests.concat vehicle[:simplified_rests]
+          vehicle.rests += vehicle[:simplified_rests]
           vehicle[:simplified_rests] = nil
 
           vehicle.rests.each{ |rest|
@@ -966,14 +962,14 @@ module Wrappers
         }
 
         if vrp[:simplified_rests]
-          vrp.rests.concat vrp[:simplified_rests]
+          vrp.rests += vrp[:simplified_rests]
           vrp[:simplified_rests] = nil
         end
       when :patch_result
         # correct the result with respect to simplifications
         pause_and_depot = %w[depot rest].freeze
         vrp.vehicles&.each{ |vehicle|
-          next unless vehicle[:simplified_rest_ids]&.any?
+          next unless vehicle[:simplified_rests]&.any?
 
           route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
           no_cost = route[:activities].none?{ |a| pause_and_depot.exclude?(a[:type]) }
@@ -1052,14 +1048,9 @@ module Wrappers
             cost_increase = vehicle.cost_time_multiplier.to_f * rest.duration +
                             vehicle.cost_waiting_time_multiplier.to_f * idle_time_created_by_inserted_pause
 
-            if route[:cost_details]
-              route[:cost_details].time += cost_increase
-              route[:cost_details].total += cost_increase
-            end
-            if result[:cost_details]
-              result[:cost_details].time += cost_increase
-              result[:cost_details].total += cost_increase
-            end
+
+            route[:cost_details]&.time += cost_increase
+            result[:cost_details]&.time += cost_increase
             result[:cost] += cost_increase # totals are not calculated yet
           }
         }
@@ -1253,7 +1244,7 @@ module Wrappers
       OptimizerWrapper.parse_result(vrp, {
         solvers: [solver],
         cost: nil,
-        cost_details: Models::CostDetails.new({}),
+        cost_details: Models::CostDetails.create({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle|
           OptimizerWrapper.empty_route(vrp, vehicle)

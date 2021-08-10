@@ -147,6 +147,7 @@ module OptimizerWrapper
             msg = "#{"repetition #{repetition_index + 1}/#{service_vrp_repeats.size} - " if service_vrp_repeats.size > 1}#{message}" unless message.nil?
             callback_join&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
+          Models.delete_all if service_vrp_repeats.size > 1 # needed to prevent duplicate ids because expand_repeat uses Marshal.load/dump
         }
 
         (result, position) = repeated_results.each.with_index(1).min_by { |result, _| result[:unassigned].size } # find the best result and its index
@@ -703,7 +704,7 @@ module OptimizerWrapper
     {
       vehicle_id: vehicle.id,
       original_vehicle_id: vehicle.original_id,
-      cost_details: Models::CostDetails.new({}),
+      cost_details: Models::CostDetails.create({}),
       activities: [], # TODO: check if depot activities are needed
                       # or-tools returns depot_start -> depot_end for empty vehicles
                       # in that case route_end_time needs to be corrected
