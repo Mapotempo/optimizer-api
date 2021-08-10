@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/Mapotempo/balanced_vrp_clustering.git
-  revision: 4b2b48732604731e1759788eab85f7ac6268835d
+  revision: b7e7f69e63d6c39855da3a938e4e3f682deb3580
   branch: dev
   specs:
     balanced_vrp_clustering (0.2.0)
@@ -349,4 +349,4 @@ RUBY VERSION
    ruby 2.5.7p206
 
 BUNDLED WITH
-   2.2.16
+   2.2.24
