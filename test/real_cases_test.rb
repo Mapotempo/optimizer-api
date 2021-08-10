@@ -272,18 +272,28 @@ class RealCasesTest < Minitest::Test
 
     # Haute-Savoie - A single route with a visit with 2 open timewindows (0 ; x] [y ; ∞)
     def test_ortools_open_timewindows
+      # TODO: the timing of this test can be decreased (by 10x) when optimizer-api/-/issues/841 is fixed
       vrp = TestHelper.load_vrp(self)
       check_vrp_services_size = vrp.services.size
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
       # Check activities
+      service_with_endless_tw = vrp.services[15]
+      begin_time_of_service_with_endless_tw = result[:routes][0][:activities].find{ |activity|
+        activity[:service_id] == service_with_endless_tw.id # service_with_endless_tw
+      }[:begin_time]
+      endless_tw_respected = service_with_endless_tw.activity.timewindows.one?{ |tw|
+        begin_time_of_service_with_endless_tw >= (tw.start || 0) &&
+          begin_time_of_service_with_endless_tw <= (tw.end || Float::INFINITY)
+      }
+      assert endless_tw_respected, 'Service does not respect endless TW'
       assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
 
       # Check total travel time
       assert result[:routes].sum{ |r| r[:total_travel_time] } <= 13225, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
-      assert result[:elapsed] < 5000, "Too long elapsed time: #{result[:elapsed]}"
+      assert result[:elapsed] < 15000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Nantes - A single route with an order defining the most part of the route
