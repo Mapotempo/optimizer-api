@@ -416,7 +416,7 @@ module ValidateData
     check_clustering_parameters(configuration) if configuration[:preprocessing]
     check_schedule_consistency(configuration[:schedule]) if configuration[:schedule]
     check_periodic_consistency(configuration) if periodic_heuristic
-    check_geometry_parameters(configuration) if configuration[:restitution]
+    check_geometry_parameters(configuration)
   end
 
   def check_clustering_parameters(configuration)
@@ -481,8 +481,11 @@ module ValidateData
   end
 
   def check_geometry_parameters(configuration)
-    return unless configuration[:restitution][:geometry].any? &&
-                  !@hash[:points].all?{ |pt| pt[:location] }
+    return unless configuration &&
+                  configuration[:restitution] &&
+                  configuration[:restitution][:geometry]&.any?
+
+    return if @hash[:points].all?{ |pt| pt[:location] }
 
     raise OptimizerWrapper::DiscordantProblemError.new('Geometry is not available if locations are not defined')
   end
