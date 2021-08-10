@@ -160,6 +160,15 @@ module ValidateData
     raise OptimizerWrapper::DiscordantProblemError.new("Unconsistent timewindows within relations: #{unconsistent_relation_timewindows}")
   end
 
+  def check_vehicle_trips_relation_consistency
+    all_trips = @hash[:relations].flat_map{ |r| r[:linked_vehicle_ids] if r[:type].to_sym == :vehicle_trips }.compact
+    return unless @hash[:vehicles].any?{ |v| all_trips.count(v[:id]) > 1 }
+
+    raise OptimizerWrapper::UnsupportedProblemError.new(
+      'A vehicle cannot appear in more than one vehicle_trips relation'
+    )
+  end
+
   def check_position_relation_specificities
     forbidden_position_pairs = [
       [:always_middle, :always_first],
@@ -373,6 +382,7 @@ module ValidateData
       end
     end
 
+    check_vehicle_trips_relation_consistency
     check_position_relation_specificities
     check_relation_consistent_timewindows
     check_sticky_relation_consistency

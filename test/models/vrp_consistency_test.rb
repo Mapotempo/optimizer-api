@@ -519,6 +519,22 @@ module Models
       check_consistency(vrp) # this should not raise
     end
 
+    def test_reject_complex_vehicle_trips
+      vrp = VRP.lat_lon_two_vehicles
+      check_consistency(Oj.load(Oj.dump(vrp))) # this should not raise
+
+      vrp[:vehicles] << Oj.load(Oj.dump(vrp[:vehicles].last)).deep_merge!({ id: 'vehicle_2' })
+      # complex (overlapping) vehicle_trips relations
+      vrp[:relations] = [
+        TestHelper.vehicle_trips_relation(vrp[:vehicles][0..1]),
+        TestHelper.vehicle_trips_relation(vrp[:vehicles][1..2]),
+      ]
+      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+      assert_equal 'A vehicle cannot appear in more than one vehicle_trips relation', error.message
+    end
+
     def test_reject_when_unfeasible_vehicle_timewindows
       vrp = VRP.toy
       vrp[:vehicles].first[:timewindow] = { start: 10000, end: 0 }
