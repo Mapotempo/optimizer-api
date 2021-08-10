@@ -401,7 +401,7 @@ module Models
 
     def test_vehicles_store_consistency_with_vehicle_trips
       vrp = VRP.lat_lon_two_vehicles
-      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
       check_consistency(vrp) # this should not raise
 
       vrp[:vehicles][1][:start_point_id] = 'point_1'
@@ -418,7 +418,7 @@ module Models
 
     def test_vehicle_timewindows_consistency_with_vehicle_trips
       vrp = VRP.lat_lon_two_vehicles
-      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
       vrp[:vehicles][0][:timewindow] = { start: 10, end: 100 }
       vrp[:vehicles][1][:timewindow] = { start: 5, end: 7 }
 
@@ -433,7 +433,7 @@ module Models
 
     def test_compatible_days_availabilities_with_vehicle_trips
       vrp = VRP.lat_lon_two_vehicles
-      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
       vrp[:vehicles][0][:timewindow] = { start: 0, end: 10 }
       check_consistency(vrp) # this should not raise
 
@@ -457,7 +457,7 @@ module Models
     def test_compatible_days_availabilities_with_vehicle_trips_with_sequence_timewindows
       vrp = VRP.lat_lon_two_vehicles
       vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
-      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
       vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 },
                                                   { start: 20, end: 30, day_index: 1 }]
       vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 },
@@ -484,7 +484,7 @@ module Models
 
     def test_unavailable_days_with_vehicle_trips
       vrp = VRP.lat_lon_periodic_two_vehicles
-      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
       # vehicle trips are not available with periodic heuristic for now :
       vrp[:configuration][:preprocessing] = nil
       check_consistency(vrp) # this should not raise
@@ -499,7 +499,7 @@ module Models
 
     def test_vehicle_in_vehicle_trips_does_not_exist
       vrp = VRP.lat_lon_two_vehicles
-      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
       vrp[:relations].first[:linked_vehicle_ids] << 'unknown vehicle'
 
       assert_raises OptimizerWrapper::DiscordantProblemError do
@@ -507,9 +507,9 @@ module Models
       end
     end
 
-    def test_vehicle_trips_uncompatible_with_clustering
+    def test_vehicle_trips_incompatible_with_clustering
       vrp = VRP.lat_lon_two_vehicles
-      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+      vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
       vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
       assert_raises OptimizerWrapper::UnsupportedProblemError do
         check_consistency(vrp)
@@ -624,7 +624,7 @@ module Models
 
         case type
         when :vehicle_trips
-          problem[:relations] = [TestHelper.vehicle_trips_relation(problem)]
+          problem[:relations] = [TestHelper.vehicle_trips_relation(problem[:vehicles])]
           problem[:relations].first[:lapses] = [2]
           check_consistency(problem)
 
