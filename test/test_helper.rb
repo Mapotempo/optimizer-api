@@ -139,6 +139,15 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       v[:skills].each{ |set| set.map!(&:to_sym) }
     }
 
+    # trips parameter does not exist anymore
+    vrp[:vehicles]&.each{ |v|
+      next unless v[:trips]
+
+      raise 'vehicle[:trips] parameter does not exist' if v[:trips] > 1
+
+      v.delete(:trips)
+    }
+
     vrp
   end
 
@@ -260,6 +269,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       configuration: {
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -315,7 +327,10 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         resolution: {
           duration: 100
         },
-        preprocessing: {}
+        preprocessing: {},
+        restitution: {
+          intermediate_solutions: false,
+        }
       }
     }
   end
@@ -494,7 +509,10 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         resolution: {
           duration: 2000
         },
-        preprocessing: {}
+        preprocessing: {},
+        restitution: {
+          intermediate_solutions: false,
+        }
       }
     }
   end
@@ -612,7 +630,10 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
         resolution: {
           duration: 2000
         },
-        preprocessing: {}
+        preprocessing: {},
+        restitution: {
+          intermediate_solutions: false,
+        }
       }
     }
   end
@@ -679,6 +700,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
             start: 0,
             end: 3
           }
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -814,6 +838,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       configuration: {
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -849,6 +876,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
           start: 0,
           end: 3
         }
+      },
+      restitution: {
+        intermediate_solutions: false,
       }
     }
 
@@ -1048,6 +1078,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       configuration: {
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1180,6 +1213,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
             start: 0,
             end: 10
           }
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1290,6 +1326,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       configuration: {
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
@@ -1387,6 +1426,9 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       configuration: {
         resolution: {
           duration: 100
+        },
+        restitution: {
+          intermediate_solutions: false,
         }
       }
     }
