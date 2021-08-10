@@ -18,7 +18,7 @@
 require './test/test_helper'
 
 class RealCasesTest < Minitest::Test
-  if !ENV['SKIP_REAL_DICHO'] && !ENV['SKIP_DICHO'] && !ENV['TRAVIS']
+  if !ENV['SKIP_REAL_DICHO'] && !ENV['SKIP_DICHO']
 
     def test_dichotomious_first_instance
       skip "This test have incorrect bounds so it never passes and it takes 3 hours to complete.
