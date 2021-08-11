@@ -29,7 +29,8 @@ class Api::V01::WithSolverTest < Minitest::Test
   def test_deleted_job
     # using ORtools to make sure that optimization takes enough time to be cut before ending
     asynchronously start_worker: true do
-      @job_id = submit_vrp api_key: 'ortools', vrp: VRP.lat_lon
+      vrp = VRP.lat_lon.deep_merge!({ configuration: { restitution: { intermediate_solutions: true }}})
+      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
       response = wait_avancement_match @job_id, /run optimization, iterations [0-9]+/, api_key: 'ortools'
       refute_empty response['solutions'].to_a, "Solution is missing from the response body: #{response}"
       response = delete_job @job_id, api_key: 'ortools'

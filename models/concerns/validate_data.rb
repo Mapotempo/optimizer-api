@@ -20,7 +20,7 @@ require 'active_support/concern'
 # Expands provided data
 module ValidateData
   extend ActiveSupport::Concern
-  POSITION_RELATIONS = %i[order sequence shipment]
+  POSITION_RELATIONS = %i[order sequence shipment].freeze
   def check_consistency(hash)
     hash[:services] ||= []
     hash[:vehicles] ||= []
@@ -30,7 +30,7 @@ module ValidateData
     ensure_no_conflicting_skills
 
     configuration = @hash[:configuration]
-    schedule = configuration[:schedule] if configuration
+    schedule = configuration && configuration[:schedule]
     periodic_heuristic = schedule &&
                          configuration[:preprocessing] &&
                          configuration[:preprocessing][:first_solution_strategy].to_a.include?('periodic')
@@ -40,7 +40,7 @@ module ValidateData
     check_services(schedule)
 
     check_routes(periodic_heuristic)
-    check_configuration(configuration, periodic_heuristic) if configuration
+    check_configuration(configuration, periodic_heuristic)
   end
 
   def ensure_no_conflicting_skills
@@ -413,13 +413,17 @@ module ValidateData
   end
 
   def check_configuration(configuration, periodic_heuristic)
-    check_clustering_parameters(configuration) if configuration[:preprocessing]
-    check_schedule_consistency(configuration[:schedule]) if configuration[:schedule]
-    check_periodic_consistency(configuration) if periodic_heuristic
-    check_geometry_parameters(configuration) if configuration[:restitution]
+    return unless configuration
+
+    check_clustering_parameters(configuration)
+    check_schedule_consistency(configuration[:schedule])
+    check_periodic_consistency(configuration, periodic_heuristic)
+    check_geometry_parameters(configuration)
   end
 
   def check_clustering_parameters(configuration)
+    return unless configuration && configuration[:preprocessing]
+
     if @hash[:relations].any?{ |relation| relation[:type].to_sym == :vehicle_trips }
       if configuration[:preprocessing][:partitions]&.any?
         raise OptimizerWrapper::UnsupportedProblemError.new(
@@ -434,10 +438,10 @@ module ValidateData
 
     if @hash[:services].any?{ |s|
         min_lapse = s[:minimum_lapse]&.floor || 1
-        max_lapse = s[:maximum_lapse]&.ceil || @hash[:configuration][:schedule][:range_indices][:end]
+        max_lapse = s[:maximum_lapse]&.ceil || configuration[:schedule][:range_indices][:end]
 
         s[:visits_number].to_i > 1 && (
-          @hash[:configuration][:schedule][:range_indices][:end] <= 6 ||
+          configuration[:schedule][:range_indices][:end] <= 6 ||
           (min_lapse..max_lapse).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
        )
       }
@@ -450,6 +454,8 @@ module ValidateData
   end
 
   def check_schedule_consistency(schedule)
+    return unless schedule
+
     if schedule[:range_indices][:start] > 6
       raise OptimizerWrapper::DiscordantProblemError.new('Api does not support schedule start index bigger than 6')
       # TODO : allow start bigger than 6 and make code consistent with this
@@ -460,7 +466,9 @@ module ValidateData
     raise OptimizerWrapper::DiscordantProblemError.new('Schedule start index should be less than or equal to end')
   end
 
-  def check_periodic_consistency(configuration)
+  def check_periodic_consistency(configuration, periodic_heuristic)
+    return unless configuration && periodic_heuristic
+
     if @hash[:relations].any?{ |relation| relation[:type] == :vehicle_group_duration_on_months } &&
        (!configuration[:schedule] || configuration[:schedule][:range_indice])
       raise OptimizerWrapper::DiscordantProblemError.new(
@@ -481,8 +489,11 @@ module ValidateData
   end
 
   def check_geometry_parameters(configuration)
-    return unless configuration[:restitution][:geometry].any? &&
-                  !@hash[:points].all?{ |pt| pt[:location] }
+    return unless configuration &&
+                  configuration[:restitution] &&
+                  configuration[:restitution][:geometry]&.any?
+
+    return if @hash[:points].all?{ |pt| pt[:location] }
 
     raise OptimizerWrapper::DiscordantProblemError.new('Geometry is not available if locations are not defined')
   end
