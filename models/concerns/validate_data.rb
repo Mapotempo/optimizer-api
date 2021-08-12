@@ -161,6 +161,7 @@ module ValidateData
   end
 
   def check_vehicle_trips_relation_consistency
+    # :prioritize_first_available_trips_and_vehicles logic depends on this check
     all_trips = @hash[:relations].flat_map{ |r| r[:linked_vehicle_ids] if r[:type].to_sym == :vehicle_trips }.compact
     return unless @hash[:vehicles].any?{ |v| all_trips.count(v[:id]) > 1 }
 
