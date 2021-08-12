@@ -59,25 +59,18 @@ module Models
     def split_regarding_lapses
       # TODO : can we create relations from here ?
       # remove self.linked_ids
-      if Models::Relation::NO_LAPSE_TYPES.include?(self.type)
-        [[self.linked_ids, self.linked_vehicle_ids, nil]]
-      elsif Models::Relation::ONE_LAPSE_TYPES.include?(self.type)
-        [[self.linked_ids, self.linked_vehicle_ids, self.lapses.first]]
-      elsif self.type == :vehicle_trips && self.lapses.nil?
-        [[nil, self.linked_vehicle_ids, nil]]
-      elsif self.lapses.uniq.size == 1
-        [[self.linked_ids, self.linked_vehicle_ids, self.lapses.first]]
-      else
-        [linked_ids, self.linked_vehicle_ids].collect.each_with_index{ |set, set_index|
-          set.collect.with_index{ |id, index|
-            next unless set[index + 1]
-
-            portion = Array.new(3, [])
-            portion[set_index] = [id, set[index + 1]]
-            portion[2] = self.lapses[index]
-            portion
+      if Models::Relation::SEVERAL_LAPSE_TYPES.include?(self.type)
+        if self.lapses.uniq.size == 1
+          [[self.linked_ids, self.linked_vehicle_ids, self.lapses.first]]
+        else
+          self.lapses.collect.with_index{ |lapse, index|
+            [self.linked_ids && self.linked_ids[index..index+1],
+             self.linked_vehicle_ids && self.linked_vehicle_ids[index..index+1],
+             lapse]
           }
-        }.flatten(1).compact
+        end
+      else
+        [[self.linked_ids, self.linked_vehicle_ids, self.lapses&.first]]
       end
     end
   end
