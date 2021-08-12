@@ -57,7 +57,6 @@ module Wrappers
       @services_unlocked_by = {}
       @unlocked = []
       @same_located = {}
-      @freq_max_at_point = Hash.new(0)
 
       @uninserted = {}
       @missing_visits = {}
@@ -595,8 +594,8 @@ module Wrappers
         involved_days = (day..last_visit_day).step(@services_data[service_id][:heuristic_period]).collect{ |d| d }
         already_involved = @candidate_routes[vehicle_id].select{ |_d, r| r[:stops].any?{ |s| s[:point_id] == @services_data[service_id][:points_ids].first } }.collect{ |d, _r| d }
         if !already_involved.empty? &&
-           @services_data[service_id][:raw].visits_number > @freq_max_at_point[@services_data[service_id][:points_ids].first] &&
-           (involved_days & already_involved).size < @freq_max_at_point[@services_data[service_id][:points_ids].first]
+           @services_data[service_id][:raw].visits_number > @points_vehicles_and_days[same_point][:maximum_visits_number] &&
+           (involved_days & already_involved).size < @points_vehicles_and_days[same_point][:maximum_visits_number]
           same_point_compatible_day = false
         elsif !already_involved.empty? && (involved_days & already_involved).size < involved_days.size
           same_point_compatible_day = false
@@ -1085,7 +1084,6 @@ module Wrappers
       @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
       @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, r_d| r_d[:available_ids].delete(point_to_add[:id]) } } if first_visit
-      @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:raw].visits_number].max
 
       current_route.insert(point_to_add[:position],
                            id: point_to_add[:id],
