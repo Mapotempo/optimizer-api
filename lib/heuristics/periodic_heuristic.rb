@@ -586,32 +586,36 @@ module Wrappers
       potential_days.find{ |d| find_feasible_index(service_id, @candidate_routes[vehicle_id][d], false) }
     end
 
-    def same_point_compatibility(service_id, vehicle_id, day)
-      # reminder : services in (relaxed_)same_point_day relation have only one point_id
-      same_point_compatible_day = true
+    def same_point_compatibility(service_id, day)
+      # REMINDER : services in (relaxed_)same_point_day relation can only have one point_id
+      same_point = @services_data[service_id][:points_ids].first
+      return true unless (@relaxed_same_point_day || @same_point_day) && @points_assignment[same_point][:days].any?
 
-      return same_point_compatible_day if @services_data[service_id][:heuristic_period].nil?
-
-      last_visit_day = day + (@services_data[service_id][:raw].visits_number - 1) * @services_data[service_id][:heuristic_period]
-      if @relaxed_same_point_day
-        # we know only one activity/point_id because @same_point_day was activated
-        involved_days = (day..last_visit_day).step(@services_data[service_id][:heuristic_period]).collect{ |d| d }
-        already_involved = @candidate_routes[vehicle_id].select{ |_d, r| r[:stops].any?{ |s| s[:point_id] == @services_data[service_id][:points_ids].first } }.collect{ |d, _r| d }
-        if !already_involved.empty? &&
-           @services_data[service_id][:raw].visits_number > @points_assignment[@services_data[service_id][:points_ids].first][:maximum_visits_number] &&
-           (involved_days & already_involved).size < @points_assignment[@services_data[service_id][:points_ids].first][:maximum_visits_number]
-          same_point_compatible_day = false
-        elsif !already_involved.empty? && (involved_days & already_involved).size < involved_days.size
-          same_point_compatible_day = false
-        end
-      elsif @unlocked.include?(service_id)
-        # can not finish later (over whole period) than service at same_point
-        stop = @candidate_routes[vehicle_id][day][:stops].select{ |s| s[:point_id] == @services_data[service_id][:points_ids].first }.max_by{ |s| @services_data[s[:id]][:raw].visits_number }
-        stop_last_visit_day = day + (@services_data[stop[:id]][:raw].visits_number - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
-        same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
+      if @services_data[service_id][:heuristic_period].nil?
+        return @points_assignment[same_point][:days].include?(day)
       end
 
-      same_point_compatible_day
+      min_overall_lapse =
+        (@services_data[service_id][:raw].visits_number - 1) * @services_data[service_id][:heuristic_period]
+      if @relaxed_same_point_day
+        involved_days = (day..day + min_overall_lapse).step(@services_data[service_id][:heuristic_period]).to_a
+        common_days = involved_days & @points_assignment[same_point][:days]
+        expected_number =
+          if @services_data[service_id][:raw].visits_number > @points_assignment[same_point][:maximum_visits_number]
+            @points_assignment[same_point][:maximum_visits_number]
+          else
+            involved_days.size
+          end
+
+        return common_days.size == expected_number
+      elsif @unlocked.include?(service_id)
+        # can not finish later (over whole period) than service at same point
+        last_visit_day = day + min_overall_lapse
+        last_possible_day = @points_assignment[same_point][:days].max
+        return last_visit_day <= last_possible_day
+      end
+
+      true
     end
 
     def compute_shift(route_data, service_inserted, inserted_final_time, next_service)
@@ -947,7 +951,7 @@ module Wrappers
           find_day_for_second_visit(vehicle_id, day, service_id) &&
           route_data[:available_ids].include?(service_id) &&
           relaxed_or_same_point_day_constraint_respected(service_id, vehicle_id, day) &&
-          same_point_compatibility(service_id, vehicle_id, day))
+          same_point_compatibility(service_id, day))
     end
 
     def find_best_index(service_id, route_data, first_visit = true)
