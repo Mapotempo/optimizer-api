@@ -424,7 +424,10 @@ module Wrappers
 
       route_start_time = 0
       route_end_time = 0
-      costs_array = []
+      # To prevent results and routes sharing the same Model::CostDetails object ([x].sum returns the same x object)
+      # and to make sure that even for an empty solution returned by ortools, we have a proper Model::CostDetails object
+      # in result[:cost_details], use additive identity 0 (i.e., summation with an empty CostDetails object)
+      costs_array = [Models::CostDetails.create({})]
 
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
