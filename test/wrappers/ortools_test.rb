@@ -4152,7 +4152,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
-    assert_equal 65, result[:cost]
+    assert_equal 1, result[:cost_details].total # exclusion costs are not included in the cost_details
     assert_equal 1, result[:iterations]
   end
 
@@ -4897,8 +4897,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert result
-    assert result[:cost].nil?
+    assert_equal 0, result[:routes][0][:activities].size, 'All services should be eliminated'
+    assert_equal 2, result[:unassigned].size, 'All services should be eliminated'
+    assert_equal 0, result[:cost], 'All eliminated, cost should be 0'
   end
 
   def test_build_rest
