@@ -5055,10 +5055,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
       { id: 'visit' }
     ]
     problem[:matrices].first[:time] = [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0]
+      [0, 1, 1, 1],
+      [1, 0, 1, 1],
+      [1, 1, 0, 1],
+      [1, 1, 1, 0]
     ]
     problem[:vehicles].each{ |vehicle|
       vehicle[:capacities] = [{ unit_id: 'visit', limit: 1 }]
