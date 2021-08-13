@@ -413,6 +413,10 @@ module Models
       }
     end
 
+    def self.find_relative_index(value, start_index)
+      value.to_date.ajd.to_i - start_index
+    end
+
     def self.convert_availability_dates_into_indices(element, hash, start_index, end_index, type)
       unavailable_indices_key, unavailable_dates_key =
         case type
@@ -429,9 +433,9 @@ module Models
 
       return unless hash[:configuration][:schedule][:range_date]
 
-      start_value = hash[:configuration][:schedule][:range_date][:start].to_date.ajd.to_i - start_index
+      start_value = find_relative_index(hash[:configuration][:schedule][:range_date][:start], start_index)
       element[unavailable_dates_key].to_a.each{ |unavailable_date|
-        new_index = unavailable_date.to_date.ajd.to_i - start_value
+        new_index = find_relative_index(unavailable_date, start_value)
         element[:unavailable_days] |= [new_index] if new_index.between?(start_index, end_index)
       }
       element.delete(unavailable_dates_key)
@@ -441,8 +445,8 @@ module Models
       element[:unavailable_index_ranges] ||= []
       element[:unavailable_index_ranges] += element[:unavailable_date_ranges].collect{ |range|
         {
-          start: range[:start].to_date.ajd.to_i - start_value,
-          end: range[:end].to_date.ajd.to_i - start_value,
+          start: find_relative_index(range[:start], start_value),
+          end: find_relative_index(range[:end], start_value),
         }
       }
       element.delete(:unavailable_date_ranges)
@@ -476,13 +480,13 @@ module Models
     def self.convert_possible_dates_into_indices(element, hash, start_index)
       return unless hash[:configuration][:schedule][:range_date]
 
-      start_value = hash[:configuration][:schedule][:range_date][:start].to_date.ajd.to_i - start_index
+      start_value = find_relative_index(hash[:configuration][:schedule][:range_date][:start], start_index)
       element[:first_possible_day_indices] ||= element[:first_possible_dates].to_a.collect{ |date|
-        date.to_date.ajd.to_i - start_value
+        find_relative_index(date, start_value)
       }
 
       element[:last_possible_day_indices] ||= element[:last_possible_dates].to_a.collect{ |date|
-        date.to_date.ajd.to_i - start_value
+        find_relative_index(date, start_value)
       }
     end
 
