@@ -9,6 +9,8 @@
 - Return route day/date and visits' index in result [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
 - Treat complex shipments (multi-pickup-single-delivery and single-pickup-multi-delivery) as multiple simple shipments internally to increase performance [#261](https://github.com/Mapotempo/optimizer-api/pull/261)
 
+- Document return codes [#224](https://github.com/Mapotempo/optimizer-api/pull/224)
+
 ### Changed
 
 - Improve cases where a service has two visits in periodic heuristic: ensure that the second visit can be assigned to the right day [#227](https://github.com/Mapotempo/optimizer-api/pull/227)

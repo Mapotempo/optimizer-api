@@ -75,10 +75,32 @@ module Api
           desc 'Submit VRP problem', {
 
             nickname: 'submit_vrp',
-            success: VrpResult,
-            failure: [
-              { code: 400, message: 'Bad Request', model: ::Api::V01::Status }
-            ],
+            success: [{
+              code: 200,
+              message: 'The VRP has been processed synchronously',
+              model: VrpSyncJob
+            }, {
+              code: 201,
+              message: 'The VRP has been placed in a queue to be processed',
+              model: VrpAsyncJob
+            }],
+            failure: [{
+                code: 400,
+                message: 'Bad Request',
+                model: ::Api::V01::Status
+              }, {
+                code: 401,
+                message: 'Unauthorized',
+                model: ::Api::V01::Status
+              }, {
+                code: 402,
+                message: "Subscription expired. Please contact support (#{::OptimizerWrapper.config[:product_support_email]}) or sales (#{::OptimizerWrapper.config[:product_sales_email]}) to extend your access period.",
+                model: ::Api::V01::Status
+              }, {
+                code: 413,
+                message: "Exceeded limit authorized for your account. Please contact support (#{::OptimizerWrapper.config[:product_support_email]}) or sales (#{::OptimizerWrapper.config[:product_sales_email]}) to increase limits.",
+                model: ::Api::V01::Status
+            }],
             detail: 'Submit vehicle routing problem. If the problem can be quickly solved, the solution is returned in the response. In other case, the response provides a job identifier in a queue: you need to perfom another request to fetch vrp job status and solution.'
           }
           params {
@@ -97,7 +119,7 @@ module Api
               next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value
 
               error!({
-                message: "Exceeded #{key} limit authorized for your account: #{value}. Please contact support or sales to increase limits."
+                message: "Exceeded #{key} limit authorized for your account: #{value}. Please contact support (#{::OptimizerWrapper.config[:product_support_email]}) or sales (#{::OptimizerWrapper.config[:product_sales_email]}) to increase limits."
               }, 413)
             }
 
@@ -202,7 +224,10 @@ module Api
 
           desc 'Delete vrp job', {
             nickname: 'deleteJob',
-            success: { code: 204 },
+            success: {
+              code: 202,
+              model: VrpResult
+            },
             failure: [
               { code: 404, message: 'Not Found', model: ::Api::V01::Status }
             ],
