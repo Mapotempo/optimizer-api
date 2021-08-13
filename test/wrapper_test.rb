@@ -3249,16 +3249,16 @@ class WrapperTest < Minitest::Test
 
     # Solve WITHOUT simplification (when prioritize_first_available_trips_and_vehicles is off)
     # verify the cost is the same or better with the simplification and that the trip2 is used before trip1
-    simplifier_called = false
+    function_called = false
     soln_without_simplification = Wrappers::Wrapper.stub_any_instance(:prioritize_first_available_trips_and_vehicles,
                                                                       proc{
-                                                                        simplifier_called = true
+                                                                        function_called = true
                                                                         nil
                                                                       }) do
       vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multi_trips_which_uses_trip2_before_trip1')
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     end
-    assert simplifier_called, 'prioritize_first_available_trips_and_vehicles should have been called'
+    assert function_called, 'prioritize_first_available_trips_and_vehicles should have been called'
 
     assert_operator soln_with_simplification[:cost], :<=, soln_without_simplification[:cost],
                     'simplification should not increase the cost'
@@ -3294,16 +3294,16 @@ class WrapperTest < Minitest::Test
     assert_equal service_count + 7, vrp.services.size, 'simplify should have created 7 new services'
 
     # Solve WITHOUT simplification
-    simplifier_called = false
+    function_called = false
     result_wo_simplify = Wrappers::Wrapper.stub_any_instance(:simplify_complex_multi_pickup_or_delivery_shipments,
                                                              proc{
-                                                               simplifier_called = true
+                                                               function_called = true
                                                                nil
                                                              }) do
       vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     end
-    assert simplifier_called, 'simplify_complex_multi_pickup_or_delivery_shipments should have been called'
+    assert function_called, 'simplify_complex_multi_pickup_or_delivery_shipments should have been called'
     # if there are no unassigned; maybe or-tools improved its performance
     # and this simplification might not be necessary anymore,
     # or this instance is too small and timing needs to be fixed.
