@@ -110,7 +110,7 @@ class MultiTripsTest < Minitest::Test
     vrp[:vehicles].each{ |vehicle| vehicle[:distance] = 100000 }
     vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
 
-    vrp[:relations].first[:lapse] = 3600
+    vrp[:relations].first[:lapses] = [3600]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert(result[:routes].all?{ |route| route[:activities].size > 2 })
     first_route_end = result[:routes][0][:activities].last[:begin_time]

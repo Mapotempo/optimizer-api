@@ -174,7 +174,7 @@ module Models
         max_lapse = shipment[:maximum_inroute_duration]
         next unless max_lapse
 
-        hash[:relations] << { type: :maximum_duration_lapse, linked_ids: @linked_ids[shipment[:id]], lapse: max_lapse }
+        hash[:relations] << { type: :maximum_duration_lapse, linked_ids: @linked_ids[shipment[:id]], lapses: [max_lapse] }
       }
       convert_shipment_within_routes(hash)
       hash.delete(:shipments)
@@ -186,7 +186,8 @@ module Models
         when :minimum_duration_lapse, :maximum_duration_lapse
           relation[:linked_ids][0] = delivery_service_id if relation[:linked_ids][0] == shipment_id
           relation[:linked_ids][1] = pickup_service_id if relation[:linked_ids][1] == shipment_id
-          relation[:lapse] ||= 0
+          relation[:lapses] ||= relation[:lapse] ? [relation[:lapse]] : [0]
+          relation.delete(:lapse)
         when :same_route, :same_vehicle
           relation[:linked_ids].each_with_index{ |id, id_i|
             next unless id == shipment_id
@@ -328,6 +329,23 @@ module Models
       hash[:configuration][:restitution].delete(:geometry_polyline)
     end
 
+    def self.convert_relation_lapse_into_lapses(hash)
+      hash[:relations].to_a.each{ |relation|
+        if Models::Relation::ONE_LAPSE_TYPES.include?(relation[:type])
+          if relation[:lapse]
+            relation[:lapses] = [relation[:lapse]]
+            relation.delete(:lapse)
+          end
+        elsif [:vehicle_trips, Models::Relation::SEVERAL_LAPSE_TYPES].flatten.include?(relation[:type])
+          if relation[:lapse]
+            expected_size = relation[:linked_vehicle_ids].to_a.size + relation[:linked_ids].to_a.size - 1
+            relation[:lapses] = Array.new(expected_size, relation[:lapse]) if expected_size > 0
+            relation.delete(:lapse)
+          end
+        end
+      }
+    end
+
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
       self.deduce_first_solution_strategy(hash)
@@ -335,6 +353,7 @@ module Models
       self.deduce_solver_parameter(hash)
       self.convert_route_indice_into_index(hash)
       self.convert_geometry_polylines_to_geometry(hash)
+      self.convert_relation_lapse_into_lapses(hash)
     end
 
     def self.filter(hash)
@@ -375,14 +394,6 @@ module Models
 
     def self.remove_unnecessary_relations(hash)
       return unless hash[:relations]&.any?
-
-      types_with_duration =
-        %i[minimum_day_lapse maximum_day_lapse
-           minimum_duration_lapse maximum_duration_lapse
-           vehicle_group_duration vehicle_group_duration_on_weeks
-           vehicle_group_duration_on_months vehicle_group_number]
-
-      hash[:relations].delete_if{ |r| r[:lapse].nil? && types_with_duration.include?(r[:type]) }
 
       # TODO : remove this filter, VRP with duplicated relations should not be accepted
       uniq_relations = []

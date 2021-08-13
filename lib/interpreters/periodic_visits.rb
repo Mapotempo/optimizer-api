@@ -101,7 +101,7 @@ module Interpreters
           linked_ids = relation.linked_ids.collect{ |s_id| @expanded_services[s_id][visit_index].id }
 
           Models::Relation.create(
-            type: relation.type, linked_ids: linked_ids, lapse: relation.lapse, periodicity: relation.periodicity
+            type: relation.type, linked_ids: linked_ids, lapses: relation.lapses, periodicity: relation.periodicity
           )
         }
       }
@@ -117,7 +117,7 @@ module Interpreters
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
             linked_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapse: current_lapse
+            lapses: [current_lapse]
           )
         }
         (2..mission.visits_number).each{ |index|
@@ -125,7 +125,7 @@ module Interpreters
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
             linked_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapse: current_lapse
+            lapses: [current_lapse]
           )
         }
       elsif mission.minimum_lapse
@@ -134,7 +134,7 @@ module Interpreters
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
             linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapse: current_lapse
+            lapses: [current_lapse]
           )
         }
       elsif mission.maximum_lapse
@@ -143,7 +143,7 @@ module Interpreters
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
             linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapse: current_lapse
+            lapses: [current_lapse]
           )
         }
       end
@@ -230,7 +230,7 @@ module Interpreters
           new_relation = Models::Relation.create(
             type: :vehicle_group_duration,
             linked_vehicle_ids: @equivalent_vehicles[vehicle.original_id],
-            lapse: vehicle.overall_duration + rests_durations[index]
+            lapses: [vehicle.overall_duration + rests_durations[index]]
           )
           vrp.relations << new_relation
         end
@@ -316,7 +316,7 @@ module Interpreters
             last_computed_time: 0
           }
         }
-        residual_time.push(r[:lapse])
+        residual_time.push(r.lapses.first)
         idx += 1
       }
 
@@ -439,7 +439,7 @@ module Interpreters
 
         additional_relations << Models::Relation.create(
           linked_vehicle_ids: relation_vehicles,
-          lapse: relation.lapse,
+          lapses: relation.lapses,
           type: relation_type
         )
       end
@@ -466,7 +466,7 @@ module Interpreters
           Models::Relation.create(
             type: :vehicle_group_duration,
             linked_vehicle_ids: relation[:linked_vehicle_ids].flat_map{ |v| @equivalent_vehicles[v] },
-            lapse: relation.lapse
+            lapses: relation.lapses
           )
         when :vehicle_group_duration_on_weeks
           schedule_week_indices = collect_weeks_in_schedule

@@ -169,8 +169,7 @@ module Models
 
       vrp[:relations] = [{
         type: :same_route,
-        linked_ids: ['service', 'shipment_0', 'shipment_1'],
-        lapse: 3
+        linked_ids: ['service', 'shipment_0', 'shipment_1']
       }]
       generated_vrp = TestHelper.create(vrp)
       assert_includes generated_vrp.relations.first.linked_ids, 'service'
@@ -293,14 +292,6 @@ module Models
       vrp = VRP.basic
       vrp[:relations] = [{
         type: :vehicle_group_duration_on_months,
-        linked_vehicle_ids: ['vehicle_0']
-      }]
-
-      Models::Vrp.filter(vrp)
-      assert_empty vrp[:relations] # reject relation because lapse is mandatory
-
-      vrp[:relations] = [{
-        type: :vehicle_group_duration_on_months,
         linked_vehicle_ids: ['vehicle_0'],
         lapse: 2
       }]
@@ -354,6 +345,25 @@ module Models
       created_vrp = Models::Vrp.create(problem)
       assert(created_vrp.relations.any?{ |relation| relation.type == :same_vehicle })
       assert(created_vrp.relations.none?{ |relation| relation.type == :same_route })
+    end
+
+    def test_lapse_converted_into_lapses
+      problem = VRP.lat_lon_two_vehicles
+      problem[:relations] = [TestHelper.vehicle_trips_relation(problem)]
+      problem[:relations].first[:lapse] = 2
+
+      created_vrp = Models::Vrp.create(problem)
+      assert_nil problem[:relations].first[:lapse]
+      assert_equal [2], created_vrp.relations.first.lapses
+
+      problem[:vehicles] << problem[:vehicles].first.dup
+      problem[:vehicles].last[:id] += '_dup'
+      problem[:relations] = [TestHelper.vehicle_trips_relation(problem)]
+      problem[:relations].first[:lapse] = 2
+
+      created_vrp = Models::Vrp.create(problem)
+      assert_nil problem[:relations].first[:lapse]
+      assert_equal [2, 2], created_vrp.relations.first.lapses
     end
   end
 end

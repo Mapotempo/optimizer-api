@@ -318,22 +318,23 @@ module Wrappers
         )
       }
 
-      relations += vrp.relations.collect{ |relation|
-        current_linked_ids = relation.linked_ids.select{ |mission_id|
-          services.one?{ |service| service.id == mission_id }
-        }.uniq
-        current_linked_vehicles = relation.linked_vehicle_ids.select{ |vehicle_id|
-          vrp.vehicles.one? { |vehicle| vehicle.id == vehicle_id }
-        }.uniq
-        next if current_linked_ids.empty? && current_linked_vehicles.empty?
+      vrp.relations.each{ |relation|
+        relation.split_regarding_lapses.flat_map{ |relation_portion|
+          portion_linked_ids, portion_vehicle_ids, portion_lapse = relation_portion
 
-        OrtoolsVrp::Relation.new(
-          type: relation.type,
-          linked_ids: current_linked_ids.map(&:to_s),
-          linked_vehicle_ids: current_linked_vehicles.map(&:to_s),
-          lapse: relation.lapse
-        )
-      }.compact
+          current_linked_ids = (portion_linked_ids & services.map(&:id)).uniq if portion_linked_ids
+          current_linked_vehicles = (portion_vehicle_ids & vehicles.map(&:id)).uniq if portion_vehicle_ids
+          next if current_linked_ids.to_a.empty? && current_linked_vehicles.to_a.empty?
+
+          # NOTE: we collect lapse because optimizer-ortools expects one lapse per relation for now
+          relations << OrtoolsVrp::Relation.new(
+            type: relation.type,
+            linked_ids: current_linked_ids&.map(&:to_s),
+            linked_vehicle_ids: current_linked_vehicles&.map(&:to_s),
+            lapse: portion_lapse
+          )
+        }
+      }
 
       routes = vrp.routes.collect{ |route|
         next if route.vehicle.nil? || route.mission_ids.empty?

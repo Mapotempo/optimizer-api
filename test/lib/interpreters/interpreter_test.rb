@@ -1398,7 +1398,7 @@ class InterpreterTest < Minitest::Test
     problem[:relations] = [{
       type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
-      lapse: 10,
+      lapses: [10],
       periodicity: 1
     }]
     problem[:configuration][:schedule] = {
@@ -1428,7 +1428,7 @@ class InterpreterTest < Minitest::Test
     problem[:relations] = [{
       type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0', 'vehicle_1'],
-      lapse: 10,
+      lapses: [10],
       periodicity: 2
     }]
     problem[:configuration][:schedule] = {
@@ -1452,7 +1452,7 @@ class InterpreterTest < Minitest::Test
     problem[:relations] = [{
       type: :vehicle_group_duration_on_weeks,
       linked_vehicle_ids: ['vehicle_0'],
-      lapse: 10
+      lapses: [10]
     }]
     problem[:configuration][:schedule] = {
       range_indices: { start: 0, end: 7 }
@@ -1476,7 +1476,7 @@ class InterpreterTest < Minitest::Test
     problem[:relations] = [{
       type: :vehicle_group_duration_on_months,
       linked_vehicle_ids: ['vehicle_0'],
-      lapse: 10
+      lapses: [10]
     }]
     problem[:configuration][:schedule] = {
       range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 2, 1) }

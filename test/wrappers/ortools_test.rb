@@ -150,13 +150,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:relations] = [{
       type: :vehicle_group_number,
       linked_vehicle_ids: ['vehicle_0', 'vehicle_1', 'vehicle_2'],
-      lapse: 2
+      lapses: [2]
     }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 2, (result[:routes].count{ |r| r[:activities].any?{ |a| a[:type] == 'service' } })
 
     # extreme case : lapse is 0
-    problem[:relations].first[:lapse] = 0
+    problem[:relations].first[:lapses] = [0]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_empty(result[:routes].select{ |r| r[:activities].any?{ |a| a[:type] == 'service' } })
   end
@@ -2581,7 +2581,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:vehicles].each{ |v| v.delete(:start_point_id) }
     problem[:relations] = [{
       type: :minimum_day_lapse,
-      lapse: 0,
+      lapses: [0],
       linked_ids: ['service_1', 'service_2', 'service_3']
     }]
     problem[:configuration][:schedule] = { range_indices: { start: 0, end: 4 }}
@@ -2592,7 +2592,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal [0, 1, 2], result[:routes].collect{ |r| r[:activities].any? ? r[:day] : nil }.compact
 
     # standard case
-    problem[:relations].first[:lapse] = 2
+    problem[:relations].first[:lapses] = [2]
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 5, result[:routes].size
     # There should be a lapse of 2 between each visits :
@@ -2604,7 +2604,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem = VRP.basic
     relation = [{
       type: :maximum_day_lapse,
-      lapse: 0,
+      lapses: [0],
       linked_ids: ['service_1', 'service_3']
     }]
     problem[:relations] = relation
@@ -2631,7 +2631,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
                  (result[:routes].collect{ |r| r[:activities].collect{ |a| a[:service_id] } })
 
     problem[:relations] = relation
-    problem[:relations].first[:lapse] = 1
+    problem[:relations].first[:lapses] = [1]
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal [['service_1_1_1'], ['service_3_1_1'], ['service_2_1_1'], [], []],
                  (result[:routes].collect{ |r| r[:activities].collect{ |a| a[:service_id] } })
@@ -2972,11 +2972,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:shipments][1][:delivery][:timewindows] = [{ start: 100, end: 200 }]
     problem[:relations] = [{
       type: :maximum_duration_lapse,
-      lapse: 100,
+      lapses: [100],
       linked_ids: ['shipment_0_pickup', 'shipment_0_delivery']
     }, {
       type: :maximum_duration_lapse,
-      lapse: 100,
+      lapses: [100],
       linked_ids: ['shipment_1_pickup', 'shipment_1_delivery']
     }]
     result = ortools.solve(TestHelper.create(problem), 'test')
@@ -2988,7 +2988,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
                     result[:routes][0][:activities][delivery_index][:begin_time]
     assert_equal 2, result[:unassigned].size
 
-    problem[:relations].each{ |r| r[:lapse] = 0 }
+    problem[:relations].each{ |r|
+      r[:lapses] = [0] if r[:lapses]
+    }
     result = ortools.solve(TestHelper.create(problem), 'test')
     # pickup and delivery at not at same location so it is impossible to assign with lapse 0
     # we could use direct shipment instead
@@ -4957,12 +4959,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:relations] = [{
       type: :minimum_duration_lapse,
       linked_ids: ['service_1', 'service_2'],
-      lapse: 0
+      lapses: [0]
     }]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal previous_result, (result[:routes].collect{ |r| r[:activities].collect{ |a| a[:service_id] } })
 
-    vrp[:relations].first[:lapse] = 10
+    vrp[:relations].first[:lapses] = [10]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     route = result[:routes].first[:activities]
     first_index = route.find_index{ |stop| stop[:service_id] == 'service_1' }
@@ -4984,7 +4986,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp.relations << Models::Relation.create(
       type: :minimum_duration_lapse,
       linked_ids: [delivery1.id, pickup0.id],
-      lapse: 1800
+      lapses: [1800]
     )
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     shipment1_route = result[:routes].find{ |r|
@@ -5303,5 +5305,42 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
 
     assert_equal 20, result[:routes][0][:activities].last[:begin_time], 'Third service should be planned at 20'
+  end
+
+  def test_relations_sent_to_ortools_when_different_lapses
+    problem = VRP.lat_lon_two_vehicles
+    problem[:vehicles] << problem[:vehicles].last.dup
+    problem[:vehicles].last[:id] += '_dup'
+    relations = [
+      { type: :sequence, linked_ids: problem[:services].slice(0..1).map{ |s| s[:id] } },
+      { type: :vehicle_group_duration, linked_vehicle_ids: problem[:vehicles].map{ |s| s[:id] }, lapse: 2 },
+      { type: :minimum_duration_lapse, linked_ids: problem[:services].slice(0..2).map{ |s| s[:id] }, lapse: 2 },
+      { type: :minimum_duration_lapse, linked_ids: problem[:services].slice(0..2).map{ |s| s[:id] }, lapses: [2, 2] },
+      { type: :minimum_duration_lapse, linked_ids: problem[:services].slice(0..2).map{ |s| s[:id] }, lapses: [2, 3] },
+      { type: :vehicle_trips, linked_vehicle_ids: problem[:vehicles].slice(0..2).map{ |s| s[:id] }, lapses: [2, 3] },
+      # same but we will provide schedule (index 6 :)
+      { type: :vehicle_trips, linked_vehicle_ids: problem[:vehicles].slice(0..2).map{ |s| s[:id] }, lapses: [2, 3] }
+    ]
+    expected_number_of_relations = [1, 1, 1, 1, 2, 2, 8]
+
+    relations.each_with_index{ |relation, pb_index|
+      problem[:relations] = [relation]
+      if [1, 6].include?(pb_index)
+        problem[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
+      else
+        problem[:configuration].delete(:schedule)
+      end
+      OptimizerWrapper.config[:services][:ortools].stub(
+        :run_ortools,
+        lambda { |ortools_problem, _, _|
+          # check number of relations sent to ortools
+          assert_equal expected_number_of_relations[pb_index], ortools_problem.relations.size
+
+          'Job killed' # Return "Job killed" to stop gracefully
+        }
+      ) do
+        OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem.dup))
+      end
+    }
   end
 end

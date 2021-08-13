@@ -19,8 +19,14 @@ require './models/base'
 
 module Models
   class Relation < Base
+    NO_LAPSE_TYPES = %i[same_vehicle same_route sequence order shipment meetup force_first never_first force_end].freeze
+    ONE_LAPSE_TYPES = %i[vehicle_group_number vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].freeze
+    SEVERAL_LAPSE_TYPES = %i[minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse vehicle_trips].freeze
+    ON_VEHICLES_TYPES = %i[vehicle_group_number vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months vehicle_trips].freeze
+    ON_SERVICES_TYPES = %i[same_vehicle same_route sequence order shipment meetup force_first never_first force_end minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse].freeze
+
     field :type, default: :same_route
-    field :lapse, default: nil
+    field :lapses, default: nil
     field :linked_ids, default: []
     has_many :linked_services, class_name: 'Models::Service'
     field :linked_vehicle_ids, default: []
@@ -48,6 +54,24 @@ module Models
 
       hash[:type] = hash[:type]&.to_sym if hash.key?(:type)
       super(hash)
+    end
+
+    def split_regarding_lapses
+      # TODO : can we create relations from here ?
+      # remove self.linked_ids
+      if Models::Relation::SEVERAL_LAPSE_TYPES.include?(self.type)
+        if self.lapses.uniq.size == 1
+          [[self.linked_ids, self.linked_vehicle_ids, self.lapses.first]]
+        else
+          self.lapses.collect.with_index{ |lapse, index|
+            [self.linked_ids && self.linked_ids[index..index+1],
+             self.linked_vehicle_ids && self.linked_vehicle_ids[index..index+1],
+             lapse]
+          }
+        end
+      else
+        [[self.linked_ids, self.linked_vehicle_ids, self.lapses&.first]]
+      end
     end
   end
 end
