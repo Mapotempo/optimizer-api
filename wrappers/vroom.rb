@@ -30,11 +30,16 @@ module Wrappers
       @exec_vroom += " -t #{hash[:threads]}" if hash[:threads]
     end
 
+    def prioritize_first_available_trips_and_vehicles(*)
+      # no-op
+      # TODO: remove this override when vroom can handle different fixed costs
+    end
+
     def solver_constraints
       super + [
         # Costs
         :assert_homogeneous_costs,
-        :assert_no_cost_fixed,
+        :assert_no_cost_fixed, # if removing this, delete prioritize_first_available_trips_and_vehicles as well
         :assert_vehicles_objective,
 
         # Problem
