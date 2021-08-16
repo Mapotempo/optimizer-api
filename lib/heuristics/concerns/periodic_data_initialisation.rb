@@ -105,10 +105,10 @@ module PeriodicDataInitialization
     }.each{ |stop|
       id = stop[:id]
 
-      next if @services_data[id][:used_days].size == @services_data[id][:raw].visits_number
+      next if @services_assignment[id][:days].size == @services_data[id][:raw].visits_number
 
-      plan_next_visits(vehicle_id, id, @services_data[id][:used_days].size + 1)
-      @output_tool&.insert_visits(@services_data[id][:used_days], id, @services_data[id][:visits_number])
+      plan_next_visits(vehicle_id, id, @services_assignment[id][:days].size + 1)
+      @output_tool&.insert_visits(@services_assignment[id][:days], id, @services_data[id][:visits_number])
     }
   end
 
@@ -132,6 +132,7 @@ module PeriodicDataInitialization
     available_units = vrp.vehicles.flat_map{ |v| v.capacities.collect{ |capacity| capacity.unit.id } }.uniq
     one_working_day_per_vehicle = @candidate_routes.all?{ |_vehicle_id, all_routes| all_routes.keys.uniq{ |day| day % 7 }.size == 1 }
     vrp.services.each{ |service|
+      @services_assignment[service.id] = { vehicles: [], days: [], missing_visits: 0, unassigned_reasons: [] }
       @services_data[service.id] = {
         raw: service,
         capacity: compute_capacities(service.quantities, false, available_units),
@@ -140,8 +141,6 @@ module PeriodicDataInitialization
         heuristic_period: compute_period(service, one_working_day_per_vehicle),
         points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
         tws_sets: service.activity ? [service.activity.timewindows] : service.activities.collect(&:timewindows),
-        used_days: [],
-        used_vehicles: [],
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
         positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),
@@ -208,7 +207,7 @@ module PeriodicDataInitialization
     }
 
     @indices.each_key{ |point_id|
-      @points_vehicles_and_days[point_id] = { vehicles: [], days: [], maximum_visits_number: 0 }
+      @points_assignment[point_id] = { vehicles: [], days: [], maximum_visits_number: 0 }
     }
   end
 
