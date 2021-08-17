@@ -3366,18 +3366,18 @@ class WrapperTest < Minitest::Test
     # Solve WITH simplification and note the cost and check if trips are not skipped
     vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multi_trips_which_uses_trip2_before_trip1')
 
-    soln_with_simplification = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+    solns_with_simplification = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
 
     there_is_no_skipped_trip_when_simplification_is_on = vrp.relations.none?{ |relation|
       skipped_a_trip = false
       relation.linked_vehicle_ids.any?{ |vid|
-        route = soln_with_simplification[:routes].find{ |r| r[:vehicle_id] == vid }
+        route = solns_with_simplification[0].routes.find{ |r| r.vehicle.id == vid }
 
         # if an earlier trip is skipped check if a later trip is active
         if skipped_a_trip
-          route[:end_time] > route[:start_time]
+          route.info.end_time > route.info.start_time
         else
-          skipped_a_trip = (route[:end_time] <= route[:start_time])
+          skipped_a_trip = (route.info.end_time <= route.info.start_time)
           nil
         end
       }
@@ -3387,19 +3387,19 @@ class WrapperTest < Minitest::Test
     # Solve WITHOUT simplification (when prioritize_first_available_trips_and_vehicles is off)
     # verify the cost is the same or better with the simplification and that the trip2 is used before trip1
     function_called = false
-    soln_without_simplification = Wrappers::Wrapper.stub_any_instance(:prioritize_first_available_trips_and_vehicles,
-                                                                      proc{
-                                                                        function_called = true
-                                                                        nil
-                                                                      }) do
+    solns_without_simplification = Wrappers::Wrapper.stub_any_instance(:prioritize_first_available_trips_and_vehicles,
+                                                                       proc{
+                                                                         function_called = true
+                                                                         nil
+                                                                       }) do
       vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multi_trips_which_uses_trip2_before_trip1')
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     end
     assert function_called, 'prioritize_first_available_trips_and_vehicles should have been called'
 
-    assert_operator soln_with_simplification[:cost], :<=, soln_without_simplification[:cost],
+    assert_operator solns_with_simplification[0].cost, :<=, solns_without_simplification[0].cost,
                     'simplification should not increase the cost'
-    assert_operator soln_with_simplification[:unassigned].size, :<=, soln_without_simplification[:unassigned].size,
+    assert_operator solns_with_simplification[0].unassigned.size, :<=, solns_without_simplification[0].unassigned.size,
                     'simplification should not increase unassigned services'
 
     # If the next check starts to fail regularly, it may be removed after verification
@@ -3409,13 +3409,13 @@ class WrapperTest < Minitest::Test
     there_is_a_skipped_trip_when_simplification_is_off = vrp.relations.any?{ |relation|
       skipped_a_trip = false
       relation.linked_vehicle_ids.any?{ |vid|
-        route = soln_without_simplification[:routes].find{ |r| r[:vehicle_id] == vid }
+        route = solns_without_simplification[0].routes.find{ |r| r.vehicle.id == vid }
 
         # if an earlier trip is skipped check if a later trip is active
         if skipped_a_trip
-          route[:end_time] > route[:start_time]
+          route.info.end_time > route.info.start_time
         else
-          skipped_a_trip = (route[:end_time] <= route[:start_time])
+          skipped_a_trip = (route.info.end_time <= route.info.start_time)
           nil
         end
       }
@@ -3438,23 +3438,23 @@ class WrapperTest < Minitest::Test
                                                                nil
                                                              }) do
       vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
     end
     assert function_called, 'simplify_complex_multi_pickup_or_delivery_shipments should have been called'
     # if there are no unassigned; maybe or-tools improved its performance
     # and this simplification might not be necessary anymore,
     # or this instance is too small and timing needs to be fixed.
     # In any case, testing with a bigger instance might be necessary if the following condition fails regularly.
-    refute_empty result_wo_simplify[:unassigned], 'There should have been some unassigned'
+    refute_empty result_wo_simplify.unassigned, 'There should have been some unassigned'
 
     # Solve WITH simplification
     vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
-    result_w_simplify = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_operator result_w_simplify[:unassigned].size, :<, result_wo_simplify[:unassigned].size,
+    sols_w_simplify = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_operator sols_w_simplify[0].unassigned.size, :<, result_wo_simplify[:unassigned].size,
                     'Simplification should improve performance'
     # if there are unassigned services; this might be due to computer performance
     # but normally even 0.5 seconds is enough, so it might be due to a change in or-tools or optimizer-ortools
-    assert_empty result_w_simplify[:unassigned], 'Simplification should plan all services'
+    assert_empty sols_w_simplify[0].unassigned, 'Simplification should plan all services'
   end
 
   def test_reject_when_unfeasible_timewindows
@@ -3472,8 +3472,9 @@ class WrapperTest < Minitest::Test
     problem[:vehicles].first[:timewindow] = { start: 0, end: 24500 }
     problem[:vehicles].first[:capacities] = [{ unit_id: 'kg', limit: 1100 }]
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil)
-    assert(result[:unassigned].collect{ |una| una[:reason].include?('&&') })
+    solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }},
+                                             TestHelper.load_vrp(self, problem: problem), nil)
+    assert(solutions[0].unassigned.collect{ |una| una.reason.include?('&&') })
   end
 
   def test_possible_days_consistency

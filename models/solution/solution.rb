@@ -87,5 +87,14 @@ module Models
       solution.configuration = self.configuration + other.configuration
       solution
     end
+
+    def update_costs
+      previous_total = cost_info.total
+      # When there is only one route, the route cost_info object is shared with the solution cost_info
+      return if routes.size <= 1
+
+      cost_info = routes.map(&:cost_info).sum
+      self.cost -= (previous_total - cost_info.total).round
+    end
   end
 end

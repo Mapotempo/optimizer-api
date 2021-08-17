@@ -314,7 +314,7 @@ class RealCasesTest < Minitest::Test
              "Too long travel time: #{solutions[0].routes.sum{ |r| r.info.total_travel_time }}"
 
       # Check elapsed time
-      assert solutions[0].elapsed < 5000, "Too long elapsed time: #{solutions[0].elapsed}"
+      assert solutions[0].elapsed < 15000, "Too long elapsed time: #{solutions[0].elapsed}"
     end
 
     # Nantes - A single route with an order defining the most part of the route

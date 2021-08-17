@@ -891,18 +891,13 @@ module Wrappers
 
         simplification_active = true
 
-        result[:routes].each{ |route|
-          vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
-
+        result.routes.each{ |route|
           # correct the costs if the vehicle had cost adjustment and it is used
-          next unless vehicle[:fixed_cost_before_adjustment] && route[:cost_details]&.fixed&.positive?
+          next unless route.vehicle[:fixed_cost_before_adjustment] && route.cost_info&.fixed&.positive?
 
-          cost_diff = route[:cost_details].fixed - vehicle[:fixed_cost_before_adjustment]
-
-          route[:cost_details].fixed -= cost_diff
-          result[:cost_details].fixed -= cost_diff
+          route.cost_info.fixed = route.vehicle[:fixed_cost_before_adjustment]
         }
-        result[:cost] = result[:cost_details].total
+        result.update_costs
       else
         raise 'Unknown :mode option'
       end
@@ -1034,31 +1029,28 @@ module Wrappers
 
         simplification_data[:original_services].each{ |service|
           # delete the unassigned expanded version of service and calculate how many of them planned/unassigned
-          unassigned_exp_ser_count = result[:unassigned].size
-          unassigned_exp_ser_count -= result[:unassigned].delete_if{ |uns| uns[:original_service_id] == service.original_id }.size
+          unassigned_exp_ser_count = result.unassigned.size
+          unassigned_exp_ser_count -= result.unassigned.delete_if{ |uns| uns.id == service.original_id }.size
           planned_exp_ser_count = simplification_data[:expanded_services].count{ |s| s.original_id == service.original_id } - unassigned_exp_ser_count
 
           if planned_exp_ser_count == 0
             # if all of them were unplanned
             # replace the deleted unassigned expanded ones with one single original un-expanded service
-            result[:unassigned] << {
-              original_service_id: service.original_id,
-              service_id: service.id,
-              point_id: service.activity.point_id,
-              detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
-            }
+            result.unassigned << Models::Solution::Step.new(service)
           else
             # replace the planned one(s) into one single unexpanded original service
-            first_exp_ser_activity = nil
-            last_exp_ser_activity = nil
+            first_exp_ser_step = nil
+            last_exp_ser_step = nil
+            step_info = nil
             insert_location = nil
             deleted_exp_ser_count = 0
-            result[:routes].each{ |route|
-              route[:activities].delete_if.with_index{ |activity, index|
-                if activity[:original_service_id] == service.original_id
+            result.routes.each{ |route|
+              route.steps.delete_if.with_index{ |step, index|
+                if step.id == service.original_id
                   insert_location ||= index
-                  first_exp_ser_activity ||= activity # first_exp_ser_activity has the travel and timing info
-                  last_exp_ser_activity = activity # last_exp_ser_activity has the quantity info
+                  step_info ||= step.info
+                  first_exp_ser_step ||= step # first_exp_ser_step has the travel and timing info
+                  last_exp_ser_step = step # last_exp_ser_step has the quantity info
                   deleted_exp_ser_count += 1
                   true
                 elsif deleted_exp_ser_count == planned_exp_ser_count
@@ -1068,29 +1060,29 @@ module Wrappers
 
               next unless insert_location # expanded activity(ies) of service is found in this route
 
-              merged_activity = first_exp_ser_activity.merge(last_exp_ser_activity) { |key, first, last|
-                if key == :service_id
-                  service.id
-                elsif key == :detail && first != last
-                  # if only one expanded service is planned (i.e., first == last), then first will be correct
-                  # if not correct the quantities
-                  first[:quantities].each_with_index{ |first_quantity, q_ind|
-                    last_quantity = last[:quantities][q_ind][:unit] == first_quantity[:unit] && last[:quantities][q_ind]
-                    last_quantity ||= last[:quantities].find{ |q| q[:unit] == first_quantity[:unit] }
-                    value_correction = last_quantity[:current_load] - first_quantity[:current_load]
-                    first_quantity[:current_load] = last_quantity[:current_load]
+              step = Models::Solution::Step.new(service, loads: [], info: step_info)
 
-                    next if first_quantity[:value].nil? && value_correction == 0
+              current_firsts = Hash.new { 0 }
+              current_lasts = Hash.new { 0 }
 
-                    first_quantity[:value] = first_quantity[:value].to_f + value_correction
-                  }
-                  first
-                else
-                  first
-                end
+              first_exp_ser_step.loads.each{ |load|
+                current_firsts[load.quantity.unit_id] = load.current
               }
 
-              route[:activities].insert(insert_location, merged_activity)
+              if last_exp_ser_step != first_exp_ser_step
+                last_exp_ser_step.loads.each{ |load|
+                  current_lasts[load.quantity.unit_id] = load.current
+                }
+              end
+              vrp.units.map{ |unit|
+                Models::Solution::Load.new(
+                  quantity: Models::Quantity.new(unit: unit,
+                                       value: current_lasts[unit.id] - current_firsts[unit.id]),
+                  current: current_firsts[unit.id]
+                )
+              }
+
+              route.steps.insert(insert_location, step)
 
               break
             }

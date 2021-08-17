@@ -4161,7 +4161,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.unassigned.size
-    assert_equal 1, solution.cost_details.total # exclusion costs are not included in the cost_details
+    assert_equal 1, solution.cost_info.total # exclusion costs are not included in the cost_details
     assert_equal 1, solution.iterations
   end
 
@@ -4863,7 +4863,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 0, solutions[0].routes[0].activities.size, 'All services should be eliminated'
+    assert_equal 0, solutions[0].routes[0].steps.size, 'All services should be eliminated'
     assert_equal 2, solutions[0].unassigned.size, 'All services should be eliminated'
     assert_equal 0, solutions[0].cost, 'All eliminated, cost should be 0'
   end
@@ -4971,7 +4971,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
                     shipment0_route.steps[pickup0_index].info.begin_time
   end
 
-  def test_cost_details
+  def test_cost_info
     vrp = VRP.basic
     vrp[:units] = [{ id: 'kg' }]
     vrp[:vehicles].first.merge!(cost_fixed: 1, cost_time_multiplier: 2,
@@ -4979,8 +4979,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:services].first[:quantities] = [{ unit_id: 'kg', value: 2 }]
     vrp[:services].first[:activity].merge!(timewindows: [{ start: 0, end: 1 }], late_multiplier: 0.007)
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    refute (solutions[0].cost_info.object_id equal? solutions[0].routes[0].cost_info.object_id),
-           'cost_info object should not be the same for route and solution'
     assert_equal 21.321, solutions[0].cost_info.total.round(3)
     assert_equal 1, solutions[0].cost_info.fixed
     assert_equal 20, solutions[0].cost_info.time
@@ -5317,18 +5315,18 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:services].last[:activity][:timewindows] << { start: 20 }
 
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+    solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
 
-    assert_empty result[:unassigned], 'All three services should be planned. There is an obvious feasible solution.'
+    assert_empty solutions[0].unassigned, 'All three services should be planned. There is an obvious feasible solution.'
 
     vrp.services.each{ |service|
-      planned_begin_time = result[:routes][0][:activities].find{ |a| a[:service_id] == service.id }[:begin_time]
+      planned_begin_time = solutions[0].routes[0].steps.find{ |s| s.service_id == service.id }.info.begin_time
       assert service.activity.timewindows.one?{ |tw|
         planned_begin_time >= tw.start && (tw.end.nil? || planned_begin_time <= tw.end)
       }, 'Services should respect the TW without end and fall within exactly one of its TW ranges'
     }
 
-    assert_equal 20, result[:routes][0][:activities].last[:begin_time], 'Third service should be planned at 20'
+    assert_equal 20, solutions[0].routes[0].steps.last.info.begin_time, 'Third service should be planned at 20'
   end
 
   def test_relations_sent_to_ortools_when_different_lapses
@@ -5360,7 +5358,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           # check number of relations sent to ortools
           assert_equal expected_number_of_relations[pb_index], ortools_problem.relations.size
 
-          'Job killed' # Return "Job killed" to stop gracefully
+          Models::Solution.new(status: :killed)
         }
       ) do
         OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem.dup))
