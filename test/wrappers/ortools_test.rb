@@ -4152,7 +4152,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = ortools.solve(vrp, 'test')
     assert result
     assert_equal 1, result[:unassigned].size
-    assert_equal 65, result[:cost]
+    assert_equal 1, result[:cost_details].total # exclusion costs are not included in the cost_details
     assert_equal 1, result[:iterations]
   end
 
@@ -4897,8 +4897,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert result
-    assert result[:cost].nil?
+    assert_equal 0, result[:routes][0][:activities].size, 'All services should be eliminated'
+    assert_equal 2, result[:unassigned].size, 'All services should be eliminated'
+    assert_equal 0, result[:cost], 'All eliminated, cost should be 0'
   end
 
   def test_build_rest
@@ -5013,6 +5014,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:services].first[:quantities] = [{ unit_id: 'kg', value: 2 }]
     vrp[:services].first[:activity].merge!(timewindows: [{ start: 0, end: 1 }], late_multiplier: 0.007)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    refute result[:cost_details].object_id == result[:routes][0][:cost_details].object_id, 'cost_details object should not be the same for route and result'
     assert_equal 21.321, result[:cost_details].total.round(3)
     assert_equal 1, result[:cost_details].fixed
     assert_equal 20, result[:cost_details].time
@@ -5055,10 +5057,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
       { id: 'visit' }
     ]
     problem[:matrices].first[:time] = [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0]
+      [0, 1, 1, 1],
+      [1, 0, 1, 1],
+      [1, 1, 0, 1],
+      [1, 1, 1, 0]
     ]
     problem[:vehicles].each{ |vehicle|
       vehicle[:capacities] = [{ unit_id: 'visit', limit: 1 }]

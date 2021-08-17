@@ -252,10 +252,10 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
      { method: 'balanced_kmeans', metric: 'duration', entity: :work_day }]
   end
 
-  def self.vehicle_trips_relation(vrp)
+  def self.vehicle_trips_relation(vehicles)
     {
       type: :vehicle_trips,
-      linked_vehicle_ids: vrp[:vehicles].collect{ |v| v[:id] }
+      linked_vehicle_ids: vehicles.collect{ |v| v[:id] }
     }
   end
 end

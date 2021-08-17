@@ -830,6 +830,7 @@ module Wrappers
       # and result patching operations will be called in the opposite order. This can be changed
       # if necessary.
       [
+        :prioritize_first_available_trips_and_vehicles,
         :simplify_vehicle_duration,
         :simplify_vehicle_pause,
         :simplify_complex_multi_pickup_or_delivery_shipments,
@@ -868,6 +869,89 @@ module Wrappers
       }
 
       vrp
+    end
+
+    def prioritize_first_available_trips_and_vehicles(vrp, result = nil, options = { mode: :simplify })
+      # For each vehicle group, it applies a small but increasing fixed_cost so that or-tools can
+      # distinguish two identical vehicles and use the one that comes first.
+      # This is to handle two cases:
+      #  i.  Skipped intermediary trips of the same vehicle_trips relation
+      #  ii. Skipped intermediary "similar" vehicles of vrp.vehicles list
+
+      simplification_active = false
+      case options[:mode]
+      when :simplify
+        # cannot do prioritization by fixed_cost if the vehicles have different costs
+        # TODO: if needed this limitation can be partially removed for the cases where a group of vehicles
+        # have one cost and another group has another cost. The below logic can be applied such groups of vehicles
+        # separately but the code would be messier. Wait for a real use case.
+        return unless vrp.vehicles.uniq(&:cost_fixed).size == 1
+
+        simplification_active = true
+
+        all_vehicle_trips_relations = vrp.relations.select{ |v| v.type == :vehicle_trips }
+        leader_trip_vehicles = all_vehicle_trips_relations.map{ |r| r.linked_vehicle_ids.first }
+        loner_vehicles = vrp.vehicles.map(&:id) - all_vehicle_trips_relations.flat_map(&:linked_vehicle_ids)
+
+        cost_increment = 1e-4 # cost is multiplied with 1e6 (CUSTOM_BIGNUM_COST) inside optimizer-ortools
+        cost_adjustment = cost_increment
+
+        # Below both (i. and ii.) cases are handled
+        # The vehicles that are the "leader" trip of a vehicle trip relation handle the
+        # remaining trips of that relation.
+        vrp.vehicles.each{ |vehicle|
+          case vehicle.id
+          when *leader_trip_vehicles
+            vehicle_trips = all_vehicle_trips_relations.find{ |r| r.linked_vehicle_ids.first == vehicle.id }
+            linked_vehicles = vehicle_trips.linked_vehicle_ids.map{ |lv_id| vrp.vehicles.find{ |v| v.id == lv_id } }
+
+            linked_vehicles.each{ |linked_vehicle|
+              # WARNING: this logic depends on the fact that each vehicle can appear in at most one vehicle_trips
+              # relation ensured by check_vehicle_trips_relation_consistency (models/concerns/validate_data.rb)
+              linked_vehicle[:fixed_cost_before_adjustment] = linked_vehicle.cost_fixed
+              linked_vehicle.cost_fixed += cost_adjustment
+              cost_adjustment += cost_increment
+            }
+          when *loner_vehicles
+            vehicle[:fixed_cost_before_adjustment] = vehicle.cost_fixed
+            vehicle.cost_fixed += cost_adjustment
+            cost_adjustment += cost_increment
+          end
+        }
+      when :rewind
+        # rewinds the simplification
+        return nil unless vrp.vehicles.any?{ |v| v[:fixed_cost_before_adjustment] }
+
+        simplification_active = true
+
+        vrp.vehicles.each{ |vehicle|
+          next if vehicle[:fixed_cost_before_adjustment].nil?
+
+          vehicle.cost_fixed = vehicle[:fixed_cost_before_adjustment]
+          vehicle[:fixed_cost_before_adjustment] = nil
+        }
+      when :patch_result
+        # patches the result
+        return nil unless vrp.vehicles.any?{ |v| v[:fixed_cost_before_adjustment] }
+
+        simplification_active = true
+
+        result[:routes].each{ |route|
+          vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
+
+          # correct the costs if the vehicle had cost adjustment and it is used
+          next unless vehicle[:fixed_cost_before_adjustment] && route[:cost_details]&.fixed&.positive?
+
+          cost_diff = route[:cost_details].fixed - vehicle[:fixed_cost_before_adjustment]
+
+          route[:cost_details].fixed -= cost_diff
+          result[:cost_details].fixed -= cost_diff
+        }
+        result[:cost] = result[:cost_details].total
+      else
+        raise 'Unknown :mode option'
+      end
+      simplification_active # returns true if the simplification is applied/rewinded/patched
     end
 
     def simplify_complex_multi_pickup_or_delivery_shipments(vrp, result = nil, options = { mode: :simplify })

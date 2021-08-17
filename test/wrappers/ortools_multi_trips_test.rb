@@ -108,7 +108,7 @@ class MultiTripsTest < Minitest::Test
     vrp = VRP.lat_lon_two_vehicles
     # ensure one vehicle only is not enough :
     vrp[:vehicles].each{ |vehicle| vehicle[:distance] = 100000 }
-    vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+    vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
 
     vrp[:relations].first[:lapses] = [3600]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)

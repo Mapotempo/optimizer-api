@@ -349,7 +349,7 @@ module Models
 
     def test_lapse_converted_into_lapses
       problem = VRP.lat_lon_two_vehicles
-      problem[:relations] = [TestHelper.vehicle_trips_relation(problem)]
+      problem[:relations] = [TestHelper.vehicle_trips_relation(problem[:vehicles])]
       problem[:relations].first[:lapse] = 2
 
       created_vrp = Models::Vrp.create(problem)
@@ -358,7 +358,7 @@ module Models
 
       problem[:vehicles] << problem[:vehicles].first.dup
       problem[:vehicles].last[:id] += '_dup'
-      problem[:relations] = [TestHelper.vehicle_trips_relation(problem)]
+      problem[:relations] = [TestHelper.vehicle_trips_relation(problem[:vehicles])]
       problem[:relations].first[:lapse] = 2
 
       created_vrp = Models::Vrp.create(problem)

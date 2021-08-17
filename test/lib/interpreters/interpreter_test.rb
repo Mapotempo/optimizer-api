@@ -1565,7 +1565,7 @@ class InterpreterTest < Minitest::Test
     # every day those vehicles are available
     vrp = VRP.lat_lon_two_vehicles
     vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
-    vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp)]
+    vrp[:relations] = [TestHelper.vehicle_trips_relation(vrp[:vehicles])]
     vrp[:vehicles].each{ |v|
       v.delete(:sequence_timewindows)
       v[:timewindow] = { start: 0, end: 10 }

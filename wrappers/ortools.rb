@@ -424,7 +424,10 @@ module Wrappers
 
       route_start_time = 0
       route_end_time = 0
-      costs_array = []
+      # To prevent results and routes sharing the same Model::CostDetails object ([x].sum returns the same x object)
+      # and to make sure that even for an empty solution returned by ortools, we have a proper Model::CostDetails object
+      # in result[:cost_details], use additive identity 0 (i.e., summation with an empty CostDetails object)
+      costs_array = [Models::CostDetails.create({})]
 
       collected_indices = []
       vehicle_rest_ids = Hash.new([])
@@ -643,9 +646,9 @@ module Wrappers
       stdout_and_stderr.each_line { |line|
         r = /Iteration : ([0-9]+)/.match(line)
         r && (iterations = Integer(r[1]))
-        s = / Cost : ([0-9.eE+]+)/.match(line)
+        s = / Cost : ([0-9.eE+-]+)/.match(line)
         s && (cost = Float(s[1]))
-        t = /Time : ([0-9.eE+]+)/.match(line)
+        t = /Time : ([0-9.eE+-]+)/.match(line)
         t && (time = t[1].to_f)
         log line.strip, level: (/Final Iteration :/.match(line) || /First solution strategy :/.match(line) || /Using the provided initial solution./.match(line) || /OR-Tools v[0-9]+\.[0-9]+\n/.match(line)) ? :info : (r || s || t) ? :debug : :error
         out += line
