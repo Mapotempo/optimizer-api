@@ -365,5 +365,33 @@ module Models
       assert_nil problem[:relations].first[:lapse]
       assert_equal [2, 2], created_vrp.relations.first.lapses
     end
+
+    def test_creating_possible_days
+      problem = VRP.periodic
+      problem[:services][0][:first_possible_day_indices] = [0]
+      problem[:services][1][:first_possible_dates] = [Date.new(2021, 7, 23)]
+      problem[:services][0][:last_possible_day_indices] = [1]
+      problem[:services][1][:last_possible_dates] = [Date.new(2021, 7, 24)]
+      problem[:services][2][:first_possible_day_indices] = [1, 2]
+      problem[:services] << problem[:services].last.dup
+      problem[:services][3][:id] += '_dup'
+      problem[:services][3][:visits_number] = 3
+      problem[:services][3][:first_possible_day_indices] = [1, 2, 4, 5]
+      problem[:services] << problem[:services].last.dup
+      problem[:services][4][:id] += '_dup'
+      problem[:services][4][:visits_number] = 4
+      problem[:services][4][:first_possible_day_indices] = [1, 2, 4, 5]
+      problem[:configuration][:schedule] = { range_date: { start: Date.new(2021, 7, 20), end: Date.new(2021, 7, 29) }}
+
+      created_vrp = TestHelper.create(problem)
+      assert_equal [0], created_vrp.services[0].first_possible_days
+      assert_equal [4], created_vrp.services[1].first_possible_days # July 23rd corresponds to first Friday in period
+      assert_equal [1], created_vrp.services[0].last_possible_days
+      assert_equal [5], created_vrp.services[1].last_possible_days # July 23rd corresponds to first Saturday in period
+      # We should keep as many values as the number visits
+      assert_equal [1], created_vrp.services[2].first_possible_days
+      assert_equal [1, 2, 4], created_vrp.services[3].first_possible_days
+      assert_equal [1, 2, 4, 5], created_vrp.services[4].first_possible_days
+    end
   end
 end

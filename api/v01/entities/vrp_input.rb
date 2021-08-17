@@ -330,6 +330,17 @@ module VrpMissions
 
     optional(:visits_number, type: Integer, coerce_with: ->(val) { val.to_i.positive? && val.to_i }, default: 1, allow_blank: false, desc: '(Schedule only) Total number of visits over the complete schedule (including the unavailable visit indices)')
 
+    optional(:first_possible_day_indices, type: Array[Integer], coerce_with: ->(val) { val.is_a?(Integer) ? [val] : val },
+                                          desc: '(Schedule only) For each visit, first possible day index')
+    optional(:first_possible_dates, type: Array, coerce_with: ->(val) { val.map{ |date| ScheduleType.type_cast(date) } },
+                                    desc: '(Schedule only) For each visit, first possible date')
+    mutually_exclusive :first_possible_day_indices, :first_possible_dates
+    optional(:last_possible_day_indices, type: Array[Integer], coerce_with: ->(val) { val.is_a?(Integer) ? [val] : val },
+                                         desc: '(Schedule only) For each visit, last possible day index')
+    optional(:last_possible_dates, type: Array, coerce_with: ->(val) { val.map{ |date| ScheduleType.type_cast(date) } },
+                                   desc: '(Schedule only) For each visit, last possible date')
+    mutually_exclusive :last_possible_day_indices, :last_possible_dates
+
     optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Schedule only) unavailable indices of visit')
 
     optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptionnals days indices of unavailabilty')

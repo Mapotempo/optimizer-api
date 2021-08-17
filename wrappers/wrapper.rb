@@ -693,6 +693,38 @@ module Wrappers
       capacities.reject{ |_k, v| v.nil? || v.negative? }
     end
 
+    def possible_days_are_consistent(vrp, service)
+      return false if service.first_possible_days.any?{ |d| d > vrp.schedule_range_indices[:end] }
+
+      return false if service.last_possible_days.any?{ |d| d < vrp.schedule_range_indices[:start] }
+
+      consistency_for_each_visit =
+        (0..service.visits_number - 1).none?{ |v_i|
+          service.first_possible_days[v_i] &&
+            service.last_possible_days[v_i] &&
+            service.first_possible_days[v_i] > service.last_possible_days[v_i]
+        }
+
+      return false unless consistency_for_each_visit
+
+      visit_index = 1
+      consistency_in_between_visits = true
+      current_day = service.first_possible_days.first
+      while visit_index < service.last_possible_days.size && consistency_in_between_visits
+        this_visit_day = [service.first_possible_days[visit_index], current_day + (service.minimum_lapse || 1)].max
+        if this_visit_day <= current_day ||
+           (service.last_possible_days[visit_index] && this_visit_day > service.last_possible_days[visit_index]) ||
+           this_visit_day > vrp.schedule_range_indices[:end]
+          consistency_in_between_visits = false
+        else
+          current_day = this_visit_day
+          visit_index += 1
+        end
+      end
+
+      consistency_in_between_visits
+    end
+
     def detect_unfeasible_services(vrp)
       unfeasible = []
       vehicle_max_shift = compute_vehicles_shift(vrp.vehicles)
@@ -721,6 +753,10 @@ module Wrappers
 
         # unconsistency for planning
         next if !vrp.schedule?
+
+        unless possible_days_are_consistent(vrp, service)
+          add_unassigned(unfeasible, vrp, service, 'Provided possible days do not allow service to be assigned')
+        end
 
         unless vrp.can_affect_all_visits?(service)
           add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')

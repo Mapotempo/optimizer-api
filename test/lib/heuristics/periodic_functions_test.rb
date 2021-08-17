@@ -559,6 +559,22 @@ class HeuristicTest < Minitest::Test
       assert_equal 0, vrp.services.first.last_possible_days.first, 'There are 261 working days, hence a service with 261 visits can only start at day 0'
     end
 
+    def test_compute_latest_authorized_day_with_partially_provided_data
+      problem = VRP.periodic
+      problem[:services][0][:visits_number] = 4
+      problem[:services][0][:last_possible_day_indices] = [2, 4]
+      problem[:configuration][:schedule][:range_indices][:end] = 40
+      vrp = TestHelper.create(problem)
+      Interpreters::PeriodicVisits.new(vrp) # call to function compute_possible_days
+      assert_equal [2, 4, 39, 40], vrp.services.first.last_possible_days
+
+      problem[:services][0][:first_possible_day_indices] = [2, 4]
+      problem[:services][0][:minimum_lapse] = 3
+      vrp = TestHelper.create(problem)
+      Interpreters::PeriodicVisits.new(vrp) # call to function compute_possible_days
+      assert_equal [2, 5, 8, 11], vrp.services.first.first_possible_days
+    end
+
     def test_exist_possible_first_route_according_to_same_point_day
       vrp = TestHelper.create(VRP.lat_lon_periodic)
       vrp.resolution_same_point_day = true
@@ -624,6 +640,51 @@ class HeuristicTest < Minitest::Test
       s = Wrappers::PeriodicHeuristic.new(vrp)
       assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
       assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
+    end
+
+    def test_day_in_possible_interval
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.services.first.visits_number = 4
+      vrp.schedule_range_indices[:end] = 40
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      vrp.services.first.first_possible_days = [0, 1, 2, 3]
+      vrp.services.first.last_possible_days = [4, 2, 3, 8]
+      assert s.send(:day_in_possible_interval, 'service_1', 0)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0]
+      refute s.send(:day_in_possible_interval, 'service_1', 0) # only one visit can be assigned to a given day / in a given set
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0, 1, 2]
+      refute s.send(:day_in_possible_interval, 'service_1', 2)
+      assert s.send(:day_in_possible_interval, 'service_1', 4)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0, 1, 2, 4]
+      refute s.send(:day_in_possible_interval, 'service_1', 7)
+
+      vrp.services.first.first_possible_days = [0, 1, 2, 5]
+      vrp.services.first.last_possible_days = [4, 3, 3, 8]
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = []
+      assert s.send(:day_in_possible_interval, 'service_1', 1)
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [1]
+      assert s.send(:day_in_possible_interval, 'service_1', 1) # this case will be avoided by compute days
+      refute s.send(:compatible_days, 'service_1', 1)
+    end
+
+    def test_can_find_a_distinct_array_per_set_function
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      assert s.send(:can_find_a_distinct_array_per_set, [[[0, 4], [2, 3]], [[0, 4], [2, 3]]])
+      refute s.send(:can_find_a_distinct_array_per_set, [[[0, 4], [2, 3]], [[0, 4], [2, 3]], [[0, 4], [2, 3]]])
+      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2]], [[3, 4]], [[5, 6]]])
+      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4]], [[1, 2], [5, 6]], [[1, 2]]])
+      refute s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2]], [[3, 4]], [[5, 6]]])
+      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6], [7, 8]], [[1, 2]], [[3, 4]], [[5, 6]]])
+      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6], [7, 8]], [[1, 2], [7, 8]], [[3, 4]], [[5, 6]]])
+      refute s.send(:can_find_a_distinct_array_per_set, [[[1, 2]], [[1, 2]], [[3, 4]]])
+      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[3, 4], [5, 6]]])
+      refute s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[3, 4], [5, 6]], [[3, 4], [5, 6]]])
+      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4]], [[3, 4], [7, 8], [9, 10]], [[3, 4], [7, 8], [9, 10]]])
     end
   end
 end
