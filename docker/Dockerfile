@@ -8,7 +8,7 @@ ARG BUNDLE_WITHOUT="development test"
 FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.8.0} as vroom
 
 # Rake
-FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.6.0}
+FROM ${REGISTRY}mapotempo-${BRANCH}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.7.0}
 ARG BUNDLE_WITHOUT
 
 ENV LANG C.UTF-8
