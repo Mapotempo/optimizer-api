@@ -332,12 +332,12 @@ module VrpMissions
 
     optional(:first_possible_day_indices, type: Array[Integer], coerce_with: ->(val) { val.is_a?(Integer) ? [val] : val },
                                           desc: '(Schedule only) For each visit, first possible day index')
-    optional(:first_possible_dates, type: Array, coerce_with: ->(val) { val.map{ |date| ScheduleType.type_cast(date) } },
+    optional(:first_possible_dates, type: Array[Date],
                                     desc: '(Schedule only) For each visit, first possible date')
     mutually_exclusive :first_possible_day_indices, :first_possible_dates
     optional(:last_possible_day_indices, type: Array[Integer], coerce_with: ->(val) { val.is_a?(Integer) ? [val] : val },
                                          desc: '(Schedule only) For each visit, last possible day index')
-    optional(:last_possible_dates, type: Array, coerce_with: ->(val) { val.map{ |date| ScheduleType.type_cast(date) } },
+    optional(:last_possible_dates, type: Array[Date],
                                    desc: '(Schedule only) For each visit, last possible date')
     mutually_exclusive :last_possible_day_indices, :last_possible_dates
 
