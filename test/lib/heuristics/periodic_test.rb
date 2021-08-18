@@ -699,5 +699,28 @@ class HeuristicTest < Minitest::Test
       assert result[:routes][0][:activities].none?{ |a| a[:service_id] == 'service_2_1_2' },
              'Service_2 can not take before day index 1'
     end
+
+    def test_first_last_possible_day_validation_done_in_data_initialization
+      vrp = VRP.lat_lon_periodic
+      vrp[:vehicles].each{ |v|
+        v[:sequence_timewindows] = (0..4).map{ |day_index|
+          { start: 31500, end: 55500, day_index: day_index }
+        }
+        v.delete(:timewindow)
+      }
+      vrp[:services][1][:visits_number] = 2
+      vrp[:services][1][:first_possible_day_indices] = [2]
+      vrp[:services][1][:minimum_lapse] = 3
+
+      vrp[:services][2][:visits_number] = 2
+      vrp[:services][2][:first_possible_dates] = [Date.new(2021, 1, 20)]
+      vrp[:services][2][:minimum_lapse] = 3
+
+      vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 1, 19), end: Date.new(2021, 1, 24)} }
+
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 4, result[:unassigned].size
+      assert(result[:unassigned].all?{ |u| u[:reason] == 'First and last possible days do not allow this service planification' })
+    end
   end
 end

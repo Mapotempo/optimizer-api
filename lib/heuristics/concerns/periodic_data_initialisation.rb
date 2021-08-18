@@ -148,8 +148,12 @@ module PeriodicDataInitialization
         nb_activities: service.activity ? 1 : service.activities.size,
       }
 
-      @candidate_services_ids << service.id
-      @to_plan_service_ids << service.id
+      if possible_days_are_consistent(vrp, service)
+        @candidate_services_ids << service.id
+        @to_plan_service_ids << service.id
+      else
+        reject_all_visits(service.id, service.visits_number, 'First and last possible days do not allow this service planification')
+      end
     }
 
     adapt_services_data(vrp) if @same_point_day
