@@ -515,6 +515,9 @@ module Interpreters
 
         if load_flag && time_flag
           emptied_routes = true
+          %i[total_distance total_time total_travel_time total_value].each{ |key|
+            result[key] -= route[key] if route[key]
+          }
 
           number_of_services_in_the_route = route[:activities].map{ |a| a[:service_id] && a.slice(:service_id, :detail).compact }.compact.size
 

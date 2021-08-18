@@ -135,7 +135,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 1, result[:routes].size
 
       # Check total travel time
-      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 5289, 'Too long travel time'
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 5394, 'Too long travel time'
       # Check activities
       assert_equal check_vrp_services_size + 2 + 1, result[:routes][0][:activities].size
       # Check elapsed time
