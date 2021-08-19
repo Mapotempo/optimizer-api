@@ -132,7 +132,7 @@ module PeriodicDataInitialization
     available_units = vrp.vehicles.flat_map{ |v| v.capacities.collect{ |capacity| capacity.unit.id } }.uniq
     one_working_day_per_vehicle = @candidate_routes.all?{ |_vehicle_id, all_routes| all_routes.keys.uniq{ |day| day % 7 }.size == 1 }
     vrp.services.each{ |service|
-      @services_assignment[service.id] = { vehicles: [], days: [], missing_visits: 0, unassigned_reasons: [] }
+      @services_assignment[service.id] = { vehicles: [], days: [], missing_visits: service.visits_number, unassigned_reasons: [] }
       @services_data[service.id] = {
         raw: service,
         capacity: compute_capacities(service.quantities, false, available_units),

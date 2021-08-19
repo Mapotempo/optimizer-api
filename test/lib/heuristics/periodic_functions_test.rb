@@ -265,50 +265,71 @@ class HeuristicTest < Minitest::Test
 
     def test_check_validity
       vrp = VRP.periodic_seq_timewindows
+      vrp[:services][0][:visits_number] = 2
       vrp[:services][0][:activity][:timewindows] = [{ start: 100, end: 300 }]
       vrp = TestHelper.create(vrp)
       vrp.vehicles = []
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      s.instance_variable_set(:@candidate_routes,
-                              'vehicle_0' => {
-                                0 => {
-                                  stops: [{
-                                    id: 'service_1',
-                                    start: 50,
-                                    arrival: 100,
-                                    end: 350,
-                                    considered_setup_duration: 0,
-                                    activity: 0
-                                  }],
-                                  tw_start: 0,
-                                  tw_end: 400
-                                }
-                            })
-      assert s.check_solution_validity
+      s.instance_variable_set(
+        :@candidate_routes,
+        'vehicle_0' => {
+          0 => {
+            stops: [{ id: 'service_1', start: 50, arrival: 100, end: 350, considered_setup_duration: 0, activity: 0 }],
+            tw_start: 0, tw_end: 400
+          }
+      })
+      s.check_solution_validity # this is not expected to raise
 
       s.instance_variable_set(:@duration_in_tw, true)
       assert_raises OptimizerWrapper::PeriodicHeuristicError do
         s.check_solution_validity
       end
 
-      s.instance_variable_set(:@candidate_routes,
-                              'vehicle_0' => {
-                                0 => {
-                                  stops: [{
-                                    id: 'service_1',
-                                    start: 50,
-                                    arrival: 60,
-                                    end: 80,
-                                    considered_setup_duration: 0,
-                                    activity: 0
-                                  }],
-                                  tw_start: 0,
-                                  tw_end: 400
-                                }
-                            })
+      s.instance_variable_set(
+        :@candidate_routes,
+        'vehicle_0' => {
+          0 => {
+            stops: [{ id: 'service_1', start: 50, arrival: 60, end: 80, considered_setup_duration: 0, activity: 0 }],
+            tw_start: 0, tw_end: 400
+          }
+      })
       assert_raises OptimizerWrapper::PeriodicHeuristicError do
         s.check_solution_validity
       end
+    end
+
+    def test_check_consistent_generated_ids
+      vrp = VRP.periodic_seq_timewindows
+      vrp[:services].first[:visits_number] = 2
+      vrp[:services] = [vrp[:services].first]
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = []
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      possible_cases = [[[1, 2], [], 0],
+                        [[1], [2], 1],
+                        [[], [1, 2], 2]]
+      possible_cases.each{ |assigned_indices, unassigned_indices, missing_visits|
+        s.instance_variable_get(:@services_assignment)['service_1'][:assigned_indices] = assigned_indices
+        s.instance_variable_get(:@services_assignment)['service_1'][:unassigned_indices] = unassigned_indices
+        s.instance_variable_get(:@services_assignment)['service_1'][:missing_visits] = missing_visits
+        s.check_consistent_generated_ids # this should not raise
+      }
+
+      prohibited_cases = [[[1], [2]],
+                          [[], [1, 1]],
+                          [[1], [2, 3]],
+                          [[1], []],
+                          [[], [1]],
+                          [[1], [1]],
+                          [[-1], [1]]]
+      prohibited_cases.each{ |assigned_indices, unassigned_indices|
+        s.instance_variable_get(:@services_assignment)['service_1'][:assigned_indices] = assigned_indices
+        s.instance_variable_get(:@services_assignment)['service_1'][:unassigned_indices] = unassigned_indices
+        assert_raises OptimizerWrapper::PeriodicHeuristicError do
+          s.check_consistent_generated_ids
+        end
+      }
     end
 
     def test_compute_next_insertion_cost_when_activities
@@ -699,6 +720,32 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_get(:@services_assignment)['service_1'][:days] = [1]
       assert s.send(:day_in_possible_interval, 'service_1', 1) # this case will be avoided by compute days
       refute s.send(:compatible_days, 'service_1', 1)
+    end
+
+    def test_compute_visits_number
+      vrp = VRP.periodic_seq_timewindows
+      vrp[:services].first[:visits_number] = 5
+      vrp[:services] = [vrp[:services].first]
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = []
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      test_set = [[nil, [], [], [1, 2, 3, 4, 5]],
+                  [nil, [0, 1, 2, 3, 4], [1, 2, 3, 4, 5], []],
+                  [nil, [0, 1, 2], [1, 2, 3], [4, 5]],
+                  [nil, [0, 2, 4], [1, 2, 3], [4, 5]],
+                  # [1, [0, 2, 4], [1, 3, 5], [2, 4]], # TODO : function should do this properly
+                  [2, [0, 2, 4], [1, 2, 3], [4, 5]],
+                  # [2, [0, 6], [1, 4], [2, 3, 5]] # TODO : function should do this properly
+                ]
+      test_set.each{ |max_lapse, used_days, assigned, unassigned|
+        s.instance_variable_get(:@services_data)['service_1'][:raw].maximum_lapse = max_lapse
+        s.instance_variable_get(:@services_assignment)['service_1'][:days] = used_days
+        s.instance_variable_get(:@services_assignment)['service_1'][:missing_visits] = 5 - used_days.size
+        services_assignment = s.send(:compute_visits_number)
+        assert_equal assigned, services_assignment['service_1'][:assigned_indices]
+        assert_equal unassigned, services_assignment['service_1'][:unassigned_indices]
+      }
     end
   end
 end
