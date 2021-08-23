@@ -211,9 +211,7 @@ module PeriodicDataInitialization
   end
 
   def reject_group(group, specified_reason)
-    group.each{ |id, data|
-      reject_all_visits(id, data[:raw].visits_number, specified_reason)
-    }
+    group.each{ |id, data| reject_all_visits(id, data[:raw].visits_number, specified_reason) }
   end
 
   def compute_latest_authorized
