@@ -121,9 +121,7 @@ module PeriodicEndPhase
     uninserted_set = @uninserted.select{ |_key, info| info[:original_id] == best_cost[0] }.keys
     @uninserted.delete(uninserted_set.first)
     if uninserted_set.size > 1
-      available_days = days_respecting_lapse(best_cost[0], @candidate_routes[best_cost[1][:vehicle]])
-
-      cost = find_best_day_cost(@candidate_routes[best_cost[1][:vehicle]], best_cost[0], available_days)
+      cost = find_best_day_cost(@candidate_routes[best_cost[1][:vehicle]], best_cost[0])
 
       if cost
         costs[best_cost[0]] = cost
@@ -150,8 +148,15 @@ module PeriodicEndPhase
     costs
   end
 
-  def find_best_day_cost(vehicle_routes, id, available_days = nil)
-    available_days ||= days_respecting_lapse(id, vehicle_routes)
+  def find_best_vehicle_day_cost(id)
+    @services_assignment[id][:vehicles].map{ |vehicle_id|
+      find_best_day_cost(@candidate_routes[vehicle_id], id)
+    }.compact.min_by{ |cost| cost[:additional_route_time] } # TODO : find fair comparison between empty and non empty routes
+  end
+
+  def find_best_day_cost(vehicle_routes, id)
+    # FIXME : this function does not return best cost, but earliest day which have a cost
+    available_days = days_respecting_lapse(id, vehicle_routes)
 
     return nil unless available_days.any?
 
@@ -168,11 +173,15 @@ module PeriodicEndPhase
   def compute_first_costs
     costs = {}
 
-    @missing_visits.collect{ |vehicle, list|
-      list.collect{ |service_id|
-        cost = find_best_day_cost(@candidate_routes[vehicle], service_id)
-        costs[service_id] = cost if cost
-      }
+    @services_assignment.each{ |id, data|
+      next unless data[:days].any? && data[:missing_visits].positive?
+
+      # some visits could be assigned but not all of them
+      # we can try to be less restrictive on the lapse we use
+      # TODO : should we consider all IDs again, even if no visit was assigned?
+
+      cost = find_best_vehicle_day_cost(id)
+      costs[id] = cost if cost
     }
 
     costs

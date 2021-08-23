@@ -196,7 +196,6 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@services_data, services_data)
       s.instance_variable_set(:@services_assignment, Marshal.load(File.binread('test/fixtures/add_missing_visits_services_assignment.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@points_assignment, Marshal.load(File.binread('test/fixtures/add_missing_visits_points_assignment.bindump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@missing_visits, Marshal.load(File.binread('test/fixtures/add_missing_visits_missing_visits.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@ids_to_renumber, [])
       starting_with = s.instance_variable_get(:@uninserted).size

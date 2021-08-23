@@ -60,7 +60,6 @@ module Wrappers
       @same_located = {}
 
       @uninserted = {}
-      @missing_visits = {}
 
       if OptimizerWrapper.config[:debug][:output_periodic]
         @output_tool = OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end)
@@ -130,8 +129,7 @@ module Wrappers
       @output_tool&.close_file
 
       block&.call(nil, nil, nil, 'periodic heuristic - preparing result', nil, nil, nil)
-      routes = prepare_output_and_collect_routes(vrp)
-      routes
+      prepare_output_and_collect_routes(vrp)
     end
 
     def compute_consistent_positions_to_insert(position_requirement, service_points_ids, route)
@@ -306,7 +304,6 @@ module Wrappers
         end
       }
 
-      @missing_visits[vehicle_id] << service_id if need_to_add_visits
       impacted_days
     end
 

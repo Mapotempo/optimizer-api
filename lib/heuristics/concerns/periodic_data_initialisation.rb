@@ -45,7 +45,6 @@ module PeriodicDataInitialization
         available_ids: [],
         completed: false,
       }
-      @missing_visits[vehicle.original_id] = []
     }
   end
 

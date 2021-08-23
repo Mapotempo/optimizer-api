@@ -165,10 +165,30 @@ class HeuristicTest < Minitest::Test
       # checks performance on instance calling post_processing
       vrp = TestHelper.load_vrp(self, fixture_file: 'periodic_with_post_process')
       vrp.resolution_minimize_days_worked = true
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      found_uninserted_visits = nil
+      Wrappers::PeriodicHeuristic.stub_any_instance(
+        :compute_initial_solution,
+        lambda { |vrp_in|
+          @starting_time = Time.now
+          @candidate_routes = Marshal.load(File.binread('test/fixtures/fill_days_and_post_processing_candidate_routes.bindump')) # rubocop: disable Security/MarshalLoad
+          @candidate_routes.each_value{ |vehicle_routes|
+            vehicle_routes.each_value{ |day_route| day_route[:matrix_id] = vrp.vehicles.first.matrix_id }
+          }
+          @uninserted = Marshal.load(File.binread('test/fixtures/fill_days_and_post_processing_uninserted.bindump')) # rubocop: disable Security/MarshalLoad
+          @services_assignment = Marshal.load(File.binread('test/fixtures/fill_days_and_post_processing_services_assignment.bindump')) # rubocop: disable Security/MarshalLoad
+          # We still have 1000 unassigned visits in this dumped solution
+
+          refine_solution
+          found_uninserted_visits = @uninserted.size
+          prepare_output_and_collect_routes(vrp_in)
+        }
+      ) do
+        periodic = Interpreters::PeriodicVisits.new(vrp)
+        periodic.send(:expand, vrp, nil)
+      end
 
       # voluntarily equal to watch evolution of periodic algorithm performance
-      assert_equal 74, result[:unassigned].size, 'Do not have the expected number of unassigned visits'
+      assert_equal 63, found_uninserted_visits, 'We started end_phase with 1000 unassigned, we should only have 74 left now'
     end
 
     def test_treatment_site
