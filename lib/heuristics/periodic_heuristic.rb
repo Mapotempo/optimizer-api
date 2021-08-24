@@ -278,13 +278,13 @@ module Wrappers
         end
 
       cleaned_service = false
-      (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |visit_number|
+      (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |_visit_number|
         inserted_day = nil
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
           diff = day_to_insert - next_day.round
           next_day += diff
 
-          inserted_day = try_to_insert_at(vehicle_id, day_to_insert, service_id, visit_number)
+          inserted_day = try_to_insert_at(vehicle_id, day_to_insert, service_id)
 
           next_day += @services_data[service_id][:heuristic_period]
           day_to_insert = @candidate_routes[vehicle_id].keys.select{ |day| day >= next_day.round }.min
@@ -821,7 +821,6 @@ module Wrappers
                                   end: start + @services_data[service_id][:durations].first,
                                   considered_setup_duration: 0,
                                   max_shift: max_shift ? max_shift - additional_durations : nil,
-                                  number_in_sequence: 1,
                                   activity: 0) # when using same_point_day, points in same_located relation can not have serveral activities
 
         additional_durations += @services_data[service_id][:durations].first
@@ -1114,7 +1113,6 @@ module Wrappers
                            end: point_to_add[:end],
                            considered_setup_duration: point_to_add[:considered_setup_duration],
                            max_shift: point_to_add[:potential_shift],
-                           number_in_sequence: 1,
                            activity: point_to_add[:activity],
                            requirement: @services_data[point_to_add[:id]][:positions_in_route][point_to_add[:activity]])
 
@@ -1336,7 +1334,7 @@ module Wrappers
       end
     end
 
-    def try_to_insert_at(vehicle_id, day, service_id, visit_number)
+    def try_to_insert_at(vehicle_id, day, service_id)
       # when adjusting routes, tries to insert [service_id] at [day] for [vehicle]
       return if @candidate_routes[vehicle_id][day].nil? ||
                 @candidate_routes[vehicle_id][day][:completed]
@@ -1345,7 +1343,6 @@ module Wrappers
       return unless best_index
 
       insert_point_in_route(@candidate_routes[vehicle_id][day], best_index, false)
-      @candidate_routes[vehicle_id][day][:stops].find{ |stop| stop[:id] == service_id }[:number_in_sequence] = visit_number
       day
     end
 
