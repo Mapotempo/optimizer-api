@@ -23,8 +23,10 @@ class HeuristicTest < Minitest::Test
       services_data[element.id] = { days: [], vehicles: [], missing_visits: element.visits_number, unassigned_reasons: [] }
     }
     vrp.points.each{ |element|
-      points_data[element.id] = { days: [], vehicles: [] }
+      points_data[element.id] = { days: [], vehicles: [], services_ids: [] }
     }
+
+    seen = []
     routes.each{ |vehicle_id, vehicle_routes|
       vehicle_routes.each{ |day, route|
         route[:stops].each{ |stop|
@@ -34,10 +36,16 @@ class HeuristicTest < Minitest::Test
 
           points_data[stop[:point_id]][:vehicles] |= [vehicle_id]
           points_data[stop[:point_id]][:days] |= [day]
+
+          seen << [stop[:point_id], stop[:id]]
         }
       }
     }
 
+    seen.group_by{ |point_id, _id| point_id }.each{ |point_id, set|
+      points_data[point_id][:visits_number] =
+        set.collect{ |data| data[1] }.uniq.collect{ |id| vrp.services.find{ |s| s.id == id }.visits_number }
+    }
     [services_data, points_data]
   end
 
@@ -127,10 +135,10 @@ class HeuristicTest < Minitest::Test
         :@candidate_routes,
         'vehicle_0' => {
           0 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id, capacity: []
           },
           7 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id, capacity: []
           }
         }
       )
@@ -156,21 +164,22 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      s.instance_variable_set(:@candidate_routes,
-                              'vehicle_0' => {
-                                0 => {
-                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
-                                },
-                                3 => {
-                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
-                                },
-                                7 => {
-                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
-                                },
-                                10 => {
-                                  stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id
-                                }
-                            })
+      s.instance_variable_set(
+        :@candidate_routes,
+        'vehicle_0' => {
+          0 => {
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
+          },
+          3 => {
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
+          },
+          7 => {
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
+          },
+          10 => {
+            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
+          }
+      })
       s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
       s.instance_variable_set(:@services_assignment, s_a)
       s.instance_variable_set(:@points_assignment, p_a)
@@ -214,7 +223,7 @@ class HeuristicTest < Minitest::Test
         :@candidate_routes,
         'vehicle_0' => {
           0 => { stops: [{ id: 'service_1', point_id: 'point_0', requirement: :neutral },
-                         { id: 'service_2', point_id: 'point_0', requirement: :never_first }] }
+                         { id: 'service_2', point_id: 'point_0', requirement: :never_first }], capacity: [] }
         })
       s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
       s.instance_variable_set(:@services_assignment, s_a)
@@ -238,7 +247,7 @@ class HeuristicTest < Minitest::Test
         :@candidate_routes,
         'vehicle_0' => {
           0 => { stops: [{ id: 'service_1', point_id: 'point_0', requirement: :never_last },
-                         { id: 'service_2', point_id: 'point_0', requirement: :neutral }] }
+                         { id: 'service_2', point_id: 'point_0', requirement: :neutral }], capacity: [] }
         })
       s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
       s.instance_variable_set(:@services_assignment, s_a)

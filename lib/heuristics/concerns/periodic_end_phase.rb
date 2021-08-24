@@ -65,7 +65,7 @@ module PeriodicEndPhase
       vehicle_id = best_cost[1][:vehicle]
       log "It is interesting to add #{id} at day #{day} on #{vehicle_id}", level: :debug
 
-      insert_point_in_route(@candidate_routes[vehicle_id][day], best_cost[1])
+      insert_visit_in_route(@candidate_routes[vehicle_id][day], best_cost[1])
       @output_tool&.add_single_visit(day, @services_assignment[id][:days], id, @services_data[id][:raw].visits_number)
 
       costs = update_costs(costs, best_cost)
@@ -160,13 +160,6 @@ module PeriodicEndPhase
     end
   end
 
-  def empty_route(route_data)
-    route_data[:stops] = []
-    route_data[:capacity].each{ |unit, qty|
-      route_data[:capacity_left][unit] = qty
-    }
-  end
-
   def reduce_removed(id)
     @still_removed[id] -= 1
     return unless @still_removed[id].zero?
@@ -179,27 +172,23 @@ module PeriodicEndPhase
       smth_removed = false
       all_empty = true
 
-      @candidate_routes.each{ |_vehicle, all_routes|
+      @candidate_routes.each{ |vehicle, all_routes|
         all_routes.each{ |day, route_data|
           next if route_data[:stops].empty?
 
           all_empty = false
 
-          next if route_data[:stops].sum{ |stop|
-                    @services_data[stop[:id]][:raw].exclusion_cost.to_f
-                  } >= route_data[:cost_fixed]
+          route_exclusion_costs = route_data[:stops].sum{ |stop| @services_data[stop[:id]][:raw].exclusion_cost.to_f }
+          next if route_exclusion_costs >= route_data[:cost_fixed]
 
           smth_removed = true
           localy_removed = Hash.new(0)
           route_data[:stops].each{ |stop|
-            @services_assignment[stop[:id]][:days].delete(day)
-            @services_assignment[stop[:id]][:vehicles] = [] unless @services_assignment[stop[:id]][:days].any?
-            @services_assignment[stop[:id]][:missing_visits] += 1
+            remove_visit_from_route(vehicle, day, stop[:id])
             @services_assignment[stop[:id]][:unassigned_reasons] |= ['Corresponding route was poorly populated']
             @output_tool&.remove_visits([day], @services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
             localy_removed[stop[:id]] += 1
           }
-          empty_route(route_data)
 
           localy_removed.each{ |id, number_of_removed|
             @still_removed[id] ||= 0
@@ -261,7 +250,7 @@ module PeriodicEndPhase
           end
         }
         point_to_add = select_point(acceptable_costs, referent_route)
-        insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
+        insert_visit_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
         @output_tool&.add_single_visit(point_to_add[:day], @services_assignment[point_to_add[:id]][:days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
         reduce_removed(point_to_add[:id])
       end
@@ -355,7 +344,7 @@ module PeriodicEndPhase
           else
             point_to_add = select_point(insertion_costs, route_data)
             inserted << point_to_add[:id]
-            insert_point_in_route(route_data, point_to_add, false)
+            insert_visit_in_route(route_data, point_to_add, false)
           end
         end
       else
@@ -421,7 +410,7 @@ module PeriodicEndPhase
       else
         to_plan = sequences.min_by{ |sequence| sequence[:cost] }
         to_plan[:seq].each{ |day|
-          insert_point_in_route(@candidate_routes[to_plan[:vehicle]][day], potential_costs[to_plan[:s_i]][to_plan[:vehicle]][day], false)
+          insert_visit_in_route(@candidate_routes[to_plan[:vehicle]][day], potential_costs[to_plan[:s_i]][to_plan[:vehicle]][day], false)
         }
         @output_tool&.insert_visits(@services_assignment[to_plan[:service]][:days], to_plan[:service], @services_data[to_plan[:service]][:visits_number])
 
