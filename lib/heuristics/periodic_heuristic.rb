@@ -35,7 +35,6 @@ module Wrappers
       @same_point_day = vrp.resolution_same_point_day
       @relaxed_same_point_day = false
       @duration_in_tw = false # TODO: create parameter for this
-      @end_phase = false
       @spread_among_days = !vrp.resolution_minimize_days_worked
 
       # heuristic data

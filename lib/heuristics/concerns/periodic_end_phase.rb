@@ -21,9 +21,6 @@ module PeriodicEndPhase
   extend ActiveSupport::Concern
 
   def refine_solution(&block)
-    @end_phase = true
-    @ids_to_renumber = []
-
     if @allow_partial_assignment && !@same_point_day && !@relaxed_same_point_day
       block&.call(nil, nil, nil, 'periodic heuristic - adding missing visits', nil, nil, nil)
       add_missing_visits
@@ -51,44 +48,6 @@ module PeriodicEndPhase
 
   private
 
-  def reaffect_visits_number
-    @ids_to_renumber.each{ |id|
-      current_visit_index = 1
-      previous_day = nil
-      uninserted_indices = []
-      @services_assignment[id][:days].sort.each{ |day|
-        if previous_day.nil? || previous_day + @services_data[id][:raw].maximum_lapse >= day
-          @services_assignment[id][:vehicles].each{ |vehicle_id|
-            stop = @candidate_routes[vehicle_id][day][:stops].find{ |route_stop| route_stop[:id] == id }
-
-            next unless stop
-
-            stop[:number_in_sequence] = current_visit_index
-          }
-        else
-          uninserted_indices << current_visit_index
-        end
-
-        current_visit_index += 1
-      }
-
-      reasons = []
-      @uninserted.each{ |uninserted_id, info|
-        next unless info[:original_id] == uninserted_id
-
-        @uninserted.delete(uninserted_id)
-        reasons |= info[:reason]
-      }
-
-      uninserted_indices.each{ |indice|
-        @uninserted["#{id}_#{indice}_#{@services_data[id][:raw].visits_number}"] = {
-          original_id: service,
-          reason: "Still unassigned after end_phase. Original reasons : #{reasons}."
-        }
-      }
-    }
-  end
-
   #### ADD MISSING VISITS PROCESS ####
 
   def add_missing_visits
@@ -106,14 +65,11 @@ module PeriodicEndPhase
       vehicle_id = best_cost[1][:vehicle]
       log "It is interesting to add #{id} at day #{day} on #{vehicle_id}", level: :debug
 
-      @ids_to_renumber |= [id]
       insert_point_in_route(@candidate_routes[vehicle_id][day], best_cost[1])
       @output_tool&.add_single_visit(day, @services_assignment[id][:days], id, @services_data[id][:raw].visits_number)
 
       costs = update_costs(costs, best_cost)
     end
-
-    reaffect_visits_number
   end
 
   def update_costs(costs, best_cost)
@@ -206,8 +162,6 @@ module PeriodicEndPhase
     elsif @allow_partial_assignment
       log 'Reaffection with allow_partial_assignment false was usefull', level: :warn
     end
-
-    reaffect_visits_number
   end
 
   def empty_underfilled
@@ -312,7 +266,6 @@ module PeriodicEndPhase
           end
         }
         point_to_add = select_point(acceptable_costs, referent_route)
-        @ids_to_renumber |= [point_to_add[:id]]
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
         @output_tool&.add_single_visit(point_to_add[:day], @services_assignment[point_to_add[:id]][:days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
         still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
@@ -404,7 +357,6 @@ module PeriodicEndPhase
             else
               previous_was_filled = true
               route_data[:stops].each{ |stop|
-                @ids_to_renumber |= [stop[:id]]
                 still_removed.delete(still_removed.find{ |removed| removed.first == stop[:id] })
                 @output_tool&.add_single_visit(route_data[:day], @services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
                 @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == stop[:id] }[0])
@@ -480,7 +432,6 @@ module PeriodicEndPhase
         most_prio_and_frequent = []
       else
         to_plan = sequences.min_by{ |sequence| sequence[:cost] }
-        @ids_to_renumber |= [to_plan[:service]]
         to_plan[:seq].each{ |day|
           insert_point_in_route(@candidate_routes[to_plan[:vehicle]][day], potential_costs[to_plan[:s_i]][to_plan[:vehicle]][day], false)
         }
