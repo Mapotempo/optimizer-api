@@ -22,8 +22,8 @@ module PeriodicDataInitialization
 
   def generate_route_structure(vrp)
     vrp.vehicles.each{ |vehicle|
-      capacity = compute_capacities(vehicle[:capacities], true)
-      vrp.units.reject{ |unit| capacity.key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
+      capacity = compute_capacities(vrp, vehicle.capacities, true)
+      @candidate_routes[vehicle.original_id] ||= {}
       @candidate_routes[vehicle.original_id][vehicle.global_day_index] = {
         # vehicle: vehicle # it is costly to use this
         vehicle_original_id: vehicle.original_id,
@@ -134,7 +134,7 @@ module PeriodicDataInitialization
       @services_assignment[service.id] = { vehicles: [], days: [], missing_visits: service.visits_number, unassigned_reasons: [] }
       @services_data[service.id] = {
         raw: service,
-        capacity: compute_capacities(service.quantities, false, available_units),
+        capacity: compute_capacities(vrp, service.quantities, false, available_units),
         setup_durations: service.activity ? [service.activity.setup_duration] : service.activities.collect(&:setup_duration),
         durations: service.activity ? [service.activity.duration] : service.activities.collect(&:duration),
         heuristic_period: compute_period(service, one_working_day_per_vehicle),
@@ -158,7 +158,7 @@ module PeriodicDataInitialization
   end
 
   def adapt_services_data(vrp)
-    # reminder : services in (relaxed_)same_point_day relation have only one point_id
+    # REMINDER : services in (relaxed_)same_point_day relation can only have one point_id
 
     @to_plan_service_ids = []
     vrp.points.each{ |point|
@@ -280,26 +280,30 @@ module PeriodicDataInitialization
     end
   end
 
-  def compute_capacities(quantities, vehicle, available_units = [])
+  def compute_capacities(vrp, quantities, is_vehicle, available_units = [])
     return {} if quantities.nil?
 
     capacities = {}
-    quantities.each{ |unit|
-      if vehicle
-        if capacities[unit[:unit][:id]]
-          capacities[unit[:unit][:id]] += unit[:limit].to_f
+    quantities.each{ |data|
+      if is_vehicle
+        if capacities[data.unit.id]
+          capacities[data.unit.id] += data.limit.to_f
         else
-          capacities[unit[:unit][:id]] = unit[:limit].to_f
+          capacities[data.unit.id] = data.limit.to_f
         end
-      elsif available_units.include?(unit[:unit][:id])
+      elsif available_units.include?(data.unit.id)
         # if vehicled do not have this unit then this unit should be ignored
         # with clustering, issue is open about assigning vehicles with right capacities to services
-        if capacities[unit[:unit][:id]]
-          capacities[unit[:unit][:id]] += unit[:value].to_f
+        if capacities[data.unit.id]
+          capacities[data.unit.id] += data.value.to_f
         else
-          capacities[unit[:unit][:id]] = unit[:value].to_f
+          capacities[data.unit.id] = data.value.to_f
         end
       end
+    }
+
+    vrp.units.reject{ |unit| capacities.key?(unit.id) }.each{ |missing_unit|
+      capacities[missing_unit.id] = 0.0
     }
 
     capacities

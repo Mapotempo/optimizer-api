@@ -299,6 +299,7 @@ class HeuristicTest < Minitest::Test
       # check generated routes
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
+      s.initialize_routes(routes)
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:stops].size == expecting.size } })
 
@@ -333,6 +334,7 @@ class HeuristicTest < Minitest::Test
 
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       periodic = Wrappers::PeriodicHeuristic.new(vrp)
+      periodic.initialize_routes(vrp.routes)
       generated_starting_routes = periodic.instance_variable_get(:@candidate_routes)
 
       # periodic initialization uses best order to initialize routes

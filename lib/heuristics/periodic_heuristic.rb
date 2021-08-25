@@ -29,46 +29,45 @@ module Wrappers
     def initialize(vrp, job = nil)
       return if vrp.services.empty?
 
-      # global data
-      @schedule_end = vrp.schedule_range_indices[:end]
+      # heuristic parameters
       @allow_partial_assignment = vrp.resolution_allow_partial_assignment
       @same_point_day = vrp.resolution_same_point_day
-      @relaxed_same_point_day = false
-      @duration_in_tw = false # TODO: create parameter for this
+      @relaxed_same_point_day = false   # relaxed version of same_point_day if this one was activated
+      @duration_in_tw = false           # TODO: create parameter in vrp for this (issue340)
       @spread_among_days = !vrp.resolution_minimize_days_worked
 
-      # heuristic data
+      # global data
       @services_data = {}
-      @candidate_services_ids = []
-      @to_plan_service_ids = []
-      @used_to_adjust = []
-
-      @candidate_routes = {}
-      @services_assignment = {} # For each service_id, specifies how it has been assigned
-      @points_assignment = {} # For each service_id, specifies how it has been assigned
-      vrp.vehicles.group_by(&:original_id).each{ |vehicle_id, _set|
-        @candidate_routes[vehicle_id] = {}
-      }
-
+      @candidate_services_ids = []      # all service_ids
+      @to_plan_service_ids = []         # subset of @candidate_services_ids : only service_ids we can assign at this
+                                        # point some services need one service at same location and with more visits
+                                        # to be planned before
+      @same_located = {}                # services at same location as key
+      @services_unlocked_by = {}        # specifies which service_id allows other service_ids to be in to_plan_service_ids
+      @unlocked = []                    # specifies if a service should follow another service
+      @used_to_adjust = []              # services for whom we already tried to assign all visits (plan_next_visits)
+      @schedule_end = vrp.schedule_range_indices[:end]
       @indices = {}
       @matrices = vrp[:matrices]
 
-      # same_point_day : service with higher heuristic_period unlocks others
-      @services_unlocked_by = {}
-      @unlocked = {}
-      @same_located = {}
+      # heuristic result data
+      @cost = 0                         # cost of current solution.
+                                        # FIXME : this cost might not be correct (issue422)
+      @candidate_routes = {}
+      @services_assignment = {}         # For each service_id, specifies how it has been assigned
+      @points_assignment = {}           # For each point_id, specifies how it has been assigned
 
+      # debug data
       if OptimizerWrapper.config[:debug][:output_periodic]
         @output_tool = OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end)
       end
 
+      # fill structures
       generate_route_structure(vrp)
       collect_services_data(vrp)
       @max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
       collect_indices(vrp)
       compute_latest_authorized
-      @cost = 0
-      initialize_routes(vrp.routes) unless vrp.routes.empty?
     end
 
     def compute_initial_solution(vrp, &block)
@@ -80,6 +79,7 @@ module Wrappers
 
       block&.call(nil, nil, nil, 'periodic heuristic - start solving', nil, nil, nil)
       @starting_time = Time.now
+      initialize_routes(vrp.routes)
       @output_tool&.add_comment('COMPUTE_INITIAL_SOLUTION')
 
       fill_days
@@ -974,9 +974,9 @@ module Wrappers
       # when @duration_in_tw is disabled, only arrival time of first point at a given location matters in tw
       (@same_point_day || @relaxed_same_point_day) &&
         !@duration_in_tw &&
-        @services_data.has_key?(previous_service_id) && # not coming from depot
+        @services_data.key?(previous_service_id) && # previous is different from depot
         @services_data[previous_service_id][:points_ids].first == @services_data[service_id][:points_ids].first # same location as previous
-        # reminder : services in (relaxed_)same_point_day relation have only one point_id
+        # REMINDER : services in (relaxed_)same_point_day relation can only have one point_id
     end
 
     def find_timewindows(previous, inserted_service, route_data)
