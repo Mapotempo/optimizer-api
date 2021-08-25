@@ -69,11 +69,6 @@ module Wrappers
       compute_latest_authorized
       @cost = 0
       initialize_routes(vrp.routes) unless vrp.routes.empty?
-
-      # secondary data
-      @previous_candidate_service_ids = nil
-      @previous_uninserted = nil
-      @previous_candidate_routes = nil
     end
 
     def compute_initial_solution(vrp, &block)
@@ -102,8 +97,6 @@ module Wrappers
         fill_days
       end
 
-      save_status
-
       # Reorder routes with solver and try to add more visits
       if vrp.resolution_solver && !@candidate_services_ids.empty?
         block&.call(nil, nil, nil, 'periodic heuristic - re-ordering routes', nil, nil, nil)
@@ -113,17 +106,8 @@ module Wrappers
       end
 
       refine_solution(&block)
-
-      begin
-        check_solution_validity
-      rescue StandardError
-        log 'Solution after calling solver to reorder routes is unfeasible.', level: :warn
-        restore
-      end
-
-      check_solution_validity
-
       @output_tool&.close_file
+      check_solution_validity
 
       block&.call(nil, nil, nil, 'periodic heuristic - preparing result', nil, nil, nil)
       prepare_output_and_collect_routes(vrp)
@@ -1406,20 +1390,6 @@ module Wrappers
         vehicle: vehicle,
         mission_ids: services.collect{ |service| service[:id] }
       }]
-    end
-
-    def save_status
-      @previous_candidate_routes = Marshal.load(Marshal.dump(@candidate_routes))
-      @previous_services_assignment = Marshal.load(Marshal.dump(@services_assignment))
-      @previous_points_assignment = Marshal.load(Marshal.dump(@points_assignment))
-      @previous_candidate_service_ids = Marshal.load(Marshal.dump(@candidate_services_ids))
-    end
-
-    def restore
-      @candidate_routes = @previous_candidate_routes
-      @services_assignment = @previous_services_assignment
-      @points_assignment = @previous_points_assignment
-      @candidate_services_ids = @previous_candidate_service_ids
     end
 
     def reject_all_visits(service_id, visits_number, specified_reason)
