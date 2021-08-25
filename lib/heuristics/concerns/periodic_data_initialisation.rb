@@ -54,7 +54,7 @@ module PeriodicDataInitialization
     routes.sort_by(&:day_index).each{ |defined_route|
       associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.day_index.to_i]
       defined_route.mission_ids.each{ |id|
-        next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
+        next if !@services_data.key?(id) # id has been removed when detecting unfeasible services in wrapper
 
         best_index = find_best_index(id, associated_route, false) if associated_route
         considered_ids << id
@@ -62,14 +62,11 @@ module PeriodicDataInitialization
           insert_point_in_route(associated_route, best_index, false)
 
           # unlock corresponding services
-          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_id] }
+          services_to_add = @services_unlocked_by[id].to_a & @candidate_services_ids
           @to_plan_service_ids += services_to_add
           @unlocked += services_to_add
         else
-          @uninserted["#{id}_#{considered_ids.count(id)}_#{@services_data[id][:raw].visits_number}"] = {
-            original_id: id,
-            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.day_index}) : already #{associated_route ? associated_route[:stops].size : 0} elements in route"
-          }
+          @services_assignment[id][:unassigned_reasons] |= ['Can not add this service to its corresponding route']
         end
 
         @candidate_services_ids.delete(id)
@@ -79,22 +76,21 @@ module PeriodicDataInitialization
     }
 
     routes.sort_by(&:day_index).each{ |defined_route|
-      plan_routes_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
+      # TODO : try to affect missing visits with add_missing visits functions (because plan_next_visits only plans after last planned day, not in between)
+      # Should plan_next_visits use this logic always ?
+      plan_visits_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
     }
 
-    # TODO : try to affect missing visits with add_missing visits functions
+    considered_ids.each{ |id|
+      @services_assignment[id][:missing_visits] = @services_data[id][:raw].visits_number - @services_assignment[id][:days].size
+      next unless @services_assignment[id][:missing_visits].positive?
 
-    @uninserted.group_by{ |_k, v| v[:original_id] }.each{ |id, set|
-      (set.size + 1..@services_data[id][:raw].visits_number).each{ |visit|
-        @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
-          original_id: id,
-          reason: 'Routes provided do not allow to assign this visit because previous visit could not be planned in specified route'
-        }
-      }
+      @services_assignment[id][:unassigned_reasons] |=
+        ['Routes provided do not allow to assign this visit because previous visit could not be planned in specified route']
     }
   end
 
-  def plan_routes_missing_in_routes(vehicle_id, day)
+  def plan_visits_missing_in_routes(vehicle_id, day)
     max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
     return unless @candidate_routes[vehicle_id][day]
 
@@ -104,7 +100,10 @@ module PeriodicDataInitialization
     }.each{ |stop|
       id = stop[:id]
 
-      next if @services_assignment[id][:days].size == @services_data[id][:raw].visits_number
+      next if @services_assignment[id][:days].size == @services_data[id][:raw].visits_number ||
+              # if we rejected services this implies we could not affect one service to its corresponding route
+              # therefore, trying to insert more visits might cause inconsistency
+              @services_assignment[id][:unassigned_reasons].any?
 
       plan_next_visits(vehicle_id, id, @services_assignment[id][:days].size + 1)
       @output_tool&.insert_visits(@services_assignment[id][:days], id, @services_data[id][:visits_number])
@@ -119,7 +118,8 @@ module PeriodicDataInitialization
       if service.maximum_lapse.nil? || service.maximum_lapse >= ideal_lapse
         ideal_lapse
       else
-        reject_all_visits(service.id, service.visits_number, 'Vehicles have only one working day, no lapse will allow to affect more than one visit.')
+        reject_all_visits(service.id, service.visits_number,
+                          'Vehicles have only one working day, no lapse will allow to affect more than one visit.')
         nil
       end
     else
@@ -168,7 +168,8 @@ module PeriodicDataInitialization
 
       group_tw = best_common_tw(same_located_set)
       if group_tw.empty? && !same_located_set.all?{ |_id, data| data[:tws_sets].first.empty? }
-        reject_group(same_located_set, 'Same_point_day conflict : services at this geographical point have no compatible timewindow')
+        reject_group(same_located_set,
+                     'Same_point_day conflict : services at this geographical point have no compatible timewindow')
       else
         representative_ids = []
         # one representative per freq

@@ -174,12 +174,11 @@ class HeuristicTest < Minitest::Test
           @candidate_routes.each_value{ |vehicle_routes|
             vehicle_routes.each_value{ |day_route| day_route[:matrix_id] = vrp.vehicles.first.matrix_id }
           }
-          @uninserted = Marshal.load(File.binread('test/fixtures/fill_days_and_post_processing_uninserted.bindump')) # rubocop: disable Security/MarshalLoad
           @services_assignment = Marshal.load(File.binread('test/fixtures/fill_days_and_post_processing_services_assignment.bindump')) # rubocop: disable Security/MarshalLoad
           # We still have 1000 unassigned visits in this dumped solution
 
           refine_solution
-          found_uninserted_visits = @uninserted.size
+          found_uninserted_visits = @services_assignment.sum{ |_id, data| data[:missing_visits] }
           prepare_output_and_collect_routes(vrp_in)
         }
       ) do

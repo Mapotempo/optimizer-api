@@ -20,7 +20,7 @@ require './test/test_helper'
 class HeuristicTest < Minitest::Test
   def get_assignment_data(routes, vrp, services_data = {}, points_data = {})
     vrp.services.each{ |element|
-      services_data[element.id] = { days: [], vehicles: [] }
+      services_data[element.id] = { days: [], vehicles: [], missing_visits: element.visits_number, unassigned_reasons: [] }
     }
     vrp.points.each{ |element|
       points_data[element.id] = { days: [], vehicles: [] }
@@ -30,6 +30,7 @@ class HeuristicTest < Minitest::Test
         route[:stops].each{ |stop|
           services_data[stop[:id]][:vehicles] |= [vehicle_id]
           services_data[stop[:id]][:days] |= [day]
+          services_data[stop[:id]][:missing_visits] -= 1
 
           points_data[stop[:point_id]][:vehicles] |= [vehicle_id]
           points_data[stop[:point_id]][:days] |= [day]
@@ -63,7 +64,7 @@ class HeuristicTest < Minitest::Test
 
       vrp.vehicles = []
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      assert_equal 2, (s.instance_variable_get(:@services_assignment).count{ |id, data| data[:unassigned_reasons].any? })
+      assert_equal 2, (s.instance_variable_get(:@services_assignment).count{ |_id, data| data[:unassigned_reasons].any? })
     end
 
     def test_compute_best_common_tw_when_no_conflict_tw
@@ -186,29 +187,22 @@ class HeuristicTest < Minitest::Test
       add_missing_visits_candidate_routes = Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_routes.bindump')) # rubocop: disable Security/MarshalLoad
       add_missing_visits_candidate_routes.each_value{ |vehicle| vehicle.each_value{ |route| route[:matrix_id] = vrp.vehicles.first.matrix_id } }
       s.instance_variable_set(:@candidate_routes, add_missing_visits_candidate_routes)
-      s.instance_variable_set(:@uninserted, Marshal.load(File.binread('test/fixtures/add_missing_visits_uninserted.bindump'))) # rubocop: disable Security/MarshalLoad
       services_data = Marshal.load(File.binread('test/fixtures/add_missing_visits_services_data.bindump')) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@services_data, services_data)
       s.instance_variable_set(:@services_assignment, Marshal.load(File.binread('test/fixtures/add_missing_visits_services_assignment.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@points_assignment, Marshal.load(File.binread('test/fixtures/add_missing_visits_points_assignment.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@candidate_services_ids, Marshal.load(File.binread('test/fixtures/add_missing_visits_candidate_services_ids.bindump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@ids_to_renumber, [])
-      starting_with = s.instance_variable_get(:@uninserted).size
+      starting_with = s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:missing_visits] }
       s.send(:add_missing_visits)
 
       candidate_routes = s.instance_variable_get(:@candidate_routes)
-      uninserted = s.instance_variable_get(:@uninserted)
-      candidate_services_ids = s.instance_variable_get(:@candidate_services_ids)
+      uninserted_number = s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:missing_visits] }
       assert_equal vrp.visits, candidate_routes.sum{ |_v, d| d.sum{ |_day, route| route[:stops].size } } +
-                               uninserted.size +
-                               candidate_services_ids.sum{ |id| s.instance_variable_get(:@services_data)[id][:raw].visits_number }
-      assert starting_with >= s.instance_variable_get(:@uninserted).size
-
-      all_ids = (uninserted.keys +
-                 candidate_routes.collect{ |_v, d| d.collect{ |_day, route_day| route_day[:stops].collect{ |stop| "#{stop[:id]}_#{stop[:number_in_sequence]}_#{services_data[stop[:id]][:raw].visits_number}" } } } +
-                 candidate_services_ids.collect{ |id| (1..services_data[id][:raw].visits_number).collect{ |visit_index| "#{id}_#{visit_index}_#{services_data[id][:raw].visits_number}" } }).flatten
-      assert_equal vrp.visits, all_ids.size
-      assert_equal vrp.visits, all_ids.uniq.size
+                               uninserted_number
+      assert starting_with > uninserted_number
+      assert_equal vrp.visits,
+                   candidate_routes.sum{ |_v_id, v_routes| v_routes.sum{ |_day, day_route| day_route[:stops].size } } +
+                   s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:missing_visits] }
     end
 
     def test_clean_stops_with_position_requirement_never_first

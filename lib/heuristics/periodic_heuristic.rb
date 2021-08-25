@@ -58,8 +58,6 @@ module Wrappers
       @unlocked = []
       @same_located = {}
 
-      @uninserted = {}
-
       if OptimizerWrapper.config[:debug][:output_periodic]
         @output_tool = OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end)
       end
@@ -256,16 +254,14 @@ module Wrappers
       seen_visits == all_days.size
     end
 
-    def reject_according_to_allow_partial_assignment(service_id, impacted_days, visit_number)
+    def reject_according_to_allow_partial_assignment(service_id, impacted_days)
       if @allow_partial_assignment
-        @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
-          original_id: service_id,
-          reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_assignment[service_id][:days].min}"
-        }
-        [true, impacted_days, false]
+        @services_assignment[service_id][:unassigned_reasons] |=
+          ['Visit not assignable by heuristic because of previous visits assignment']
+        [impacted_days, false]
       else
         clean_stops(service_id)
-        [false, [], true]
+        [[], true]
       end
     end
 
@@ -282,7 +278,6 @@ module Wrappers
         end
 
       cleaned_service = false
-      need_to_add_visits = false
       (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |visit_number|
         inserted_day = nil
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
@@ -298,8 +293,8 @@ module Wrappers
         if inserted_day
           impacted_days |= [inserted_day]
         else
-          need_to_add_visits, impacted_days, cleaned_service =
-            reject_according_to_allow_partial_assignment(service_id, impacted_days, visit_number)
+          impacted_days, cleaned_service =
+            reject_according_to_allow_partial_assignment(service_id, impacted_days)
         end
       }
 
@@ -398,17 +393,19 @@ module Wrappers
     def collect_unassigned
       unassigned = []
 
-      @candidate_services_ids.each{ |id|
-        service_in_vrp = @services_data[id][:raw]
-        (1..service_in_vrp.visits_number).each{ |index|
-          reason = provide_fair_reason(id)
-          unassigned << get_unassigned_info("#{id}_#{index}_#{service_in_vrp.visits_number}", service_in_vrp, reason)
-        }
-      }
+      @services_assignment.each{ |id, data|
+        next unless data[:unassigned_indices].any?
 
-      @uninserted.each{ |uninserted_id, info|
-        service_in_vrp = @services_data[info[:original_id]][:raw]
-        unassigned << get_unassigned_info(uninserted_id, service_in_vrp, info[:reason])
+        if @candidate_services_ids.include?(id)
+          @services_assignment[id][:unassigned_reasons] = [provide_fair_reason(id)]
+        end
+
+        data[:unassigned_indices].each{ |index|
+          unassigned_id = "#{id}_#{index}_#{@services_data[id][:raw].visits_number}"
+          unassigned << get_unassigned_info(unassigned_id,
+                                            @services_data[id][:raw],
+                                            @services_assignment[id][:unassigned_reasons].join(','))
+        }
       }
 
       unassigned
@@ -506,9 +503,8 @@ module Wrappers
           route_data[:available_ids] |= service_id
         }
       }
-      @uninserted.each{ |uninserted_id, info|
-        @uninserted.delete(uninserted_id) if info[:original_id] == service_id
-      }
+      @services_assignment[service_id][:missing_visits] = @services_data[service_id][:raw].visits_number
+      @services_assignment[:unassigned_reasons] = []
     end
 
     def clean_stops(service_id, reaffect = false)
@@ -547,15 +543,11 @@ module Wrappers
         reject_all_visits(service_id, @services_data[service_id][:raw].visits_number, 'Partial assignment only')
       end
 
-      # unaffected all points at this location
+      # Unaffect all points at this location
+      # FIXME : do we really want to unaffect those ?
       points_at_same_location = @candidate_services_ids.select{ |id| @services_data[id][:points_ids] == @services_data[service_id][:points_ids] }
       points_at_same_location.each{ |id|
-        (1..@services_data[id][:raw].visits_number).each{ |visit|
-          @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
-            original_id: id,
-            reason: 'Partial assignment only'
-          }
-        }
+        @services_assignment[id][:unassigned_reasons] |= ['Partial assignment only']
         @candidate_services_ids.delete(id)
         @to_plan_service_ids.delete(id)
       }
@@ -856,7 +848,7 @@ module Wrappers
 
       unlocked_ids =
         if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty? && !@relaxed_same_point_day
-          services_to_add = @services_unlocked_by[best_index[:id]] - @uninserted.collect{ |_un, data| data[:original_id] }
+          services_to_add = @services_unlocked_by[best_index[:id]] & @candidate_services_ids
           @to_plan_service_ids += services_to_add
           @unlocked += services_to_add
 
@@ -1430,26 +1422,23 @@ module Wrappers
 
     def save_status
       @previous_candidate_routes = Marshal.load(Marshal.dump(@candidate_routes))
-      @previous_uninserted = Marshal.load(Marshal.dump(@uninserted))
+      @previous_services_assignment = Marshal.load(Marshal.dump(@services_assignment))
+      @previous_points_assignment = Marshal.load(Marshal.dump(@points_assignment))
       @previous_candidate_service_ids = Marshal.load(Marshal.dump(@candidate_services_ids))
     end
 
     def restore
       @candidate_routes = @previous_candidate_routes
-      @uninserted = @previous_uninserted
+      @services_assignment = @previous_services_assignment
+      @points_assignment = @previous_points_assignment
       @candidate_services_ids = @previous_candidate_service_ids
     end
 
-    def reject_all_visits(original_service_id, visits_number, specified_reason)
-      visits_number.times.each{ |visit_index|
-        @uninserted["#{original_service_id}_#{visit_index + 1}_#{visits_number}"] = {
-          original_id: original_service_id,
-          reason: specified_reason
-        }
-      }
-
-      @candidate_services_ids.delete(original_service_id)
-      @to_plan_service_ids.delete(original_service_id)
+    def reject_all_visits(service_id, visits_number, specified_reason)
+      @services_assignment[service_id][:missing_visits] = visits_number
+      @services_assignment[service_id][:unassigned_reasons] = [specified_reason]
+      @candidate_services_ids.delete(service_id)
+      @to_plan_service_ids.delete(service_id)
     end
   end
 end
