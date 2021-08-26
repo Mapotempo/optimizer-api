@@ -96,58 +96,61 @@ class HeuristicTest < Minitest::Test
       assert(s.instance_variable_get(:@services_assignment).none?{ |_id, data| data[:unassigned_reasons].any? })
     end
 
-    def test_compute_service_lapse
-      vrp = VRP.periodic_seq_timewindows
-      vrp[:services][0][:visits_number] = 1
-      vrp[:services][0][:minimum_lapse] = 10
-
-      vrp[:services][1][:visits_number] = 2
-      vrp[:services][1][:minimum_lapse] = 7
-
-      vrp[:services][2][:visits_number] = 2
-      vrp[:services][2][:minimum_lapse] = 10
-
-      vrp[:services][3][:visits_number] = 2
-      vrp[:services][3][:minimum_lapse] = 6
-      vrp = TestHelper.create(vrp)
+    def test_compute_period
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      vrp.services = [vrp.services.first]
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      data_services = s.instance_variable_get(:@services_data)
-      assert_equal 6, data_services.size
-      assert_nil data_services['service_1'][:heuristic_period]
-      assert_equal 7, data_services['service_2'][:heuristic_period]
-      assert_equal 10, data_services['service_3'][:heuristic_period]
-      assert_equal 6, data_services['service_4'][:heuristic_period]
+      [[1, 10], [2, 7], [2, 10], [2, 6]].each{ |visits_number, minimum_lapse|
+        vrp.services.first.visits_number = visits_number
+        vrp.services.first.minimum_lapse = minimum_lapse
+
+        if visits_number > 1
+          assert_equal minimum_lapse, s.send(:compute_period, vrp.services.first, false)
+        else
+          assert_nil s.send(:compute_period, vrp.services.first, false)
+        end
+      }
     end
 
-    def test_clean_stops
-      vrp = VRP.periodic_seq_timewindows
-      vrp[:services][0][:visits_number] = 2
-      vrp[:services][0][:minimum_lapse] = 7
-
-      vrp = TestHelper.create(vrp)
+    def test_compute_period_when_work_day_split
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      data_services = s.instance_variable_get(:@services_data)
-      assert_equal 7, data_services['service_1'][:heuristic_period]
+      [[2, 6, 10, 7], [3, 5, 9, 7], [3, 2, 4, nil]].each{ |visits_number, minimum_lapse, maximum_lapse, expected|
+        vrp.services.first.visits_number = visits_number
+        vrp.services.first.minimum_lapse = minimum_lapse
+        vrp.services.first.maximum_lapse = maximum_lapse
 
-      s.instance_variable_set(
-        :@candidate_routes,
-        'vehicle_0' => {
-          0 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id, capacity: []
-          },
-          7 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle_id: vrp.vehicles.first.id, capacity: []
+        if expected
+          assert_equal expected, s.send(:compute_period, vrp.services.first, true)
+        else
+          assert_nil s.send(:compute_period, vrp.services.first, true)
+          assert_equal ['Vehicles have only one working day, no lapse will allow to affect more than one visit.'],
+                       s.instance_variable_get(:@services_assignment)[vrp.services.first.original_id][:unassigned_reasons]
+        end
+      }
+    end
+
+    def test_one_working_day_per_vehicle_properly_computed
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      vrp.services = [vrp.services.first] # in order to call compute_period only once per loop
+      values = []
+
+      [[[0] * 4, true], [[0] * 2 + [1] * 2, false]].each{ |day_indices, expected|
+        Wrappers::PeriodicHeuristic.stub_any_instance(:compute_period, lambda{ |_service, one_working_day_per_vehicle|
+          values << one_working_day_per_vehicle
+          expected
+        }) do
+          vrp.vehicles.each_with_index{ |v, v_i|
+            v.global_day_index = day_indices[v_i]
           }
-        }
-      )
-      s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
-      s.instance_variable_set(:@services_assignment, s_a)
-      s.instance_variable_set(:@points_assignment, p_a)
-      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id])
-      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
-      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:stops].size
+          Wrappers::PeriodicHeuristic.new(vrp)
+        end
+      }
+
+      assert_equal [true, false], values
     end
 
     def test_clean_stops_small_lapses
@@ -374,66 +377,94 @@ class HeuristicTest < Minitest::Test
       assert_operator times_back_to_depot[0], :!=, times_back_to_depot[1]
     end
 
+    def test_compute_first_ones
+      vrp = VRP.periodic_seq_timewindows
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      assert_equal [0], s.send(:compute_first_ones, [])
+      assert_equal (0..3).to_a, s.send(:compute_first_ones, [:always_first, :never_middle, :always_first, :neutral])
+      assert_equal (0..3).to_a, s.send(:compute_first_ones, [:always_first, :never_middle, :always_first, :always_middle, :neutral])
+    end
+
+    def test_compute_last_ones
+      vrp = VRP.periodic_seq_timewindows
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      assert_equal [0], s.send(:compute_last_ones, [])
+      assert_equal [4], s.send(:compute_last_ones, [:always_first, :never_middle, :always_first, :neutral])
+      assert_equal [4], s.send(:compute_last_ones, [:always_first, :never_middle, :always_first, :always_middle])
+      assert_equal [3, 4], s.send(:compute_last_ones, [:always_first, :never_middle, :always_first, :never_middle])
+    end
+
     def test_positions_provided
       vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
 
-      assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [])
-      assert_equal [0, 1], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
-                                                                                                     { requirement: :neutral, point_id: 'point' }])
-      assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
-      assert_equal [0, 1, 2, 3], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
-                                                                                                           { requirement: :never_middle, point_id: 'point' },
-                                                                                                           { requirement: :always_first, point_id: 'point' },
-                                                                                                           { requirement: :neutral, point_id: 'point' },
-                                                                                                           { requirement: :neutral, point_id: 'point' },
-                                                                                                           { requirement: :always_last, point_id: 'point' }])
+      fct = lambda do |requirement, routes, point_id = ['unknow_point']|
+        s.compute_consistent_positions_to_insert(requirement, point_id, routes)
+      end
 
-      assert_equal [], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
-                                                                                                   { requirement: :always_last, point_id: 'point' }])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
-                                                                                                   { requirement: :neutral, point_id: 'point' }])
-      assert_equal [1, 2], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
-                                                                                                      { requirement: :always_middle, point_id: 'point' },
-                                                                                                      { requirement: :neutral, point_id: 'point' }])
+      assert_equal [0], fct.call(:always_first, [])
+      assert_equal [0, 1], fct.call(:always_first, [{ requirement: :always_first, point_id: 'point' },
+                                                    { requirement: :neutral, point_id: 'point' }])
+      assert_equal [0], fct.call(:always_first, [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [0, 1, 2, 3], fct.call(:always_first, [{ requirement: :always_first, point_id: 'point' },
+                                                          { requirement: :never_middle, point_id: 'point' },
+                                                          { requirement: :always_first, point_id: 'point' },
+                                                          { requirement: :neutral, point_id: 'point' },
+                                                          { requirement: :neutral, point_id: 'point' },
+                                                          { requirement: :always_last, point_id: 'point' }])
 
-      assert_equal [0], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
-      assert_equal [2, 3, 4, 5], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
-                                                                                                          { requirement: :neutral, point_id: 'point' },
-                                                                                                          { requirement: :always_last, point_id: 'point' },
-                                                                                                          { requirement: :always_last, point_id: 'point' },
-                                                                                                          { requirement: :always_last, point_id: 'point' }])
+      assert_equal [], fct.call(:always_middle, [])
+      assert_equal [1], fct.call(:always_middle, [{ requirement: :always_first, point_id: 'point' },
+                                                  { requirement: :always_last, point_id: 'point' }])
+      assert_equal [1], fct.call(:always_middle, [{ requirement: :neutral, point_id: 'point' },
+                                                  { requirement: :neutral, point_id: 'point' }])
+      assert_equal [1, 2], fct.call(:always_middle, [{ requirement: :neutral, point_id: 'point' },
+                                                     { requirement: :always_middle, point_id: 'point' },
+                                                     { requirement: :neutral, point_id: 'point' }])
 
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
-                                                                                                 { requirement: :always_last, point_id: 'point' }])
-      assert_equal [1, 2], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
-                                                                                                    { requirement: :neutral, point_id: 'point' },
-                                                                                                    { requirement: :always_last, point_id: 'point' }])
+      assert_equal [0], fct.call(:always_last, [])
+      assert_equal [1], fct.call(:always_last, [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [2, 3, 4, 5], fct.call(:always_last, [{ requirement: :neutral, point_id: 'point' },
+                                                         { requirement: :neutral, point_id: 'point' },
+                                                         { requirement: :always_last, point_id: 'point' },
+                                                         { requirement: :always_last, point_id: 'point' },
+                                                         { requirement: :always_last, point_id: 'point' }])
 
-      assert_equal [0], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [])
-      assert_equal [0, 1], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
-      assert_equal [0, 1, 3], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
-                                                                                                        { requirement: :neutral, point_id: 'point' },
-                                                                                                        { requirement: :neutral, point_id: 'point' }])
+      assert_equal [], fct.call(:never_first, [])
+      assert_equal [1], fct.call(:never_first, [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [1], fct.call(:never_first, [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [], fct.call(:never_first, [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [1], fct.call(:never_first, [{ requirement: :neutral, point_id: 'point' },
+                                                { requirement: :always_last, point_id: 'point' }])
+      assert_equal [1, 2], fct.call(:never_first, [{ requirement: :always_first, point_id: 'point' },
+                                                   { requirement: :neutral, point_id: 'point' },
+                                                   { requirement: :always_last, point_id: 'point' }])
 
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [])
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
-      assert_equal [0], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
-      assert_equal [0], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [0], fct.call(:never_middle, [])
+      assert_equal [0, 1], fct.call(:never_middle, [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [0, 1, 3], fct.call(:never_middle, [{ requirement: :always_first, point_id: 'point' },
+                                                       { requirement: :neutral, point_id: 'point' },
+                                                       { requirement: :neutral, point_id: 'point' }])
+
+      assert_equal [], fct.call(:never_last, [])
+      assert_equal [], fct.call(:never_last, [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [0], fct.call(:never_last, [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [0], fct.call(:never_last, [{ requirement: :always_last, point_id: 'point' }])
 
       # with point at same location :
-      assert_equal [2, 3], s.compute_consistent_positions_to_insert(:always_middle, ['same_point'], [{ requirement: :always_first, point_id: 'point' },
-                                                                                                     { requirement: :neutral, point_id: 'point' },
-                                                                                                     { requirement: :neutral, point_id: 'same_point' },
-                                                                                                     { requirement: :neutral, point_id: 'point' }])
+      assert_equal [2, 3], fct.call(:always_middle, [{ requirement: :always_first, point_id: 'point' },
+                                                     { requirement: :neutral, point_id: 'point' },
+                                                     { requirement: :neutral, point_id: 'same_point' },
+                                                     { requirement: :neutral, point_id: 'point' }], ['same_point'])
+
     end
 
     def test_insertion_cost_with_tw_choses_best_value
@@ -650,55 +681,6 @@ class HeuristicTest < Minitest::Test
       assert s.send(:exist_possible_first_route_according_to_same_point_day?, 'id', 'point_0') # can assign to 0 and 2 and 4
     end
 
-    def test_lapse_when_only_one_working_week_day
-      raw_vrp = VRP.periodic
-      raw_vrp[:services][0][:visits_number] = 2
-      raw_vrp[:services][0][:minimum_lapse] = 6
-      raw_vrp[:services][0][:maximum_lapse] = 10
-      raw_vrp[:services][1][:visits_number] = 3
-      raw_vrp[:services][1][:minimum_lapse] = 5
-      raw_vrp[:services][1][:maximum_lapse] = 9
-      raw_vrp[:services][2][:visits_number] = 3
-      raw_vrp[:services][2][:minimum_lapse] = 2
-      raw_vrp[:services][2][:maximum_lapse] = 4
-      raw_vrp[:configuration][:schedule][:range_indices][:end] = 21
-
-      vrp = TestHelper.create(raw_vrp)
-      vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::PeriodicHeuristic.new(vrp)
-      assert_equal [6, 5, 2], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
-
-      raw_vrp[:vehicles].first.delete(:timewindow)
-      raw_vrp[:vehicles].first[:sequence_timewindows] = [{ start: 0, end: 20, day_index: 0 }]
-      vrp = TestHelper.create(raw_vrp)
-      vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::PeriodicHeuristic.new(vrp)
-      # only one route per week, lapse should be multiple of 7
-      assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
-      assert_equal 3, s.instance_variable_get(:@services_assignment)['service_3'][:missing_visits],
-                   'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
-
-      raw_vrp[:vehicles] << {
-        id: 'new_vehicle',
-        matrix_id: 'matrix_0',
-        timewindow: { start: 0, end: 20 }
-      }
-      vrp = TestHelper.create(raw_vrp)
-      vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::PeriodicHeuristic.new(vrp)
-      # all days are allowed again
-      assert_equal [6, 5, 2], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
-
-      raw_vrp[:vehicles].last.delete(:timewindow)
-      raw_vrp[:vehicles][1][:sequence_timewindows] = [{ start: 0, end: 20, day_index: 2 }]
-      vrp = TestHelper.create(raw_vrp)
-      vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::PeriodicHeuristic.new(vrp)
-      assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
-      assert_equal 3, s.instance_variable_get(:@services_assignment)['service_3'][:missing_visits],
-                   'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
-    end
-
     def test_day_in_possible_interval
       vrp = TestHelper.create(VRP.periodic)
       vrp.services.first.visits_number = 4
@@ -750,6 +732,217 @@ class HeuristicTest < Minitest::Test
         assert_equal assigned, services_assignment['service_1'][:assigned_indices]
         assert_equal unassigned, services_assignment['service_1'][:unassigned_indices]
       }
+    end
+
+    def test_initialize_routes
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
+      vrp.routes = [Models::Route.create(vehicle: vrp.vehicles[0], mission_ids: %w[1810 1623 2434 8508], day_index: 2)]
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+      s.send(:initialize_routes, vrp.routes)
+
+      assert_empty %w[1810 1623 2434 8508] -
+                   s.instance_variable_get(:@candidate_routes)['ANDALUCIA 1'][2][:stops].map{ |stop| stop[:id] },
+                   'All these visits should have been assigned to this route'
+      services_assignment = s.instance_variable_get(:@services_assignment)
+      assert %w[1810 1623 2434 8508].all?{ |id| services_assignment[id][:missing_visits] == 0 },
+             'All these services\'s visits should have been assigned'
+    end
+
+    def test_initialize_routes_vehicle_not_available_at_provided_day
+      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+      s.send(:initialize_routes,
+             [Models::Route.create(vehicle_id: vrp.vehicles.first.original_id,
+                                   mission_ids: %w[5482 0833 8595 0352 0799 2047 5446 0726 0708],
+                                   day_index: 300)]) # not available in schedule
+
+      assert_equal 9, s.instance_variable_get(:@services_assignment).count{ |_id, data| data[:unassigned_reasons].any? },
+                   'At least one visit of these 9 services should be rejected because it can not be planned at day 300'
+      assert %w[5482 0833 8595 0352 0799 2047 5446 0726 0708].none?{ |id_in_route|
+        s.instance_variable_get(:@services_assignment)[id_in_route][:days].any?
+      }, 'None of those services\' visit should be assign to avoid unconsisitency with provided routes'
+    end
+
+    def test_plan_visits_missing_in_routes
+      problem = VRP.periodic
+      problem[:services].first[:visits_number] = 3
+      problem[:configuration][:schedule][:range_indices][:end] = 8
+      vrp = TestHelper.create(problem)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      # assume first visit was assigned at day one :
+      s.instance_variable_get(:@services_assignment)['service_1'][:days] = [0]
+      s.instance_variable_get(:@services_assignment)['service_1'][:missing_visits] -= 1
+      s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops] << { id: 'service_1' }
+
+      s.send(:plan_visits_missing_in_routes, 'vehicle_0', 0, ['service_1'])
+      assert_equal [0, 1, 2], s.instance_variable_get(:@services_assignment)['service_1'][:days],
+                   'First visit was correctly assigned, other visits were not considered, hence we can assign all visits'
+
+      # back to initial case but with bigger lapse :
+      s.instance_variable_get(:@services_assignment)['service_1'][:days] = [0]
+      s.instance_variable_get(:@services_data)['service_1'][:heuristic_period] = 2
+      s.send(:plan_visits_missing_in_routes, 'vehicle_0', 0, ['service_1'])
+      assert_equal [0, 2, 4], s.instance_variable_get(:@services_assignment)['service_1'][:days],
+                   'First visit was correctly assigned, other visits were not considered, hence we can assign all visits while respecting minimum lapse'
+
+      # back to initial case but with bigger lapse :
+      s.instance_variable_get(:@services_assignment)['service_1'][:days] = [0]
+      s.send(:plan_visits_missing_in_routes, 'vehicle_0', 0, ['service_1', 'service_1'])
+      assert_equal [0], s.instance_variable_get(:@services_assignment)['service_1'][:days],
+                   'Two visits were considered, but only one assigned to a day. We can not insert more visits without risking to generate unconsistency'
+    end
+
+    def test_adjust_services_data
+      vrp = TestHelper.load_vrps(self, fixture_file: 'performance_13vl')[0]
+      vrp.resolution_same_point_day = false
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      p_h = Wrappers::PeriodicHeuristic.new(vrp)
+
+      assert_equal 181, p_h.instance_variable_get(:@candidate_services_ids).size
+      assert_equal 181, p_h.instance_variable_get(:@to_plan_service_ids).size
+
+      p_h.instance_variable_set(:@same_point_day, true)
+      p_h.send(:adapt_services_data)
+      assert_equal 181, p_h.instance_variable_get(:@candidate_services_ids).size
+      assert_equal vrp.services.map{ |s| s.activity.point_id }.uniq.size,
+                   p_h.instance_variable_get(:@to_plan_service_ids).size,
+                   'At the beginning of algorithm, there should be one service to plan per location'
+
+      p_h.instance_variable_get(:@services_unlocked_by).each{ |id, other_ids|
+        next if other_ids.empty?
+
+        leader = vrp.services.find{ |s| s.id == id }
+        other_visits = other_ids.collect{ |other_id| vrp.services.find{ |s| s.id == other_id } }
+        assert_operator leader.visits_number, :>=, other_visits.map(&:visits_number).max,
+                        'Leader should have more visits than services it represents'
+        assert_equal 1, ([leader.activity.point_id] + other_visits.map{ |other| other.activity.point_id }).uniq.size
+      }
+    end
+
+    def test_plan_next_visits
+      problem = VRP.periodic
+      problem[:services].first[:visits_number] = 3
+      vrp = TestHelper.create(problem)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      # simulate assigning at first day
+      s.instance_variable_get(:@services_assignment)['service_1'][:days] = [0]
+      s.send(:plan_next_visits, 'vehicle_0', 'service_1', 2)
+      assert_equal [0, 1, 2], s.instance_variable_get(:@services_assignment)['service_1'][:days],
+                   'All missing visits should have been assigned because it is possible too'
+
+      s.instance_variable_get(:@services_assignment)['service_1'][:days] = [2]
+      s.send(:plan_next_visits, 'vehicle_0', 'service_1', 2)
+      assert_equal [2, 3], s.instance_variable_get(:@services_assignment)['service_1'][:days],
+                   'For now, this function does not allow to assign any visit before already inserted one(s)'
+      assert_equal 1, (s.instance_variable_get(:@services_assignment).count{ |_id, data| data[:unassigned_reasons].any? })
+
+      s.instance_variable_set(:@allow_partial_assignment, false)
+      s.instance_variable_get(:@services_assignment)['service_1'][:days] = [2]
+      s.send(:plan_next_visits, 'vehicle_0', 'service_1', 2)
+      assert_equal [], s.instance_variable_get(:@services_assignment)['service_1'][:days],
+                   'We can only assign 2 out of 3 visits and allow_partial_assignme is off so every visit should be unassigned'
+      assert_equal 1, (s.instance_variable_get(:@services_assignment).count{ |_id, data| data[:unassigned_reasons].any? })
+    end
+
+    def test_adjust_candidate_routes
+      problem = VRP.periodic
+      vrp = TestHelper.create(problem)
+      vrp.services = vrp.services[0..1]
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops] =
+        [{ id: 'service_1', point_id: 'point_1' }, { id: 'service_2', point_id: 'point_2' }]
+      s_a, _p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
+      s.instance_variable_set(:@services_assignment, s_a)
+
+      s.send(:adjust_candidate_routes, 'vehicle_0', 0)
+      assert_equal 2, (s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:days].size })
+      assert_equal 0, (s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:missing_visits] })
+
+      s.instance_variable_get(:@services_data)['service_1'][:raw].visits_number = 3
+      s.instance_variable_get(:@services_data)['service_1'][:heuristic_period] = 1
+      s.instance_variable_get(:@services_data)['service_1'][:raw].first_possible_days = [0, 1, 2]
+      s.instance_variable_get(:@services_data)['service_1'][:raw].last_possible_days = [1, 2, 3]
+      s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops] =
+        [{ id: 'service_1', point_id: 'point_1' }, { id: 'service_2', point_id: 'point_2' }]
+      s_a, _p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
+      s.instance_variable_set(:@services_assignment, s_a)
+      s.instance_variable_set(:@used_to_adjust, [])
+      assert_equal 2, (s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:days].size })
+      assert_equal 2, (s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:missing_visits] })
+
+      s.send(:adjust_candidate_routes, 'vehicle_0', 0)
+      assert_equal 4, (s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:days].size })
+      assert_equal 0, (s.instance_variable_get(:@services_assignment).sum{ |_id, data| data[:missing_visits] })
+    end
+
+    def test_update_route
+      problem = VRP.lat_lon_periodic_two_vehicles
+      problem[:matrices].each{ |m|
+        [:time, :distance].each{ |dimension|
+          m[dimension] = m[dimension].collect.with_index{ |line, l|
+                           line.collect.with_index{ |_, i| i == l ? 0 : 1 } }
+        }
+      }
+
+      vrp = TestHelper.create(problem)
+      vrp.services.each{ |s| s.activity.duration = 1 }
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      route_data = { day: 0, tw_start: 0, tw_end: 50, start_point_id: vrp.vehicles.first.start_point_id, matrix_id: 'm1',
+                     stops: vrp.services.collect{ |service|
+                      { id: service.id, start: 0, arrival: 0, end: 0, activity: 0, point_id: service.activity.point_id } } }
+      s.send(:update_route, route_data, 5)
+      assert_equal 5 * 3 + 1, route_data[:stops].flat_map{ |stop| [stop[:start], stop[:arrival], stop[:end]] }.count(0)
+      s.send(:update_route, route_data, 0)
+      assert_equal (0..26).to_a, route_data[:stops].flat_map{ |stop| [stop[:start], stop[:arrival], stop[:end]] }.uniq
+
+      # check setup durations properly computed
+      s.instance_variable_get(:@services_data).each{ |_id, data| data[:setup_durations] = [1] }
+      s.send(:update_route, route_data, 0)
+      assert_equal 13, (route_data[:stops].sum{ |stop| stop[:considered_setup_duration] })
+
+      route_data[:stops][-1][:point_id] = route_data[:stops][-2][:point_id]
+      s.send(:update_route, route_data, 0)
+      assert_equal 12, (route_data[:stops].sum{ |stop| stop[:considered_setup_duration] })
+    end
+
+    def test_update_route_can_ignore_timewindow
+      problem = VRP.lat_lon_periodic_two_vehicles
+      problem[:matrices].each{ |m|
+        [:time, :distance].each{ |dimension|
+          m[dimension] = m[dimension].collect.with_index{ |line, l|
+                           line.collect.with_index{ |_, i| i == l ? 0 : 1 } }
+        }
+      }
+
+      vrp = TestHelper.create(problem)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      vrp.services.last.activity.timewindows = [Models::Timewindow.create(start: 5, end: 7)]
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+      route_data = { day: 0, tw_start: 0, tw_end: 50, start_point_id: vrp.vehicles.first.start_point_id, matrix_id: 'm1',
+                     stops: vrp.services.collect{ |service|
+                      { id: service.id, start: 0, arrival: 0, end: 0, activity: 0, point_id: service.activity.point_id } }}
+      # service can not start before 25 which is outside service timewindows
+      assert_raises do
+        s.send(:update_route, route_data, 0)
+      end
+
+      # this is ignored when point at same location is right before and same_point_day is on
+      vrp.services[-1].activity.point_id = vrp.services[-2].activity.point_id
+      route_data[:stops][-1][:point_id] = route_data[:stops][-2][:point_id]
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+      s.instance_variable_set(:@same_point_day, true)
+      s.send(:update_route, route_data, 0)
+      assert_equal (0..12).to_a, route_data[:stops].flat_map{ |stop| [stop[:start], stop[:arrival], stop[:end]] }.uniq
     end
   end
 end

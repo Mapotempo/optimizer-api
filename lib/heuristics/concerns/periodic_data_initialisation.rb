@@ -20,6 +20,8 @@ require 'active_support/concern'
 module PeriodicDataInitialization
   extend ActiveSupport::Concern
 
+  # Generate one route per vehicle and day combination.
+  # Provide all route constraints and specificities.
   def generate_route_structure(vrp)
     vrp.vehicles.each{ |vehicle|
       capacity = compute_capacities(vrp, vehicle.capacities, true)
@@ -48,6 +50,8 @@ module PeriodicDataInitialization
     }
   end
 
+  # In the case routes were provided in vrp,
+  # feel routes accordingly
   def initialize_routes(routes)
     @output_tool&.add_comment('INITIALIZE_ROUTES')
     considered_ids = []
@@ -76,9 +80,7 @@ module PeriodicDataInitialization
     }
 
     routes.sort_by(&:day_index).each{ |defined_route|
-      # TODO : try to affect missing visits with add_missing visits functions (because plan_next_visits only plans after last planned day, not in between)
-      # Should plan_next_visits use this logic always ?
-      plan_visits_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
+      plan_visits_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i, considered_ids)
     }
 
     considered_ids.each{ |id|
@@ -90,26 +92,31 @@ module PeriodicDataInitialization
     }
   end
 
-  def plan_visits_missing_in_routes(vehicle_id, day)
+  # In the case routes were provided in vrp, plan missing visits of services
+  # whom some visits were partially assigned in routes.
+  def plan_visits_missing_in_routes(vehicle_id, day, considered_ids)
     max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
     return unless @candidate_routes[vehicle_id][day]
 
     @candidate_routes[vehicle_id][day][:stops].sort_by{ |stop|
-      id = stop[:id]
-      @services_data[id][:priority].to_f + 1 / (max_priority * @services_data[id][:raw].visits_number**2)
+      @services_data[stop[:id]][:priority].to_f + 1 / (max_priority * @services_data[stop[:id]][:raw].visits_number**2)
     }.each{ |stop|
-      id = stop[:id]
+      next if @services_assignment[stop[:id]][:days].size == @services_data[stop[:id]][:raw].visits_number ||
+              # if we assigned less visits (days) than number of times we considered id
+              # this implies we could not insert one visit to its route. Therefore planning missing
+              # visits might generate unconsistency with provided data
+              @services_assignment[stop[:id]][:days].size < considered_ids.count(stop[:id])
 
-      next if @services_assignment[id][:days].size == @services_data[id][:raw].visits_number ||
-              # if we rejected services this implies we could not affect one service to its corresponding route
-              # therefore, trying to insert more visits might cause inconsistency
-              @services_assignment[id][:unassigned_reasons].any?
-
-      plan_next_visits(vehicle_id, id, @services_assignment[id][:days].size + 1)
-      @output_tool&.insert_visits(@services_assignment[id][:days], id, @services_data[id][:visits_number])
+      # TODO : try to affect missing visits with add_missing visits functions
+      # (because plan_next_visits only plans after last planned day, not in between)
+      plan_next_visits(vehicle_id, stop[:id], @services_assignment[stop[:id]][:days].size + 1)
+      @output_tool&.insert_visits(@services_assignment[stop[:id]][:days], stop[:id], @services_data[id][:visits_number])
     }
   end
 
+  # Deduce lapse to use in heuristic according to minimum/maximum_lapse
+  # and the fact of being in a work_day configuration or not.
+  # This could be improved (issue 452, 664)
   def compute_period(service, one_working_day_per_vehicle)
     if service.visits_number == 1
       nil
@@ -127,6 +134,7 @@ module PeriodicDataInitialization
     end
   end
 
+  # Provide all services's visits and activities specificities
   def collect_services_data(vrp)
     available_units = vrp.vehicles.flat_map{ |v| v.capacities.collect{ |capacity| capacity.unit.id } }.uniq
     one_working_day_per_vehicle = @candidate_routes.all?{ |_vehicle_id, all_routes| all_routes.keys.uniq{ |day| day % 7 }.size == 1 }
@@ -154,25 +162,27 @@ module PeriodicDataInitialization
       end
     }
 
-    adapt_services_data(vrp) if @same_point_day
+    adapt_services_data
   end
 
-  def adapt_services_data(vrp)
+  # In the case same_point_day option is activated, choose one representative
+  # per point_id. Representative is one service with highest number of visits.
+  # Only when representative is assigned we can assign remaining services at this point,
+  # with same and lower frequence.
+  # This is relaxed at @relaxed_same_point_day stage.
+  def adapt_services_data
     # REMINDER : services in (relaxed_)same_point_day relation can only have one point_id
+    return unless @same_point_day
 
     @to_plan_service_ids = []
-    vrp.points.each{ |point|
-      same_located_set = @services_data.select{ |_id, data| data[:points_ids].include?(point.id) }.sort_by{ |_id, data| data[:raw].visits_number }
-
-      next if same_located_set.empty?
-
+    @services_data.group_by{ |_id, data| data[:points_ids].first }.each{ |_point_id, same_located_set|
+      same_located_set.sort_by!{ |_id, data| data[:raw].visits_number }
       group_tw = best_common_tw(same_located_set)
       if group_tw.empty? && !same_located_set.all?{ |_id, data| data[:tws_sets].first.empty? }
         reject_group(same_located_set,
                      'Same_point_day conflict : services at this geographical point have no compatible timewindow')
       else
-        representative_ids = []
-        # one representative per freq
+        representative_ids = [] # also one representative per freq
         same_located_set.group_by{ |_id, data| data[:raw].visits_number }.sort_by{ |visits_number, _sub_set|
           visits_number
         }.each{ |_visits_number, sub_set|
@@ -180,9 +190,9 @@ module PeriodicDataInitialization
           representative_ids << representative_id
           sub_set[0][1][:tws_sets] = [group_tw]
           sub_set[0][1][:group_duration] = sub_set.sum{ |_id, data| data[:durations].first }
-          @same_located[representative_id] = sub_set.collect(&:first) - [representative_id]
+          @same_freq_and_location[representative_id] = sub_set.collect(&:first) - [representative_id]
           sub_set[0][1][:group_capacity] = Marshal.load(Marshal.dump(sub_set[0][1][:capacity]))
-          @same_located[representative_id].each{ |id|
+          @same_freq_and_location[representative_id].each{ |id|
             @services_data[id][:capacity].each{ |unit, value| sub_set[0][1][:group_capacity][unit] += value }
             @services_data[id][:tws_sets] = [group_tw]
           }
@@ -194,6 +204,7 @@ module PeriodicDataInitialization
     }
   end
 
+  # Simplifies time/distance computation between stops
   def collect_indices(vrp)
     vrp.vehicles.each{ |vehicle|
       @indices[vehicle.start_point.id] = vehicle.start_point.matrix_index if vehicle.start_point
@@ -211,6 +222,7 @@ module PeriodicDataInitialization
     }
   end
 
+  # Reject all vists of each service in group with specified reason
   def reject_group(group, specified_reason)
     group.each{ |id, data| reject_all_visits(id, data[:raw].visits_number, specified_reason) }
   end
@@ -280,6 +292,7 @@ module PeriodicDataInitialization
     end
   end
 
+  # Unifies quantities and capacities
   def compute_capacities(vrp, quantities, is_vehicle, available_units = [])
     return {} if quantities.nil?
 

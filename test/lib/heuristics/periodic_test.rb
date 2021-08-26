@@ -325,12 +325,16 @@ class HeuristicTest < Minitest::Test
       assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == "#{vehicle_id}_#{day}" }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
     end
 
-    def test_fix_unfeasible_initial_solution
+    def test_improve_provided_routes
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
-      vrp.routes = [Models::Route.create(vehicle: vrp.vehicles.first, mission_ids: %w[5482 0833 8595 0352 0799 2047 5446 0726 0708], day_index: 0)]
+      vrp.routes = [Models::Route.create(vehicle: vrp.vehicles.first,
+                                         mission_ids: %w[5482 0833 8595 0352 0799 2047 5446 0726 0708],
+                                         day_index: 0)]
 
-      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] = [Models::Timewindow.create(start: 43500, end: 55500)]
-      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] = [Models::Timewindow.create(start: 31500, end: 43500)]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[0] }[:activity][:timewindows] =
+        [Models::Timewindow.create(start: 43500, end: 55500)]
+      vrp.services.find{ |s| s[:id] == vrp.routes.first.mission_ids[1] }[:activity][:timewindows] =
+        [Models::Timewindow.create(start: 31500, end: 43500)]
 
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       periodic = Wrappers::PeriodicHeuristic.new(vrp)
@@ -338,15 +342,9 @@ class HeuristicTest < Minitest::Test
       generated_starting_routes = periodic.instance_variable_get(:@candidate_routes)
 
       # periodic initialization uses best order to initialize routes
-      assert(generated_starting_routes['BALEARES'][0][:stops].find_index{ |stop| stop[:id] == '5482' } >
-             generated_starting_routes['BALEARES'][0][:stops].find_index{ |stop| stop[:id] == '0833' })
-    end
-
-    def test_unassign_if_vehicle_not_available_at_provided_day
-      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
-      vrp.routes = [Models::Route.create(vehicle: vrp.vehicles.first, mission_ids: %w[5482 0833 8595 0352 0799 2047 5446 0726 0708], day_index: 300)]
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 36, result[:unassigned].size
+      assert generated_starting_routes['BALEARES'][0][:stops].find_index{ |stop| stop[:id] == '5482' } >
+             generated_starting_routes['BALEARES'][0][:stops].find_index{ |stop| stop[:id] == '0833' },
+             'Service 0833 can take place before 5482 and its more performant to see 0833 first, thus it shoul be assigned before'
     end
 
     def test_sticky_in_periodic
