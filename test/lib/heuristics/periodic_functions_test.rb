@@ -617,6 +617,7 @@ class HeuristicTest < Minitest::Test
 
       sequences = s.send(:deduce_sequences, 'service_2', 3, [0, 1, 2, 4, 5, 6])
       assert_equal [[0, 2, 4], [0, 2, 5], [1, 4, 6], [2, 4, 6], []], sequences
+      s.instance_variable_set(:@end_phase, true)
       s.instance_variable_set(:@still_removed, {'service_2' => 3})
       s.send(:reaffect_removed_visits)
       new_routes = s.instance_variable_get(:@candidate_routes)

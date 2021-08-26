@@ -44,7 +44,6 @@ module PeriodicDataInitialization
         maximum_ride_distance: vehicle.maximum_ride_distance,
         router_dimension: vehicle.router_dimension.to_sym,
         cost_fixed: vehicle.cost_fixed,
-        available_ids: [],
         completed: false,
       }
     }
@@ -225,20 +224,6 @@ module PeriodicDataInitialization
   # Reject all vists of each service in group with specified reason
   def reject_group(group, specified_reason)
     group.each{ |id, data| reject_all_visits(id, data[:raw].visits_number, specified_reason) }
-  end
-
-  def compute_latest_authorized
-    @services_data.group_by{ |_id, data| [data[:raw].visits_number, data[:heuristic_period]] }.each{ |_parameters, set|
-      latest_day = set.max_by{ |_service, data| data[:raw].last_possible_days.first }.last[:raw].last_possible_days.first # first is for first visit
-
-      @candidate_routes.each{ |vehicle_id, all_routes|
-        all_routes.each_key{ |day|
-          next if day > latest_day
-
-          @candidate_routes[vehicle_id][day][:available_ids] += set.collect(&:first)
-        }
-      }
-    }
   end
 
   def best_common_tw(set)

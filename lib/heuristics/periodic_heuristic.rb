@@ -68,7 +68,6 @@ module Wrappers
       collect_services_data(vrp)
       @max_priority = @services_data.collect{ |_id, data| data[:priority] }.max + 1
       collect_indices(vrp)
-      compute_latest_authorized
     end
 
     # Core of the algorithm
@@ -815,7 +814,6 @@ module Wrappers
       additional_durations = @services_data[best_index[:id]][:durations].first + best_index[:considered_setup_duration]
       @same_freq_and_location[best_index[:id]].each_with_index{ |service_id, i|
         @services_assignment[service_id][:missing_visits] -= 1
-        @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, r_d| r_d[:available_ids].delete(service_id) } }
         @services_assignment[service_id][:days] << route_data[:day]
         @services_assignment[service_id][:vehicles] |= [route_data[:vehicle_original_id]]
         route_data[:stops].insert(best_index[:position] + i + 1,
@@ -963,7 +961,6 @@ module Wrappers
         compatible_vehicle(service_id, route_data) &&
         service_does_not_violate_capacity(service_id, route_data, first_visit) &&
         (!first_visit ||
-          route_data[:available_ids].include?(service_id) &&
           relaxed_or_same_point_day_constraint_respected(service_id, vehicle_id, day) &&
           same_point_compatibility(service_id, day))
     end
@@ -1105,8 +1102,6 @@ module Wrappers
       @points_assignment[point_to_add[:point]][:services_ids] |= [point_to_add[:id]]
       @points_assignment[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
       @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
-
-      @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, r_d| r_d[:available_ids].delete(point_to_add[:id]) } } if first_visit
 
       current_route.insert(point_to_add[:position],
                            id: point_to_add[:id],

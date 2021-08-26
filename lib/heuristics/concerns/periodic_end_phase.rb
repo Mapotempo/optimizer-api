@@ -205,8 +205,6 @@ module PeriodicEndPhase
 
       break if all_empty || !smth_removed
     end
-
-    compute_latest_authorized
   end
 
   def reaffect_removed_visits
@@ -354,9 +352,6 @@ module PeriodicEndPhase
   end
 
   def reaffect_prohibiting_partial_assignment
-    # allow any day to assign visits
-    @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, route_data| route_data[:available_ids] = @services_data.keys } }
-
     banned = []
     adapted_still_removed = @still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
     most_prioritary = adapted_still_removed.group_by{ |removed| @services_data[removed.first][:raw].priority }.min_by{ |priority, _set| priority }[1]
@@ -428,9 +423,6 @@ module PeriodicEndPhase
         most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
       end
     end
-
-    # restaure right days to insert
-    compute_latest_authorized
   end
 
   def deduce_sequences(id, visits_number, days)
