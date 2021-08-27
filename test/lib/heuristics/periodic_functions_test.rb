@@ -477,7 +477,8 @@ class HeuristicTest < Minitest::Test
 
       # standard case :
       s.instance_variable_set(:@candidate_routes, candidate_route.deep_dup)
-      s.send(:remove_poorly_populated_routes, Hash.new(0))
+      s.instance_variable_set(:@still_removed, {})
+      s.send(:remove_poorly_populated_routes)
       assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops]
       (1..3).each{ |day|
         refute_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops]
@@ -492,7 +493,8 @@ class HeuristicTest < Minitest::Test
       s_a, p_a = get_assignment_data(candidate_route, vrp_to_solve)
       s.instance_variable_set(:@services_assignment, s_a)
       s.instance_variable_set(:@points_assignment, p_a)
-      s.send(:remove_poorly_populated_routes, Hash.new(0))
+      s.instance_variable_set(:@still_removed, {})
+      s.send(:remove_poorly_populated_routes)
       (0..3).each{ |day|
         assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops]
       }
@@ -511,7 +513,8 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@services_assignment, s_a)
       s.instance_variable_set(:@points_assignment, p_a)
 
-      s.send(:remove_poorly_populated_routes, Hash.new(0))
+      s.instance_variable_set(:@still_removed, {})
+      s.send(:remove_poorly_populated_routes)
       (0..3).each{ |day|
         assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops]
       }
@@ -541,7 +544,8 @@ class HeuristicTest < Minitest::Test
 
       sequences = s.send(:deduce_sequences, 'service_2', 3, [0, 1, 2, 4, 5, 6])
       assert_equal [[0, 2, 4], [0, 2, 5], [1, 4, 6], [2, 4, 6], []], sequences
-      s.send(:reaffect, {'service_2' => 3})
+      s.instance_variable_set(:@still_removed, {'service_2' => 3})
+      s.send(:reaffect_removed_visits)
       new_routes = s.instance_variable_get(:@candidate_routes)
       # [1, 4, 6] is the only combination such that every day is available for service_2,
       # and none of these day's route is empty
@@ -551,9 +555,10 @@ class HeuristicTest < Minitest::Test
 
       sequences = s.send(:deduce_sequences, 'service_1', 7, [0, 1, 2, 3, 4, 5, 6])
       assert_equal [[0, 1, 2, 3, 4, 5, 6]], sequences
-      s.send(:reaffect, {'service_1' => 7})
+      s.instance_variable_set(:@still_removed, {'service_1' => 7})
+      s.send(:reaffect_removed_visits)
       assert((0..6).all?{ |day| new_routes['vehicle_0'][day][:stops].any?{ |stop| stop[:id]&.include?('service_1') } })
-      s.send(:remove_poorly_populated_routes, Hash.new(0))
+      s.send(:remove_poorly_populated_routes)
       new_routes = s.instance_variable_get(:@candidate_routes)
       # this is room enough to assign every visit of service_1,
       # but that would violate minimum stop per route expected

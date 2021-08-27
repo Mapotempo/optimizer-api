@@ -142,17 +142,18 @@ module PeriodicEndPhase
 
   def correct_poorly_populated_routes
     @output_tool&.add_comment('REMOVE_POORLY_POPULATED_ROUTES PHASE')
+    @still_removed = {}
 
-    removed = remove_poorly_populated_routes(Hash.new(0))
-    return if removed.empty?
+    remove_poorly_populated_routes
+    return if @still_removed.empty?
 
     @output_tool&.add_comment('REAFFECT_FROM_POORLY_POPULATED_ROUTES_PHASE')
 
-    firstly_unassigned = removed.dup
-    still_removed = reaffect(removed)
+    firstly_unassigned = @still_removed.dup
+    reaffect_removed_visits
 
-    still_removed = remove_poorly_populated_routes(still_removed) unless @allow_partial_assignment
-    if @allow_partial_assignment && firstly_unassigned == still_removed
+    remove_poorly_populated_routes unless @allow_partial_assignment
+    if @allow_partial_assignment && firstly_unassigned == @still_removed
       log 'Reaffection with allow_partial_assignment false was pointless', level: :warn
     elsif @allow_partial_assignment
       log 'Reaffection with allow_partial_assignment false was usefull', level: :warn
@@ -166,7 +167,14 @@ module PeriodicEndPhase
     }
   end
 
-  def remove_poorly_populated_routes(removed)
+  def reduce_removed(id)
+    @still_removed[id] -= 1
+    return unless @still_removed[id].zero?
+
+    @still_removed.delete(id)
+  end
+
+  def remove_poorly_populated_routes
     loop do
       smth_removed = false
       all_empty = true
@@ -194,12 +202,13 @@ module PeriodicEndPhase
           empty_route(route_data)
 
           localy_removed.each{ |id, number_of_removed|
+            @still_removed[id] ||= 0
             if @allow_partial_assignment
-              removed[id] += number_of_removed
+              @still_removed[id] += number_of_removed
             else
               clean_stops(id, false)
               @services_assignment[id][:missing_visits] = @services_data[id][:raw].visits_number
-              removed[id] = @services_data[id][:raw].visits_number
+              @still_removed[id] = @services_data[id][:raw].visits_number
             end
           }
         }
@@ -209,24 +218,20 @@ module PeriodicEndPhase
     end
 
     compute_latest_authorized
-    removed
   end
 
-  def reaffect(still_removed)
+  def reaffect_removed_visits
     if @allow_partial_assignment
-      still_removed = reaffect_in_non_empty_route(still_removed)
-      still_removed = generate_new_routes(still_removed)
+      reaffect_in_non_empty_route
+      generate_new_routes
     else
-      still_removed = reaffect_prohibiting_partial_assignment(still_removed)
+      reaffect_prohibiting_partial_assignment
     end
-
-    still_removed
   end
 
-  def reaffect_in_non_empty_route(still_removed)
+  def reaffect_in_non_empty_route
     need_to_stop = false
-    until still_removed.all?{ |_id, nb_of_removed| nb_of_removed == 0 } || need_to_stop
-      remaining_ids = still_removed.select{ |_id, nb_of_removed| nb_of_removed > 0 }.keys
+    until @still_removed.empty? || need_to_stop
       referent_route = nil
       insertion_costs = @candidate_routes.collect{ |vehicle_id, all_routes|
         all_routes.collect{ |day, route_data|
@@ -234,7 +239,7 @@ module PeriodicEndPhase
             []
           else
             referent_route ||= route_data
-            insertion_costs = compute_costs_for_route(route_data, remaining_ids)
+            insertion_costs = compute_costs_for_route(route_data, @still_removed.keys)
             insertion_costs.each{ |cost|
               cost[:vehicle] = vehicle_id
               cost[:day] = day
@@ -258,11 +263,9 @@ module PeriodicEndPhase
         point_to_add = select_point(acceptable_costs, referent_route)
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
         @output_tool&.add_single_visit(point_to_add[:day], @services_assignment[point_to_add[:id]][:days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
-        still_removed[point_to_add[:id]] -= 1
+        reduce_removed(point_to_add[:id])
       end
     end
-
-    still_removed
   end
 
   def collect_empty_routes
@@ -279,21 +282,17 @@ module PeriodicEndPhase
     }
   end
 
-  def chose_best_route(empty_routes, still_removed)
+  def chose_best_route(empty_routes, still_removed_ids)
     # prefer closer vehicles
     closer_vehicles = empty_routes.group_by{ |empty_route_data|
       divider = 0
-      still_removed.sum{ |id, number_of_removed|
-        if number_of_removed.zero?
-          0
-        else
-          @services_data[id][:points_ids].sum{ |point_id|
-            divider += empty_route_data[:stores].size
-            empty_route_data[:stores].sum{ |store|
-              matrix(@candidate_routes[@candidate_routes.keys.first].first[1], store, point_id)
-            }
+      still_removed_ids.sum{ |id|
+        @services_data[id][:points_ids].sum{ |point_id|
+          divider += empty_route_data[:stores].size
+          empty_route_data[:stores].sum{ |store|
+            matrix(@candidate_routes[@candidate_routes.keys.first].first[1], store, point_id)
           }
-        end
+        }
       }.to_f / divider
     }.min_by{ |key, _set| key }[1]
 
@@ -315,13 +314,13 @@ module PeriodicEndPhase
     to_consider_routes[1].min_by{ |empty_route_data| empty_route_data[:day] } # start as soon as possible to maximize number of visits we can assign allong period
   end
 
-  def generate_new_routes(still_removed)
+  def generate_new_routes
     empty_routes = collect_empty_routes
 
     previous_vehicle_filled_info = nil
     previous_was_filled = false
-    until still_removed.all?{ |_id, nb_of_removed| nb_of_removed == 0 } || empty_routes.empty?
-      best_route = chose_best_route(empty_routes, still_removed)
+    until @still_removed.empty? || empty_routes.empty?
+      best_route = chose_best_route(empty_routes, @still_removed.keys)
       vehicle_info = {
         stores: best_route[:stores],
         time_range: best_route[:time_range]
@@ -333,7 +332,7 @@ module PeriodicEndPhase
         keep_inserting = true
         inserted = []
         while keep_inserting
-          insertion_costs = compute_costs_for_route(route_data, still_removed.select{ |_id, nb_of_removed| nb_of_removed > 0 }.keys - inserted)
+          insertion_costs = compute_costs_for_route(route_data, @still_removed.keys - inserted)
 
           if insertion_costs.flatten.empty?
             keep_inserting = false
@@ -349,7 +348,7 @@ module PeriodicEndPhase
             else
               previous_was_filled = true
               route_data[:stops].each{ |stop|
-                still_removed[stop[:id]] -= 1
+                reduce_removed(stop[:id])
                 @output_tool&.add_single_visit(route_data[:day], @services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
               }
             end
@@ -363,16 +362,14 @@ module PeriodicEndPhase
         empty_routes.delete_if{ |tab| tab[:vehicle_id] == best_route[:vehicle_id] && tab[:day] == best_route[:day] }
       end
     end
-
-    still_removed
   end
 
-  def reaffect_prohibiting_partial_assignment(still_removed)
+  def reaffect_prohibiting_partial_assignment
     # allow any day to assign visits
     @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, route_data| route_data[:available_ids] = @services_data.keys } }
 
     banned = []
-    adapted_still_removed = still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
+    adapted_still_removed = @still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
     most_prioritary = adapted_still_removed.group_by{ |removed| @services_data[removed.first][:raw].priority }.min_by{ |priority, _set| priority }[1]
     most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
     until most_prio_and_frequent.empty?
@@ -430,7 +427,7 @@ module PeriodicEndPhase
 
         most_prio_and_frequent.delete_if{ |service| service.first == to_plan[:service] }
         adapted_still_removed.delete_if{ |service| service.first == to_plan[:service] }
-        still_removed[to_plan[:service]] = 0
+        @still_removed.delete(to_plan[:service])
         @services_assignment[to_plan[:service]][:missing_visits] = 0
         @services_assignment[to_plan[:service]][:unassigned_reasons] = []
       end
@@ -445,7 +442,6 @@ module PeriodicEndPhase
 
     # restaure right days to insert
     compute_latest_authorized
-    still_removed
   end
 
   def deduce_sequences(id, visits_number, days)
