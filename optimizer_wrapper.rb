@@ -405,20 +405,59 @@ module OptimizerWrapper
     independent_vrps
   end
 
-  def self.split_independent_vrp_by_sticky_vehicle(vrp)
-    vrp.vehicles.map.with_index{ |vehicle, v_i|
-      vehicle_id = vehicle.id
-      service_ids = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
-      service_vrp = {
+  def self.build_independent_vrp(vrp, service_ids, vehicle_indices)
+    service_vrp = {
         service: nil,
         vrp: vrp,
       }
-      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids, [v_i])
-      split_ratio = 1.0 / vrp.vehicles.size
-      sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
-      sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
-      sub_service_vrp[:vrp].resolution_iterations_without_improvment = vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
-      sub_service_vrp[:vrp]
+    sub_service_vrp =
+      Interpreters::SplitClustering.build_partial_service_vrp(service_vrp,
+                                                              service_ids,
+                                                              vehicle_indices)
+    split_ratio = vehicle_indices.size.to_f / vrp.vehicles.size
+    sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
+    sub_service_vrp[:vrp].resolution_minimum_duration =
+      (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
+    sub_service_vrp[:vrp].resolution_iterations_without_improvment =
+      vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
+    sub_service_vrp[:vrp]
+  end
+
+  def self.split_independent_vrp_by_relation_and_sticky(vrp)
+    vehicle_problem = {}
+    problem_size = -1
+
+    vrp.relations.select{ |relation| Models::Relation::ON_VEHICLES_TYPES.include?(relation.type) }.each{ |relation|
+      problem_size += 1 if relation.linked_vehicle_ids.none?{ |v_id| vehicle_problem.key?(v_id) }
+      if relation.linked_vehicle_ids.count{ |v_id| vehicle_problem[v_id] } > 1
+        raise 'A vehicle belongs to multiple vehicle and sticky relations'
+      end
+
+      index = relation.linked_vehicle_ids.find_index{ |v_id| vehicle_problem[v_id] } || problem_size
+      relation.linked_vehicle_ids.each{ |v_id|
+        vehicle_problem[v_id] = index
+      }
+    }
+    affected_service_ids = Array.new(problem_size + 1) { [] }
+    affected_vehicle_indices = Array.new(problem_size + 1) { [] }
+
+    vrp.vehicles.each.with_index{ |vehicle, v_index|
+      if vehicle_problem.key?(vehicle.id)
+        affected_vehicle_indices[vehicle_problem[vehicle.id]] << v_index
+      else
+        problem_size += 1
+        vehicle_problem[vehicle.id] = problem_size
+        affected_service_ids << []
+        affected_vehicle_indices << [v_index]
+      end
+    }
+    vrp.services.each{ |service|
+      sticky_first_id = service.sticky_vehicle_ids.first
+      index = vehicle_problem[sticky_first_id]
+      affected_service_ids[index] << service.id
+    }
+    affected_service_ids.map.with_index{ |service_ids, problem_index|
+      build_independent_vrp(vrp, service_ids, affected_vehicle_indices[problem_index])
     }
   end
 
@@ -427,7 +466,7 @@ module OptimizerWrapper
     return [vrp] if (vrp.vehicles.size <= 1) || vrp.services.empty? # there might be zero services
 
     if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }
-      return split_independent_vrp_by_sticky_vehicle(vrp)
+      return split_independent_vrp_by_relation_and_sticky(vrp)
     end
     # Cannot split if there is multimodal subtours
     if !vrp.subtours&.any? && vrp.services.all?{ |s| s.sticky_vehicles.empty? }
