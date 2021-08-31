@@ -375,8 +375,12 @@ module Wrappers
       check_vehicle_timewindows_respected(route_data)
     end
 
+    # When relaxed/same_point_day is on, checks if available_days according to
+    # @unlocked logic allow to assign all visits of this service_id
     def exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
       # TODO : eventually consider unavailable_days here
+      # TODO : this function should not be usefull because we should rather deal with particular cases in order
+      # to avoid that this function ever returns false
       return true unless @same_point_day || @relaxed_same_point_day
 
       return true unless @unlocked.key?(service_id) && @services_data[service_id][:raw].visits_number > 1
@@ -392,17 +396,20 @@ module Wrappers
       seen_visits == @services_data[service_id][:raw].visits_number
     end
 
+    # Helps user know if same_point_day parameter made it impossible to assign service
     def provide_fair_reason(service_id)
-      reason = 'Heuristic could not affect this service before all vehicles are full'
-
-      # if no capacity limitation, would there be a way to assign this service
+      # if there were no capacity limitation, would there be a way to assign this service
       # while respecting same_point_day constraints ?
       point_id = @services_data[service_id][:points_ids][0]
-      reason = "All this service's visits can not be assigned with other services at same location" unless exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
 
-      reason
+      if exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
+        return 'Heuristic could not affect this service before all vehicles are full'
+      end
+
+      'All this service\'s visits can not be assigned with other services at same location'
     end
 
+    # At the end of algorithm, collect unassigned services to return in heuristic_result
     def collect_unassigned
       unassigned = []
 
@@ -424,7 +431,11 @@ module Wrappers
       unassigned
     end
 
+    # Provide same timewindow for all services at same
     def provide_group_tws(services, day)
+      # WARNING : this might be risky to do when we start calling ORtools AFTER periodic heuristic.
+      # Indeed, we need to put original timewindows back after calling reorder routes (with logic similar
+      # to wrapper simplifications, which would require to extract first solution logic from periodic expand function)
       services_from_same_point_day_relation = @services_unlocked_by.flat_map{ |id, set| [id, set].flatten }
 
       services.each{ |service|
@@ -435,7 +446,6 @@ module Wrappers
         service.activity.timewindows.delete_if{ |tw| tw.day_index && tw.day_index != day % 7 }
 
         # since service is in a same_point_day_relation then it has only one timewindow_set and duration :
-
         service.activity.timewindows.each{ |original_tw|
           corresponding = find_corresponding_timewindow(day, original_tw.start, @services_data[service[:id]][:tws_sets].first, @services_data[service[:id]][:durations].first)
           corresponding = find_corresponding_timewindow(day, original_tw.end, @services_data[service[:id]][:tws_sets].first, @services_data[service[:id]][:durations].first) if corresponding.nil?
@@ -453,6 +463,8 @@ module Wrappers
       }
     end
 
+    # Call solver in order to reoptimize stops order because heuristic chose best position
+    # at each iteration, but these 'best local choices' might not lead to 'best global order'
     def reorder_stops(vrp)
       @candidate_routes.each{ |vehicle_id, all_routes|
         all_routes.each{ |day, route_data|
@@ -466,9 +478,10 @@ module Wrappers
           log "Re-ordering route for #{vehicle_id} at day #{day} : #{route_data[:stops].size}"
 
           # TODO : test with and without providing initial solution ?
-          route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route_data[:stops])
+          route_vrp.routes = collect_generated_route(route_vrp.vehicles.first, route_data[:stops])
           route_vrp.services = provide_group_tws(route_vrp.services, day) if @same_point_day || @relaxed_same_point_day # to have same data in ORtools and periodic. Customers should ensure all timewindows are the same for same points
 
+          # TODO : call wrapper instead, in order to choose best solver according to route_vrp parameters
           result = OptimizerWrapper.solve(service: :ortools, vrp: route_vrp)
 
           next if result.nil? || !result[:unassigned].empty?
@@ -484,11 +497,13 @@ module Wrappers
           next if periodic_route_time - solver_route_time < minimum_duration ||
                   result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == original_indices # we did not change our points order
 
-          compute_route_from(route_data, result[:routes].first[:activities])
+          compute_route_from(result[:routes].first[:activities], route_data)
         }
       }
     end
 
+    # When one service is removed from a route, we need to make sure position requirement
+    # (never_first, never_last or always_middle mainly) are still respected
     def clean_position_dependent_services(stops, removed_index)
       return if stops.empty?
 
@@ -496,32 +511,18 @@ module Wrappers
         index = removed_index - 1
         while stops[index] && [:never_last, :always_middle].include?(stops[index][:requirement])
           clean_stops(stops[index][:id], true)
-          # index removed so no need to increment index
+        end
+      else
+        index = removed_index
+        while stops[index] && [:never_first, :always_middle].include?(stops[index][:requirement])
+          clean_stops(stops[index][:id], true)
         end
       end
-
-      index = removed_index
-      while stops[index] && [:never_first, :always_middle].include?(stops[index][:requirement])
-        clean_stops(stops[index][:id], true)
-        # index removed so no need to increment index
-      end
     end
 
-    def make_available(service_id)
-      @candidate_services_ids << service_id
-      @candidate_routes.each{ |_vehicle_id, all_routes|
-        all_routes.each{ |day, route_data|
-          next unless day <= @services_data[service_id][:raw].last_possible_days.first # first is for first visit
-
-          route_data[:available_ids] |= service_id
-        }
-      }
-      @services_assignment[service_id][:missing_visits] = @services_data[service_id][:raw].visits_number
-      @services_assignment[:unassigned_reasons] = []
-    end
-
+    # When allow_partial_assignment is false, we might want to remove
+    # all visits of a given service_id from routes because one of them could not be assigned properly
     def clean_stops(service_id, reaffect = false)
-      ### when allow_partial_assignment is false, removes all affected visits of [service_id] because we can not affect all visits ###
       @services_assignment[service_id][:vehicles].each{ |vehicle_id|
         all_days = @services_assignment[service_id][:days].dup
         all_days.each{ |day|
@@ -536,7 +537,10 @@ module Wrappers
       }
 
       if reaffect
-        make_available(service_id)
+        # Edit data to allow service_id to be planned again :
+        @candidate_services_ids << service_id
+        @services_assignment[service_id][:missing_visits] = @services_data[service_id][:raw].visits_number
+        @services_assignment[service_id][:unassigned_reasons] = []
         return
       else
         reject_all_visits(service_id, @services_data[service_id][:raw].visits_number, 'Partial assignment only')
@@ -552,14 +556,15 @@ module Wrappers
       }
     end
 
-    def compute_route_from(new_route, solver_route)
+    # Apply solution from solver on current route
+    def compute_route_from(solver_route, current_route)
       solver_order = solver_route.collect{ |s| s[:service_id] }.compact
-      new_route[:stops].sort_by!{ |stop| solver_order.find_index(stop[:id]) }.collect{ |s| s[:id] }
-      update_route(new_route, 0, solver_route.first[:begin_time])
+      current_route[:stops].sort_by!{ |stop| solver_order.find_index(stop[:id]) }.collect{ |s| s[:id] }
+      update_route(current_route, 0, solver_route.first[:begin_time])
     end
 
+    # For each remaining service to assign, compute the cost of assigning it to route_data
     def compute_costs_for_route(route_data, set = nil)
-      ### for each remaining service to assign, computes the cost of assigning it to [route_data] ###
       unless set
         set = @to_plan_service_ids
         set.delete_if{ |id| @services_data[id][:raw].visits_number == 1 } if @same_point_day
@@ -607,6 +612,8 @@ module Wrappers
       true
     end
 
+    # Compute (potential) shift in start/arrival/end time of services following service_inserted in route_data,
+    # or in route end time is service was inserted in last position
     def compute_shift(route_data, service_inserted, inserted_final_time, next_service)
       if next_service
         shift = 0
@@ -622,13 +629,13 @@ module Wrappers
         end
 
         shift
-      elsif !route_data[:stops].empty?
+      elsif route_data[:stops].any?
         inserted_final_time - route_data[:stops].last[:end]
       end
     end
 
+    # Deduce new start/arrival/end times for the service just after inserted point
     def compute_tw_for_next(inserted_final_time, route_next, dist_from_inserted, current_day)
-      ### compute new start and end times for the service just after inserted point ###
       sooner_start = inserted_final_time
       setup_duration = dist_from_inserted.zero? ? 0 : @services_data[route_next[:id]][:setup_durations][route_next[:activity]]
       if !route_next[:tw].empty?
@@ -642,11 +649,15 @@ module Wrappers
       new_end
     end
 
+    # Return maximum shift acceptable value to shift every element in route from position to then end
+    # if it is possible to shift
     def acceptable?(shift, route_data, position)
       return [true, nil] if route_data[:stops].empty?
 
       computed_shift = shift
-      acceptable = (route_data[:stops][position] && route_data[:stops][position][:max_shift]) ? route_data[:stops][position][:max_shift] >= shift : true
+      acceptable =
+        route_data[:stops][position] && route_data[:stops][position][:max_shift] ?
+          route_data[:stops][position][:max_shift] >= shift : true
 
       if acceptable && route_data[:stops][position + 1]
         (position + 1..route_data[:stops].size - 1).each{ |pos|
@@ -662,6 +673,8 @@ module Wrappers
       [acceptable, computed_shift]
     end
 
+    # Similar as acceptable? : ensure all points at same_location, that will be assigned at same time
+    # as service, can be inserted without producing a shift too big
     def acceptable_for_group?(service, timewindow)
       return true unless @same_point_day && service[:tw].size.positive? && @same_freq_and_location[service[:id]]
 
@@ -676,6 +689,8 @@ module Wrappers
       acceptable_for_group
     end
 
+    # Compute values (values in route + insertion cost) corresponding to inserting service
+    # in route at a time compatible with timewindow, and adjust next service activity if it is more performant
     def insertion_cost_with_tw(timewindow, route_data, service, position)
       original_next_activity = route_data[:stops][position][:activity] if route_data[:stops][position]
       nb_activities_index = route_data[:stops][position] ? @services_data[route_data[:stops][position][:id]][:nb_activities] - 1 : 0
@@ -1429,11 +1444,10 @@ module Wrappers
       route_vrp
     end
 
-    def collect_generated_routes(vehicle, services)
-      [{
+    def collect_generated_route(vehicle, services)
+      [Models::Route.create(
         vehicle: vehicle,
-        mission_ids: services.collect{ |service| service[:id] }
-      }]
+        mission_ids: services.collect{ |service| service[:id] })]
     end
 
     def reject_all_visits(service_id, visits_number, specified_reason)

@@ -153,6 +153,29 @@ class HeuristicTest < Minitest::Test
       assert_equal [true, false], values
     end
 
+    def test_clean_stops
+      vrp = VRP.periodic_seq_timewindows
+      vrp[:services][0][:visits_number] = 2
+      vrp[:services][0][:minimum_lapse] = 7
+
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+      data_services = s.instance_variable_get(:@services_data)
+      assert_equal 7, data_services['service_1'][:heuristic_period]
+
+      [0, 7].each{ |day|
+        s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops] =
+          [{ id: 'service_1', point_id: 'point_0' }]
+      }
+      s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
+      s.instance_variable_set(:@services_assignment, s_a)
+      s.instance_variable_set(:@points_assignment, p_a)
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id])
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
+      assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:stops].size
+    end
+
     def test_clean_stops_small_lapses
       vrp = VRP.periodic_seq_timewindows
       vrp[:services][0][:visits_number] = 4
@@ -167,22 +190,11 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(vrp)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      s.instance_variable_set(
-        :@candidate_routes,
-        'vehicle_0' => {
-          0 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
-          },
-          3 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
-          },
-          7 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
-          },
-          10 => {
-            stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
-          }
-      })
+      [0, 3, 7, 10].each{ |day|
+        s.instance_variable_get(:@candidate_routes)['vehicle_0'][day][:stops] =
+          [{ id: 'service_1', point_id: 'point_0' }]
+      }
+
       s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
       s.instance_variable_set(:@services_assignment, s_a)
       s.instance_variable_set(:@points_assignment, p_a)
@@ -237,7 +249,7 @@ class HeuristicTest < Minitest::Test
       s.send(:clean_stops, 'service_1')
       assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops]
       # service 2 can be assigned again :
-      assert(s.instance_variable_get(:@services_assignment)['service_2'][:unassigned_reasons].empty?)
+      assert_empty(s.instance_variable_get(:@services_assignment)['service_2'][:unassigned_reasons])
       assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size
     end
 
@@ -332,49 +344,70 @@ class HeuristicTest < Minitest::Test
       }
     end
 
-    def test_compute_next_insertion_cost_when_activities
-      vrp = TestHelper.create(VRP.basic)
-      vrp.schedule_range_indices = { start: 0, end: 365 }
+    def test_insertion_cost_with_tw
+      vrp = TestHelper.create(VRP.lat_lon_periodic_two_vehicles)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      route_data = {
+        matrix_id: 'm1', start_point_id: 'point_0', tw_start: 0, tw_end: 50000,
+        stops: [{ id: 'service_1', point_id: 'point_1', activity: 0, start: 0, arrival: 4046, end: 4046, considered_setup_duration: 0, tw: [] }]
+      }
+      assert_equal [0, true, 32640, 36686],
+                   s.send(:insertion_cost_with_tw, { start_time: 32793, arrival_time: 36000, final_time: 36000 },
+                          route_data, { service_id: 'service_4', point_id: 'point_4', duration: 0 }, 0)
+
+      # this function can choose to edit next service activity if it is better :
+      s.instance_variable_get(:@services_data)['service_1'][:point_ids] = ['point_1', 'point_2']
+      s.instance_variable_get(:@services_data)['service_1'][:tws_sets] = [[], []]
+      s.instance_variable_get(:@services_data)['service_1'][:nb_activities] = 2
+      s.instance_variable_get(:@services_data)['service_1'][:durations] = [0, 0]
+      assert_equal [1, true, 31954, 36000],
+                   s.send(:insertion_cost_with_tw, { start_time: 32793, arrival_time: 36000, final_time: 36000 },
+                          route_data, { service_id: 'service_4', point_id: 'point_4', duration: 0, start: 32793, arrival: 36000, end: 36000 }, 0)
+    end
+
+    def test_insertion_cost_with_tw_choses_best_value
+      vrp = VRP.lat_lon_periodic_two_vehicles
+      vrp = TestHelper.create(vrp)
       vrp.vehicles = []
       s = Wrappers::PeriodicHeuristic.new(vrp)
 
-      service = { id: 'service_2', point_id: 'point_2', duration: 0 }
-      timewindow = { start_time: 47517.6, arrival_time: 48559.4, final_time: 48559.4, setup_duration: 0 }
-      route_data = { stops: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 },
-                             { id: 'service_with_activities', point_id: 'point_1', start: 47517.6, arrival: 47517.6, end: 47517.6, considered_setup_duration: 0, activity: 0, duration: 0 }],
-                     tw_end: 100000, router_dimension: :time, matrix_id: 'm1' }
-      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_indices.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@services_data, 'service_with_activities' => { nb_activities: 2,
+                                                                              setup_durations: [0, 0],
+                                                                              durations: [0, 0],
+                                                                              points_ids: ['point_2', 'point_10'],
+                                                                              tws_sets: [[], []] })
 
-      s.send(:insertion_cost_with_tw, timewindow, route_data, service, 1)
+      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/chose_best_value_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
+      s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/chose_best_value_indices.bindump'))) # rubocop: disable Security/MarshalLoad
 
-      assert_equal 0, route_data[:stops].find{ |stop| stop[:id].include?('with_activities') }[:activity]
-      assert_equal 'point_1', route_data[:stops].find{ |stop| stop[:id].include?('with_activities') }[:point_id]
+      timewindow = { start_time: 0, arrival_time: 3807, final_time: 3807, setup_duration: 0 }
+      route_data = { tw_end: 10000, start_point_id: 'point_0', end_point_id: 'point_0', matrix_id: 'm1',
+                     stops: [{ id: 'service_with_activities', point_id: 'point_10', start: 0, arrival: 1990, end: 1990, considered_setup_duration: 0, activity: 1 }] }
+      service = { id: 'service_3', point_id: 'point_3', duration: 0 }
+
+      set = s.send(:insertion_cost_with_tw, timewindow, route_data, service, 0)
+      assert set.last < 10086, "#{set.last} should be the best value among all activities' value"
     end
 
-    def test_compute_shift_two_potential_tws
+    def test_compute_shift
       vrp = TestHelper.create(VRP.periodic)
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      s.instance_variable_set(:@services_data, Marshal.load(File.binread('test/fixtures/compute_shift_services_data.bindump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_shift_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
-      s.instance_variable_set(:@indices, '1028167' => 0, 'endvehicule8' => 270)
-      s.instance_variable_set(:@same_point_day, true)
-      route_data = Marshal.load(File.binread('test/fixtures/compute_shift_route_data.bindump')) # rubocop: disable Security/MarshalLoad
-      potential_tws = Marshal.load(File.binread('test/fixtures/compute_shift_potential_tws.bindump')) # rubocop: disable Security/MarshalLoad
 
-      service_to_plan = '1028167_CLI_84_1AB'
-      service_data = s.instance_variable_get(:@services_data)[service_to_plan]
-      route_data[:stops] = [
-        { id: '1028167_INI_84_1AB', point_id: '1028167', start: 21600, arrival: 21700, end: 22000, considered_setup_duration: 120, activity: 0 }
-      ]
-      route_data[:stops][0][:point_id] = service_data[:points_ids][0]
-      times_back_to_depot = potential_tws.collect{ |tw|
-        _next_a, _accepted, _shift, back_depot = s.send(:insertion_cost_with_tw, tw, route_data, { id: service_to_plan, point_id: service_data[:points_ids][0], duration: 876 }, 0)
-        back_depot
+      route_data = {
+        matrix_id: vrp.matrices.first.id,
+        stops: [{ id: 'service_1', point_id: 'point_1', start: 0, arrival: 4, end: 4, activity: 0, considered_setup_duration: 0 }]
       }
-      assert_operator times_back_to_depot[0], :!=, times_back_to_depot[1]
+      assert_equal (-2), s.send(:compute_shift,
+                                route_data, { id: 'service_2', point_id: 'point_2', activity: 0 }, 2,
+                                { id: 'service_1', start: 0, arrival: 4, end: 4, activity: 0, point_id: 'point_2' })
+      route_data[:stops] = [{ id: 'service_2', point_id: 'point_2', activity: 0, start: 0, arrival: 5, end: 5 },
+                            { id: 'service_1', point_id: 'point_1', activity: 0, start: 5, arrival: 7, end: 7 }]
+      assert_equal 8, s.send(:compute_shift,
+                             route_data, { id: 'service_3', point_id: 'point_3', activity: 0 }, 10,
+                             { id: 'service_1', start: 0, arrival: 5, end: 7, activity: 0, point_id: 'point_1' })
     end
 
     def test_compute_first_ones
