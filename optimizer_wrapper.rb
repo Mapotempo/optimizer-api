@@ -722,7 +722,7 @@ module OptimizerWrapper
     route[:day] = provide_day(vrp, route)
     provide_visits_index(vrp, route[:activities])
     details = compute_route_travel_distances(vrp, matrix, route, vehicle)
-    compute_route_waiting_times(route) unless route[:activities].empty? || solvers.include?('vroom')
+    compute_route_waiting_times(route) unless route[:activities].empty?
 
     if route[:end_time] && route[:start_time]
       route[:total_time] = route[:end_time] - route[:start_time]
