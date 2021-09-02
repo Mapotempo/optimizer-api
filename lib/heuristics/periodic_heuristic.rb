@@ -585,6 +585,10 @@ module Wrappers
       }.compact
     end
 
+
+    # Check if we can assign first visit of service_id at day without violating
+    # same_point_day constraint for this visit or any following one.
+    # All services at same location should be assigned at same days as service with higher frequency.
     def same_point_compatibility(service_id, day)
       # REMINDER : services in (relaxed_)same_point_day relation can only have one point_id
       same_point = @services_data[service_id][:points_ids].first
@@ -594,15 +598,19 @@ module Wrappers
         return @points_assignment[same_point][:days].include?(day)
       end
 
+      # If @relaxed_same_point_day is on, @unlocked may not contain service_id but we still
+      # want ot maximize number of common days with visits at same location.
+      # If @unlocked contains service_id then one service with higher or same frequency was already inserted
+      # so we can refert to @points_assignment[same_point][:days]
+
       min_overall_lapse =
         (@services_data[service_id][:raw].visits_number - 1) * @services_data[service_id][:heuristic_period]
       if @relaxed_same_point_day
         involved_days = (day..day + min_overall_lapse).step(@services_data[service_id][:heuristic_period]).to_a
         common_days = involved_days & @points_assignment[same_point][:days]
-        freq_max_at_point = @points_assignment[same_point][:services_ids].map{ |id| @services_data[id][:raw].visits_number }.max
         expected_number =
-          if @services_data[service_id][:raw].visits_number > freq_max_at_point
-            freq_max_at_point
+          if @services_data[service_id][:raw].visits_number > @points_assignment[same_point][:days].size
+            @points_assignment[same_point][:days].size
           else
             involved_days.size
           end
@@ -941,11 +949,10 @@ module Wrappers
 
       return true if @points_assignment[point][:vehicles].empty?
 
-      freq_max_at_point = @points_assignment[point][:services_ids].map{ |id| @services_data[id][:raw].visits_number }.max
       if @relaxed_same_point_day
         @points_assignment[point][:vehicles].include?(vehicle_id) &&
           (@points_assignment[point][:days].include?(day) ||
-          freq_max_at_point < @services_data[service_id][:raw].visits_number)
+          @points_assignment[point][:days].size < @services_data[service_id][:raw].visits_number)
       else # @same_point_day is on :
         !@unlocked.key?(service_id) ||
           @points_assignment[point][:vehicles].include?(vehicle_id) &&
@@ -1099,7 +1106,6 @@ module Wrappers
       @services_assignment[point_to_add[:id]][:vehicles] |= [point_to_add[:vehicle]]
       @points_assignment[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
       @points_assignment[point_to_add[:point]][:days] |= [route_data[:day]]
-      @points_assignment[point_to_add[:point]][:services_ids] |= [point_to_add[:id]]
       @points_assignment[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
       @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
@@ -1144,11 +1150,6 @@ module Wrappers
         if @points_assignment[removed_point][:days].empty?
           @points_assignment[removed_point][:vehicles] = []
         end
-        @points_assignment[removed_point][:services_ids].delete(service_id) unless @services_assignment[service_id][:days].any?
-      end
-      if @services_assignment[service_id][:days].empty?
-        # service_id is not assigned anymore
-        @points_assignment[removed_point][:services_ids].delete(service_id)
       end
       @output_tool&.remove_visits(
         [day], @services_data[service_id][:used_days], service_id, @services_data[service_id][:raw].visits_number)

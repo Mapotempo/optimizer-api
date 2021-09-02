@@ -23,7 +23,7 @@ class HeuristicTest < Minitest::Test
       services_data[element.id] = { days: [], vehicles: [], missing_visits: element.visits_number, unassigned_reasons: [] }
     }
     vrp.points.each{ |element|
-      points_data[element.id] = { days: [], vehicles: [], services_ids: [] }
+      points_data[element.id] = { days: [], vehicles: [] }
     }
 
     seen = []
@@ -42,10 +42,6 @@ class HeuristicTest < Minitest::Test
       }
     }
 
-    seen.group_by{ |point_id, _id| point_id }.each{ |point_id, set|
-      points_data[point_id][:visits_number] =
-        set.collect{ |data| data[1] }.uniq.collect{ |id| vrp.services.find{ |s| s.id == id }.visits_number }
-    }
     [services_data, points_data]
   end
 
@@ -979,6 +975,30 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@same_point_day, true)
       s.send(:update_route, route_data, 0)
       assert_equal (0..12).to_a, route_data[:stops].flat_map{ |stop| [stop[:start], stop[:arrival], stop[:end]] }.uniq
+    end
+
+    def test_same_point_compatibility
+      problem = VRP.periodic
+      problem[:services] = [problem[:services][0]]
+      problem[:services][0][:visits_number] = 3
+      point_id = problem[:services][0][:activity][:point_id]
+
+      vrp = TestHelper.create(problem)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+      s.instance_variable_set(:@relaxed_same_point_day, true) # same as same_point_day but would require to insert id in @unlocked
+      assert s.send(:same_point_compatibility, 'service_1', 0)
+
+      s.instance_variable_get(:@services_data)['service_1'][:heuristic_period] = 1
+      s.instance_variable_get(:@points_assignment)[point_id][:days] = [0, 1, 2, 3]
+      assert s.send(:same_point_compatibility, 'service_1', 0)
+      s.instance_variable_get(:@points_assignment)[point_id][:days] = [0, 2, 4, 6]
+      refute s.send(:same_point_compatibility, 'service_1', 0)
+
+      s.instance_variable_get(:@points_assignment)[point_id][:days] = [0, 2]
+      assert s.send(:same_point_compatibility, 'service_1', 0)
+      s.instance_variable_get(:@points_assignment)[point_id][:days] = [0, 4]
+      refute s.send(:same_point_compatibility, 'service_1', 0)
     end
   end
 end

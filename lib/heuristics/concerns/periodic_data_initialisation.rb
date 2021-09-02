@@ -217,7 +217,7 @@ module PeriodicDataInitialization
     }
 
     @indices.each_key{ |point_id|
-      @points_assignment[point_id] = { vehicles: [], days: [], services_ids: [] }
+      @points_assignment[point_id] = { vehicles: [], days: [] }
     }
   end
 
