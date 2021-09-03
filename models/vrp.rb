@@ -335,15 +335,14 @@ module Models
         if Models::Relation::ONE_LAPSE_TYPES.include?(relation[:type])
           if relation[:lapse]
             relation[:lapses] = [relation[:lapse]]
-            relation.delete(:lapse)
           end
-        elsif [:vehicle_trips, Models::Relation::SEVERAL_LAPSE_TYPES].flatten.include?(relation[:type])
+        elsif Models::Relation::SEVERAL_LAPSE_TYPES.include?(relation[:type])
           if relation[:lapse]
             expected_size = relation[:linked_vehicle_ids].to_a.size + relation[:linked_ids].to_a.size - 1
             relation[:lapses] = Array.new(expected_size, relation[:lapse]) if expected_size > 0
-            relation.delete(:lapse)
           end
         end
+        relation.delete(:lapse)
       }
     end
 
