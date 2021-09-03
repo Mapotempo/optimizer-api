@@ -574,6 +574,9 @@ module Interpreters
             vehicle.id == r.vehicle_id && (route_week_day.nil? || vehicle_week_day_availability.include?(route_week_day))
           }
         }
+        sub_vrp.matrices.delete_if{ |m|
+          sub_vrp.vehicles.none?{ |vehicle| vehicle.matrix_id == m.id }
+        }
       end
       sub_vrp.services = sub_vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
       points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.uniq.compact

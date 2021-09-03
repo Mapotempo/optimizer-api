@@ -59,4 +59,19 @@ module ExpandData
       element.original_skills = element.skills.dup
     }
   end
+
+  def sticky_as_skills
+    sticky_hash = {}
+    self.services.each{ |service|
+      next if service.sticky_vehicle_ids.empty?
+
+      key = service.sticky_vehicle_ids.sort.join('_')
+      skill = "sticky_skill_#{key}".to_sym
+      unless sticky_hash.key?(key)
+        sticky_hash[key] = service.sticky_vehicle_ids
+        service.sticky_vehicles.each{ |vehicle| vehicle.skills.each{ |skill_set| skill_set << skill } }
+      end
+      service.skills << skill
+    }
+  end
 end
