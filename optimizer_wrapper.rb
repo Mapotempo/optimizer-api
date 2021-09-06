@@ -548,7 +548,7 @@ module OptimizerWrapper
                      " #{waiting_times.sum} + #{setup_durations.flatten.reduce(&:+)}"\
                      " + #{durations.flatten.reduce(&:+)}"
         log log_string, level: :warn
-        raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
+        raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production' && !@zip_condition
       end
 
       nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }
@@ -557,6 +557,7 @@ module OptimizerWrapper
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
         log 'Wrong number of visits returned in result', level: :warn
+        # FIXME: Validate time computation for zip clusters
         raise RuntimeError, 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
       end
     }
@@ -837,9 +838,9 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    zip_condition = vrp.matrices.any? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.schedule?
+    @zip_condition = vrp.matrices.any? && (cluster_threshold.to_f.positive? || force_cluster) && !vrp.schedule?
 
-    if zip_condition
+    if @zip_condition
       if vrp.services.any?{ |s| s.activities.any? }
         raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.')
       end
@@ -848,7 +849,7 @@ module OptimizerWrapper
       zip_key = zip_cluster(vrp, cluster_threshold, force_cluster)
     end
     result = yield(vrp)
-    if zip_condition
+    if @zip_condition
       vrp.services = original_services
       unzip_cluster(result, zip_key, vrp)
     else
@@ -1033,18 +1034,26 @@ module OptimizerWrapper
           end
           last_index = start_index
           new_activities += min_order.collect{ |index|
+            original_service = original_vrp.services[index]
+            fake_wrapper = Wrappers::Wrapper.new
             a = {
-              point_id: (original_vrp.services[index].activity.point_id if original_vrp.services[index].id),
+              point_id: (original_service.activity.point_id if original_service.id),
               travel_time: (t = original_vrp.matrices.find{ |m| m.id == vehicle.matrix_id }[:time]) ?
-                t[original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0,
+                t[original_vrp.services[last_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0,
               travel_value: (v = original_vrp.matrices.find{ |m| m.id == vehicle.matrix_id }[:value]) ?
-                v[original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0,
+                v[original_vrp.services[last_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0,
               travel_distance: (d = original_vrp.matrices.find{ |m| m.id == vehicle.matrix_id }[:distance]) ?
-                d[original_vrp.services[last_index].activity.point.matrix_index][original_vrp.services[index].activity.point.matrix_index] : 0, # TODO: from matrix_distance
+                d[original_vrp.services[last_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0, # TODO: from matrix_distance
               # travel_start_time: 0, # TODO: from matrix_time
               # arrival_time: 0, # TODO: from matrix_time
               # departure_time: 0, # TODO: from matrix_time
-              service_id: original_vrp.services[index].id
+              service_id: original_service.id,
+              type: :service,
+              detail: fake_wrapper.build_detail(original_service,
+                                                     original_service.activity,
+                                                     original_service.activity.point,
+                                                     vehicle.global_day_index ? vehicle.global_day_index % 7 : nil,
+                                                     nil, vehicle)
             }.delete_if { |_k, v| !v }
             last_index = index
             a
