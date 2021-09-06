@@ -152,7 +152,7 @@ module Parsers
           used_travel_time = [step.info.begin_time - previous_end, left_travel_time].min
           consumed_travel_time += used_travel_time
           # As setup is considered as a transit value, it may be performed before a rest
-          consumed_setup_time  += step.info.begin_time - previous_end - [used_travel_time, potential_setup].min
+          consumed_setup_time  += [step.info.begin_time - previous_end - used_travel_time, potential_setup].min
         else
           used_travel_time = (step.info.travel_time || 0) - consumed_travel_time - consumed_setup_time
           consumed_travel_time = 0
@@ -201,7 +201,7 @@ module Parsers
       }.reverse.compact
 
       unless segments.empty?
-        info = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
+        info = vrp.router.compute_batch(OptimizerWrapper.config[:router][:url],
                                                      @route.vehicle.router_mode.to_sym, @route.vehicle.router_dimension,
                                                      segments, vrp.restitution_geometry.include?(:encoded_polylines),
                                                      @route.vehicle.router_options)

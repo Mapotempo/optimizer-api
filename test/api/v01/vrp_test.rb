@@ -78,7 +78,7 @@ class Api::V01::VrpTest < Minitest::Test
         ].each_with_index{ |expected_skills, v_i|
           assert_equal vrp.vehicles[v_i].skills, expected_skills
         }
-        {}
+        [vrp.empty_solution({})]
       }
     ) do
       submit_vrp api_key: 'demo', vrp: problem

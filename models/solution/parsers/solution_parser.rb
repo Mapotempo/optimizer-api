@@ -32,7 +32,8 @@ module Parsers
         Parsers::RouteParser.parse(route, vrp, matrix, options)
       }
       compute_result_total_dimensions_and_round_route_stats(solution)
-      solution.cost_info = solution.routes.map(&:cost_info).reduce(&:+)
+      solution.cost_info = solution.routes.map(&:cost_info).reduce(&:+) ||
+                           Models::Solution::CostInfo.new({})
       solution.configuration.geometry = vrp.restitution_geometry
       solution.configuration.schedule_start_date = vrp.schedule_start_date
 

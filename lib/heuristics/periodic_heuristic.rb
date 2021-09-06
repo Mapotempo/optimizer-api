@@ -389,19 +389,20 @@ module Wrappers
     def collect_unassigned
       unassigned = []
 
-      @candidate_services_ids.each{ |id|
-        service_in_vrp = @services_data[id][:raw]
-        (1..service_in_vrp.visits_number).each{ |index|
-          reason = provide_fair_reason(id)
+      @services_assignment.each{ |id, data|
+        next unless data[:unassigned_indices].any?
+
+        if @candidate_services_ids.include?(id)
+          @services_assignment[id][:unassigned_reasons] = [provide_fair_reason(id)]
+        end
+
+        data[:unassigned_indices].each{ |index|
+          service_in_vrp = @services_data[id][:raw]
           unassigned_id = "#{id}_#{index}_#{@services_data[id][:raw].visits_number}"
           unassigned << Models::Solution::Step.new(service_in_vrp,
                                                    service_id: unassigned_id,
-                                                   reason: reason)
+                                                   reason: @services_assignment[id][:unassigned_reasons].join(','))
         }
-      }
-      @uninserted.each{ |uninserted_id, info|
-        service_in_vrp = @services_data[info[:original_id]][:raw]
-        unassigned << Models::Solution::Step.new(service_in_vrp, service_id: uninserted_id, reason: info[:reason])
       }
 
       unassigned
@@ -1117,10 +1118,12 @@ module Wrappers
         loads = service.quantities.map{ |quantity|
           Models::Solution::Load.new(quantity: Models::Quantity.new(unit: quantity.unit))
         }
+        number_in_sequence =
+          @services_assignment[data[:id]][:assigned_indices][@services_assignment[data[:id]][:days].find_index(day)]
         Models::Solution::Step.new(
           service,
-          service_id: "#{data[:id]}_#{data[:number_in_sequence]}_#{service.visits_number}",
-          visit_index: data[:number_in_sequence],
+          service_id: "#{data[:id]}_#{number_in_sequence}_#{service.visits_number}",
+          visit_index: number_in_sequence,
           info: times,
           index: data[:activity],
           loads: loads

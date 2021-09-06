@@ -28,7 +28,6 @@ module ValidateData
     @hash = hash
 
     ensure_no_conflicting_skills
-    ensure_uniq_ids
 
     configuration = @hash[:configuration]
     schedule = configuration && configuration[:schedule]

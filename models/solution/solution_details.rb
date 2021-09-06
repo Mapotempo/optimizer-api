@@ -20,7 +20,7 @@ require './models/base'
 module Models
   class Solution < Base
     class Info < Base
-      field :total_time, default: 1
+      field :total_time, default: 0
       field :total_travel_time, default: 0
       field :total_waiting_time, default: 0
 

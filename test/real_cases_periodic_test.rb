@@ -54,7 +54,7 @@ class HeuristicTest < Minitest::Test
       }.compact
       assert_nil assigned_service_ids.uniq!,
                  'There should not be any duplicate service ID because there are no duplicated IDs in instance'
-      assert_equal vrp.services.map(&:id).sort, (assigned_service_ids + result[:unassigned].map{ |u| u[:service_id] } ).sort
+      assert_equal vrp.services.map(&:id).sort, (assigned_service_ids + solutions[0].unassigned.map(&:service_id) ).sort
 
       # add priority
       assert(solutions[0].unassigned.any?{ |service| service.service_id.include?('3359') })

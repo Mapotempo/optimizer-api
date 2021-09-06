@@ -89,9 +89,9 @@ module OptimizerWrapper
     else
       # Delegate the job to a worker (expire is defined resque config)
       job_id = Job.enqueue_to(profile[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
-                                                     api_key: api_key,
-                                                     checksum: checksum,
-                                                     pids: [])
+                                                    api_key: api_key,
+                                                    checksum: checksum,
+                                                    pids: [])
       JobList.add(api_key, job_id)
       job_id
     end
@@ -285,15 +285,14 @@ module OptimizerWrapper
       optim_solution.name = vrp.name
       optim_solution.configuration.csv = vrp.restitution_csv
       optim_solution.configuration.geometry = vrp.restitution_geometry
-
-      optim_solution.unassigned += unfeasible_services
+      optim_solution.unassigned += unfeasible_services.values.flatten
       optim_solution.parse(vrp)
 
       if vrp.preprocessing_first_solution_strategy
         optim_solution.heuristic_synthesis = vrp.preprocessing_heuristic_synthesis
       end
     else
-      optim_solution = vrp.empty_solution(service, unfeasible_services)
+      optim_solution = vrp.empty_solution(service, unfeasible_services.values)
     end
 
     log "<-- optim_wrap::solve elapsed: #{(Time.now - tic).round(2)}sec", level: :debug

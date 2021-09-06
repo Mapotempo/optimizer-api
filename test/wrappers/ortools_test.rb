@@ -5244,7 +5244,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 1, solutions[0].unassigned.size, 'The result is expected to contain 1 unassigned'
 
-    assert_operator solutions[0].routes.first.steps.count{ |activity| activity.service_id }, :<=, 2,
+    assert_operator solutions[0].routes.first.steps.count(&:service_id), :<=, 2,
                     'The vehicle cannot load more than 2 services and 3 kg'
     solutions[0].routes.first.steps.each{ |activity|
       next unless activity.service_id
@@ -5261,8 +5261,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
       vehicle[:capacities] = [{ unit_id: 'kg', limit: 3, initial: 0 }]
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 2, result[:unassigned].size, 'The result is expected to contain 2 unassigned'
+    solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert_equal 2, solutions[0].unassigned.size, 'The result is expected to contain 2 unassigned'
 
     problem = VRP.basic
     problem[:services].first[:quantities] = [{ unit_id: 'kg', value: -1 }]
@@ -5271,9 +5271,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
       vehicle[:capacities] = [{ unit_id: 'kg', limit: 3, initial: 0 }]
     }
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert result[:routes].first[:activities].index{ |act| act[:service_id] == problem[:services].last[:id] } <
-           result[:routes].first[:activities].index{ |act| act[:service_id] == problem[:services].first[:id] }
+    solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    assert solutions[0].routes.first.steps.index{ |act| act.service_id == problem[:services].last[:id] } <
+           solutions[0].routes.first.steps.index{ |act| act.service_id == problem[:services].first[:id] }
   end
 
   def test_simplify_vehicle_pause_without_timewindow_or_duration

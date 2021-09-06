@@ -1416,7 +1416,7 @@ class WrapperTest < Minitest::Test
     problem[:vehicles][0][:skills] = [['A']]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 1, (solutions[0].unassigned.count{ |un|
-      un.reason == 'No compatible vehicle can reach this service while respecting all constraints'
+      un.reason == 'No vehicle available for this service'
     })
   end
 
@@ -2033,7 +2033,7 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 2, (solutions[0].unassigned.count{ |un| un.reason == 'Unconsistency between visit number and minimum lapse' })
+    assert_equal 2, (solutions[0].unassigned.count{ |un| un.reason == 'Inconsistency between visit number and minimum lapse' })
   end
 
   def test_wrong_matrix_and_points_definitions
@@ -2534,7 +2534,7 @@ class WrapperTest < Minitest::Test
       end: 10
     }
     vrp[:services].first[:activity][:duration] = 15
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
     assert_equal(1, unfeasible.count{ |un| un.reason == 'Service duration greater than any vehicle timewindow' })
 
     vrp[:vehicles].first[:timewindow] = nil
@@ -2544,7 +2544,7 @@ class WrapperTest < Minitest::Test
     }]
     vrp[:services].first[:activity][:duration] = 15
     vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
     assert_equal(1, unfeasible.count{ |un| un.reason == 'Service duration greater than any vehicle timewindow' })
 
     vrp[:vehicles].first[:sequence_timewindows] << {
@@ -2561,7 +2561,7 @@ class WrapperTest < Minitest::Test
     assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
 
     vrp[:services].first[:quantities].first[:value] = -6
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
     assert_equal(1, unfeasible.count{ |un| un.reason == 'Service quantity greater than any vehicle capacity' })
   end
 
@@ -2569,19 +2569,19 @@ class WrapperTest < Minitest::Test
     vrp = VRP.basic
 
     vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
-    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size,
+    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
                     'All services (3) should be eliminated'
 
     vrp[:vehicles].first[:cost_late_multiplier] = 1
-    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size,
+    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
                     'No services should be eliminated due to vehicle timewindow since tardiness is allowed'
 
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 3 }]
-    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size,
+    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
                     'First service should be eliminated due its timewindow'
 
     vrp[:services].first[:activity][:late_multiplier] = 1
-    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size,
+    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
                     'First service should not be eliminated due to its timewindow since tardiness is allowed'
   end
 
@@ -2598,18 +2598,18 @@ class WrapperTest < Minitest::Test
 
     vrp[:vehicles].first[:start_point_id] = nil
     vrp[:vehicles].first[:end_point_id] = 'point_0'
-    assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size,
+    assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
                     'Two services should be eliminated even if there is no vehicle start'
 
     vrp[:vehicles].first[:start_point_id] = 'point_0'
     vrp[:vehicles].first[:end_point_id] = nil
-    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size,
+    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
                     'All services (3) should be eliminated even if there is no vehicle end'
 
     vrp[:vehicles].first[:start_point_id] = nil
     vrp[:vehicles].first[:end_point_id] = nil
     vrp[:services].first[:activity][:duration] = 2
-    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size,
+    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
                     'First service should be eliminated even if there is no vehicle start nor end'
   end
 
@@ -2778,18 +2778,18 @@ class WrapperTest < Minitest::Test
     assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
 
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? } }
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal(2, unfeasible.count{ |un| un.reason == 'Unconsistency between visit number and minimum lapse' })
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
+    assert_equal(2, unfeasible.count{ |un| un.reason == 'Inconsistency between visit number and minimum lapse' })
     vrp[:vehicles].each{ |v|
       v[:sequence_timewindows].select{ |tw| tw[:day_index] == 2 }.each{ |tw| tw[:day_index] = 0 }
     }
-    assert_equal(2, unfeasible.count{ |un| un.reason == 'Unconsistency between visit number and minimum lapse' })
+    assert_equal(2, unfeasible.count{ |un| un.reason == 'Inconsistency between visit number and minimum lapse' })
   end
 
   def test_impossible_minimum_lapse_opened_days_real_case
     vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
-    unfeasible.select!{ |un| un.reason == 'Unconsistency between visit number and minimum lapse' }
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp).values.flatten
+    unfeasible.select!{ |un| un.reason == 'Inconsistency between visit number and minimum lapse' }
     unfeasible.map!(&:id)
     unfeasible.uniq!
     assert_equal 12, unfeasible.size
@@ -2816,14 +2816,14 @@ class WrapperTest < Minitest::Test
         vrp = vrp_in[:vrp]
 
         start = Time.now
-        unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
+        OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
         total_detect_unfeasible_services_time += Time.now - start
 
         vrp.compute_matrix(&block)
 
         start = Time.now
-        OptimizerWrapper.config[:services][:demo].check_distances(vrp, [])
-        total_time += Time.now - start
+        OptimizerWrapper.config[:services][:demo].check_distances(vrp, {})
+        total_add_unassigned_time += Time.now - start
         Models::Solution.new(unassigned: vrp.services.flat_map{ |service|
           (1..service.visits_number).map{ |visit|
             Models::Solution::Step.new(service, service_id: "#{service.id}_#{visit}")
@@ -3383,7 +3383,6 @@ class WrapperTest < Minitest::Test
       }
     }
     assert there_is_no_skipped_trip_when_simplification_is_on, 'Should prevent skipped trips for this instance'
-
     # Solve WITHOUT simplification (when prioritize_first_available_trips_and_vehicles is off)
     # verify the cost is the same or better with the simplification and that the trip2 is used before trip1
     function_called = false
@@ -3396,7 +3395,6 @@ class WrapperTest < Minitest::Test
       OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     end
     assert function_called, 'prioritize_first_available_trips_and_vehicles should have been called'
-
     assert_operator solns_with_simplification[0].cost, :<=, solns_without_simplification[0].cost,
                     'simplification should not increase the cost'
     assert_operator solns_with_simplification[0].unassigned.size, :<=, solns_without_simplification[0].unassigned.size,
@@ -3450,7 +3448,7 @@ class WrapperTest < Minitest::Test
     # Solve WITH simplification
     vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
     sols_w_simplify = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_operator sols_w_simplify[0].unassigned.size, :<, result_wo_simplify[:unassigned].size,
+    assert_operator sols_w_simplify[0].unassigned.size, :<, result_wo_simplify.unassigned.size,
                     'Simplification should improve performance'
     # if there are unassigned services; this might be due to computer performance
     # but normally even 0.5 seconds is enough, so it might be due to a change in or-tools or optimizer-ortools
@@ -3461,7 +3459,7 @@ class WrapperTest < Minitest::Test
     vrp = VRP.toy
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }, { start: 20, end: 15 }]
     # ship and service but only check service
-    unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
     assert_equal 1, (unfeasible_services.count{ |un| un.reason == 'Service timewindows are infeasible' })
   end
 

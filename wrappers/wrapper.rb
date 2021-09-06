@@ -540,11 +540,13 @@ module Wrappers
         # we update reason to have more details
         unfeasible[service.id].each{ |un| un.reason += " && #{reason}" }
       else
-        unfeasible.concat Array.new(service.visits_number){ |index|
-          Models::Solution::Step.new(
+        unfeasible[service.id] = []
+        service.visits_number.times{ |index|
+          step_id = vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service.id
+          unfeasible[service.id] << Models::Solution::Step.new(
             service,
-            id: service.id,
-            service_id: vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service.id,
+            id: step_id,
+            service_id: service.id,
             reason: reason
           )
         }
