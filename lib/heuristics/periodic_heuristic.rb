@@ -887,8 +887,12 @@ module Wrappers
       # WARNING : this does not consider vehicle alternative skills properly
       # we would need to know which skill_set is required in order that all services on same vehicle are compatible
       service_data = @services_data[service_id]
-      route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? } &&
-        (service_data[:sticky_vehicles_ids].empty? || service_data[:sticky_vehicles_ids].include?(route_data[:vehicle_original_id]))
+      point = @services_data[service_id][:points_ids].first
+      (!@same_point_day && !@relaxed_same_point_day ||  @points_vehicles_and_days[point][:vehicles].empty? ||
+        @points_vehicles_and_days[point][:vehicles].include?(route_data[:vehicle_original_id])) &&
+        route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? } &&
+        (service_data[:sticky_vehicles_ids].empty? ||
+          service_data[:sticky_vehicles_ids].include?(route_data[:vehicle_original_id]))
     end
 
     def service_does_not_violate_capacity(service_id, route_data, first_visit)
