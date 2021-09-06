@@ -956,11 +956,11 @@ module Wrappers
                   previous[:point_id] == next_point && previous[:point_id] != @services_data[service_id][:points_ids][activity] # there is no point in testing a position that will imply useless route time
 
           next if route_data[:maximum_ride_time] &&
-                  (position.positive? && matrix(route_data, previous, current, :time) > route_data[:maximum_ride_time] ||
+                  (position.positive? && matrix(route_data, previous[:point_id], current, :time) > route_data[:maximum_ride_time] ||
                   position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :time) > route_data[:maximum_ride_time])
 
           next if route_data[:maximum_ride_distance] &&
-                  (position.positive? && matrix(route_data, previous, current, :distance) > route_data[:maximum_ride_distance] ||
+                  (position.positive? && matrix(route_data, previous[:point_id], current, :distance) > route_data[:maximum_ride_distance] ||
                   position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :distance) > route_data[:maximum_ride_distance])
 
           best_cost_according_to_tws(route_data, service_id, service_data, previous,
