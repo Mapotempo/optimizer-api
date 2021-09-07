@@ -588,8 +588,11 @@ module Wrappers
           service = vrp.services.find{ |s| s.id == service_id }
           {
             original_service_id: service.original_id,
+            pickup_shipment_id: service.type == :pickup && service.original_id,
+            delivery_shipment_id: service.type == :delivery && service.original_id,
             service_id: service_id,
             point_id: service.activity ? service.activity.point_id : service.activities.collect{ |activity| activity[:point_id] },
+            type: service.type,
             detail: service.activity ? build_detail(service, service.activity, service.activity.point, nil, nil, nil) : { activities: service.activities }
           }
         } + vrp.vehicles.flat_map{ |vehicle|

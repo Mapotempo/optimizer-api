@@ -649,11 +649,13 @@ module Wrappers
       else
         unfeasible.concat Array.new(service.visits_number){ |index|
           {
-            original_service_id: service.id,
+            original_service_id: service.original_id,
+            pickup_shipment_id: service.type == :pickup && service.original_id,
+            delivery_shipment_id: service.type == :delivery && service.original_id,
             service_id: vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service[:id],
             point_id: service.activity ? service.activity.point_id : nil,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
-            type: 'service',
+            type: service.type,
             reason: reason
           }
         }
