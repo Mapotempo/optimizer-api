@@ -668,23 +668,5 @@ class HeuristicTest < Minitest::Test
       assert s.send(:day_in_possible_interval, 'service_1', 1) # this case will be avoided by compute days
       refute s.send(:compatible_days, 'service_1', 1)
     end
-
-    def test_can_find_a_distinct_array_per_set_function
-      vrp = TestHelper.create(VRP.periodic)
-      vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      s = Wrappers::PeriodicHeuristic.new(vrp)
-
-      assert s.send(:can_find_a_distinct_array_per_set, [[[0, 4], [2, 3]], [[0, 4], [2, 3]]])
-      refute s.send(:can_find_a_distinct_array_per_set, [[[0, 4], [2, 3]], [[0, 4], [2, 3]], [[0, 4], [2, 3]]])
-      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2]], [[3, 4]], [[5, 6]]])
-      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4]], [[1, 2], [5, 6]], [[1, 2]]])
-      refute s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2]], [[3, 4]], [[5, 6]]])
-      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6], [7, 8]], [[1, 2]], [[3, 4]], [[5, 6]]])
-      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6], [7, 8]], [[1, 2], [7, 8]], [[3, 4]], [[5, 6]]])
-      refute s.send(:can_find_a_distinct_array_per_set, [[[1, 2]], [[1, 2]], [[3, 4]]])
-      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[3, 4], [5, 6]]])
-      refute s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[3, 4], [5, 6]], [[3, 4], [5, 6]]])
-      assert s.send(:can_find_a_distinct_array_per_set, [[[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4], [5, 6]], [[1, 2], [3, 4]], [[3, 4], [7, 8], [9, 10]], [[3, 4], [7, 8], [9, 10]]])
-    end
   end
 end

@@ -208,51 +208,25 @@ module Wrappers
 
     private
 
-    # Returns true if day can be used for service with corresponding `id`
-    # This is, regarding first and last_possible_days available combinations
-    def compatible_ranges_for_day(id, day)
-      (0..@services_data[id][:raw].visits_number - 1).collect{ |v_i|
-        next unless day.between?(@services_data[id][:raw].first_possible_days[v_i],
-                                 @services_data[id][:raw].last_possible_days[v_i])
-
-        [@services_data[id][:raw].first_possible_days[v_i], @services_data[id][:raw].last_possible_days[v_i]]
-      }.compact
-    end
-
-    # Checks if it is possible to select an array from each set (of sets)
-    # such that all selected arrays are different from each other
-    def can_find_a_distinct_array_per_set(sets)
-      if sets.any?{ |set| set.uniq.size != set.size }
-        # since we want each set to contain values that are in no other set, if a value appears twice in a set
-        # this implies that we can use this value twice and hence we will not be able to return expected output.
-        # Moreover, sets comme from first/last_possible_days which can not be the exact same for two diffent
-        # visits of the same service (because visit 2 can not start/end at same day as visit 1)
-        raise OptimizerWrapper::PeriodicHeuristicError.new('Function called with inconsistent parameters')
-      end
-
-      return false if sets.any?(&:empty?)
-
-      return true if sets.size == 1
-
-      sets.sort_by!(&:size)
-      sets.first.any?{ |subset|
-        new_sets = sets[1..-1].collect{ |set| set - [subset] }
-        new_sets.each{ |set| set.delete(subset) }
-        can_find_a_distinct_array_per_set(new_sets)
-      }
-    end
-
     # Ensures `day` is compatible with other already assigned visits with this ID
-    # regarding first/last_possible_days available ranges
-    def day_in_possible_interval(id, day)
-      day_sets = compatible_ranges_for_day(id, day)
+    # regarding first/last_possible_days available ranges : it is possible to find a
+    # pair of first/last_possible_day for each and every day used for this service_id
+    def day_in_possible_interval(service_id, day)
+      all_days = (@services_data[service_id][:used_days] + [day]).sort
+      seen_visits = 0
 
-      if @services_data[id][:used_days].empty?
-        return true if day_sets.any?
-      end
+      return false if all_days.size > @services_data[service_id][:raw].visits_number
 
-      all_visits_sets = @services_data[id][:used_days].collect{ |d| compatible_ranges_for_day(id, d) }
-      can_find_a_distinct_array_per_set(all_visits_sets.insert(0, day_sets))
+      @services_data[service_id][:raw].visits_number.times{ |tried_indices|
+        next unless all_days[seen_visits].between?(@services_data[service_id][:raw].first_possible_days[tried_indices],
+                                                   @services_data[service_id][:raw].last_possible_days[tried_indices])
+
+        seen_visits += 1 # This combination can accept this day
+
+        break if seen_visits == all_days.size
+      }
+
+      seen_visits == all_days.size
     end
 
     def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
