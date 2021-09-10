@@ -581,6 +581,7 @@ class HeuristicTest < Minitest::Test
       s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp_to_solve)
       s.instance_variable_set(:@services_assignment, s_a)
       s.instance_variable_set(:@points_assignment, p_a)
+      s.instance_variable_set(:@still_removed, {})
 
       s.instance_variable_set(:@still_removed, {})
       s.send(:remove_poorly_populated_routes)

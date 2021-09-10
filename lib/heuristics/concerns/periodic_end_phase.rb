@@ -54,6 +54,8 @@ module PeriodicEndPhase
 
   #### ADD MISSING VISITS PROCESS ####
 
+  # Add missing visits : visits can now be inserted using a lapse between minimum and maximum_lapse,
+  # we do not need to respect heuristic_period anymore
   def add_missing_visits
     @output_tool&.add_comment('ADD_MISSING_VISITS_PHASE')
 
@@ -103,40 +105,46 @@ module PeriodicEndPhase
     costs
   end
 
-  def find_best_vehicle_day_cost(id)
-    @services_assignment[id][:vehicles].map{ |vehicle_id|
-      find_best_day_cost(@candidate_routes[vehicle_id], id)
+  # Find best global cost : for each vehicle, find best route to insert it.
+  # Select best vehicle to insert service_id according to these best costs.
+  def find_best_vehicle_day_cost(service_id)
+    @services_assignment[service_id][:vehicles].map{ |vehicle_id|
+      find_best_day_cost(@candidate_routes[vehicle_id], service_id)
     }.compact.min_by{ |cost| cost[:additional_route_time] } # TODO : find fair comparison between empty and non empty routes
   end
 
-  def find_best_day_cost(vehicle_routes, id)
+  # Find best day cost : find best cost among vehicle_routes.
+  # That is, find day where it is the most interesting to insert service_id
+  def find_best_day_cost(vehicle_routes, service_id)
     # FIXME : this function does not return best cost, but earliest day which have a cost
-    available_days = days_respecting_lapse(id, vehicle_routes)
+    available_days = days_respecting_lapse(service_id, vehicle_routes)
 
     return nil unless available_days.any?
 
     index = 0
     cost = nil
     while cost.nil? && index < available_days.size
-      cost = find_best_index(id, vehicle_routes[available_days[index]], false)
+      cost = find_best_index(service_id, vehicle_routes[available_days[index]], false)
       index += 1
     end
 
     cost
   end
 
+  # For each service, find its best cost :
+  # which vehicle and day would be the best to insert it?
   def compute_first_costs
     costs = {}
 
-    @services_assignment.each{ |id, data|
+    @services_assignment.each{ |service_id, data|
       next unless data[:days].any? && data[:missing_visits].positive?
 
       # some visits could be assigned but not all of them
       # we can try to be less restrictive on the lapse we use
       # TODO : should we consider all IDs again, even if no visit was assigned?
 
-      cost = find_best_vehicle_day_cost(id)
-      costs[id] = cost if cost
+      cost = find_best_vehicle_day_cost(service_id)
+      costs[service_id] = cost if cost
     }
 
     costs
@@ -144,6 +152,8 @@ module PeriodicEndPhase
 
   #### CORRECT POORLY POPULATED ROUTES PROCESS ####
 
+  # Ensure each route services' cost is enough :
+  # one route costs should be higher or equal to route cost fixed
   def correct_poorly_populated_routes
     @output_tool&.add_comment('REMOVE_POORLY_POPULATED_ROUTES PHASE')
     @still_removed = {}
@@ -171,6 +181,7 @@ module PeriodicEndPhase
     @still_removed.delete(id)
   end
 
+  # Empty all routes that do not contain enough valuable services
   def remove_poorly_populated_routes
     loop do
       smth_removed = false
@@ -211,6 +222,7 @@ module PeriodicEndPhase
     end
   end
 
+  # Reaffect visits removed from routes that were poorly populated
   def reaffect_removed_visits
     if @allow_partial_assignment
       reaffect_in_non_empty_route
@@ -224,18 +236,13 @@ module PeriodicEndPhase
     need_to_stop = false
     until @still_removed.empty? || need_to_stop
       referent_route = nil
-      insertion_costs = @candidate_routes.collect{ |vehicle_id, all_routes|
-        all_routes.collect{ |day, route_data|
+      insertion_costs = @candidate_routes.collect{ |_vehicle_id, all_routes|
+        all_routes.collect{ |_day, route_data|
           if route_data[:stops].empty?
             []
           else
             referent_route ||= route_data
-            insertion_costs = compute_costs_for_route(route_data, @still_removed.keys)
-            insertion_costs.each{ |cost|
-              cost[:vehicle] = vehicle_id
-              cost[:day] = day
-            }
-            insertion_costs
+            compute_costs_for_route(route_data, @still_removed.keys)
           end
         }
       }
@@ -243,12 +250,12 @@ module PeriodicEndPhase
       if insertion_costs.flatten.empty?
         need_to_stop = true
       else
-        acceptable_costs = insertion_costs.flatten.group_by{ |cost| cost[:id] }.collect{ |id, set|
-          # keep insertion cost that minimizes lapse with its other visits
+        acceptable_costs = insertion_costs.flatten.group_by{ |insertion_cost| insertion_cost[:id] }.collect{ |id, set|
+          # keep insertion_cost that minimizes lapse with its other visits
           if @services_assignment[id][:days].empty?
             set.first
           else
-            set.min_by{ |cost| @services_assignment[id][:days].collect{ |day| (day - cost[:day]).abs }.min }
+            set.min_by{ |insertion_cost| @services_assignment[id][:days].collect{ |day| (day - insertion_cost[:day]).abs }.min }
           end
         }
         point_to_add = select_point(acceptable_costs, referent_route)
@@ -273,17 +280,22 @@ module PeriodicEndPhase
     }
   end
 
-  def chose_best_route(empty_routes, still_removed_ids)
+  # Find best empty_route to insert visits
+  def chose_best_route(empty_routes)
     # prefer closer vehicles
     closer_vehicles = empty_routes.group_by{ |empty_route_data|
       divider = 0
-      still_removed_ids.sum{ |id|
-        @services_data[id][:points_ids].sum{ |point_id|
-          divider += empty_route_data[:stores].size
-          empty_route_data[:stores].sum{ |store|
-            matrix(@candidate_routes[@candidate_routes.keys.first].first[1], store, point_id)
+      @still_removed.sum{ |id, number_of_removed|
+        if number_of_removed.zero?
+          0
+        else
+          @services_data[id][:points_ids].sum{ |point_id|
+            divider += empty_route_data[:stores].size
+            empty_route_data[:stores].sum{ |store|
+              matrix(@candidate_routes[@candidate_routes.keys.first].first[1], store, point_id)
+            }
           }
-        }
+        end
       }.to_f / divider
     }.min_by{ |key, _set| key }[1]
 
@@ -305,13 +317,15 @@ module PeriodicEndPhase
     to_consider_routes[1].min_by{ |empty_route_data| empty_route_data[:day] } # start as soon as possible to maximize number of visits we can assign allong period
   end
 
+  # Try to fill an empty route in order to plan more visits.
+  # Visits value need to exceed route cost_fixed.
   def generate_new_routes
     empty_routes = collect_empty_routes
 
     previous_vehicle_filled_info = nil
     previous_was_filled = false
     until @still_removed.empty? || empty_routes.empty?
-      best_route = chose_best_route(empty_routes, @still_removed.keys)
+      best_route = chose_best_route(empty_routes)
       vehicle_info = {
         stores: best_route[:stores],
         time_range: best_route[:time_range]
@@ -355,6 +369,8 @@ module PeriodicEndPhase
     end
   end
 
+  # Plan additional visits by planning all visits of one service at once
+  # to ensure there is no partial assignment
   def reaffect_prohibiting_partial_assignment
     banned = []
     adapted_still_removed = @still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
@@ -429,7 +445,9 @@ module PeriodicEndPhase
     end
   end
 
-  def deduce_sequences(id, visits_number, days)
+  # Deduce possible sequences of days such that all visits of service_id are
+  # planned and minimum and maximum lapses are respected
+  def deduce_sequences(service_id, visits_number, days)
     sequences = []
 
     return days.collect{ |day| [day] } if visits_number == 1
@@ -438,7 +456,9 @@ module PeriodicEndPhase
       available_days = days.slice(days.find_index(first_day)..-1)
       break if available_days.size < visits_number
 
-      sequences += find_sequences_from(days.slice(day_index + 1..-1), visits_number - 1, @services_data[id][:raw].minimum_lapse, @services_data[id][:raw].maximum_lapse, [first_day])
+      sequences += find_sequences_from(days.slice(day_index + 1..-1), visits_number - 1,
+                                       @services_data[service_id][:raw].minimum_lapse,
+                                       @services_data[service_id][:raw].maximum_lapse, [first_day])
     }
 
     sequences
@@ -452,12 +472,10 @@ module PeriodicEndPhase
     return [] if next_days.empty? # unvalid sequences will be ignored
 
     collected = next_days.collect{ |day|
-      c = find_sequences_from(days.slice(days.find_index(day) + 1..-1), visits_left - 1, min_lapse, max_lapse, current_sequence + [day])
-      c
+      find_sequences_from(days.slice(days.find_index(day) + 1..-1), visits_left - 1, min_lapse, max_lapse, current_sequence + [day])
     }
 
     collected = collected.first while collected.first.is_a?(Array) && collected.first.first.is_a?(Array)
-
     collected
   end
 
