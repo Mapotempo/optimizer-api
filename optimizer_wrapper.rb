@@ -344,14 +344,18 @@ module OptimizerWrapper
     }.each{ |relation|
       v_skills_indices = relation.linked_vehicle_ids.map{ |v_id| correspondance_hash[v_id] }
       mission_skill_indices = []
-      next unless v_skills_indices.any?{ |v_index|
-        mission_skills.each_index.any?{ |m_index|
+      # We check if there is at least one vehicle of the relation compatible with a mission skills set
+      v_skills_indices.each{ |v_index|
+        mission_skills.each_index.each{ |m_index|
           mission_skill_indices << m_index if compatibility_table[m_index][v_index]
         }
       }
+      next if mission_skill_indices.empty?
 
       mission_skill_indices.uniq!
 
+      # If at last one vehicle of the relation is compatible, then we propagate it,
+      # as we want all the relation vehicles to belong to the same problem
       v_skills_indices.each{ |v_index|
         mission_skill_indices.each{ |m_index|
           compatibility_table[m_index][v_index] = true
@@ -430,7 +434,7 @@ module OptimizerWrapper
     # - there is multimodal subtours
     return [vrp] if (vrp.vehicles.size <= 1) || vrp.services.empty? || vrp.subtours&.any? # there might be zero services
 
-    # - a service with no service (or sticky vehicle see: expand_data.rb:sticky_as_skills)
+    # - there is a service with no skills (or sticky vehicle see: expand_data.rb:sticky_as_skills)
     mission_skills = vrp.services.map(&:skills).uniq
     return [vrp] if mission_skills.include?([])
 

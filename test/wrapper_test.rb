@@ -2892,6 +2892,25 @@ class WrapperTest < Minitest::Test
     assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
   end
 
+  def test_split_independent_skills_with_trip_relation
+    problem = VRP.independent_skills
+
+    problem[:vehicles][1][:end_point_id] = problem[:vehicles].first[:start_point_id]
+    problem[:relations] = [{
+      type: :vehicle_trips,
+      linked_vehicle_ids: ['vehicle_1', 'vehicle_2']
+    }]
+    vrp = TestHelper.create(problem)
+
+    independent_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    expected_skills_sets = [[[[:D, :S2]], [[:S3, :S4]]], [], [[[:D, :S1]]]]
+    assert(independent_vrps.all?{ |independent_vrp|
+      expected_skills_sets.include?(independent_vrp.vehicles.map(&:skills))
+    })
+    assert_equal 4, independent_vrps.size,
+                 'split_independent_vrp function does not generate expected number of independent_vrps'
+  end
+
   def test_split_independent_vrps_with_useless_vehicle
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.vehicles << Models::Vehicle.create(id: 'useless_vehicle')
