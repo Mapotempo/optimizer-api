@@ -60,6 +60,8 @@ module ExpandData
     }
   end
 
+  # NOTE : The sticky vehicles are converted as logical OR skills
+  # TODO : Once the proper logical OR skills is implemented this logic should be merged with it
   def sticky_as_skills
     sticky_hash = {}
     self.services.each{ |service|

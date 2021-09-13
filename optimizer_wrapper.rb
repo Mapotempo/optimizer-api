@@ -384,7 +384,8 @@ module OptimizerWrapper
     }
   end
 
-  def self.build_independent_vrps(vrp, skill_sets, unused_vehicle_indices, skill_vehicle_ids, skill_service_ids)
+  def self.build_independent_vrps(vrp, skill_sets, skill_vehicle_ids, skill_service_ids)
+    unused_vehicle_indices = (0..vrp.vehicles.size - 1).to_a
     independent_vrps = skill_sets.collect{ |skills_set|
       # Compatible problem ids are retrieved
       vehicle_indices = skills_set.flat_map{ |skills|
@@ -454,8 +455,7 @@ module OptimizerWrapper
 
     independant_skill_sets = compute_independent_skills_sets(vrp, mission_skills, vehicle_skills)
 
-    unused_vehicle_indices = (0..vrp.vehicles.size - 1).to_a
-    build_independent_vrps(vrp, independant_skill_sets, unused_vehicle_indices, skill_vehicle_ids, skill_service_ids)
+    build_independent_vrps(vrp, independant_skill_sets, skill_vehicle_ids, skill_service_ids)
   end
 
   def self.join_independent_vrps(services_vrps, callback)
