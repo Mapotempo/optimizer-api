@@ -1412,7 +1412,7 @@ class WrapperTest < Minitest::Test
 
     problem[:vehicles][0][:skills] = [['A']]
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 1, (result[:unassigned].count{ |un| un[:reason].include?('No compatible vehicle can reach this service while respecting all constraints') })
+    assert_equal 1, (result[:unassigned].count{ |un| un[:reason].include?('No vehicle available for this service') })
   end
 
   def test_impossible_service_too_far_time
@@ -2853,8 +2853,8 @@ class WrapperTest < Minitest::Test
   def test_number_of_service_vrps_generated_in_split_independent
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
-    services_vrps = OptimizerWrapper.split_independent_vrp_by_skills(vrp)
-    assert_equal 5, services_vrps.size, 'Split_independent_vrp_by_skills function does not generate expected number of services_vrps'
+    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 5, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
     assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
 
     # add services that can not be served by any vehicle (different configurations)
@@ -2862,8 +2862,8 @@ class WrapperTest < Minitest::Test
     vrp.matrices = nil
     vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
     vrp.services << Models::Service.create(id: 'fake_service_2', skills: ['fake_skill1'], activity: { point: vrp.points.first })
-    services_vrps = OptimizerWrapper.split_independent_vrp_by_skills(vrp)
-    assert_equal 6, services_vrps.size, 'Split_independent_vrp_by_skills function does not generate expected number of services_vrps'
+    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 6, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
     assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
     assert_equal 3, (services_vrps.count{ |s| s.resolution_duration.zero? })
 
@@ -2871,10 +2871,44 @@ class WrapperTest < Minitest::Test
     vrp.matrices = nil
     vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
     vrp.services << Models::Service.create(id: 'fake_service_3', skills: ['fake_skill2'], activity: { point: vrp.points.first })
-    services_vrps = OptimizerWrapper.split_independent_vrp_by_skills(vrp)
-    assert_equal 7, services_vrps.size, 'Split_independent_vrp_by_skills function does not generate expected number of services_vrps'
+    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 7, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
     assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
     assert_equal 4, (services_vrps.count{ |s| s.resolution_duration.zero? })
+  end
+
+  def test_split_independent_with_trip_relation
+    problem = VRP.independent
+    problem[:vehicles].first[:end_point_id] = problem[:vehicles].first[:start_point_id]
+    problem[:relations] = [{
+      type: :vehicle_trips,
+      linked_vehicle_ids: ['vehicle_0', 'vehicle_1']
+    }]
+    vrp = TestHelper.create(problem)
+
+    vrp.matrices = nil
+    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 1, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
+    assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
+  end
+
+  def test_split_independent_skills_with_trip_relation
+    problem = VRP.independent_skills
+
+    problem[:vehicles][1][:end_point_id] = problem[:vehicles].first[:start_point_id]
+    problem[:relations] = [{
+      type: :vehicle_trips,
+      linked_vehicle_ids: ['vehicle_1', 'vehicle_2']
+    }]
+    vrp = TestHelper.create(problem)
+
+    independent_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    expected_skills_sets = [[[[:D, :S2]], [[:S3, :S4]]], [], [[[:D, :S1]]]]
+    assert(independent_vrps.all?{ |independent_vrp|
+      expected_skills_sets.include?(independent_vrp.vehicles.map(&:skills))
+    })
+    assert_equal 4, independent_vrps.size,
+                 'split_independent_vrp function does not generate expected number of independent_vrps'
   end
 
   def test_split_independent_vrps_with_useless_vehicle
@@ -2888,7 +2922,7 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(VRP.independent)
     vrp.vehicles << Models::Vehicle.create(id: 'useless_vehicle')
     expected_number_of_vehicles = vrp.vehicles.size
-    services_vrps = OptimizerWrapper.split_independent_vrp_by_sticky_vehicle(vrp)
+    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
     assert_equal expected_number_of_vehicles, services_vrps.collect{ |sub_vrp| sub_vrp.vehicles.size }.sum, 'some vehicles disapear because of split_independent_vrp_by_sticky_vehicle function'
   end
 

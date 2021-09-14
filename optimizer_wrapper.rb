@@ -322,7 +322,120 @@ module OptimizerWrapper
     optim_result
   end
 
-  def self.split_independent_vrp_by_skills(vrp)
+  def self.compute_independent_skills_sets(vrp, mission_skills, vehicle_skills)
+    independent_skills = Array.new(mission_skills.size) { |i| [i] }
+
+    correspondance_hash = vrp.vehicles.map{ |vehicle|
+      [vehicle.id, vehicle_skills.index{ |skills| skills == vehicle.skills.flatten }]
+    }.to_h
+
+    # Build the compatibility table between service and vehicle skills
+    # As reminder vehicle skills are defined as an OR condition
+    # When the services skills are defined as an AND condition
+    compatibility_table = mission_skills.map.with_index{ |_skills, _index| Array.new(vehicle_skills.size) { false } }
+    mission_skills.each.with_index{ |m_skills, m_index|
+      vehicle_skills.each.with_index{ |v_skills, v_index|
+        compatibility_table[m_index][v_index] = true if (v_skills & m_skills) == m_skills
+      }
+    }
+
+    vrp.relations.select{ |relation|
+      Models::Relation::ON_VEHICLES_TYPES.include?(relation.type)
+    }.each{ |relation|
+      v_skills_indices = relation.linked_vehicle_ids.map{ |v_id| correspondance_hash[v_id] }
+      mission_skill_indices = []
+      # We check if there is at least one vehicle of the relation compatible with a mission skills set
+      v_skills_indices.each{ |v_index|
+        mission_skills.each_index.each{ |m_index|
+          mission_skill_indices << m_index if compatibility_table[m_index][v_index]
+        }
+      }
+      next if mission_skill_indices.empty?
+
+      mission_skill_indices.uniq!
+
+      # If at last one vehicle of the relation is compatible, then we propagate it,
+      # as we want all the relation vehicles to belong to the same problem
+      v_skills_indices.each{ |v_index|
+        mission_skill_indices.each{ |m_index|
+          compatibility_table[m_index][v_index] = true
+        }
+      }
+    }
+
+    mission_skills.size.times.each{ |a_line|
+      ((a_line + 1)..mission_skills.size - 1).each{ |b_line|
+        next if (compatibility_table[a_line].select.with_index{ |state, index|
+          state & compatibility_table[b_line][index]
+        }).empty?
+
+        b_set = independent_skills.find{ |set| set.include?(b_line) && set.exclude?(a_line) }
+        next if b_set.nil?
+
+        # Skills indices are merged as they have at least a vehicle in common
+        independent_skills.delete(b_set)
+        set_index = independent_skills.index{ |set| set.include?(a_line) }
+        independent_skills[set_index] += b_set
+      }
+    }
+    # Independent skill sets : Original skills are retrieved
+    independent_skills.map{ |index_set|
+      index_set.collect{ |index| mission_skills[index] }
+    }
+  end
+
+  def self.build_independent_vrps(vrp, skill_sets, skill_vehicle_ids, skill_service_ids)
+    unused_vehicle_indices = (0..vrp.vehicles.size - 1).to_a
+    independent_vrps = skill_sets.collect{ |skills_set|
+      # Compatible problem ids are retrieved
+      vehicle_indices = skills_set.flat_map{ |skills|
+        skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v }
+      }.uniq
+      vehicle_indices.each{ |index| unused_vehicle_indices.delete(index) }
+      service_ids = skills_set.flat_map{ |skills| skill_service_ids[skills] }
+
+      service_vrp = { service: nil, vrp: vrp }
+      Interpreters::SplitClustering.build_partial_service_vrp(service_vrp,
+                                                              service_ids,
+                                                              vehicle_indices)[:vrp]
+    }
+    total_size = vrp.services.all?{ |service| service.sticky_vehicles.any? } ? vrp.vehicles.size :
+     independent_vrps.collect{ |s_vrp| s_vrp.services.size * [1, s_vrp.vehicles.size].min }.sum
+    independent_vrps.each{ |sub_vrp|
+      # If one sub vrp has no vehicle or no service, duration can be zero.
+      # We only split duration among sub_service_vrps that have at least one vehicle and one service.
+      this_sub_size = vrp.services.all?{ |service| service.sticky_vehicles.any? } ? sub_vrp.vehicles.size :
+        sub_vrp.services.size * [1, sub_vrp.vehicles.size].min
+      adjust_independent_duration(sub_vrp, this_sub_size, total_size)
+    }
+
+    return independent_vrps if unused_vehicle_indices.empty?
+
+    sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp({ vrp: vrp }, [], unused_vehicle_indices)
+    sub_service_vrp[:vrp].matrices = []
+    independent_vrps.push(sub_service_vrp[:vrp])
+
+    independent_vrps
+  end
+
+  def self.adjust_independent_duration(vrp, this_sub_size, total_size)
+    split_ratio = this_sub_size.to_f / total_size
+    vrp.resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
+    vrp.resolution_minimum_duration =
+      vrp.resolution_minimum_duration&.*(split_ratio)&.ceil
+    vrp.resolution_iterations_without_improvment =
+      vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
+    vrp
+  end
+
+  def self.split_independent_vrp(vrp)
+    # Don't split vrp if
+    # - No vehicle
+    # - No service
+    # - there is multimodal subtours
+    return [vrp] if (vrp.vehicles.size <= 1) || vrp.services.empty? || vrp.subtours&.any? # there might be zero services
+
+    # - there is a service with no skills (or sticky vehicle see: expand_data.rb:sticky_as_skills)
     mission_skills = vrp.services.map(&:skills).uniq
     return [vrp] if mission_skills.include?([])
 
@@ -336,105 +449,13 @@ module OptimizerWrapper
     grouped_vehicles = vrp.vehicles.group_by{ |vehicle| vehicle.skills.flatten }
     vehicle_skills = grouped_vehicles.keys.uniq
     skill_vehicle_ids = Hash.new{ [] }
-    grouped_vehicles.each{ |skills, vehicles| skill_vehicle_ids[skills] += vehicles.map{ |vehicle| vrp.vehicles.find_index(vehicle) } }
-
-    independent_skills = Array.new(mission_skills.size) { |i| [i] }
-
-    # Build the compatibility table between service and vehicle skills
-    # As reminder vehicle skills are defined as an OR condition
-    # When the services skills are defined as an AND condition
-    compatibility_table = mission_skills.map.with_index{ |_skills, _index| Array.new(vehicle_skills.size) { false } }
-    mission_skills.each.with_index{ |m_skills, m_index|
-      vehicle_skills.each.with_index{ |v_skills, v_index|
-        compatibility_table[m_index][v_index] = true if (v_skills & m_skills) == m_skills
-      }
+    grouped_vehicles.each{ |skills, vehicles|
+      skill_vehicle_ids[skills] += vehicles.map{ |vehicle| vrp.vehicles.find_index(vehicle) }
     }
 
-    mission_skills.size.times.each{ |a_line|
-      ((a_line + 1)..mission_skills.size - 1).each{ |b_line|
-        next if (compatibility_table[a_line].select.with_index{ |state, index| state & compatibility_table[b_line][index] }).empty?
+    independant_skill_sets = compute_independent_skills_sets(vrp, mission_skills, vehicle_skills)
 
-        b_set = independent_skills.find{ |set| set.include?(b_line) && set.exclude?(a_line) }
-        next if b_set.nil?
-
-        # Skills indices are merged as they have at least a vehicle in common
-        independent_skills.delete(b_set)
-        set_index = independent_skills.index{ |set| set.include?(a_line) }
-        independent_skills[set_index] += b_set
-      }
-    }
-
-    # Original skills are retrieved
-    independant_skill_sets = independent_skills.map{ |index_set|
-      index_set.collect{ |index| mission_skills[index] }
-    }
-
-    unused_vehicles_indices = (0..vrp.vehicles.size - 1).to_a
-    independent_vrps = independant_skill_sets.collect{ |skills_set|
-      # Compatible problem ids are retrieved
-      vehicles_indices = skills_set.flat_map{ |skills| skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v } }.uniq
-      vehicles_indices.each{ |index| unused_vehicles_indices.delete(index) }
-      service_ids = skills_set.flat_map{ |skills| skill_service_ids[skills] }
-      service_vrp = {
-        service: nil,
-        vrp: vrp,
-      }
-
-      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids, vehicles_indices)
-      sub_service_vrp[:vrp]
-    }
-
-    total_size = independent_vrps.collect{ |s_s_v| s_s_v.services.size * [1, s_s_v.vehicles.size].min }.sum
-    independent_vrps.each{ |sub_service_vrp|
-      # If one sub_service_vrp has no vehicle or no service, duration can be zero.
-      # We only split duration among sub_service_vrps that have at least one vehicle and one service.
-      this_sub_vrp_size = sub_service_vrp.services.size * [1, sub_service_vrp.vehicles.size].min
-
-      split_ratio = this_sub_vrp_size / total_size.to_f
-      sub_service_vrp.resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
-      sub_service_vrp.resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
-      sub_service_vrp.resolution_iterations_without_improvment = vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
-    }
-
-    return independent_vrps if unused_vehicles_indices.empty?
-
-    sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp({ vrp: vrp }, [], unused_vehicles_indices)
-    sub_service_vrp[:vrp].matrices = []
-    independent_vrps.push(sub_service_vrp[:vrp])
-
-    independent_vrps
-  end
-
-  def self.split_independent_vrp_by_sticky_vehicle(vrp)
-    vrp.vehicles.map.with_index{ |vehicle, v_i|
-      vehicle_id = vehicle.id
-      service_ids = vrp.services.select{ |s| s.sticky_vehicles.map(&:id) == [vehicle_id] }.map(&:id)
-      service_vrp = {
-        service: nil,
-        vrp: vrp,
-      }
-      sub_service_vrp = Interpreters::SplitClustering.build_partial_service_vrp(service_vrp, service_ids, [v_i])
-      split_ratio = 1.0 / vrp.vehicles.size
-      sub_service_vrp[:vrp].resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
-      sub_service_vrp[:vrp].resolution_minimum_duration = (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out)&.*(split_ratio)&.ceil
-      sub_service_vrp[:vrp].resolution_iterations_without_improvment = vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
-      sub_service_vrp[:vrp]
-    }
-  end
-
-  def self.split_independent_vrp(vrp)
-    # Don't split vrp if
-    return [vrp] if (vrp.vehicles.size <= 1) || vrp.services.empty? # there might be zero services
-
-    if vrp.services.all?{ |s| s.sticky_vehicles.size == 1 }
-      return split_independent_vrp_by_sticky_vehicle(vrp)
-    end
-    # Cannot split if there is multimodal subtours
-    if !vrp.subtours&.any? && vrp.services.all?{ |s| s.sticky_vehicles.empty? }
-      return split_independent_vrp_by_skills(vrp)
-    end
-
-    [vrp]
+    build_independent_vrps(vrp, independant_skill_sets, skill_vehicle_ids, skill_service_ids)
   end
 
   def self.join_independent_vrps(services_vrps, callback)

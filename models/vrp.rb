@@ -237,6 +237,7 @@ module Models
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.expand_unavailable_days
       vrp.provide_original_info
+      vrp.sticky_as_skills
     end
 
     def self.convert_position_relations(hash)
