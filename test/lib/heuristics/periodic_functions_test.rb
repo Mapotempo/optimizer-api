@@ -737,7 +737,7 @@ class HeuristicTest < Minitest::Test
       assert s.send(:day_in_possible_interval, 'service_1', 1)
       s.instance_variable_get(:@services_assignment)['service_1'][:days] = [1]
       assert s.send(:day_in_possible_interval, 'service_1', 1) # this case will be avoided by compute days
-      refute s.send(:compatible_days, 'service_1', 1)
+      refute s.send(:day_is_compatible, 'service_1', 1)
     end
 
     def test_compute_visits_number
@@ -999,6 +999,54 @@ class HeuristicTest < Minitest::Test
       assert s.send(:same_point_compatibility, 'service_1', 0)
       s.instance_variable_get(:@points_assignment)[point_id][:days] = [0, 4]
       refute s.send(:same_point_compatibility, 'service_1', 0)
+    end
+
+    def test_compute_times
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      # standard case :
+      previous = { point_id: 'point_2', end: 0 }
+      inserted_service = { id: 'service_1', points_ids: 'point_1', tws_sets: [], durations: 10, setup_durations: 3 }
+      computed_times = s.send(:compute_times, previous, inserted_service, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0])[0]
+      assert_equal 0, computed_times[:start_time]
+      assert_equal 5, computed_times[:arrival_time]
+      assert_equal 15, computed_times[:final_time]
+
+      # service has a timewindow :
+      inserted_service[:tws_sets] = [{ start: 20, end: 100 }]
+      computed_times = s.send(:compute_times, previous, inserted_service, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0])[0]
+      assert_equal 15, computed_times[:start_time]
+
+      # service is located at same point as previous, we can then ignore setup_duration :
+      previous[:point_id] = 'point_1'
+      computed_times = s.send(:compute_times, previous, inserted_service, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0])[0]
+      assert_equal 20, computed_times[:start_time]
+    end
+
+    def test_days_respecting_lapse
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.schedule_range_indices[:end] = 50
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      # Nothing inserted yet
+      assert_equal (0..50).to_a,
+                   s.send(:days_respecting_lapse, 'service_1', s.instance_variable_get(:@candidate_routes)['vehicle_0']).sort
+
+      # One visit inserted but no lapse provided
+      s.instance_variable_get(:@services_assignment)['service_1'][:days] = [25]
+      assert_equal (0..50).to_a - [25],
+                   s.send(:days_respecting_lapse, 'service_1', s.instance_variable_get(:@candidate_routes)['vehicle_0']).sort
+
+      # Adding lapse
+      s.instance_variable_get(:@services_data)['service_1'][:raw].minimum_lapse = 10
+      assert_equal (0..15).to_a + (35..50).to_a,
+                   s.send(:days_respecting_lapse, 'service_1', s.instance_variable_get(:@candidate_routes)['vehicle_0']).sort
+      s.instance_variable_get(:@services_data)['service_1'][:raw].maximum_lapse = 20
+      assert_equal (5..15).to_a + (35..45).to_a,
+                   s.send(:days_respecting_lapse, 'service_1', s.instance_variable_get(:@candidate_routes)['vehicle_0']).sort
     end
   end
 end

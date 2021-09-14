@@ -20,6 +20,7 @@ require 'active_support/concern'
 module PeriodicEndPhase
   extend ActiveSupport::Concern
 
+  # End phase for periodic heuristic
   def refine_solution(&block)
     if @allow_partial_assignment && !@same_point_day && !@relaxed_same_point_day
       block&.call(nil, nil, nil, 'periodic heuristic - adding missing visits', nil, nil, nil)
@@ -32,17 +33,20 @@ module PeriodicEndPhase
     end
   end
 
-  def days_respecting_lapse(id, vehicle_routes)
-    min_lapse = @services_data[id][:raw].minimum_lapse
-    max_lapse = @services_data[id][:raw].maximum_lapse
-    used_days = @services_assignment[id][:days]
+  # Returns all days such that minimum and maximum lapses are respected
+  # with already used days for this service_id
+  def days_respecting_lapse(service_id, vehicle_routes)
+    min_lapse = @services_data[service_id][:raw].minimum_lapse
+    max_lapse = @services_data[service_id][:raw].maximum_lapse
+    used_days = @services_assignment[service_id][:days]
 
     return vehicle_routes.keys if used_days.empty?
 
     vehicle_routes.keys.select{ |day|
       smaller_lapse_with_other_days = used_days.collect{ |used_day| (used_day - day).abs }.min
       (min_lapse.nil? || smaller_lapse_with_other_days >= min_lapse) &&
-        (max_lapse.nil? || smaller_lapse_with_other_days <= max_lapse)
+        (max_lapse.nil? || smaller_lapse_with_other_days <= max_lapse) &&
+        !used_days.include?(day)
     }.sort_by{ |day| used_days.collect{ |used_day| (used_day - day).abs }.min } # minimize generated lapse
   end
 
