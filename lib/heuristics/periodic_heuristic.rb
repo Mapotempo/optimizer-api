@@ -138,31 +138,42 @@ module Wrappers
       first_index = 0
       last_index = route.size
 
-      first_unforced_first = (0..route.size).find{ |position| route[position].nil? || (route[position][:requirement] != :always_first && route[position][:requirement] != :never_middle) }
-      first_forced_last = (0..route.size).find{ |position| route[position].nil? || route[position][:requirement] == :always_last || position > first_unforced_first && route[position][:requirement] == :never_middle }
+      first_unforced_first = (0..route.size).find{ |position|
+        route[position].nil? || (route[position][:requirement] != :always_first &&
+          route[position][:requirement] != :never_middle)
+      }
+      first_forced_last = (0..route.size).find{ |position|
+        route[position].nil? || route[position][:requirement] == :always_last || position > first_unforced_first &&
+          route[position][:requirement] == :never_middle
+      }
+      positions_to_try =
+        case position_requirement
+        when :always_first
+          (first_index..first_unforced_first).to_a
+        when :always_middle
+          full = (first_unforced_first..first_forced_last).to_a
+          cleaned = full - (0..first_unforced_first - 1).to_a - (first_forced_last + 1..last_index).to_a
+          cleaned.delete(0)           # can not be the very first
+          cleaned.delete(route.size)  # can not be the very last
+          cleaned
+        when :always_last
+          (first_forced_last..last_index).to_a
+        when :never_first
+          route.empty? ? [] : ([1, first_unforced_first].max..first_forced_last).to_a
+        when :never_middle
+          ((first_index..first_unforced_first).to_a + (first_forced_last..last_index).to_a).uniq
+        when :never_last
+          route.empty? || [route.size - 1, first_forced_last].min < first_unforced_first ?
+            [] : (first_unforced_first..[(route.size - 1), first_forced_last].min).to_a
+        else # position_requirement == :neutral
+          (first_unforced_first..first_forced_last).to_a
+        end
 
-      positions_to_try = if position_requirement == :always_first
-        (first_index..first_unforced_first).to_a
-      elsif position_requirement == :always_middle
-        full = (first_unforced_first..first_forced_last).to_a
-        cleaned = full - (0..first_unforced_first - 1).to_a - (first_forced_last + 1..last_index).to_a
-        cleaned.delete(0)           # can not be the very first
-        cleaned.delete(route.size)  # can not be the very last
-        cleaned
-      elsif position_requirement == :always_last
-        (first_forced_last..last_index).to_a
-      elsif position_requirement == :never_first
-        route.empty? ? [] : ([1, first_unforced_first].max..first_forced_last).to_a
-      elsif position_requirement == :never_middle
-        ((first_index..first_unforced_first).to_a + (first_forced_last..last_index).to_a).uniq
-      elsif position_requirement == :never_last
-        route.empty? || [route.size - 1, first_forced_last].min < first_unforced_first ? [] : (first_unforced_first..[(route.size - 1), first_forced_last].min).to_a
-      else # position_requirement == :neutral
-        (first_unforced_first..first_forced_last).to_a
-      end
-
-      if service_points_ids.size == 1 && positions_to_try.find{ |position| route[position] && route[position][:point_id] == service_points_ids.first }
-        same_location_position = positions_to_try.select{ |position| route[position] && route[position][:point_id] == service_points_ids.first }
+      if service_points_ids.size == 1 &&
+         positions_to_try.find{ |position| route[position] && route[position][:point_id] == service_points_ids.first }
+        same_location_position = positions_to_try.select{ |position|
+          route[position] && route[position][:point_id] == service_points_ids.first
+        }
         positions_to_try.delete_if{ |position|
           !same_location_position.include?(position) &&
             !same_location_position.include?(position - 1)
@@ -569,7 +580,7 @@ module Wrappers
                     first_day + (@services_data[service_id][:raw].maximum_lapse || 2**32))
       }
 
-      potential_days.find{ |d| find_best_index(service_id, @candidate_routes[vehicle_id][d], false) }
+      potential_days.find{ |d| find_feasible_index(service_id, @candidate_routes[vehicle_id][d], false) }
     end
 
     def same_point_compatibility(service_id, vehicle_id, day)
@@ -887,8 +898,12 @@ module Wrappers
       # WARNING : this does not consider vehicle alternative skills properly
       # we would need to know which skill_set is required in order that all services on same vehicle are compatible
       service_data = @services_data[service_id]
-      route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? } &&
-        (service_data[:sticky_vehicles_ids].empty? || service_data[:sticky_vehicles_ids].include?(route_data[:vehicle_original_id]))
+      point = @services_data[service_id][:points_ids].first
+      (!@same_point_day && !@relaxed_same_point_day || @points_vehicles_and_days[point][:vehicles].empty? ||
+        @points_vehicles_and_days[point][:vehicles].include?(route_data[:vehicle_original_id])) &&
+        route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? } &&
+        (service_data[:sticky_vehicles_ids].empty? ||
+          service_data[:sticky_vehicles_ids].include?(route_data[:vehicle_original_id]))
     end
 
     def service_does_not_violate_capacity(service_id, route_data, first_visit)
@@ -940,33 +955,54 @@ module Wrappers
       (0..service_data[:nb_activities] - 1).collect{ |activity|
         positions_to_try = compute_consistent_positions_to_insert(@services_data[service_id][:positions_in_route][activity], @services_data[service_id][:points_ids], route)
         positions_to_try.collect{ |position|
-          ### compute cost of inserting service activity [activity] at [position] in [route_data]
-          previous = get_previous_info(route_data, position)
-          current = service_data[:points_ids][activity]
-          next_point = position == route_data[:stops].size ? route_data[:end_point_id] : route[position][:point_id]
-
-          # TODO : this needs to be improved because when we insert a point at same location as start or end_point_id
-          # we still might create a detour because we can insert at first and/or last position
-          # we should not generate useless route time :
-          next if position.between?(1, route.size - 2) && # not first neither last position
-                  matrix(route_data, previous[:point_id], next_point, :time).zero? &&
-                  matrix(route_data, previous[:point_id], @services_data[service_id][:points_ids][activity], :time) > 0
-
-          next if position.positive? && position < route.size && # not first neither last position
-                  previous[:point_id] == next_point && previous[:point_id] != @services_data[service_id][:points_ids][activity] # there is no point in testing a position that will imply useless route time
-
-          next if route_data[:maximum_ride_time] &&
-                  (position.positive? && matrix(route_data, previous, current, :time) > route_data[:maximum_ride_time] ||
-                  position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :time) > route_data[:maximum_ride_time])
-
-          next if route_data[:maximum_ride_distance] &&
-                  (position.positive? && matrix(route_data, previous, current, :distance) > route_data[:maximum_ride_distance] ||
-                  position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :distance) > route_data[:maximum_ride_distance])
-
-          best_cost_according_to_tws(route_data, service_id, service_data, previous,
-                                     position: position, activity: activity, first_visit: first_visit)
+          index_cost(route_data, service_id, position, activity, first_visit)
         }
       }.flatten.compact.min_by{ |cost| cost[:back_to_depot] }
+    end
+
+    def find_feasible_index(service_id, route_data, first_visit = true)
+      return nil unless service_compatible_with_route(service_id, route_data, first_visit)
+
+      ### find the best position in [route_data] to insert [service] ###
+      route = route_data[:stops]
+      service_data = @services_data[service_id]
+
+      (0..service_data[:nb_activities] - 1).find{ |activity|
+        positions_to_try = compute_consistent_positions_to_insert(@services_data[service_id][:positions_in_route][activity], @services_data[service_id][:points_ids], route)
+        positions_to_try.find{ |position|
+          index_cost(route_data, service_id, position, activity, first_visit)
+        }
+      }
+    end
+
+    def index_cost(route_data, service_id, position, activity, first_visit)
+      ### compute cost of inserting service activity [activity] at [position] in [route_data]
+      service_data = @services_data[service_id]
+      route = route_data[:stops]
+      previous = get_previous_info(route_data, position)
+      current = service_data[:points_ids][activity]
+      next_point = position == route_data[:stops].size ? route_data[:end_point_id] : route[position][:point_id]
+
+      # TODO : this needs to be improved because when we insert a point at same location as start or end_point_id
+      # we still might create a detour because we can insert at first and/or last position
+      # we should not generate useless route time :
+      return if position.between?(1, route.size - 2) && # not first neither last position
+                matrix(route_data, previous[:point_id], next_point, :time).zero? &&
+                matrix(route_data, previous[:point_id], @services_data[service_id][:points_ids][activity], :time) > 0
+
+      return if position.positive? && position < route.size && # not first neither last position
+                previous[:point_id] == next_point && previous[:point_id] != @services_data[service_id][:points_ids][activity] # there is no point in testing a position that will imply useless route time
+
+      return if route_data[:maximum_ride_time] &&
+                (position.positive? && matrix(route_data, previous[:point_id], current, :time) > route_data[:maximum_ride_time] ||
+                position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :time) > route_data[:maximum_ride_time])
+
+      return if route_data[:maximum_ride_distance] &&
+                (position.positive? && matrix(route_data, previous[:point_id], current, :distance) > route_data[:maximum_ride_distance] ||
+                position < route_data[:stops].size - 2 && matrix(route_data, current, next_point, :distance) > route_data[:maximum_ride_distance])
+
+      best_cost_according_to_tws(route_data, service_id, service_data, previous,
+                                 position: position, activity: activity, first_visit: first_visit)
     end
 
     def can_ignore_tw(previous_service_id, service_id)
@@ -1296,11 +1332,12 @@ module Wrappers
       # Now it is ok because marshall dump, but do not use mashall dump
       route_vrp = Marshal.load(Marshal.dump(vrp))
 
-      route_vrp.services.delete_if{ |service| !current_route.collect{ |service| service[:id] }.include?(service[:id]) }
+      service_hash = current_route.map{ |service| [service[:id], service] }.to_h
+      route_vrp.services.select!{ |service| service_hash.key?(service[:id]) }
       route_vrp.services.each{ |service|
         next if service.activity
 
-        service.activity = service.activities[current_route.find{ |stop| stop[:id] == service.id }[:activity]]
+        service.activity = service.activities[service_hash[service.id][:activity]]
         service.activities = nil
       }
       route_vrp.vehicles = [vehicle]
