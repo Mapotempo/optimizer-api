@@ -50,5 +50,16 @@ module Models
         2147483647 # 2**31 - 1
       end
     end
+
+    def compatible_with?(timewindow, check_days = true)
+      raise unless timewindow.is_a?(Models::Timewindow)
+
+      return false if check_days &&
+                      self.day_index && timewindow.day_index &&
+                      self.day_index != timewindow.day_index
+
+      (self.end.nil? || timewindow.start.nil? || timewindow.start <= self.end + (self.maximum_lateness || 0)) &&
+        (self.start.nil? || timewindow.end.nil? || timewindow.end + (timewindow.maximum_lateness || 0) >= self.start)
+    end
   end
 end

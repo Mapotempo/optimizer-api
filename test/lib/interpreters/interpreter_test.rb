@@ -1617,4 +1617,27 @@ class InterpreterTest < Minitest::Test
     assert_equal 4, expanded_vrp.vehicles.size
     assert_equal 2, (expanded_vrp.relations.count{ |r| r[:type] == :vehicle_trips })
   end
+
+  def test_expand_rests_timewindows
+    problem = VRP.lat_lon_two_vehicles
+    problem[:rests] = [{ id: 'rest', duration: 10 }]
+    problem[:vehicles].each{ |v| v[:rest_ids] = ['rest'] }
+    problem[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
+
+    expanded_vrp = periodic_expand(problem)
+    assert_equal 8, expanded_vrp.vehicles.size
+    assert_equal 8, expanded_vrp.vehicles.flat_map(&:rest_ids).uniq.size
+
+    problem[:rests].first[:timewindows] = [{ start: 2, end: 3 }]
+    expanded_vrp = periodic_expand(problem)
+    assert_equal 8, expanded_vrp.vehicles.flat_map(&:rest_ids).uniq.size
+    assert(expanded_vrp.vehicles.all?{ |v| v.rests.first.timewindows.first.start == 2 })
+    assert(expanded_vrp.vehicles.all?{ |v| v.rests.first.timewindows.first.end == 3 })
+
+    problem[:rests].first[:timewindows].first[:day_index] = 1
+    expanded_vrp = periodic_expand(problem)
+    assert_equal 2, expanded_vrp.vehicles.flat_map(&:rest_ids).uniq.size
+    vehicle_at_day_one = expanded_vrp.vehicles.find{ |v| v.global_day_index == 1 }
+    assert_equal 86402, vehicle_at_day_one.rests.first.timewindows.first.start
+  end
 end

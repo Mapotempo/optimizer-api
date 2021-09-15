@@ -80,8 +80,8 @@ module Parsers
   class RestParser
     def self.parse(rest, options)
       {
-        id: rest.id,
-        rest_id: rest.id,
+        id: rest.original_id || rest.id,
+        rest_id: rest.original_id || rest.id,
         type: :rest,
         activity: Models::Rest.new(rest.as_json),
         info: options[:info] || Models::Solution::Stop::Info.new({})
