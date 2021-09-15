@@ -1356,6 +1356,7 @@ module Interpreters
             service.skills.insert(0, "vehicle_partition_#{vrp.vehicles.first.id}".to_sym)
           }
           vrp.vehicles.each{ |v|
+            # assumes vehicle.skills is an array of arrays
             v.skills.each{ |set| set << "vehicle_partition_#{vrp.vehicles.first.id}".to_sym }
           }
         when :work_day
