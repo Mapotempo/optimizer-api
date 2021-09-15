@@ -605,9 +605,7 @@ module Wrappers
         next if (column_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1)) && (line_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1))
 
         vrp.services.select{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.point.matrix_index == matrix_index } }.each{ |service|
-          if unfeasible.none?{ |unfeas| unfeas[:service_id] == service[:id] }
-            add_unassigned(unfeasible, vrp, service, 'Unreachable')
-          end
+          add_unassigned(unfeasible, vrp, service, 'Unreachable')
         }
       }
 
@@ -617,7 +615,7 @@ module Wrappers
     ALL_OR_NONE_RELATIONS = %i[shipment sequence meetup].freeze
     def add_unassigned(unfeasible, vrp, service, reason)
       # calls add_unassigned_internal for every service in an "ALL_OR_NONE_RELATION" with the service
-      service_already_marked_unfeasible = unfeasible.any?{ |un| un[:original_service_id] == service.id }
+      service_already_marked_unfeasible = !!unfeasible[service.id]
 
       unless service_already_marked_unfeasible && reason.start_with?('In a relation with an unfeasible service: ')
         add_unassigned_internal(unfeasible, vrp, service, reason)
@@ -639,25 +637,25 @@ module Wrappers
     end
 
     def add_unassigned_internal(unfeasible, vrp, service, reason)
-      if unfeasible.any?{ |unfeas| unfeas[:original_service_id] == service[:id] }
+      if unfeasible[service.id]
         # we update reason to have more details
-        unfeasible.each{ |unfeas|
-          next unless unfeas[:original_service_id] == service[:id]
-
-          unfeas[:reason] += " && #{reason}"
-        }
+        unfeasible[service.id].each{ |un| un[:reason] += " && #{reason}" }
       else
-        unfeasible.concat Array.new(service.visits_number){ |index|
-          {
+        service_detail = build_detail(service, service.activity, service.activity.point, nil, nil, nil)
+
+        unfeasible[service.id] = []
+
+        service.visits_number.times{ |index|
+          unfeasible[service.id] << {
             original_service_id: service.original_id,
             pickup_shipment_id: service.type == :pickup && service.original_id,
             delivery_shipment_id: service.type == :delivery && service.original_id,
-            service_id: vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service[:id],
-            point_id: service.activity ? service.activity.point_id : nil,
-            detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
+            service_id: vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service.id,
+            point_id: service.activity&.point_id,
+            detail: service_detail,
             type: service.type,
             reason: reason
-          }
+          }.delete_if{ |_k, v| v.nil? }
         }
       end
 
@@ -728,7 +726,8 @@ module Wrappers
     end
 
     def detect_unfeasible_services(vrp)
-      unfeasible = []
+      unfeasible = {}
+
       vehicle_max_shift = compute_vehicles_shift(vrp.vehicles)
       vehicle_max_capacities = compute_vehicles_capacity(vrp)
 
@@ -824,8 +823,8 @@ module Wrappers
       }
 
       unless unfeasible.empty?
-        log "Following services marked as infeasible:\n#{unfeasible.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug
-        log "#{unfeasible.size} services marked as infeasible with the following reasons: #{unfeasible.collect{ |u| u[:reason] }.uniq.join(', ')}", level: :info
+        log "Following services marked as infeasible:\n#{unfeasible.values.flatten.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug
+        log "#{unfeasible.size} services marked as infeasible with the following reasons: #{unfeasible.values.flatten.collect{ |u| u[:reason] }.uniq.join(', ')}", level: :info
       end
 
       unfeasible

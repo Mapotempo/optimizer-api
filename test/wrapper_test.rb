@@ -2512,7 +2512,7 @@ class WrapperTest < Minitest::Test
     }
     vrp[:services].first[:activity][:duration] = 15
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal(1, result.count{ |un| un[:reason] == 'Service duration greater than any vehicle timewindow' })
+    assert_equal(1, result.values.flatten.count{ |un| un[:reason] == 'Service duration greater than any vehicle timewindow' })
 
     vrp[:vehicles].first[:timewindow] = nil
     vrp[:vehicles].first[:sequence_timewindows] = [{
@@ -2521,7 +2521,7 @@ class WrapperTest < Minitest::Test
     }]
     vrp[:services].first[:activity][:duration] = 15
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal(1, result.count{ |un| un[:reason] == 'Service duration greater than any vehicle timewindow' })
+    assert_equal(1, result.values.flatten.count{ |un| un[:reason] == 'Service duration greater than any vehicle timewindow' })
 
     vrp[:vehicles].first[:sequence_timewindows] << {
       start: 0,
@@ -2538,23 +2538,23 @@ class WrapperTest < Minitest::Test
 
     vrp[:services].first[:quantities].first[:value] = -6
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal(1, result.count{ |un| un[:reason] == 'Service quantity greater than any vehicle capacity' })
+    assert_equal(1, result.values.flatten.count{ |un| un[:reason] == 'Service quantity greater than any vehicle capacity' })
   end
 
   def test_feasible_if_tardiness_allowed
     vrp = VRP.basic
 
     vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
-    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size, 'All services (3) should be eliminated'
+    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'All services (3) should be eliminated'
 
     vrp[:vehicles].first[:cost_late_multiplier] = 1
-    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size, 'No services should be eliminated due to vehicle timewindow since tardiness is allowed'
+    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'No services should be eliminated due to vehicle timewindow since tardiness is allowed'
 
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 3 }]
-    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size, 'First service should be eliminated due its timewindow'
+    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'First service should be eliminated due its timewindow'
 
     vrp[:services].first[:activity][:late_multiplier] = 1
-    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size, 'First service should not be eliminated due to its timewindow since tardiness is allowed'
+    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'First service should not be eliminated due to its timewindow since tardiness is allowed'
   end
 
   def test_return_empty_if_all_eliminated
@@ -2570,16 +2570,19 @@ class WrapperTest < Minitest::Test
 
     vrp[:vehicles].first[:start_point_id] = nil
     vrp[:vehicles].first[:end_point_id] = 'point_0'
-    assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size, 'Two services should be eliminated even if there is no vehicle start'
+    assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+                 'Two services should be eliminated even if there is no vehicle start'
 
     vrp[:vehicles].first[:start_point_id] = 'point_0'
     vrp[:vehicles].first[:end_point_id] = nil
-    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size, 'All services (3) should be eliminated even if there is no vehicle end'
+    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+                 'All services (3) should be eliminated even if there is no vehicle end'
 
     vrp[:vehicles].first[:start_point_id] = nil
     vrp[:vehicles].first[:end_point_id] = nil
     vrp[:services].first[:activity][:duration] = 2
-    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), []).size, 'First service should be eliminated even if there is no vehicle start nor end'
+    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+                 'First service should be eliminated even if there is no vehicle start nor end'
   end
 
   def test_work_day_entity_after_eventual_vehicle
@@ -2647,16 +2650,16 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(VRP.periodic)
     vrp[:services].first.visits_number = 4
 
-    unfeasible = []
+    unfeasible = {}
 
     unfeasible = OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible, vrp, vrp[:services][1], 'reason1')
-    assert_equal 1, unfeasible.size
+    assert_equal 1, unfeasible.values.flatten.size
 
     unfeasible = OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible, vrp, vrp[:services][0], 'reason2')
-    assert_equal 5, unfeasible.size
+    assert_equal 5, unfeasible.values.flatten.size
 
     unfeasible = OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible, vrp, vrp[:services][0], 'reason3')
-    assert_equal 5, unfeasible.size
+    assert_equal 5, unfeasible.values.flatten.size
   end
 
   def test_add_unassigned_respects_relations
@@ -2670,14 +2673,14 @@ class WrapperTest < Minitest::Test
 
     # no relation
     vrp = TestHelper.create(problem)
-    assert_equal 1, services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason').size
+    assert_equal 1, services_demo.add_unassigned({}, vrp, vrp[:services][0], 'reason').values.flatten.size
 
     # all 7 services in one relation type become unfeasible at the same time
     Wrappers::Wrapper::ALL_OR_NONE_RELATIONS.each{ |relation_type|
       linked_ids_size = relation_type == :shipment ? 2 : problem[:services].size
       problem[:relations] = [{ type: relation_type, linked_ids: problem[:services][0..linked_ids_size-1].collect{ |s| s[:id] } }]
       vrp = TestHelper.create(problem)
-      assert_equal linked_ids_size, services_demo.add_unassigned([], vrp, vrp[:services][0], 'reason').size
+      assert_equal linked_ids_size, services_demo.add_unassigned({}, vrp, vrp[:services][0], 'reason').values.flatten.size
     }
 
     # 2 services in shipment, 2 in meetup, which are connected by sequence becomes unfeasible at the same time
@@ -2688,15 +2691,15 @@ class WrapperTest < Minitest::Test
       { type: :shipment, linked_ids: problem[:services][5..6].collect{ |s| s[:id] } },
     ]
     vrp = TestHelper.create(problem)
-    unassigned = []
-    assert_equal 2, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'reason').size # only 1 shipment
+    unassigned = {}
+    assert_equal 2, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'reason').values.flatten.size # only 1 shipment
     services_demo.add_unassigned(unassigned, vrp, vrp[:services][0], 'reason') # shipment + meetup
-    assert_equal 6, unassigned.size
+    assert_equal 6, unassigned.values.flatten.size
     in_relation_msg = 'In a relation with an unfeasible service: '
     expected_reasons = { service_0: 'reason', service_1: "#{in_relation_msg}service_0",
                          service_2: "#{in_relation_msg}service_0", service_3: "#{in_relation_msg}service_2",
                          service_5: 'reason', service_6: "#{in_relation_msg}service_5" }
-    assert_equal expected_reasons, unassigned.collect{ |u| [u[:service_id], u[:reason]] }.to_h.symbolize_keys
+    assert_equal expected_reasons, unassigned.values.flatten.collect{ |u| [u[:service_id], u[:reason]] }.to_h.symbolize_keys
   end
 
   def test_default_repetition
@@ -2742,20 +2745,20 @@ class WrapperTest < Minitest::Test
 
     vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 2 }
     assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? } }
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal(2, result.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
+    assert_equal(2, result.values.flatten.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
+
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].select{ |tw| tw[:day_index] == 2 }.each{ |tw| tw[:day_index] = 0 } }
-    assert_equal(2, result.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
+    result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_equal(2, result.values.flatten.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
   end
 
   def test_impossible_minimum_lapse_opened_days_real_case
     vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
-    result.select!{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }
-    result.collect!{ |un| un[:original_service_id] }
-    result.uniq!
-    assert_equal 12, result.size
+    assert_equal 12, (result.count{ |_o_s_id, uns| uns.any?{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }})
   end
 
   def test_lapse_with_unavailable_work_days
@@ -2770,24 +2773,33 @@ class WrapperTest < Minitest::Test
     OptimizerLogger.level = :fatal # turn off output completely no matter the setting
     OptimizerWrapper.config[:solve][:repetition] = 1 # fix repetition to measure the perf correctly
 
-    total_time = 0.0
+    total_detect_unfeasible_services_time = 0.0
+    total_check_distances_time = 0.0
+    total_add_unassigned_time = 0.0
     OptimizerWrapper.stub(
       :solve,
       lambda { |vrp_in, _job, block|
         vrp = vrp_in[:vrp]
-        vrp.compute_matrix(&block)
-        start = Time.now
-        OptimizerWrapper.config[:services][:demo].check_distances(vrp, [])
-        total_time += Time.now - start
 
-        {
-          routes: [],
-          unassigned: vrp.services.flat_map{ |service|
-            (1..service.visits_number).collect{ |visit|
-              { service_id: "#{service.id}_#{visit}", detail: {}}
-            }
-          }
+        start = Time.now
+        unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
+        total_detect_unfeasible_services_time += Time.now - start
+
+        vrp.compute_matrix(&block)
+
+        start = Time.now
+        OptimizerWrapper.config[:services][:demo].check_distances(vrp, unfeasible_services)
+        total_check_distances_time += Time.now - start
+
+        # In these vrps, there is no unfeasible service, manually calling the add_unassigned
+        # for all services to check add_unassigned performance correctly
+        start = Time.now
+        vrp.services.each{ |service|
+          OptimizerWrapper.config[:services][:demo].add_unassigned(unfeasible_services, vrp, service, 'reason')
         }
+        total_add_unassigned_time += Time.now - start
+
+        { routes: [], unassigned: unfeasible_services.values.flatten }
       }
     ) do
       vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
@@ -2797,7 +2809,14 @@ class WrapperTest < Minitest::Test
       }
     end
 
-    assert_operator total_time, :<=, 3.0, 'check_distances function took longer than expected'
+    # The time limits down below should be relax enough to take into account github performance variation. If any one of
+    # them is violated "marginally" (without any change in the infeasibility detection logic) then the limits can be
+    # corrected/increased. On local, the total_times are almost half the limits.
+    # The goal of this test is to prevent additional an exponential logic and the limits can increase linearly if more
+    # verifications are added but the time should not increase orders of magnitude.
+    assert_operator total_check_distances_time, :<=, 2.5, 'check_distances function took longer than expected'
+    assert_operator total_add_unassigned_time, :<=, 4.5, 'add_unassigned function took longer than expected'
+    assert_operator total_detect_unfeasible_services_time, :<=, 7.0, 'detect_unfeasible_services function took longer than expected'
   ensure
     OptimizerLogger.level = old_logger_level if old_logger_level
     OptimizerWrapper.config[:solve][:repetition] = old_config_solve_repetition if old_config_solve_repetition
@@ -2847,7 +2866,9 @@ class WrapperTest < Minitest::Test
     vrp[:vehicles].first[:cost_distance_multiplier] = 1
     vrp[:vehicles].first[:distance] = 1
 
-    OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), [])
+    assert_equal 3,
+                 OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+                 "all should be infeasible due to distance constraint"
   end
 
   def test_number_of_service_vrps_generated_in_split_independent
@@ -3359,7 +3380,7 @@ class WrapperTest < Minitest::Test
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }, { start: 20, end: 15 }]
     # ship and service but only check service
     unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal 1, (unfeasible_services.count{ |un| un[:reason] == 'Service timewindows are infeasible' })
+    assert_equal 1, (unfeasible_services.values.flatten.count{ |un| un[:reason] == 'Service timewindows are infeasible' })
   end
 
   def test_multiple_reason
@@ -3383,8 +3404,8 @@ class WrapperTest < Minitest::Test
     vrp.services[2].last_possible_days = [-1]
 
     unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
-    assert_equal 3, unfeasible_services.size
-    assert(unfeasible_services.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
+    assert_equal 3, unfeasible_services.values.flatten.size
+    assert(unfeasible_services.values.flatten.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
   end
 
   def test_possible_days_consistency_regarding_other_visits_possible_days
@@ -3409,8 +3430,8 @@ class WrapperTest < Minitest::Test
     vrp.services[3].last_possible_days = [7, 2, 3]
 
     unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
-    assert_equal 9, unfeasible_services.size
-    assert(unfeasible_services.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
-    refute_includes unfeasible_services.collect{ |un| un[:original_service_id] }, vrp.services.first.id
+    assert_equal 9, unfeasible_services.values.flatten.size
+    assert(unfeasible_services.values.flatten.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
+    refute_includes unfeasible_services.values.flatten.collect{ |un| un[:original_service_id] }, vrp.services.first.id
   end
 end
