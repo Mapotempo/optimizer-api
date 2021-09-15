@@ -164,6 +164,19 @@ module PeriodicDataInitialization
     adapt_services_data
   end
 
+  # Fill correspondance with common timewindows from set_timewindows
+  def fill_correspondance_for(set_timewindows, correspondance)
+    # set_timewindows may contain same timewindow (start/end/day_index) several times
+    # but we can not know because timewindow.id is different :
+    uniq_set_timewindows =
+      set_timewindows.map{ |tw_set|
+        tw_set.collect{ |tw|
+          [[:start, tw.start], [:end, tw.end], [:day_index, tw.day_index]].to_h
+        }
+      }.uniq
+    correspondance[set_timewindows] = best_common_tws(uniq_set_timewindows)
+  end
+
   # In the case same_point_day option is activated, choose one representative
   # per point_id. Representative is one service with highest number of visits.
   # Only when representative is assigned we can assign remaining services at this point,
@@ -174,10 +187,12 @@ module PeriodicDataInitialization
     return unless @same_point_day
 
     @to_plan_service_ids = []
+    correspondance = {}
     @services_data.group_by{ |_id, data| data[:points_ids].first }.each{ |_point_id, same_located_set|
       same_located_set.sort_by!{ |_id, data| data[:raw].visits_number }
-      group_tw = best_common_tw(same_located_set)
-      if group_tw.empty? && !same_located_set.all?{ |_id, data| data[:tws_sets].first.empty? }
+      set_timewindows = same_located_set.map{ |_id, data| data[:tws_sets].flatten }.uniq
+      fill_correspondance_for(set_timewindows, correspondance) unless correspondance[set_timewindows]
+      if correspondance[set_timewindows].empty? && !same_located_set.all?{ |_id, data| data[:tws_sets].first.empty? }
         reject_group(same_located_set,
                      'Same_point_day conflict : services at this geographical point have no compatible timewindow')
       else
@@ -187,13 +202,13 @@ module PeriodicDataInitialization
         }.each{ |_visits_number, sub_set|
           representative_id = sub_set[0][0]
           representative_ids << representative_id
-          sub_set[0][1][:tws_sets] = [group_tw]
+          sub_set[0][1][:tws_sets] = [correspondance[set_timewindows]]
           sub_set[0][1][:group_duration] = sub_set.sum{ |_id, data| data[:durations].first }
           @same_freq_and_location[representative_id] = sub_set.collect(&:first) - [representative_id]
           sub_set[0][1][:group_capacity] = Marshal.load(Marshal.dump(sub_set[0][1][:capacity]))
           @same_freq_and_location[representative_id].each{ |id|
             @services_data[id][:capacity].each{ |unit, value| sub_set[0][1][:group_capacity][unit] += value }
-            @services_data[id][:tws_sets] = [group_tw]
+            @services_data[id][:tws_sets] = [correspondance[set_timewindows]]
           }
         }
 
@@ -226,55 +241,51 @@ module PeriodicDataInitialization
     group.each{ |id, data| reject_all_visits(id, data[:raw].visits_number, specified_reason) }
   end
 
-  def best_common_tw(set)
-    ### finds the biggest tw common to all services in [set] ###
-    first_with_tw = set.find{ |_id, data| !data[:tws_sets].first.empty? }
-    if first_with_tw
-      group_tw = @services_data[first_with_tw[0]][:tws_sets].first.collect{ |tw| { day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
-      # all timewindows are assigned to a day
-      group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw|
-        (0..6).each{ |day|
-          group_tw << { day_index: day, start: tw[:start], end: tw[:end] }
-        }
-      }
-      group_tw.delete_if{ |tw| tw[:day_index].nil? }
+  # Return wether timewindow and other_timewindow have any overlap
+  def compatible_timewindows?(timewindow, other_timewindow)
+    # TODO : it would be better to use this function from timewindow.rb
+    # However, if we work with timewindows we can not, for now, use 'uniq' on
+    # timewindows because we sometimes have same ID for timewindows with same start/end/day_index.
+    # Therefor we might recursively call best_common_tws more than needed
+    return false if timewindow[:day_index] && other_timewindow[:day_index] &&
+                    timewindow[:day_index] != other_timewindow[:day_index]
 
-      # finding minimal common timewindow
-      set.each{ |_id, data|
-        next if data[:tws_sets].first.empty?
+    (timewindow[:end].nil? || other_timewindow[:start].nil? || other_timewindow[:start] <= timewindow[:end]) &&
+      (timewindow[:start].nil? || other_timewindow[:end].nil? || other_timewindow[:end] >= timewindow[:start])
+  end
 
-        # remove all tws with no intersection with this service tws
-        group_tw.delete_if{ |tw1|
-          data[:tws_sets].first.none?{ |tw2|
-            (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
-              (tw2[:end].nil? || tw1[:start] <= tw2[:end]) &&
-              (tw1[:end].nil? || tw1[:end] >= tw2[:start])
-          }
-        }
+  # Compute biggest common timewindows for all services in set
+  def best_common_tws(all_timewindows_sets)
+    # TODO : improve with issue272
 
-        next if group_tw.empty?
+    return [] if all_timewindows_sets == [[]]
 
-        # adjust all tws with intersections with this point tws
-        data[:tws_sets].first.each{ |tw1|
-          intersecting_tws = group_tw.select{ |tw2|
-            (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
-              (tw2[:start] <= tw1[:start] || tw1[:end].nil? || tw2[:start].between?(tw1[:start], tw1[:end])) &&
-              (tw2[:end].nil? || tw1[:end].nil? || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
-          }
-          next if intersecting_tws.empty?
+    return all_timewindows_sets.first if all_timewindows_sets.size == 1
 
-          intersecting_tws.each{ |tw2|
-            tw2[:start] = [tw2[:start], tw1[:start]].max
-            tw2[:end] = [tw2[:end], tw1[:end]].min
-          }
-        }
-      }
+    if all_timewindows_sets.size > 2
 
-      group_tw.delete_if{ |tw| tw[:start] == tw[:end] }
-      group_tw
-    else
-      []
+      return best_common_tws([all_timewindows_sets.first, best_common_tws(all_timewindows_sets[1..-1])])
     end
+
+    referent_tws, other_tws = all_timewindows_sets.dup
+    referent_tws.delete_if{ |tw|
+      other_tws.none?{ |other_tw| compatible_timewindows?(tw, other_tw) }
+    }
+    other_tws.delete_if{ |other_tw|
+      referent_tws.none?{ |tw| compatible_timewindows?(other_tw, tw) }
+    }
+
+    return [] if [referent_tws.size, other_tws.size].min.zero?
+
+    biggest_set, smallest_set = referent_tws.size > other_tws.size ? [referent_tws, other_tws] : [other_tws, referent_tws]
+    biggest_set.flat_map{ |tw|
+      compatible_set = smallest_set.select{ |other_tw| compatible_timewindows?(tw, other_tw) }
+      compatible_set << tw
+
+      Models::Timewindow.create(start: compatible_set.map{ |t| t[:start] }.max,
+                                end: compatible_set.map{ |t| t[:end] }.min,
+                                day_index: compatible_set.map{ |t| t[:day_index] }.compact.first)
+    }
   end
 
   # Unifies quantities and capacities

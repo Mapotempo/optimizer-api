@@ -46,50 +46,90 @@ class HeuristicTest < Minitest::Test
   end
 
   if !ENV['SKIP_PERIODIC']
-    def test_compute_best_common_tw_when_empty_tw
-      vrp = VRP.periodic_seq_timewindows
-      vrp[:configuration][:resolution][:same_point_day] = true
-      vrp[:services][1][:activity][:point_id] = 'point_1'
-      vrp = TestHelper.create(vrp)
-
+    def test_best_common_tws
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
+      vrp.resolution_same_point_day = true
+      vrp.services[1].activity.point_id = vrp.services[0].activity.point_id
       vrp.vehicles = []
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      # Ensure no visit is unassigned :
+      # Ensure no visit is unassigned because of timewindows :
       assert(s.instance_variable_get(:@services_assignment).none?{ |_id, data| data[:unassigned_reasons].any? })
+      assert_equal [], s.send(:best_common_tws, [[], []])
+
+      tw1 = Models::Timewindow.create(start: 0, end: 10)
+      tw2 = Models::Timewindow.create(start: 5, end: 20)
+      tw3 = Models::Timewindow.create(start: 11, end: 20)
+      assert_equal [[0, 10]], (s.send(:best_common_tws, [[tw1], [tw1]]).collect{ |tw| [tw.start, tw.end] })
+      assert_equal [[5, 10]], s.send(:best_common_tws, [[tw1], [tw2]]).collect{ |tw| [tw.start, tw.end] },
+                   'Timewindows should have been merged into biggest common timewindow'
+      assert_equal [], s.send(:best_common_tws, [[tw1], [tw3]])
+
+      # Ensure this case would reject group :
+      vrp.services[0].activity.timewindows = [tw1]
+      vrp.services[1].activity.timewindows = [tw3]
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+      assert_includes s.instance_variable_get(:@services_assignment)['service_1'][:unassigned_reasons],
+                      'Same_point_day conflict : services at this geographical point have no compatible timewindow'
+      assert_includes s.instance_variable_get(:@services_assignment)['service_2'][:unassigned_reasons],
+                      'Same_point_day conflict : services at this geographical point have no compatible timewindow'
+      refute_includes s.instance_variable_get(:@services_assignment)['service_3'][:unassigned_reasons],
+                      'Same_point_day conflict : services at this geographical point have no compatible timewindow'
     end
 
-    def test_compute_best_common_tw_when_conflict_tw
-      vrp = VRP.periodic_seq_timewindows
-      vrp[:configuration][:resolution][:same_point_day] = true
-      vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10 }]
-      vrp[:services][1][:activity][:point_id] = 'point_1'
-      vrp[:services][1][:activity][:timewindows] = [{ start: 11, end: 20 }]
-      vrp = TestHelper.create(vrp)
-
+    def test_best_common_tws_with_day_indices
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       vrp.vehicles = []
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      assert_equal 2, (s.instance_variable_get(:@services_assignment).count{ |_id, data| data[:unassigned_reasons].any? })
+
+      tw1 = Models::Timewindow.create(start: 0, end: 10, day_index: 0)
+      tw2 = Models::Timewindow.create(start: 5, end: 20, day_index: 0)
+      tw3 = Models::Timewindow.create(start: 5, end: 20, day_index: 1)
+      assert_equal [[5, 10, 0]],
+                   (s.send(:best_common_tws, [[tw1], [tw2]]).collect{ |tw| [tw.start, tw.end, tw.day_index] })
+      assert_equal [], s.send(:best_common_tws, [[tw1], [tw3]])
     end
 
-    def test_compute_best_common_tw_when_no_conflict_tw
-      vrp = VRP.periodic_seq_timewindows
-      vrp[:configuration][:resolution][:same_point_day] = true
-      vrp[:services][0][:activity][:timewindows] = [{
-        start: 0,
-        end: 10
-      }]
-      vrp[:services][1][:activity][:point_id] = 'point_1'
-      vrp[:services][1][:activity][:timewindows] = [{
-        start: 5,
-        end: 20
-      }]
-      vrp = TestHelper.create(vrp)
-
+    def test_best_common_tws_with_more_timewindows
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       vrp.vehicles = []
       s = Wrappers::PeriodicHeuristic.new(vrp)
-      data_services = s.instance_variable_get(:@services_data)
-      assert(data_services['service_1'][:tws_sets].first.all?{ |tw| tw[:start] == 5 && tw[:end] == 10 })
-      assert(s.instance_variable_get(:@services_assignment).none?{ |_id, data| data[:unassigned_reasons].any? })
+
+      tw1 = Models::Timewindow.create(start: 0, end: 10)
+      tw2 = Models::Timewindow.create(start: 15, end: 20)
+      tw3 = Models::Timewindow.create(start: 30, end: 40)
+      assert_equal [], s.send(:best_common_tws, [[tw1, tw2], [tw2, tw3], [tw1, tw3]]),
+                   'There is no combination of these sets'
+
+      tw4 = Models::Timewindow.create(start: 5, end: 10, day_index: 0)
+      sets = [[tw1, tw2], [tw2, tw3, tw4], [tw3, tw4], [tw4, tw2]]
+      assert_equal [[5, 10, 0]],
+                   (s.send(:best_common_tws, sets).collect{ |tw| [tw.start, tw.end, tw.day_index] })
+
+      tw5 = Models::Timewindow.create(start: 5, end: 17)
+      assert_equal [],
+                   s.send(:best_common_tws, [[tw1], [tw2], [tw5]]),
+                   'tw5 is compatible with both tw1 and tw2 but tw1 and tw2 are not compatible'
+
+      sets = [[tw1, tw2, tw3], [tw1, tw3], [tw3, tw5]]
+      assert_equal [[5, 10], [30, 40]],
+                   (s.send(:best_common_tws, sets).collect{ |tw| [tw.start, tw.end] }).sort
+    end
+
+    def test_common_tws_with_several_overlapses
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
+      vrp.vehicles = []
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      tw1 = Models::Timewindow.create(start: 0, end: 10, day_index: 0)
+      tw2 = Models::Timewindow.create(start: 4, end: 6, day_index: 0)
+      tw3 = Models::Timewindow.create(start: 8, end: 15, day_index: 0)
+      # both tw2 and tw3 are compatible with tw1 but we can not keep them such as
+      assert_equal [[4, 6, 0], [8, 10, 0]],
+                   (s.send(:best_common_tws, [[tw1], [tw2, tw3]]).collect{ |tw| [tw.start, tw.end, tw.day_index] })
+
+      tw4 = Models::Timewindow.create(start: 5, end: 9, day_index: 0)
+      assert_equal [[5, 6, 0], [8, 9, 0]],
+                   (s.send(:best_common_tws, [[tw1], [tw2, tw3], [tw4]]).collect{ |tw| [tw.start, tw.end, tw.day_index] })
     end
 
     def test_compute_period
@@ -1048,6 +1088,24 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_get(:@services_data)['service_1'][:raw].maximum_lapse = 20
       assert_equal (5..15).to_a + (35..45).to_a,
                    s.send(:days_respecting_lapse, 'service_1', s.instance_variable_get(:@candidate_routes)['vehicle_0']).sort
+    end
+
+    def test_compatible_timewindows
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      tw1 = { start: 10, end: 20, day_index: 0 }
+      tw2 = { start: 10, end: 20, day_index: 1 }
+
+      assert s.compatible_timewindows?(tw1, tw1)
+      refute s.compatible_timewindows?(tw1, tw2)
+      assert s.compatible_timewindows?(tw2, { start: 15, end: 18, day_index: 1 })
+      assert s.compatible_timewindows?(tw2, { start: 15, end: 25, day_index: 1 })
+      assert s.compatible_timewindows?(tw2, { start: 5, end: 18, day_index: 1 })
+      assert s.compatible_timewindows?(tw2, { start: 5, end: 25, day_index: 1 })
+      refute s.compatible_timewindows?(tw2, { start: 5, end: 8 })
+      refute s.compatible_timewindows?(tw2, { start: 25, day_index: 1 })
     end
   end
 end
