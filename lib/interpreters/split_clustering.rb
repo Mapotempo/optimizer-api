@@ -684,48 +684,60 @@ module Interpreters
       log '--> split_balanced_kmeans', level: :debug
 
       if options[:entity] && nb_clusters != service_vrp[:vrp].vehicles.size
-        raise OptimizerWrapper::ClusteringError, 'Usage of options[:entity] requires that number of clusters (nb_clusters) is equal to number of vehicles in the vrp.'
+        raise OptimizerWrapper::ClusteringError.new('Usage of options[:entity] requires that number of clusters (nb_clusters) is equal to number of vehicles in the vrp.')
       end
+
+      raise OptimizerWrapper::ClusteringError.new('nb_clusters should be a positive integer') if nb_clusters <= 0
 
       defaults = { max_iterations: 300, restarts: 10, cut_symbol: :duration, build_sub_vrps: true, group_points: true }
       options = defaults.merge(options)
       vrp = service_vrp[:vrp]
       # Split using balanced kmeans
-      if vrp.services.all?{ |service| service&.activity&.point&.location } && nb_clusters > 1
-        cumulated_metrics = Hash.new(0)
+      if vrp.services.all?{ |service| service.activity&.point&.location }
+        result_items =
+          if nb_clusters > 1
+            cumulated_metrics = Hash.new(0)
 
-        if options[:entity] == :work_day || !vrp.matrices.empty?
-          vrp.compute_matrix if vrp.matrices.empty?
+            if options[:entity] == :work_day || !vrp.matrices.empty?
+              vrp.compute_matrix if vrp.matrices.empty?
 
-          options[:distance_matrix] = vrp.matrices[0][:time]
-        end
+              options[:distance_matrix] = vrp.matrices[0][:time]
+            end
 
-        data_items, cumulated_metrics, grouped_objects, related_item_indices = collect_data_items_metrics(vrp, cumulated_metrics, options)
+            data_items, cumulated_metrics, grouped_objects, related_item_indices = collect_data_items_metrics(vrp, cumulated_metrics, options)
 
-        limits = { metric_limit: centroid_limits(vrp, nb_clusters, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
+            limits = { metric_limit: centroid_limits(vrp, nb_clusters, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
 
-        options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
+            options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
 
-        if vrp.vehicles.any?{ |v| v.skills.count{ |skill| skill.is_a?(Array) && !skill.empty? } > 1 }
-          raise OptimizerWrapper::UnsupportedProblemError.new(
-            'Cannot use balanced kmeans if there are vehicles with alternative skills')
-        end
+            if vrp.vehicles.any?{ |v| v.skills.count{ |skill| skill.is_a?(Array) && !skill.empty? } > 1 }
+              raise OptimizerWrapper::UnsupportedProblemError.new(
+                'Cannot use balanced kmeans if there are vehicles with alternative skills')
+            end
 
-        tic = Time.now
+            tic = Time.now
 
-        options[:clusters_infos] = collect_cluster_data(vrp, nb_clusters)
+            options[:clusters_infos] = collect_cluster_data(vrp, nb_clusters)
 
-        clusters = kmeans_process(nb_clusters, data_items, related_item_indices, limits, options, &block)
+            clusters = kmeans_process(nb_clusters, data_items, related_item_indices, limits, options, &block)
 
-        toc = Time.now
+            toc = Time.now
 
-        result_items = clusters.collect{ |cluster|
-          cluster.data_items.flat_map{ |i|
-            grouped_objects[i[2]]
-          }
-        }
-        log "Balanced K-Means (#{toc - tic}sec): split #{result_items.sum(&:size)} activities into #{result_items.map(&:size).join(' & ')}"
-        log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} data_items into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
+            log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} data_items into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
+
+            clusters.collect{ |cluster|
+              cluster.data_items.flat_map{ |i|
+                grouped_objects[i[2]]
+              }
+            }
+          else
+            # this is normal if there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
+            log 'Split is not possible if the cluster size is 1', level: :warn
+
+            [vrp.services.dup] # mimics grouped_objects
+          end
+
+        log "Balanced K-Means: split #{result_items.sum(&:size)} activities into #{result_items.map(&:size).join(' & ')}"
 
         if options[:build_sub_vrps]
           result_items.collect.with_index{ |result_item, result_index|
@@ -740,7 +752,7 @@ module Interpreters
           result_items
         end
       else
-        log 'Split is not available if there are services with no activity, no location or if the cluster size is less than 2', level: :error
+        log 'Split is not available if there are services with no activity, no location', level: :error
 
         # TODO : remove marshal dump
         # ensure test_instance_800unaffected_clustered and test_instance_800unaffected_clustered_same_point work

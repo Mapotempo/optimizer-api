@@ -257,7 +257,7 @@ class HeuristicTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.load_vrp(self, problem: problem), nil)
       assert_empty result[:unassigned]
-      assert(result[:routes].all?{ |route| route[:activities].all?{ |activity| activity[:detail][:skills].nil? || activity[:detail][:skills].size == 2 } })
+      assert(result[:routes].all?{ |route| route[:activities].all?{ |activity| activity[:detail][:skills].nil? || activity[:detail][:skills].size == 3 } })
     end
 
     def test_callage_freq
