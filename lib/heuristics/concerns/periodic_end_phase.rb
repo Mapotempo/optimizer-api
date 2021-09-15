@@ -136,7 +136,7 @@ module PeriodicEndPhase
 
     # update costs for all ids that should take place at this day. Route changed so cost can change too.
     costs.each{ |id, info|
-      next if info[:day] != best_cost[1][:day] && info[:vehicle] != best_cost[1][:vehicle]
+      next if info.nil? || info[:day] != best_cost[1][:day] && info[:vehicle] != best_cost[1][:vehicle]
 
       cost = find_best_day_cost(@candidate_routes[info[:vehicle]], id)
 
@@ -153,7 +153,7 @@ module PeriodicEndPhase
   def find_best_day_cost(vehicle_routes, id, available_days = nil)
     available_days ||= days_respecting_lapse(id, vehicle_routes)
 
-    return [nil, nil] unless available_days.any?
+    return nil unless available_days.any?
 
     index = 0
     cost = nil
