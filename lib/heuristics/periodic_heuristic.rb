@@ -519,7 +519,7 @@ module Wrappers
           route_data[:stops].slice!(removed_index)
           @services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] += qty }
 
-          unless route_data[:stops].any?{ |s| s[:point_id] == service_point }
+          if route_data[:stops].none?{ |s| s[:point_id] == service_point }
             @points_assignment[service_point][:days].delete(day)
             vehicle_still_used =
               @points_assignment[service_point][:days].any?{ |d|
