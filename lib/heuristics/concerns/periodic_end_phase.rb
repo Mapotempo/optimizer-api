@@ -72,7 +72,7 @@ module PeriodicEndPhase
     end
   end
 
-  # Updates costs after insertion of inserted_cost
+  # Updates costs after insertion of inserted_id
   # Costs of inserted id should be updated : some days are no longer available because of lapses
   # Costs corresponding to this route should updated : they may not be assignable anymore
   def update_costs(costs, inserted_cost_data)
