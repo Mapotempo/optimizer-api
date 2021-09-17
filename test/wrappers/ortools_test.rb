@@ -5299,4 +5299,27 @@ class Wrappers::OrtoolsTest < Minitest::Test
       end
     }
   end
+
+  def test_always_one_time_window_provided_for_rests
+    problem = VRP.basic
+    problem[:rests] = [{ id: 'rest', duration: 10 }]
+    problem[:vehicles][0][:rest_ids] = ['rest']
+
+    [[], [{ start: 2, end: 3 }]].each{ |rest_tws|
+      OptimizerWrapper.config[:services][:ortools].stub(
+        :run_ortools,
+        lambda { |pb, _, _|
+          assert_equal rest_tws.any? ? rest_tws[0][:start] : 0,
+                       pb.vehicles.first.rests.first.time_window.start
+          assert_equal rest_tws.any? ? rest_tws[0][:end] : 2**31 - 1,
+                       pb.vehicles.first.rests.first.time_window.end
+
+          'Job killed' # Return "Job killed" to stop gracefully
+        }
+      ) do
+        problem[:rests].first[:timewindows] = rest_tws
+        OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+      end
+    }
+  end
 end
