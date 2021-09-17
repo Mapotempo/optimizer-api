@@ -1185,8 +1185,25 @@ module Interpreters
 
           tic = Time.now
           log "matrix computation #{vehicle_start_locations.size}x#{locations.size} + #{locations.size}x#{vehicle_end_locations.size}"
-          time_matrix_from_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], vehicle_start_locations, locations).first if vehicle_start_locations.any?
-          time_matrix_to_depot = OptimizerWrapper.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], locations, vehicle_end_locations).first if vehicle_end_locations.any?
+
+          # Try :car and :car_interurban to cover every supported location.
+          router = OptimizerWrapper.router
+          url = OptimizerWrapper.config[:router][:url]
+          time_matrix_from_depot, time_matrix_to_depot =
+            begin
+              [
+                router.matrix(url, :car, [:time], vehicle_start_locations, locations).first,
+                router.matrix(url, :car, [:time], locations, vehicle_end_locations).first
+              ]
+            rescue RouterError => e
+              raise e unless e.message.include?('OutOfSupportedAreaOrNotSupportedDimensionError')
+
+              [
+                router.matrix(url, :car_interurban, [:time], vehicle_start_locations, locations).first,
+                router.matrix(url, :car_interurban, [:time], locations, vehicle_end_locations).first
+              ]
+            end
+
           log "matrix computed in #{(Time.now - tic).round(2)} seconds"
 
           v_index = {
