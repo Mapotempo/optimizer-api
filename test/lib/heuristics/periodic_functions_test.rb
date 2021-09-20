@@ -724,6 +724,8 @@ class HeuristicTest < Minitest::Test
       vrp.services.first.first_possible_days = [0, 1, 2, 3]
       vrp.services.first.last_possible_days = [4, 2, 3, 8]
       assert s.send(:day_in_possible_interval, 'service_1', 0)
+      refute s.send(:day_in_possible_interval, 'service_1', 7),
+             'Inserting fist visit at day 7 is not allowed, that would be too late to assign remaining visits after'
       s.instance_variable_get(:@services_assignment)['service_1'][:days] = [0]
       refute s.send(:day_in_possible_interval, 'service_1', 0) # only one visit can be assigned to a given day / in a given set
       s.instance_variable_get(:@services_assignment)['service_1'][:days] = [0, 1, 2]

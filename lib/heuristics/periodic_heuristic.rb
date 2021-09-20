@@ -258,13 +258,20 @@ module Wrappers
     # Ensures `day` is compatible with other already assigned visits with this ID
     # regarding first/last_possible_days available ranges : it is possible to find a
     # pair of first/last_possible_day for each and every day used for this service_id
-    def day_in_possible_interval(service_id, day)
+    def day_in_possible_interval(service_id, day, first_visit)
       all_days = (@services_assignment[service_id][:days] + [day]).sort
       seen_visits = 0
 
       return false if all_days.size > @services_data[service_id][:raw].visits_number
 
-      @services_data[service_id][:raw].visits_number.times{ |tried_indices|
+      indices_to_try =
+        if first_visit # all inserted visits will be inserted after day
+          [0]
+        else
+          (0..@services_data[service_id][:raw].visits_number - 1).to_a
+        end
+
+      indices_to_try.each{ |tried_indices|
         next unless all_days[seen_visits].between?(@services_data[service_id][:raw].first_possible_days[tried_indices],
                                                    @services_data[service_id][:raw].last_possible_days[tried_indices])
 
@@ -904,10 +911,10 @@ module Wrappers
       }.compact.min_by{ |cost| cost[:back_to_depot] }
     end
 
-    def compatible_days(service_id, day)
+    def compatible_days(service_id, day, first_visit)
       !@services_data[service_id][:raw].unavailable_days.include?(day) &&
         !@services_assignment[service_id][:days].include?(day) &&
-        day_in_possible_interval(service_id, day)
+        day_in_possible_interval(service_id, day, first_visit)
     end
 
     def compatible_vehicle(service_id, route_data)
@@ -952,7 +959,7 @@ module Wrappers
       vehicle_id = route_data[:vehicle_original_id]
       day = route_data[:day]
 
-      compatible_days(service_id, day) &&
+      compatible_days(service_id, day, first_visit) &&
         compatible_vehicle(service_id, route_data) &&
         service_does_not_violate_capacity(service_id, route_data, first_visit) &&
         (!first_visit ||
