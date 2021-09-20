@@ -21,24 +21,21 @@ module PeriodicEndPhase
   extend ActiveSupport::Concern
 
   def refine_solution(&block)
-    @end_phase = true
-    @ids_to_renumber = []
-
     if @allow_partial_assignment && !@same_point_day && !@relaxed_same_point_day
       block&.call(nil, nil, nil, 'periodic heuristic - adding missing visits', nil, nil, nil)
       add_missing_visits
     end
 
     unless @services_data.all?{ |_id, data| data[:raw].exclusion_cost.to_f.zero? }
-      block&.call(nil, nil, nil, 'periodic heuristic - correcting underfilled routes', nil, nil, nil)
-      correct_underfilled_routes
+      block&.call(nil, nil, nil, 'periodic heuristic - correcting poorly populated routes', nil, nil, nil)
+      correct_poorly_populated_routes
     end
   end
 
   def days_respecting_lapse(id, vehicle_routes)
     min_lapse = @services_data[id][:raw].minimum_lapse
     max_lapse = @services_data[id][:raw].maximum_lapse
-    used_days = @services_data[id][:used_days]
+    used_days = @services_assignment[id][:days]
 
     return vehicle_routes.keys if used_days.empty?
 
@@ -50,44 +47,6 @@ module PeriodicEndPhase
   end
 
   private
-
-  def reaffect_visits_number
-    @ids_to_renumber.each{ |id|
-      current_visit_index = 1
-      previous_day = nil
-      uninserted_indices = []
-      @services_data[id][:used_days].sort.each{ |day|
-        if previous_day.nil? || previous_day + @services_data[id][:raw].maximum_lapse >= day
-          @services_data[id][:used_vehicles].each{ |vehicle_id|
-            stop = @candidate_routes[vehicle_id][day][:stops].find{ |route_stop| route_stop[:id] == id }
-
-            next unless stop
-
-            stop[:number_in_sequence] = current_visit_index
-          }
-        else
-          uninserted_indices << current_visit_index
-        end
-
-        current_visit_index += 1
-      }
-
-      reasons = []
-      @uninserted.each{ |uninserted_id, info|
-        next unless info[:original_id] == uninserted_id
-
-        @uninserted.delete(uninserted_id)
-        reasons |= info[:reason]
-      }
-
-      uninserted_indices.each{ |indice|
-        @uninserted["#{id}_#{indice}_#{@services_data[id][:raw].visits_number}"] = {
-          original_id: service,
-          reason: "Still unassigned after end_phase. Original reasons : #{reasons}."
-        }
-      }
-    }
-  end
 
   #### ADD MISSING VISITS PROCESS ####
 
@@ -106,52 +65,49 @@ module PeriodicEndPhase
       vehicle_id = best_cost[1][:vehicle]
       log "It is interesting to add #{id} at day #{day} on #{vehicle_id}", level: :debug
 
-      @ids_to_renumber |= [id]
       insert_point_in_route(@candidate_routes[vehicle_id][day], best_cost[1])
-      @output_tool&.add_single_visit(day, @services_data[id][:used_days], id, @services_data[id][:raw].visits_number)
+      @output_tool&.add_single_visit(day, @services_assignment[id][:days], id, @services_data[id][:raw].visits_number)
 
       costs = update_costs(costs, best_cost)
     end
-
-    reaffect_visits_number
   end
 
-  def update_costs(costs, best_cost)
-    # update costs for inserted id, available_days changed
-    uninserted_set = @uninserted.select{ |_key, info| info[:original_id] == best_cost[0] }.keys
-    @uninserted.delete(uninserted_set.first)
-    if uninserted_set.size > 1
-      available_days = days_respecting_lapse(best_cost[0], @candidate_routes[best_cost[1][:vehicle]])
-
-      cost = find_best_day_cost(@candidate_routes[best_cost[1][:vehicle]], best_cost[0], available_days)
-
-      if cost
-        costs[best_cost[0]] = cost
-      else
-        costs.delete(best_cost[0])
-      end
+  # Updates costs after insertion of inserted_id
+  # Costs of inserted id should be updated : some days are no longer available because of lapses
+  # Costs corresponding to this route should updated : they may not be assignable anymore
+  def update_costs(costs, inserted_cost_data)
+    # Update inserted_id costs
+    inserted_id = inserted_cost_data[0]
+    inserted_cost = inserted_cost_data[1]
+    if @services_assignment[inserted_id][:missing_visits].positive?
+      costs[inserted_id] = find_best_day_cost(@candidate_routes[inserted_cost[:vehicle]], inserted_id)
+      costs.delete(inserted_id) unless costs[inserted_id]
     else
-      costs.delete(best_cost[0])
+      costs.delete(inserted_id)
     end
 
-    # update costs for all ids that should take place at this day. Route changed so cost can change too.
+    # Update costs on this route
     costs.each{ |id, info|
-      next if info.nil? || info[:day] != best_cost[1][:day] && info[:vehicle] != best_cost[1][:vehicle]
+      next unless info &&
+                  info[:day] == inserted_cost[:day] &&
+                  info[:vehicle] == inserted_cost[:vehicle]
 
-      cost = find_best_day_cost(@candidate_routes[info[:vehicle]], id)
-
-      if cost
-        costs[id] = cost
-      else
-        costs.delete(id)
-      end
+      costs[id] = find_best_day_cost(@candidate_routes[info[:vehicle]], id)
+      costs.delete(id) unless costs[id]
     }
 
     costs
   end
 
-  def find_best_day_cost(vehicle_routes, id, available_days = nil)
-    available_days ||= days_respecting_lapse(id, vehicle_routes)
+  def find_best_vehicle_day_cost(id)
+    @services_assignment[id][:vehicles].map{ |vehicle_id|
+      find_best_day_cost(@candidate_routes[vehicle_id], id)
+    }.compact.min_by{ |cost| cost[:additional_route_time] } # TODO : find fair comparison between empty and non empty routes
+  end
+
+  def find_best_day_cost(vehicle_routes, id)
+    # FIXME : this function does not return best cost, but earliest day which have a cost
+    available_days = days_respecting_lapse(id, vehicle_routes)
 
     return nil unless available_days.any?
 
@@ -168,46 +124,62 @@ module PeriodicEndPhase
   def compute_first_costs
     costs = {}
 
-    @missing_visits.collect{ |vehicle, list|
-      list.collect{ |service_id|
-        cost = find_best_day_cost(@candidate_routes[vehicle], service_id)
-        costs[service_id] = cost if cost
-      }
+    @services_assignment.each{ |id, data|
+      next unless data[:days].any? && data[:missing_visits].positive?
+
+      # some visits could be assigned but not all of them
+      # we can try to be less restrictive on the lapse we use
+      # TODO : should we consider all IDs again, even if no visit was assigned?
+
+      cost = find_best_vehicle_day_cost(id)
+      costs[id] = cost if cost
     }
 
     costs
   end
 
-  #### CORRECT UNDERFILLED ROUTES PROCESS ####
+  #### CORRECT POORLY POPULATED ROUTES PROCESS ####
 
-  def correct_underfilled_routes
-    @output_tool&.add_comment('EMPTY_UNDERFILLED_ROUTES_PHASE')
+  def correct_poorly_populated_routes
+    @output_tool&.add_comment('REMOVE_POORLY_POPULATED_ROUTES PHASE')
+    @still_removed = {}
 
-    removed = empty_underfilled
-    return if removed.empty?
+    remove_poorly_populated_routes
+    return if @still_removed.empty?
 
-    @output_tool&.add_comment('REAFFECT_FROM_UNDERFILLED_ROUTES_PHASE')
+    @output_tool&.add_comment('REAFFECT_FROM_POORLY_POPULATED_ROUTES_PHASE')
 
-    firstly_unassigned = removed.collect(&:first)
-    still_removed = reaffect(removed)
+    firstly_unassigned = @still_removed.dup
+    reaffect_removed_visits
 
-    still_removed += empty_underfilled unless @allow_partial_assignment
-    if @allow_partial_assignment && firstly_unassigned.sort == still_removed.collect(&:first).sort
+    remove_poorly_populated_routes unless @allow_partial_assignment
+    if @allow_partial_assignment && firstly_unassigned == @still_removed
       log 'Reaffection with allow_partial_assignment false was pointless', level: :warn
     elsif @allow_partial_assignment
       log 'Reaffection with allow_partial_assignment false was usefull', level: :warn
     end
-
-    reaffect_visits_number
   end
 
-  def empty_underfilled
-    removed = []
+  def empty_route(route_data)
+    route_data[:stops] = []
+    route_data[:capacity].each{ |unit, qty|
+      route_data[:capacity_left][unit] = qty
+    }
+  end
+
+  def reduce_removed(id)
+    @still_removed[id] -= 1
+    return unless @still_removed[id].zero?
+
+    @still_removed.delete(id)
+  end
+
+  def remove_poorly_populated_routes
     loop do
       smth_removed = false
       all_empty = true
 
-      @candidate_routes.each{ |vehicle, all_routes|
+      @candidate_routes.each{ |_vehicle, all_routes|
         all_routes.each{ |day, route_data|
           next if route_data[:stops].empty?
 
@@ -218,37 +190,27 @@ module PeriodicEndPhase
                   } >= route_data[:cost_fixed]
 
           smth_removed = true
-          locally_removed = route_data[:stops].collect{ |stop|
-            @services_data[stop[:id]][:used_days].delete(day)
-            @output_tool&.remove_visits([day], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
-            [stop[:id], stop[:number_in_sequence]]
+          localy_removed = Hash.new(0)
+          route_data[:stops].each{ |stop|
+            @services_assignment[stop[:id]][:days].delete(day)
+            @services_assignment[stop[:id]][:vehicles] = [] unless @services_assignment[stop[:id]][:days].any?
+            @services_assignment[stop[:id]][:missing_visits] += 1
+            @services_assignment[stop[:id]][:unassigned_reasons] |= ['Corresponding route was poorly populated']
+            @output_tool&.remove_visits([day], @services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
+            localy_removed[stop[:id]] += 1
           }
-          route_data[:stops] = []
-          route_data[:capacity].each{ |unit, qty|
-            route_data[:capacity_left][unit] = qty
+          empty_route(route_data)
+
+          localy_removed.each{ |id, number_of_removed|
+            @still_removed[id] ||= 0
+            if @allow_partial_assignment
+              @still_removed[id] += number_of_removed
+            else
+              clean_stops(id, false)
+              @services_assignment[id][:missing_visits] = @services_data[id][:raw].visits_number
+              @still_removed[id] = @services_data[id][:raw].visits_number
+            end
           }
-          removed += locally_removed
-
-          if @allow_partial_assignment
-            locally_removed.each{ |removed_id, number_in_sequence|
-              @uninserted["#{removed_id}_#{number_in_sequence}_#{@services_data[removed_id][:raw].visits_number}"] = {
-                original_id: removed_id,
-                reason: 'Unaffected because route was underfilled'
-              }
-            }
-          else
-            locally_removed.each{ |removed_id, _number_in_sequence|
-              clean_stops(removed_id, vehicle, false)
-              (1..@services_data[removed_id][:raw].visits_number).each{ |visit|
-                uninserted_id = "#{removed_id}_#{visit}_#{@services_data[removed_id][:raw].visits_number}"
-                @uninserted[uninserted_id][:reason] = 'Unaffected because route was underfilled'
-
-                next if visit == 1
-
-                removed << [removed_id, visit]
-              }
-            }
-          end
         }
       }
 
@@ -256,24 +218,20 @@ module PeriodicEndPhase
     end
 
     compute_latest_authorized
-    removed
   end
 
-  def reaffect(still_removed)
+  def reaffect_removed_visits
     if @allow_partial_assignment
-      still_removed = reaffect_in_non_empty_route(still_removed)
-      still_removed = generate_new_routes(still_removed)
+      reaffect_in_non_empty_route
+      generate_new_routes
     else
-      still_removed = reaffect_prohibiting_partial_assignment(still_removed)
+      reaffect_prohibiting_partial_assignment
     end
-
-    still_removed
   end
 
-  def reaffect_in_non_empty_route(still_removed)
+  def reaffect_in_non_empty_route
     need_to_stop = false
-    until still_removed.empty? || need_to_stop
-      remaining_ids = still_removed.collect(&:first).uniq
+    until @still_removed.empty? || need_to_stop
       referent_route = nil
       insertion_costs = @candidate_routes.collect{ |vehicle_id, all_routes|
         all_routes.collect{ |day, route_data|
@@ -281,7 +239,7 @@ module PeriodicEndPhase
             []
           else
             referent_route ||= route_data
-            insertion_costs = compute_costs_for_route(route_data, remaining_ids)
+            insertion_costs = compute_costs_for_route(route_data, @still_removed.keys)
             insertion_costs.each{ |cost|
               cost[:vehicle] = vehicle_id
               cost[:day] = day
@@ -296,22 +254,18 @@ module PeriodicEndPhase
       else
         acceptable_costs = insertion_costs.flatten.group_by{ |cost| cost[:id] }.collect{ |id, set|
           # keep insertion cost that minimizes lapse with its other visits
-          if @services_data[id][:used_days].empty?
+          if @services_assignment[id][:days].empty?
             set.first
           else
-            set.min_by{ |cost| @services_data[id][:used_days].collect{ |day| (day - cost[:day]).abs }.min }
+            set.min_by{ |cost| @services_assignment[id][:days].collect{ |day| (day - cost[:day]).abs }.min }
           end
         }
         point_to_add = select_point(acceptable_costs, referent_route)
-        @ids_to_renumber |= [point_to_add[:id]]
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
-        @output_tool&.add_single_visit(point_to_add[:day], @services_data[point_to_add[:id]][:used_days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
-        still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
-        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == point_to_add[:id] }[0])
+        @output_tool&.add_single_visit(point_to_add[:day], @services_assignment[point_to_add[:id]][:days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
+        reduce_removed(point_to_add[:id])
       end
     end
-
-    still_removed
   end
 
   def collect_empty_routes
@@ -328,11 +282,11 @@ module PeriodicEndPhase
     }
   end
 
-  def chose_best_route(empty_routes, still_removed)
+  def chose_best_route(empty_routes, still_removed_ids)
     # prefer closer vehicles
     closer_vehicles = empty_routes.group_by{ |empty_route_data|
       divider = 0
-      average_distance_to_removed = still_removed.sum{ |id, _nb_in_sq|
+      still_removed_ids.sum{ |id|
         @services_data[id][:points_ids].sum{ |point_id|
           divider += empty_route_data[:stores].size
           empty_route_data[:stores].sum{ |store|
@@ -340,8 +294,6 @@ module PeriodicEndPhase
           }
         }
       }.to_f / divider
-
-      average_distance_to_removed
     }.min_by{ |key, _set| key }[1]
 
     # prefer vehicles with big timewindows
@@ -362,13 +314,13 @@ module PeriodicEndPhase
     to_consider_routes[1].min_by{ |empty_route_data| empty_route_data[:day] } # start as soon as possible to maximize number of visits we can assign allong period
   end
 
-  def generate_new_routes(still_removed)
+  def generate_new_routes
     empty_routes = collect_empty_routes
 
     previous_vehicle_filled_info = nil
     previous_was_filled = false
-    until still_removed.empty? || empty_routes.empty?
-      best_route = chose_best_route(empty_routes, still_removed)
+    until @still_removed.empty? || empty_routes.empty?
+      best_route = chose_best_route(empty_routes, @still_removed.keys)
       vehicle_info = {
         stores: best_route[:stores],
         time_range: best_route[:time_range]
@@ -380,13 +332,14 @@ module PeriodicEndPhase
         keep_inserting = true
         inserted = []
         while keep_inserting
-          insertion_costs = compute_costs_for_route(route_data, still_removed.collect(&:first).uniq - inserted)
+          insertion_costs = compute_costs_for_route(route_data, @still_removed.keys - inserted)
 
           if insertion_costs.flatten.empty?
             keep_inserting = false
             empty_routes.delete_if{ |tab| tab[:vehicle_id] == best_route[:vehicle_id] && tab[:day] == best_route[:day] }
             if route_data[:stops].empty? ||
                route_data[:stops].sum{ |stop| @services_data[stop[:id]][:raw].exclusion_cost.to_f } < route_data[:cost_fixed]
+              route_data[:stops].each{ |stop| @services_assignment[stop[:id]][:missing_visits] += 1 }
               route_data[:stops] = []
               previous_vehicle_filled_info = {
                 stores: best_route[:stores],
@@ -395,10 +348,8 @@ module PeriodicEndPhase
             else
               previous_was_filled = true
               route_data[:stops].each{ |stop|
-                @ids_to_renumber |= [stop[:id]]
-                still_removed.delete(still_removed.find{ |removed| removed.first == stop[:id] })
-                @output_tool&.add_single_visit(route_data[:day], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
-                @uninserted.delete(@uninserted.find{ |_id, data| data[:original_id] == stop[:id] }[0])
+                reduce_removed(stop[:id])
+                @output_tool&.add_single_visit(route_data[:day], @services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
               }
             end
           else
@@ -411,16 +362,14 @@ module PeriodicEndPhase
         empty_routes.delete_if{ |tab| tab[:vehicle_id] == best_route[:vehicle_id] && tab[:day] == best_route[:day] }
       end
     end
-
-    still_removed
   end
 
-  def reaffect_prohibiting_partial_assignment(still_removed)
+  def reaffect_prohibiting_partial_assignment
     # allow any day to assign visits
     @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, route_data| route_data[:available_ids] = @services_data.keys } }
 
     banned = []
-    adapted_still_removed = still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
+    adapted_still_removed = @still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
     most_prioritary = adapted_still_removed.group_by{ |removed| @services_data[removed.first][:raw].priority }.min_by{ |priority, _set| priority }[1]
     most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
     until most_prio_and_frequent.empty?
@@ -471,16 +420,16 @@ module PeriodicEndPhase
         most_prio_and_frequent = []
       else
         to_plan = sequences.min_by{ |sequence| sequence[:cost] }
-        @ids_to_renumber |= [to_plan[:service]]
         to_plan[:seq].each{ |day|
           insert_point_in_route(@candidate_routes[to_plan[:vehicle]][day], potential_costs[to_plan[:s_i]][to_plan[:vehicle]][day], false)
         }
-        @output_tool&.insert_visits(@services_data[to_plan[:service]][:used_days], to_plan[:service], @services_data[to_plan[:service]][:visits_number])
+        @output_tool&.insert_visits(@services_assignment[to_plan[:service]][:days], to_plan[:service], @services_data[to_plan[:service]][:visits_number])
 
         most_prio_and_frequent.delete_if{ |service| service.first == to_plan[:service] }
         adapted_still_removed.delete_if{ |service| service.first == to_plan[:service] }
-        still_removed.delete_if{ |service| service.first == to_plan[:service] }
-        @uninserted.delete_if{ |_id, data| data[:original_id] == to_plan[:service] }
+        @still_removed.delete(to_plan[:service])
+        @services_assignment[to_plan[:service]][:missing_visits] = 0
+        @services_assignment[to_plan[:service]][:unassigned_reasons] = []
       end
 
       break if adapted_still_removed.empty? || (adapted_still_removed - banned).empty?
@@ -493,7 +442,6 @@ module PeriodicEndPhase
 
     # restaure right days to insert
     compute_latest_authorized
-    still_removed
   end
 
   def deduce_sequences(id, visits_number, days)

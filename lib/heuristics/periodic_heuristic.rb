@@ -35,7 +35,6 @@ module Wrappers
       @same_point_day = vrp.resolution_same_point_day
       @relaxed_same_point_day = false
       @duration_in_tw = false # TODO: create parameter for this
-      @end_phase = false
       @spread_among_days = !vrp.resolution_minimize_days_worked
 
       # heuristic data
@@ -45,7 +44,8 @@ module Wrappers
       @used_to_adjust = []
 
       @candidate_routes = {}
-      @points_vehicles_and_days = {}
+      @services_assignment = {} # For each service_id, specifies how it has been assigned
+      @points_assignment = {} # For each service_id, specifies how it has been assigned
       vrp.vehicles.group_by(&:original_id).each{ |vehicle_id, _set|
         @candidate_routes[vehicle_id] = {}
       }
@@ -57,10 +57,6 @@ module Wrappers
       @services_unlocked_by = {}
       @unlocked = []
       @same_located = {}
-      @freq_max_at_point = Hash.new(0)
-
-      @uninserted = {}
-      @missing_visits = {}
 
       if OptimizerWrapper.config[:debug][:output_periodic]
         @output_tool = OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end)
@@ -130,8 +126,7 @@ module Wrappers
       @output_tool&.close_file
 
       block&.call(nil, nil, nil, 'periodic heuristic - preparing result', nil, nil, nil)
-      routes = prepare_output_and_collect_routes(vrp)
-      routes
+      prepare_output_and_collect_routes(vrp)
     end
 
     def compute_consistent_positions_to_insert(position_requirement, service_points_ids, route)
@@ -183,6 +178,38 @@ module Wrappers
       positions_to_try
     end
 
+    def check_stops_timewindows_respected(route_data)
+      route_data[:stops].each_with_index{ |s, i|
+        next if @services_data[s[:id]][:tws_sets].flatten.empty? ||
+                i.positive? && can_ignore_tw(route_data[:stops][i - 1][:id], s[:id])
+
+        compatible_tw =
+          find_corresponding_timewindow(
+            route_data[:day], s[:arrival], @services_data[s[:id]][:tws_sets][s[:activity]], s[:end] - s[:arrival])
+        next if compatible_tw &&
+                s[:arrival].round.between?(compatible_tw[:start], compatible_tw[:end]) &&
+                (!@duration_in_tw || s[:end] <= compatible_tw[:end])
+
+        raise OptimizerWrapper::PeriodicHeuristicError.new('One service timewindows violated')
+      }
+    end
+
+    def check_consistent_generated_ids
+      return false unless @services_assignment[@services_data.keys.first][:assigned_indices]
+
+      @services_assignment.each{ |id, data|
+        generated_indices = data[:assigned_indices] + data[:unassigned_indices]
+
+        next unless generated_indices.size != generated_indices.uniq.size ||
+                    generated_indices.size != @services_data[id][:raw].visits_number ||
+                    generated_indices.max > @services_data[id][:raw].visits_number ||
+                    generated_indices.max < 1 ||
+                    data[:unassigned_indices].size != data[:missing_visits]
+
+        raise OptimizerWrapper::PeriodicHeuristicError.new('Unconsistent IDs generated')
+      }
+    end
+
     def check_solution_validity
       @candidate_routes.each{ |_vehicle_id, all_routes|
         all_routes.each{ |_day, route_data|
@@ -195,24 +222,11 @@ module Wrappers
             raise OptimizerWrapper::PeriodicHeuristicError.new('One vehicle is starting too soon')
           end
 
-          next unless back_to_depot > route_data[:tw_end]
+          if back_to_depot > route_data[:tw_end]
+            raise OptimizerWrapper::PeriodicHeuristicError.new('One vehicle is ending too late')
+          end
 
-          raise OptimizerWrapper::PeriodicHeuristicError.new('One vehicle is ending too late')
-        }
-      }
-
-      @candidate_routes.each{ |_vehicle_id, all_routes|
-        all_routes.each{ |day, route_data|
-          route_data[:stops].each_with_index{ |s, i|
-            next if @services_data[s[:id]][:tws_sets].flatten.empty? || i.positive? && can_ignore_tw(route_data[:stops][i - 1][:id], s[:id])
-
-            compatible_tw = find_corresponding_timewindow(day, s[:arrival], @services_data[s[:id]][:tws_sets][s[:activity]], s[:end] - s[:arrival])
-            next if compatible_tw &&
-                    s[:arrival].round.between?(compatible_tw[:start], compatible_tw[:end]) &&
-                    (!@duration_in_tw || s[:end] <= compatible_tw[:end])
-
-            raise OptimizerWrapper::PeriodicHeuristicError.new('One service timewindows violated')
-          }
+          check_stops_timewindows_respected(route_data)
         }
       }
     end
@@ -223,7 +237,7 @@ module Wrappers
     # regarding first/last_possible_days available ranges : it is possible to find a
     # pair of first/last_possible_day for each and every day used for this service_id
     def day_in_possible_interval(service_id, day)
-      all_days = (@services_data[service_id][:used_days] + [day]).sort
+      all_days = (@services_assignment[service_id][:days] + [day]).sort
       seen_visits = 0
 
       return false if all_days.size > @services_data[service_id][:raw].visits_number
@@ -240,16 +254,14 @@ module Wrappers
       seen_visits == all_days.size
     end
 
-    def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
+    def reject_according_to_allow_partial_assignment(service_id, impacted_days)
       if @allow_partial_assignment
-        @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
-          original_id: service_id,
-          reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_data[service_id][:used_days].min}"
-        }
-        [true, impacted_days, false]
+        @services_assignment[service_id][:unassigned_reasons] |=
+          ['Visit not assignable by heuristic because of previous visits assignment']
+        [impacted_days, false]
       else
-        clean_stops(service_id, vehicle_id)
-        [false, [], true]
+        clean_stops(service_id)
+        [[], true]
       end
     end
 
@@ -257,23 +269,22 @@ module Wrappers
       return if @services_data[service_id][:raw].visits_number == 1
 
       impacted_days = []
-      next_day = @services_data[service_id][:used_days].max + @services_data[service_id][:heuristic_period]
+      next_day = @services_assignment[service_id][:days].max + @services_data[service_id][:heuristic_period]
       day_to_insert =
         if @services_data[service_id][:raw].visits_number == 2
-          day_to_insert = find_day_for_second_visit(vehicle_id, @services_data[service_id][:used_days][0], service_id)
+          day_to_insert = find_day_for_second_visit(vehicle_id, @services_assignment[service_id][:days][0], service_id)
         else
           @candidate_routes[vehicle_id].keys.select{ |day| day >= next_day.round }.min
         end
 
       cleaned_service = false
-      need_to_add_visits = false
-      (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |visit_number|
+      (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |_visit_number|
         inserted_day = nil
         while inserted_day.nil? && day_to_insert && day_to_insert <= @schedule_end && !cleaned_service
           diff = day_to_insert - next_day.round
           next_day += diff
 
-          inserted_day = try_to_insert_at(vehicle_id, day_to_insert, service_id, visit_number)
+          inserted_day = try_to_insert_at(vehicle_id, day_to_insert, service_id)
 
           next_day += @services_data[service_id][:heuristic_period]
           day_to_insert = @candidate_routes[vehicle_id].keys.select{ |day| day >= next_day.round }.min
@@ -282,12 +293,11 @@ module Wrappers
         if inserted_day
           impacted_days |= [inserted_day]
         else
-          need_to_add_visits, impacted_days, cleaned_service =
-            reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
+          impacted_days, cleaned_service =
+            reject_according_to_allow_partial_assignment(service_id, impacted_days)
         end
       }
 
-      @missing_visits[vehicle_id] << service_id if need_to_add_visits
       impacted_days
     end
 
@@ -297,7 +307,7 @@ module Wrappers
         next if @used_to_adjust.include?(stop[:id])
 
         @used_to_adjust << stop[:id]
-        @output_tool&.insert_visits(@services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
+        @output_tool&.insert_visits(@services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
 
         plan_next_visits(vehicle_id, stop[:id], 2)
       }.compact
@@ -358,7 +368,7 @@ module Wrappers
 
       return true unless @unlocked.include?(service_id) && @services_data[service_id][:raw].visits_number > 1
 
-      available_days = @points_vehicles_and_days[point_id][:days]
+      available_days = @points_assignment[point_id][:days]
       current_day = available_days.first
       seen_visits = 1
       while seen_visits < @services_data[service_id][:raw].visits_number && current_day
@@ -383,17 +393,19 @@ module Wrappers
     def collect_unassigned
       unassigned = []
 
-      @candidate_services_ids.each{ |id|
-        service_in_vrp = @services_data[id][:raw]
-        (1..service_in_vrp.visits_number).each{ |index|
-          reason = provide_fair_reason(id)
-          unassigned << get_unassigned_info("#{id}_#{index}_#{service_in_vrp.visits_number}", service_in_vrp, reason)
-        }
-      }
+      @services_assignment.each{ |id, data|
+        next unless data[:unassigned_indices].any?
 
-      @uninserted.each{ |uninserted_id, info|
-        service_in_vrp = @services_data[info[:original_id]][:raw]
-        unassigned << get_unassigned_info(uninserted_id, service_in_vrp, info[:reason])
+        if @candidate_services_ids.include?(id)
+          @services_assignment[id][:unassigned_reasons] = [provide_fair_reason(id)]
+        end
+
+        data[:unassigned_indices].each{ |index|
+          unassigned_id = "#{id}_#{index}_#{@services_data[id][:raw].visits_number}"
+          unassigned << get_unassigned_info(unassigned_id,
+                                            @services_data[id][:raw],
+                                            @services_assignment[id][:unassigned_reasons].join(','))
+        }
       }
 
       unassigned
@@ -464,80 +476,80 @@ module Wrappers
       }
     end
 
-    def clean_position_dependent_services(vehicle_id, stops, removed_index)
+    def clean_position_dependent_services(stops, removed_index)
+      return if stops.empty?
+
       if removed_index == stops.size
         index = removed_index - 1
         while stops[index] && [:never_last, :always_middle].include?(stops[index][:requirement])
-          clean_stops(stops[index][:id], vehicle_id, true)
+          clean_stops(stops[index][:id], true)
           # index removed so no need to increment index
         end
       end
 
       index = removed_index
       while stops[index] && [:never_first, :always_middle].include?(stops[index][:requirement])
-        clean_stops(stops[index][:id], vehicle_id, true)
+        clean_stops(stops[index][:id], true)
         # index removed so no need to increment index
       end
     end
 
-    def clean_stops(service_id, vehicle_id, reaffect = false)
+    def make_available(service_id)
+      @candidate_services_ids << service_id
+      @candidate_routes.each{ |_vehicle_id, all_routes|
+        all_routes.each{ |day, route_data|
+          next unless day <= @services_data[service_id][:raw].last_possible_days.first # first is for first visit
+
+          route_data[:available_ids] |= service_id
+        }
+      }
+      @services_assignment[service_id][:missing_visits] = @services_data[service_id][:raw].visits_number
+      @services_assignment[:unassigned_reasons] = []
+    end
+
+    def clean_stops(service_id, reaffect = false)
       ### when allow_partial_assignment is false, removes all affected visits of [service_id] because we can not affect all visits ###
-      @candidate_routes[vehicle_id].collect{ |day, route_data|
-        remove_index = route_data[:stops].find_index{ |stop| stop[:id] == service_id }
-        next unless remove_index
+      @services_assignment[service_id][:vehicles].each{ |vehicle_id|
+        @services_assignment[service_id][:days].each{ |day|
+          route_data = @candidate_routes[vehicle_id][day]
+          removed_index = route_data[:stops].find_index{ |stop| stop[:id] == service_id }
+          next unless removed_index
 
-        used_point = route_data[:stops][remove_index][:point_id]
-        route_data[:stops].slice!(remove_index)
-        @services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] += qty }
+          service_point = route_data[:stops][removed_index][:point_id]
+          route_data[:stops].slice!(removed_index)
+          @services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] += qty }
 
-        update_point_vehicle_and_days(used_point)
-        clean_position_dependent_services(vehicle_id, route_data[:stops], remove_index) unless route_data[:stops].empty?
-        route_data[:stops] = update_route(route_data, remove_index)
-        @services_data[service_id][:used_days] = []
-        @services_data[service_id][:used_vehicles] = []
-      }.compact.size
+          if route_data[:stops].none?{ |s| s[:point_id] == service_point }
+            @points_assignment[service_point][:days].delete(day)
+            vehicle_still_used =
+              @points_assignment[service_point][:days].any?{ |d|
+                @candidate_routes[vehicle_id][d][:stops].any?{ |stop| stop[:point_id] == service_point }
+              }
+            @points_assignment[service_point][:vehicles].delete(vehicle_id) unless vehicle_still_used
+          end
+
+          clean_position_dependent_services(route_data[:stops], removed_index)
+          route_data[:stops] = update_route(route_data, removed_index)
+        }
+      }
+      @services_assignment[service_id] = {
+        vehicles: [], days: [], missing_visits: @services_data[service_id][:raw].visits_number, unassigned_reasons: []
+      }
 
       if reaffect
-        @candidate_services_ids << service_id
-        @candidate_routes.each{ |_vehicle_id, all_routes|
-          all_routes.each{ |day, route_data|
-            next unless day <= @services_data[service_id][:raw].last_possible_days.first # first is for first visit
-
-            route_data[:available_ids] |= service_id
-          }
-        }
-        @uninserted.each{ |uninserted_id, info|
-          @uninserted.delete(uninserted_id) if info[:original_id] == service_id
-        }
+        make_available(service_id)
+        return
       else
         reject_all_visits(service_id, @services_data[service_id][:raw].visits_number, 'Partial assignment only')
       end
 
-      return if reaffect
-
-      # unaffected all points at this location
+      # Unaffect all points at this location
+      # FIXME : do we really want to unaffect those ?
       points_at_same_location = @candidate_services_ids.select{ |id| @services_data[id][:points_ids] == @services_data[service_id][:points_ids] }
       points_at_same_location.each{ |id|
-        (1..@services_data[id][:raw].visits_number).each{ |visit|
-          @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
-            original_id: id,
-            reason: 'Partial assignment only'
-          }
-        }
+        @services_assignment[id][:unassigned_reasons] |= ['Partial assignment only']
         @candidate_services_ids.delete(id)
         @to_plan_service_ids.delete(id)
-      }
-    end
-
-    def update_point_vehicle_and_days(point)
-      @points_vehicles_and_days[point][:vehicles].delete_if{ |vehicle_id|
-        @candidate_routes[vehicle_id].none?{ |_day, route_data| route_data[:stops].any?{ |stop| stop[:point_id] == point } }
-      }
-
-      @points_vehicles_and_days[point][:days].delete_if{ |day|
-        @points_vehicles_and_days[point][:vehicles].none?{ |vehicle_id|
-          @candidate_routes[vehicle_id][day][:stops].find{ |stop| stop[:point_id] == point }
-        }
       }
     end
 
@@ -556,7 +568,7 @@ module Wrappers
 
       day = route_data[:day]
       set.collect{ |service_id|
-        next if @services_data[service_id][:used_days] &&
+        next if @services_assignment[service_id][:days] &&
                 !days_respecting_lapse(service_id, @candidate_routes[route_data[:vehicle_original_id]]).include?(day)
 
         find_best_index(service_id, route_data)
@@ -569,7 +581,7 @@ module Wrappers
       potential_days =
         if @unlocked.include?(service_id)
           point = @services_data[service_id][:points_ids].first # there can be only on point in points_ids in this case
-          @points_vehicles_and_days[point][:days].dup
+          @points_assignment[point][:days].dup
         else
           @candidate_routes[vehicle_id].keys
         end
@@ -583,32 +595,36 @@ module Wrappers
       potential_days.find{ |d| find_feasible_index(service_id, @candidate_routes[vehicle_id][d], false) }
     end
 
-    def same_point_compatibility(service_id, vehicle_id, day)
-      # reminder : services in (relaxed_)same_point_day relation have only one point_id
-      same_point_compatible_day = true
+    def same_point_compatibility(service_id, day)
+      # REMINDER : services in (relaxed_)same_point_day relation can only have one point_id
+      same_point = @services_data[service_id][:points_ids].first
+      return true unless (@relaxed_same_point_day || @same_point_day) && @points_assignment[same_point][:days].any?
 
-      return same_point_compatible_day if @services_data[service_id][:heuristic_period].nil?
-
-      last_visit_day = day + (@services_data[service_id][:raw].visits_number - 1) * @services_data[service_id][:heuristic_period]
-      if @relaxed_same_point_day
-        # we know only one activity/point_id because @same_point_day was activated
-        involved_days = (day..last_visit_day).step(@services_data[service_id][:heuristic_period]).collect{ |d| d }
-        already_involved = @candidate_routes[vehicle_id].select{ |_d, r| r[:stops].any?{ |s| s[:point_id] == @services_data[service_id][:points_ids].first } }.collect{ |d, _r| d }
-        if !already_involved.empty? &&
-           @services_data[service_id][:raw].visits_number > @freq_max_at_point[@services_data[service_id][:points_ids].first] &&
-           (involved_days & already_involved).size < @freq_max_at_point[@services_data[service_id][:points_ids].first]
-          same_point_compatible_day = false
-        elsif !already_involved.empty? && (involved_days & already_involved).size < involved_days.size
-          same_point_compatible_day = false
-        end
-      elsif @unlocked.include?(service_id)
-        # can not finish later (over whole period) than service at same_point
-        stop = @candidate_routes[vehicle_id][day][:stops].select{ |s| s[:point_id] == @services_data[service_id][:points_ids].first }.max_by{ |s| @services_data[s[:id]][:raw].visits_number }
-        stop_last_visit_day = day + (@services_data[stop[:id]][:raw].visits_number - stop[:number_in_sequence]) * @services_data[stop[:id]][:heuristic_period]
-        same_point_compatible_day = last_visit_day <= stop_last_visit_day if same_point_compatible_day
+      if @services_data[service_id][:heuristic_period].nil?
+        return @points_assignment[same_point][:days].include?(day)
       end
 
-      same_point_compatible_day
+      min_overall_lapse =
+        (@services_data[service_id][:raw].visits_number - 1) * @services_data[service_id][:heuristic_period]
+      if @relaxed_same_point_day
+        involved_days = (day..day + min_overall_lapse).step(@services_data[service_id][:heuristic_period]).to_a
+        common_days = involved_days & @points_assignment[same_point][:days]
+        expected_number =
+          if @services_data[service_id][:raw].visits_number > @points_assignment[same_point][:maximum_visits_number]
+            @points_assignment[same_point][:maximum_visits_number]
+          else
+            involved_days.size
+          end
+
+        return common_days.size == expected_number
+      elsif @unlocked.include?(service_id)
+        # can not finish later (over whole period) than service at same point
+        last_visit_day = day + min_overall_lapse
+        last_possible_day = @points_assignment[same_point][:days].max
+        return last_visit_day <= last_possible_day
+      end
+
+      true
     end
 
     def compute_shift(route_data, service_inserted, inserted_final_time, next_service)
@@ -793,18 +809,20 @@ module Wrappers
       max_shift = best_index[:potential_shift]
       additional_durations = @services_data[best_index[:id]][:durations].first + best_index[:considered_setup_duration]
       @same_located[best_index[:id]].each_with_index{ |service_id, i|
+        @services_assignment[service_id][:missing_visits] -= 1
         @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, r_d| r_d[:available_ids].delete(service_id) } }
-        @services_data[service_id][:used_days] << route_data[:day]
+        @services_assignment[service_id][:days] << route_data[:day]
+        @services_assignment[service_id][:vehicles] |= [route_data[:vehicle_original_id]]
         route_data[:stops].insert(best_index[:position] + i + 1,
-                                          id: service_id,
-                                          point_id: best_index[:point],
-                                          start: start,
-                                          arrival: start,
-                                          end: start + @services_data[service_id][:durations].first,
-                                          considered_setup_duration: 0,
-                                          max_shift: max_shift ? max_shift - additional_durations : nil,
-                                          number_in_sequence: 1,
-                                          activity: 0) # when using same_point_day, points in same_located relation can not have serveral activities
+                                  id: service_id,
+                                  point_id: best_index[:point],
+                                  start: start,
+                                  arrival: start,
+                                  end: start + @services_data[service_id][:durations].first,
+                                  considered_setup_duration: 0,
+                                  max_shift: max_shift ? max_shift - additional_durations : nil,
+                                  activity: 0) # when using same_point_day, points in same_located relation can not have serveral activities
+
         additional_durations += @services_data[service_id][:durations].first
         @to_plan_service_ids.delete(service_id)
         @candidate_services_ids.delete(service_id)
@@ -829,7 +847,7 @@ module Wrappers
 
       unlocked_ids =
         if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty? && !@relaxed_same_point_day
-          services_to_add = @services_unlocked_by[best_index[:id]] - @uninserted.collect{ |_un, data| data[:original_id] }
+          services_to_add = @services_unlocked_by[best_index[:id]] & @candidate_services_ids
           @to_plan_service_ids += services_to_add
           @unlocked += services_to_add
 
@@ -890,7 +908,7 @@ module Wrappers
 
     def compatible_days(service_id, day)
       !@services_data[service_id][:raw].unavailable_days.include?(day) &&
-        !@services_data[service_id][:used_days].include?(day) &&
+        !@services_assignment[service_id][:days].include?(day) &&
         day_in_possible_interval(service_id, day)
     end
 
@@ -899,8 +917,8 @@ module Wrappers
       # we would need to know which skill_set is required in order that all services on same vehicle are compatible
       service_data = @services_data[service_id]
       point = @services_data[service_id][:points_ids].first
-      (!@same_point_day && !@relaxed_same_point_day || @points_vehicles_and_days[point][:vehicles].empty? ||
-        @points_vehicles_and_days[point][:vehicles].include?(route_data[:vehicle_original_id])) &&
+      (!@same_point_day && !@relaxed_same_point_day || @points_assignment[point][:vehicles].empty? ||
+        @points_assignment[point][:vehicles].include?(route_data[:vehicle_original_id])) &&
         route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? } &&
         (service_data[:sticky_vehicles_ids].empty? ||
           service_data[:sticky_vehicles_ids].include?(route_data[:vehicle_original_id]))
@@ -918,16 +936,16 @@ module Wrappers
       # there can be only on point in points_ids because of these options :
       point = @services_data[service_id][:points_ids].first
 
-      return true if @points_vehicles_and_days[point][:vehicles].empty?
+      return true if @points_assignment[point][:vehicles].empty?
 
       if @relaxed_same_point_day
-        @points_vehicles_and_days[point][:vehicles].include?(vehicle_id) &&
-          (@points_vehicles_and_days[point][:days].include?(day) ||
-          @points_vehicles_and_days[point][:maximum_visits_number] < @services_data[service_id][:raw].visits_number)
+        @points_assignment[point][:vehicles].include?(vehicle_id) &&
+          (@points_assignment[point][:days].include?(day) ||
+          @points_assignment[point][:maximum_visits_number] < @services_data[service_id][:raw].visits_number)
       else # @same_point_day is on :
         !@unlocked.include?(service_id) ||
-          @points_vehicles_and_days[point][:vehicles].include?(vehicle_id) &&
-            @points_vehicles_and_days[point][:days].include?(day)
+          @points_assignment[point][:vehicles].include?(vehicle_id) &&
+            @points_assignment[point][:days].include?(day)
       end
     end
 
@@ -942,7 +960,7 @@ module Wrappers
           find_day_for_second_visit(vehicle_id, day, service_id) &&
           route_data[:available_ids].include?(service_id) &&
           relaxed_or_same_point_day_constraint_respected(service_id, vehicle_id, day) &&
-          same_point_compatibility(service_id, vehicle_id, day))
+          same_point_compatibility(service_id, day))
     end
 
     def find_best_index(service_id, route_data, first_visit = true)
@@ -1074,18 +1092,18 @@ module Wrappers
       current_route = route_data[:stops]
       @candidate_services_ids.delete(point_to_add[:id])
 
-      @services_data[point_to_add[:id]][:used_days] << point_to_add[:day]
-      @services_data[point_to_add[:id]][:used_vehicles] |= [point_to_add[:vehicle]]
-      @points_vehicles_and_days[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
-      @points_vehicles_and_days[point_to_add[:point]][:days] |= [route_data[:day]]
-      @points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number] =
-        [@points_vehicles_and_days[point_to_add[:point]][:maximum_visits_number],
+      @services_assignment[point_to_add[:id]][:missing_visits] -= 1
+      @services_assignment[point_to_add[:id]][:days] << point_to_add[:day]
+      @services_assignment[point_to_add[:id]][:vehicles] |= [point_to_add[:vehicle]]
+      @points_assignment[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
+      @points_assignment[point_to_add[:point]][:days] |= [route_data[:day]]
+      @points_assignment[point_to_add[:point]][:maximum_visits_number] =
+        [@points_assignment[point_to_add[:point]][:maximum_visits_number],
          @services_data[point_to_add[:id]][:raw].visits_number].max
-      @points_vehicles_and_days[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
+      @points_assignment[point_to_add[:point]][:vehicles] |= [route_data[:vehicle_original_id]]
       @services_data[point_to_add[:id]][:capacity].each{ |need, qty| route_data[:capacity_left][need] -= qty }
 
       @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, r_d| r_d[:available_ids].delete(point_to_add[:id]) } } if first_visit
-      @freq_max_at_point[point_to_add[:point]] = [@freq_max_at_point[point_to_add[:point]], @services_data[point_to_add[:id]][:raw].visits_number].max
 
       current_route.insert(point_to_add[:position],
                            id: point_to_add[:id],
@@ -1095,7 +1113,6 @@ module Wrappers
                            end: point_to_add[:end],
                            considered_setup_duration: point_to_add[:considered_setup_duration],
                            max_shift: point_to_add[:potential_shift],
-                           number_in_sequence: 1,
                            activity: point_to_add[:activity],
                            requirement: @services_data[point_to_add[:id]][:positions_in_route][point_to_add[:activity]])
 
@@ -1140,11 +1157,15 @@ module Wrappers
                       build_detail(nil, nil, associated_point, nil, nil, vehicle)
                     end
       stop_detail[:setup_duration] = data[:considered_setup_duration]
+      if type == 'service'
+        number_in_sequence =
+          @services_assignment[data[:id]][:assigned_indices][@services_assignment[data[:id]][:days].find_index(day)]
+      end
       {
         day_week_num: "#{day % 7}_#{week}",
         day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}",
         point_id: data[:point_id],
-        service_id: ("#{data[:id]}_#{data[:number_in_sequence]}_#{service_in_vrp.visits_number}" if type == 'service'),
+        service_id: ("#{data[:id]}_#{number_in_sequence}_#{service_in_vrp.visits_number}" if type == 'service'),
         original_service_id: service_in_vrp&.id,
         travel_time: data[:travel_time],
         travel_distance: data[:travel_distance],
@@ -1212,9 +1233,35 @@ module Wrappers
       [computed_activities, route_start, route_end]
     end
 
+    # At the end of algorithm, deduces which visit number is assigned
+    # and which is not. For now, we assume all first visits are assigned.
+    # TODO : This could be improved by detecting if there is one intermediate visit missing vis-à-vis maximum_lapse
+    # (see test_compute_visits_number).
+    # This is hard because we may overpass maximum_lapse (in days) without overpassing
+    # maximum_lapse (in open days).
+    def compute_visits_number
+      @services_assignment.each{ |id, data|
+        data[:days].sort! # this ensures assigned_indices order will correspond to days order
+        assigned_indices = (1..@services_assignment[id][:days].size).to_a
+        unassigned_indices = []
+        current_visit_index = @services_assignment[id][:days].size + 1
+        until assigned_indices.size + unassigned_indices.size == @services_data[id][:raw].visits_number
+          unassigned_indices << current_visit_index
+          current_visit_index += 1
+        end
+
+        @services_assignment[id][:assigned_indices] = assigned_indices
+        @services_assignment[id][:unassigned_indices] = unassigned_indices
+      }
+
+      check_consistent_generated_ids
+    end
+
     def prepare_output_and_collect_routes(vrp)
       routes = []
       solution = []
+
+      compute_visits_number
 
       @candidate_routes.each{ |original_vehicle_id, all_routes|
         all_routes.sort_by{ |day, _route_data| day }.each{ |day, route_data|
@@ -1287,7 +1334,7 @@ module Wrappers
       end
     end
 
-    def try_to_insert_at(vehicle_id, day, service_id, visit_number)
+    def try_to_insert_at(vehicle_id, day, service_id)
       # when adjusting routes, tries to insert [service_id] at [day] for [vehicle]
       return if @candidate_routes[vehicle_id][day].nil? ||
                 @candidate_routes[vehicle_id][day][:completed]
@@ -1296,7 +1343,6 @@ module Wrappers
       return unless best_index
 
       insert_point_in_route(@candidate_routes[vehicle_id][day], best_index, false)
-      @candidate_routes[vehicle_id][day][:stops].find{ |stop| stop[:id] == service_id }[:number_in_sequence] = visit_number
       day
     end
 
@@ -1373,26 +1419,23 @@ module Wrappers
 
     def save_status
       @previous_candidate_routes = Marshal.load(Marshal.dump(@candidate_routes))
-      @previous_uninserted = Marshal.load(Marshal.dump(@uninserted))
+      @previous_services_assignment = Marshal.load(Marshal.dump(@services_assignment))
+      @previous_points_assignment = Marshal.load(Marshal.dump(@points_assignment))
       @previous_candidate_service_ids = Marshal.load(Marshal.dump(@candidate_services_ids))
     end
 
     def restore
       @candidate_routes = @previous_candidate_routes
-      @uninserted = @previous_uninserted
+      @services_assignment = @previous_services_assignment
+      @points_assignment = @previous_points_assignment
       @candidate_services_ids = @previous_candidate_service_ids
     end
 
-    def reject_all_visits(original_service_id, visits_number, specified_reason)
-      visits_number.times.each{ |visit_index|
-        @uninserted["#{original_service_id}_#{visit_index + 1}_#{visits_number}"] = {
-          original_id: original_service_id,
-          reason: specified_reason
-        }
-      }
-
-      @candidate_services_ids.delete(original_service_id)
-      @to_plan_service_ids.delete(original_service_id)
+    def reject_all_visits(service_id, visits_number, specified_reason)
+      @services_assignment[service_id][:missing_visits] = visits_number
+      @services_assignment[service_id][:unassigned_reasons] = [specified_reason]
+      @candidate_services_ids.delete(service_id)
+      @to_plan_service_ids.delete(service_id)
     end
   end
 end
