@@ -55,7 +55,7 @@ module Wrappers
 
       # same_point_day : service with higher heuristic_period unlocks others
       @services_unlocked_by = {}
-      @unlocked = []
+      @unlocked = {}
       @same_located = {}
 
       if OptimizerWrapper.config[:debug][:output_periodic]
@@ -361,7 +361,7 @@ module Wrappers
       # TODO : eventually consider unavailable_days here
       return true unless @same_point_day || @relaxed_same_point_day
 
-      return true unless @unlocked.include?(service_id) && @services_data[service_id][:raw].visits_number > 1
+      return true unless @unlocked.key?(service_id) && @services_data[service_id][:raw].visits_number > 1
 
       available_days = @points_assignment[point_id][:days]
       current_day = available_days.first
@@ -592,7 +592,7 @@ module Wrappers
           end
 
         return common_days.size == expected_number
-      elsif @unlocked.include?(service_id)
+      elsif @unlocked.key?(service_id)
         # can not finish later (over whole period) than service at same point
         last_visit_day = day + min_overall_lapse
         last_possible_day = @points_assignment[same_point][:days].max
@@ -824,8 +824,7 @@ module Wrappers
         if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty? && !@relaxed_same_point_day
           services_to_add = @services_unlocked_by[best_index[:id]] & @candidate_services_ids
           @to_plan_service_ids += services_to_add
-          @unlocked += services_to_add
-
+          services_to_add.each{ |service_id| @unlocked[service_id] = nil }
           services_to_add
         end
 
@@ -918,7 +917,7 @@ module Wrappers
           (@points_assignment[point][:days].include?(day) ||
           @points_assignment[point][:maximum_visits_number] < @services_data[service_id][:raw].visits_number)
       else # @same_point_day is on :
-        !@unlocked.include?(service_id) ||
+        !@unlocked.key?(service_id) ||
           @points_assignment[point][:vehicles].include?(vehicle_id) &&
             @points_assignment[point][:days].include?(day)
       end

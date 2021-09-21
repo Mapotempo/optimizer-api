@@ -628,7 +628,7 @@ class HeuristicTest < Minitest::Test
       s = Wrappers::PeriodicHeuristic.new(vrp)
 
       s.instance_variable_set(:@points_assignment, { 'point_0' => { days: [0, 2, 4, 6] }})
-      s.instance_variable_set(:@unlocked, ['id'])
+      s.instance_variable_set(:@unlocked, { 'id' => nil })
       vrp.services.first.visits_number = 2
       s.instance_variable_set(:@services_data, { 'id' => { heuristic_period: 3, raw: vrp.services.first }})
       assert s.send(:exist_possible_first_route_according_to_same_point_day?, 'id', 'point_0') # can assign to 0 and 6
