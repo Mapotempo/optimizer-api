@@ -57,7 +57,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # This function is called both with a JSON and Models::Vrp
     # That is, service[:activity]&.fetch(symbol) do not work
     # Code needs to be valid both for vrp and json.
-    # Thus `if service[:activity] && service[:activity][symbol]` style verificiations.
+    # Thus `if service[:activity] && service[:activity][symbol]` style verifications.
 
     vrp[:points]&.each{ |pt|
       next unless pt[:location]
@@ -79,6 +79,13 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     }
 
     vrp[:vehicles].each{ |vehicle|
+      if vehicle.key?(:skills)
+        vehicle.delete(:skills) if vehicle[:skills].nil? || vehicle[:skills].empty?
+
+        raise 'Vehicle skills should be an Array[Array[Symbol]]' if vehicle[:skills]&.any?{ |skill_set| !skill_set.is_a? Array }
+
+        vehicle[:skills]&.each{ |skill_set| skill_set.map!(&:to_sym) }
+      end
       vehicle.delete(:original_id)
     }
 

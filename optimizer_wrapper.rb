@@ -214,25 +214,26 @@ module OptimizerWrapper
 
     optim_result = nil
 
-    unfeasible_services = []
+    unfeasible_services = {}
 
     if !vrp.subtours.empty?
       multi_modal = Interpreters::MultiModal.new(vrp, service)
       optim_result = multi_modal.multimodal_routes
     elsif vrp.vehicles.empty? || vrp.services.empty?
       optim_result = config[:services][service].empty_result(
-        service.to_s, vrp, 'No vehicle available for this service', false)
+        service.to_s, vrp, 'No vehicle available for this service', false
+      )
     else
-      services_to_reinject = []
-      sub_unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
+      unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
       vrp.compute_matrix(&block)
 
-      sub_unfeasible_services = config[:services][service].check_distances(vrp, sub_unfeasible_services)
+      config[:services][service].check_distances(vrp, unfeasible_services)
 
       # Remove infeasible services
-      sub_unfeasible_services.each{ |una_service|
-        index = vrp.services.find_index{ |s| una_service[:original_service_id] == s.id }
+      services_to_reinject = []
+      unfeasible_services.each_key{ |una_service_id|
+        index = vrp.services.find_index{ |s| s.id == una_service_id }
         if index
           services_to_reinject << vrp.services.slice!(index)
         end
@@ -245,7 +246,6 @@ module OptimizerWrapper
         optim_result = parse_result(vrp, vrp.preprocessing_heuristic_result) if vrp.periodic_heuristic?
       end
 
-      unfeasible_services += sub_unfeasible_services
       if vrp.resolution_solver && !vrp.periodic_heuristic?
         block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.preprocessing_cluster_threshold.to_f}) ", nil, nil, nil) if vrp.preprocessing_cluster_threshold.to_f.positive?
         optim_result = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
@@ -310,7 +310,7 @@ module OptimizerWrapper
         csv: vrp.restitution_csv,
         geometry: vrp.restitution_geometry
       }
-      optim_result[:unassigned] = (optim_result[:unassigned] || []) + unfeasible_services
+      optim_result[:unassigned] = (optim_result[:unassigned] || []) + unfeasible_services.values.flatten
 
       if vrp.preprocessing_first_solution_strategy
         optim_result[:heuristic_synthesis] = vrp.preprocessing_heuristic_synthesis
