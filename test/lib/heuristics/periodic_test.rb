@@ -211,7 +211,7 @@ class HeuristicTest < Minitest::Test
 
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
       assert_equal(3, result[:routes].count{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_1' } })
-      assert_equal(3, result[:routes].count{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_3' } })
+      assert_equal(4, result[:routes].count{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_3' } })
       assert_equal(3, result[:routes].count{ |route| route[:activities].any?{ |stop| stop[:point_id] == 'point_5' } })
     end
 
@@ -307,7 +307,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 0, result[:unassigned].size
+      assert_equal 1, result[:unassigned].size
       assert_equal expected_nb_visits, result[:routes].sum{ |r| r[:activities].size - 2 } + result[:unassigned].size
       assert_equal expecting.size, (result[:routes].find{ |r| r[:vehicle_id] == 'ANDALUCIA 1_2' }[:activities].collect{ |a| a[:service_id].to_s.split('_')[0..-3].join('_') } & expecting).size
 
