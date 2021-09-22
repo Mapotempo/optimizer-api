@@ -539,16 +539,17 @@ module OptimizerWrapper
       }
       total_time = result[:total_time] || 0
       total_travel_time = result[:total_travel_time] || 0
-      if total_time != (total_travel_time || 0) +
-                       waiting_times.sum +
-                       (setup_durations.flatten.reduce(&:+) || 0) +
-                       (durations.flatten.reduce(&:+) || 0)
+      if !@zip_condition && total_time != (total_travel_time || 0) +
+                                          waiting_times.sum +
+                                          (setup_durations.flatten.reduce(&:+) || 0) +
+                                          (durations.flatten.reduce(&:+) || 0)
 
         log_string = "Expected #{total_time} == #{total_travel_time} +"\
                      " #{waiting_times.sum} + #{setup_durations.flatten.reduce(&:+)}"\
                      " + #{durations.flatten.reduce(&:+)}"
+
         log log_string, level: :warn
-        raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production' && !@zip_condition
+        raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
       end
 
       nb_assigned = result[:routes].sum{ |route| route[:activities].count{ |a| a[:service_id] || a[:pickup_shipment_id] || a[:delivery_shipment_id] } }
