@@ -199,7 +199,7 @@ class DichotomiousTest < Minitest::Test
     end
 
     def test_rest_cannot_appear_as_a_mission_in_the_initial_route
-      assert_empty Interpreters::Dichotomious.send(:build_initial_routes, [{ routes: [activities: [{ rest_id: 'id' }]] }])
+      assert_empty Interpreters::Dichotomious.send(:build_initial_routes, {}, [{ routes: [activities: [{ rest_id: 'id' }]] }])
     end
   end
 end
