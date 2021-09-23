@@ -44,7 +44,6 @@ module Wrappers
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_square_matrix,
         :assert_vehicle_tw_if_periodic,
-        :assert_if_sequence_tw_then_schedule,
         :assert_if_periodic_heuristic_then_schedule,
         :assert_only_force_centroids_if_kmeans_method,
         :assert_no_periodic_if_evaluation,

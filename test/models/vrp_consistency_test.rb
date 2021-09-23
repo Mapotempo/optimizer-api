@@ -438,20 +438,29 @@ module Models
       check_consistency(vrp) # this should not raise
 
       vrp[:vehicles][0][:timewindow] = { start: 0, end: 10, day_index: 0 }
-      check_consistency(vrp) # this should not raise
+      # days are uncompatible because first vehicle only works
+      # on mondays while second vehicle is available everyday
+      assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
 
       vrp[:vehicles][1][:timewindow] = { start: 0, end: 10, day_index: 1 }
       # days are uncompatible
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
+      assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
 
       vrp[:vehicles][1][:timewindow] = nil
+      vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 }}
       vrp[:vehicles][1][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
       # vehicles have common day index 0 but they are still not available at exact same days
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
+      assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
+
+      vrp[:vehicles][0][:timewindow] = nil
+      vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
+      check_consistency(vrp) # this should not raise
     end
 
     def test_compatible_days_availabilities_with_vehicle_trips_with_sequence_timewindows
@@ -466,12 +475,12 @@ module Models
       check_consistency(vrp) # this should not raise
 
       vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15, day_index: 0 }]
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
+      assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
 
       vrp[:vehicles][1][:sequence_timewindows] = [{ start: 5, end: 15 }]
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
+      assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
 
@@ -492,7 +501,7 @@ module Models
       vrp[:vehicles][0][:unavailable_work_day_indices] = [0, 1]
       vrp[:vehicles][1][:unavailable_work_day_indices] = [2, 3]
       # no common day_index anymore
-      assert_raises OptimizerWrapper::UnsupportedProblemError do
+      assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
     end
@@ -660,6 +669,43 @@ module Models
           check_consistency(problem)
         end
       }
+    end
+
+    def test_reject_if_different_day_indices_without_schedule
+      vrp = VRP.basic
+      vrp[:vehicles][0][:timewindow] = { day_index: 0 }
+      vrp[:services][0][:activity][:timewindows] = [{ day_index: 0 }]
+      check_consistency(vrp) # no error expected because we can ignore day indices if they are all the same
+
+      vrp[:services][1][:activity][:timewindows] = [{ day_index: 1 }]
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp)
+      end
+      assert_equal 'There cannot be different day indices if no schedule is provided', error.message
+    end
+
+    def test_reject_if_sequence_timewindows_without_schedule
+      vrp = VRP.basic
+      vrp[:vehicles][0].delete(:timewindow)
+      vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10 }]
+      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
+        check_consistency(vrp)
+      end
+      assert_equal 'Vehicle[:sequence_timewindows] are only available when a schedule is provided', error.message
+    end
+
+    def test_route_has_no_day_unless_schedule_or_one_route
+      vrp = VRP.basic
+      vrp[:routes] = [{ mission_ids: [], day_index: 0 }]
+      check_consistency(vrp) # no error expected because we have one route and only one vehicle
+      vrp[:vehicles][0][:timewindow] = { day_index: 1 }
+      error = assert_raises OptimizerWrapper::DiscordantProblemError do
+        check_consistency(vrp) # one route and only one vehicle, but day indices do not match
+      end
+      assert_equal 'There cannot be different day indices if no schedule is provided', error.message
+
+      vrp[:configuration][:schedule] = { mission_ids: [], range_indices: { start: 0, end: 3 }}
+      check_consistency(vrp) # no error expected because we do have a schedule now
     end
   end
 end

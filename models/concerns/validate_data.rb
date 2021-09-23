@@ -27,20 +27,25 @@ module ValidateData
     hash[:relations] ||= []
     @hash = hash
 
-    ensure_no_conflicting_skills
-
     configuration = @hash[:configuration]
     schedule = configuration && configuration[:schedule]
     periodic_heuristic = schedule &&
                          configuration[:preprocessing] &&
                          configuration[:preprocessing][:first_solution_strategy].to_a.include?('periodic')
+
+    check_data_globally(schedule)
     check_matrices
-    check_vehicles(periodic_heuristic)
+    check_vehicles(schedule, periodic_heuristic)
     check_relations(periodic_heuristic)
     check_services(schedule)
 
     check_routes(periodic_heuristic)
     check_configuration(configuration, periodic_heuristic)
+  end
+
+  def check_data_globally(schedule)
+    ensure_no_conflicting_skills
+    ensure_no_day_indices unless schedule
   end
 
   def ensure_no_conflicting_skills
@@ -55,6 +60,25 @@ module ValidateData
     raise OptimizerWrapper::UnsupportedProblemError.new(
       "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. " \
       'These skill patterns are reserved for internal use and they would lead to unexpected behaviour.'
+    )
+  end
+
+  def ensure_no_day_indices
+    day_indices =
+      # there can be no sequence_timewindows without schedule
+      @hash[:vehicles].flat_map{ |v| v[:timewindow].to_h[:day_index] } +
+      (@hash[:services].to_a + @hash[:shipments].to_a).flat_map{ |s|
+        activities = [s[:activity], s[:activities], s[:pickup], s[:delivery]].compact.flatten
+        activities.flat_map{ |a| a[:timewindows]&.flat_map{ |tw| tw[:day_index] } }
+      } +
+      @hash[:rests].to_a.flat_map{ |r| r[:timewindows].to_a.flat_map{ |tw| tw[:day_index] } } +
+      @hash[:timewindows].to_a.flat_map{ |tw| tw[:day_index] } +
+      @hash[:routes].to_a.flat_map{ |r| r[:day_index] ? r[:day_index] % 7 : nil }
+
+    return if day_indices.compact.uniq.size <= 1
+
+    raise OptimizerWrapper::DiscordantProblemError.new(
+      'There cannot be different day indices if no schedule is provided'
     )
   end
 
@@ -83,7 +107,7 @@ module ValidateData
     end
   end
 
-  def check_vehicles(periodic_heuristic)
+  def check_vehicles(schedule, periodic_heuristic)
     @hash[:vehicles].each{ |v|
       if v[:cost_waiting_time_multiplier].to_f > (v[:cost_time_multiplier] || 1)
         raise OptimizerWrapper::DiscordantProblemError.new(
@@ -101,6 +125,12 @@ module ValidateData
 
           raise OptimizerWrapper::DiscordantProblemError.new('Vehicle timewindows are infeasible')
         }
+      end
+
+      unless schedule || v[:sequence_timewindows].to_a.empty?
+        raise OptimizerWrapper::UnsupportedProblemError.new(
+          'Vehicle[:sequence_timewindows] are only available when a schedule is provided'
+        )
       end
 
       next unless periodic_heuristic
@@ -201,13 +231,13 @@ module ValidateData
   def calculate_day_availabilities(vehicles, timewindow_arrays)
     vehicles_days = timewindow_arrays.collect{ |timewindows|
       if timewindows.empty?
-        []
+        (0..6).to_a
       else
         days = timewindows.flat_map{ |tw| tw[:day_index] || (0..6).to_a }
         days.compact!
         days.uniq
       end
-    }.delete_if(&:empty?)
+    }
 
     vehicles_unavailable_indices = vehicles.collect{ |v| v[:unavailable_work_day_indices] }
     vehicles_unavailable_indices.compact!
@@ -251,7 +281,7 @@ module ValidateData
 
     week_days, unavailable_indices = calculate_day_availabilities(relation_vehicles, vehicles_timewindows)
     if week_days.uniq.size > 1 || unavailable_indices.uniq.size > 1
-      raise OptimizerWrapper::UnsupportedProblemError.new(
+      raise OptimizerWrapper::DiscordantProblemError.new(
         'Vehicles in vehicle_trips relation should have the same available days'
       )
     end
