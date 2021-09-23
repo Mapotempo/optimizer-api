@@ -140,6 +140,7 @@ module Api
         response = { error: e.class, message: e.message }
         if e.is_a?(RangeError) ||
            e.is_a?(RouterError) ||
+           e.is_a?(ActiveHash::IdError) ||
            e.is_a?(ActiveHash::RecordNotFound) ||
            e.is_a?(Grape::Exceptions::InvalidMessageBody) ||
            e.is_a?(Grape::Exceptions::ValidationErrors) ||
