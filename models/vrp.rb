@@ -237,7 +237,7 @@ module Models
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.expand_unavailable_days
       vrp.provide_original_info
-      vrp.sticky_as_skills
+      vrp.sticky_as_skills # TODO: this should be done on hash in order to completely remove sticky_vehicles from service model
     end
 
     def self.convert_position_relations(hash)

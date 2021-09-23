@@ -68,6 +68,35 @@ class Api::V01::VrpTest < Minitest::Test
     end
   end
 
+  def test_generated_vehicle_skills
+    problem = VRP.basic
+    [nil, [], [[]],
+     'skill1', [['skill1']],
+     'skill1,skill2', [['skill1', 'skill2']]
+    ].each_with_index{ |skill_set, v_i|
+      problem[:vehicles] << problem[:vehicles].first.dup unless v_i == 0
+      problem[:vehicles][v_i][:id] = "vehicle_#{v_i}"
+      problem[:vehicles][v_i][:skills] = skill_set
+    }
+    problem[:services].first[:skills] = ['skill1', 'skill2'] # otherwise skills will be ignored in vehicles
+
+    OptimizerWrapper.stub(
+      :define_main_process,
+      lambda { |services_vrps, _job|
+        vrp = services_vrps[0][:vrp]
+        [[[]], [[]], [[]],
+         [[:skill1]], [[:skill1]],
+         [[:skill1, :skill2]], [[:skill1, :skill2]]
+        ].each_with_index{ |expected_skills, v_i|
+          assert_equal vrp.vehicles[v_i].skills, expected_skills
+        }
+        {}
+      }
+    ) do
+      submit_vrp api_key: 'demo', vrp: problem
+    end
+  end
+
   def test_exceed_params_limit
     vrp = VRP.toy
     vrp[:points] *= 151
