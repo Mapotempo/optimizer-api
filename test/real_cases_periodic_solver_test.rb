@@ -65,7 +65,7 @@ class HeuristicTest < Minitest::Test
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_nb + result[:unassigned].size
       }
-      assert_operator unassigned_visits, :<=, 225, 'Expecting less unassigned visits'
+      assert_operator unassigned_visits, :<=, 248, 'Expecting less unassigned visits'
     end
 
     def test_performance_britanny_with_solver

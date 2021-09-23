@@ -64,7 +64,7 @@ module PeriodicDataInitialization
           # unlock corresponding services
           services_to_add = @services_unlocked_by[id].to_a & @candidate_services_ids
           @to_plan_service_ids += services_to_add
-          @unlocked += services_to_add
+          services_to_add.each{ |service_id| @unlocked[service_id] = nil }
         else
           @services_assignment[id][:unassigned_reasons] |= ['Can not add this service to its corresponding route']
         end

@@ -55,7 +55,7 @@ module Wrappers
 
       # same_point_day : service with higher heuristic_period unlocks others
       @services_unlocked_by = {}
-      @unlocked = []
+      @unlocked = {}
       @same_located = {}
 
       if OptimizerWrapper.config[:debug][:output_periodic]
@@ -270,12 +270,7 @@ module Wrappers
 
       impacted_days = []
       next_day = @services_assignment[service_id][:days].max + @services_data[service_id][:heuristic_period]
-      day_to_insert =
-        if @services_data[service_id][:raw].visits_number == 2
-          day_to_insert = find_day_for_second_visit(vehicle_id, @services_assignment[service_id][:days][0], service_id)
-        else
-          @candidate_routes[vehicle_id].keys.select{ |day| day >= next_day.round }.min
-        end
+      day_to_insert = @candidate_routes[vehicle_id].keys.select{ |day| day >= next_day.round }.min
 
       cleaned_service = false
       (first_unseen_visit..@services_data[service_id][:raw].visits_number).each{ |_visit_number|
@@ -366,7 +361,7 @@ module Wrappers
       # TODO : eventually consider unavailable_days here
       return true unless @same_point_day || @relaxed_same_point_day
 
-      return true unless @unlocked.include?(service_id) && @services_data[service_id][:raw].visits_number > 1
+      return true unless @unlocked.key?(service_id) && @services_data[service_id][:raw].visits_number > 1
 
       available_days = @points_assignment[point_id][:days]
       current_day = available_days.first
@@ -575,26 +570,6 @@ module Wrappers
       }.compact
     end
 
-    def find_day_for_second_visit(vehicle_id, first_day, service_id)
-      return [] unless @services_data[service_id][:raw].visits_number == 2
-
-      potential_days =
-        if @unlocked.include?(service_id)
-          point = @services_data[service_id][:points_ids].first # there can be only on point in points_ids in this case
-          @points_assignment[point][:days].dup
-        else
-          @candidate_routes[vehicle_id].keys
-        end
-
-      potential_days.sort!
-      potential_days.delete_if{ |d|
-        !d.between?(first_day + (@services_data[service_id][:raw].minimum_lapse || 0),
-                    first_day + (@services_data[service_id][:raw].maximum_lapse || 2**32))
-      }
-
-      potential_days.find{ |d| find_feasible_index(service_id, @candidate_routes[vehicle_id][d], false) }
-    end
-
     def same_point_compatibility(service_id, day)
       # REMINDER : services in (relaxed_)same_point_day relation can only have one point_id
       same_point = @services_data[service_id][:points_ids].first
@@ -617,7 +592,7 @@ module Wrappers
           end
 
         return common_days.size == expected_number
-      elsif @unlocked.include?(service_id)
+      elsif @unlocked.key?(service_id)
         # can not finish later (over whole period) than service at same point
         last_visit_day = day + min_overall_lapse
         last_possible_day = @points_assignment[same_point][:days].max
@@ -849,8 +824,7 @@ module Wrappers
         if @services_unlocked_by[best_index[:id]] && !@services_unlocked_by[best_index[:id]].empty? && !@relaxed_same_point_day
           services_to_add = @services_unlocked_by[best_index[:id]] & @candidate_services_ids
           @to_plan_service_ids += services_to_add
-          @unlocked += services_to_add
-
+          services_to_add.each{ |service_id| @unlocked[service_id] = nil }
           services_to_add
         end
 
@@ -943,7 +917,7 @@ module Wrappers
           (@points_assignment[point][:days].include?(day) ||
           @points_assignment[point][:maximum_visits_number] < @services_data[service_id][:raw].visits_number)
       else # @same_point_day is on :
-        !@unlocked.include?(service_id) ||
+        !@unlocked.key?(service_id) ||
           @points_assignment[point][:vehicles].include?(vehicle_id) &&
             @points_assignment[point][:days].include?(day)
       end
@@ -957,7 +931,6 @@ module Wrappers
         compatible_vehicle(service_id, route_data) &&
         service_does_not_violate_capacity(service_id, route_data, first_visit) &&
         (!first_visit ||
-          find_day_for_second_visit(vehicle_id, day, service_id) &&
           route_data[:available_ids].include?(service_id) &&
           relaxed_or_same_point_day_constraint_respected(service_id, vehicle_id, day) &&
           same_point_compatibility(service_id, day))
