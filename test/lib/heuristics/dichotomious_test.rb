@@ -37,7 +37,7 @@ class DichotomiousTest < Minitest::Test
       elsif result[:routes].size == 11
         assert result[:unassigned].size <= 57, activity_assert_message
       else
-        assert result[:unassigned].size <= 77, activity_assert_message
+        assert result[:unassigned].size <= 78, activity_assert_message
       end
 
       # Check routes
