@@ -161,7 +161,7 @@ module OutputHelper
     def self.build_csv_activity(name, route, activity)
       type, complete_id = find_type_and_complete_id(activity)
       [
-        route && route[:vehicle_id],
+        route && route[:original_vehicle_id],
         complete_id,
         activity[:point_id],
         activity[:detail][:lat],
