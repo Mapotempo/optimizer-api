@@ -25,7 +25,7 @@ module TestHelper
     loop do
       get "0.1/vrp/jobs/#{job_id}.json", options
 
-      assert_equal 200, last_response.status, last_response.body
+      assert_equal 200, last_response.status, 'Response status code should be 200'
       last_response_body = JSON.parse(last_response.body)
       assert_includes ['queued', 'working', 'completed'], last_response_body['job']['status']
 
@@ -44,7 +44,7 @@ module TestHelper
     loop do
       get "0.1/vrp/jobs/#{job_id}.json", options
 
-      assert_equal 200, last_response.status, last_response.body
+      assert_equal 200, last_response.status, 'Response status code should be 200'
       assert_includes ['queued', 'working', 'completed'], JSON.parse(last_response.body)['job']['status']
 
       puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
@@ -64,7 +64,7 @@ module TestHelper
     loop do
       get "0.1/vrp/jobs/#{job_id}", options, 'HTTP_ACCEPT_LANGUAGE' => language
 
-      assert_equal 200, last_response.status, last_response.body
+      assert_equal 200, last_response.status, 'Response status code should be 200'
 
       break if last_response.content_type == 'text/csv;'
 

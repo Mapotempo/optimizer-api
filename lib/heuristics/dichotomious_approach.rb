@@ -201,7 +201,7 @@ module Interpreters
       end
     end
 
-    def self.build_initial_routes(results)
+    def self.build_initial_routes(vrp, results)
       results.flat_map{ |result|
         next if result.nil?
 
@@ -212,7 +212,7 @@ module Interpreters
           next if mission_ids.empty?
 
           Models::Route.create(
-            vehicle_id: route[:vehicle_id],
+            vehicle: vrp.vehicles.find{ |v| v[:id] == route[:vehicle_id] },
             mission_ids: mission_ids
           )
         }
@@ -247,7 +247,7 @@ module Interpreters
       vrp = service_vrp[:vrp]
       log "try to insert #{result[:unassigned].size} unassigned from #{vrp.services.size} services"
       transfer_unused_time_limit = 0
-      vrp.routes = build_initial_routes([result])
+      vrp.routes = build_initial_routes(vrp, [result])
       vrp.resolution_init_duration = nil
       unassigned_services = vrp.services.select{ |s| result[:unassigned].map{ |a| a[:service_id] }.include?(s.id) }
       unassigned_services_by_skills = unassigned_services.group_by(&:skills)
@@ -346,7 +346,7 @@ module Interpreters
 
           sub_results << result_loop
         end
-        new_routes = build_initial_routes(sub_results)
+        new_routes = build_initial_routes(vrp, sub_results)
         vehicle_ids = sub_results.flat_map{ |r| r[:routes].map{ |route| route[:vehicle_id] } }
         vrp.routes.delete_if{ |r| vehicle_ids.include?(r.vehicle.id) }
         vrp.routes += new_routes

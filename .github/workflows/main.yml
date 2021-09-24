@@ -105,7 +105,7 @@ jobs:
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
-        timeout-minutes: 20
+        timeout-minutes: 25
         run: ./.github/actions/tests.sh
         shell: bash
 
@@ -155,7 +155,7 @@ jobs:
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
-        timeout-minutes: 30
+        timeout-minutes: 10
         run: ./.github/actions/tests.sh
         shell: bash
 
@@ -205,7 +205,7 @@ jobs:
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: ./.github/actions/tests.sh
         shell: bash
 

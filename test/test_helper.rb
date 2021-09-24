@@ -39,6 +39,24 @@ Minitest::Reporters.use! [
   ENV['TIME'] && Minitest::Reporters::SpecReporter.new, # Generate a report to find slowest tests
 ].compact
 
+require 'minitest/retry'
+Minitest::Retry.use!(
+  # List of methods that will trigger a retry (when empty, all methods will).
+  # The list respects alphabetical order for easy maintenance
+  methods_to_retry: %w[
+    Api::V01::OutputTest#test_csv_configuration_asynchronously
+    Api::V01::OutputTest#test_csv_headers_compatible_with_import_according_to_language
+    Api::V01::OutputTest#test_returned_ids
+    Api::V01::OutputTest#test_returned_types
+    Api::V01::OutputTest#test_use_deprecated_csv_headers_asynchronously
+    Api::V01::WithSolverTest#test_deleted_job
+    DichotomiousTest#test_dichotomious_approach
+    SplitClusteringTest#test_avoid_capacities_overlap
+    SplitClusteringTest#test_no_doubles_3000
+    WrapperTest#test_detecting_unfeasible_services_can_not_take_too_long
+  ]
+)
+
 require 'grape'
 require 'grape-swagger'
 require 'grape-entity'

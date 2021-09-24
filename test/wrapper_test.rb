@@ -2813,11 +2813,11 @@ class WrapperTest < Minitest::Test
     # The time limits down below should be relax enough to take into account github performance variation. If any one of
     # them is violated "marginally" (without any change in the infeasibility detection logic) then the limits can be
     # corrected/increased. On local, the total_times are almost half the limits.
-    # The goal of this test is to prevent additional an exponential logic and the limits can increase linearly if more
-    # verifications are added but the time should not increase orders of magnitude.
+    # The goal of this test is to prevent adding an involuntary exponential logic and the limits can increase linearly
+    # if more verifications are added but the time should not jump orders of magnitude.
     assert_operator total_check_distances_time, :<=, 2.5, 'check_distances function took longer than expected'
-    assert_operator total_add_unassigned_time, :<=, 4.5, 'add_unassigned function took longer than expected'
-    assert_operator total_detect_unfeasible_services_time, :<=, 7.0, 'detect_unfeasible_services function took longer than expected'
+    assert_operator total_add_unassigned_time, :<=, 5.0, 'add_unassigned function took longer than expected'
+    assert_operator total_detect_unfeasible_services_time, :<=, 7.5, 'detect_unfeasible_services function took too long'
   ensure
     OptimizerLogger.level = old_logger_level if old_logger_level
     OptimizerWrapper.config[:solve][:repetition] = old_config_solve_repetition if old_config_solve_repetition

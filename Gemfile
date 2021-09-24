@@ -70,9 +70,10 @@ end
 group :test do
   gem 'minitest'
   gem 'minitest-around' # to create a block around unit tests for initialisation and cleanup
-  gem 'minitest-bisect' # to identify randomly failing order-depoendent tests
+  gem 'minitest-bisect' # useful for identifing randomly failing order-depoendent tests
   gem 'minitest-focus'
   gem 'minitest-reporters'
+  gem 'minitest-retry' # relaunches selected methods when they fail
   gem 'minitest-stub_any_instance'
   gem 'rack-test'
   gem 'simplecov', require: false
