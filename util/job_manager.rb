@@ -15,11 +15,17 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+# frozen_string_literal: true
+
 require 'i18n'
 require 'resque'
 require 'resque-status'
 require 'redis'
 require 'json'
+
+require './util/error.rb'
+require './util/config.rb'
+
 module OptimizerWrapper
   class Job
     include Resque::Plugins::Status
@@ -97,23 +103,6 @@ module OptimizerWrapper
       @killed = true
     end
   end
-
-  class StandardErrorWithData < StandardError
-    attr_reader :data
-
-    def initialize(msg, data = [])
-      @data = data
-      super(msg)
-    end
-  end
-
-  class UnsupportedProblemError     < StandardErrorWithData; end
-
-  class ClusteringError             < StandardError; end
-  class DiscordantProblemError      < StandardError; end
-  class JobKilledError              < StandardError; end
-  class PeriodicHeuristicError      < StandardError; end
-  class UnsupportedRouterModeError  < StandardError; end
 
   class Result
     def self.time_spent(value)

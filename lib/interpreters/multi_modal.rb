@@ -31,7 +31,7 @@ module Interpreters
     def generate_isolines
       @original_vrp.subtours.collect{ |tour|
         tour.transmodal_stops.collect{ |stop|
-          isoline = JSON.parse(OptimizerWrapper.router.isoline(OptimizerWrapper.config[:router][:url], tour.router_mode, (tour.time_bounds ? :time : :distance), stop.location.lat, stop.location.lon, (tour.time_bounds || tour.distance_bounds)))
+          isoline = JSON.parse(@original_vrp.router.isoline(OptimizerWrapper.config[:router][:url], tour.router_mode, (tour.time_bounds ? :time : :distance), stop.location.lat, stop.location.lon, (tour.time_bounds || tour.distance_bounds)))
           next unless isoline
 
           {

@@ -16,17 +16,11 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './test/test_helper'
-require './test/api/v01/request_helper'
+require './test/api/v01/helpers/request_helper'
 
 class Api::V01::VrpTest < Minitest::Test
   include Rack::Test::Methods
   include TestHelper
-
-  def clear_optim_redis_count
-    OptimizerWrapper.config[:redis_count].keys.select{ |key| key =~ /optimizer:/ }.each do |to_remove|
-      OptimizerWrapper.config[:redis_count].del(to_remove)
-    end
-  end
 
   def app
     Api::Root
@@ -38,12 +32,6 @@ class Api::V01::VrpTest < Minitest::Test
     end
   ensure
     delete_job @job_id, api_key: 'demo'
-  end
-
-  def test_cannot_submit_vrp
-    post '/0.1/vrp/submit', api_key: '!', vrp: VRP.toy
-    assert_equal 401, last_response.status, last_response.body
-    assert_includes JSON.parse(last_response.body)['error'], 'Unauthorized'
   end
 
   def test_dont_ignore_legitimate_skills
@@ -348,44 +336,6 @@ class Api::V01::VrpTest < Minitest::Test
 
       refute_nil Regexp.last_match, assert_msg
     }
-  end
-
-  def test_count_optimizations
-    clear_optim_redis_count
-    [
-      { method: 'post', uri: 'submit', operation: :optimize, options: { vrp: VRP.toy }},
-      { method: 'get', uri: "jobs/#{@job_id}.json", operation: :get_job, options: {}},
-      { method: 'get', uri: 'jobs', operation: :get_job_list, options: {}},
-      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one!
-    ].each do |obj|
-      (1..2).each do |cpt|
-        send(obj[:method], "/0.1/vrp/#{obj[:uri]}", { api_key: 'demo' }.merge(obj[:options]))
-
-        keys = OptimizerWrapper.config[:redis_count].keys("optimizer:#{obj[:operation]}:#{Time.now.utc.to_s[0..9]}_key:demo_ip*")
-
-        case obj[:operation]
-        when :optimize
-          assert_equal 1, keys.count
-          assert_equal({ 'hits' => cpt.to_s, 'transactions' => (VRP.toy[:vehicles].count * VRP.toy[:points].count * cpt).to_s }, OptimizerWrapper.config[:redis_count].hgetall(keys.first)) # only one key
-        else
-          assert_equal 0, keys.count
-        end
-      end
-    end
-  end
-
-  def test_use_quota
-    clear_optim_redis_count
-    post '/0.1/vrp/submit', { api_key: 'quota', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
-    assert last_response.ok?, last_response.body
-
-    post '/0.1/vrp/submit', { api_key: 'quota', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
-    assert_equal 429, last_response.status
-
-    assert_includes JSON.parse(last_response.body)['message'], 'Too many daily requests'
-    assert_equal ["application/json; charset=UTF-8", 4, 0, Time.now.utc.to_date.next_day.to_time.to_i], last_response.headers.select{ |key|
-      key =~ /(Content-Type|X-RateLimit-Limit|X-RateLimit-Remaining|X-RateLimit-Reset)/
-    }.values
   end
 
   def test_submit_without_schedule_start_should_break

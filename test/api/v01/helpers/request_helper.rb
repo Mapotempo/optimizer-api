@@ -19,6 +19,7 @@ require './test/test_helper'
 
 module TestHelper
   include Rack::Test::Methods
+
   def wait_avancement_match(job_id, avancement_regexp, options)
     puts "#{job_id} #{Time.now} waiting avancement to match '#{avancement_regexp}'"
     last_response_body = nil

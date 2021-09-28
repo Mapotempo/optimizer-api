@@ -15,11 +15,16 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+# frozen_string_literal: true
+
 require 'i18n'
 require 'resque'
 require 'resque-status'
 require 'redis'
 require 'json'
+
+require './util/error.rb'
+require './util/config.rb'
 require './util/job_manager.rb'
 
 require './lib/routers/router_wrapper.rb'
@@ -42,30 +47,7 @@ require 'sim_annealing'
 require 'rgeo/geo_json'
 
 module OptimizerWrapper
-  REDIS = Resque.redis
-
-  def self.config
-    @@c
-  end
-
-  def self.access(force_load = false)
-    load config[:access_by_api_key][:file] || './config/access.rb' if force_load
-    @access_by_api_key
-  end
-
-  def self.dump_vrp_dir
-    @@dump_vrp_dir
-  end
-
-  def self.dump_vrp_dir=(dir)
-    @@dump_vrp_dir = dir
-  end
-
-  def self.router
-    @router ||= Routers::RouterWrapper.new(ActiveSupport::Cache::NullStore.new, ActiveSupport::Cache::NullStore.new, config[:router][:api_key])
-  end
-
-  def self.wrapper_vrp(api_key, services, vrp, checksum, job_id = nil)
+  def self.wrapper_vrp(api_key, profile, vrp, checksum, job_id = nil)
     inapplicable_services = []
     apply_zones(vrp)
     adjust_vehicles_duration(vrp)
@@ -81,7 +63,7 @@ module OptimizerWrapper
 
     services_vrps = split_independent_vrp(vrp).map{ |vrp_element|
       {
-        service: services[:services][:vrp].find{ |s|
+        service: profile[:services][:vrp].find{ |s|
           inapplicable = config[:services][s].inapplicable_solve?(vrp_element)
           if inapplicable.empty?
             log "Select service #{s}"
@@ -109,7 +91,7 @@ module OptimizerWrapper
       result.size == 1 ? result.first : result
     else
       # Delegate the job to a worker
-      job_id = Job.enqueue_to(services[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
+      job_id = Job.enqueue_to(profile[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
                                                      api_key: api_key,
                                                      checksum: checksum,
                                                      pids: [])
@@ -715,7 +697,7 @@ module OptimizerWrapper
     }.reverse.compact
 
     unless segments.empty?
-      details = OptimizerWrapper.router.compute_batch(OptimizerWrapper.config[:router][:url],
+      details = vrp.router.compute_batch(OptimizerWrapper.config[:router][:url],
                                                       vehicle.router_mode.to_sym, vehicle.router_dimension,
                                                       segments, vrp.restitution_geometry.include?(:encoded_polyline),
                                                       vehicle.router_options)

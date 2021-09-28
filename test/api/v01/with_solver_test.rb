@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './test/test_helper'
-require './test/api/v01/request_helper'
+require './test/api/v01/helpers/request_helper'
 
 class Api::V01::WithSolverTest < Minitest::Test
   include Rack::Test::Methods
