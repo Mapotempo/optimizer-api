@@ -748,7 +748,7 @@ module Wrappers
           add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow')
         end
 
-        # unconsistency for planning
+        # Planning inconsistency
         next if !vrp.schedule?
 
         unless possible_days_are_consistent(vrp, service)
@@ -756,7 +756,7 @@ module Wrappers
         end
 
         unless vrp.can_affect_all_visits?(service)
-          add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
+          add_unassigned(unfeasible, vrp, service, 'Inconsistency between visit number and minimum lapse')
         end
       }
 

@@ -207,7 +207,7 @@ module ValidateData
       [:always_last, :always_first]
     ]
 
-    unconsistent_position_services = []
+    inconsistent_position_services = []
     @hash[:relations].each{ |relation|
       next unless POSITION_RELATIONS.include?(relation[:type])
 
@@ -217,15 +217,15 @@ module ValidateData
       previous_service = nil
       services.each{ |service|
         if previous_service && forbidden_position_pairs.include?([previous_service[:activity][:position], service[:activity][:position]])
-          unconsistent_position_services << [previous_service[:id], service[:id]]
+          inconsistent_position_services << [previous_service[:id], service[:id]]
         end
         previous_service = service
       }
     }
 
-    return unless unconsistent_position_services.any?
+    return unless inconsistent_position_services.any?
 
-    raise OptimizerWrapper::DiscordantProblemError.new("Unconsistent positions in relations: #{unconsistent_position_services}")
+    raise OptimizerWrapper::DiscordantProblemError.new("Inconsistent positions in relations: #{inconsistent_position_services}")
   end
 
   def calculate_day_availabilities(vehicles, timewindow_arrays)
@@ -462,7 +462,7 @@ module ValidateData
   end
 
   def check_sticky_relation_consistency
-    unconsistent_stickies = []
+    inconsistent_stickies = []
     @hash[:relations].none?{ |relation|
       relation_sticky_ids = []
       services = @hash[:services].select{ |service| relation[:linked_ids]&.include?(service[:id]) }
@@ -470,17 +470,17 @@ module ValidateData
         sticky_ids = service[:sticky_vehicle_ids] || []
 
         if relation_sticky_ids.any? && sticky_ids.any? && (sticky_ids & relation_sticky_ids).empty?
-          unconsistent_stickies << services.map{ |s| s[:id] }
+          inconsistent_stickies << services.map{ |s| s[:id] }
         end
         relation_sticky_ids += sticky_ids
       }
     }
-    return unless unconsistent_stickies.any?
+    return unless inconsistent_stickies.any?
 
     raise OptimizerWrapper::UnsupportedProblemError.new(
       'All services from a relation should have consistent sticky_vehicle_ids or none'\
       'Following services have different sticky_vehicle_ids: ',
-      unconsistent_stickies
+      inconsistent_stickies
     )
   end
 

@@ -1962,7 +1962,7 @@ class WrapperTest < Minitest::Test
     assert_empty(unassigned_services.select{ |un| un[:reason] == 'Unreachable' })
   end
 
-  def test_impossible_service_unconsistent_minimum_lapse
+  def test_impossible_service_inconsistent_minimum_lapse
     problem = {
       matrices: [{
         id: 'matrix_0',
@@ -2016,7 +2016,7 @@ class WrapperTest < Minitest::Test
       }
     }
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal(2, result[:unassigned].count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
+    assert_equal(2, result[:unassigned].count{ |un| un[:reason] == 'Inconsistency between visit number and minimum lapse' })
   end
 
   def test_wrong_matrix_and_points_definitions
@@ -2749,17 +2749,17 @@ class WrapperTest < Minitest::Test
 
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? } }
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal(2, result.values.flatten.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
+    assert_equal(2, result.values.flatten.count{ |un| un[:reason] == 'Inconsistency between visit number and minimum lapse' })
 
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].select{ |tw| tw[:day_index] == 2 }.each{ |tw| tw[:day_index] = 0 } }
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
-    assert_equal(2, result.values.flatten.count{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' })
+    assert_equal(2, result.values.flatten.count{ |un| un[:reason] == 'Inconsistency between visit number and minimum lapse' })
   end
 
   def test_impossible_minimum_lapse_opened_days_real_case
     vrp = TestHelper.load_vrp(self, fixture_file: 'real_case_impossible_visits_because_lapse')
     result = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
-    assert_equal 12, (result.count{ |_o_s_id, uns| uns.any?{ |un| un[:reason] == 'Unconsistency between visit number and minimum lapse' }})
+    assert_equal 12, (result.count{ |_o_s_id, uns| uns.any?{ |un| un[:reason] == 'Inconsistency between visit number and minimum lapse' }})
   end
 
   def test_lapse_with_unavailable_work_days

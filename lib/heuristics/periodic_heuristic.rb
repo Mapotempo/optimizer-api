@@ -206,7 +206,7 @@ module Wrappers
                     generated_indices.max < 1 ||
                     data[:unassigned_indices].size != data[:missing_visits]
 
-        raise OptimizerWrapper::PeriodicHeuristicError.new('Unconsistent IDs generated')
+        raise OptimizerWrapper::PeriodicHeuristicError.new('Inconsistent IDs generated')
       }
     end
 

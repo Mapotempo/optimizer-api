@@ -48,7 +48,7 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
       assert_equal 4, result[:unassigned].size
-      assert(result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Partial assignment only') || unassigned[:reason].include?('Unconsistency between visit number and minimum lapse') })
+      assert(result[:unassigned].all?{ |unassigned| unassigned[:reason].include?('Partial assignment only') || unassigned[:reason].include?('Inconsistency between visit number and minimum lapse') })
     end
 
     def test_max_ride_time
@@ -302,7 +302,7 @@ class HeuristicTest < Minitest::Test
       candidate_routes = s.instance_variable_get(:@candidate_routes)
       assert(candidate_routes.any?{ |_vehicle, vehicle_data| vehicle_data.any?{ |_day, data| data[:stops].size == expecting.size } })
 
-      # providing uncomplete solution (compared to solution without initial routes)
+      # providing incomplete solution (compared to solution without initial routes)
       OptimizerLogger.log "On vehicle ANDALUCIA 1_2, expecting #{expecting}"
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
@@ -542,7 +542,7 @@ class HeuristicTest < Minitest::Test
       assert result[:cost_details] # TODO: Verify costs content whenever it is correctly returned by periodic heuristic
     end
 
-    def test_same_point_day_option_used_with_uncompatible_lapses
+    def test_same_point_day_option_used_with_incompatible_lapses
       vrp = VRP.lat_lon_periodic
       vrp[:configuration][:schedule][:range_indices][:end] = 5 # 6 days
       [[nil, nil], [5, 5], [2, 3], [1, 2], [1, 2], [1, 1]].each_with_index{ |data, index|
