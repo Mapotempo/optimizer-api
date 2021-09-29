@@ -21,7 +21,7 @@ module Models
   class Quantity < Base
     field :fill, default: false
     field :empty, default: false
-    field :value
+    field :value, default: 0
     field :setup_value, default: 1
 
     # ActiveHash doesn't validate the validator of the associated objects
