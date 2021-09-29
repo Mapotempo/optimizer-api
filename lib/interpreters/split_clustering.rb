@@ -238,6 +238,8 @@ module Interpreters
         unless sides.size == 2 && sides.none?(&:empty?)
           # this might happen under certain cases (skills etc can force all points to be on one side)
           # and not necessarily a problem but it should happen very rarely (in real instances)
+          # it might also happen because the vehicles are in a linking relation (like vehicle_trips)
+          # which forces them to be stay on one side.
           log 'There should be exactly two clusters in split_solve_core!', level: :warn
           ss_data[:cannot_split_further] = true
         end
@@ -298,7 +300,8 @@ module Interpreters
       sub_vrp = ::Models::Vrp.create({}, false)
 
       # Select the vehicles and services belonging to this sub-problem from the service_vehicle_assignments
-      sub_vrp.vehicles = ss_data[:current_vehicles] + ss_data[:transferred_vehicles]
+      # transfer a vehicle with a forcing linked relation only if all of its linked vehicles can be transferred as well
+      sub_vrp.vehicles = ss_data[:current_vehicles] + transfer_unused_vehicles(ss_data)
       sub_vrp.services = ss_data[:current_vehicles].flat_map{ |v| ss_data[:service_vehicle_assignments][v.id] }
       sub_vrp.services.concat ss_data[:transferred_empties_or_fills]
 
@@ -386,7 +389,13 @@ module Interpreters
       # go through the original relations and force the services and vehicles to stay in the same sub-vrp if necessary
       split_solve_data[:original_vrp].relations.select{ |r| FORCING_RELATIONS.include?(r.type) }.each{ |relation|
         if relation.linked_vehicle_ids.any? && relation.linked_services.none?
-          relations << { type: :same_route, linked_ids: relation.linked_vehicle_ids }
+          linked_ids = []
+          relation.linked_vehicle_ids.map{ |v_id|
+            s_id = "0_representative_vrp_s_#{v_id}"
+            linked_ids << s_id if services.any?{ |s| s[:id] == s_id }
+          }
+
+          relations << { type: :same_route, linked_ids: linked_ids } if linked_ids.size > 1
         elsif relation.linked_vehicle_ids.none? && relation.linked_services.any?
           linked_ids = []
           relation.linked_services.each{ |linked_service|
@@ -441,6 +450,33 @@ module Interpreters
       r_sub_vrp
     end
 
+    def self.transfer_unused_vehicles(split_solve_data)
+      # transfers an unused vehicle to the current sub-problem if and only if
+      # all forcing relations can be respected (vehicle_trips, meetup etc.)
+      ss_data = split_solve_data
+      o_vrp = ss_data[:original_vrp]
+
+      unused_vehicle_ids = ss_data[:transferred_vehicles].map(&:id)
+      current_and_unused_vehicle_ids = ss_data[:current_vehicles].map(&:id) + unused_vehicle_ids
+
+      related_forcing_relations = o_vrp.relations.select{ |r|
+        FORCING_RELATIONS.include?(r.type) && (r.linked_vehicle_ids.to_a & unused_vehicle_ids).any?
+      }
+
+      # FIXME: this operation can be done faster by exploiting the fact that some unused vehicles might share a relation
+      selected_vehicles_to_use = []
+      ss_data[:transferred_vehicles].each{ |transferred_vehicle|
+        can_have_all_its_linked_vehicles_if_transferred = related_forcing_relations.all?{ |relation|
+          relation.linked_vehicle_ids.exclude?(transferred_vehicle.id) ||
+            (relation.linked_vehicle_ids - current_and_unused_vehicle_ids).empty?
+        }
+
+        selected_vehicles_to_use << transferred_vehicle if can_have_all_its_linked_vehicles_if_transferred
+      }
+
+      selected_vehicles_to_use
+    end
+
     def self.select_existing_relations(relations, vrp)
       relations.select{ |relation|
         next if relation.linked_vehicle_ids.empty? && relation.linked_ids.empty?
@@ -468,12 +504,28 @@ module Interpreters
          (vrp.resolution_vehicle_limit.nil? || result[:routes].size == vrp.resolution_vehicle_limit)
         remove_poorly_populated_routes(vrp, result, 0.1)
       end
-      split_solve_data[:transferred_vehicles].delete_if{ |vehicle|
-        result[:routes].any?{ |r| r[:vehicle_id] == vehicle.id } # used
+
+      used_vehicle_ids = result[:routes].map{ |r| r[:vehicle_id] }
+      forcing_vehicle_relations = split_solve_data[:original_vrp].relations.select{ |r|
+        FORCING_RELATIONS.include?(r.type) && r.linked_vehicle_ids&.any?
       }
+
+      split_solve_data[:transferred_vehicles].delete_if{ |vehicle|
+        # mark used (delete from transferred_vehicles) if used or there is a used linked vehicle from a forcing relation
+        next true if used_vehicle_ids.include?(vehicle.id)
+
+        related_relations = forcing_vehicle_relations.select{ |r| r.linked_vehicle_ids.include?(vehicle.id) }
+        (used_vehicle_ids & related_relations.flat_map(&:linked_vehicle_ids)).any?
+      }
+
       split_solve_data[:transferred_vehicles].concat(split_solve_data[:current_vehicles].select{ |vehicle|
-        result[:routes].none?{ |r| r[:vehicle_id] == vehicle.id } # not used
+        # mark unused (add to transferred_vehicles) if not used and there is no used linked vehicle from a forcing relation
+        next false if used_vehicle_ids.include?(vehicle.id)
+
+        related_relations = forcing_vehicle_relations.select{ |r| r.linked_vehicle_ids.include?(vehicle.id) }
+        (used_vehicle_ids & related_relations.flat_map(&:linked_vehicle_ids)).empty?
       })
+
       split_solve_data[:transferred_vehicles].each{ |v|
         v.matrix_id = nil unless split_solve_data[:vehicle_has_complete_matrix][v.id]
       }
@@ -498,9 +550,13 @@ module Interpreters
     end
 
     def self.remove_poorly_populated_routes(vrp, result, limit)
+      forcing_relation_vehicle_ids = vrp.relations.flat_map{ |relation|
+        FORCING_RELATIONS.include?(relation.type) ? relation.linked_vehicle_ids.to_a : []
+      }.uniq
+
       emptied_routes = false
       result[:routes].delete_if{ |route|
-        vehicle = vrp.vehicles.find{ |current_vehicle| current_vehicle.id == route[:vehicle_id] }
+        vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
         loads = route[:activities].last[:detail][:quantities]
         load_flag = vehicle.capacities.empty? || vehicle.capacities.all?{ |capacity|
           current_load = loads.find{ |unit_load| unit_load[:unit] == capacity.unit.id }
@@ -510,6 +566,14 @@ module Interpreters
         route_duration = route[:total_time] || (route[:activities].last[:begin_time] - route[:activities].first[:begin_time])
 
         log "route #{route[:vehicle_id]} time: #{route_duration}/#{vehicle_worktime} percent: #{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :info
+
+        # Do not remove a poorly populated routes if it is in a forcing relation
+        # TODO: Ideally, we wouldn't remove a poorly populated vehicle only if, any of its linked vehicles is
+        # "non-removable" (i.e., either it is well-used or it has a well-used link)
+        # Or we would calculate the "overall" stats for all linked vehicles and remove/leave them together
+        # NOTE: This might need a recursive logic because different vehicles might be connected via different
+        # FORCING_RELATIONS.
+        next if forcing_relation_vehicle_ids.include?(route[:vehicle_id])
 
         time_flag = vehicle_worktime && route_duration < limit * vehicle_worktime
 

@@ -117,4 +117,45 @@ class MultiTripsTest < Minitest::Test
     last_route_start = result[:routes][1][:activities].first[:begin_time]
     assert_operator first_route_end + 3600, :<=, last_route_start
   end
+
+  def test_multi_trips_with_max_split
+    vrp = VRP.lat_lon_capacitated
+
+    # 2 vehicles with 4 trips each (to make sure there will be unused but un-transferable vehicles)
+    vrp[:relations] = []
+    2.times{ |i|
+      vrp[:vehicles] << vrp[:vehicles].first.dup.merge({ id: 'other_vehicle' }) if i == 1
+
+      linked_vehicle_ids = [vrp[:vehicles].last[:id]]
+      1.upto(3).each{ |trip|
+        vrp[:vehicles] << vrp[:vehicles][-trip].dup.merge({ id: "#{vrp[:vehicles][-trip][:id]}_#{trip+1}_trip" })
+        linked_vehicle_ids << vrp[:vehicles].last[:id]
+      }
+      vrp[:relations] << { type: :vehicle_trips, linked_vehicle_ids: linked_vehicle_ids }
+    }
+    # make sure split uses all vehicles
+    vrp[:services].first[:sticky_vehicle_ids] = [vrp[:vehicles].first[:id]]
+    vrp[:services].last[:sticky_vehicle_ids] = [vrp[:vehicles].last[:id]]
+    # activate max_split
+    vrp[:configuration][:preprocessing] ||= {}
+    vrp[:configuration][:preprocessing][:max_split_size] = 1
+    vrp[:configuration][:preprocessing][:first_solution_strategy] = 'global_cheapest_arc'
+
+    vrp = TestHelper.create(vrp)
+
+    OptimizerWrapper.stub(:solve, lambda{ |service_vrp, _job, _block| # stub with empty solution
+      sub_vrp_vehicle_ids = service_vrp[:vrp].vehicles.map(&:id)
+
+      # check vehicle trips are not split
+      vrp.relations.each{ |relation|
+        assert (relation.linked_vehicle_ids - sub_vrp_vehicle_ids).empty? ||
+                 (relation.linked_vehicle_ids & sub_vrp_vehicle_ids).empty?,
+               'All trips of a vehicle should be in the same subproblem'
+      }
+
+      OptimizerWrapper.send(:__minitest_stub__solve, service_vrp) # call original solve method
+    }) do
+      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+    end
+  end
 end
