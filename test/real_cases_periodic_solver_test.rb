@@ -28,7 +28,6 @@ class HeuristicTest < Minitest::Test
         unassigned = result[:unassigned].size
 
         vrp.resolution_solver = true
-        Models.delete_all # needed to prevent duplicate ids while calling wrapper_vrp second time
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         assert unassigned >= result[:unassigned].size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{result[:unassigned].size} now"
       }

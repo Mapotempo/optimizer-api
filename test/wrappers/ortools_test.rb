@@ -4983,7 +4983,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     delivery1 = vrp.services.find{ |service| service.id == "#{ordered_pickup_ids[1]}_delivery" }
     pickup0 = vrp.services.find{ |service| service.id == "#{ordered_pickup_ids[0]}_pickup" }
 
-    # add consecutivity :
+    # add consecutivity:
+    vrp = TestHelper.load_vrp(self)
     vrp.relations << Models::Relation.create(
       type: :minimum_duration_lapse,
       linked_ids: [delivery1.id, pickup0.id],

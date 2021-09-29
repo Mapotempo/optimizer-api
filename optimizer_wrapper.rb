@@ -129,9 +129,14 @@ module OptimizerWrapper
             msg = "#{"repetition #{repetition_index + 1}/#{service_vrp_repeats.size} - " if service_vrp_repeats.size > 1}#{message}" unless message.nil?
             callback_join&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
-          Models.delete_all if service_vrp_repeats.size > 1 # needed to prevent duplicate ids because expand_repeat uses Marshal.load/dump
+          Models.delete_all # needed to prevent duplicate ids because expand_repeat uses Marshal.load/dump
+
+          break if repeated_results.last[:unassigned].empty? # No need to repeat more, cannot do better than this
         }
 
+        # NOTE: the only criteria is number of unassigneds at the moment so if there is ever a solution with zero
+        # unassigned, the loop is cut early. That is, if the criteria below is evolved, the above `break if` condition
+        # should be modified in a similar fashion)
         (result, position) = repeated_results.each.with_index(1).min_by { |result, _| result[:unassigned].size } # find the best result and its index
         log "#{job}_repetition - #{repeated_results.collect{ |r| r[:unassigned].size }} : chose to keep the #{position.ordinalize} solution"
         result
