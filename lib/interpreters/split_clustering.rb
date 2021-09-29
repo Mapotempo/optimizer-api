@@ -49,7 +49,7 @@ module Interpreters
     def self.split_clusters(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
 
-      if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
+      if vrp.preprocessing_partitions&.any?
         splited_service_vrps = generate_split_vrps(service_vrp, job, block)
 
         OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.preprocessing_partitions.size == 2, job) if OptimizerWrapper.config[:debug][:output_clusters] && service_vrp.size < splited_service_vrps.size
@@ -79,6 +79,11 @@ module Interpreters
             end
           }
         }
+
+        # merge expanded vehicles, services and relations
+        vrp.vehicles = splited_service_vrps.flat_map{ |sv| sv[:vrp].vehicles }
+        vrp.services = splited_service_vrps.flat_map{ |sv| sv[:vrp].services }
+        vrp.relations = splited_service_vrps.flat_map{ |sv| sv[:vrp].relations }
 
         return Helper.merge_results(split_results)
       elsif split_solve_candidate?(service_vrp)
@@ -759,7 +764,7 @@ module Interpreters
       # Split using balanced kmeans
       if vrp.services.all?{ |service| service.activity&.point&.location }
         result_items =
-          if nb_clusters > 1
+          if nb_clusters > 1 && vrp.services.any?
             cumulated_metrics = Hash.new(0)
 
             if options[:entity] == :work_day || !vrp.matrices.empty?
@@ -794,7 +799,14 @@ module Interpreters
                 grouped_objects[i[2]]
               }
             }
+          elsif vrp.services.empty?
+            # this is normal if there is split independent vrp (by skills or sticky)
+            # we pass here so that result is collected correctly for all expanded vehicles
+            log 'Split is not possible if there is nothing to split', level: :debug
+
+            Array.new(nb_clusters){ [] } # mimics grouped_objects
           else
+            # nb_clusters == 1
             # this is normal if there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
             log 'Split is not possible if the cluster size is 1', level: :warn
 
@@ -805,8 +817,6 @@ module Interpreters
 
         if options[:build_sub_vrps]
           result_items.collect.with_index{ |result_item, result_index|
-            next if result_item.empty?
-
             vehicles_indices = [result_index] if options[:entity] == :work_day || options[:entity] == :vehicle
             # TODO: build_partial_service_vrp can work directly with the list of services instead of ids.
             build_partial_service_vrp(service_vrp, result_item.collect(&:id), vehicles_indices, options[:entity])
