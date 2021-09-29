@@ -59,6 +59,13 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # Code needs to be valid both for vrp and json.
     # Thus `if service[:activity] && service[:activity][symbol]` style verifications.
 
+    # Clean unreferenced points
+    all_referenced_point_ids = vrp[:vehicles]&.flat_map{ |v| [v[:start_point_id], v[:end_point_id]] }.to_a |
+                               vrp[:services]&.flat_map{ |s| s[:activity] ? s[:activity][:point_id] : s[:activities]&.map{ |a| a[:point_id] }.to_a }.to_a |
+                               vrp[:shipments]&.flat_map{ |s| [s[:pickup][:point_id], s[:delivery][:point_id]].compact }.to_a |
+                               vrp[:subtours]&.flat_map{ |s| s[:transmodal_stop_ids].to_a }.to_a
+    vrp[:points]&.delete_if{ |p| all_referenced_point_ids.exclude?(p[:id]) }
+
     vrp[:points]&.each{ |pt|
       next unless pt[:location]
 
@@ -78,7 +85,14 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       }
     }
 
+    vrp[:rests]&.each{ |rest|
+      rest[:duration] = ScheduleType.type_cast(rest[:duration] || 0)
+    }
+
     vrp[:vehicles].each{ |vehicle|
+      vehicle[:duration]         = ScheduleType.type_cast(vehicle[:duration])         if vehicle[:duration]
+      vehicle[:overall_duration] = ScheduleType.type_cast(vehicle[:overall_duration]) if vehicle[:overall_duration]
+
       if vehicle.key?(:skills)
         vehicle.delete(:skills) if vehicle[:skills].nil? || vehicle[:skills].empty?
 
@@ -186,6 +200,8 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     dump_file = "test/fixtures/#{filename}.dump"
     dumped_data = Oj.load(Zlib.inflate(File.read(dump_file))) if File.file?(dump_file)
 
+    warn 'Overwriting the existing matrix dump' if dumped_data && ENV['TEST_DUMP_VRP'] == 'true'
+
     write_in_dump = []
     vrps.each{ |vrp|
       next if vrp.matrices.any?
@@ -196,33 +212,47 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
         WebMock.disable_net_connect!
       else
         Routers::RouterWrapper.stub_any_instance(:matrix, lambda { |url, mode, dimensions, row, column, options|
-          if ENV['TEST_DUMP_VRP'] == 'true'
-            warn 'Overwriting the existing matrix dump' if dumped_data
+          corresponding_data = nil
 
+          # Oj rounds values:
+          row.map!{ |l| l.map!{ |v| v.round(6) } }
+          column.map!{ |l| l.map!{ |v| v.round(6) } }
+
+          # Dump the matrices only for uniq locations
+          uniq_row = row.uniq
+          uniq_column = column.uniq
+
+          if ENV['TEST_DUMP_VRP'] == 'true'
             WebMock.enable_net_connect!
             matrices =
-              vrp.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+              vrp.router.send(:__minitest_any_instance_stub__matrix, url, mode, dimensions, uniq_row, uniq_column, options) # call original method
             WebMock.disable_net_connect!
-            write_in_dump <<
-              { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }
-            matrices
+
+            corresponding_data =
+              { column: uniq_column, dimensions: dimensions, matrices: matrices, mode: mode, options: options, row: uniq_row, url: url }
+
+            write_in_dump << corresponding_data
           else
-            corresponding_data = dumped_data.find{ |request|
-              request[:mode] == mode && request[:dimensions] == dimensions &&
-                request[:options] == options &&
-                # Oj rounds values :
-                request[:row].collect{ |r| r.collect{ |v| v.round(6) } } == row.collect{ |r| r.collect{ |v| v.round(6) } } &&
-                request[:column].collect{ |c| c.collect{ |v| v.round(6) } } == column.collect{ |c| c.collect{ |v| v.round(6) } }
+            corresponding_data = dumped_data.find{ |dumped|
+              dumped[:mode] == mode && dumped[:options] == options && (dimensions - dumped[:dimensions]).empty? &&
+                (uniq_row - dumped[:row]).empty? && (uniq_column - dumped[:column]).empty?
             }
             raise 'Could not find matrix in the dump' unless corresponding_data
-
-            corresponding_matrices = corresponding_data[:matrices]
-            # TODO: If services are filtered then some test may not find
-            # their corresponding matrices because row and/or column will be different
-            # In this case, we need to modify the above code and filter via lat/lon
-            # to have the same order/content.
-            dimensions.collect.with_index{ |_dim, dim_i| corresponding_matrices[dim_i] }
           end
+
+          corresponding_matrices = corresponding_data[:matrices]
+
+          row_indices = row.map{ |location| corresponding_data[:row].find_index(location) }
+          column_indices = column.map{ |location| corresponding_data[:column].find_index(location) }
+
+          corresponding_matrices.map!{ |matrix|
+            matrix.map!{ |r| r.values_at(*column_indices) }
+            row_indices.map.with_index{ |r_index, index|
+              r_index == index ? matrix[r_index] : matrix[r_index].dup
+            }
+          }
+
+          dimensions.collect{ |dim| corresponding_matrices[corresponding_data[:dimensions].find_index(dim)] }
         }) do
           vrp.compute_matrix
         end

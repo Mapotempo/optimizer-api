@@ -264,7 +264,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 29, (result[:routes].count{ |r| r[:activities].count{ |a| a[:service_id] }.positive? })
 
       # Check total times
-      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 203829, 'Too long travel time'
+      assert_operator result[:routes].sum{ |r| r[:total_travel_time] }, :<=, 206065, 'Too long travel time'
       assert_operator result[:routes].sum{ |r| r[:total_time] }, :<=, 449970, 'Too long total time'
 
       # Check elapsed time
