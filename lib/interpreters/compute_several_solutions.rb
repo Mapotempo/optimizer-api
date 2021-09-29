@@ -90,7 +90,7 @@ module Interpreters
           elsif mandatory_heuristic == 'parallel_cheapest_insertion'
             [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
           else
-            [mandatory_heuristic]
+            [mandatory_heuristic, verified('global_cheapest_arc')]
           end
 
         heuristic_list |= ['savings'] if vrp.vehicles.collect{ |vehicle| vehicle[:rests].to_a.size }.sum.positive? # while waiting for self_selection improve
@@ -275,7 +275,7 @@ module Interpreters
             (vehicles.any?(&:duration) && vehicles.size == 1 ||
             size_mtws.to_f / services.map(&:visits_number).sum > 0.2 && size_rest.zero?)
         verified('global_cheapest_arc')
-      elsif vehicles.size == 1 && size_rest.positive? || size_mtws > 0 || vrp.relations.any?{ |r| r.type == :shipment }
+      elsif vehicles.size == 1 && size_rest.positive? || size_mtws > 0
         verified('local_cheapest_insertion')
       elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?(&:duration)
         verified('savings')
