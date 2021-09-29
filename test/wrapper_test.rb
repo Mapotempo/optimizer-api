@@ -3086,6 +3086,11 @@ class WrapperTest < Minitest::Test
     refute_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
                     :assert_no_relations_except_simple_shipments
 
+    problem[:services][0][:quantities] = [{ unit_id: 'kg', value: nil }]
+    vrp = TestHelper.create(problem)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
+                    :assert_no_relations_except_simple_shipments
+
     problem[:services][1][:quantities] = [{ unit_id: 'kg', value: 2 }]
     vrp = TestHelper.create(problem)
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
