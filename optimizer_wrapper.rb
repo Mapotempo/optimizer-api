@@ -449,7 +449,7 @@ module OptimizerWrapper
     results = services_vrps.each_with_index.map{ |service_vrp, i|
       block = if services_vrps.size > 1 && !callback.nil?
                 proc { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-                  msg = "process #{i + 1}/#{services_vrps.size} - #{message}" unless message.nil?
+                  msg = "split independent process #{i + 1}/#{services_vrps.size} - #{message}" unless message.nil?
                   callback&.call(wrapper, avancement, total, msg, cost, time, solution)
                 }
               else
