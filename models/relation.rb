@@ -22,8 +22,11 @@ module Models
     NO_LAPSE_TYPES = %i[same_vehicle same_route sequence order shipment meetup force_first never_first force_end].freeze
     ONE_LAPSE_TYPES = %i[vehicle_group_number vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].freeze
     SEVERAL_LAPSE_TYPES = %i[minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse vehicle_trips].freeze
+
     ON_VEHICLES_TYPES = %i[vehicle_group_number vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months vehicle_trips].freeze
     ON_SERVICES_TYPES = %i[same_vehicle same_route sequence order shipment meetup force_first never_first force_end minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse].freeze
+
+    POSITION_TYPES = %i[order sequence shipment].freeze
 
     field :type, default: :same_route
     field :lapses, default: nil

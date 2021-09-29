@@ -748,7 +748,9 @@ module Wrappers
           add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow')
         end
 
-        # unconsistency for planning
+        detect_inconsistent_relation_timewindows_od_service(vrp, unfeasible, service)
+
+        # Planning inconsistency
         next if !vrp.schedule?
 
         unless possible_days_are_consistent(vrp, service)
@@ -756,11 +758,37 @@ module Wrappers
         end
 
         unless vrp.can_affect_all_visits?(service)
-          add_unassigned(unfeasible, vrp, service, 'Unconsistency between visit number and minimum lapse')
+          add_unassigned(unfeasible, vrp, service, 'Inconsistency between visit number and minimum lapse')
         end
       }
 
       unfeasible
+    end
+
+    def detect_inconsistent_relation_timewindows_od_service(vrp, unfeasible, service)
+      # In a POSITION_TYPES relationship s1->s2, s2 cannot be served
+      # if its timewindows end before any timewindow of s1 starts
+      service.relations.each{ |relation|
+        next unless Models::Relation::POSITION_TYPES.include?(relation[:type])
+
+        max_earliest_arrival = 0
+        relation.linked_services.map{ |service_in|
+          next unless service_in.activity.timewindows.any?
+
+          earliest_arrival = service_in.activity.timewindows.map{ |tw|
+            (tw.day_index || 0) * 86400 + (tw.start || 0)
+          }.min
+          latest_arrival = service_in.activity.timewindows.map{ |tw|
+            tw.day_index ? tw.day_index * 86400 + (tw.end || 86399) : (tw.end || 2**56)
+          }.max
+
+          max_earliest_arrival = [max_earliest_arrival, earliest_arrival].compact.max
+
+          if latest_arrival < max_earliest_arrival
+            add_unassigned(unfeasible, vrp, service_in, 'Inconsistent timewindows within relations of service')
+          end
+        }
+      }
     end
 
     def service_reachable_by_vehicle_within_timewindows(vrp, activity, vehicle)

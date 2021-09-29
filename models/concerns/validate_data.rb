@@ -20,7 +20,7 @@ require 'active_support/concern'
 # Expands provided data
 module ValidateData
   extend ActiveSupport::Concern
-  POSITION_RELATIONS = %i[order sequence shipment].freeze
+
   def check_consistency(hash)
     hash[:services] ||= []
     hash[:vehicles] ||= []
@@ -153,41 +153,16 @@ module ValidateData
     }
   end
 
-  # In a sequence s1->s2, s2 cannot be served if its timewindows have ended before
-  # any timewindows of s1 have started
-  def check_relation_consistent_timewindows
-    unconsistent_relation_timewindows = []
+  def check_relation_consistent_ids
     @hash[:relations].each{ |relation|
-      unless relation[:linked_ids]&.uniq == relation[:linked_ids]
+      unless relation[:linked_ids]&.uniq&.size == relation[:linked_ids]&.size
         raise OptimizerWrapper::DiscordantProblemError.new('Same ID is provided multiple times in one relation.')
       end
 
-      unless relation[:linked_vehicle_ids]&.uniq == relation[:linked_vehicle_ids]
+      unless relation[:linked_vehicle_ids]&.uniq&.size == relation[:linked_vehicle_ids]&.size
         raise OptimizerWrapper::DiscordantProblemError.new('Same vehicle ID is provided multiple times in one relation.')
       end
-
-      next unless POSITION_RELATIONS.include?(relation[:type])
-
-      latest_sequence_earliest_arrival = nil
-      services = relation[:linked_ids].map{ |linked_id|
-        @hash[:services].find{ |service| service[:id] == linked_id }
-      }
-      services.each{ |service|
-        next unless service[:activity][:timewindows]&.any?
-
-        earliest_arrival = service[:activity][:timewindows].map{ |tw| (tw[:day_index] || 0) * 86400 + (tw[:start] || 0) }.min
-        latest_arrival = service[:activity][:timewindows].map{ |tw| (tw[:day_index] || 0) * 86400 + (tw[:end] || 86399) }.max -
-                         service[:activity][:duration]
-
-        latest_sequence_earliest_arrival = [latest_sequence_earliest_arrival, earliest_arrival].compact.max
-        if latest_arrival < latest_sequence_earliest_arrival
-          unconsistent_relation_timewindows << relation[:linked_ids]
-        end
-      }
     }
-    return unless unconsistent_relation_timewindows.any?
-
-    raise OptimizerWrapper::DiscordantProblemError.new("Unconsistent timewindows within relations: #{unconsistent_relation_timewindows}")
   end
 
   def check_vehicle_trips_relation_consistency
@@ -207,9 +182,9 @@ module ValidateData
       [:always_last, :always_first]
     ]
 
-    unconsistent_position_services = []
+    inconsistent_position_services = []
     @hash[:relations].each{ |relation|
-      next unless POSITION_RELATIONS.include?(relation[:type])
+      next unless Models::Relation::POSITION_TYPES.include?(relation[:type])
 
       services = relation[:linked_ids].map{ |linked_id|
         @hash[:services].find{ |service| service[:id] == linked_id }
@@ -217,15 +192,15 @@ module ValidateData
       previous_service = nil
       services.each{ |service|
         if previous_service && forbidden_position_pairs.include?([previous_service[:activity][:position], service[:activity][:position]])
-          unconsistent_position_services << [previous_service[:id], service[:id]]
+          inconsistent_position_services << [previous_service[:id], service[:id]]
         end
         previous_service = service
       }
     }
 
-    return unless unconsistent_position_services.any?
+    return unless inconsistent_position_services.any?
 
-    raise OptimizerWrapper::DiscordantProblemError.new("Unconsistent positions in relations: #{unconsistent_position_services}")
+    raise OptimizerWrapper::DiscordantProblemError.new("Inconsistent positions in relations: #{inconsistent_position_services}")
   end
 
   def calculate_day_availabilities(vehicles, timewindow_arrays)
@@ -415,7 +390,7 @@ module ValidateData
 
     check_vehicle_trips_relation_consistency
     check_position_relation_specificities
-    check_relation_consistent_timewindows
+    check_relation_consistent_ids
     check_sticky_relation_consistency
 
     if periodic_heuristic
@@ -462,7 +437,7 @@ module ValidateData
   end
 
   def check_sticky_relation_consistency
-    unconsistent_stickies = []
+    inconsistent_stickies = []
     @hash[:relations].none?{ |relation|
       relation_sticky_ids = []
       services = @hash[:services].select{ |service| relation[:linked_ids]&.include?(service[:id]) }
@@ -470,17 +445,17 @@ module ValidateData
         sticky_ids = service[:sticky_vehicle_ids] || []
 
         if relation_sticky_ids.any? && sticky_ids.any? && (sticky_ids & relation_sticky_ids).empty?
-          unconsistent_stickies << services.map{ |s| s[:id] }
+          inconsistent_stickies << services.map{ |s| s[:id] }
         end
         relation_sticky_ids += sticky_ids
       }
     }
-    return unless unconsistent_stickies.any?
+    return unless inconsistent_stickies.any?
 
     raise OptimizerWrapper::UnsupportedProblemError.new(
       'All services from a relation should have consistent sticky_vehicle_ids or none'\
       'Following services have different sticky_vehicle_ids: ',
-      unconsistent_stickies
+      inconsistent_stickies
     )
   end
 

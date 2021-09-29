@@ -70,7 +70,7 @@ module Models
       }
     end
 
-    def test_reject_if_pickup_position_uncompatible_with_delivery
+    def test_reject_if_pickup_position_incompatible_with_delivery
       vrp = VRP.toy
       vrp[:shipments] = [{
           id: 'shipment_0',
@@ -99,7 +99,7 @@ module Models
       end
     end
 
-    def test_reject_work_day_partition_with_unconsistent_lapses
+    def test_reject_work_day_partition_with_inconsistent_lapses
       vrp = VRP.periodic
       vrp[:services].each{ |s|
         s[:visits_number] = 1
@@ -438,14 +438,14 @@ module Models
       check_consistency(vrp) # this should not raise
 
       vrp[:vehicles][0][:timewindow] = { start: 0, end: 10, day_index: 0 }
-      # days are uncompatible because first vehicle only works
+      # days are incompatible because first vehicle only works
       # on mondays while second vehicle is available everyday
       assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
 
       vrp[:vehicles][1][:timewindow] = { start: 0, end: 10, day_index: 1 }
-      # days are uncompatible
+      # days are incompatible
       assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
@@ -568,12 +568,17 @@ module Models
       problem[:shipments].first[:pickup][:timewindows] = [{ start: 6, end: 9}]
       problem[:shipments].first[:delivery][:timewindows] = [{ start: 1, end: 5}]
 
-      assert_raises OptimizerWrapper::DiscordantProblemError do
-        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
-      end
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+
+      reasons = result[:unassigned].flat_map{ |u| u[:reason].split(' && ') }
+
+      assert_includes reasons, 'Inconsistent timewindows within relations of service', 'Expected an unfeasible shipment'
+
       problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.create(start: 1, end: 9)]
 
-      OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
+
+      assert_empty result[:unassigned], 'There should be no unassigned services'
     end
 
     def test_uniqueness_of_provided_services_or_vehicles_in_relation
@@ -638,7 +643,7 @@ module Models
     def test_relations_number_of_lapses_consistency_when_authorized_lapses
       problem = VRP.lat_lon_two_vehicles
 
-      [:vehicle_trips, Models::Relation::SEVERAL_LAPSE_TYPES].flatten.each{ |type|
+      Models::Relation::SEVERAL_LAPSE_TYPES.each{ |type|
         problem[:relations] = [{ type: type, lapse: 3 }]
         if Models::Relation::ON_SERVICES_TYPES.include?(type)
           problem[:relations].first[:linked_ids] = problem[:services].map{ |s| s[:id] }
