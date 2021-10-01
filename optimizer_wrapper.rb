@@ -90,7 +90,7 @@ module OptimizerWrapper
       result = define_main_process(services_vrps, job_id)
       result.size == 1 ? result.first : result
     else
-      # Delegate the job to a worker
+      # Delegate the job to a worker (expire is defined resque config)
       job_id = Job.enqueue_to(profile[:queue], Job, services_vrps: Base64.encode64(Marshal.dump(services_vrps)),
                                                      api_key: api_key,
                                                      checksum: checksum,

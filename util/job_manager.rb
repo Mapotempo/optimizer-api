@@ -51,7 +51,7 @@ module OptimizerWrapper
       value = JSON.parse(OptimizerWrapper::REDIS.get(Resque::Plugins::Status::Hash.status_key(self.uuid)))
       value['name'] = nil
       value['options']['services_vrps'] = nil
-      OptimizerWrapper::REDIS.set(Resque::Plugins::Status::Hash.status_key(self.uuid), Resque::Plugins::Status::Hash.encode(value))
+      OptimizerWrapper::REDIS.set Resque::Plugins::Status::Hash.status_key(self.uuid), Resque::Plugins::Status::Hash.encode(value) # Expire is defined resque config
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
       ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].restitution_geometry }.uniq
@@ -112,7 +112,8 @@ module OptimizerWrapper
     end
 
     def self.set(key, value)
-      OptimizerWrapper::REDIS.set(key, value.to_json)
+      OptimizerWrapper::REDIS.set key, value.to_json
+      OptimizerWrapper::REDIS.expire key, 7.days
     end
 
     def self.get(key)
