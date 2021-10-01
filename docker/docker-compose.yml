@@ -1,25 +1,27 @@
-version: '3.3'
+version: '3.7'
 services:
   redis:
-    image: redis:${REDIS_VERSION:-3.2-alpine}
+    image: redis:${REDIS_VERSION:-6.2.5-alpine}
+    hostname: redis
     volumes:
-      - ../redis:/data
+      - ${APP_HOME:-..}/redis:/data
     command: redis-server --appendonly yes
     networks:
       - resque
 
   redis-cache:
-    image: redis:${REDIS_VERSION:-3.2-alpine}
+    image: redis:${REDIS_VERSION:-6.2.5-alpine}
+    hostname: redis-cache
     volumes:
-      - ../redis:/data
+      - ${APP_HOME:-..}/redis:/data
     command: redis-server --save ""
     networks:
       - redis_cache
 
   redis-count:
-    image: redis:${REDIS_VERSION:-3.2-alpine}
+    image: redis:${REDIS_VERSION:-6.2.5-alpine}
     volumes:
-      - ../redis-count:/data
+      - ${APP_HOME:-..}/redis-count:/data
     hostname: redis-count
     command: redis-server --appendonly yes
     deploy:
