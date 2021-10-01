@@ -77,6 +77,7 @@ module OptimizerWrapper
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
+        router_api_key: 'other_key',
       },
       solvers: {
         queue: 'DEFAULT',
@@ -108,7 +109,7 @@ module OptimizerWrapper
       repetition: ENV['OPTIM_CLUST_SCHED_REPETITION']&.to_i || 3
     },
     router: {
-      api_key: ENV['ROUTER_API_KEY'] || 'demo',
+      api_key: ENV['ROUTER_API_KEY'] || 'demo', # Overwritable in profile or access
       url: ENV['ROUTER_URL'] || 'http://localhost:4899/0.1'
     },
     dump: {

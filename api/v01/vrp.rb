@@ -109,12 +109,13 @@ module Api
           post do
             # Api key is not declared as part of the VRP and must be handled carefully and separatly from other parameters
             api_key = params[:api_key]
+            profile = APIBase.profile(api_key)
             checksum = Digest::MD5.hexdigest Marshal.dump(params)
             d_params = declared(params, include_missing: false)
             vrp_params = d_params[:points] ? d_params : d_params[:vrp]
             APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
 
-            params_limit = APIBase.profile(params[:api_key])[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
+            params_limit = profile[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
             params_limit.each{ |key, value|
               next if vrp_params[key].nil? || value.nil? || vrp_params[key].size <= value
 
@@ -131,7 +132,8 @@ module Api
               vrp.errors.add(:empty_vrp, message: 'VRP structure is empty') if vrp_params&.keys&.empty?
               error!("Model Validation Error: #{vrp.errors}", 400)
             else
-              ret = OptimizerWrapper.wrapper_vrp(api_key, APIBase.profile(api_key), vrp, checksum)
+              vrp.router = OptimizerWrapper.router(OptimizerWrapper.access[api_key][:router_api_key] || profile[:router_api_key] || OptimizerWrapper.config[:router][:api_key])
+              ret = OptimizerWrapper.wrapper_vrp(api_key, profile, vrp, checksum)
               count_incr :optimize, transactions: vrp.transactions
               if ret.is_a?(String)
                 status 201

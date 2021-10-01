@@ -24,14 +24,6 @@ if Rake.application.top_level_tasks.include?('test') && ![ENV['COVERAGE'], ENV['
   SimpleCov.start
 end
 
-ENV['APP_ENV'] ||= 'test'
-require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
-Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].sort.each{ |file| require file }
-
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].sort.each{ |file| require file }
-require './optimizer_wrapper'
-require './api/root'
-
 require 'minitest/reporters'
 Minitest::Reporters.use! [
   !ENV['TIME'] ? Minitest::Reporters::ProgressReporter.new : nil,
@@ -69,6 +61,16 @@ require 'rack/test'
 require 'find'
 
 require 'zlib'
+
+ENV['APP_ENV'] ||= 'test'
+require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
+Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].sort.each{ |file| require file }
+
+require './util/error.rb'
+require './util/config.rb'
+Dir[File.dirname(__FILE__) + '/../models/*.rb'].sort.each{ |file| require file }
+require './optimizer_wrapper'
+require './api/root'
 
 module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDisableDirective, Metrics/ModuleLength
   def self.coerce(vrp)
@@ -213,13 +215,13 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
         vrp.compute_matrix
         WebMock.disable_net_connect!
       else
-        OptimizerWrapper.router.stub(:matrix, lambda { |url, mode, dimensions, row, column, options|
+        Routers::RouterWrapper.stub_any_instance(:matrix, lambda { |url, mode, dimensions, row, column, options|
           if ENV['TEST_DUMP_VRP'] == 'true'
             warn 'Overwriting the existing matrix dump' if dumped_data
 
             WebMock.enable_net_connect!
             matrices =
-              OptimizerWrapper.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+              vrp.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
             WebMock.disable_net_connect!
             write_in_dump <<
               { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }

@@ -126,7 +126,7 @@ class SplitClusteringTest < Minitest::Test
       problem[:vehicles] << problem[:vehicles].first.dup
       problem[:vehicles].last[:id] += '_dup'
 
-      OptimizerWrapper.router.stub(:matrix, ->(_url, _router_mode, _router_dimension, src, dst){ return [Array.new(src.size){ |i| Array.new(dst.size){ (i + 1) * 100 } }] }) do
+      Routers::RouterWrapper.stub_any_instance(:matrix, ->(_url, _router_mode, _router_dimension, src, dst){ return [Array.new(src.size){ |i| Array.new(dst.size){ (i + 1) * 100 } }] }) do
         mock = MiniTest::Mock.new
         mock.expect(:call, nil, [])
         Interpreters::SplitClustering.stub(:add_duration_from_and_to_depot, lambda{ |vrp, data_items|
@@ -537,7 +537,7 @@ class SplitClusteringTest < Minitest::Test
       problem = TestHelper.create(vrp)
       check_vrp_services_size = problem.services.size
       error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
-      result = OptimizerWrapper.router.stub(:matrix, error) do
+      result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
         OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       end
       assert_equal check_vrp_services_size, problem.services.size
@@ -558,7 +558,7 @@ class SplitClusteringTest < Minitest::Test
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
         error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
-        result = OptimizerWrapper.router.stub(:matrix, error) do
+        result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
           OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
         end
 

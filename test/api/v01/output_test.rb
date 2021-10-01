@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './test/test_helper'
-require './test/api/v01/request_helper'
+require './test/api/v01/helpers/request_helper'
 
 require 'minitest/around/unit'
 
@@ -451,7 +451,7 @@ class Api::V01::OutputTest < Minitest::Test
          'cannot stub the child process. When the output of POST (synchronous) is the same as GET, this skip ' \
          'can be removed.'
 
-    OptimizerWrapper.router.stub(:compute_batch, proc{
+    Routers::RouterWrapper.stub_any_instance(:compute_batch, proc{
       # returns a "truncated" trace, so there will be a jump in the traced path -- original trace has 1000 elements
       [
         [43509.5, 3445.0,

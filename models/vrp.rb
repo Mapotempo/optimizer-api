@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './lib/tsp_helper.rb'
+require './util/config'
 require './models/base'
 require './models/concerns/distance_matrix'
 require './models/concerns/validate_data'
@@ -86,6 +87,8 @@ module Models
     field :schedule_start_date, default: nil
     field :schedule_unavailable_days, default: Set[] # extends unavailable_date and schedule_unavailable_indices
     field :schedule_months_indices, default: []
+
+    field :router, default: OptimizerWrapper.router(OptimizerWrapper.config[:router][:api_key])
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
