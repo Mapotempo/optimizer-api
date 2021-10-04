@@ -1031,7 +1031,7 @@ module Wrappers
         # the original service id with the new expanded service ids in the routes (and rewind it afterwards)
         # but if the complex relations are already in feasible initial routes then it might not worth it.
         # So we can wait for a real use case arrives and we have an instance to test.
-        return nil if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.includes?(s.id) }}
+        return nil if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.include?(s.id) }}
 
         simplification_active = true
 
