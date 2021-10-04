@@ -526,11 +526,16 @@ module OptimizerWrapper
                                           (setup_durations.flatten.reduce(&:+) || 0) +
                                           (durations.flatten.reduce(&:+) || 0)
 
-        log_string = "Expected #{total_time} == #{total_travel_time} +"\
-                     " #{waiting_times.sum} + #{setup_durations.flatten.reduce(&:+)}"\
-                     " + #{durations.flatten.reduce(&:+)}"
+        log_string = 'Computed times are invalid'
+        tags = {
+          total_time: total_time,
+          total_travel_time: total_travel_time,
+          waiting_time: waiting_times.sum,
+          setup_durations: setup_durations.flatten.reduce(&:+),
+          durations: durations.flatten.reduce(&:+)
+        }
 
-        log log_string, level: :warn
+        log log_string, tags.merge(level: :warn)
         raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
       end
 
@@ -538,8 +543,8 @@ module OptimizerWrapper
       nb_unassigned = result[:unassigned].count{ |unassigned| unassigned[:service_id] || unassigned[:pickup_shipment_id] || unassigned[:delivery_shipment_id] }
 
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
-        log "Expected: #{expected_value} Have: #{nb_assigned + nb_unassigned} activities"
-        log 'Wrong number of visits returned in result', level: :warn
+        tags = { expected: expected_value, assigned: nb_assigned, unassigned: nb_unassigned }
+        log 'Wrong number of visits returned in result', tags.merge(level: :warn)
         # FIXME: Validate time computation for zip clusters
         raise RuntimeError, 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
       end
