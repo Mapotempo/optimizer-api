@@ -112,8 +112,9 @@ class OptimizerLogger
     @@logger.formatter = formatter
   end
 
-  def self.log(msg, level: :info, progname: nil)
-    progname = define_progname(progname)
+  def self.log(msg, options = {})
+    progname = define_progname(options[:progname])
+    level = options[:level] || :info
 
     @@logger
       .method(level)
@@ -126,8 +127,8 @@ end
 module OptimizerLoggerMethods
   private
 
-  def log(msg, level: :info, progname: nil)
-    OptimizerLogger.log(msg, level: level, progname: progname)
+  def log(msg, options = {})
+    OptimizerLogger.log(msg, options)
   end
 end
 
