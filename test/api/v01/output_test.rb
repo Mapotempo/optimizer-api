@@ -438,12 +438,6 @@ class Api::V01::OutputTest < Minitest::Test
       refute(result['geojsons'].first['partitions'].key?('work_day'))
       # points should always be returned
       refute_empty(result['geojsons'].first['points'])
-
-      # TODO : remove when returning polylines is more performant and we allow this field in geometry :
-      vrp[:configuration][:restitution] = { geometry: [:partitions, :polylines] }
-      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
-      result = wait_status @job_id, 'completed', api_key: 'ortools'
-      refute(result['geojsons'].first.key?('polylines'))
     end
 
     skip 'Remaining part of this test is skipped because at the moment POST does not return the same result as GET ' \
