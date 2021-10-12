@@ -2815,9 +2815,9 @@ class WrapperTest < Minitest::Test
     # corrected/increased. On local, the total_times are almost half the limits.
     # The goal of this test is to prevent adding an involuntary exponential logic and the limits can increase linearly
     # if more verifications are added but the time should not jump orders of magnitude.
-    assert_operator total_check_distances_time, :<=, 3.0, 'check_distances function took longer than expected'
-    assert_operator total_add_unassigned_time, :<=, 6.0, 'add_unassigned function took longer than expected'
-    assert_operator total_detect_unfeasible_services_time, :<=, 8.0, 'detect_unfeasible_services function took too long'
+    assert_operator total_check_distances_time, :<=, 3.3, 'check_distances function took longer than expected'
+    assert_operator total_add_unassigned_time, :<=, 6.6, 'add_unassigned function took longer than expected'
+    assert_operator total_detect_unfeasible_services_time, :<=, 8.8, 'detect_unfeasible_services function took too long'
   ensure
     OptimizerLogger.level = old_logger_level if old_logger_level
     OptimizerWrapper.config[:solve][:repetition] = old_config_solve_repetition if old_config_solve_repetition
