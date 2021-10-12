@@ -699,7 +699,7 @@ module OptimizerWrapper
     unless segments.empty?
       details = vrp.router.compute_batch(OptimizerWrapper.config[:router][:url],
                                                       vehicle.router_mode.to_sym, vehicle.router_dimension,
-                                                      segments, vrp.restitution_geometry.include?(:encoded_polyline),
+                                                      segments, vrp.restitution_geometry.include?(:encoded_polylines),
                                                       vehicle.router_options)
       raise RouterError.new('Route details cannot be received') unless details
     end
