@@ -473,7 +473,7 @@ module OutputHelper
           },
           geometry: {
             type: 'LineString',
-            coordinates: route[:geometry][0]
+            coordinates: route[:geometry].flatten(1)
           }
         }
       }
