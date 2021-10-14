@@ -960,6 +960,17 @@ class SplitClusteringTest < Minitest::Test
       assert_equal 5, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 4 }, vrp.vehicles, :work_day).size
     end
 
+    def test_split_keeps_matrices_in_case_vehicles_are_moved_between_subproblems
+      problem = VRP.lat_lon_two_vehicles
+      problem[:vehicles].last[:matrix_id] = 'm2'
+      problem[:matrices] << problem[:matrices][0].merge({ id: 'm2' })
+      vrp = TestHelper.create(problem)
+
+      sub_vrp = Interpreters::SplitClustering.build_partial_service_vrp({ vrp: vrp }, vrp.services.map(&:id), [0])[:vrp]
+
+      assert_equal %w[m1 m2], sub_vrp.matrices.map(&:id), 'Split should not eliminate matrices in case vehicles are moved between subproblems'
+    end
+
     def test_split_with_vehicle_alternative_skills
       problem = VRP.lat_lon_two_vehicles
 
