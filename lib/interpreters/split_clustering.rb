@@ -647,13 +647,18 @@ module Interpreters
           }
         }
       end
-      sub_vrp.services = sub_vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
-      sub_vrp.rests = sub_vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
-      sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } } }
+      sub_vrp.services.select!{ |service| partial_service_ids.include?(service.id) }
+      rest_ids = sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.uniq
+      sub_vrp.rests.select!{ |r| rest_ids.include?(r.id) }
       if entity == :vehicle
         sub_vrp.relations.delete_if{ |r| r.type == :same_vehicle }
         sub_vrp.services.each{ |s| s.relations.delete_if{ |r| r.type == :same_vehicle } }
       end
+      sub_vrp.relations.select!{ |r|
+        # Split respects relations, it is enough to check only the first linked id --  [0..0].any? is to handle empties
+        r.linked_ids[0..0].any? { |sid| sub_vrp.services.any? { |s| s.id == sid } } &&
+          r.linked_vehicle_ids[0..0].any? { |vid| sub_vrp.vehicles.any? { |v| v.id == vid } }
+      }
       points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.compact |
                    sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.compact
       sub_vrp.points.select!{ |p| points_ids.include?(p.id) }
