@@ -155,7 +155,7 @@ module Wrappers
         r.linked_services.first.quantities.each{ |q| quantities[q.unit.id] << q.value }
         r.linked_services.last.quantities.each{ |q| quantities[q.unit.id] << q.value }
         quantities.all?{ |_unit, values|
-          [0, 2].include?(values.size) && values.first >= 0 && values.first == -values.last
+          values.empty? || (values.size == 2 && values.first >= 0 && values.first == -values.last)
         }
       }
     end
