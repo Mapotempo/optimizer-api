@@ -600,10 +600,13 @@ module Interpreters
       log 'Some routes are emptied due to poor workload -- time or quantity.', level: :warn if emptied_routes
     end
 
-    def self.update_matrix(original_matrices, sub_vrp, matrix_indices)
-      sub_vrp.matrices.each_with_index{ |matrix, index|
-        [:time, :distance].each{ |dimension|
-          matrix[dimension] = sub_vrp.vehicles.first.matrix_blend(original_matrices[index], matrix_indices, [dimension], cost_time_multiplier: 1, cost_distance_multiplier: 1)
+    def self.update_matrix(sub_vrp, matrix_indices)
+      sub_vrp.matrices.each{ |matrices|
+        [:time, :distance, :value].each{ |dimension|
+          matrix = matrices.send(dimension)
+          next unless matrix
+
+          matrices.send("#{dimension}=", matrix_indices.map{ |r_index| matrix[r_index].values_at(*matrix_indices) })
         }
       }
     end
@@ -659,7 +662,7 @@ module Interpreters
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
         update_matrix_index(sub_vrp)
-        update_matrix(sub_vrp.matrices, sub_vrp, matrix_indices)
+        update_matrix(sub_vrp, matrix_indices)
       end
 
       log "<--- build_partial_service_vrp takes #{Time.now - tic}", level: :debug

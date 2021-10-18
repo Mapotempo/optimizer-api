@@ -93,7 +93,7 @@ module Interpreters
               service_vrp[:vrp].points.find{ |r_point| point.id == r_point.id }.matrix_index
             }
             SplitClustering.update_matrix_index(sub_service_vrp[:vrp])
-            SplitClustering.update_matrix(service_vrp[:vrp].matrices, sub_service_vrp[:vrp], matrix_indices)
+            SplitClustering.update_matrix(sub_service_vrp[:vrp], matrix_indices)
             result = OptimizerWrapper.define_process(sub_service_vrp, job, &block)
 
             transfer_unused_vehicles(result, sub_service_vrps) if index.zero? && result

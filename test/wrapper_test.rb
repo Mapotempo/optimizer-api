@@ -1043,9 +1043,9 @@ class WrapperTest < Minitest::Test
         distance: [[0, 376184], [379177, 0]]
       }],
       points: [{
-        id: 'point_0', location: { lat: 48, lon: 5 }
+        id: 'point_0', location: { lat: 48, lon: 5 }, matrix_index: 0
       }, {
-        id: 'point_1', location: { lat: 49, lon: 1 }
+        id: 'point_1', location: { lat: 49, lon: 1 }, matrix_index: 1
       }],
       zones: [{
         id: 'zone_0',

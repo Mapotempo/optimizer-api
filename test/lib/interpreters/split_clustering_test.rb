@@ -459,11 +459,10 @@ class SplitClusteringTest < Minitest::Test
       # and then max_split again during solution process
       # should not raise "Wrong number of visits returned in result" error
       vrp = VRP.independent_skills
+      vrp[:matrices][0][:distance] = Oj.load(Oj.dump(vrp[:matrices][0][:time]))
       vrp[:points] = VRP.lat_lon_periodic[:points]
       vrp[:services].first[:skills] = ['D']
-      vrp[:configuration][:preprocessing] = {
-        max_split_size: 4
-      }
+      vrp[:configuration][:preprocessing] = { max_split_size: 4 }
 
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     end
