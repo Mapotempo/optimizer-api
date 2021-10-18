@@ -648,15 +648,19 @@ module Interpreters
         }
       end
       sub_vrp.services = sub_vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
-      points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.uniq.compact
       sub_vrp.rests = sub_vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
       sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } } }
       if entity == :vehicle
         sub_vrp.relations.delete_if{ |r| r.type == :same_vehicle }
         sub_vrp.services.each{ |s| s.relations.delete_if{ |r| r.type == :same_vehicle } }
       end
-      sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
-      sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
+      points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.compact |
+                   sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.compact
+      sub_vrp.points.select!{ |p| points_ids.include?(p.id) }
+      sub_vrp.vehicles.each{ |vehicle|
+        vehicle.start_point = sub_vrp.points.find{ |p| p.id == vehicle.start_point_id } if vehicle.start_point
+        vehicle.end_point = sub_vrp.points.find{ |p| p.id == vehicle.end_point_id } if vehicle.end_point
+      }
       sub_vrp = add_corresponding_entity_skills(entity, sub_vrp)
 
       if !sub_vrp.matrices&.empty?
