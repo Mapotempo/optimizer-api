@@ -62,6 +62,7 @@ module Wrappers
         :assert_vehicles_no_late_multiplier_or_single_vehicle,
         :assert_vehicles_no_overload_multiplier,
         :assert_vehicles_start_or_end,
+        :assert_no_overall_duration,
 
         # Mission constraints
         :assert_no_activity_with_position,

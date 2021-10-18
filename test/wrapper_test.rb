@@ -3070,6 +3070,8 @@ class WrapperTest < Minitest::Test
 
     vrp = TestHelper.create(problem)
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
+                    :assert_no_overall_duration
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
                     :assert_no_relations_except_simple_shipments
     refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp),
                     :assert_no_relations_except_simple_shipments
