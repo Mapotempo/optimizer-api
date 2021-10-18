@@ -147,8 +147,8 @@ module Wrappers
 
     def assert_no_relations_except_simple_shipments(vrp)
       vrp.relations.all?{ |r|
-        return true if r.linked_ids.empty? && r.linked_vehicle_ids.empty?
-        return false unless r.type == :shipment && r.linked_ids.size == 2
+        next true if r.linked_ids.empty? && r.linked_vehicle_ids.empty?
+        next false unless r.type == :shipment && r.linked_ids.size == 2
 
         quantities = Hash.new {}
         vrp.units.each{ |unit| quantities[unit.id] = [] }
