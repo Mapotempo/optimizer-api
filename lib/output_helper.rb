@@ -318,8 +318,7 @@ module OutputHelper
 
         geojson[:partitions] = generate_partitions_geometry(result) if expected_geometry.include?(:partitions)
         geojson[:points] = generate_points_geometry(result)
-        # TODO : re-activate this function call when we find a good way to return polylines in result
-        # geojson[:polylines] = generate_polylines_geometry(result) if expected_geometry.include?(:polylines)
+        geojson[:polylines] = generate_polylines_geometry(result) if expected_geometry.include?(:polylines) && ENV['OPTIM_GENERATE_GEOJSON_POLYLINES']
         geojson
       }
     end
@@ -459,21 +458,21 @@ module OutputHelper
     def self.generate_polylines_geometry(result)
       polylines = []
 
-      result[:routes].each{ |route|
+      result[:routes].each_with_index{ |route, route_index|
         next unless route[:geometry]
 
-        color = compute_color([], nil, route[:day])
+        color = route[:day] ? compute_color([], nil, route[:day]) : compute_color([], :vehicle, route_index)
         polylines << {
           type: 'Feature',
           properties: {
             color: color,
-            name: "#{route[:original_vehicle_id]}, day #{route[:day]} route",
+            name: "#{route[:original_vehicle_id]}#{route[:day] ? '' : ", day #{route[:day]} route"}",
             vehicle: route[:original_vehicle_id],
             day: route[:day]
           },
           geometry: {
             type: 'LineString',
-            coordinates: route[:geometry][0]
+            coordinates: route[:geometry].flatten(1)
           }
         }
       }

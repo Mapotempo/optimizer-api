@@ -355,14 +355,12 @@ class Api::V01::VrpTest < Minitest::Test
           case case_index
           when 0
             assert_empty services_vrps.first[:vrp].restitution_geometry
-          when 1
-            assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
+          when 1 || 5 || 8
+            assert_equal %i[polylines partitions], services_vrps.first[:vrp].restitution_geometry
           when 2
-            assert_equal %i[encoded_polylines], services_vrps.first[:vrp].restitution_geometry
-          when 5 || 8
-            assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
+            assert_equal %i[encoded_polylines partitions], services_vrps.first[:vrp].restitution_geometry
           when 3 || 4
-            assert_empty services_vrps.first[:vrp].restitution_geometry
+            assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
           when 7
             assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
           end
