@@ -1279,10 +1279,10 @@ module Wrappers
               idle_time_created_by_inserted_pause = 0
             end
             times = { begin_time: rest_start, end_time: rest_start + rest.duration, departure_time: rest_start + rest.duration }
-            route.steps.insert(insert_rest_at,
-                               Models::Solution::Step.new(rest, info: Models::Solution::Step::Info.new(times)))
+            rest_step = Models::Solution::Step.new(rest, info: Models::Solution::Step::Info.new(times))
+            result.insert_step(vrp, route, rest_step, insert_rest_at)
 
-            shift_route_times(route, idle_time_created_by_inserted_pause + rest.duration, insert_rest_at + 1)
+            # shift_route_times(route, idle_time_created_by_inserted_pause + rest.duration, insert_rest_at + 1)
 
             next if no_cost
 

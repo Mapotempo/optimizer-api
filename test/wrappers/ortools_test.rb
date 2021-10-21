@@ -5165,7 +5165,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
-    assert solutions[0].routes.first.steps[-2][:rest_id], 'Pause should be at the last spot'
+    assert solutions[0].routes.first.steps[-2].type == :rest, 'Pause should be at the last spot'
   end
 
   def test_no_nil_in_corresponding_mission_ids

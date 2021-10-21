@@ -96,5 +96,10 @@ module Models
       cost_info = routes.map(&:cost_info).sum
       self.cost -= (previous_total - cost_info.total).round
     end
+
+    def insert_step(vrp, route, step_object, index)
+      route.insert_step(vrp, step_object, index)
+      Parsers::SolutionParser.parse(self, vrp)
+    end
   end
 end

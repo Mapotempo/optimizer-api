@@ -52,6 +52,30 @@ module Models
       def count_services
         steps.count(&:service_id)
       end
+
+      def insert_step(vrp, step_object, index)
+        matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
+        steps.insert(index, step_object)
+        shift_route_times(step_object.activity.duration, index)
+        Parsers::RouteParser.parse(self, vrp, matrix)
+      end
+
+      def shift_route_times(shift_amount, shift_start_index = 0)
+        return if shift_amount == 0
+
+        raise 'Cannot shift the route, there are not enough steps' if shift_start_index > self.steps.size
+
+        self.info.start_time += shift_amount if shift_start_index == 0
+        self.steps.each_with_index{ |step_object, index|
+          next if index <= shift_start_index
+
+          step_object.info.begin_time += shift_amount
+          step_object.info.end_time += shift_amount if step_object.info.end_time
+          step_object.info.departure_time += shift_amount if step_object.info.departure_time
+          step_object.info.waiting_time = [step_object.info.waiting_time - shift_amount, 0].max
+        }
+        self.info.end_time += shift_amount if self.info.end_time
+      end
     end
   end
 end

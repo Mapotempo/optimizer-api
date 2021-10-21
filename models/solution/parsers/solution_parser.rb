@@ -19,7 +19,7 @@ require './models/base'
 
 module Parsers
   class SolutionParser
-    def self.parse(solution, vrp, options)
+    def self.parse(solution, vrp, options = {})
       tic_parse_result = Time.now
       vrp.vehicles.each{ |vehicle|
         route = solution.routes.find{ |r| r.vehicle.id == vehicle.id }

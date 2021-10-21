@@ -438,10 +438,28 @@ module Wrappers
     def build_routes(vrp, routes)
       @vehicle_rest_ids = Hash.new([])
       routes.map.with_index{ |route, index|
+        previous_matrix_index = nil
         vehicle = vrp.vehicles[index]
         route_costs = build_cost_details(route.cost_details)
         steps = route.activities.map{ |activity|
-          build_route_step(vrp, vehicle, activity)
+          current_matrix_index =
+            case activity.type
+            when 'service'
+              service = vrp.services[activity.index]
+              service.activity&.point&.matrix_index ||
+              !service.activities.empty? && service.activities[activity.alternative].point.matrix_index
+            when 'start'
+              vrp.vehicles[index].start_point&.matrix_index
+            when 'end'
+              vrp.vehicles[index].end_point&.matrix_index
+            end
+          step_object = build_route_step(vrp, vehicle, activity)
+          next step_object if activity.type == 'rest'
+
+          matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
+          build_route_data(step_object, matrix, previous_matrix_index, current_matrix_index)
+          previous_matrix_index = current_matrix_index
+          step_object
         }.compact
         route_detail = Models::Solution::Route::Info.new({})
         initial_loads = route.activities.first.quantities.map.with_index{ |quantity, q_index|
@@ -485,16 +503,16 @@ module Wrappers
         vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
     end
 
-    def build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
+    def build_route_data(step, vehicle_matrix, previous_matrix_index, current_matrix_index)
       if previous_matrix_index && current_matrix_index
         travel_distance = vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0
         travel_time = vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0
         travel_value = vehicle_matrix[:value] ? vehicle_matrix[:value][previous_matrix_index][current_matrix_index] : 0
-        return {
+        {
           travel_distance: travel_distance,
           travel_time: travel_time,
           travel_value: travel_value
-        }
+        }.each{ |key, value| step.info.send("#{key}=", value) }
       end
       {}
     end

@@ -19,7 +19,7 @@ require './models/base'
 
 module Parsers
   class RouteParser
-    def self.parse(route, vrp, matrix, options)
+    def self.parse(route, vrp, matrix, options = {})
       return if route.steps.empty?
 
       @route = route
@@ -66,7 +66,7 @@ module Parsers
           }
         end
 
-        previous_index = matrix_index
+        previous_index = matrix_index if activity.type != :rest
       }
 
       if @route.info.end_time && @route.info.start_time
