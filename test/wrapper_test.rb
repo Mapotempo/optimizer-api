@@ -3042,6 +3042,23 @@ class WrapperTest < Minitest::Test
     assert_empty OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp)
   end
 
+  def test_assert_can_handle_empty_quantities
+    problem = VRP.basic
+    problem[:relations] = [{
+      type: :shipment,
+      linked_ids: ['service_1', 'service_2']
+    }]
+    problem[:units] << { id: 'vol' }
+    problem[:vehicles].first[:capacities] = [{ unit_id: 'kg', limit: 2 }, { unit_id: 'vol', limit: 1 }]
+    problem[:services][0][:quantities] = [{ unit_id: 'kg', value: 1 }]
+    problem[:services][1][:quantities] = [{ unit_id: 'kg', value: -1 }]
+    problem[:services][2][:quantities] = [{ unit_id: 'vol', value: 1 }]
+    vrp = TestHelper.create(problem)
+
+    OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp)
+    OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp)
+  end
+
   def test_assert_inapplicable_relations
     problem = VRP.basic
     problem[:relations] = [{
@@ -3069,6 +3086,8 @@ class WrapperTest < Minitest::Test
     }]
 
     vrp = TestHelper.create(problem)
+    assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
+                    :assert_no_overall_duration
     assert_includes OptimizerWrapper.config[:services][:vroom].inapplicable_solve?(vrp),
                     :assert_no_relations_except_simple_shipments
     refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(vrp),
