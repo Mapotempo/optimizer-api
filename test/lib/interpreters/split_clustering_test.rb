@@ -199,7 +199,7 @@ class SplitClusteringTest < Minitest::Test
 
       services_vrps = Interpreters::SplitClustering.generate_split_vrps({ vrp: vrp, service: :demo }, nil, nil)
       assert services_vrps
-      assert_equal 2, services_vrps.size
+      assert_equal 35, services_vrps.size
     end
 
     def test_work_day_without_vehicle_entity_small

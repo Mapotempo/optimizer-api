@@ -269,7 +269,7 @@ class HeuristicTest < Minitest::Test
 
     def test_same_point_day_relaxation
       vrp = TestHelper.load_vrp(self)
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Marshal.load(Marshal.dump(vrp)), nil)
 
       assert_equal vrp.visits, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size,
                    "Found #{result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size} instead of #{vrp.visits} expected"

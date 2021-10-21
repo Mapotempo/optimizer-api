@@ -148,7 +148,7 @@ class RealCasesTest < Minitest::Test
       check_vrp_services_size = vrp.services.size
 
       # or-tools performance
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
       assert result
       # Check activities
       assert_equal check_vrp_services_size, (result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } })
