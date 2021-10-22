@@ -316,7 +316,7 @@ module VrpMissions
   params :vrp_request_rest do
     requires(:id, type: String, allow_blank: false)
     requires(:duration, type: Integer, default: 0, desc: 'Duration of the vehicle rest', coerce_with: ->(value) { ScheduleType.type_cast(value) })
-    optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
+    optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin. At most one timewindow per rest is supported.') do
       use :vrp_request_timewindow
     end
     optional(:late_multiplier, type: Float, desc: 'Late multiplier applied for this rest')

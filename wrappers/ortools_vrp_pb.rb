@@ -30,7 +30,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :problem_index, :int32, 15
   end
   add_message 'ortools_vrp.Rest' do
-    repeated :time_windows, :message, 1, 'ortools_vrp.TimeWindow'
+    optional :time_window, :message, 1, 'ortools_vrp.TimeWindow'
     optional :duration, :uint32, 2
     optional :id, :string, 3
     optional :late_multiplier, :float, 4

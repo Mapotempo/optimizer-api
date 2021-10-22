@@ -315,9 +315,14 @@ module Wrappers
           ),
           rests: vehicle.rests.collect{ |rest|
             OrtoolsVrp::Rest.new(
-              time_windows: rest.timewindows.collect{ |tw|
-                OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
-              },
+              time_window:
+                if rest.timewindows.any?
+                  log 'optimiser-ortools supports one timewindow per rest', level: :warn if rest.timewindows.size > 1
+
+                  OrtoolsVrp::TimeWindow.new(start: rest.timewindows[0].start, end: rest.timewindows[0].end || 2147483647)
+                else
+                  OrtoolsVrp::TimeWindow.new(start: 0, end: 2147483647) # Rests should always have a timewindow
+                end,
               duration: rest.duration,
               id: rest.id.to_s,
               late_multiplier: rest.late_multiplier,
