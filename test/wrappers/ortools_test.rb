@@ -2839,6 +2839,31 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 6, result[:routes][0][:activities].size
   end
 
+  def test_shipments_with_multiple_timewindows_and_lateness
+    # OR-Tools will generate separate nodes for disjoint timewindows with lateness
+    ortools = OptimizerWrapper.config[:services][:ortools]
+    problem = VRP.pud
+    keys = [:pickup, :delivery]
+    problem[:shipments].each{ |shipment|
+      keys.each{ |key|
+        shipment[key][:timewindows] = [
+          { start: 0, end: 14, maximum_lateness: 15 },
+          { start: 17, end: 29, maximum_lateness: 15}
+        ]
+        shipment[key][:late_multiplier] = 0.3
+      }
+    }
+    vrp = TestHelper.create(problem)
+    result = ortools.solve(vrp, 'test')
+    assert_equal 0, result[:cost_details][:lateness]
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
   def test_shipments_inroute_duration
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = VRP.pud
