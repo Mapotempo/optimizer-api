@@ -155,7 +155,7 @@ module Wrappers
         if service.activity
           services << OrtoolsVrp::Service.new(
             time_windows: service.activity.timewindows.collect{ |tw|
-              OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
+              OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647)
             },
             quantities: vrp.units.collect{ |unit|
               is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -187,7 +187,7 @@ module Wrappers
           service.activities.each_with_index{ |possible_activity, activity_index|
             services << OrtoolsVrp::Service.new(
               time_windows: possible_activity.timewindows.collect{ |tw|
-                OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2**56)
+                OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647)
               },
               quantities: vrp.units.collect{ |unit|
                 is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -257,7 +257,7 @@ module Wrappers
               rest.timewindows.collect{ |tw|
                 [
                   tw.start,
-                  tw.end || 2**56,
+                  tw.end || 2147483647,
                 ]
               },
               rest.duration,
@@ -333,15 +333,14 @@ module Wrappers
           value_matrix_index: vrp.matrices.index{ |matrix| matrix.id == vehicle.value_matrix_id } || 0,
           start_index: vehicle.start_point ? vehicle.start_point.matrix_index : -1,
           end_index: vehicle.end_point ? vehicle.end_point.matrix_index : -1,
-          duration: vehicle.duration || -1,
-          distance: vehicle.distance || -1,
+          duration: vehicle.duration || 0,
+          distance: vehicle.distance || 0,
           shift_preference: (vehicle.force_start ? 'force_start' : vehicle.shift_preference.to_s),
           day_index: vehicle.global_day_index || -1,
           max_ride_time: vehicle.maximum_ride_time || 0,
           max_ride_distance: vehicle.maximum_ride_distance || 0,
           free_approach: vehicle.free_approach || false,
-          free_return: vehicle.free_return || false,
-          type_index: vehicle.type_index
+          free_return: vehicle.free_return || false
         )
       }
 
@@ -375,10 +374,10 @@ module Wrappers
         )
       }
 
-      relations << OrtoolsVrp::Relation.new(type: :force_first, linked_ids: services_positions[:always_first], lapse: -1) unless services_positions[:always_first].empty?
-      relations << OrtoolsVrp::Relation.new(type: :never_first, linked_ids: services_positions[:never_first], lapse: -1) unless services_positions[:never_first].empty?
-      relations << OrtoolsVrp::Relation.new(type: :never_last, linked_ids: services_positions[:never_last], lapse: -1) unless services_positions[:never_last].empty?
-      relations << OrtoolsVrp::Relation.new(type: :force_end, linked_ids: services_positions[:always_last], lapse: -1) unless services_positions[:always_last].empty?
+      relations << OrtoolsVrp::Relation.new(type: :force_first, linked_ids: services_positions[:always_first]) unless services_positions[:always_first].empty?
+      relations << OrtoolsVrp::Relation.new(type: :never_first, linked_ids: services_positions[:never_first]) unless services_positions[:never_first].empty?
+      relations << OrtoolsVrp::Relation.new(type: :never_last, linked_ids: services_positions[:never_last]) unless services_positions[:never_last].empty?
+      relations << OrtoolsVrp::Relation.new(type: :force_end, linked_ids: services_positions[:always_last]) unless services_positions[:always_last].empty?
 
       problem = OrtoolsVrp::Problem.new(
         vehicles: vehicles,

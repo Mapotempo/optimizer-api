@@ -944,6 +944,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_negative_time_windows_problem
+    skip 'Negative timewindows is not supported, or-tools ignores the negative part completely. '\
+         'A preprocessing routine is needed to correctly handle negative timewindows -- i.e., '\
+         'Adding the absolute value of the most negative TW to all other TWs so that everything '\
+         'shifted into positive time horizon and then a postprocessing is needed to correct the '\
+         'time values (begin_time, end_time, etc) of the activities of the solution.'
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       matrices: [{

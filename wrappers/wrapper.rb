@@ -779,7 +779,7 @@ module Wrappers
             (tw.day_index || 0) * 86400 + (tw.start || 0)
           }.min
           latest_arrival = service_in.activity.timewindows.map{ |tw|
-            tw.day_index ? tw.day_index * 86400 + (tw.end || 86399) : (tw.end || 2**56)
+            tw.day_index ? tw.day_index * 86400 + (tw.end || 86399) : (tw.end || 2147483647)
           }.max
 
           max_earliest_arrival = [max_earliest_arrival, earliest_arrival].compact.max
@@ -1280,7 +1280,7 @@ module Wrappers
           next if vehicle.rests.any?{ |rest|
             rest.timewindows.any? { |rest_tw|
               rest_start = rest_tw.start || vehicle.timewindow&.start || 0
-              rest_end = rest_tw.end || vehicle.timewindow&.end || vehicle.duration && rest.duration && (rest_start + vehicle.duration - rest.duration) || 2**56
+              rest_end = rest_tw.end || vehicle.timewindow&.end || vehicle.duration && rest.duration && (rest_start + vehicle.duration - rest.duration) || 2147483647
               max_service_duration > rest_end - rest_start
             }
           }
