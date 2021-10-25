@@ -59,7 +59,7 @@ module Wrappers
         :assert_vehicles_no_capacity_initial,
         :assert_vehicles_no_duration_limit,
         :assert_vehicles_no_force_start,
-        :assert_vehicles_no_late_multiplier_or_single_vehicle,
+        :assert_vehicles_no_late_multiplier,
         :assert_vehicles_no_overload_multiplier,
         :assert_vehicles_start_or_end,
         :assert_no_overall_duration,
@@ -319,7 +319,6 @@ module Wrappers
 
     def collect_vehicles(vrp, vrp_skills, vrp_units)
       vrp.vehicles.map.with_index{ |vehicle, index|
-        tw_end = (vehicle.cost_late_multiplier.nil? || vehicle.cost_late_multiplier.zero?) && vehicle.timewindow&.end || 2**30
         {
           id: index,
           start_index: vehicle.start_point&.matrix_index,
@@ -328,8 +327,7 @@ module Wrappers
             c = vehicle.capacities.find{ |capacity| capacity.unit.id == unit.id }
             ((c&.limit || @total_quantities[unit.id]) * CUSTOM_QUANTITY_BIGNUM).round
           },
-          # We assume that if we have a cost_late_multiplier we have both a single vehicle and we accept to finish the route late without limit
-          time_window: [vehicle.timewindow&.start || 0, tw_end],
+          time_window: [vehicle.timewindow&.start || 0, vehicle.timewindow&.end || 2**30],
           # VROOM expects a default skill
           skills: collect_skills(vehicle, vrp_skills),
           breaks: vehicle.rests.map{ |rest|

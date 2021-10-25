@@ -167,6 +167,10 @@ class RealCasesTest < Minitest::Test
       assert result[:elapsed] < 420000, "Too long elapsed time: #{result[:elapsed]}"
 
       # vroom performance
+      vrp.vehicles.each{ |v|
+        v.cost_late_multiplier = 0
+        v.timewindow&.end += 5 * 60 * 60
+      }
       result = OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }}, vrp, nil)
       assert result
       # Check activities
