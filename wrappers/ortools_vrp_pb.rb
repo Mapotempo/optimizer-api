@@ -13,6 +13,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     add_message "ortools_vrp.TimeWindow" do
       optional :start, :uint32, 1
       optional :end, :uint32, 2
+      optional :maximum_lateness, :uint32, 3
     end
     add_message "ortools_vrp.Service" do
       repeated :time_windows, :message, 1, "ortools_vrp.TimeWindow"

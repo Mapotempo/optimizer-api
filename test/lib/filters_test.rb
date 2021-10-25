@@ -254,8 +254,10 @@ class FiltersTest < Minitest::Test
     end
 
     vrp[:services][0][:activity][:late_multiplier] = 0.3
+    vrp[:services][0][:activity][:timewindows][0][:maximum_lateness] = 50 # do not filter if the max_lateness is enough
     vrp[:vehicles][0][:capacities] = [{ unit_id: 'kg', limit: 5, overload_multiplier: 1 }]
     vrp[:vehicles][0][:cost_late_multiplier] = 0.3
+    vrp[:vehicles][0][:timewindow][:maximum_lateness] = 50 # do not filter if the max_lateness is enough
     begin
       OptimizerWrapper.config[:services][:ortools].stub(
         :solve, # (cluster_vrp, job, proc)

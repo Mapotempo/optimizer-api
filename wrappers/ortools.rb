@@ -155,7 +155,7 @@ module Wrappers
         if service.activity
           services << OrtoolsVrp::Service.new(
             time_windows: service.activity.timewindows.collect{ |tw|
-              OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647)
+              OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647, maximum_lateness: tw.maximum_lateness)
             },
             quantities: vrp.units.collect{ |unit|
               is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -187,7 +187,7 @@ module Wrappers
           service.activities.each_with_index{ |possible_activity, activity_index|
             services << OrtoolsVrp::Service.new(
               time_windows: possible_activity.timewindows.collect{ |tw|
-                OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647)
+                OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647, maximum_lateness: tw.maximum_lateness)
               },
               quantities: vrp.units.collect{ |unit|
                 is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
@@ -252,6 +252,7 @@ module Wrappers
           time_window: OrtoolsVrp::TimeWindow.new(
             start: vehicle.timewindow&.start || 0,
             end: vehicle.timewindow&.end || 2147483647,
+            maximum_lateness: vehicle.timewindow&.maximum_lateness || 0,
           ),
           rests: vehicle.rests.collect{ |rest|
             OrtoolsVrp::Rest.new(

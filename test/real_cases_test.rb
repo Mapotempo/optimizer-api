@@ -84,6 +84,11 @@ class RealCasesTest < Minitest::Test
     def test_ortools_one_route_many_stops
       vrp = TestHelper.load_vrp(self)
       check_vrp_services_size = vrp.services.size
+
+      # imitate old lateness functionality (i.e., there is no limit on the maximum lateness)
+      # maximum_lateness of the vehicle is increased to have the result with the old functionality
+      vrp.vehicles.each{ |v| v.timewindow.maximum_lateness = 7 * 60 * 60 }
+
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 
@@ -147,6 +152,10 @@ class RealCasesTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
       check_vrp_services_size = vrp.services.size
 
+      # imitate old lateness functionality (i.e., there is no limit on the maximum lateness)
+      # maximum_lateness of the vehicle is increased to have the result with the old functionality
+      vrp.vehicles.each{ |v| v.timewindow.maximum_lateness = 5 * 60 * 60 }
+
       # or-tools performance
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
       assert result
@@ -193,6 +202,11 @@ class RealCasesTest < Minitest::Test
     # Lille - 141 services with time window and quantity - no late for services
     def test_ortools_global_six_routes_without_rest
       vrp = TestHelper.load_vrp(self)
+
+      # imitate old lateness functionality (i.e., there is no limit on the maximum lateness)
+      # maximum_lateness of the vehicle is increased to have the result with the old functionality
+      vrp.vehicles.each{ |v| v.timewindow.maximum_lateness = 3 * 60 * 60 }
+
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
 

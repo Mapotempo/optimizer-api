@@ -1317,6 +1317,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
             start: 5,
             end: 6
           }, {
+            maximum_lateness: 10,
             start: 10,
             end: 11
           }],
@@ -5018,7 +5019,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:units] = [{ id: 'kg' }]
     vrp[:vehicles].first.merge!(cost_fixed: 1, cost_time_multiplier: 2, capacities: [{ unit_id: 'kg', limit: 1, overload_multiplier: 0.3 }])
     vrp[:services].first[:quantities] = [{ unit_id: 'kg', value: 2 }]
-    vrp[:services].first[:activity].merge!(timewindows: [{ start: 0, end: 1 }], late_multiplier: 0.007)
+    vrp[:services].first[:activity].merge!(timewindows: [{ start: 0, end: 1, maximum_lateness: 3 }], late_multiplier: 0.007)
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     refute result[:cost_details].object_id == result[:routes][0][:cost_details].object_id, 'cost_details object should not be the same for route and result'
     assert_equal 21.321, result[:cost_details].total.round(3)

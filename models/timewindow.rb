@@ -22,11 +22,19 @@ module Models
     field :start, default: 0
     field :end, default: nil
     field :day_index, default: nil
+    field :maximum_lateness, default: nil
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
     # validates_numericality_of :start, allow_nil: true
     # validates_numericality_of :end, allow_nil: true, greater_than: :start, if: :start
     # validates_numericality_of :day_index, allow_nil: true
+
+    def self.create(hash)
+      # By default 25% of the timewindow (if there is no end, it is 0)
+      hash[:maximum_lateness] ||= hash[:end] ? (0.25 * (hash[:end] - hash[:start].to_i)).round : 0
+
+      super(hash)
+    end
   end
 end

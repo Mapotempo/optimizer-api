@@ -789,7 +789,15 @@ module Wrappers
 
     def service_reachable_by_vehicle_within_timewindows(vrp, activity, vehicle)
       vehicle_start = vehicle.timewindow&.start || vehicle.sequence_timewindows.collect(&:start).min || 0
-      vehicle_end = vehicle.timewindow&.end || vehicle.sequence_timewindows.collect(&:end).max
+      vehicle_end =
+        if vehicle.cost_late_multiplier&.positive? # vehicle lateness is allowed
+          vehicle.timewindow&.end ?
+            vehicle.timewindow.end + vehicle.timewindow.maximum_lateness :
+            vehicle.sequence_timewindows.collect{ |tw| tw.end + tw.maximum_lateness }.max
+        else # vehicle lateness is not allowed
+          vehicle.timewindow&.end || vehicle.sequence_timewindows.collect(&:end).max
+        end
+
       matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
 
       time_to_go = vehicle.start_point&.matrix_index ? matrix.time[vehicle.start_point&.matrix_index][activity.point.matrix_index] : 0
@@ -797,21 +805,24 @@ module Wrappers
 
       earliest_arrival = vehicle_start + time_to_go
       earliest_back = earliest_arrival + activity.duration + time_back
-      latest_arrival = vehicle_end - time_back - activity.duration if vehicle_end
+
+      return false if vehicle_end && earliest_back > vehicle_end
+
+      return false if vehicle.duration && earliest_back - earliest_arrival > vehicle.duration
 
       if activity.timewindows.any?
-        if !activity.late_multiplier&.positive? # if service lateness is not allowed
+        if activity.late_multiplier&.positive? # service lateness is allowed
+          return false if activity.timewindows.none?{ |tw| tw.end.nil? || earliest_arrival <= tw.end + tw.maximum_lateness }
+        else # service lateness is not allowed
           return false if activity.timewindows.none?{ |tw| tw.end.nil? || earliest_arrival <= tw.end }
-          return false if latest_arrival && activity.timewindows.all?{ |tw| latest_arrival < tw.start }
+        end
+        if vehicle_end
+          latest_arrival = vehicle_end - time_back - activity.duration
+          return false if activity.timewindows.all?{ |tw| latest_arrival < tw.start }
         end
       end
 
-      if vehicle.cost_time_multiplier&.positive?
-        return false if vehicle_end && earliest_back > vehicle_end && !vehicle.cost_late_multiplier&.positive? # lateness is not allowed
-        return false if vehicle.duration && earliest_back - earliest_arrival > vehicle.duration
-      end
-
-      if vehicle.distance && vehicle.cost_distance_multiplier&.positive?
+      if vehicle.distance
         # check distances constraints
         dist_to_go = vehicle.start_point&.matrix_index ? matrix.distance[vehicle.start_point&.matrix_index][activity.point.matrix_index] : 0
         dist_back = vehicle.end_point&.matrix_index ? matrix.distance[activity.point.matrix_index][vehicle.end_point&.matrix_index] : 0

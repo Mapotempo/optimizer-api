@@ -93,11 +93,14 @@ class HeuristicTest < Minitest::Test
 
     def test_vrp_allow_partial_assigment_false
       vrp = TestHelper.load_vrp(self)
+      vrp.preprocessing_partitions.each{ |p| p.restarts = 3 }
+      # make sure there will be unassigned visits
+      vrp.vehicles.each{ |v| v.sequence_timewindows.each{ |tw| tw.end -= ((tw.end - tw.start) / 2.75).round } }
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
       refute_empty result[:unassigned], 'If unassigned set is empty this test becomes useless'
       result[:unassigned].group_by{ |un| un[:original_service_id] }.each{ |id, set|
-        expected_visits = vrp.services.find{ |s| s.id == id }.visits_number
+        expected_visits = vrp.services.select{ |s| s.original_id == id }.sum(&:visits_number)
         assert_equal expected_visits, set.size
       }
 
