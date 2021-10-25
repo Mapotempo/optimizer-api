@@ -227,66 +227,6 @@ module Wrappers
         )
       }
 
-      v_types = []
-      vrp.vehicles.each{ |vehicle|
-        v_type_id = [
-          vehicle.cost_fixed,
-          vehicle.cost_distance_multiplier,
-          vehicle.cost_time_multiplier,
-          vehicle.cost_waiting_time_multiplier || vehicle.cost_time_multiplier,
-          vehicle.cost_value_multiplier || 0,
-          vehicle.cost_late_multiplier || 0,
-          vehicle.coef_service || 1,
-          vehicle.coef_setup || 1,
-          vehicle.additional_service || 0,
-          vehicle.additional_setup || 0,
-          vrp.units.flat_map{ |unit|
-            q = vehicle.capacities.find{ |capacity| capacity.unit == unit }
-            [
-              (q&.limit && q.limit < 1e+22) ? q.limit : -1,
-              q&.overload_multiplier || 0,
-              unit&.counting || false
-            ]
-          }.compact,
-          [
-            vehicle.timewindow&.start || 0,
-            vehicle.timewindow&.end || 2147483647,
-          ],
-          vehicle.rests.collect{ |rest|
-            [
-              rest.timewindows.collect{ |tw|
-                [
-                  tw.start,
-                  tw.end || 2147483647,
-                ]
-              },
-              rest.duration,
-            ].flatten.compact
-          },
-          vehicle.skills,
-          vehicle.matrix_id,
-          vehicle.value_matrix_id,
-          vehicle.start_point ? vehicle.start_point.matrix_index : -1,
-          vehicle.end_point ? vehicle.end_point.matrix_index : -1,
-          vehicle.duration || -1,
-          vehicle.distance || -1,
-          (vehicle.force_start ? 'force_start' : vehicle.shift_preference.to_s),
-          vehicle.global_day_index || -1,
-          vehicle.maximum_ride_time || 0,
-          vehicle.maximum_ride_distance || 0,
-          vehicle.free_approach || false,
-          vehicle.free_return || false
-        ].flatten
-
-        v_type_checksum = Digest::MD5.hexdigest(Marshal.dump(v_type_id))
-        v_type_index = v_types.index(v_type_checksum)
-        if v_type_index
-          vehicle.type_index = v_type_index
-        else
-          vehicle.type_index = v_types.size
-          v_types << v_type_checksum
-        end
-      }
       vehicles = vrp.vehicles.collect{ |vehicle|
         OrtoolsVrp::Vehicle.new(
           id: vehicle.id.to_s,

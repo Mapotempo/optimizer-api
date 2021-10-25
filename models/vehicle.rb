@@ -72,7 +72,6 @@ module Models
 
     field :free_approach, default: false
     field :free_return, default: false
-    field :type_index, default: nil
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
