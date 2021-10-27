@@ -600,10 +600,13 @@ module Interpreters
       log 'Some routes are emptied due to poor workload -- time or quantity.', level: :warn if emptied_routes
     end
 
-    def self.update_matrix(original_matrices, sub_vrp, matrix_indices)
-      sub_vrp.matrices.each_with_index{ |matrix, index|
-        [:time, :distance].each{ |dimension|
-          matrix[dimension] = sub_vrp.vehicles.first.matrix_blend(original_matrices[index], matrix_indices, [dimension], cost_time_multiplier: 1, cost_distance_multiplier: 1)
+    def self.update_matrix(sub_vrp, matrix_indices)
+      sub_vrp.matrices.each{ |matrices|
+        [:time, :distance, :value].each{ |dimension|
+          matrix = matrices.send(dimension)
+          next unless matrix
+
+          matrices.send("#{dimension}=", matrix_indices.map{ |r_index| matrix[r_index].values_at(*matrix_indices) })
         }
       }
     end
@@ -643,26 +646,32 @@ module Interpreters
             vehicle.id == r.vehicle_id && (route_week_day.nil? || vehicle_week_day_availability.include?(route_week_day))
           }
         }
-        sub_vrp.matrices.delete_if{ |m|
-          sub_vrp.vehicles.none?{ |vehicle| vehicle.matrix_id == m.id }
-        }
       end
-      sub_vrp.services = sub_vrp.services.select{ |service| partial_service_ids.include?(service.id) }.compact
-      points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.uniq.compact
-      sub_vrp.rests = sub_vrp.rests.select{ |r| sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.include? r.id }
-      sub_vrp.relations = sub_vrp.relations.select{ |r| r.linked_ids.all? { |id| sub_vrp.services.any? { |s| s.id == id } } }
+      sub_vrp.services.select!{ |service| partial_service_ids.include?(service.id) }
+      rest_ids = sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.uniq
+      sub_vrp.rests.select!{ |r| rest_ids.include?(r.id) }
       if entity == :vehicle
         sub_vrp.relations.delete_if{ |r| r.type == :same_vehicle }
         sub_vrp.services.each{ |s| s.relations.delete_if{ |r| r.type == :same_vehicle } }
       end
-      sub_vrp.points = sub_vrp.points.select{ |p| points_ids.include? p.id }.compact
-      sub_vrp.points += sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact.uniq
+      sub_vrp.relations.select!{ |r|
+        # Split respects relations, it is enough to check only the first linked id --  [0..0].any? is to handle empties
+        r.linked_ids[0..0].any? { |sid| sub_vrp.services.any? { |s| s.id == sid } } &&
+          r.linked_vehicle_ids[0..0].any? { |vid| sub_vrp.vehicles.any? { |v| v.id == vid } }
+      }
+      points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.compact |
+                   sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.compact
+      sub_vrp.points.select!{ |p| points_ids.include?(p.id) }
+      sub_vrp.vehicles.each{ |vehicle|
+        vehicle.start_point = sub_vrp.points.find{ |p| p.id == vehicle.start_point_id } if vehicle.start_point
+        vehicle.end_point = sub_vrp.points.find{ |p| p.id == vehicle.end_point_id } if vehicle.end_point
+      }
       sub_vrp = add_corresponding_entity_skills(entity, sub_vrp)
 
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
         update_matrix_index(sub_vrp)
-        update_matrix(sub_vrp.matrices, sub_vrp, matrix_indices)
+        update_matrix(sub_vrp, matrix_indices)
       end
 
       log "<--- build_partial_service_vrp takes #{Time.now - tic}", level: :debug

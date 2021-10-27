@@ -127,6 +127,7 @@ class HeuristicTest < Minitest::Test
       assert result[:routes].any?{ |r| r[:activities].size - 2 < 5 },
              'We expect at least one route with less than 5 services, this test is useless otherwise'
       should_remain_assigned = result[:routes].sum{ |r| r[:activities].size - 2 >= 5 ? r[:activities].size - 2 : 0 }
+      should_remain_unassigned = result[:unassigned].size
 
       # one vehicle should have at least 5 stops :
       vrp.vehicles.each{ |v| v.cost_fixed = 5 }
@@ -135,7 +136,7 @@ class HeuristicTest < Minitest::Test
       assert result[:routes].all?{ |r| (r[:activities].size - 2).zero? || r[:activities].size - 2 >= 5 },
              'Expecting no route with less than 5 stops unless it is an empty route'
       assert_operator should_remain_assigned, :<=, (result[:routes].sum{ |r| r[:activities].size - 2 })
-      assert_equal 25, result[:unassigned].size
+      assert_operator result[:unassigned].size, :>=, should_remain_unassigned
 
       all_ids = (result[:routes].flat_map{ |route| route[:activities].collect{ |stop| stop[:service_id] } }.compact +
                 result[:unassigned].collect{ |un| un[:service_id] }).uniq

@@ -89,14 +89,10 @@ module Interpreters
             if sub_service_vrp[:vrp].resolution_minimum_duration
               sub_service_vrp[:vrp].resolution_minimum_duration *= sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             end
-            matrix_indices = sub_service_vrp[:vrp].points.map{ |point|
-              service_vrp[:vrp].points.find{ |r_point| point.id == r_point.id }.matrix_index
-            }
-            SplitClustering.update_matrix_index(sub_service_vrp[:vrp])
-            SplitClustering.update_matrix(service_vrp[:vrp].matrices, sub_service_vrp[:vrp], matrix_indices)
+
             result = OptimizerWrapper.define_process(sub_service_vrp, job, &block)
 
-            transfer_unused_vehicles(result, sub_service_vrps) if index.zero? && result
+            transfer_unused_vehicles(service_vrp, result, sub_service_vrps) if index.zero? && result
 
             result
           }
@@ -129,33 +125,68 @@ module Interpreters
       result
     end
 
-    def self.transfer_unused_vehicles(result, sub_service_vrps)
+    def self.transfer_unused_vehicles(service_vrp, result, sub_service_vrps)
+      original_vrp = service_vrp[:vrp]
       sv_zero = sub_service_vrps[0][:vrp]
       sv_one = sub_service_vrps[1][:vrp]
 
-      # First transfer empty vehicles that appear in the routes
-      result[:routes].each{ |r|
-        next if !r[:activities].select{ |a| a[:service_id] }.empty?
-
-        vehicle = sv_zero.vehicles.find{ |v| v.id == r[:vehicle_id] }
-        sv_one.vehicles << vehicle
-        sv_zero.vehicles -= [vehicle]
-        sv_one.points += sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
-      }
-
-      # Then transfer the vehicles which do not appear in the routes.
+      original_matrix_indices = nil
       sv_zero.vehicles.each{ |vehicle|
-        next if result[:routes].any?{ |r| r[:vehicle_id] == vehicle.id }
+        route = result[:routes].find{ |r| r[:vehicle_id] == vehicle.id }
+
+        # Transfer the vehicles which do not appear in the routes or the empty vehicles that appear in the routes
+        next if route && !route[:activities].select{ |a| a[:service_id] }.empty?
 
         sv_one.vehicles << vehicle
         sv_zero.vehicles -= [vehicle]
-        sv_one.points += sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+        vehicle_points = sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+
+        update_sv_one_matrix(sv_one, original_vrp, original_matrix_indices, vehicle, vehicle_points)
       }
 
       # Transfer unsued vehicle limit to the other side as well
       sv_zero_used_vehicle_count = result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } }
       sv_zero_unused_vehicle_limit = sv_zero.resolution_vehicle_limit - sv_zero_used_vehicle_count
       sv_one.resolution_vehicle_limit += sv_zero_unused_vehicle_limit
+    end
+
+    def self.update_sv_one_matrix(sv_one, original_vrp, original_matrix_indices, vehicle, vehicle_points)
+      vehicle_points.each{ |new_point|
+        point_exists = sv_one.points.find{ |p| p.id == new_point.id }
+
+        if point_exists
+          vehicle.start_point = point_exists if vehicle.start_point_id == new_point.id
+          vehicle.end_point = point_exists if vehicle.end_point_id == new_point.id
+          next
+        end
+
+        new_point.matrix_index = sv_one.points.size
+
+        original_matrix_indices ||= sv_one.points.map{ |p| original_vrp.points.find{ |pi| pi.id == p.id }.matrix_index }
+        new_point_original_matrix_index = original_vrp.points.find{ |pi| pi.id == new_point.id }.matrix_index
+
+        # Update the matrix
+        sv_one.matrices.each_with_index{ |sv_one_matrix, m_index|
+          %i[time distance value].each{ |dimension|
+            d_matrix = sv_one_matrix.send(dimension)
+            next unless d_matrix
+
+            original_matrix = original_vrp.matrices[m_index].send(dimension)
+
+            # existing points to new_point
+            d_matrix.each_with_index{ |row, r_index|
+              row << original_matrix[original_matrix_indices[r_index]][new_point_original_matrix_index]
+            }
+            # new_point to existing points
+            d_matrix << original_matrix[new_point_original_matrix_index].values_at(*original_matrix_indices)
+            # new_point to new_point
+            d_matrix.last << 0
+          }
+        }
+
+        original_matrix_indices << new_point_original_matrix_index
+        sv_one.points << new_point
+      }
     end
 
     def self.dicho_level_coeff(service_vrp)

@@ -459,11 +459,10 @@ class SplitClusteringTest < Minitest::Test
       # and then max_split again during solution process
       # should not raise "Wrong number of visits returned in result" error
       vrp = VRP.independent_skills
+      vrp[:matrices][0][:distance] = Oj.load(Oj.dump(vrp[:matrices][0][:time]))
       vrp[:points] = VRP.lat_lon_periodic[:points]
       vrp[:services].first[:skills] = ['D']
-      vrp[:configuration][:preprocessing] = {
-        max_split_size: 4
-      }
+      vrp[:configuration][:preprocessing] = { max_split_size: 4 }
 
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     end
@@ -758,6 +757,7 @@ class SplitClusteringTest < Minitest::Test
       vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
       (1..@regularity_restarts).each{ |trial|
         puts "Regularity trial: #{trial}/#{@regularity_restarts}"
+        Models.delete_all
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
         visits_unassigned << result[:unassigned].size
         unassigned_service_ids = result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }
@@ -801,6 +801,7 @@ class SplitClusteringTest < Minitest::Test
       vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
       (1..@regularity_restarts).each{ |trial|
         OptimizerLogger.log "Regularity trial: #{trial}/#{@regularity_restarts}"
+        Models.delete_all
         result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
         visits_unassigned << result[:unassigned].size
         unassigned_service_ids = result[:unassigned].collect{ |unassigned| unassigned[:original_service_id] }
@@ -958,6 +959,17 @@ class SplitClusteringTest < Minitest::Test
       assert_equal 7, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 6 }, vrp.vehicles, :work_day).size
       # if schedule is less than a week, we generate one cluster per vehicle per day
       assert_equal 5, Interpreters::SplitClustering.list_vehicles({ start: 0, end: 4 }, vrp.vehicles, :work_day).size
+    end
+
+    def test_split_keeps_matrices_in_case_vehicles_are_moved_between_subproblems
+      problem = VRP.lat_lon_two_vehicles
+      problem[:vehicles].last[:matrix_id] = 'm2'
+      problem[:matrices] << problem[:matrices][0].merge({ id: 'm2' })
+      vrp = TestHelper.create(problem)
+
+      sub_vrp = Interpreters::SplitClustering.build_partial_service_vrp({ vrp: vrp }, vrp.services.map(&:id), [0])[:vrp]
+
+      assert_equal %w[m1 m2], sub_vrp.matrices.map(&:id), 'Split should not eliminate matrices in case vehicles are moved between subproblems'
     end
 
     def test_split_with_vehicle_alternative_skills

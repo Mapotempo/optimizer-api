@@ -265,6 +265,7 @@ class Api::V01::VrpTest < Minitest::Test
     vrp1[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
     vrp2 = VRP.independent_skills
+    vrp2[:matrices][0][:distance] = Oj.load(Oj.dump(vrp2[:matrices][0][:time]))
     vrp2[:points] = VRP.lat_lon_periodic[:points]
     vrp2[:services].first[:skills] = ['D']
     vrp2[:configuration][:preprocessing] = {
