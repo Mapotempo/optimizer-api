@@ -24,7 +24,12 @@ require 'action_dispatch'
 use Rack::Cors do
   allow do
     origins '*'
-    resource '*', headers: :any, methods: :any
+    resource '*',
+      headers: :any,
+      methods: :any,
+      expose: ['Cache-Control', 'Content-Encoding', 'Content-Type'],
+      max_age: 1728000,
+      credentials: false
   end
 end
 
