@@ -1217,10 +1217,10 @@ module Wrappers
       unassigned = collect_unassigned
       # TODO: fulfill cost_details with solution_routes costs
       solution = Models::Solution.new(cost: @cost,
-                                                solvers: [:heuristic],
-                                                routes: solution_routes,
-                                                unassigned: unassigned,
-                                                elapsed: (Time.now - @starting_time) * 1000) # ms
+                                      solvers: [:heuristic],
+                                      routes: solution_routes,
+                                      unassigned: unassigned,
+                                      elapsed: (Time.now - @starting_time) * 1000) # ms
       solution.parse(vrp)
       vrp.preprocessing_heuristic_result = solution
       routes

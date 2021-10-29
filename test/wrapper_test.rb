@@ -3038,8 +3038,7 @@ class WrapperTest < Minitest::Test
 
     assert_equal 0, corresponding_in_route.activity.timewindows.first.start
     assert_equal 10, corresponding_in_route.activity.timewindows.first.end
-    # Services which can be served have their timewindows interpreted and the day index is removed
-    assert_nil corresponding_in_route.activity.timewindows.first.day_index
+    assert_equal 0, corresponding_in_route.activity.timewindows.first.day_index
 
     corresponding_unassigned = solutions[0].unassigned.find{ |un| un.id == vrp[:services][1][:id] }
     assert_equal 30, corresponding_unassigned.activity.timewindows.first.start

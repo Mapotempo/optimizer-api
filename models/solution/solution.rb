@@ -97,8 +97,8 @@ module Models
       self.cost -= (previous_total - cost_info.total).round
     end
 
-    def insert_step(vrp, route, step_object, index)
-      route.insert_step(vrp, step_object, index)
+    def insert_step(vrp, route, step_object, index, idle_time = 0)
+      route.insert_step(vrp, step_object, index, idle_time)
       Parsers::SolutionParser.parse(self, vrp)
     end
   end

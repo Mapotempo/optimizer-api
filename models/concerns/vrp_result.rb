@@ -35,7 +35,7 @@ module Serializers
                include_root_in_json
              end
 
-      hash = serializable_hash(options).vrp_result
+      hash = serializable_hash(options).vrp_result(options)
       if root
         root = model_name.element if root == true
         { root => hash }

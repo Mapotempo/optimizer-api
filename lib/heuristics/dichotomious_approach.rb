@@ -129,8 +129,8 @@ module Interpreters
             log "dicho - before remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], solution, 0.5)
             log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
-            solution.parse(vrp)
           end
+          solution.parse(vrp)
 
           log "dicho - level(#{service_vrp[:dicho_level]}) unassigned rate " \
               "#{solution.unassigned.size}/#{service_vrp[:vrp].services.size}: " \
@@ -146,19 +146,13 @@ module Interpreters
       original_vrp = service_vrp[:vrp]
       sv_zero = sub_service_vrps[0][:vrp]
       sv_one = sub_service_vrps[1][:vrp]
+      original_matrix_indices = nil
 
-      # First transfer empty vehicles that appear in the routes
-      solution.routes.each{ |r|
-        next if r.steps.any?(&:service_id)
-
-        sv_one.vehicles << r.vehicle
-        sv_zero.vehicles -= [r.vehicle]
-        sv_one.points += [r.vehicle.start_point, r.vehicle.end_point].compact
-      }
-
-      # Then transfer the vehicles which do not appear in the routes.
+      # Transfer the vehicles which do not appear in the routes or the empty vehicles that appear in the routes
       sv_zero.vehicles.each{ |vehicle|
-        next if solution.routes.any?{ |r| r.vehicle.id == vehicle.id }
+        route = solution.routes.find{ |r| r.vehicle.id == vehicle.id }
+
+        next if route&.steps&.any?(&:service_id)
 
         sv_one.vehicles << vehicle
         sv_zero.vehicles -= [vehicle]

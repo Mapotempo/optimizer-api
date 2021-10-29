@@ -20,13 +20,15 @@ require './models/base'
 module Parsers
   class ServiceParser
     def self.parse(service, options)
+      activity = options[:index] && service.activities[options[:index]] || service.activity
       activity_hash = Models::Activity.field_names.map{ |key|
-        activity = options[:index] && service.activities[options[:index]] || service.activity
+        next if key == :point_id
+
         [key, activity.send(key)]
-      }.to_h
+      }.compact.to_h
 
       dup_activity = Models::Activity.new(activity_hash)
-      dup_activity[:simplified_setup_duration] = service.activity[:simplified_setup_duration]
+      dup_activity[:simplified_setup_duration] = activity[:simplified_setup_duration] if activity[:simplified_setup_duration]
 
       {
         id: service.original_id,

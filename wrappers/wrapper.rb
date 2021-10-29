@@ -1254,13 +1254,13 @@ module Wrappers
                 end
               else
                 # there is a clear position to insert
-                activity_after_rest = route.steps[insert_rest_at]
+                step_after_rest = route.steps[insert_rest_at]
 
-                rest_start = activity_after_rest.info.begin_time
+                rest_start = step_after_rest.info.begin_time
                 # if this the first service of this location then we need to consider the setup_duration
-                rest_start -= activity_after_rest.activity.setup_duration.to_i if activity_after_rest.info.travel_time > 0
+                rest_start -= step_after_rest.activity.setup_duration.to_i if step_after_rest.info.travel_time > 0
                 if rest.timewindows&.last&.end && rest_start > rest.timewindows.last.end
-                  rest_start -= activity_after_rest.info.travel_time
+                  rest_start -= step_after_rest.info.travel_time
                   rest_start = [rest_start, rest.timewindows&.first&.start.to_i].max # don't induce idle_time if within travel_time
                 end
 
@@ -1283,18 +1283,16 @@ module Wrappers
             end
             times = { begin_time: rest_start, end_time: rest_start + rest.duration, departure_time: rest_start + rest.duration }
             rest_step = Models::Solution::Step.new(rest, info: Models::Solution::Step::Info.new(times))
-            result.insert_step(vrp, route, rest_step, insert_rest_at)
-
+            result.insert_step(vrp, route, rest_step, insert_rest_at, idle_time_created_by_inserted_pause)
             # shift_route_times(route, idle_time_created_by_inserted_pause + rest.duration, insert_rest_at + 1)
 
             next if no_cost
 
             cost_increase = vehicle.cost_time_multiplier.to_f * rest.duration +
                             vehicle.cost_waiting_time_multiplier.to_f * idle_time_created_by_inserted_pause
-
-            route[:cost_info]&.time += cost_increase
-            result[:cost_info]&.time += cost_increase
-            result[:cost] += cost_increase # totals are not calculated yet
+            route.cost_info&.time += cost_increase
+            result.cost_info&.time += cost_increase
+            result.cost += cost_increase # totals are not calculated yet
           }
         }
       else

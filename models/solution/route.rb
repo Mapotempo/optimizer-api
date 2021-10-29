@@ -53,9 +53,9 @@ module Models
         steps.count(&:service_id)
       end
 
-      def insert_step(vrp, step_object, index)
+      def insert_step(vrp, step_object, index, idle_time = 0)
         steps.insert(index, step_object)
-        shift_route_times(step_object.activity.duration, index)
+        shift_route_times(idle_time + step_object.activity.duration, index)
       end
 
       def shift_route_times(shift_amount, shift_start_index = 0)
