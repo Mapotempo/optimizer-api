@@ -53,6 +53,7 @@ module Models
 
     def self.has_many(name, options = {})
       super
+      field_names << name
 
       # respect English spelling rules: vehicles -> vehicle_ids | capacities -> capacity_ids
       ids_function_name =
@@ -95,6 +96,7 @@ module Models
 
     def self.belongs_to(name, options = {})
       super
+      field_names << name
 
       id_function_name = "#{name}_id".to_sym
 

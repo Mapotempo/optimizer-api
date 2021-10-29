@@ -970,7 +970,7 @@ module Wrappers
               activity.timewindows.each{ |tw| tw.end += activity.duration if tw&.end }
               activity.additional_value = 0
               activity.duration = 0
-              activity.setup_duration = 0
+              activity.setup_duration += activity.duration # We expect the first duplicate service to be placed first
 
               # inserting the remaining parts of a multipart service should be of highest priority
               new_service.priority = 0 # 0 is the highest priority
@@ -1041,18 +1041,19 @@ module Wrappers
             result.unassigned << Models::Solution::Step.new(service)
           else
             # replace the planned one(s) into one single unexpanded original service
-            first_exp_ser_step = nil
-            last_exp_ser_step = nil
-            step_info = nil
-            insert_location = nil
-            deleted_exp_ser_count = 0
             result.routes.each{ |route|
-              route.steps.delete_if.with_index{ |step, index|
-                if step.id == service.original_id
+              step_info = nil
+              first_exp_ser_step = nil
+              last_exp_ser_step = nil
+              insert_location = nil
+              deleted_exp_ser_count = 0
+              route.steps.delete_if.with_index{ |step_object, index|
+                if step_object.id == service.original_id
+
                   insert_location ||= index
-                  step_info ||= step.info
-                  first_exp_ser_step ||= step # first_exp_ser_step has the travel and timing info
-                  last_exp_ser_step = step # last_exp_ser_step has the quantity info
+                  step_info ||= step_object.info
+                  first_exp_ser_step ||= step_object # first_exp_ser_step has the travel and timing info
+                  last_exp_ser_step = step_object # last_exp_ser_step has the quantity info
                   deleted_exp_ser_count += 1
                   true
                 elsif deleted_exp_ser_count == planned_exp_ser_count
@@ -1062,7 +1063,7 @@ module Wrappers
 
               next unless insert_location # expanded activity(ies) of service is found in this route
 
-              step = Models::Solution::Step.new(service, loads: [], info: step_info)
+              step_object = Models::Solution::Step.new(service, loads: [], info: step_info)
 
               current_firsts = Hash.new { 0 }
               current_lasts = Hash.new { 0 }
@@ -1078,13 +1079,15 @@ module Wrappers
               end
               vrp.units.map{ |unit|
                 Models::Solution::Load.new(
-                  quantity: Models::Quantity.new(unit: unit,
-                                       value: current_lasts[unit.id] - current_firsts[unit.id]),
+                  quantity: Models::Quantity.new(
+                    unit: unit,
+                    value: current_lasts[unit.id] - current_firsts[unit.id]
+                  ),
                   current: current_firsts[unit.id]
                 )
               }
 
-              route.steps.insert(insert_location, step)
+              result.insert_step(vrp, route, step_object, insert_location)
 
               break
             }
@@ -1347,7 +1350,7 @@ module Wrappers
           }
         }
 
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
@@ -1359,14 +1362,14 @@ module Wrappers
         }
       when :rewind
         # take it back in case in dicho and there will be re-optimization
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
 
         vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
-          setup_duration = service_group.first[:simplified_setup_duration].to_i
+          setup_duration = service_group.first.activity[:simplified_setup_duration].to_i
 
           next if setup_duration.zero?
 
@@ -1381,8 +1384,8 @@ module Wrappers
           }
 
           service_group.each{ |service|
-            service.setup_duration = service[:simplified_setup_duration]
-            service[:simplified_setup_duration] = nil
+            service.activity.setup_duration = service.activity[:simplified_setup_duration]
+            service.activity[:simplified_setup_duration] = nil
           }
         }
 
@@ -1396,12 +1399,14 @@ module Wrappers
         # patches the result
         # the travel_times need to be decreased and setup_duration need to be increased by
         # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless result.routes.any?{ |route|
+          route.steps.any?{ |step| step.activity[:simplified_setup_duration] }
+        }
 
         simplification_active = true
 
         vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
-        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point }
+        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point.id }
 
         overall_total_travel_time_correction = 0
         result.routes.each{ |route|
@@ -1410,18 +1415,19 @@ module Wrappers
           additional_setup = vehicle[:simplified_additional_setup].to_i
 
           total_travel_time_correction = 0
-          route.steps.each{ |step|
-            next if step.info.travel_time.to_i.zero?
+          route.steps.each{ |step_object|
+            next if step_object.info.travel_time.to_i.zero? || services_grouped_by_point_id[step_object.activity.point_id].nil?
 
-            setup_duration = services_grouped_by_point_id[step.activity.point_id].first[:simplified_setup_duration].to_i
+            setup_duration = step_object.activity[:simplified_setup_duration].to_i
 
             next if setup_duration.zero?
 
             time_correction = coef_setup * setup_duration + additional_setup
 
             total_travel_time_correction += time_correction
-            step.activity.setup_duration = time_correction.round
-            step.info.travel_time -= step.activity.setup_duration
+            step_object.activity.setup_duration = time_correction.round
+            step_object.info.travel_time -= time_correction
+            step_object.activity[:simplified_setup_duration] = nil
           }
 
           overall_total_travel_time_correction += total_travel_time_correction
@@ -1429,10 +1435,10 @@ module Wrappers
         }
         result.info.total_travel_time -= overall_total_travel_time_correction.round
 
-        result.unassigned.each{ |activity|
-          setup_duration = services_grouped_by_point_id[activity.activity.point.id].first[:simplified_setup_duration].to_i
+        result.unassigned.each{ |step_object|
+          setup_duration = step_object.activity[:simplified_setup_duration].to_i
 
-          activity.activity.setup_duration = setup_duration
+          step_object.activity.setup_duration = setup_duration
         }
       else
         raise 'Unknown :mode option'

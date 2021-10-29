@@ -56,17 +56,19 @@ module Parsers
       dimensions << :value if matrix&.value
 
       total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
-      @route.steps.each{ |activity|
-        matrix_index = activity.activity.point&.matrix_index
+      @route.steps.each{ |step_object|
+        matrix_index = step_object.activity.point&.matrix_index
         if previous_index && matrix_index
           dimensions.each{ |dimension|
-            activity.info.send("travel_#{dimension}=", matrix.send(dimension)[previous_index][matrix_index])
-            total[dimension] += activity.info.send("travel_#{dimension}".to_sym).round
-            activity.info.current_distance = total[dimension].round if dimension == :distance
+            unless step_object.info.send("travel_#{dimension}".to_sym)
+              step_object.info.send("travel_#{dimension}=", matrix.send(dimension)[previous_index][matrix_index])
+            end
+            total[dimension] += step_object.info.send("travel_#{dimension}".to_sym).round
+            step_object.info.current_distance = total[dimension].round if dimension == :distance
           }
         end
 
-        previous_index = matrix_index if activity.type != :rest
+        previous_index = matrix_index if step_object.type != :rest
       }
 
       if @route.info.end_time && @route.info.start_time
@@ -115,19 +117,19 @@ module Parsers
       }
     end
 
-    def self.compute_time_info(step, previous_departure, travel_time)
+    def self.compute_time_info(step_object, previous_departure, travel_time)
       earliest_arrival =
         [
-          step.activity.timewindows&.find{ |tw| (tw.end || 2**32) > previous_departure }&.start || 0,
+          step_object.activity.timewindows&.find{ |tw| (tw.end || 2**32) > previous_departure }&.start || 0,
           previous_departure + travel_time
         ].max || 0
       if travel_time > 0
-        earliest_arrival += step.activity.setup_duration * @route.vehicle.coef_setup + @route.vehicle.additional_setup
+        earliest_arrival += step_object.activity.setup_duration * @route.vehicle.coef_setup + @route.vehicle.additional_setup
       end
-      step.info.begin_time = earliest_arrival
-      step.info.end_time = earliest_arrival +
-                           (step.activity.duration * @route.vehicle.coef_service + @route.vehicle.additional_service)
-      step.info.departure_time = step.info.end_time
+      step_object.info.begin_time = earliest_arrival
+      step_object.info.end_time = earliest_arrival +
+        (step_object.activity.duration * @route.vehicle.coef_service + @route.vehicle.additional_service)
+      step_object.info.departure_time = step_object.info.end_time
       earliest_arrival
     end
 
@@ -138,9 +140,9 @@ module Parsers
       loc_index = nil
       consumed_travel_time = 0
       consumed_setup_time = 0
-      @route.steps.each.with_index{ |step, index|
+      @route.steps.each.with_index{ |step_object, index|
         used_travel_time = 0
-        if step.type == :rest
+        if step_object.type == :rest
           if loc_index.nil?
             next_index = @route.steps[index..-1].index{ |a| a.type != :rest }
             loc_index = index + next_index if next_index
@@ -149,21 +151,21 @@ module Parsers
           shared_travel_time = loc_index && @route.steps[loc_index].info.travel_time || 0
           potential_setup = shared_travel_time > 0 && @route.steps[loc_index].activity.setup_duration || 0
           left_travel_time = shared_travel_time - consumed_travel_time
-          used_travel_time = [step.info.begin_time - previous_end, left_travel_time].min
+          used_travel_time = [step_object.info.begin_time - previous_end, left_travel_time].min
           consumed_travel_time += used_travel_time
           # As setup is considered as a transit value, it may be performed before a rest
-          consumed_setup_time  += [step.info.begin_time - previous_end - used_travel_time, potential_setup].min
+          consumed_setup_time  += [step_object.info.begin_time - previous_end - used_travel_time, potential_setup].min
         else
-          used_travel_time = (step.info.travel_time || 0) - consumed_travel_time - consumed_setup_time
+          used_travel_time = (step_object.info.travel_time || 0) - consumed_travel_time - consumed_setup_time
           consumed_travel_time = 0
           consumed_setup_time = 0
           loc_index = nil
         end
-        considered_setup = step.info.travel_time&.positive? &&
-                           (step.activity.setup_duration.to_i - consumed_setup_time) || 0
+        considered_setup = step_object.info.travel_time&.positive? &&
+                           (step_object.activity.setup_duration.to_i - consumed_setup_time) || 0
         arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
-        step.info.waiting_time = step.info.begin_time - arrival_time
-        previous_end = step.info.end_time || step.info.begin_time
+        step_object.info.waiting_time = step_object.info.begin_time - arrival_time
+        previous_end = step_object.info.end_time || step_object.info.begin_time
       }
     end
 

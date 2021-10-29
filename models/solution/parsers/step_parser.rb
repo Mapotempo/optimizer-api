@@ -20,6 +20,14 @@ require './models/base'
 module Parsers
   class ServiceParser
     def self.parse(service, options)
+      activity_hash = Models::Activity.field_names.map{ |key|
+        activity = options[:index] && service.activities[options[:index]] || service.activity
+        [key, activity.send(key)]
+      }.to_h
+
+      dup_activity = Models::Activity.new(activity_hash)
+      dup_activity[:simplified_setup_duration] = service.activity[:simplified_setup_duration]
+
       {
         id: service.original_id,
         service_id: options[:service_id] || service.id,
@@ -28,7 +36,7 @@ module Parsers
         type: service.type,
         alternative: options[:index],
         loads: build_loads(service, options),
-        activity: options[:index] && service.activities[options[:index]] || service.activity,
+        activity: dup_activity,
         info: options[:info] || Models::Solution::Step::Info.new({}),
         reason: options[:reason],
         skills: options[:skills] || service.skills,
@@ -68,11 +76,16 @@ module Parsers
 
   class RestParser
     def self.parse(rest, options)
+      rest_hash = Models::Rest.field_names.map{ |key|
+        [key, rest.send(key)]
+      }.to_h
+
+      dup_rest = Models::Rest.new(rest_hash)
       {
         id: rest.id,
         rest_id: rest.id,
         type: :rest,
-        activity: rest,
+        activity: dup_rest,
         info: options[:info] || Models::Solution::Step::Info.new({})
       }
     end

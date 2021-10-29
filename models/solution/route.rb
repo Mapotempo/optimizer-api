@@ -54,10 +54,8 @@ module Models
       end
 
       def insert_step(vrp, step_object, index)
-        matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
         steps.insert(index, step_object)
         shift_route_times(step_object.activity.duration, index)
-        Parsers::RouteParser.parse(self, vrp, matrix)
       end
 
       def shift_route_times(shift_amount, shift_start_index = 0)
