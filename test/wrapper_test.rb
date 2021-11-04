@@ -2970,7 +2970,7 @@ class WrapperTest < Minitest::Test
 
   def test_split_independent_vrps_with_useless_vehicle
     vrp = TestHelper.create(VRP.independent_skills)
-    vrp.vehicles << Models::Vehicle.create(id: 'useless_vehicle')
+    vrp.vehicles << Models::Vehicle.create(id: 'useless_vehicle', matrix_id: 'matrix_0')
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal vrp.vehicles.size, solutions[0].routes.size,
                  'All vehicles should appear in result, even though they can serve no service'

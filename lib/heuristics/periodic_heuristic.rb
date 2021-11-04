@@ -1191,7 +1191,7 @@ module Wrappers
     end
 
     def prepare_output_and_collect_routes(vrp)
-      routes = []
+      vrp_routes = []
       solution_routes = []
 
       compute_visits_number
@@ -1205,7 +1205,7 @@ module Wrappers
           }
           computed_steps, _start_time, _end_time = get_activities(day, route_data, vrp_vehicle)
 
-          routes << {
+          vrp_routes << {
             vehicle_id: vrp_vehicle.id,
             mission_ids: computed_steps.collect{ |stop| stop[:service_id] }.compact
           }
@@ -1223,7 +1223,7 @@ module Wrappers
                                       elapsed: (Time.now - @starting_time) * 1000) # ms
       solution.parse(vrp)
       vrp.preprocessing_heuristic_result = solution
-      routes
+      vrp_routes
     end
 
     def select_point(insertion_costs, empty_route)

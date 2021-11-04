@@ -21,11 +21,11 @@ module Models
   class Solution < Base
     class Route < Base
       class Info < Base
-        field :total_time, default: 0
-        field :total_travel_time, default: 0
-        field :total_waiting_time, default: 0
+        field :total_time
+        field :total_travel_time
+        field :total_waiting_time
 
-        field :total_distance, default: 0
+        field :total_distance
 
         field :total_travel_value
 

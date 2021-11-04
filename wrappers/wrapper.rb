@@ -545,8 +545,8 @@ module Wrappers
           step_id = vrp.schedule? ? "#{service.id}_#{index + 1}_#{service.visits_number}" : service.id
           unfeasible[service.id] << Models::Solution::Step.new(
             service,
-            id: step_id,
-            service_id: service.id,
+            id: service.id,
+            service_id: step_id,
             reason: reason
           )
         }

@@ -397,6 +397,7 @@ module Interpreters
         remove_bad_skills(sub_service_vrp, solution_loop)
 
         Helper.replace_routes_in_result(solution, solution_loop)
+        solution.parse(vrp)
         sub_solutions << solution_loop
       end
       new_routes = build_initial_routes(sub_solutions)

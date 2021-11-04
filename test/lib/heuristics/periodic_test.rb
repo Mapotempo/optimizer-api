@@ -777,9 +777,9 @@ class HeuristicTest < Minitest::Test
 
       vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 1, 19), end: Date.new(2021, 1, 24)} }
 
-      result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      assert_equal 4, result[:unassigned].size
-      assert(result[:unassigned].all?{ |u| u[:reason] == 'First and last possible days do not allow this service planification' })
+      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      assert_equal 4, solutions[0].unassigned.size
+      assert(solutions[0].unassigned.all?{ |u| u.reason == 'First and last possible days do not allow this service planification' })
     end
   end
 end

@@ -24,9 +24,9 @@ module Models
         field :day_week_num
         field :day_week
 
-        field :travel_distance, default: 0
-        field :travel_time, default: 0
-        field :travel_value, default: 0
+        field :travel_distance
+        field :travel_time
+        field :travel_value
 
         field :waiting_time, default: 0
         field :begin_time, default: 0

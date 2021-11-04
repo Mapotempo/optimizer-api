@@ -58,15 +58,17 @@ module Parsers
       total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
       @route.steps.each{ |step_object|
         matrix_index = step_object.activity.point&.matrix_index
-        if previous_index && matrix_index
-          dimensions.each{ |dimension|
+        dimensions.each{ |dimension|
+          if previous_index && matrix_index
             unless step_object.info.send("travel_#{dimension}".to_sym)
               step_object.info.send("travel_#{dimension}=", matrix.send(dimension)[previous_index][matrix_index])
             end
             total[dimension] += step_object.info.send("travel_#{dimension}".to_sym).round
             step_object.info.current_distance = total[dimension].round if dimension == :distance
-          }
-        end
+          else
+            step_object.info.send("travel_#{dimension}=", 0)
+          end
+        }
 
         previous_index = matrix_index if step_object.type != :rest
       }
@@ -88,7 +90,9 @@ module Parsers
       dimensions.each{ |dimension|
         next unless matrix&.send(dimension)&.any?
 
-        next if @route.steps.any?{ |step| step.info.send("travel_#{dimension}") > 0 }
+        next if @route.steps.any?{ |step|
+          step.info.send("travel_#{dimension}") && step.info.send("travel_#{dimension}") > 0
+        }
 
         previous_departure = dimension == :time ? @route.steps.first.info.begin_time : 0
         previous_index = nil
