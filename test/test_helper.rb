@@ -201,7 +201,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
             WebMock.enable_net_connect!
             matrices =
-              vrp.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+              vrp.router.send(:__minitest_any_instance_stub__matrix, url, mode, dimensions, row, column, options) # call original method
             WebMock.disable_net_connect!
             write_in_dump <<
               { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }
