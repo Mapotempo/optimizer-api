@@ -35,6 +35,15 @@ module Models
         field :departure_time, default: 0
 
         field :current_distance, default: 0
+
+        def set_schedule(vrp, vehicle)
+          return unless vrp.schedule?
+
+          size_weeks = (vrp.configuration.schedule.range_indices[:end].to_f / 7).ceil.to_s.size
+          week = Helper.string_padding(vehicle.global_day_index / 7 + 1, size_weeks)
+          self.day_week_num = "#{vehicle.global_day_index % 7}_#{week}"
+          self.day_week = "#{OptimizerWrapper::WEEKDAYS[vehicle.global_day_index % 7]}_#{week}"
+        end
       end
     end
   end

@@ -497,7 +497,7 @@ module Interpreters
         remove_poorly_populated_routes(vrp, solution, 0.1)
       end
 
-      used_vehicle_ids = solution.routes.map{ |r| r.vehicle.id }
+      used_vehicle_ids = solution.routes.map{ |r| r.vehicle.original_id }.uniq
       forcing_vehicle_relations = split_solve_data[:original_vrp].relations.select{ |r|
         FORCING_RELATIONS.include?(r.type) && r.linked_vehicle_ids&.any?
       }

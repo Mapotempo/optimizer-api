@@ -221,14 +221,23 @@ module OptimizerWrapper
         end
       }
 
+      # vrp.periodic_heuristic check the first_solution_stategy which may change right after periodic heuristic
+      periodic_heuristic_flag = vrp.periodic_heuristic?
       # TODO: refactor with dedicated class
       if vrp.schedule?
         periodic = Interpreters::PeriodicVisits.new(vrp)
         vrp = periodic.expand(vrp, job, &block)
-        optim_solution = vrp.configuration.preprocessing.heuristic_result if vrp.periodic_heuristic?
+        if vrp.periodic_heuristic?
+          optim_solution = vrp.configuration.preprocessing.heuristic_result
+          if vrp.configuration.resolution.solver
+            first_solution_strategy = vrp.configuration.preprocessing.first_solution_strategy
+            first_solution_strategy.delete('periodic')
+            first_solution_strategy << 'global_cheapest_arc' if first_solution_strategy.empty?
+          end
+        end
       end
 
-      if vrp.configuration.resolution.solver && !vrp.periodic_heuristic?
+      if vrp.configuration.resolution.solver && (!periodic_heuristic_flag || vrp.services.size < 200)
         block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.configuration.preprocessing.cluster_threshold.to_f}) ", nil, nil, nil) if vrp.configuration.preprocessing.cluster_threshold.to_f.positive?
         optim_solution = clique_cluster(vrp, vrp.configuration.preprocessing.cluster_threshold, vrp.configuration.preprocessing.force_cluster) { |cliqued_vrp|
           time_start = Time.now
@@ -280,6 +289,15 @@ module OptimizerWrapper
     end
 
     if optim_solution # Job might have been killed
+      if periodic_heuristic_flag
+        periodic_solution = vrp.configuration.preprocessing.heuristic_result
+
+        # TODO: uniformize cost computation to define a comparison operator between solutions
+        if periodic_solution.unassigned_stops.size < optim_solution.unassigned_stops.size
+          optim_solution = periodic_solution
+        end
+      end
+
       Cleanse.cleanse(vrp, optim_solution)
       optim_solution.name = vrp.name
       optim_solution.configuration.csv = vrp.configuration.restitution.csv
