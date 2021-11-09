@@ -48,11 +48,11 @@ module Parsers
 
     def self.compute_result_total_dimensions_and_round_route_stats(solution)
       %i[total_time total_travel_time total_travel_value total_distance total_waiting_time].each{ |stat_symbol|
-        next unless solution.routes.all?{ |r| r.info.send stat_symbol }
+        next if solution.routes.none?{ |r| r.info.send stat_symbol }
 
         solution.info.send("#{stat_symbol}=", solution.routes.collect{ |r|
           r.info.send(stat_symbol)
-        }.reduce(:+))
+        }.compact.reduce(:+))
       }
     end
   end
