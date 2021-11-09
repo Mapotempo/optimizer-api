@@ -19,6 +19,8 @@ require './models/base'
 
 module Models
   class Point < Base
+    include PointAsJson
+
     field :matrix_index
     field :associated_stops, default: []
 

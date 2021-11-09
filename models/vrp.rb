@@ -25,6 +25,8 @@ require './models/concerns/periodic_service'
 
 module Models
   class Vrp < Base
+    include IndependentAsJson
+    include VrpAsJson
     include DistanceMatrix
     include ValidateData
     include ExpandData

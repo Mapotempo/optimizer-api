@@ -17,6 +17,7 @@
 #
 require 'active_hash'
 require 'active_model/validations/numericality'
+require './models/concerns/as_json'
 require './models/concerns/vrp_result'
 
 module Models
@@ -31,6 +32,8 @@ module Models
     include Serializers::JSONResult
 
     include ActiveHash::Associations
+
+    include IndependentAsJson
 
     def initialize(hash)
       super(hash.each_with_object({}){ |(k, v), memo|

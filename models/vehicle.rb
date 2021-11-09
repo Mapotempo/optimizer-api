@@ -19,6 +19,10 @@ require './models/base'
 
 module Models
   class Vehicle < Base
+    include ContainedPointAsJson
+    include TimewindowAsJson
+    include VehicleAsJson
+
     field :original_id, default: nil
     field :cost_fixed, default: 0
     field :cost_distance_multiplier, default: 0

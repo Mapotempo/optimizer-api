@@ -610,8 +610,9 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_poorly_populated_route_limit_result
       vrp = TestHelper.load_vrp(self, fixture_file: 'max_split_functionality')
-      result = JSON.parse(File.read('test/fixtures/max_split_poorly_populated_route_limit_result.json'))
-      solution = Models::Solution.create(result)
+      result = JSON.parse(File.read('test/fixtures/max_split_poorly_populated_route_limit_result.json'), symbolize_names: true)
+
+      solution = Models::Solution.new(result)
       Interpreters::SplitClustering.remove_poor_routes(vrp, solution)
 
       assert_equal 0, solution.unassigned.size, 'remove_poor_routes should not remove any services from this result'

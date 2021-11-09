@@ -19,6 +19,8 @@ require './models/base'
 
 module Models
   class Quantity < Base
+    include LoadAsJson
+
     field :fill, default: false
     field :empty, default: false
     field :value, default: 0

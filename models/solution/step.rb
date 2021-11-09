@@ -21,6 +21,8 @@ require './models/solution/parsers/step_parser'
 module Models
   class Solution < Base
     class Step < Base
+      include SolutionStepAsJson
+
       # field :point_id
       field :id
       field :type

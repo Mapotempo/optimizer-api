@@ -20,6 +20,8 @@ require './models/base'
 module Models
   class Solution < Base
     class Route < Base
+      include SolutionRouteAsJson
+
       field :geometry
 
       has_many :steps, class_name: 'Models::Solution::Step'

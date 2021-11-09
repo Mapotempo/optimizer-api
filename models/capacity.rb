@@ -19,6 +19,8 @@ require './models/base'
 
 module Models
   class Capacity < Base
+    include LoadAsJson
+
     field :limit
     field :initial
     field :overload_multiplier

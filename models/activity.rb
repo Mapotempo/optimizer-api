@@ -19,6 +19,9 @@ require './models/base'
 
 module Models
   class Activity < Base
+    include ContainedPointAsJson
+    include TimewindowAsJson
+
     field :duration, default: 0
     field :setup_duration, default: 0
     field :additional_value, default: 0

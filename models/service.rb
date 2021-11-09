@@ -19,6 +19,8 @@ require './models/base'
 
 module Models
   class Service < Base
+    include ServiceAsJson
+
     field :original_id, default: nil
 
     field :priority, default: 4
