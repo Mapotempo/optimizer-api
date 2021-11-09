@@ -710,6 +710,7 @@ class WrapperTest < Minitest::Test
             point_id: "point_#{i}",
             late_multiplier: 3,
             timewindows: [{
+              maximum_lateness: 10,
               start: 1,
               end: 2
             }]
@@ -2549,13 +2550,23 @@ class WrapperTest < Minitest::Test
     assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'All services (3) should be eliminated'
 
     vrp[:vehicles].first[:cost_late_multiplier] = 1
+    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'All services (3) should be eliminated since maximum_lateness is too low even tough tardiness is allowed'
+
+    vrp[:vehicles].first[:timewindow][:maximum_lateness] = 10 # eliminates no services
     assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'No services should be eliminated due to vehicle timewindow since tardiness is allowed'
 
+    vrp[:vehicles].first[:timewindow][:maximum_lateness] = 3 # eliminates service 2 and 3 but not 1
+    assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'Only Services 2 and 3 should be eliminated'
+
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 3 }]
+    vrp[:vehicles].first[:timewindow][:maximum_lateness] = 10
     assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'First service should be eliminated due its timewindow'
 
     vrp[:services].first[:activity][:late_multiplier] = 1
     assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'First service should not be eliminated due to its timewindow since tardiness is allowed'
+
+    vrp[:services].first[:activity][:timewindows].first[:maximum_lateness] = 0
+    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size, 'First service should be eliminated due to its timewindow even if tardiness is allowed since maximum_lateness is not enough'
   end
 
   def test_return_empty_if_all_eliminated

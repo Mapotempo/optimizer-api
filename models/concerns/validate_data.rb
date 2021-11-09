@@ -35,6 +35,7 @@ module ValidateData
 
     check_data_globally(schedule)
     check_matrices
+    check_rests
     check_vehicles(schedule, periodic_heuristic)
     check_relations(periodic_heuristic)
     check_services(schedule)
@@ -105,6 +106,18 @@ module ValidateData
         )
       end
     end
+  end
+
+  def check_rests
+    used_rest_ids = @hash[:vehicles].flat_map{ |v| v[:rest_ids] }
+    used_rest_ids.compact!
+
+    used_rest_ids.uniq.each{ |rest_id|
+      corresponding = @hash[:rests].find{ |r| r[:id] == rest_id }
+      next unless corresponding && corresponding[:timewindows].to_a.size > 1
+
+      raise OptimizerWrapper::UnsupportedProblemError.new('Rests can only have one timewindow')
+    }
   end
 
   def check_vehicles(schedule, periodic_heuristic)

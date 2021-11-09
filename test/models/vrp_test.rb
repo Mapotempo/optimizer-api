@@ -393,5 +393,28 @@ module Models
       assert_equal [1, 2, 4], created_vrp.services[3].first_possible_days
       assert_equal [1, 2, 4, 5], created_vrp.services[4].first_possible_days
     end
+
+    def test_validate_rest_timewindows
+      problem = VRP.basic
+      problem[:rests] = [{
+        id: 'rest',
+        timewindows: [{ start: 0, end: 10 }, {start: 20, end: 15 }]
+      }]
+
+      TestHelper.create(problem) # this should not raise because no vehicle has this rest
+
+      problem[:vehicles].first[:rest_ids] = ['rest']
+      assert_raises OptimizerWrapper::UnsupportedProblemError do
+        TestHelper.create(problem)
+      end
+
+      problem[:rests].first[:timewindows] = [{ start: 0, end: 10 }]
+      TestHelper.create(problem) # this should not raise because there is only one timewindow for this rest
+
+      problem[:vehicles].first[:rest_ids] = ['unknown_rest']
+      assert_raises ActiveHash::RecordNotFound do
+        TestHelper.create(problem)
+      end
+    end
   end
 end

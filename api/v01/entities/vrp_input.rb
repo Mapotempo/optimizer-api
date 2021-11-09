@@ -165,7 +165,7 @@ module VrpConfiguration
   end
 
   params :vrp_request_resolution do
-    optional(:duration, type: Integer, allow_blank: false, desc: 'Maximum duration of resolution')
+    optional(:duration, type: Integer, values: ->(v) { v.positive? }, allow_blank: false, desc: 'Maximum duration of resolution')
     optional(:iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvment from the best solution already found')
     optional(:stable_iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
@@ -293,7 +293,7 @@ module VrpMisc
     optional(:skills, type: Array[Symbol],
                       coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val&.map(&:to_sym) },
                       desc: 'Particular abilities required by a vehicle to perform this subtour')
-    optional(:duration, type: Integer, desc: 'Maximum subtour duration')
+    optional(:duration, type: Integer, values: ->(v) { !v.negative? }, desc: 'Maximum subtour duration')
     optional(:transmodal_stops, type: Array, desc: 'Point where the vehicles can park and start the subtours') do
       use :vrp_request_point
     end
@@ -315,8 +315,9 @@ module VrpMissions
 
   params :vrp_request_rest do
     requires(:id, type: String, allow_blank: false)
+    requires(:duration, type: Integer, values: ->(v) { !v.negative? }, default: 0, desc: 'Duration of the vehicle rest', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     requires(:duration, type: Integer, default: 0, desc: 'Duration of the vehicle rest', coerce_with: ->(value) { ScheduleType.type_cast(value) })
-    optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin') do
+    optional(:timewindows, type: Array, desc: 'Time slot while the rest may begin. At most one timewindow per rest is supported.') do
       use :vrp_request_timewindow
     end
     optional(:late_multiplier, type: Float, desc: 'Late multiplier applied for this rest')
@@ -430,9 +431,9 @@ module VrpShared
 
   params :vrp_request_activity do
     optional(:position, type: Symbol, default: :neutral, values: [:neutral, :always_first, :always_middle, :always_last, :never_first, :never_middle, :never_last], desc: 'Provides an indication on when to do this service among whole route', coerce_with: ->(value) { value.to_sym })
-    optional(:duration, type: Integer, default: 0, desc: 'Time while the current activity stands until it\'s over (in seconds)', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:duration, type: Integer, values: ->(v) { !v.negative? }, default: 0, desc: 'Time (in seconds) while the current activity stands until it\'s over', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
-    optional(:setup_duration, type: Integer, default: 0, desc: 'Time at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.type_cast(value) })
+    optional(:setup_duration, type: Integer, values: ->(v) { !v.negative? }, default: 0, desc: 'Time (in seconds) at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:late_multiplier, type: Float, desc: '(ORtools only) Overrides the late_multiplier defined at the vehicle level')
     optional(:timewindow_start_day_shift_number, documentation: { hidden: true }, type: Integer, desc: '[ DEPRECATED ]')
     requires(:point_id, type: String, allow_blank: false, desc: 'Reference to the associated point')
@@ -483,6 +484,12 @@ module VrpShared
              type: Integer, values: 0..6,
              desc: '(Schedule only) Day index of the current timewindow within the periodic week,
                     (monday = 0, ..., sunday = 6)')
+    optional(:maximum_lateness,
+             type: Integer, values: ->(v) { !v.negative? }, allow_blank: true, # nil is auto
+             desc: 'The maximum allowed timewindow violation in seconds. It is taken into account only for the
+                    activities with a positive late_multiplier and the vehicles with a positive cost_late_multiplier.
+                    By default, it is equal to the %25 of the timewindow -- i.e., round(0.25 * (end - start)).
+                    Not taken into account within periodic heuristic.')
     at_least_one_of :start, :end, :day_index
   end
 
@@ -501,9 +508,9 @@ module VrpVehicles
     requires(:id, type: String, allow_blank: false)
 
     optional(:coef_setup, type: Float, desc: 'Coefficient applied to every setup duration defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
-    optional(:additional_setup, type: Float, desc: 'Constant additional setup duration for all setup defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
+    optional(:additional_setup, type: Integer, values: ->(v) { !v.negative? }, desc: 'Constant additional setup duration (in seconds) for all setup defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
     optional(:coef_service, type: Float, desc: 'Coefficient applied to every service duration defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
-    optional(:additional_service, type: Float, desc: 'Constant additional service time for all travel defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
+    optional(:additional_service, type: Integer, values: ->(v) { !v.negative? }, desc: 'Constant additional service time (in seconds) for all travel defined in the tour, for this vehicle. Not taken into account within periodic heuristic.')
     optional(:force_start, type: Boolean, documentation: { hidden: true }, desc: '[ DEPRECATED ]')
     optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open,
       as late as possible or let vehicle start at any time. Not available with periodic heuristic, it will always leave as soon as possible.')
@@ -513,9 +520,9 @@ module VrpVehicles
 
     optional(:duration, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:overall_duration, type: Integer, values: ->(v) { v.positive? }, documentation: { hidden: true }, desc: '(Schedule only) If schedule covers several days, maximum work duration over whole period. Not available with periodic heuristic.', coerce_with: ->(value) { ScheduleType.type_cast(value) })
-    optional(:distance, type: Integer, desc: 'Maximum tour distance. Not available with periodic heuristic.')
-    optional(:maximum_ride_time, type: Integer, desc: 'Maximum ride duration between two route activities')
-    optional(:maximum_ride_distance, type: Integer, desc: 'Maximum ride distance between two route activities')
+    optional(:distance, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum tour distance. Not available with periodic heuristic.')
+    optional(:maximum_ride_time, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum ride duration between two route activities')
+    optional(:maximum_ride_distance, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum ride distance between two route activities')
     optional :skills, type: Array[Array[Symbol]],
                       coerce_with: ->(val) {
                         val.is_a?(String) ?
