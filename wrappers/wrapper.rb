@@ -1438,7 +1438,7 @@ module Wrappers
         # simplifies the constraint
         return nil if vrp.vehicles.group_by(&:matrix_id).any?{ |_m_id, v_group|
                         v_group.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size > 1
-                      }
+                      } || vrp.services.any?{ |s| s.activity.nil? }
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
         vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
@@ -1469,7 +1469,7 @@ module Wrappers
           }
         }
 
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
@@ -1481,14 +1481,14 @@ module Wrappers
         }
       when :rewind
         # take it back in case in dicho and there will be re-optimization
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
 
         vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
-          setup_duration = service_group.first[:simplified_setup_duration].to_i
+          setup_duration = service_group.first.activity[:simplified_setup_duration].to_i
 
           next if setup_duration.zero?
 
@@ -1503,8 +1503,8 @@ module Wrappers
           }
 
           service_group.each{ |service|
-            service.setup_duration = service[:simplified_setup_duration]
-            service[:simplified_setup_duration] = nil
+            service.activity.setup_duration = service.activity[:simplified_setup_duration]
+            service.activity[:simplified_setup_duration] = nil
           }
         }
 
@@ -1518,12 +1518,12 @@ module Wrappers
         # patches the result
         # the travel_times need to be decreased and setup_duration need to be increased by
         # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
         vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
-        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point }
+        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point_id }
 
         overall_total_travel_time_correction = 0
         result[:routes].each{ |route|
@@ -1533,9 +1533,9 @@ module Wrappers
 
           total_travel_time_correction = 0
           route[:activities].each{ |activity|
-            next if activity[:travel_time].to_i.zero?
+            next if activity[:service_id].nil? || activity[:travel_time].to_i.zero?
 
-            setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+            setup_duration = services_grouped_by_point_id[activity[:point_id]].first.activity[:simplified_setup_duration].to_i
 
             next if setup_duration.zero?
 
@@ -1552,7 +1552,7 @@ module Wrappers
         result[:total_travel_time] -= overall_total_travel_time_correction.round
 
         result[:unassigned].each{ |activity|
-          setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+          setup_duration = services_grouped_by_point_id[activity[:point_id]].first.activity[:simplified_setup_duration].to_i
 
           activity[:detail][:setup_duration] = setup_duration
         }
