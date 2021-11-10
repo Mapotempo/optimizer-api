@@ -3377,6 +3377,28 @@ class WrapperTest < Minitest::Test
     assert there_is_a_skipped_trip_when_simplification_is_off, assert_msg
   end
 
+  def test_protobuf_receives_correct_simplified_complex_shipments
+    vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
+
+    assert_raises OptimizerWrapper::JobKilledError do
+      OptimizerWrapper.config[:services][:ortools].stub(
+        :run_ortools,
+        proc{ |problem, _vrp, _thread_proc, _block|
+          # there are 7 multi-pickup-single-delivery P&Ds so the stats should be as follows:
+          err_msg = 'Simplified multi-pickup-single-delivery p&d relation count is not correct'
+          assert_equal 7, (problem.relations.count{ |r| r.type == 'sequence' }), err_msg
+          assert_equal 20, (problem.relations.count{ |r| r.type == 'shipment' }), err_msg
+          assert_equal 54, problem.relations.flat_map(&:linked_ids).size, err_msg
+          assert_equal 40, problem.relations.flat_map(&:linked_ids).uniq.size, err_msg
+
+          raise OptimizerWrapper::JobKilledError # Return "Job killed" to stop gracefully
+        }
+      ) do
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      end
+    end
+  end
+
   def test_simplify_complex_multi_pickup_or_delivery_shipments
     # check service count after simplification
     vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
