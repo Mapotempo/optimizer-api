@@ -1079,14 +1079,14 @@ module Wrappers
                                            shallow_copy: [:unit, :point])
             sequence_relation_ids << new_service.id
 
-            if index > 0
+            if index < shipment_relations.size - 1
               # all timing will be handled by the first service (of the sequence relation)
               # correct the TW.end for the succeeding services (so that they can start)
               activity = new_service.activity
               activity.timewindows.each{ |tw| tw.end += activity.duration if tw&.end }
               activity.additional_value = 0
+              activity.setup_duration += activity.duration
               activity.duration = 0
-              activity.setup_duration = 0
 
               # inserting the remaining parts of a multipart service should be of highest priority
               new_service.priority = 0 # 0 is the highest priority
@@ -1112,7 +1112,7 @@ module Wrappers
             expanded_services << new_service
           }
 
-          sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids)
+          sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids.reverse)
         }
 
         vrp[:simplified_complex_shipments] = {
@@ -1180,6 +1180,9 @@ module Wrappers
               }
 
               next unless insert_location # expanded activity(ies) of service is found in this route
+
+              # stop.. something went wrong if duplicated services are planned on different vehicles
+              raise 'Simplification cannot patch the result if duplicated services are planned on different vehicles' unless deleted_exp_ser_count == planned_exp_ser_count
 
               merged_activity = first_exp_ser_activity.merge(last_exp_ser_activity) { |key, first, last|
                 if key == :service_id

@@ -3399,38 +3399,35 @@ class WrapperTest < Minitest::Test
     end
   end
 
-  def test_simplify_complex_multi_pickup_or_delivery_shipments
-    # check service count after simplification
-    vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
-    service_count = vrp.services.size
-    OptimizerWrapper.config[:services][:demo].simplify_complex_multi_pickup_or_delivery_shipments(vrp)
-    assert_equal service_count + 7, vrp.services.size, 'simplify should have created 7 new services'
+  def test_simplified_complex_shipments_respect_the_original_relations
+    vrp = VRP.basic
 
-    # Solve WITHOUT simplification
-    function_called = false
-    result_wo_simplify = Wrappers::Wrapper.stub_any_instance(:simplify_complex_multi_pickup_or_delivery_shipments,
-                                                             proc{
-                                                               function_called = true
-                                                               nil
-                                                             }) do
-      vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    end
-    assert function_called, 'simplify_complex_multi_pickup_or_delivery_shipments should have been called'
-    # if there are no unassigned; maybe or-tools improved its performance
-    # and this simplification might not be necessary anymore,
-    # or this instance is too small and timing needs to be fixed.
-    # In any case, testing with a bigger instance might be necessary if the following condition fails regularly.
-    refute_empty result_wo_simplify[:unassigned], 'There should have been some unassigned'
+    vrp[:relations] = [
+      { type: :shipment, linked_ids: %w[service_1 service_3] },
+      { type: :shipment, linked_ids: %w[service_2 service_3] },
+    ]
 
-    # Solve WITH simplification
-    vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multipickup_singledelivery_shipments')
-    result_w_simplify = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_operator result_w_simplify[:unassigned].size, :<, result_wo_simplify[:unassigned].size,
-                    'Simplification should improve performance'
-    # if there are unassigned services; this might be due to computer performance
-    # but normally even 0.5 seconds is enough, so it might be due to a change in or-tools or optimizer-ortools
-    assert_empty result_w_simplify[:unassigned], 'Simplification should plan all services'
+    vrp[:vehicles] << vrp[:vehicles].first.merge({id: 'vehicle_2', cost_fixed: 1 })
+
+    # The matrix makes it so that if we ignore the complex shipment, serving s1 and s2 in two different vehicles is a
+    # lot cheaper (4) then serving them on one vehicle (102). So we verify if optim-api does the "right" thing even if
+    # it is inconvenient.
+    vrp[:matrices][0][:time] = [
+      [0, 1, 1, 1],
+      [1, 0, 100, 1], # pickup1 to pickup2 is hard
+      [1, 101, 0, 1], # pickup2 to pickup1 is hard
+      [1, 11, 10, 0]  # delivery to p1 and p2 are hard
+    ]
+    vrp = TestHelper.create(vrp)
+
+    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+
+    assert_empty result[:unassigned], 'There should be no unsigned services'
+    assert_equal 1, result[:routes].count{ |r| r[:activities].any?{ |a| a[:service_id] } }, 'All services must be assigned to one vehicle'
+
+    planned_order = result[:routes][0][:activities].map{ |a| a[:service_id] }.compact
+    feasible_orders = [%w[service_1 service_2 service_3], %w[service_2 service_1 service_3]]
+    assert_includes feasible_orders, planned_order, 'Complex shipment relation is violated'
   end
 
   def test_reject_when_unfeasible_timewindows
