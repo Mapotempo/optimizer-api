@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -18,19 +18,24 @@
 require './models/base'
 
 module Models
-  class Capacity < Base
-    include LoadAsJson
+  class Solution < Base
+    class Load < Base
+      include LoadAsJson
+      field :current, default: 0
 
-    field :limit
-    field :initial
-    field :overload_multiplier
+      belongs_to :quantity, class_name: 'Models::Quantity'
 
-    # ActiveHash doesn't validate the validator of the associated objects
-    # Forced to do the validation in Grape params
-    # validates_numericality_of :limit
-    # validates_numericality_of :initial
-    # validates_numericality_of :overload_multiplier, allow_nil: true
-
-    belongs_to :unit, class_name: 'Models::Unit'
+      def vrp_result(options = {})
+        hash = super(options)
+        hash.delete('quantity')
+        hash.delete('current')
+        hash['unit'] = quantity.unit_id
+        hash['label'] = quantity.unit.label
+        hash['value'] = quantity.value
+        hash['setup_value'] = quantity.setup_value
+        hash['current_load'] = current
+        hash
+      end
+    end
   end
 end

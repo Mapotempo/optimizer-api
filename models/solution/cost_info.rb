@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2016
+# Copyright © Mapotempo, 2020
 #
 # This file is part of Mapotempo.
 #
@@ -18,19 +18,29 @@
 require './models/base'
 
 module Models
-  class Capacity < Base
-    include LoadAsJson
+  class Solution < Base
+    class CostInfo < Base
+      field :fixed, default: 0
+      field :time, default: 0
+      field :distance, default: 0
+      field :value, default: 0
+      field :lateness, default: 0
+      field :overload, default: 0
 
-    field :limit
-    field :initial
-    field :overload_multiplier
+      def total
+        fixed + time + distance + value + lateness + overload
+      end
 
-    # ActiveHash doesn't validate the validator of the associated objects
-    # Forced to do the validation in Grape params
-    # validates_numericality_of :limit
-    # validates_numericality_of :initial
-    # validates_numericality_of :overload_multiplier, allow_nil: true
-
-    belongs_to :unit, class_name: 'Models::Unit'
+      def +(other)
+        CostInfo.create(
+          fixed: fixed + other.fixed,
+          time: time + other.time,
+          distance: distance + other.distance,
+          value: value + other.value,
+          lateness: lateness + other.lateness,
+          overload: overload + other.overload,
+        )
+      end
+    end
   end
 end

@@ -17,6 +17,8 @@
 #
 require 'active_hash'
 require 'active_model/validations/numericality'
+require './models/concerns/as_json'
+require './models/concerns/vrp_result'
 
 module Models
   def self.delete_all
@@ -27,8 +29,11 @@ module Models
     include ActiveModel::Serializers::JSON
     include ActiveModel::Validations
     include ActiveModel::Validations::HelperMethods
+    include Serializers::JSONResult
 
     include ActiveHash::Associations
+
+    include IndependentAsJson
 
     def initialize(hash)
       super(hash.each_with_object({}){ |(k, v), memo|
@@ -51,6 +56,7 @@ module Models
 
     def self.has_many(name, options = {})
       super
+      field_names << name
 
       # respect English spelling rules: vehicles -> vehicle_ids | capacities -> capacity_ids
       ids_function_name =
@@ -93,6 +99,7 @@ module Models
 
     def self.belongs_to(name, options = {})
       super
+      field_names << name
 
       id_function_name = "#{name}_id".to_sym
 
