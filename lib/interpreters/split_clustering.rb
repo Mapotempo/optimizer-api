@@ -367,7 +367,7 @@ module Interpreters
         next if vehicle_services.size < 5
 
         vehicle_service_coordinates = vehicle_services.collect{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }
-        extreme_points = Helper.approximate_quadrilateral_polygon(vehicle_service_coordinates)
+        extreme_points = Helper.approximate_quadrilateral_polygon(vehicle_service_coordinates).uniq
         linked_ids = ["0_representative_vrp_s_#{vehicle_id}"]
         extreme_points.each_with_index{ |lat_lon, index|
           points << { id: "#{index + 1}_representative_vrp_p_#{vehicle_id}", location: { lat: lat_lon[0], lon: lat_lon[1] }}
