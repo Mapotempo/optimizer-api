@@ -41,8 +41,7 @@ module Models
 
     def vrp_result(options = {})
       hash = super(options)
-      hash['cost_details'] = hash['cost_info']
-      hash.delete('cost_info')
+      hash['cost_details'] = hash.delete('cost_info')
       hash.delete('info')
       hash.merge!(info.vrp_result(options))
       edit_route_days(hash)

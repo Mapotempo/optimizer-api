@@ -39,13 +39,10 @@ module Models
       def vrp_result(options = {})
         hash = super(options)
         hash.delete('vehicle')
-        hash['cost_details'] = hash['cost_info']
-        hash.delete('cost_info')
-        hash['activities'] = hash['steps']
+        hash['activities'] = hash.delete('steps')
+        hash['cost_details'] = hash.delete('cost_info')
+        hash['detail'] = hash.delete('info')
         hash.merge!(info.vrp_result(options))
-        hash['detail'] = hash['info']
-        hash.delete('info')
-        hash.delete('steps')
         hash.merge!(vehicle.vrp_result(options))
         hash.delete_if{ |_k, v| v.nil? }
         hash

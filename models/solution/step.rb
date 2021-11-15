@@ -68,8 +68,7 @@ module Models
         hash.delete('original_skills')
         hash.merge!(info.vrp_result(options))
         hash.delete('info')
-        hash['detail'] = hash['activity']
-        hash.delete('activity')
+        hash['detail'] = hash.delete('activity')
         hash['detail']['skills'] = build_skills
         hash['detail']['internal_skills'] = self.skills
         hash['detail']['quantities'] = loads.vrp_result(options)

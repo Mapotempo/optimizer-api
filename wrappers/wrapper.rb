@@ -970,7 +970,6 @@ module Wrappers
               activity.timewindows.each{ |tw| tw.end += activity.duration if tw&.end }
               activity.additional_value = 0
               activity.duration = 0
-              activity.setup_duration += activity.duration # We expect the first duplicate service to be placed first
 
               # inserting the remaining parts of a multipart service should be of highest priority
               new_service.priority = 0 # 0 is the highest priority
@@ -1404,7 +1403,7 @@ module Wrappers
         simplification_active = true
 
         vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
-        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point.id }
+        services_grouped_by_point = vrp.services.group_by{ |s| s.activity.point }
 
         overall_total_travel_time_correction = 0
         result.routes.each{ |route|
@@ -1414,7 +1413,7 @@ module Wrappers
 
           total_travel_time_correction = 0
           route.steps.each{ |step_object|
-            next if step_object.info.travel_time.to_i.zero? || services_grouped_by_point_id[step_object.activity.point_id].nil?
+            next if step_object.info.travel_time.to_i.zero? || services_grouped_by_point[step_object.activity.point].nil?
 
             setup_duration = step_object.activity[:simplified_setup_duration].to_i
 
@@ -1425,7 +1424,6 @@ module Wrappers
             total_travel_time_correction += time_correction
             step_object.activity.setup_duration = time_correction.round
             step_object.info.travel_time -= time_correction
-            step_object.activity[:simplified_setup_duration] = nil
           }
 
           overall_total_travel_time_correction += total_travel_time_correction
