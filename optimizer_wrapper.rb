@@ -406,7 +406,12 @@ module OptimizerWrapper
     grouped_services.each{ |skills, missions| skill_service_ids[skills] += missions.map(&:id) }
 
     # Generate Vehicles data
-    ### Be careful in case the alternative skills are supported again !
+    if vrp.vehicles.any?{ |v| v.skills.size > 1 } # alternative skills
+      log 'split_independent_vrp does not support alternative set of vehicle skills', level: :warn
+      # Be careful in case the alternative skills are supported again !
+      # The vehicle.skills.flatten down below won't work
+      return [vrp]
+    end
     grouped_vehicles = vrp.vehicles.group_by{ |vehicle| vehicle.skills.flatten }
     vehicle_skills = grouped_vehicles.keys.uniq
     vehicle_indices_by_skills = Hash.new{ [] }
