@@ -296,7 +296,7 @@ module OptimizerWrapper
     compatibility_table = mission_skills.map.with_index{ |_skills, _index| Array.new(vehicle_skills.size) { false } }
     mission_skills.each.with_index{ |m_skills, m_index|
       vehicle_skills.each.with_index{ |v_skills, v_index|
-        compatibility_table[m_index][v_index] = true if (v_skills & m_skills) == m_skills
+        compatibility_table[m_index][v_index] = true if (m_skills - v_skills).empty?
       }
     }
 
@@ -350,7 +350,7 @@ module OptimizerWrapper
     independent_vrps = skill_sets.collect{ |skills_set|
       # Compatible problem ids are retrieved
       vehicle_indices = skills_set.flat_map{ |skills|
-        skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v }
+        skill_vehicle_ids.select{ |k, _v| (skills - k).empty? }.flat_map{ |_k, v| v }
       }.uniq
       vehicle_indices.each{ |index| unused_vehicle_indices.delete(index) }
       service_ids = skills_set.flat_map{ |skills| skill_service_ids[skills] }
