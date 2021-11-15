@@ -20,7 +20,7 @@ require './models/base'
 module Parsers
   class RouteParser
     def self.parse(route, vrp, matrix, options = {})
-      return if route.steps.empty?
+      return if route.stops.empty?
 
       @route = route
 
@@ -28,10 +28,10 @@ module Parsers
       compute_route_waiting_times
       route_data = compute_route_travel_distances(vrp, matrix)
       compute_total_time
-      compute_route_waiting_times unless @route.steps.empty?
+      compute_route_waiting_times unless @route.stops.empty?
       compute_route_total_dimensions(matrix)
       return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? &&
-                    @route.steps.any?(&:service_id)
+                    @route.stops.any?(&:service_id)
 
       route_data ||= route_info(vrp)
       @route.geometry = route_data&.map(&:last)
@@ -39,10 +39,10 @@ module Parsers
     end
 
     def self.compute_total_time
-      return if @route.steps.empty?
+      return if @route.stops.empty?
 
-      @route.info.end_time = @route.steps.last.info.end_time || @route.steps.last.info.begin_time
-      @route.info.start_time = @route.steps.first.info.begin_time
+      @route.info.end_time = @route.stops.last.info.end_time || @route.stops.last.info.begin_time
+      @route.info.start_time = @route.stops.first.info.begin_time
       return unless @route.info.end_time && @route.info.start_time
 
       @route.info.total_time = @route.info.end_time - @route.info.start_time
@@ -56,21 +56,21 @@ module Parsers
       dimensions << :value if matrix&.value
 
       total = dimensions.collect.with_object({}) { |dimension, hash| hash[dimension] = 0 }
-      @route.steps.each{ |step_object|
-        matrix_index = step_object.activity.point&.matrix_index
+      @route.stops.each{ |stop|
+        matrix_index = stop.activity.point&.matrix_index
         dimensions.each{ |dimension|
           if previous_index && matrix_index
-            unless step_object.info.send("travel_#{dimension}".to_sym)
-              step_object.info.send("travel_#{dimension}=", matrix.send(dimension)[previous_index][matrix_index])
+            unless stop.info.send("travel_#{dimension}".to_sym)
+              stop.info.send("travel_#{dimension}=", matrix.send(dimension)[previous_index][matrix_index])
             end
-            total[dimension] += step_object.info.send("travel_#{dimension}".to_sym).round
-            step_object.info.current_distance = total[dimension].round if dimension == :distance
+            total[dimension] += stop.info.send("travel_#{dimension}".to_sym).round
+            stop.info.current_distance = total[dimension].round if dimension == :distance
           else
-            step_object.info.send("travel_#{dimension}=", 0)
+            stop.info.send("travel_#{dimension}=", 0)
           end
         }
 
-        previous_index = matrix_index if step_object.type != :rest
+        previous_index = matrix_index if stop.type != :rest
       }
 
       if @route.info.end_time && @route.info.start_time
@@ -80,9 +80,9 @@ module Parsers
       @route.info.total_distance = total[:distance].round if dimensions.include?(:distance)
       @route.info.total_travel_value = total[:value].round if dimensions.include?(:value)
 
-      return unless @route.steps.all?{ |a| a.info.waiting_time }
+      return unless @route.stops.all?{ |a| a.info.waiting_time }
 
-      @route.info.total_waiting_time = @route.steps.collect{ |a| a.info.waiting_time }.sum.round
+      @route.info.total_waiting_time = @route.stops.collect{ |a| a.info.waiting_time }.sum.round
     end
 
     def self.compute_missing_dimensions(matrix)
@@ -90,99 +90,99 @@ module Parsers
       dimensions.each{ |dimension|
         next unless matrix&.send(dimension)&.any?
 
-        next if @route.steps.any?{ |step|
-          step.info.send("travel_#{dimension}") && step.info.send("travel_#{dimension}") > 0
+        next if @route.stops.any?{ |stop|
+          stop.info.send("travel_#{dimension}") && stop.info.send("travel_#{dimension}") > 0
         }
 
-        previous_departure = dimension == :time ? @route.steps.first.info.begin_time : 0
+        previous_departure = dimension == :time ? @route.stops.first.info.begin_time : 0
         previous_index = nil
-        @route.steps.each{ |step|
-          current_index = step.activity.point&.matrix_index
+        @route.stops.each{ |stop|
+          current_index = stop.activity.point&.matrix_index
           if previous_index && current_index
-            step.info.send("travel_#{dimension}=",
+            stop.info.send("travel_#{dimension}=",
                            matrix.send(dimension)[previous_index][current_index])
           end
           case dimension
           when :time
             previous_departure = compute_time_info(
-              step,
+              stop,
               previous_departure,
               previous_index && current_index && matrix.send(dimension)[previous_index][current_index] || 0
             )
           when :distance
-            step.info.current_distance = previous_departure
+            stop.info.current_distance = previous_departure
             if previous_index && current_index
               previous_departure += matrix.send(dimension)[previous_index][current_index]
             end
           end
 
-          previous_index = current_index unless step.type == :rest
+          previous_index = current_index unless stop.type == :rest
         }
       }
     end
 
-    def self.compute_time_info(step_object, previous_departure, travel_time)
+    def self.compute_time_info(stop, previous_departure, travel_time)
       earliest_arrival =
         [
-          step_object.activity.timewindows&.find{ |tw| (tw.end || 2**32) > previous_departure }&.start || 0,
+          stop.activity.timewindows&.find{ |tw| (tw.end || 2**32) > previous_departure }&.start || 0,
           previous_departure + travel_time
         ].max || 0
       if travel_time > 0
-        earliest_arrival += step_object.activity.setup_duration * @route.vehicle.coef_setup + @route.vehicle.additional_setup
+        earliest_arrival += stop.activity.setup_duration * @route.vehicle.coef_setup + @route.vehicle.additional_setup
       end
-      step_object.info.begin_time = earliest_arrival
-      step_object.info.end_time = earliest_arrival +
-        (step_object.activity.duration * @route.vehicle.coef_service + @route.vehicle.additional_service)
-      step_object.info.departure_time = step_object.info.end_time
+      stop.info.begin_time = earliest_arrival
+      stop.info.end_time = earliest_arrival +
+        (stop.activity.duration * @route.vehicle.coef_service + @route.vehicle.additional_service)
+      stop.info.departure_time = stop.info.end_time
       earliest_arrival
     end
 
     def self.compute_route_waiting_times
-      return if @route.steps.empty?
+      return if @route.stops.empty?
 
-      previous_end = @route.steps.first.info.begin_time
+      previous_end = @route.stops.first.info.begin_time
       loc_index = nil
       consumed_travel_time = 0
       consumed_setup_time = 0
-      @route.steps.each.with_index{ |step_object, index|
+      @route.stops.each.with_index{ |stop, index|
         used_travel_time = 0
-        if step_object.type == :rest
+        if stop.type == :rest
           if loc_index.nil?
-            next_index = @route.steps[index..-1].index{ |a| a.type != :rest }
+            next_index = @route.stops[index..-1].index{ |a| a.type != :rest }
             loc_index = index + next_index if next_index
             consumed_travel_time = 0
           end
-          shared_travel_time = loc_index && @route.steps[loc_index].info.travel_time || 0
-          potential_setup = shared_travel_time > 0 && @route.steps[loc_index].activity.setup_duration || 0
+          shared_travel_time = loc_index && @route.stops[loc_index].info.travel_time || 0
+          potential_setup = shared_travel_time > 0 && @route.stops[loc_index].activity.setup_duration || 0
           left_travel_time = shared_travel_time - consumed_travel_time
-          used_travel_time = [step_object.info.begin_time - previous_end, left_travel_time].min
+          used_travel_time = [stop.info.begin_time - previous_end, left_travel_time].min
           consumed_travel_time += used_travel_time
           # As setup is considered as a transit value, it may be performed before a rest
-          consumed_setup_time  += [step_object.info.begin_time - previous_end - used_travel_time, potential_setup].min
+          consumed_setup_time  += [stop.info.begin_time - previous_end - used_travel_time, potential_setup].min
         else
-          used_travel_time = (step_object.info.travel_time || 0) - consumed_travel_time - consumed_setup_time
+          used_travel_time = (stop.info.travel_time || 0) - consumed_travel_time - consumed_setup_time
           consumed_travel_time = 0
           consumed_setup_time = 0
           loc_index = nil
         end
-        considered_setup = step_object.info.travel_time&.positive? &&
-                           (step_object.activity.setup_duration.to_i - consumed_setup_time) || 0
+        considered_setup = stop.info.travel_time&.positive? &&
+                           (stop.activity.setup_duration.to_i - consumed_setup_time) || 0
         arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
-        step_object.info.waiting_time = step_object.info.begin_time - arrival_time
-        previous_end = step_object.info.end_time || step_object.info.begin_time
+        stop.info.waiting_time = stop.info.begin_time - arrival_time
+        previous_end = stop.info.end_time || stop.info.begin_time
       }
     end
 
     def self.compute_route_travel_distances(vrp, matrix)
-      return nil unless matrix&.distance.nil? && @route.steps.size > 1 &&
-                        @route.steps.reject{ |act| act.type == :rest }.all?{ |act| act.activity.point.location }
+      return nil unless matrix&.distance.nil? && @route.stops.size > 1 &&
+                        @route.stops.reject{ |act| act.type == :rest }.all?{ |act| act.activity.point.location }
 
       info = route_info(vrp)
 
       return nil unless info && !info.empty?
 
-      @route.steps[1..-1].each_with_index{ |step, index|
-        step.info.travel_distance = info[index]&.first
+      @route.stops[1..-1].each_with_index{ |stop, index|
+        stop.info.travel_distance = info[index]&.first
       }
 
       info
@@ -191,12 +191,12 @@ module Parsers
     def self.route_info(vrp)
       previous = nil
       info = nil
-      segments = @route.steps.reverse.collect{ |step|
+      segments = @route.stops.reverse.collect{ |stop|
         current =
-          if step.type == :rest
+          if stop.type == :rest
             previous
           else
-            step.activity.point
+            stop.activity.point
           end
         segment =
           if previous && current

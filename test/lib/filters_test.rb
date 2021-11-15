@@ -318,7 +318,7 @@ class FiltersTest < Minitest::Test
 
     assert_equal 2, solutions[0].unassigned.size
     solutions[0].routes.each{ |route|
-      assert_equal(2, route.steps.count(&:service_id))
+      assert_equal(2, route.stops.count(&:service_id))
     }
   end
 end

@@ -132,6 +132,7 @@ module Interpreters
           end
           solution.parse(vrp)
 
+
           log "dicho - level(#{service_vrp[:dicho_level]}) unassigned rate " \
               "#{solution.unassigned.size}/#{service_vrp[:vrp].services.size}: " \
               "#{(solution.unassigned.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
@@ -152,7 +153,7 @@ module Interpreters
       sv_zero.vehicles.each{ |vehicle|
         route = solution.routes.find{ |r| r.vehicle.id == vehicle.id }
 
-        next if route&.steps&.any?(&:service_id)
+        next if route&.stops&.any?(&:service_id)
 
         sv_one.vehicles << vehicle
         sv_zero.vehicles -= [vehicle]
@@ -260,7 +261,7 @@ module Interpreters
         next if solution.nil?
 
         solution.routes.map{ |route|
-          mission_ids = route.steps.map(&:service_id).compact
+          mission_ids = route.stops.map(&:service_id).compact
           next if mission_ids.empty?
 
           Models::Route.create(
@@ -274,7 +275,7 @@ module Interpreters
     def self.remove_bad_skills(service_vrp, solution)
       log '---> remove_bad_skills', level: :debug
       solution.routes.each{ |r|
-        r.steps.each{ |a|
+        r.stops.each{ |a|
           next unless a.service_id
 
           service = service_vrp[:vrp].services.find{ |s| s.id == a.service_id }
@@ -284,7 +285,7 @@ module Interpreters
 
           log "dicho - removed service #{a.service_id} from vehicle #{r.vehicle.id}"
           solution.unassigned << a
-          r.steps.delete(a)
+          r.stops.delete(a)
           # TODO: remove bad sticky?
         }
       }
@@ -360,7 +361,7 @@ module Interpreters
         end
 
         assigned_service_ids = vehicles_indices.map{ |_v, r_i, _v_i| r_i }.compact.flat_map{ |r_i|
-          solution.routes[r_i].steps.map(&:service_id)
+          solution.routes[r_i].stops.map(&:service_id)
         }.compact
 
         sub_service_vrp = SplitClustering.build_partial_service_vrp(service_vrp,

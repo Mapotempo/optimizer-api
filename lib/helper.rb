@@ -144,7 +144,7 @@ module Helper
     # TODO: Correct total cost (needs cost per route!!!)
 
     # Correct unassigned services
-    new_service_ids = new_solution.routes.flat_map{ |route| route.steps.map(&:service_id) }.compact +
+    new_service_ids = new_solution.routes.flat_map{ |route| route.stops.map(&:service_id) }.compact +
                       new_solution.unassigned.map(&:service_id).compact
 
     solution.unassigned.delete_if{ |activity|
@@ -157,7 +157,7 @@ module Helper
     new_solution.routes.each{ |new_route|
       # This vehicle might not be used in the old solutions
       old_index = solution.routes.index{ |r| r.vehicle.id == new_route.vehicle.id }
-      # old_route_steps = old_index ? solution.routes[old_index].steps : []
+      # old_route_stops = old_index ? solution.routes[old_index].stops : []
       solution.routes[old_index] = new_route if old_index
       solution.routes << new_route unless old_index
 
@@ -243,12 +243,12 @@ class Numeric
     (self / num).round(6).round(0) * num # .round(6).round(0) to prevent floating point errors
   end
 
-  # rounds the number to the closests step in between [val.round(ndigits), val.round(ndigits) + 1/10**ndigits].
+  # rounds the number to the closests stop in between [val.round(ndigits), val.round(ndigits) + 1/10**ndigits].
   # Useful when rounding is performed to reduce the number of uniq elements.
   #
-  # ndigits: the number of decimal places (when nsteps = 0)
+  # ndigits: the number of decimal places (when nstops = 0)
   #
-  # nsteps: the number of steps between val.round(ndigits) and val.round(ndigits) + 1/10**ndigits
+  # nstops: the number of stops between val.round(ndigits) and val.round(ndigits) + 1/10**ndigits
   #
   # For example,
   # array = [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
@@ -257,17 +257,17 @@ class Numeric
   # array.collect{ |val| val.round(1) }.uniq      :=>      [0.1, 0.2]                                                       # too little
   # array.collect{ |val| val.round(2) }.uniq      :=>      [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2] # too much
   #
-  # With nsteps the number of uniq elements between two decimals can be controlled:
+  # With nstops the number of uniq elements between two decimals can be controlled:
   # array.collect{ |val| val.round_with_steps(1, 0) }.uniq      :=>     [0.1, 0.2]                                                         # same with round(1)
-  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra step in between
-  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra stop in between
+  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra stop in between
   # ...
-  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra stop in between
   # array.collect{ |val| val.round_with_steps(1, 9) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]   # same with round(2)
   #
-  # Theoretically, val.round_with_steps(ndigits, nsteps) is
-  # equivalent to  val.round_to_multiple_of(1.0 / (nsteps + 1) / 10**ndigits )
-  def round_with_steps(ndigits, nsteps = 0)
-    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nsteps + 1.0)).round(ndigits) / (nsteps + 1.0)).round(ndigits + 1)
+  # Theoretically, val.round_with_steps(ndigits, nstops) is
+  # equivalent to  val.round_to_multiple_of(1.0 / (nstops + 1) / 10**ndigits )
+  def round_with_steps(ndigits, nstops = 0)
+    self.round_to_multiple_of(1.fdiv((nstops + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nstops + 1.0)).round(ndigits) / (nstops + 1.0)).round(ndigits + 1)
   end
 end

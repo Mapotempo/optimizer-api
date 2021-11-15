@@ -16,12 +16,12 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require './models/base'
-require './models/solution/parsers/step_parser'
+require './models/solution/parsers/stop_parser'
 
 module Models
   class Solution < Base
-    class Step < Base
-      include SolutionStepAsJson
+    class Stop < Base
+      include SolutionStopAsJson
 
       # field :point_id
       field :id
@@ -39,7 +39,7 @@ module Models
 
       has_many :loads, class_name: 'Models::Solution::Load'
       belongs_to :activity, class_name: 'Models::Activity'
-      belongs_to :info, class_name: 'Models::Solution::Step::Info'
+      belongs_to :info, class_name: 'Models::Solution::Stop::Info'
 
       def initialize(object, options = {})
         options = { info: {} }.merge(options)
@@ -53,9 +53,9 @@ module Models
                         when 'Hash'
                           object # Allow direct loading of json solution
                         else
-                          raise 'Unknown step class'
+                          raise 'Unknown stop class'
                         end
-        raise 'A route step cannot be nil' unless parsed_object
+        raise 'A route stop cannot be nil' unless parsed_object
 
         super(parsed_object)
         set_info_end_time

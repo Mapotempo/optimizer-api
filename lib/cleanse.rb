@@ -78,33 +78,33 @@ module Cleanse
       capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
       previous_activity = nil
 
-      route.steps.delete_if{ |step|
-        next unless service_types.include?(step.type)
+      route.stops.delete_if{ |stop|
+        next unless service_types.include?(stop.type)
 
-        if previous_activity && step && same_position(vrp, step) &&
-           same_empty_units(capacities_units, previous_activity, step) &&
-           !same_fill_units(capacities_units, previous_activity, step)
-          add_unnassigned(solution.unassigned, step, 'Duplicate empty service.')
+        if previous_activity && stop && same_position(vrp, stop) &&
+           same_empty_units(capacities_units, previous_activity, stop) &&
+           !same_fill_units(capacities_units, previous_activity, stop)
+          add_unnassigned(solution.unassigned, stop, 'Duplicate empty service.')
           true
-        elsif previous_activity && step && same_position(vrp, step) &&
-              same_fill_units(capacities_units, previous_activity, step) &&
-              !same_empty_units(capacities_units, previous_activity, step)
-          add_unnassigned(solution.unassigned, step, 'Duplicate fill service.')
+        elsif previous_activity && stop && same_position(vrp, stop) &&
+              same_fill_units(capacities_units, previous_activity, stop) &&
+              !same_empty_units(capacities_units, previous_activity, stop)
+          add_unnassigned(solution.unassigned, stop, 'Duplicate fill service.')
           true
         else
-          previous_activity = step if previous_activity.nil? || step.service_id
+          previous_activity = stop if previous_activity.nil? || stop.service_id
           false
         end
       }
     }
   end
 
-  def self.add_unnassigned(unassigned, route_step, reason)
-    route_step.reason = reason
-    unassigned << route_step
+  def self.add_unnassigned(unassigned, route_stop, reason)
+    route_stop.reason = reason
+    unassigned << route_stop
   end
 
   def self.cleanse_empty_routes(result)
-    result.routes.delete_if{ |route| route.steps.none?(&:service_id) }
+    result.routes.delete_if{ |route| route.stops.none?(&:service_id) }
   end
 end

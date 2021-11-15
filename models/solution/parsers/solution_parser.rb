@@ -39,7 +39,7 @@ module Parsers
 
       log "solution - unassigned rate: #{solution.unassigned.size} of (ser: #{vrp.visits} " \
           "(#{(solution.unassigned.size.to_f / vrp.visits * 100).round(1)}%)"
-      used_vehicle_count = solution.routes.count{ |r| r.steps.any?(&:service_id) }
+      used_vehicle_count = solution.routes.count{ |r| r.stops.any?(&:service_id) }
       log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) " \
           "vehicles used: #{used_vehicle_count}"
       log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug

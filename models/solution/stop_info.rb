@@ -19,7 +19,7 @@ require './models/base'
 
 module Models
   class Solution < Base
-    class Step < Base
+    class Stop < Base
       class Info < Base
         field :day_week_num
         field :day_week

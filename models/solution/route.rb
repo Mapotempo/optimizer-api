@@ -24,7 +24,7 @@ module Models
 
       field :geometry
 
-      has_many :steps, class_name: 'Models::Solution::Step'
+      has_many :stops, class_name: 'Models::Solution::Stop'
       has_many :initial_loads, class_name: 'Models::Solution::Load'
 
       belongs_to :cost_info, class_name: 'Models::Solution::CostInfo'
@@ -39,7 +39,7 @@ module Models
       def vrp_result(options = {})
         hash = super(options)
         hash.delete('vehicle')
-        hash['activities'] = hash.delete('steps')
+        hash['activities'] = hash.delete('stops')
         hash['cost_details'] = hash.delete('cost_info')
         hash['detail'] = hash.delete('info')
         hash.merge!(info.vrp_result(options))
@@ -49,27 +49,27 @@ module Models
       end
 
       def count_services
-        steps.count(&:service_id)
+        stops.count(&:service_id)
       end
 
-      def insert_step(vrp, step_object, index, idle_time = 0)
-        steps.insert(index, step_object)
-        shift_route_times(idle_time + step_object.activity.duration, index)
+      def insert_stop(vrp, stop, index, idle_time = 0)
+        stops.insert(index, stop)
+        shift_route_times(idle_time + stop.activity.duration, index)
       end
 
       def shift_route_times(shift_amount, shift_start_index = 0)
         return if shift_amount == 0
 
-        raise 'Cannot shift the route, there are not enough steps' if shift_start_index > self.steps.size
+        raise 'Cannot shift the route, there are not enough stops' if shift_start_index > self.stops.size
 
         self.info.start_time += shift_amount if shift_start_index == 0
-        self.steps.each_with_index{ |step_object, index|
+        self.stops.each_with_index{ |stop, index|
           next if index <= shift_start_index
 
-          step_object.info.begin_time += shift_amount
-          step_object.info.end_time += shift_amount if step_object.info.end_time
-          step_object.info.departure_time += shift_amount if step_object.info.departure_time
-          step_object.info.waiting_time = [step_object.info.waiting_time - shift_amount, 0].max
+          stop.info.begin_time += shift_amount
+          stop.info.end_time += shift_amount if stop.info.end_time
+          stop.info.departure_time += shift_amount if stop.info.departure_time
+          stop.info.waiting_time = [stop.info.waiting_time - shift_amount, 0].max
         }
         self.info.end_time += shift_amount if self.info.end_time
       end

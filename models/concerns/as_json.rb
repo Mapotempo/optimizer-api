@@ -94,17 +94,17 @@ module SolutionRouteAsJson
   end
 end
 
-module SolutionStepAsJson
+module SolutionStopAsJson
   extend ActiveSupport::Concern
 
   def as_json
-    step = super
-    return step unless self.is_a? Models::Solution::Step
+    stop = super
+    return stop unless self.is_a? Models::Solution::Stop
 
-    puts step.inspect
-    step.delete('id') if self.type == :depot
-    step.delete('activity_id')
-    step
+    puts stop.inspect
+    stop.delete('id') if self.type == :depot
+    stop.delete('activity_id')
+    stop
   end
 end
 
@@ -112,11 +112,11 @@ module PointAsJson
   extend ActiveSupport::Concern
 
   def as_json
-    step = super
-    return step unless self.is_a? Models::Point
+    stop = super
+    return stop unless self.is_a? Models::Point
 
-    step.delete('location_id')
-    step
+    stop.delete('location_id')
+    stop
   end
 end
 
@@ -175,7 +175,7 @@ module IndependentAsJson
     except_models = [
       Models::Point.to_s,
       Models::Rest.to_s,
-      Models::Solution::Step.to_s,
+      Models::Solution::Stop.to_s,
       Models::Service.to_s,
       Models::Vehicle.to_s,
       Models::Matrix.to_s,

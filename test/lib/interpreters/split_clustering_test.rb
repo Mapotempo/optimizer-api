@@ -74,7 +74,7 @@ class SplitClusteringTest < Minitest::Test
     def test_cluster_one_phase_work_day
       skip "This test fails. The test is created for Test-Driven Development.
             The functionality is not ready yet, it is skipped for devs not working on the functionality.
-            Basically, we want to be able to cluster in one single step (instead of by-vehicle and then by-day) and
+            Basically, we want to be able to cluster in one single stop (instead of by-vehicle and then by-day) and
             we expect that the clusters are balanced. However, currently it takes too long and the results are not balanced."
       vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_two_phases')
       service_vrp = { vrp: vrp, service: :demo }
@@ -508,9 +508,9 @@ class SplitClusteringTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 2, solutions[0].solvers.size
       assert_equal([nil, 'service_1', 'service_2'],
-                   solutions[0].routes[0].steps.map(&:service_id))
+                   solutions[0].routes[0].stops.map(&:service_id))
       assert_equal([nil, 'service_3', 'service_4'],
-                   solutions[0].routes[1].steps.map(&:service_id))
+                   solutions[0].routes[1].stops.map(&:service_id))
     end
 
     def test_correct_number_of_visits_when_concurrent_split_independent_and_max_split
@@ -605,7 +605,7 @@ class SplitClusteringTest < Minitest::Test
       end
       assert_equal check_vrp_services_size, problem.services.size
       assert_equal problem.services.size, solutions[0].unassigned.count(&:service_id) +
-                                          solutions[0].routes.sum{ |r| r.steps.count(&:service_id) }
+                                          solutions[0].routes.sum{ |r| r.stops.count(&:service_id) }
     end
 
     def test_max_split_poorly_populated_route_limit_result
@@ -983,10 +983,10 @@ class SplitClusteringTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 2, (solutions[0].routes.find{ |r|
                          r.vehicle.id == 'vehicle_0'
-                       }.steps.map(&:service_id) & ['service_1', 'service_5']).size
+                       }.stops.map(&:service_id) & ['service_1', 'service_5']).size
       assert_equal 1, (solutions[0].routes.find{ |r|
                          r.vehicle.id == 'vehicle_1'
-                       }.steps.map(&:service_id) & ['service_12']).size
+                       }.stops.map(&:service_id) & ['service_12']).size
     end
 
     def test_list_vehicles

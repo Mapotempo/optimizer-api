@@ -65,7 +65,7 @@ module Interpreters
           next if solution.nil?
 
           solution.routes.each{ |route|
-            route.steps.each do |stop|
+            route.stops.each do |stop|
               next unless stop.service_id
 
               stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
@@ -549,7 +549,7 @@ module Interpreters
     end
 
     def self.remove_empty_routes(solution)
-      solution.routes.delete_if{ |route| route.steps.none?(&:service_id) }
+      solution.routes.delete_if{ |route| route.stops.none?(&:service_id) }
     end
 
     def self.remove_poorly_populated_routes(vrp, solution, limit)
@@ -560,7 +560,7 @@ module Interpreters
       emptied_routes = false
       solution.routes.delete_if{ |route|
         vehicle = vrp.vehicles.find{ |current_vehicle| current_vehicle.id == route.vehicle_id }
-        loads = route.steps.last.loads
+        loads = route.stops.last.loads
         load_flag = vehicle.capacities.empty? || vehicle.capacities.all?{ |capacity|
           current_load = loads.find{ |unit_load| unit_load.quantity.unit.id == capacity.unit.id }
           current_load.current / capacity.limit < limit if capacity.limit && current_load && capacity.limit > 0
@@ -568,7 +568,7 @@ module Interpreters
         vehicle_worktime = vehicle.duration ||
                            vehicle.timewindow&.end && (vehicle.timewindow.end - vehicle.timewindow.start)
         route_duration = route.info.total_time ||
-                         (route.steps.last.info.begin_time - route.steps.first.info.begin_time)
+                         (route.stops.last.info.begin_time - route.stops.first.info.begin_time)
         log "route #{route.vehicle.id} time: #{route_duration}/#{vehicle_worktime} percent: " \
             "#{((route_duration / (vehicle_worktime || route_duration).to_f) * 100).to_i}%", level: :info
 
@@ -588,12 +588,12 @@ module Interpreters
             result[key] -= route[key] if route[key]
           }
 
-          number_of_services_in_the_route = route.steps.count(&:service_id)
+          number_of_services_in_the_route = route.stops.count(&:service_id)
 
           log "route #{route.vehicle.id} is emptied: #{number_of_services_in_the_route} " \
               'services are now unassigned.', level: :info
 
-          solution.unassigned += route.steps.select(&:service_id)
+          solution.unassigned += route.stops.select(&:service_id)
           true
         end
       }
@@ -913,7 +913,7 @@ module Interpreters
 
     def self.collect_cluster_data(vrp, nb_clusters)
       # TODO: due to historical dev, this function is in two pieces but
-      # it is possbile to do the same task in one step. That is, instead of
+      # it is possbile to do the same task in one stop. That is, instead of
       # collecting vehicles then eliminating to have nb_clusters vehicles,
       # we can create one with nb_clusters items directly.
 
@@ -1044,12 +1044,12 @@ module Interpreters
         decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
                     {
                       digits: 4, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      steps: 5   # digits.steps 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
+                      stops: 5   # digits.stops 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
                     }
                   else
                     {
                       digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
+                      stops: 8   # digits.stops 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
                     }
                   end
 
@@ -1110,8 +1110,8 @@ module Interpreters
             end
 
           {
-            lat: location.lat.round_with_steps(decimal[:digits], decimal[:steps]),
-            lon: location.lon.round_with_steps(decimal[:digits], decimal[:steps]),
+            lat: location.lat.round_with_steps(decimal[:digits], decimal[:stops]),
+            lon: location.lon.round_with_steps(decimal[:digits], decimal[:stops]),
             v_id: s[:sticky_vehicle_ids].to_a |
               [vrp.routes.find{ |r| r.mission_ids.include? s.id }&.vehicle_id].compact, # split respects initial routes
             skills: s.skills.to_a.dup,

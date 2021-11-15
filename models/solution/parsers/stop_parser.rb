@@ -39,7 +39,7 @@ module Parsers
         alternative: options[:index],
         loads: build_loads(service, options),
         activity: dup_activity,
-        info: options[:info] || Models::Solution::Step::Info.new({}),
+        info: options[:info] || Models::Solution::Stop::Info.new({}),
         reason: options[:reason],
         skills: options[:skills] || service.skills,
         original_skills: options[:original_skills] || service.original_skills,
@@ -71,7 +71,7 @@ module Parsers
         type: :depot,
         loads: options[:loads],
         activity: Models::Activity.new(point: point),
-        info: options[:info] || Models::Solution::Step::Info.new({})
+        info: options[:info] || Models::Solution::Stop::Info.new({})
       }
     end
   end
@@ -88,7 +88,7 @@ module Parsers
         rest_id: rest.id,
         type: :rest,
         activity: dup_rest,
-        info: options[:info] || Models::Solution::Step::Info.new({})
+        info: options[:info] || Models::Solution::Stop::Info.new({})
       }
     end
   end

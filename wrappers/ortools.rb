@@ -414,24 +414,24 @@ module Wrappers
       )
     end
 
-    def build_route_step(vrp, vehicle, activity)
+    def build_route_stop(vrp, vehicle, activity)
       times = { begin_time: activity.start_time, current_distance: activity.current_distance }
       loads = activity.quantities.map.with_index{ |quantity, index|
         Models::Solution::Load.new(quantity: Models::Quantity.new(unit: vrp.units[index]), current: quantity)
       }
       case activity.type
       when 'start'
-        Models::Solution::Step.new(vehicle.start_point, info: times, loads: loads) if vehicle.start_point
+        Models::Solution::Stop.new(vehicle.start_point, info: times, loads: loads) if vehicle.start_point
       when 'end'
-        Models::Solution::Step.new(vehicle.end_point, info: times, loads: loads) if vehicle.end_point
+        Models::Solution::Stop.new(vehicle.end_point, info: times, loads: loads) if vehicle.end_point
       when 'service'
         service = vrp.services[activity.index]
         @problem_services.delete(service.id)
-        Models::Solution::Step.new(service, info: times, loads: loads, index: activity.alternative)
+        Models::Solution::Stop.new(service, info: times, loads: loads, index: activity.alternative)
       when 'break'
         vehicle_rest = @problem_rests[vehicle.id][activity.id]
         @problem_rests[vehicle.id].delete(activity.id)
-        Models::Solution::Step.new(vehicle_rest, info: times, loads: loads)
+        Models::Solution::Stop.new(vehicle_rest, info: times, loads: loads)
       end
     end
 
@@ -441,7 +441,7 @@ module Wrappers
         previous_matrix_index = nil
         vehicle = vrp.vehicles[index]
         route_costs = build_cost_details(route.cost_details)
-        steps = route.activities.map{ |activity|
+        stops = route.activities.map{ |activity|
           current_matrix_index =
             case activity.type
             when 'service'
@@ -453,20 +453,20 @@ module Wrappers
             when 'end'
               vrp.vehicles[index].end_point&.matrix_index
             end
-          step_object = build_route_step(vrp, vehicle, activity)
-          next step_object if activity.type == 'rest'
+          stop = build_route_stop(vrp, vehicle, activity)
+          next stop if activity.type == 'rest'
 
           matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
-          build_route_data(step_object, matrix, previous_matrix_index, current_matrix_index)
+          build_route_data(stop, matrix, previous_matrix_index, current_matrix_index)
           previous_matrix_index = current_matrix_index
-          step_object
+          stop
         }.compact
         route_detail = Models::Solution::Route::Info.new({})
         initial_loads = route.activities.first.quantities.map.with_index{ |quantity, q_index|
           Models::Solution::Load.new(quantity: Models::Quantity.new(unit: vrp.units[q_index]), current: quantity)
         }
         Models::Solution::Route.new(
-          steps: steps,
+          stops: stops,
           initial_loads: initial_loads,
           cost_info: route_costs,
           info: route_detail,
@@ -476,8 +476,8 @@ module Wrappers
     end
 
     def build_unassigned
-      @problem_services.values.map{ |service| Models::Solution::Step.new(service) } +
-        @problem_rests.flat_map{ |_v_id, v_rests| v_rests.values.map{ |v_rest| Models::Solution::Step.new(v_rest) } }
+      @problem_services.values.map{ |service| Models::Solution::Stop.new(service) } +
+        @problem_rests.flat_map{ |_v_id, v_rests| v_rests.values.map{ |v_rest| Models::Solution::Stop.new(v_rest) } }
     end
 
     def build_solution(vrp, content)
@@ -503,7 +503,7 @@ module Wrappers
         vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
     end
 
-    def build_route_data(step, vehicle_matrix, previous_matrix_index, current_matrix_index)
+    def build_route_data(stop, vehicle_matrix, previous_matrix_index, current_matrix_index)
       if previous_matrix_index && current_matrix_index
         travel_distance = vehicle_matrix[:distance] ? vehicle_matrix[:distance][previous_matrix_index][current_matrix_index] : 0
         travel_time = vehicle_matrix[:time] ? vehicle_matrix[:time][previous_matrix_index][current_matrix_index] : 0
@@ -512,7 +512,7 @@ module Wrappers
           travel_distance: travel_distance,
           travel_time: travel_time,
           travel_value: travel_value
-        }.each{ |key, value| step.info.send("#{key}=", value) }
+        }.each{ |key, value| stop.info.send("#{key}=", value) }
       end
       {}
     end

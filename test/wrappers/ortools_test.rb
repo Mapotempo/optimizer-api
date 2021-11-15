@@ -65,7 +65,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 1, solution.routes.first.stops.size
   end
 
   def test_group_overall_duration_first_vehicle
@@ -132,7 +132,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert solutions[0]
-    assert_equal 3, solutions[0].routes[1].steps.size
+    assert_equal 3, solutions[0].routes[1].stops.size
     # TODO : providing lapse = 0 should unable all vehicles
   end
 
@@ -145,7 +145,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem[:vehicles][2][:id] = 'vehicle_2'
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert(solutions[0].routes.all?{ |r| r.steps.any?{ |a| a.type == :service } })
+    assert(solutions[0].routes.all?{ |r| r.stops.any?{ |a| a.type == :service } })
 
     problem[:relations] = [{
       type: :vehicle_group_number,
@@ -153,12 +153,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
       lapses: [2]
     }]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 2, (solutions[0].routes.count{ |r| r.steps.any?{ |a| a.type == :service } })
+    assert_equal 2, (solutions[0].routes.count{ |r| r.stops.any?{ |a| a.type == :service } })
 
     # extreme case : lapse is 0
     problem[:relations].first[:lapses] = [0]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_empty(solutions[0].routes.select{ |r| r.steps.any?{ |a| a.type == :service } })
+    assert_empty(solutions[0].routes.select{ |r| r.stops.any?{ |a| a.type == :service } })
   end
 
   def test_periodic_overall_duration
@@ -228,7 +228,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert solutions[0]
     assert_equal 0, solutions[0].unassigned.size
-    assert_equal solutions[0].routes.first.steps.size, solutions[0].routes[1].steps.size
+    assert_equal solutions[0].routes.first.stops.size, solutions[0].routes[1].stops.size
   end
 
   def test_periodic_with_group_duration
@@ -309,7 +309,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert solutions[0]
     assert_equal 0, solutions[0].unassigned.size
-    assert_equal 3, solutions[0].routes[2].steps.size
+    assert_equal 3, solutions[0].routes[2].stops.size
   end
 
   def test_overall_duration_with_rest_no_vehicle_tw
@@ -386,8 +386,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert solutions[0]
-    assert_equal 3, solutions[0].routes.find{ |route| route[:vehicle_id] == 'vehicle_1_0' }.steps.size
-    assert_equal 2, solutions[0].routes.find{ |route| route[:vehicle_id] == 'vehicle_0_0' }.steps.size
+    assert_equal 3, solutions[0].routes.find{ |route| route[:vehicle_id] == 'vehicle_1_0' }.stops.size
+    assert_equal 2, solutions[0].routes.find{ |route| route[:vehicle_id] == 'vehicle_0_0' }.stops.size
     assert_equal 0, solutions[0].unassigned.size
   end
 
@@ -524,7 +524,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert solutions[0]
-    assert_equal 3, solutions[0].routes.first.steps.size
+    assert_equal 3, solutions[0].routes.first.stops.size
   end
 
   def test_overall_duration_on_months
@@ -541,7 +541,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal([4, 1], solutions[0].routes.collect{ |r| r.steps.size })
+    assert_equal([4, 1], solutions[0].routes.collect{ |r| r.stops.size })
 
     problem = VRP.basic
     problem[:relations] = [{
@@ -554,7 +554,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal([3, 2], solutions[0].routes.collect{ |r| r.steps.size })
+    assert_equal([3, 2], solutions[0].routes.collect{ |r| r.stops.size })
     # TODO : providing lapse = 0 should unable all vehicles
   end
 
@@ -571,7 +571,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       range_indices: { start: 6, end: 7 }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal([4, 1], solutions[0].routes.collect{ |r| r.steps.size })
+    assert_equal([4, 1], solutions[0].routes.collect{ |r| r.stops.size })
 
     problem = VRP.basic
     problem[:relations] = [{
@@ -584,7 +584,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       range_indices: { start: 6, end: 7 }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal([3, 2], solutions[0].routes.collect{ |r| r.steps.size })
+    assert_equal([3, 2], solutions[0].routes.collect{ |r| r.stops.size })
     # TODO : providing lapse = 0 should unable all vehicles
   end
 
@@ -601,7 +601,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 5), end: Date.new(2020, 1, 6) }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal([4, 1], solutions[0].routes.collect{ |r| r.steps.size })
+    assert_equal([4, 1], solutions[0].routes.collect{ |r| r.stops.size })
 
     problem = VRP.basic
     problem[:relations] = [{
@@ -614,7 +614,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 5), end: Date.new(2020, 1, 6) }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal([3, 2], solutions[0].routes.collect{ |r| r.steps.size })
+    assert_equal([3, 2], solutions[0].routes.collect{ |r| r.stops.size })
   end
 
   def test_alternative_stop_conditions
@@ -669,7 +669,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 1, solution.routes.first.stops.size
   end
 
   def test_loop_problem
@@ -741,7 +741,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 2, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 2, solution.routes.first.stops.size
   end
 
   def test_without_start_end_problem
@@ -811,7 +811,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size, solution.routes.first.steps.size
+    assert_equal problem[:services].size, solution.routes.first.stops.size
   end
 
   def test_with_rest
@@ -873,7 +873,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + problem[:rests].size + 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + problem[:rests].size + 1, solution.routes.first.stops.size
   end
 
   def test_with_rest_multiple_reference
@@ -941,7 +941,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert solution
     assert_equal 2, solution.routes.size
     assert_equal problem[:services].size + problem[:vehicles].sum{ |vehicle| vehicle[:rest_ids].size } + 2,
-                 (solution.routes.sum{ |route| route.steps.size })
+                 (solution.routes.sum{ |route| route.stops.size })
   end
 
   def test_negative_time_windows_problem
@@ -1002,7 +1002,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 1, solution.routes.first.stops.size
   end
 
   def test_quantities
@@ -1071,7 +1071,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 1 - 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 1 - 1, solution.routes.first.stops.size
     assert_equal 1, solution.unassigned.size
   end
 
@@ -1131,7 +1131,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 2, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 2, solution.routes.first.stops.size
     assert_equal 0, solution.unassigned.size
   end
 
@@ -1191,7 +1191,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 2 - 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 2 - 1, solution.routes.first.stops.size
     assert_equal 1, solution.unassigned.size
   end
 
@@ -1261,8 +1261,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.routes.size
-    assert_equal problem[:services].size + 2 - 1, solution.routes.first.steps.size
-    assert_equal problem[:services].size + 2 - 1, solution.routes[1].steps.size
+    assert_equal problem[:services].size + 2 - 1, solution.routes.first.stops.size
+    assert_equal problem[:services].size + 2 - 1, solution.routes[1].stops.size
     assert_equal 0, solution.unassigned.size
   end
 
@@ -1332,7 +1332,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 1, solution.routes.first.stops.size
   end
 
   def test_triple_soft_time_windows_problem
@@ -1407,7 +1407,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 1, solution.routes.first.stops.size
   end
 
   def test_double_hard_time_windows_problem
@@ -1476,7 +1476,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size, solution.routes.first.steps.size
+    assert_equal problem[:services].size, solution.routes.first.stops.size
   end
 
   def test_triple_hard_time_windows_problem
@@ -1551,7 +1551,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size, solution.routes.first.steps.size
+    assert_equal problem[:services].size, solution.routes.first.stops.size
   end
 
   def test_nearby_specific_ordder
@@ -1664,10 +1664,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert solution.routes.first.steps[1..-2].collect.with_index{ |activity, index|
+    assert solution.routes.first.stops[1..-2].collect.with_index{ |activity, index|
       activity.service_id == "service_#{index}"
     }.all?
-    assert_equal problem[:services].size + 2, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 2, solution.routes.first.stops.size
   end
 
   def test_distance_matrix
@@ -1736,7 +1736,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 5, solution.routes.first.steps.size
+    assert_equal 5, solution.routes.first.stops.size
   end
 
   def test_max_ride_distance
@@ -1901,8 +1901,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 4, solution.routes.first.steps.size
-    assert_equal 3, solution.routes[1].steps.size
+    assert_equal 4, solution.routes.first.stops.size
+    assert_equal 3, solution.routes[1].stops.size
   end
 
   def test_skills
@@ -1989,8 +1989,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 4, solution.routes.first.steps.size
-    assert_equal 4, solution.routes[1].steps.size
+    assert_equal 4, solution.routes.first.stops.size
+    assert_equal 4, solution.routes[1].stops.size
   end
 
   def test_setup_duration
@@ -2067,8 +2067,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.routes.size
-    assert_equal problem[:services].size, solution.routes.first.steps.size - 1
-    assert_equal problem[:services].size, solution.routes[1].steps.size - 1
+    assert_equal problem[:services].size, solution.routes.first.stops.size - 1
+    assert_equal problem[:services].size, solution.routes[1].stops.size - 1
   end
 
   def test_route_duration
@@ -2148,7 +2148,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.unassigned.size
-    assert_equal 3, solution.routes.first.steps.size
+    assert_equal 3, solution.routes.first.stops.size
   end
 
   def test_route_force_start
@@ -2237,8 +2237,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 5, solution.routes.first.steps.size
-    assert_equal 'service_0', solution.routes.first.steps[1].service_id
+    assert_equal 5, solution.routes.first.stops.size
+    assert_equal 'service_0', solution.routes.first.stops[1].service_id
   end
 
   def test_route_shift_preference_to_force_start
@@ -2330,8 +2330,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 5, solution.routes.first.steps.size
-    assert_equal 'service_0', solution.routes.first.steps[1].service_id
+    assert_equal 5, solution.routes.first.stops.size
+    assert_equal 'service_0', solution.routes.first.stops[1].service_id
   end
 
   def test_route_shift_preference_to_force_end
@@ -2420,8 +2420,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 5, solution.routes.first.steps.size
-    assert_equal 18, solution.routes.first.steps[1].info.begin_time
+    assert_equal 5, solution.routes.first.stops.size
+    assert_equal 18, solution.routes.first.stops[1].info.begin_time
   end
 
   def test_route_shift_preference_to_minimize_span
@@ -2510,8 +2510,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 5, solution.routes.first.steps.size
-    assert_equal 18, solution.routes.first.steps[1].info.begin_time
+    assert_equal 5, solution.routes.first.stops.size
+    assert_equal 18, solution.routes.first.stops[1].info.begin_time
   end
 
   def test_vehicle_limit
@@ -2576,7 +2576,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert solution
     assert_equal 2, solution.routes.size
     assert_equal problem[:services].size + 1,
-                 solution.routes.first.steps.size + solution.routes[1].steps.size
+                 solution.routes.first.stops.size + solution.routes[1].stops.size
   end
 
   def test_minimum_day_lapse
@@ -2595,7 +2595,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 5, solutions[0].routes.size
     assert_empty solutions[0].unassigned
     assert_equal [0, 1, 2],
-                 solutions[0].routes.collect{ |r| r.steps.any? ? r.vehicle.global_day_index : nil }.compact
+                 solutions[0].routes.collect{ |r| r.stops.any? ? r.vehicle.global_day_index : nil }.compact
 
     # standard case
     problem[:relations].first[:lapses] = [2]
@@ -2604,7 +2604,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 5, solutions[0].routes.size
     # There should be a lapse of 2 between each visits :
     assert_equal [0, 2, 4],
-                 solutions[0].routes.collect{ |r| r.steps.any? ? r.vehicle.global_day_index : nil }.compact
+                 solutions[0].routes.collect{ |r| r.stops.any? ? r.vehicle.global_day_index : nil }.compact
   end
 
   def test_maximum_day_lapse
@@ -2621,9 +2621,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
                                              TestHelper.create(problem), nil)
     assert_equal 5, solutions[0].routes.size
-    route_with_service = solutions[0].routes.find{ |r| r.steps.any?{ |a| a.service_id.to_s == 'service_1_1_1' } }
+    route_with_service = solutions[0].routes.find{ |r| r.stops.any?{ |a| a.service_id.to_s == 'service_1_1_1' } }
     # service_1 and service_3 should be in the same route because lapse is 0:
-    assert(route_with_service.steps.any?{ |a| a.service_id.to_s == 'service_3_1_1' })
+    assert(route_with_service.stops.any?{ |a| a.service_id.to_s == 'service_3_1_1' })
 
     # add quantities to prevent from assigning all services at the same day :
     problem[:units] = [{ id: 'visit' }]
@@ -2637,13 +2637,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
     problem.delete(:relations)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal [['service_1_1_1'], ['service_2_1_1'], ['service_3_1_1'], [], []],
-                 (solutions[0].routes.collect{ |r| r.steps.collect{ |a| a.service_id } })
+                 (solutions[0].routes.collect{ |r| r.stops.collect{ |a| a.service_id } })
 
     problem[:relations] = relation
     problem[:relations].first[:lapses] = [1]
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal [['service_1_1_1'], ['service_3_1_1'], ['service_2_1_1'], [], []],
-                 (solutions[0].routes.collect{ |r| r.steps.collect{ |a| a.service_id } })
+                 (solutions[0].routes.collect{ |r| r.stops.collect{ |a| a.service_id } })
   end
 
   def test_counting_quantities
@@ -2734,7 +2734,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size - 1, solution.routes.first.steps.count(&:service_id)
+    assert_equal problem[:services].size - 1, solution.routes.first.stops.count(&:service_id)
     assert_equal 1, solution.unassigned.size
   end
 
@@ -2743,12 +2743,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(VRP.pud)
     solution = ortools.solve(vrp, 'test')
     assert solution
-    assert solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
-           solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
-    assert solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
-           solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, solution.unassigned.size
-    assert_equal 6, solution.routes.first.steps.size
+    assert_equal 6, solution.routes.first.stops.size
   end
 
   def test_shipments_quantities
@@ -2834,12 +2834,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
     assert solution
-    assert_equal(solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
-                 solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
-    assert_equal(solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1,
-                 solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
+    assert_equal(solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
+                 solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
+    assert_equal(solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1,
+                 solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
     assert_equal 0, solution.unassigned.size
-    assert_equal 6, solution.routes.first.steps.size
+    assert_equal 6, solution.routes.first.stops.size
   end
 
   def test_shipments_inroute_duration
@@ -2851,25 +2851,25 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal(
-      solution.routes.first.steps.find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
-      solution.routes.first.steps.find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+      solution.routes.first.stops.find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
+      solution.routes.first.stops.find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
     )
     assert_equal(
-      solution.routes.first.steps.find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1,
-      solution.routes.first.steps.find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+      solution.routes.first.stops.find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1,
+      solution.routes.first.stops.find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     )
     assert_operator(
-      solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' },
+      solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' },
       :<,
-      solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+      solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
     )
     assert_operator(
-      solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' },
+      solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' },
       :<,
-      solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+      solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     )
     assert_equal 0, solution.unassigned.size
-    assert_equal 6, solution.routes.first.steps.size
+    assert_equal 6, solution.routes.first.stops.size
   end
 
   def test_mixed_shipments_and_services
@@ -2945,10 +2945,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
     assert solution
-    assert solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
-           solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, solution.unassigned.size
-    assert_equal 5, solution.routes.first.steps.size
+    assert_equal 5, solution.routes.first.stops.size
   end
 
   def test_shipments_distance
@@ -2965,12 +2965,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
     assert solution
-    assert solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
-           solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
-    assert solution.routes.first.steps.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
-           solution.routes.first.steps.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, solution.unassigned.size
-    assert_equal 6, solution.routes.first.steps.size
+    assert_equal 6, solution.routes.first.stops.size
   end
 
   def test_maximum_duration_lapse_shipments
@@ -2989,12 +2989,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
       linked_ids: ['shipment_1_pickup', 'shipment_1_delivery']
     }]
     solution = ortools.solve(TestHelper.create(problem), 'test')
-    pickup_index = solution.routes.first.steps.index{ |activity| activity.pickup_shipment_id == 'shipment_1' }
-    delivery_index = solution.routes.first.steps.index{ |activity| activity.delivery_shipment_id == 'shipment_1' }
+    pickup_index = solution.routes.first.stops.index{ |activity| activity.pickup_shipment_id == 'shipment_1' }
+    delivery_index = solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_1' }
     assert_operator pickup_index, :<, delivery_index
-    assert_operator solution.routes.first.steps[pickup_index].info.end_time + 100,
+    assert_operator solution.routes.first.stops[pickup_index].info.end_time + 100,
                     :>=,
-                    solution.routes.first.steps[delivery_index].info.begin_time
+                    solution.routes.first.stops[delivery_index].info.begin_time
     assert_equal 2, solution.unassigned.size
 
     problem[:relations].each{ |r|
@@ -3091,8 +3091,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.routes.size
-    assert_equal 4, solution.routes.first.steps.size
-    assert_equal 2, solution.routes[1].steps.size
+    assert_equal 4, solution.routes.first.stops.size
+    assert_equal 2, solution.routes[1].stops.size
   end
 
   def test_sequence
@@ -3169,8 +3169,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.routes.size
-    assert_equal 2, solution.routes.first.steps.size
-    assert_equal 5, solution.routes[1].steps.size
+    assert_equal 2, solution.routes.first.stops.size
+    assert_equal 5, solution.routes[1].stops.size
   end
 
   def test_unreachable_destination
@@ -3251,7 +3251,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 4, solutions[0].routes.first.steps.size
+    assert_equal 4, solutions[0].routes.first.stops.size
     assert solutions[0][:cost] < 2**32
   end
 
@@ -3343,9 +3343,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size + 1, solution.routes.first.steps.size
+    assert_equal problem[:services].size + 1, solution.routes.first.stops.size
 
-    case solution.routes.first.steps[1].service_id
+    case solution.routes.first.stops[1].service_id
     when 'service_1'
       assert_equal 5, solution.routes.first.initial_loads.first.current
     when 'service_2'
@@ -3373,9 +3373,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = OptimizerWrapper.config[:services][:ortools].solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.routes.size
-    assert_equal problem[:services].size, solution.routes.first.steps.size + solution.routes[1].steps.size
-    assert(solution.routes.any?{ |route| route.steps.first.service_id == 'service_1' })
-    assert(solution.routes.any?{ |route| route.steps.first.service_id == 'service_3' })
+    assert_equal problem[:services].size, solution.routes.first.stops.size + solution.routes[1].stops.size
+    assert(solution.routes.any?{ |route| route.stops.first.service_id == 'service_1' })
+    assert(solution.routes.any?{ |route| route.stops.first.service_id == 'service_3' })
   end
 
   def test_force_end
@@ -3400,9 +3400,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = OptimizerWrapper.config[:services][:ortools].solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.routes.size
-    assert_equal problem[:services].size, solution.routes.first.steps.size + solution.routes[1].steps.size
-    assert(solution.routes.any?{ |route| route.steps.last.service_id == 'service_1' })
-    assert(solution.routes.any?{ |route| route.steps.last.service_id == 'service_3' })
+    assert_equal problem[:services].size, solution.routes.first.stops.size + solution.routes[1].stops.size
+    assert(solution.routes.any?{ |route| route.stops.last.service_id == 'service_1' })
+    assert(solution.routes.any?{ |route| route.stops.last.service_id == 'service_3' })
   end
 
   def test_never_first
@@ -3422,38 +3422,38 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = OptimizerWrapper.config[:services][:ortools].solve(vrp, 'test')
     assert solution
     assert_equal 2, solution.routes.size
-    assert_equal problem[:services].size, [solution.routes.first.steps.size, solution.routes[1].steps.size].max
-    assert_equal 'service_2', solution.routes.first.steps.first.service_id || solution.routes[1].steps.first.service_id
+    assert_equal problem[:services].size, [solution.routes.first.stops.size, solution.routes[1].stops.size].max
+    assert_equal 'service_2', solution.routes.first.stops.first.service_id || solution.routes[1].stops.first.service_id
   end
 
   def test_never_last
     problem = VRP.basic
     solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
-    assert_equal 'service_3', solution.routes.first.steps.last.service_id
+    assert_equal 'service_3', solution.routes.first.stops.last.service_id
 
     problem[:services].last[:activity][:position] = :never_last
     solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
-    assert_operator 'service_3', :!=, solution.routes.first.steps.last.service_id
+    assert_operator 'service_3', :!=, solution.routes.first.stops.last.service_id
   end
 
   def test_always_middle
     problem = VRP.basic
     solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
-    assert_equal 'service_3', solution.routes.first.steps.last.service_id
+    assert_equal 'service_3', solution.routes.first.stops.last.service_id
 
     problem[:services].last[:activity][:position] = :always_middle
     solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
-    assert_equal 'service_3', solution.routes.first.steps[2].service_id
+    assert_equal 'service_3', solution.routes.first.stops[2].service_id
   end
 
   def test_never_middle
     problem = VRP.basic
     solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
-    assert_equal 'service_2', solution.routes.first.steps[2].service_id
+    assert_equal 'service_2', solution.routes.first.stops[2].service_id
 
     problem[:services][1][:activity][:position] = :never_middle
     solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
-    refute_equal('service_2', solution.routes.first.steps[2].service_id)
+    refute_equal('service_2', solution.routes.first.stops[2].service_id)
   end
 
   def test_fill_quantities
@@ -3534,10 +3534,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
     assert solution
-    assert_equal problem[:services].size, solution.routes.first.steps.size
-    assert solution.routes.first.steps.first.service_id == 'service_2' || solution.routes.first.steps.last.service_id == 'service_2'
-    assert solution.routes.first.steps.first.service_id == 'service_3' || solution.routes.first.steps.last.service_id == 'service_3'
-    assert_equal 'service_1', solution.routes.first.steps[1].service_id
+    assert_equal problem[:services].size, solution.routes.first.stops.size
+    assert solution.routes.first.stops.first.service_id == 'service_2' || solution.routes.first.stops.last.service_id == 'service_2'
+    assert solution.routes.first.stops.first.service_id == 'service_3' || solution.routes.first.stops.last.service_id == 'service_3'
+    assert_equal 'service_1', solution.routes.first.stops[1].service_id
     assert_equal 5, solution.routes.first.initial_loads.first.current
   end
 
@@ -3592,7 +3592,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 1, solution.routes.size
-    assert_equal problem[:services].size, solution.routes.first.steps.size
+    assert_equal problem[:services].size, solution.routes.first.stops.size
     assert_equal 1, solution.unassigned.size
   end
 
@@ -3652,7 +3652,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
     assert solution
-    assert_equal problem[:services].size + 1, solution.routes[1].steps.size
+    assert_equal problem[:services].size + 1, solution.routes[1].stops.size
     assert_equal 0, solution.unassigned.size
   end
 
@@ -3714,7 +3714,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
-    assert_equal solution.routes.first.steps.size, solution.routes[1].steps.size
+    assert_equal solution.routes.first.stops.size, solution.routes[1].stops.size
   end
 
   def test_max_ride_time_never_from_or_to_depot
@@ -3778,8 +3778,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert solution
     assert_equal 2, solution.routes.size
     assert_equal 52, solution.cost
-    assert_equal 3, solution.routes.first.steps.size
-    assert_equal 3, solution.routes[1].steps.size
+    assert_equal 3, solution.routes.first.stops.size
+    assert_equal 3, solution.routes[1].stops.size
     assert_equal 0, solution.unassigned.size
   end
 
@@ -3863,8 +3863,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert solution
     # Initial routes are soft assignment
     assert_equal 2, solution.routes.size
-    assert_equal 2, solution.routes.first.steps.size
-    assert_equal 5, solution.routes[1].steps.size
+    assert_equal 2, solution.routes.first.stops.size
+    assert_equal 5, solution.routes[1].stops.size
   end
 
   def test_pud_initial_routes
@@ -3935,7 +3935,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal [], solution.unassigned
-    assert_equal 0, solution.routes.first.steps[1].alternative
+    assert_equal 0, solution.routes.first.stops[1].alternative
   end
 
   def test_rest_with_exclusion_cost
@@ -4104,7 +4104,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned.size
-    assert_equal 3, solution.routes.first.steps.size
+    assert_equal 3, solution.routes.first.stops.size
     assert_equal 2, solution.cost
     assert_equal 1, solution.iterations
   end
@@ -4302,7 +4302,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert solutions[0]
     expected_cost = solutions[0].cost
-    expected_route = solutions[0].routes.first.steps.collect(&:service_id)
+    expected_route = solutions[0].routes.first.stops.collect(&:service_id)
 
     problem[:configuration][:resolution][:evaluate_only] = true
     problem[:routes] = [{
@@ -4440,10 +4440,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
                                          routes: [
                                            Models::Solution::Route.new(
                                              vehicle: vrp_in.vehicles[0],
-                                             steps: [Models::Solution::Step.new(vrp_in.vehicles.first.start_point)] +
+                                             stops: [Models::Solution::Stop.new(vrp_in.vehicles.first.start_point)] +
                                                vrp_in.routes.first.mission_ids.map{ |id|
-                                                 Models::Solution::Step.new(vrp_in.services.find{ |s| s.id == id })
-                                               } + [Models::Solution::Step.new(vrp_in.vehicles.first.end_point)]
+                                                 Models::Solution::Stop.new(vrp_in.services.find{ |s| s.id == id })
+                                               } + [Models::Solution::Stop.new(vrp_in.vehicles.first.end_point)]
                                            ),
                                            Models::Solution::Route.new(
                                              vehicle: vrp_in.vehicles[1]
@@ -4589,7 +4589,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, solutions[0].unassigned.size, 'All services should be planned.'
 
     order_in_route = vrp[:relations][0][:linked_ids].collect{ |service_id|
-      solutions[0].routes.first.steps.find_index{ |activity| activity.service_id == service_id }
+      solutions[0].routes.first.stops.find_index{ |activity| activity.service_id == service_id }
     }
     assert_equal order_in_route.sort, order_in_route, 'Services with order relation should appear in correct order in route.'
   end
@@ -4727,7 +4727,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:relations].each_with_index{ |relation, index|
       previous_index = nil
       relation[:linked_ids].each{ |service_id|
-        current_index = solution.routes[index].steps.find_index{ |activity| activity.service_id == service_id }
+        current_index = solution.routes[index].stops.find_index{ |activity| activity.service_id == service_id }
         assert((previous_index || -1) < current_index) if current_index
         previous_index = current_index
       }
@@ -4798,8 +4798,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 1, solutions[0].routes.first.steps.find{ |step|
-      step.service_id == 'service_1_1_1'
+    assert_equal 1, solutions[0].routes.first.stops.find{ |stop|
+      stop.service_id == 'service_1_1_1'
     }.activity.timewindows.size
   end
 
@@ -4863,7 +4863,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 0, solutions[0].routes[0].steps.size, 'All services should be eliminated'
+    assert_equal 0, solutions[0].routes[0].stops.size, 'All services should be eliminated'
     assert_equal 2, solutions[0].unassigned.size, 'All services should be eliminated'
     assert_equal 0, solutions[0].cost, 'All eliminated, cost should be 0'
   end
@@ -4896,7 +4896,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 1)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle_id == 'vehicle_0_3' }.steps.size
+    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle_id == 'vehicle_0_3' }.stops.size
 
     vrp = VRP.basic
     vrp[:services] = [vrp[:services].first]
@@ -4904,20 +4904,20 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 2)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle.id == 'vehicle_0_2' }.steps.size
+    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle.id == 'vehicle_0_2' }.stops.size
   end
 
   def test_minimum_duration_lapse
     vrp = VRP.lat_lon
     vrp[:vehicles].first[:timewindow] = { start: 10, end: 10000 }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    first_index = solutions[0].routes.first.steps.find_index{ |stop| stop.service_id == 'service_1' }
-    second_index = solutions[0].routes.first.steps.find_index{ |stop| stop.service_id == 'service_2' }
+    first_index = solutions[0].routes.first.stops.find_index{ |stop| stop.service_id == 'service_1' }
+    second_index = solutions[0].routes.first.stops.find_index{ |stop| stop.service_id == 'service_2' }
     # those services are at same location, they should be planned together :
     assert_includes [second_index - 1, second_index + 1], first_index
-    assert_equal solutions[0].routes.first.steps[first_index].info.begin_time,
-                 solutions[0].routes.first.steps[second_index].info.begin_time
-    previous_solution = solutions[0].routes.collect{ |r| r.steps.map(&:service_id) }
+    assert_equal solutions[0].routes.first.stops[first_index].info.begin_time,
+                 solutions[0].routes.first.stops[second_index].info.begin_time
+    previous_solution = solutions[0].routes.collect{ |r| r.stops.map(&:service_id) }
 
     vrp[:relations] = [{
       type: :minimum_duration_lapse,
@@ -4925,11 +4925,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
       lapses: [0]
     }]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal previous_solution, (solutions[0].routes.collect{ |r| r.steps.map(&:service_id) })
+    assert_equal previous_solution, (solutions[0].routes.collect{ |r| r.stops.map(&:service_id) })
 
     vrp[:relations].first[:lapses] = [10]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    route = solutions[0].routes.first.steps
+    route = solutions[0].routes.first.stops
     first_index = route.find_index{ |stop| stop.service_id == 'service_1' }
     second_index = route.find_index{ |stop| stop.service_id == 'service_2' }
     assert_operator first_index, :<, second_index
@@ -4941,8 +4941,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.load_vrp(self)
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_empty solutions[0].unassigned
-    shipment_route = solutions[0].routes.find{ |r| r.steps.any?{ |stop| stop.pickup_shipment_id == 'shipment_0' } }
-    ordered_pickup_ids = shipment_route.steps.map(&:pickup_shipment_id).compact
+    shipment_route = solutions[0].routes.find{ |r| r.stops.any?{ |stop| stop.pickup_shipment_id == 'shipment_0' } }
+    ordered_pickup_ids = shipment_route.stops.map(&:pickup_shipment_id).compact
     delivery1 = vrp.services.find{ |service| service.id == "#{ordered_pickup_ids[1]}_delivery" }
     pickup0 = vrp.services.find{ |service| service.id == "#{ordered_pickup_ids[0]}_pickup" }
 
@@ -4955,20 +4955,20 @@ class Wrappers::OrtoolsTest < Minitest::Test
     )
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     shipment1_route = solutions[0].routes.find{ |r|
-      r.steps.any?{ |stop| stop[:pickup_shipment_id] == delivery1.original_id }
+      r.stops.any?{ |stop| stop[:pickup_shipment_id] == delivery1.original_id }
     }
-    delivery1_index = shipment1_route.steps.find_index{ |stop|
+    delivery1_index = shipment1_route.stops.find_index{ |stop|
       stop.delivery_shipment_id == delivery1.original_id
     }
     shipment0_route = solutions[0].routes.find{ |r|
-      r.steps.any?{ |stop| stop.pickup_shipment_id == pickup0.original_id }
+      r.stops.any?{ |stop| stop.pickup_shipment_id == pickup0.original_id }
     }
-    pickup0_index = shipment0_route.steps.find_index{ |stop|
+    pickup0_index = shipment0_route.stops.find_index{ |stop|
       stop.delivery_shipment_id == pickup0.original_id
     }
     assert pickup0_index
-    assert_operator shipment1_route.steps[delivery1_index].info.departure_time + 1800, :<=,
-                    shipment0_route.steps[pickup0_index].info.begin_time
+    assert_operator shipment1_route.stops[delivery1_index].info.departure_time + 1800, :<=,
+                    shipment0_route.stops[pickup0_index].info.begin_time
   end
 
   def test_cost_info
@@ -4991,7 +4991,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   def test_direct_shipment
     vrp = VRP.pud
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp.dup), nil)
-    route = solutions[0].routes.first.steps
+    route = solutions[0].routes.first.stops
     pickup_index = route.find_index{ |stop| stop[:pickup_shipment_id] }
     pickup_id = route[pickup_index][:pickup_shipment_id]
     delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == pickup_id }
@@ -4999,7 +4999,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
                     'If this is case, we should edit the services to make sure we are testing direct shipment properly'
     vrp[:shipments].find{ |s| s[:id] == pickup_id }[:direct] = true
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp.dup), nil)
-    route = solutions[0].routes.first.steps
+    route = solutions[0].routes.first.stops
     pickup_index = route.find_index{ |stop| stop[:pickup_shipment_id] == pickup_id }
     delivery_index = route.find_index{ |stop| stop[:delivery_shipment_id] == pickup_id }
     assert_equal pickup_index + 1, delivery_index
@@ -5009,11 +5009,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = VRP.basic
     vrp[:matrices].first[:distance] = vrp[:matrices].first[:time]
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert solutions[0].routes.all?{ |route| route.steps.empty? || route.info.total_time },
+    assert solutions[0].routes.all?{ |route| route.stops.empty? || route.info.total_time },
            'At least one route total_time was not provided'
-    assert solutions[0].routes.all?{ |route| route.steps.empty? || route.info.total_travel_time },
+    assert solutions[0].routes.all?{ |route| route.stops.empty? || route.info.total_travel_time },
            'At least one route total_travel_time was not provided'
-    assert solutions[0].routes.all?{ |route| route.steps.empty? || route.info.total_distance },
+    assert solutions[0].routes.all?{ |route| route.stops.empty? || route.info.total_distance },
            'At least one route total_travel_distance was not provided'
   end
 
@@ -5127,7 +5127,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
-    visit_order = solutions[0].routes.first.steps.collect{ |s| s.activity.point.id&.split('_')&.last&.to_i }
+    visit_order = solutions[0].routes.first.stops.collect{ |s| s.activity.point.id&.split('_')&.last&.to_i }
 
     assert_equal (0..size).to_a + [0], visit_order, 'Services are not visited in the expected order'
   end
@@ -5165,7 +5165,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
-    assert solutions[0].routes.first.steps[-2].type == :rest, 'Pause should be at the last spot'
+    assert solutions[0].routes.first.stops[-2].type == :rest, 'Pause should be at the last spot'
   end
 
   def test_no_nil_in_corresponding_mission_ids
@@ -5196,21 +5196,21 @@ class Wrappers::OrtoolsTest < Minitest::Test
                                          routes: [
                                            Models::Solution::Route.new(
                                              vehicle: vrp.vehicles[0],
-                                             steps: [Models::Solution::Step.new(vrp.vehicles[0].start_point)]
+                                             stops: [Models::Solution::Stop.new(vrp.vehicles[0].start_point)]
                                            ),
                                            Models::Solution::Route.new(
                                              vehicle: vrp.vehicles[1],
-                                             steps: [
-                                               Models::Solution::Step.new(vrp.vehicles[1].start_point),
-                                               Models::Solution::Step.new(vrp.services[4]),
-                                               Models::Solution::Step.new(vrp.services[2]),
-                                               Models::Solution::Step.new(vrp.services[0]),
-                                               Models::Solution::Step.new(vrp.services[1])
+                                             stops: [
+                                               Models::Solution::Stop.new(vrp.vehicles[1].start_point),
+                                               Models::Solution::Stop.new(vrp.services[4]),
+                                               Models::Solution::Stop.new(vrp.services[2]),
+                                               Models::Solution::Stop.new(vrp.services[0]),
+                                               Models::Solution::Stop.new(vrp.services[1])
                                              ]
                                            ),
                                            Models::Solution::Route.new(
                                              vehicle: vrp.vehicles[2],
-                                             steps: [Models::Solution::Step.new(vrp.vehicles[2].start_point)]
+                                             stops: [Models::Solution::Stop.new(vrp.vehicles[2].start_point)]
                                            )
                                         ])
         end
@@ -5244,9 +5244,9 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 1, solutions[0].unassigned.size, 'The result is expected to contain 1 unassigned'
 
-    assert_operator solutions[0].routes.first.steps.count(&:service_id), :<=, 2,
+    assert_operator solutions[0].routes.first.stops.count(&:service_id), :<=, 2,
                     'The vehicle cannot load more than 2 services and 3 kg'
-    solutions[0].routes.first.steps.each{ |activity|
+    solutions[0].routes.first.stops.each{ |activity|
       next unless activity.service_id
 
       assert_equal 1.001, activity.loads.first.quantity.value
@@ -5272,8 +5272,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     }
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert solutions[0].routes.first.steps.index{ |act| act.service_id == problem[:services].last[:id] } <
-           solutions[0].routes.first.steps.index{ |act| act.service_id == problem[:services].first[:id] }
+    assert solutions[0].routes.first.stops.index{ |act| act.service_id == problem[:services].last[:id] } <
+           solutions[0].routes.first.stops.index{ |act| act.service_id == problem[:services].first[:id] }
   end
 
   def test_simplify_vehicle_pause_without_timewindow_or_duration
@@ -5293,7 +5293,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
     # main interest of this test is to ensure test does not fail even though we have no timewindow end on rest/vehicle
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(complete_vrp), nil)
-    assert(solutions[0].routes.first.steps.any?{ |stop| stop.type == :rest })
+    assert(solutions[0].routes.first.stops.any?{ |stop| stop.type == :rest })
     assert_empty solutions[0].unassigned
   end
 
@@ -5320,13 +5320,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_empty solutions[0].unassigned, 'All three services should be planned. There is an obvious feasible solution.'
 
     vrp.services.each{ |service|
-      planned_begin_time = solutions[0].routes[0].steps.find{ |s| s.service_id == service.id }.info.begin_time
+      planned_begin_time = solutions[0].routes[0].stops.find{ |s| s.service_id == service.id }.info.begin_time
       assert service.activity.timewindows.one?{ |tw|
         planned_begin_time >= tw.start && (tw.end.nil? || planned_begin_time <= tw.end)
       }, 'Services should respect the TW without end and fall within exactly one of its TW ranges'
     }
 
-    assert_equal 20, solutions[0].routes[0].steps.last.info.begin_time, 'Third service should be planned at 20'
+    assert_equal 20, solutions[0].routes[0].stops.last.info.begin_time, 'Third service should be planned at 20'
   end
 
   def test_relations_sent_to_ortools_when_different_lapses

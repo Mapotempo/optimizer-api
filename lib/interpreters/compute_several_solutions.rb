@@ -210,7 +210,7 @@ module Interpreters
         if best[:heuristic] != 'supplied_initial_routes'
           # if another heuristic is the best, use its solution as the initial route
           vrp.routes = best[:solution].routes.collect{ |route|
-            mission_ids = route.steps.collect(&:service_id).compact
+            mission_ids = route.stops.collect(&:service_id).compact
             next if mission_ids.empty?
 
             Models::Route.create(vehicle: vrp.vehicles.find{ |v| v.id == route.vehicle_id }, mission_ids: mission_ids)

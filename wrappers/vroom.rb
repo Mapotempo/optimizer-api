@@ -104,7 +104,7 @@ module Wrappers
         @previous = nil
         vehicle = vrp.vehicles[route['vehicle']]
         cost += vehicle.cost_fixed if route['steps'].any?
-        steps = route['steps'].map{ |step|
+        stops = route['steps'].map{ |step|
           read_step(vrp, vehicle, step)
         }.compact
         initial_loads = route['steps'].first['load']&.map&.with_index{ |load, l_index|
@@ -112,11 +112,11 @@ module Wrappers
         }
         Models::Solution::Route.new(
           initial_loads: initial_loads,
-          steps: steps,
+          stops: stops,
           vehicle: vehicle,
           info: Models::Solution::Route::Info.new(
-            start_time: steps.first.info.begin_time,
-            end_time: steps.last.info.begin_time + steps.last.activity.duration
+            start_time: stops.first.info.begin_time,
+            end_time: stops.last.info.begin_time + stops.last.activity.duration
           )
         )
       }
@@ -180,7 +180,7 @@ module Wrappers
         end_time: begin_time && (begin_time + step['service']),
         departure_time: begin_time && (begin_time + step['service'])
       }
-      Models::Solution::Step.new(original_rest, info: Models::Solution::Step::Info.new(times))
+      Models::Solution::Stop.new(original_rest, info: Models::Solution::Stop::Info.new(times))
     end
 
     def read_depot(vrp, vehicle, step)
@@ -194,9 +194,9 @@ module Wrappers
         begin_time: step['arrival']
       }.merge(route_data)
       if step['type'] == 'end'
-        Models::Solution::Step.new(vehicle.end_point, info: Models::Solution::Step::Info.new(times))
+        Models::Solution::Stop.new(vehicle.end_point, info: Models::Solution::Stop::Info.new(times))
       else
-        Models::Solution::Step.new(vehicle.start_point, info: Models::Solution::Step::Info.new(times))
+        Models::Solution::Stop.new(vehicle.start_point, info: Models::Solution::Stop::Info.new(times))
       end
     end
 
@@ -217,7 +217,7 @@ module Wrappers
           current: act_step['load'] && (act_step['load'][u_index].to_f / CUSTOM_QUANTITY_BIGNUM) || 0
         )
       }
-      job_data = Models::Solution::Step.new(service, info: Models::Solution::Step::Info.new(times), loads: loads)
+      job_data = Models::Solution::Stop.new(service, info: Models::Solution::Stop::Info.new(times), loads: loads)
       @previous = point
       job_data
     end

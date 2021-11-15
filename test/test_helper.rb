@@ -290,8 +290,8 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
                          quantity: Models::Quantity.new(unit: c_unit, value: 0))
       }
       vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
-      steps = route[:activities].map.with_index{ |act, a_i|
-        times = Models::Solution::Step::Info.new(begin_time: act[:begin_time], end_time: act[:end_time] || act[:departure_time],
+      stops = route[:activities].map.with_index{ |act, a_i|
+        times = Models::Solution::Stop::Info.new(begin_time: act[:begin_time], end_time: act[:end_time] || act[:departure_time],
                                    travel_time: act[:travel_time], travel_distance: act[:travel_distance])
         loads = act[:detail][:quantities]&.map{ |c_load|
           c_unit = Models::Unit.new(id: c_load[:unit])
@@ -301,23 +301,23 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
         if act[:service_id]
           service = vrp.services.find{ |s| s.id == act[:service_id] }
-          Models::Solution::Step.new(service, loads: loads, info: times)
+          Models::Solution::Stop.new(service, loads: loads, info: times)
         elsif act[:rest_id]
           c_rest = vrp.rests.find{ |rest| rest.id == act[:rest_id] }
-          Models::Solution::Step.new(c_rest, loads: loads)
+          Models::Solution::Stop.new(c_rest, loads: loads)
         elsif a_i.zero?
-          Models::Solution::Step.new(vehicle.start_point, loads: loads, info: times)
+          Models::Solution::Stop.new(vehicle.start_point, loads: loads, info: times)
         else
-          Models::Solution::Step.new(vehicle.end_point, loads: loads, info: times)
+          Models::Solution::Stop.new(vehicle.end_point, loads: loads, info: times)
         end
       }.compact
 
-      Models::Solution::Route.new(steps: steps, vehicle: vehicle, initial_loads: loads, info: time_detail)
+      Models::Solution::Route.new(stops: stops, vehicle: vehicle, initial_loads: loads, info: time_detail)
     }
 
     unassigned = result[:unassigned].map{ |act|
       service = vrp.services.find{ |s| s.id == act[:service_id] }
-      Models::Solution::Step.new(service)
+      Models::Solution::Stop.new(service)
     }
     Models::Solution.new(routes: routes, unassigned: unassigned)
   end

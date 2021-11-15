@@ -410,8 +410,8 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 1, solutions[0].routes.collect{ |route| route.steps.count(&:rest_id) }.min
-    assert_equal 1, solutions[0].routes.collect{ |route| route.steps.count(&:rest_id) }.max
+    assert_equal 1, solutions[0].routes.collect{ |route| route.stops.count(&:rest_id) }.min
+    assert_equal 1, solutions[0].routes.collect{ |route| route.stops.count(&:rest_id) }.max
   end
 
   def test_minimum_lapse_3_visits
@@ -495,9 +495,9 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 3, solutions[0].routes[0].steps.size
-    assert_equal 3, solutions[0].routes[10].steps.size
-    assert_equal 3, solutions[0].routes[20].steps.size
+    assert_equal 3, solutions[0].routes[0].stops.size
+    assert_equal 3, solutions[0].routes[10].stops.size
+    assert_equal 3, solutions[0].routes[20].stops.size
   end
 
   def test_minimum_and_maximum_lapse
@@ -614,16 +614,16 @@ class InterpreterTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     route_s01 = solutions[0].routes.find{ |route|
-      route.steps.any?{ |activity| activity.service_id == 'service_0_1_2' }
+      route.stops.any?{ |activity| activity.service_id == 'service_0_1_2' }
     }
     route_s02 = solutions[0].routes.find{ |route|
-      route.steps.any?{ |activity| activity.service_id == 'service_0_2_2' }
+      route.stops.any?{ |activity| activity.service_id == 'service_0_2_2' }
     }
     route_s11 = solutions[0].routes.find{ |route|
-      route.steps.any?{ |activity| activity.service_id == 'service_1_1_2' }
+      route.stops.any?{ |activity| activity.service_id == 'service_1_1_2' }
     }
     route_s12 = solutions[0].routes.find{ |route|
-      route.steps.any?{ |activity| activity.service_id == 'service_1_2_2' }
+      route.stops.any?{ |activity| activity.service_id == 'service_1_2_2' }
     }
 
     route_index_s01 = route_s01 && route_s01.vehicle.id.split('_').last.to_i || -1
@@ -745,10 +745,10 @@ class InterpreterTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 5, solutions[0].routes.size
-    assert_equal 4, solutions[0].routes[0].steps.size
-    assert_equal 4, solutions[0].routes[1].steps.size
-    assert_equal solutions[0].routes[0].steps[2].info.begin_time,
-                 solutions[0].routes[1].steps[2].info.begin_time
+    assert_equal 4, solutions[0].routes[0].stops.size
+    assert_equal 4, solutions[0].routes[1].stops.size
+    assert_equal solutions[0].routes[0].stops[2].info.begin_time,
+                 solutions[0].routes[1].stops[2].info.begin_time
   end
 
   def test_remove_multiple_empty_service
@@ -852,7 +852,7 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 4, solutions[0].routes[0].steps.size
+    assert_equal 4, solutions[0].routes[0].stops.size
   end
 
   def test_do_not_remove_multiple_empty_service
@@ -959,7 +959,7 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 5, solutions[0].routes[0].steps.size
+    assert_equal 5, solutions[0].routes[0].stops.size
   end
 
   def test_multi_modal_route_with_capacity
@@ -1051,7 +1051,7 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 7, solutions[0].routes[0].steps.size
+    assert_equal 7, solutions[0].routes[0].stops.size
   end
 
   def test_multi_modal_route_with_skills
@@ -1134,10 +1134,10 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 5, solutions[0].routes[0].steps.size
-    assert_equal 'service_0', solutions[0].routes[0].steps[2].service_id
-    assert_equal 5, solutions[0].routes[1].steps.size
-    assert_equal 'service_1', solutions[0].routes[1].steps[2].service_id
+    assert_equal 5, solutions[0].routes[0].stops.size
+    assert_equal 'service_0', solutions[0].routes[0].stops[2].service_id
+    assert_equal 5, solutions[0].routes[1].stops.size
+    assert_equal 'service_1', solutions[0].routes[1].stops[2].service_id
   end
 
   def test_multi_modal_route_with_skills_intersection
@@ -1222,7 +1222,7 @@ class InterpreterTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 1, solutions[0].routes.size
-    assert_equal 6, solutions[0].routes[0].steps.size
+    assert_equal 6, solutions[0].routes[0].stops.size
   end
 
   def test_multi_modal_route_with_restrained_capacity
@@ -1314,11 +1314,11 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 11, solutions[0].routes[0].steps.size
-    assert_equal 9.9, (solutions[0].routes[0].steps.sum{ |activity|
+    assert_equal 11, solutions[0].routes[0].stops.size
+    assert_equal 9.9, (solutions[0].routes[0].stops.sum{ |activity|
                          activity.service_id == 'service_1' ? activity.loads.first.quantity.value : 0
                        })
-    assert_equal 10, (solutions[0].routes[0].steps.sum{ |activity|
+    assert_equal 10, (solutions[0].routes[0].stops.sum{ |activity|
                         activity.service_id == 'service_0' ? activity.loads.first.quantity.value : 0
                       })
   end
@@ -1412,11 +1412,11 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 10, solutions[0].routes[0].steps.size
-    assert_equal 7.5, (solutions[0].routes[0].steps.sum{ |activity|
+    assert_equal 10, solutions[0].routes[0].stops.size
+    assert_equal 7.5, (solutions[0].routes[0].stops.sum{ |activity|
                          activity.service_id == 'service_1' ? activity.loads.first.quantity.value : 0
                        })
-    assert_equal 7.5, (solutions[0].routes[0].steps.sum{ |activity|
+    assert_equal 7.5, (solutions[0].routes[0].stops.sum{ |activity|
                          activity.service_id == 'service_0' ? activity.loads.first.quantity.value : 0
                        })
   end

@@ -28,7 +28,7 @@ module Models
     field :solvers, default: []
 
     has_many :routes, class_name: 'Models::Solution::Route'
-    has_many :unassigned, class_name: 'Models::Solution::Step'
+    has_many :unassigned, class_name: 'Models::Solution::Stop'
 
     belongs_to :cost_info, class_name: 'Models::Solution::CostInfo'
     belongs_to :info, class_name: 'Models::Solution::Info'
@@ -96,8 +96,8 @@ module Models
       self.cost -= (previous_total - cost_info.total).round
     end
 
-    def insert_step(vrp, route, step_object, index, idle_time = 0)
-      route.insert_step(vrp, step_object, index, idle_time)
+    def insert_stop(vrp, route, stop, index, idle_time = 0)
+      route.insert_stop(vrp, stop, index, idle_time)
       Parsers::SolutionParser.parse(self, vrp)
     end
   end
