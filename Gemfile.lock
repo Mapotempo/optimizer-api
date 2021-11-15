@@ -242,7 +242,6 @@ GEM
     ruby-next-core (0.10.2)
     ruby-progressbar (1.11.0)
     ruby2_keywords (0.0.2)
-    sim_annealing (0.0.2)
     simplecov (0.19.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
@@ -341,7 +340,6 @@ DEPENDENCIES
   rubocop-minitest
   rubocop-performance
   rubrowser
-  sim_annealing
   simplecov
   solargraph
   thin
