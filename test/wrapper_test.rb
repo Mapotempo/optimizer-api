@@ -2883,6 +2883,39 @@ class WrapperTest < Minitest::Test
                  "all should be infeasible due to distance constraint"
   end
 
+  def test_split_independent_vrp_does_not_reset_relations
+    problem = VRP.independent_skills
+    # The following pairs of services (those in the same relation) would stay on the same vehicle
+    # after the split_independent_vrp even without the relations (they are forced by skills).
+    # Here we test only if the relations passed correctly to sub-problems after split_independent_vrp.
+    # split_independent_vrp does not take into account relations during split.
+    # If the services are not feasible in the first place
+    # -- i.e., both services of the same relation cannot be served on the same vehicle --
+    # then split cannot do anything but split these services into different sub-problems.
+    problem[:relations] = [
+      { type: :shipment, linked_ids: ['service_2', 'service_4'] },
+      { type: :same_route, linked_ids: ['service_3', 'service_5'] },
+      { type: :sequence, linked_ids: ['service_1', 'service_6'] },
+    ]
+
+    vrp = TestHelper.create(problem)
+    vrp.matrices = nil
+    split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 3, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    expected_split = [
+      [['vehicle_0'], ['service_2', 'service_4']],
+      [['vehicle_1'], ['service_3', 'service_5']],
+      [['vehicle_2'], ['service_1', 'service_6']],
+    ]
+    assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
+    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
+    assert_equal 0, (split_vrps.count{ |s| s.resolution_duration.zero? })
+
+    expected_relations = problem[:relations].map{ |r| r[:linked_ids] }.sort
+    actual_relation = split_vrps.map{ |svrp| svrp.relations.flat_map(&:linked_ids) }.sort
+    assert_equal expected_relations, actual_relation, 'split_independent_vrp should keep relations'
+  end
+
   def test_split_independent_vrp_generates_correct_split_vrps
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
