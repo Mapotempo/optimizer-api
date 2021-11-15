@@ -1112,6 +1112,8 @@ module Wrappers
             expanded_services << new_service
           }
 
+          # For some reason, or-tools performance is better when the sequence relation is defined in the inverse order.
+          # Note that, activity.duration's are set to zero except the last duplicated service (so we model exactly same constraint). 
           sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids.reverse)
         }
 
