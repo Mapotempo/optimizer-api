@@ -33,6 +33,18 @@ module ContainedPointAsJson
   end
 end
 
+module ActivityAsJson
+  extend ActiveSupport::Concern
+
+  def as_json
+    activity = super
+    return activity unless self.is_a? Models::Activity
+
+    activity.delete('timewindow_ids')
+    activity
+  end
+end
+
 module ServiceAsJson
   extend ActiveSupport::Concern
 
@@ -40,6 +52,7 @@ module ServiceAsJson
     service = super
     return service unless self.is_a? Models::Service
 
+    service.delete('sticky_vehicles')
     service.delete('activity_id')
     service.delete('quantity_ids')
     service
@@ -133,6 +146,8 @@ module VehicleAsJson
       [field_name, self.send(field_name).as_json]
     }.compact.to_h
 
+    vehicle.delete(:timewindow_id)
+
     vehicle[:id] = self.id
     vehicle
   end
@@ -144,9 +159,16 @@ module VrpAsJson
   def as_json(options = {})
     return super unless self.is_a? Models::Vrp
 
-    vrp = super
-    vrp['configuration'] = vrp['config']
-    vrp.delete('config')
+    vrp = {}
+
+    if options[:config_only]
+      vrp = { 'configuration' => self.config.as_json }
+    else
+      vrp = super
+      vrp['configuration'] = vrp['config']
+      vrp.delete('config')
+    end
+
     delete_end_with_nested_key!(vrp['configuration'], '_id')
     vrp
   end
@@ -161,7 +183,7 @@ module VrpAsJson
         end
       }
     elsif hash.is_a? Array
-      hash.each{ |value| delete_end_with_nested_key(value, except_key) }
+      hash.each{ |value| delete_end_with_nested_key!(value, except_key) }
     end
     hash
   end

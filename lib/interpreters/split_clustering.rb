@@ -615,21 +615,17 @@ module Interpreters
 
     def self.build_partial_service_vrp(service_vrp, partial_service_ids, available_vehicles_indices = nil, entity = nil)
       log '---> build_partial_service_vrp', level: :debug
+      Models.delete_all
       tic = Time.now
-      # WARNING: Below we do marshal dump load but we continue using original objects
-      # That is, if these objects are modified in sub_vrp then they will be modified in vrp too.
-      # However, since original objects are coming from the data and we shouldn't be modifiying them, this doesn't pose a problem.
-      # TOD0: Here we do Marshal.load/dump but we continue to use the original objects (and there is no bugs related to that)
-      # That means we don't need hard copy of obejcts we just need to cut the connection between arrays (like services points etc) that we want to modify.
       vrp = service_vrp[:vrp]
-      sub_vrp = Marshal.load(Marshal.dump(vrp))
-      sub_vrp.id = Random.new
-      # TODO: Within Periodic Vehicles require to have unduplicated ids
+      vrp_hash = JSON.parse(vrp.to_json(config_only: true), symbolize_names: true)
+      sub_vrp = Models::Vrp.create(vrp_hash)
+      sub_vehicles = []
       if available_vehicles_indices
-        sub_vrp.vehicles.delete_if.with_index{ |_v, v_i| !available_vehicles_indices.include?(v_i) }
-        sub_vrp.routes.delete_if{ |r|
+        sub_vrp.vehicles = vrp.vehicles.select.with_index{ |_v, v_i| available_vehicles_indices.include?(v_i) }
+        sub_vrp.routes = vrp.routes.select{ |r|
           route_week_day = r.day_index ? r.day_index % 7 : nil
-          sub_vrp.vehicles.none?{ |vehicle|
+          sub_vehicles.any?{ |vehicle|
             vehicle_week_day_availability =
               if vehicle.timewindow
                 vehicle.timewindow.day_index || (0..6)
@@ -642,15 +638,24 @@ module Interpreters
             vehicle.id == r.vehicle_id && (route_week_day.nil? || vehicle_week_day_availability.include?(route_week_day))
           }
         }
+        sub_vrp
+      else
+        sub_vrp.vehicles = vrp.vehicles
+        sub_vrp.routes = vrp.routes
       end
-      sub_vrp.services.select!{ |service| partial_service_ids.include?(service.id) }
+
+      sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }
       rest_ids = sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.uniq
-      sub_vrp.rests.select!{ |r| rest_ids.include?(r.id) }
-      if entity == :vehicle
-        sub_vrp.relations.delete_if{ |r| r.type == :same_vehicle }
-        sub_vrp.services.each{ |s| s.relations.delete_if{ |r| r.type == :same_vehicle } }
-      end
+      sub_vrp.rests = vrp.rests.select{ |r| rest_ids.include?(r.id) }
       available_vehicle_ids = sub_vrp.vehicles.map(&:id)
+
+      sub_vrp.relations = vrp.relations.select{ |r|
+        next if r.type == :same_vehicle && entity == :vehicle
+
+        # Split should respect relations, it is enough to check only the first linked id --  [0..0].all? is to handle empties
+        r.linked_ids[0..0].all?{ |sid| partial_service_ids.include?(sid) } &&
+          r.linked_vehicle_ids[0..0].all?{ |vid| available_vehicle_ids.include?(vid) }
+      }
 
       split_respects_relations = sub_vrp.relations.all?{ |r|
         non_matching_linked_ids = r.linked_ids - partial_service_ids
@@ -665,19 +670,14 @@ module Interpreters
         raise err_msg if ENV['APP_ENV'] != 'production'
       end
 
-      sub_vrp.relations.select!{ |r|
-        # Split should respect relations, it is enough to check only the first linked id --  [0..0].all? is to handle empties
-        r.linked_ids[0..0].all?{ |sid| partial_service_ids.include?(sid) } &&
-          r.linked_vehicle_ids[0..0].all?{ |vid| available_vehicle_ids.include?(vid) }
-      }
-      points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.compact |
-                   sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.compact
-      sub_vrp.points.select!{ |p| points_ids.include?(p.id) }
-      sub_vrp.vehicles.each{ |vehicle|
-        vehicle.start_point = sub_vrp.points.find{ |p| p.id == vehicle.start_point_id } if vehicle.start_point
-        vehicle.end_point = sub_vrp.points.find{ |p| p.id == vehicle.end_point_id } if vehicle.end_point
-      }
+      sub_vrp.points = sub_vrp.services.map{ |s| s.activity.point }.compact |
+                       sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point, vehicle.end_point] }.compact
+      sub_vrp.points.uniq!
       sub_vrp = add_corresponding_entity_skills(entity, sub_vrp)
+
+      sub_vrp_hash = JSON.parse(sub_vrp.to_json, symbolize_names: true)
+
+      sub_vrp = Models::Vrp.create(sub_vrp_hash)
 
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }

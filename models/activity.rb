@@ -19,6 +19,7 @@ require './models/base'
 
 module Models
   class Activity < Base
+    include ActivityAsJson
     include ContainedPointAsJson
     include TimewindowAsJson
 
