@@ -228,10 +228,14 @@ class Api::V01::OutputTest < Minitest::Test
     OptimizerWrapper.config[:debug][:output_clusters] = true
     OptimizerWrapper.config[:debug][:output_periodic] = true
 
-    vrp = TestHelper.load_vrp(self, fixture_file: 'instance_clustered')
-    vrp.resolution_repetition = 1
+    vrp = VRP.lat_lon_periodic
     vrp[:name] = name
-    vrp.preprocessing_partitions.each{ |partition| partition[:restarts] = 1 }
+    vrp[:configuration][:preprocessing][:partitions] = [
+      {method: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :vehicle},
+      {method: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :work_day}
+    ]
+    vrp[:configuration][:resolution][:repetition] = 1
+    vrp = TestHelper.create(vrp)
 
     Wrappers::PeriodicHeuristic.stub_any_instance(
       :compute_initial_solution,
@@ -248,9 +252,7 @@ class Api::V01::OutputTest < Minitest::Test
       OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     end
 
-    files = Find.find(OptimizerWrapper.dump_vrp_dir.cache).select { |path|
-      path.include?(name)
-    }
+    files = Dir.glob(File.join(OptimizerWrapper.dump_vrp_dir.cache, "*#{name}*"))
 
     assert_equal 3, files.size
     assert_includes files, File.join(OptimizerWrapper.dump_vrp_dir.cache, "periodic_construction_#{name}")
