@@ -553,17 +553,21 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_functionality
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_duration = 120000
+      vrp.resolution_duration = 12000
+      vrp.preprocessing_first_solution_strategy = ['local_cheapest_insertion']
+      vrp.config.preprocessing.first_solution_strategy = vrp.preprocessing_first_solution_strategy
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
-        error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
-        result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
-          OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
-        end
+        Interpreters::SplitClustering.stub(:remove_poor_routes, ->(_vrp, _result){ return nil }) do
+          error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
+          result = Routers::RouterWrapper.stub_any_instance(:matrix, error) do
+            OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
+          end
 
-        assert result[:routes].size <= 7, "There shouldn't be more than 7 routes -- it is #{result[:routes].size}"
-        assert_equal [], result[:unassigned], 'There should be no unassigned services.'
-        return
+          assert result[:routes].size <= 7, "There shouldn't be more than 7 routes -- it is #{result[:routes].size}"
+          assert_equal [], result[:unassigned], 'There should be no unassigned services.'
+          return
+        end
       end
     end
 

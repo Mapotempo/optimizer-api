@@ -57,7 +57,7 @@ module TSPHelper
   def self.solve(tsp)
     vroom = OptimizerWrapper::VROOM
     progress = 0
-    result = vroom.solve(tsp){
+    vroom.solve(tsp){
       progress += 1
     }
   end

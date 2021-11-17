@@ -15,7 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './api/v01/vrp'
 
 module VrpInput
   extend Grape::API::Helpers

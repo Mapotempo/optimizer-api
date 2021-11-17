@@ -1,20 +1,20 @@
 GIT
-  remote: https://github.com/Mapotempo/balanced_vrp_clustering.git
-  revision: b7e7f69e63d6c39855da3a938e4e3f682deb3580
+  remote: https://github.com/senhalil/active_hash.git
+  revision: 10a84f020aada46febc91cf2f0fddcbd3a5485eb
+  branch: dev
+  specs:
+    active_hash (3.1.0)
+      activesupport (>= 5.0.0)
+
+GIT
+  remote: https://github.com/senhalil/balanced_vrp_clustering.git
+  revision: 1b6a16f54895aa6f5bd3c43216664ccd053b16b7
   branch: dev
   specs:
     balanced_vrp_clustering (0.2.0)
       awesome_print
       color-generator
       geojson2image
-
-GIT
-  remote: https://github.com/mapotempo/active_hash.git
-  revision: f94b0a3eeb00ec2815768fbd820d7690de82ca8a
-  branch: dev
-  specs:
-    active_hash (3.1.0)
-      activesupport (>= 5.0.0)
 
 GIT
   remote: https://github.com/senhalil/rack.git
@@ -51,8 +51,6 @@ GEM
       public_suffix (>= 2.0.2, < 5.0)
     ai4r (1.13)
     ansi (1.5.0)
-    anyway_config (2.2.2)
-      ruby-next-core (>= 0.11.0)
     ast (2.4.2)
     awesome_print (1.9.2)
     backport (1.2.0)
@@ -67,7 +65,9 @@ GEM
     crack (0.4.5)
       rexml
     crass (1.0.6)
+    csv (3.2.1)
     daemons (1.4.1)
+    date (3.2.2)
     diff-lcs (1.4.4)
     docile (1.4.0)
     domain_name (0.5.20190701)
@@ -93,6 +93,7 @@ GEM
     e2mmap (0.1.0)
     erubi (1.10.0)
     eventmachine (1.2.7)
+    fileutils (1.6.0)
     geojson2image (0.2.2)
       chunky_png (~> 1.3)
       oj (~> 3.6)
@@ -116,7 +117,6 @@ GEM
       grape
       rack
     hashdiff (1.0.1)
-    heap-profiler (0.5.0)
     http-accept (1.7.0)
     http-cookie (1.0.4)
       domain_name (~> 0.5)
@@ -124,16 +124,15 @@ GEM
     i18n (1.8.11)
       concurrent-ruby (~> 1.0)
     jaro_winkler (1.5.4)
+    json (2.6.1)
     kramdown (2.3.1)
       rexml
     kramdown-parser-gfm (1.1.0)
       kramdown (~> 2.0)
-    litecable (0.7.2)
-      anyway_config (>= 1.0)
+    logger (1.4.4)
     loofah (2.12.0)
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
-    memory_profiler (1.0.0)
     mime-types (3.4.1)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2021.1115)
@@ -168,6 +167,7 @@ GEM
       mini_portile2 (~> 2.6.1)
       racc (~> 1.4)
     oj (3.13.9)
+    open3 (0.1.0)
     parallel (1.21.0)
     parser (3.0.2.0)
       ast (~> 2.4.1)
@@ -234,12 +234,6 @@ GEM
       rubocop (>= 0.74)
     rubocop-performance (1.6.1)
       rubocop (>= 0.71.0)
-    rubrowser (2.11)
-      litecable
-      parser
-      puma
-      websocket
-    ruby-next-core (0.13.1)
     ruby-progressbar (1.11.0)
     ruby2_keywords (0.0.5)
     sim_annealing (0.0.2)
@@ -269,12 +263,15 @@ GEM
       thor (~> 1.0)
       tilt (~> 2.0)
       yard (~> 0.9, >= 0.9.24)
+    tempfile (0.1.2)
     thin (1.8.1)
       daemons (~> 1.0, >= 1.0.9)
       eventmachine (~> 1.0, >= 1.0.4)
       rack (>= 1, < 3)
     thor (1.1.0)
     tilt (2.0.10)
+    tmpdir (0.1.2)
+      fileutils
     tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
     unf (0.1.4)
@@ -287,7 +284,6 @@ GEM
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
-    websocket (1.2.9)
     yard (0.9.26)
     zeitwerk (2.5.1)
     zlib (2.1.1)
@@ -299,21 +295,25 @@ DEPENDENCIES
   actionpack
   active_hash!
   activemodel
+  activesupport
   ai4r
   balanced_vrp_clustering!
   benchmark-ips
   byebug
   charlock_holmes
+  csv
+  date
+  fileutils
   google-protobuf (>= 3)
   grape (>= 1.5.3)
   grape-entity
   grape-swagger
   grape-swagger-entity
   grape_logging
-  heap-profiler
   http_accept_language
   i18n
-  memory_profiler
+  json
+  logger
   minitest
   minitest-around
   minitest-bisect
@@ -323,6 +323,7 @@ DEPENDENCIES
   minitest-stub_any_instance
   nokogiri
   oj
+  open3
   polylines
   puma
   rack!
@@ -341,11 +342,12 @@ DEPENDENCIES
   rubocop (< 0.82)
   rubocop-minitest
   rubocop-performance
-  rubrowser
   sim_annealing
   simplecov
   solargraph
+  tempfile
   thin
+  tmpdir
   webmock
   zlib
 

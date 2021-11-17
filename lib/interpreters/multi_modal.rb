@@ -16,8 +16,6 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
-require 'rgeo/geo_json'
-
 module Interpreters
   class MultiModal
     def initialize(vrp, selected_service)

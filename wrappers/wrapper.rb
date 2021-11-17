@@ -1614,7 +1614,7 @@ module Wrappers
       vrp.vehicles = expand_vehicles_for_consistent_empty_result(vrp) if vrp.schedule? && !already_expanded
       OptimizerWrapper.parse_result(vrp, {
         solvers: [solver],
-        cost: nil,
+        cost: vrp.vehicles.empty? ? Helper.fixnum_max : nil,
         cost_details: Models::CostDetails.create({}),
         iterations: nil,
         routes: vrp.vehicles.collect{ |vehicle|

@@ -16,9 +16,23 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 ENV['APP_ENV'] ||= 'development'
-require File.expand_path('../config/environments/' + ENV['APP_ENV'], __FILE__)
 
-Dir[File.dirname(__FILE__) + '/config/initializers/*.rb'].sort.each { |file| require file }
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].sort.each { |file| require file }
+require 'rubygems'
+require 'bundler/setup'
+
+ORIGINAL_VERBOSITY = $VERBOSE
+$VERBOSE = nil if $VERBOSE && ENV['APP_ENV'] == 'test' # suppress the warnings of external libraries
+Bundler.require(:default, ENV['APP_ENV'].to_sym)
+Resque::Plugins::Status::Hash.inspect # eager load resque-hash
+$VERBOSE = ORIGINAL_VERBOSITY
+
+# Gems that needs to be manually required because they are part of an already included gem
+require 'active_support/concern'
+require 'active_support/core_ext'
+require 'active_support/core_ext/string/conversions'
+
+require_rel 'config/environments/' + ENV['APP_ENV']
+require_all 'config/initializers'
+
 require './optimizer_wrapper'
 require './api/root'

@@ -21,48 +21,6 @@ module Helper
     value.to_s.rjust(length, '0')
   end
 
-  def self.fixnum_max
-    (2**(0.size * 8 - 2) - 1)
-  end
-
-  def self.fixnum_min
-    -(2**(0.size * 8 - 2))
-  end
-
-  def self.flying_distance(loc_a, loc_b)
-    return 0.0 unless loc_a[0] && loc_b[0]
-
-    if (loc_a[0] - loc_b[0]).abs < 30 && [loc_a[0].abs, loc_b[0].abs].max + (loc_a[1] - loc_b[1]).abs < 100
-      # These limits ensures that relative error cannot be much greather than 2%
-      # For a distance like Bordeaux - Berlin, relative error between
-      # euclidean_distance and flying_distance is 0.1%.
-      # That is no need for trigonometric calculation.
-      return euclidean_distance(loc_a, loc_b)
-    end
-
-    r = 6378137 # Earth's radius in meters
-    deg2rad_lat_a = loc_a[0] * Math::PI / 180
-    deg2rad_lat_b = loc_b[0] * Math::PI / 180
-    deg2rad_lon_a = loc_a[1] * Math::PI / 180
-    deg2rad_lon_b = loc_b[1] * Math::PI / 180
-    lat_distance = deg2rad_lat_b - deg2rad_lat_a
-    lon_distance = deg2rad_lon_b - deg2rad_lon_a
-
-    intermediate = Math.sin(lat_distance / 2) * Math.sin(lat_distance / 2) +
-                   Math.sin(lon_distance / 2) * Math.sin(lon_distance / 2) * Math.cos(deg2rad_lat_a) * Math.cos(deg2rad_lat_b)
-
-    r * 2 * Math.atan2(Math.sqrt(intermediate), Math.sqrt(1 - intermediate))
-  end
-
-  def self.euclidean_distance(loc_a, loc_b)
-    return 0.0 unless loc_a[0] && loc_b[0]
-
-    delta_lat = loc_a[0] - loc_b[0]
-    delta_lon = (loc_a[1] - loc_b[1]) * Math.cos((loc_a[0] + loc_b[0]) * Math::PI / 360.0) # Correct the length of a lon difference with cosine of avereage latitude
-
-    111321 * Math.sqrt(delta_lat**2 + delta_lon**2) # 111321 is the length of a degree (of lon and lat) in meters
-  end
-
   def self.deep_copy(original, override: {}, shallow_copy: [])
     # TODO: after testing move the logic to base.rb as a clone function (initialize_copy)
 
@@ -202,65 +160,14 @@ module Helper
   end
 end
 
-# Some functions for convenience
-# In the same vein as active_support Enumerable.sum implementation
-module Enumerable
-  # Provide the average on an array
-  #  [5, 15, 7].mean # => 9.0
-  def mean
-    return nil if empty?
-
-    inject(0) { |sum, x| sum + x } / size.to_f
-  end
-
-  # If the array has an odd number, then simply pick the one in the middle
-  # If the array size is even, then we return the mean of the two middle.
-  #  [5, 15, 7].median # => 7
-  def median(already_sorted = false)
-    return nil if empty?
-
-    ret = already_sorted ? self : sort
-    m_pos = size / 2 # no to_f!
-    size.odd? ? ret[m_pos] : ret[m_pos - 1..m_pos].mean
-  end
-
-  # The mode is the single most popular item in the array.
-  #  [5, 15, 10, 15].mode # => 15
-  def mode
-    modes(false)[0]
-  end
-
-  # In case there are multiple elements with the highest occurence
-  #  [5, 15, 10, 10, 15].modes # => [10, 15]
-  #  [5, 15, 10, 15].modes     # => [15] (Note that modes() returns an array)
-  def modes(find_all = true)
-    return nil if empty?
-
-    histogram = each_with_object(Hash.new(0)) { |n, h| h[n] += 1 }
-    modes = nil
-    histogram.each_pair do |item, times|
-      modes << item if find_all && !modes.nil? && times == modes[0]
-      modes = [times, item] if (modes && times > modes[0]) || (modes.nil? && times > 1)
-    end
-    modes.nil? ? nil : modes[1...modes.size]
-  end
-
-  # group_by like counting routine for convenience
-  def count_by(&block)
-    self.group_by(&block)
-        .map{ |key, items| [key, items&.count] }
-        .to_h
-  end
-end
-
 class Numeric
-  # rounds the value to the closests multiple of `num`
+  # rounds the value to the closest multiple of `num`
   # https://en.wikipedia.org/wiki/Rounding#Rounding_to_other_values
   def round_to_multiple_of(num)
     (self / num).round(6).round(0) * num # .round(6).round(0) to prevent floating point errors
   end
 
-  # rounds the number to the closests step in between [val.round(ndigits), val.round(ndigits) + 1/10**ndigits].
+  # rounds the number to the closest step in between [val.round(ndigits), val.round(ndigits) + 1/10**ndigits].
   # Useful when rounding is performed to reduce the number of uniq elements.
   #
   # ndigits: the number of decimal places (when nsteps = 0)

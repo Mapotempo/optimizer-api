@@ -15,21 +15,13 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'active_support'
-require 'active_support/core_ext'
-require 'redis'
-require 'tmpdir'
 
 require './wrappers/demo'
 require './wrappers/vroom'
 require './wrappers/ortools'
 
 require './lib/cache_manager'
-
 require './util/logger'
-
-require 'byebug'
-require 'pp'
 
 module OptimizerWrapper
   TMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'tmp')

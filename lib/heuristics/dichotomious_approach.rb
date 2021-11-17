@@ -495,8 +495,7 @@ module Interpreters
     def self.kmeans(vrp, cut_symbol)
       nb_clusters = 2
       # Split using balanced kmeans
-      if vrp.services.all?{ |service| service.activity }
-        unit_symbols = vrp.units.collect{ |unit| unit.id.to_sym } << :duration << :visits
+      if vrp.services.all?(&:activity)
         cumulated_metrics = Hash.new(0)
         data_items = []
 
@@ -522,7 +521,7 @@ module Interpreters
           data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, characteristics, [], 0]
         }
 
-        # No expected caracteristics neither strict limitations because we do not
+        # No expected characteristics neither strict limitations because we do not
         # know which vehicles will be used in advance
         options = { max_iterations: 100, restarts: 5, cut_symbol: cut_symbol, last_iteration_balance_rate: 0.0 }
         limits = { metric_limit: { limit: cumulated_metrics[cut_symbol] / nb_clusters }, strict_limit: {}}

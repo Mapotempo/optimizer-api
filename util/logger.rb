@@ -16,8 +16,6 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
-require 'logger'
-
 class OptimizerLogger
   @@log_device = ENV['LOG_DEVICE'] || STDOUT
   @@level = :info
