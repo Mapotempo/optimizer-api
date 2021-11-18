@@ -15,8 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'active_hash'
-require 'active_model/validations/numericality'
 
 module Models
   def self.delete_all
@@ -60,11 +58,11 @@ module Models
           "#{name[0..-4]}y_ids".to_sym
         end
 
-      define_method(name) do
+      redefine_method(name) do
         self[name] ||= []
       end
 
-      define_method("#{name}=") do |vals|
+      redefine_method("#{name}=") do |vals|
         c = class_from_string(options[:class_name])
         self[name] = vals&.collect{ |val|
           if val.is_a?(c)
@@ -79,11 +77,11 @@ module Models
 
       # Array and other objects that are not based on Models::Base class cannot have id methods
       if options[:class_name]&.start_with? 'Models::'
-        define_method(ids_function_name) do
+        redefine_method(ids_function_name) do
           self[ids_function_name] ||= self[name]&.map(&:id) || []
         end
 
-        define_method("#{ids_function_name}=") do |vals|
+        redefine_method("#{ids_function_name}=") do |vals|
           c = class_from_string(options[:class_name])
           self[name] = vals && vals.split(',').flat_map{ |val_id| c.find(val_id) }
           self[ids_function_name] = self[name]&.map(&:id)
@@ -96,11 +94,11 @@ module Models
 
       id_function_name = "#{name}_id".to_sym
 
-      define_method(name) do
+      redefine_method(name) do
         self[name]
       end
 
-      define_method("#{name}=") do |val|
+      redefine_method("#{name}=") do |val|
         c = class_from_string(options[:class_name])
         self[name] = val && (val.is_a?(Hash) ? c.create(val) : val)
         self[id_function_name] = self[name]&.id if c.module_parent == Models
@@ -109,11 +107,11 @@ module Models
 
       # Array and other objects that are not based on Models::Base class cannot have id methods
       if options[:class_name]&.start_with? 'Models::'
-        define_method(id_function_name) do
+        redefine_method(id_function_name) do
           self[id_function_name] ||= self[name]&.id
         end
 
-        define_method("#{id_function_name}=") do |val_id|
+        redefine_method("#{id_function_name}=") do |val_id|
           c = class_from_string(options[:class_name])
           self[name] = val_id && c.find(val_id)
           self[id_function_name] = self[name]&.id

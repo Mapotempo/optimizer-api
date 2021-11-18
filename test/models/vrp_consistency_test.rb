@@ -280,8 +280,15 @@ module Models
         matrices points rests services shipments units vehicles zones
       ].each{ |symbol|
         vrp = Oj.load(vrp_base)
-        vrp[symbol] << vrp[symbol].first
-        assert_raises ActiveHash::IdError do TestHelper.create(vrp) end
+        vrp[symbol] << { # Any object with the same id should raise IdError
+          id: vrp[symbol].first[:id],
+          activity: vrp[symbol].first[:activity],
+          pickup: vrp[symbol].first[:pickup],
+          delivery: vrp[symbol].first[:delivery],
+        }.delete_if{ |_k, v| v.nil? }
+        assert_raises ActiveHash::IdError do
+          TestHelper.create(vrp)
+        end
       }
     end
 

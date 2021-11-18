@@ -15,11 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'grape'
-require 'grape-swagger'
-require 'http_accept_language'
-require 'date'
-require 'active_support/core_ext/string/conversions'
 
 require './api/v01/vrp'
 

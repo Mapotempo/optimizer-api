@@ -44,19 +44,16 @@ module Models
     end
 
     def test_visits_computation
-      vrp = VRP.periodic_seq_timewindows
-      vrp = TestHelper.create(vrp)
-
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       assert_equal vrp.services.size, vrp.visits
 
-      vrp = VRP.periodic_seq_timewindows
-      vrp = TestHelper.create(vrp)
-      vrp.services.each{ |service| service[:visits_number] *= 2 }
-
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
+      vrp.services.each{ |service| service.visits_number *= 2 }
       assert_equal 2 * vrp.services.size, vrp.visits
 
-      vrp = TestHelper.load_vrp(self, fixture_file: 'instance_clustered')
-      assert_equal vrp.services.sum{ |s| s[:visits_number] }, vrp.visits
+      vrp = TestHelper.create(VRP.periodic_seq_timewindows)
+      vrp.services.each{ |service| service.visits_number = rand(100) }
+      assert_equal vrp.services.sum(&:visits_number), vrp.visits
     end
 
     def test_vrp_periodic

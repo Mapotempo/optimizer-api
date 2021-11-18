@@ -17,9 +17,6 @@
 #
 require './wrappers/wrapper'
 
-require 'json'
-require 'tempfile'
-
 module Wrappers
   class Vroom < Wrapper
     CUSTOM_QUANTITY_BIGNUM = 1e3

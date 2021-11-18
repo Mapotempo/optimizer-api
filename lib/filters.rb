@@ -15,7 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './models/timewindow.rb'
 
 module Filters
   def self.filter(vrp)

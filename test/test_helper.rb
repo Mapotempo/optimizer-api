@@ -15,8 +15,11 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'minitest'
-require 'webmock/minitest'
+
+ENV['APP_ENV'] ||= 'test'
+
+require './environment.rb'
+
 WebMock.disable_net_connect!
 
 if Rake.application.top_level_tasks.include?('test') && ![ENV['COVERAGE'], ENV['COV']].include?('false')
@@ -24,14 +27,12 @@ if Rake.application.top_level_tasks.include?('test') && ![ENV['COVERAGE'], ENV['
   SimpleCov.start
 end
 
-require 'minitest/reporters'
 Minitest::Reporters.use! [
   !ENV['TIME'] ? Minitest::Reporters::ProgressReporter.new : nil,
   ENV['HTML'] && Minitest::Reporters::HtmlReporter.new, # Create an HTML report with more information
   ENV['TIME'] && Minitest::Reporters::SpecReporter.new, # Generate a report to find slowest tests
 ].compact
 
-require 'minitest/retry'
 Minitest::Retry.use!(
   # List of methods that will trigger a retry (when empty, all methods will).
   # The list respects alphabetical order for easy maintenance
@@ -49,29 +50,6 @@ Minitest::Retry.use!(
     WrapperTest#test_detecting_unfeasible_services_can_not_take_too_long
   ]
 )
-
-require 'grape'
-require 'grape-swagger'
-require 'grape-entity'
-
-require 'minitest/autorun'
-require 'minitest/stub_any_instance'
-require 'minitest/focus'
-require 'byebug'
-require 'rack/test'
-require 'find'
-
-require 'zlib'
-
-ENV['APP_ENV'] ||= 'test'
-require File.expand_path('../../config/environments/' + ENV['APP_ENV'], __FILE__)
-Dir[File.dirname(__FILE__) + '/../config/initializers/*.rb'].sort.each{ |file| require file }
-
-require './util/error.rb'
-require './util/config.rb'
-Dir[File.dirname(__FILE__) + '/../models/*.rb'].sort.each{ |file| require file }
-require './optimizer_wrapper'
-require './api/root'
 
 module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDisableDirective, Metrics/ModuleLength
   def self.coerce(vrp)

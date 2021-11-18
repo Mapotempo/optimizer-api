@@ -17,12 +17,6 @@
 #
 # frozen_string_literal: true
 
-require 'i18n'
-require 'resque'
-require 'resque-status'
-require 'redis'
-require 'json'
-
 require './util/error.rb'
 require './util/config.rb'
 

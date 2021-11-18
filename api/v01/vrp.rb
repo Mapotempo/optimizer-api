@@ -15,17 +15,10 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'csv'
-require 'date'
-require 'digest/md5'
-require 'grape'
-require 'grape-swagger'
-require 'charlock_holmes'
 
 require './api/v01/api_base'
-require './api/v01/entities/status'
-require './api/v01/entities/vrp_input'
-require './api/v01/entities/vrp_result'
+
+require_all './api/v01/entities'
 
 module Api
   module V01

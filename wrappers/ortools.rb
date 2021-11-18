@@ -19,7 +19,6 @@ require './wrappers/wrapper'
 require './wrappers/ortools_vrp_pb'
 require './wrappers/ortools_result_pb'
 
-require 'open3'
 module Wrappers
   class Ortools < Wrapper
     def initialize(hash = {})
@@ -28,6 +27,9 @@ module Wrappers
       @optimize_time = hash[:optimize_time]
       @resolution_stable_iterations = hash[:optimize_time]
       @previous_result = nil
+      @killed ||= nil
+      @iterations_without_improvment ||= nil
+      @time_out_multiplier ||= nil
 
       @semaphore = Mutex.new
     end
@@ -135,6 +137,7 @@ module Wrappers
       @previous_result = nil
       relations = []
       services = []
+      routes = []
       services_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
       vrp.services.each_with_index{ |service, service_index|
         vehicles_indices =
@@ -303,13 +306,13 @@ module Wrappers
         }
       }
 
-      routes = vrp.routes.collect{ |route|
+      vrp.routes.collect{ |route|
         next if route.vehicle.nil? || route.mission_ids.empty?
 
         service_ids = corresponding_mission_ids(services.collect(&:id), route.mission_ids)
         next if service_ids.empty?
 
-        OrtoolsVrp::Route.new(
+        routes << OrtoolsVrp::Route.new(
           vehicle_id: route.vehicle.id.to_s,
           service_ids: service_ids.map(&:to_s)
         )
@@ -329,17 +332,8 @@ module Wrappers
       )
 
       log "ortools solve problem creation elapsed: #{Time.now - tic}sec", level: :debug
-      ret = run_ortools(problem, vrp, thread_proc, &block)
-      case ret
-      when String
-        return ret
-      when Array
-        cost, iterations, result = ret
-      else
-        return ret
-      end
 
-      result
+      run_ortools(problem, vrp, thread_proc, &block)
     end
 
     def kill
@@ -558,7 +552,7 @@ module Wrappers
       log "----> run_ortools services(#{vrp.services.size}) preassigned(#{vrp.routes.flat_map{ |r| r[:mission_ids].size }.sum}) vehicles(#{vrp.vehicles.size})"
       tic = Time.now
       if vrp.vehicles.empty? || vrp.services.empty?
-        return [0, 0, @previous_result = parse_output(vrp, nil)]
+        return empty_result('ortools', vrp)
       end
 
       input = Tempfile.new('optimize-or-tools-input', @tmp_dir, binmode: true)
@@ -638,14 +632,14 @@ module Wrappers
 
       result = out.split("\n")[-1]
       if @thread.value.success?
-        if result == 'No solution found...'
-          cost = Helper.fixnum_max
-          @previous_result = empty_result('ortools', vrp)
-          @previous_result[:cost] = cost
-        else
-          @previous_result = parse_output(vrp, output)
-        end
-        [cost, iterations, @previous_result]
+        @previous_result =
+          if result == 'No solution found...'
+            empty_result('ortools', vrp)
+          else
+            parse_output(vrp, output)
+          end
+
+        return @previous_result
       elsif @thread.value.signaled? && @thread.value.termsig == 9
         raise OptimizerWrapper::JobKilledError
       else # Fatal Error

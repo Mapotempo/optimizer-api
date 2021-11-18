@@ -15,7 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'active_support/concern'
 
 # Checks periodic services validity
 module PeriodicService

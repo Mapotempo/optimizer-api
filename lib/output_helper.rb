@@ -16,7 +16,6 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
-require './lib/hull.rb'
 module OutputHelper
   # For result output
   class Result

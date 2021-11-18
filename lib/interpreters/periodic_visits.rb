@@ -256,12 +256,13 @@ module Interpreters
           start_point_id: route[:vehicle].start_point_id,
           matrix_id: route[:vehicle].matrix_id
         }],
-        services: route[:mission_ids].collect{ |s|
+        services: route[:mission_ids].collect{ |sid|
+          service_sid = vrp[:services].select{ |s| s.id == sid }[0]
           {
-            id: s,
+            id: sid,
             activity: {
-              point_id: vrp[:services].select{ |service| s == service.id }[0][:activity][:point_id],
-              duration: vrp[:services].select{ |service| s == service.id }[0][:activity][:duration]
+              point_id: service_sid[:activity][:point_id],
+              duration: service_sid[:activity][:duration]
             }
           }
         }

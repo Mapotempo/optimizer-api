@@ -17,34 +17,8 @@
 #
 # frozen_string_literal: true
 
-require 'i18n'
-require 'resque'
-require 'resque-status'
-require 'redis'
-require 'json'
-
-require './util/error.rb'
-require './util/config.rb'
-require './util/job_manager.rb'
-
-require './lib/routers/router_wrapper.rb'
-require './lib/interpreters/multi_modal.rb'
-require './lib/interpreters/periodic_visits.rb'
-require './lib/interpreters/split_clustering.rb'
-require './lib/interpreters/compute_several_solutions.rb'
-require './lib/heuristics/assemble_heuristic.rb'
-require './lib/heuristics/dichotomious_approach.rb'
-require './lib/filters.rb'
-require './lib/cleanse.rb'
-require './lib/output_helper.rb'
-
-require 'ai4r'
-include Ai4r::Data
-require './lib/clusterers/complete_linkage_max_distance.rb'
-include Ai4r::Clusterers
-require 'sim_annealing'
-
-require 'rgeo/geo_json'
+require_all 'lib'
+require_all 'util'
 
 module OptimizerWrapper
   def self.wrapper_vrp(api_key, profile, vrp, checksum, job_id = nil)
@@ -137,7 +111,7 @@ module OptimizerWrapper
         # NOTE: the only criteria is number of unassigneds at the moment so if there is ever a solution with zero
         # unassigned, the loop is cut early. That is, if the criteria below is evolved, the above `break if` condition
         # should be modified in a similar fashion)
-        (result, position) = repeated_results.each.with_index(1).min_by { |result, _| result[:unassigned].size } # find the best result and its index
+        (result, position) = repeated_results.each.with_index(1).min_by { |rresult, _| rresult[:unassigned].size } # find the best result and its index
         log "#{job}_repetition - #{repeated_results.collect{ |r| r[:unassigned].size }} : chose to keep the #{position.ordinalize} solution"
         result
       }
@@ -853,34 +827,40 @@ module OptimizerWrapper
   def self.zip_cluster(vrp, cluster_threshold, force_cluster)
     return nil if vrp.services.empty?
 
-    data_set = DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
-    c = CompleteLinkageMaxDistance.new
+    c = Ai4r::Clusterers::CompleteLinkageMaxDistance.new
+
     matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym]
-    cost_late_multiplier = vrp.vehicles.all?{ |v| v.cost_late_multiplier && v.cost_late_multiplier != 0 }
-    no_capacities = vrp.vehicles.all?{ |v| v.capacities&.empty? }
-    c.distance_function = if force_cluster
-      lambda do |a, b|
-        aa = vrp.services[a[0]]
-        bb = vrp.services[b[0]]
-        aa.activity.timewindows.empty? && bb.activity.timewindows.empty? ||
-          aa.activity.timewindows.any?{ |twa|
-            bb.activity.timewindows.any?{ |twb| twa.start <= twb.end && twb.start <= twa.end }
-          } ?
-          matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
-          Float::INFINITY
+
+    c.distance_function =
+      if force_cluster
+        lambda do |a, b|
+          aa = vrp.services[a[0]]
+          bb = vrp.services[b[0]]
+          aa.activity.timewindows.empty? && bb.activity.timewindows.empty? ||
+            aa.activity.timewindows.any?{ |twa|
+              bb.activity.timewindows.any?{ |twb| twa.start <= twb.end && twb.start <= twa.end }
+            } ?
+            matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
+            Float::INFINITY
+        end
+      else
+        cost_late_multiplier = vrp.vehicles.all?{ |v| v.cost_late_multiplier && v.cost_late_multiplier != 0 }
+        no_capacities = vrp.vehicles.all?{ |v| v.capacities&.empty? }
+
+        lambda do |a, b|
+          aa = vrp.services[a[0]]
+          bb = vrp.services[b[0]]
+          aa.activity.timewindows.collect{ |t| [t.start, t.end] } == bb.activity.timewindows.collect{ |t| [t.start, t.end] } &&
+            ((cost_late_multiplier && aa.activity.late_multiplier.to_f.positive? && bb.activity.late_multiplier.to_f.positive?) || (aa.activity.duration&.zero? && bb.activity.duration&.zero?)) &&
+            (no_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) &&
+            aa.skills == bb.skills ?
+            matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
+            Float::INFINITY
+        end
       end
-    else
-      lambda do |a, b|
-        aa = vrp.services[a[0]]
-        bb = vrp.services[b[0]]
-        aa.activity.timewindows.collect{ |t| [t.start, t.end] } == bb.activity.timewindows.collect{ |t| [t.start, t.end] } &&
-          ((cost_late_multiplier && aa.activity.late_multiplier.to_f.positive? && bb.activity.late_multiplier.to_f.positive?) || (aa.activity.duration&.zero? && bb.activity.duration&.zero?)) &&
-          (no_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) &&
-          aa.skills == bb.skills ?
-          matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
-          Float::INFINITY
-      end
-                          end
+
+    data_set = Ai4r::Data::DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
+
     clusterer = c.build(data_set, cluster_threshold)
 
     new_size = clusterer.clusters.size
@@ -1025,18 +1005,18 @@ module OptimizerWrapper
               r[1..-2] # remove start and stop from cluster
             end
           end
-          last_index = start_index
-          new_activities += min_order.collect{ |index|
-            original_service = original_vrp.services[index]
+          previous_index = start_index
+          new_activities += min_order.collect{ |current_index|
+            original_service = original_vrp.services[current_index]
             fake_wrapper = Wrappers::Wrapper.new
             a = {
               point_id: (original_service.activity.point_id if original_service.id),
               travel_time: (t = original_vrp.matrices.find{ |m| m.id == vehicle.matrix_id }[:time]) ?
-                t[original_vrp.services[last_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0,
+                t[original_vrp.services[previous_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0,
               travel_value: (v = original_vrp.matrices.find{ |m| m.id == vehicle.matrix_id }[:value]) ?
-                v[original_vrp.services[last_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0,
+                v[original_vrp.services[previous_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0,
               travel_distance: (d = original_vrp.matrices.find{ |m| m.id == vehicle.matrix_id }[:distance]) ?
-                d[original_vrp.services[last_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0, # TODO: from matrix_distance
+                d[original_vrp.services[previous_index].activity.point.matrix_index][original_service.activity.point.matrix_index] : 0, # TODO: from matrix_distance
               # travel_start_time: 0, # TODO: from matrix_time
               # arrival_time: 0, # TODO: from matrix_time
               # departure_time: 0, # TODO: from matrix_time
@@ -1047,8 +1027,8 @@ module OptimizerWrapper
                                                      original_service.activity.point,
                                                      vehicle.global_day_index ? vehicle.global_day_index % 7 : nil,
                                                      nil, vehicle)
-            }.delete_if { |_k, v| !v }
-            last_index = index
+            }.delete_if { |_k, val| !val }
+            previous_index = current_index
             a
           }
         else

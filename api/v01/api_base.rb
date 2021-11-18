@@ -15,10 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'grape'
-require 'grape-swagger'
 
-require 'require_all'
 require_all 'models'
 
 module Api
