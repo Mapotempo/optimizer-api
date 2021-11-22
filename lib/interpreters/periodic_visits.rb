@@ -67,7 +67,7 @@ module Interpreters
     def generate_timewindows(timewindows_set)
       return nil if timewindows_set.empty?
 
-      timewindows_set.collect{ |timewindow|
+      timewindows_set.flat_map{ |timewindow|
         if @have_day_index
           first_day =
             if timewindow.day_index
@@ -85,7 +85,7 @@ module Interpreters
         else
           timewindow
         end
-      }.flatten.sort_by(&:start).compact.uniq
+      }.compact.uniq.sort_by(&:start)
     end
 
     def generate_relations(vrp)

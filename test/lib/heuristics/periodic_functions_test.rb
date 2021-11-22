@@ -690,6 +690,22 @@ class HeuristicTest < Minitest::Test
                    'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
     end
 
+    def test_generate_timewindows_with_extra_day_indices
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.schedule_range_indices[:start] = 1 # schedule starts at 1 but there is a service tw with day_index = 0
+      vrp.schedule_range_indices[:end] = 2
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      periodic = Interpreters::PeriodicVisits.new(vrp)
+
+      periodic.instance_variable_set(:@have_day_index, true)
+
+      timewindows_set = Array.new(1){ |i|
+        Models::Timewindow.create(start: 0, end: 86400, day_index: i) # day_index 0
+      }
+
+      assert periodic.send(:generate_timewindows, timewindows_set) # should not raise
+    end
+
     def test_day_in_possible_interval
       vrp = TestHelper.create(VRP.periodic)
       vrp.services.first.visits_number = 4
