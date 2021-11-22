@@ -85,7 +85,7 @@ module Interpreters
         else
           timewindow
         end
-      }.compact.uniq.sort_by(&:start)
+      }.compact.uniq{ |tw| tw.attributes.except(:id) }.sort_by(&:start)
     end
 
     def generate_relations(vrp)
