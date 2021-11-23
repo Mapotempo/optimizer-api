@@ -139,17 +139,5 @@ class InstanceValidityTest < Minitest::Test
       assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_not_too_many_visits_in_route
     end
 
-    def test_reject_if_periodic_route_without_periodic_heuristic
-      problem = VRP.periodic
-      problem[:routes] = [{
-        vehicle_id: 'vehicle_0',
-        indice: 0,
-        mission_ids: ['service_1']
-      }]
-      refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_route_if_schedule_without_periodic_heuristic
-
-      problem[:configuration][:preprocessing][:first_solution_strategy] = []
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_route_if_schedule_without_periodic_heuristic
-    end
   end
 end

@@ -405,10 +405,6 @@ module Wrappers
       vrp.vehicles.empty? || (assert_only_time_dimension(vrp) ^ assert_only_distance_dimension(vrp) ^ assert_only_value_dimension(vrp))
     end
 
-    def assert_no_route_if_schedule_without_periodic_heuristic(vrp)
-      vrp.routes.empty? || !vrp.schedule? || vrp.periodic_heuristic?
-    end
-
     # TODO: Need a better way to represent solver preference
     def assert_small_minimum_duration(vrp)
       vrp.configuration.resolution.minimum_duration.nil? || vrp.vehicles.empty? || vrp.configuration.resolution.minimum_duration / vrp.vehicles.size < 5000

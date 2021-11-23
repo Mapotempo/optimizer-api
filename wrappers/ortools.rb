@@ -66,7 +66,6 @@ module Wrappers
         :assert_valid_partitions,
         :assert_route_date_or_indice_if_periodic,
         :assert_not_too_many_visits_in_route,
-        :assert_no_route_if_schedule_without_periodic_heuristic,
         # :assert_no_overall_duration, # TODO: Requires a complete rework
       ]
     end
