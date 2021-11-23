@@ -276,10 +276,10 @@ module VrpMisc
   params :vrp_request_route do
     optional(:vehicle_id, type: String, desc: 'Vehicle linked to the current described route')
     optional(:indice, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use day_index instead ]')
-    optional(:index, type: Integer, desc: 'Index of the route. Must be provided if first_solution_strategy is \'periodic\'.')
+    optional(:day_index, type: Integer, desc: 'Index of the route. Must be provided if first_solution_strategy is \'periodic\'.')
     optional(:date, type: Date, desc: 'Date of the route. Must be provided if first_solution_strategy is \'periodic\'.')
     requires(:mission_ids, type: Array[String], desc: 'Initial state or partial state of the current vehicle route', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
-    mutually_exclusive :indice, :index, :day
+    mutually_exclusive :indice, :day_index, :date
   end
 
   params :vrp_request_subtour do
