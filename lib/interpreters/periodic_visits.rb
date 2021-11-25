@@ -111,8 +111,8 @@ module Interpreters
       # TODO : need to uniformize generated relations whether mission has minimum AND maximum lapse or only one of them
       return unless mission.visits_number > 1
 
-      if mission.minimum_lapse && mission.maximum_lapse
-        (2..mission.visits_number).each{ |index|
+      if mission.minimum_lapse && mission.maximum_lapse && (mission.minimum_lapse == mission.maximum_lapse)
+        2.upto(mission.visits_number){ |index|
           current_lapse = (index - 1) * mission.minimum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
@@ -120,7 +120,7 @@ module Interpreters
             lapses: [current_lapse]
           )
         }
-        (2..mission.visits_number).each{ |index|
+        2.upto(mission.visits_number){ |index|
           current_lapse = (index - 1) * mission.maximum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
@@ -128,24 +128,21 @@ module Interpreters
             lapses: [current_lapse]
           )
         }
-      elsif mission.minimum_lapse
-        (2..mission.visits_number).each{ |index|
-          current_lapse = mission.minimum_lapse.to_i
+      else
+        if mission.minimum_lapse
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
-            linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapses: [current_lapse]
+            linked_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            lapses: [mission.minimum_lapse.to_i]
           )
-        }
-      elsif mission.maximum_lapse
-        (2..mission.visits_number).each{ |index|
-          current_lapse = mission.maximum_lapse.to_i
+        end
+        if mission.maximum_lapse
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
-            linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapses: [current_lapse]
+            linked_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            lapses: [mission.maximum_lapse.to_i]
           )
-        }
+        end
       end
     end
 
