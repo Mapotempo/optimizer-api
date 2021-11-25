@@ -141,9 +141,8 @@ module Wrappers
             []
           else
             vrp.vehicles.collect.with_index{ |vehicle, index|
-              if (service.skills.empty? || !vehicle.skills.empty? &&
-                 ((vehicle.skills[0] & service.skills).size == service.skills.size) &&
-                 check_services_compatible_days(vrp, vehicle, service)) &&
+              if (service.skills.empty? || vehicle.skills.any?{ |skill_set| (service.skills - skill_set).empty? }) &&
+                 check_services_compatible_days(vrp, vehicle, service) &&
                  (service.unavailable_days.empty? || !service.unavailable_days.include?(vehicle.global_day_index))
                 index
               end
