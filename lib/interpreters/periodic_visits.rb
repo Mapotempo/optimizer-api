@@ -57,7 +57,7 @@ module Interpreters
       @periods.uniq!
       generate_relations_on_periodic_vehicles(vrp, vehicles_linking_relations)
 
-      if vrp.configuration.preprocessing.first_solution_strategy.to_a.first != 'periodic' && vrp.services.any?{ |service| service.visits_number > 1 }
+      if vrp.routes.empty? && vrp.services.any?{ |service| service.visits_number > 1 }
         vrp.routes = generate_routes(vrp)
       end
 
