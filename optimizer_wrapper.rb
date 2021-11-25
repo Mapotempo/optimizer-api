@@ -21,6 +21,8 @@ require_all 'lib'
 require_all 'util'
 
 module OptimizerWrapper
+  @zip_condition = false
+
   def self.wrapper_vrp(api_key, profile, vrp, checksum, job_id = nil)
     inapplicable_services = []
     apply_zones(vrp)
