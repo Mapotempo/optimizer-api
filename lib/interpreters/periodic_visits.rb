@@ -59,6 +59,15 @@ module Interpreters
 
       if vrp.routes.empty? && vrp.services.any?{ |service| service.visits_number > 1 }
         vrp.routes = generate_routes(vrp)
+      elsif !vrp.periodic_heuristic?
+        expanded_service_ids = @expanded_services.transform_values{ |service| service.map(&:id) }
+        vrp.routes.sort_by(&:day_index).each{ |route|
+          # Note that we sort_by day_index so we can assume that the existing routes have the visits in the correct
+          # order. That is, the first appearance of a service id will be the visit_1_X, the next will be visit_2_X,
+          # and the last will be visit_X_X.
+          route.mission_ids.collect!{ |sid| expanded_service_ids[sid].shift }
+          route.vehicle_id += "_#{route.day_index}"
+        }
       end
 
       vrp
