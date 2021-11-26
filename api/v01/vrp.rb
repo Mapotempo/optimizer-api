@@ -135,7 +135,7 @@ module Api
               vrp.errors.add(:empty_vrp, message: 'VRP structure is empty') if vrp_params&.keys&.empty?
               error!("Model Validation Error: #{vrp.errors}", 400)
             else
-              vrp.router = OptimizerWrapper.router(OptimizerWrapper.access[api_key][:router_api_key] || profile[:router_api_key] || OptimizerWrapper.config[:router][:api_key])
+              vrp.router = OptimizerWrapper.router(OptimizerWrapper.access[api_key][:router_api_key] || profile[:router_api_key]) if OptimizerWrapper.access[api_key][:router_api_key] || profile[:router_api_key]
               ret = OptimizerWrapper.wrapper_vrp(api_key, profile, vrp, checksum)
               count_incr :optimize, transactions: vrp.transactions
               if ret.is_a?(String)
