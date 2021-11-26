@@ -45,12 +45,6 @@ module DistanceMatrix
         point.matrix_index = index
         [point.location.lat, point.location.lon]
       }
-      vehicles.select(&:start_point).each{ |v|
-        v.start_point.matrix_index = points.find{ |p| p.id == v.start_point.id }.matrix_index
-      }
-      vehicles.select(&:end_point).each{ |v|
-        v.end_point.matrix_index = points.find{ |p| p.id == v.end_point.id }.matrix_index
-      }
 
       uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
         [vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]
