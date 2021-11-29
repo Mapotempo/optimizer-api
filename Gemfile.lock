@@ -8,7 +8,7 @@ GIT
 
 GIT
   remote: https://github.com/senhalil/balanced_vrp_clustering.git
-  revision: 1b6a16f54895aa6f5bd3c43216664ccd053b16b7
+  revision: 8794a90b840cf5c6828bc6992494b30b2c780815
   branch: dev
   specs:
     balanced_vrp_clustering (0.2.0)
