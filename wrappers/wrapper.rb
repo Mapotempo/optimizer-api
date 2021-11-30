@@ -553,7 +553,7 @@ module Wrappers
             !service.unavailable_days.include?(day) &&
             (service_timewindows.empty? || vehicle_timewindows.empty? ||
               service_timewindows.any?{ |tw|
-                (tw.day_index.nil? || tw.day_index == day % 7) &&
+                (tw.day_index.nil? || tw.day_index == day % 7) && (
                   vehicle_lateness ||
                   service_lateness ||
                   vehicle_timewindows.any?{ |v_tw|
@@ -562,6 +562,7 @@ module Wrappers
                       (tw.end.nil? || v_tw.start < tw.end) &&
                       (v_tw.end.nil? || v_tw.end > tw.start)
                   }
+                )
               })
         }
       }
