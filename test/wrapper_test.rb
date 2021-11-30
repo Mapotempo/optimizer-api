@@ -1885,6 +1885,19 @@ class WrapperTest < Minitest::Test
     assert_equal(1, solutions[0].unassigned_stops.count{ |un| un.reason == 'No vehicle with compatible timewindow' })
   end
 
+  def test_impossible_service_due_to_unavailable_day_periodic
+    vrp = VRP.periodic
+    vrp[:vehicles].first.delete(:timewindow)
+    vrp[:vehicles].first[:sequence_timewindows] = [
+      { start: 6, end: 10, day_index: 2 },
+      { start: 0, end: 5, day_index: 0 }
+    ]
+    vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 5, day_index: 0 }]
+    vrp[:services].first[:unavailable_visit_day_indices] = [0]
+    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    assert_equal(1, result[:unassigned].count{ |un| un[:reason].split(' && ').include?('No vehicle with compatible timewindow') })
+  end
+
   def test_impossible_service_distance
     problem = {
       matrices: [{
