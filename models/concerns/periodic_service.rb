@@ -21,6 +21,8 @@ module PeriodicService
   extend ActiveSupport::Concern
 
   def can_affect_all_visits?(service)
+    return true unless self.schedule?
+
     return true if service.visits_number == 1
 
     self.vehicles.any?{ |vehicle|

@@ -580,6 +580,8 @@ module Wrappers
     end
 
     def possible_days_are_consistent(vrp, service)
+      return true unless vrp.schedule?
+
       return false if service.first_possible_days.any?{ |d| d > vrp.configuration.schedule.range_indices[:end] }
 
       return false if service.last_possible_days.any?{ |d| d < vrp.configuration.schedule.range_indices[:start] }
@@ -641,8 +643,6 @@ module Wrappers
         detect_inconsistent_relation_timewindows_od_service(vrp, unfeasible, service)
 
         # Planning inconsistency
-        next if !vrp.schedule?
-
         unless possible_days_are_consistent(vrp, service)
           add_unassigned(unfeasible, vrp, service, 'Provided possible days do not allow service to be assigned')
         end
