@@ -54,6 +54,8 @@ module Models
     field :skills
     field :original_skills
 
+    field :vehicle_compatibility, as_json: :none # vehicle_compatibility[v_id] == {true -> compatible, false -> incompatible, nil -> not checked yet}
+
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :activities, class_name: 'Models::Activity'

@@ -23,6 +23,9 @@ Style/FrozenStringLiteralComment:
 Style/NumericPredicate:
   Enabled: false
 
+# Style/UnlessLogicalOperators: # TODO: activate when rubocop gem is upgraded
+#   EnforcedStyle: forbid_logical_operators
+
 Layout/EmptyLines:
   Severity: warning
 

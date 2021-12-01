@@ -430,50 +430,7 @@ module Wrappers
       false
     end
 
-    def compatible_day?(vrp, service, t_day, vehicle)
-      first_day = vrp.configuration.schedule.range_indices[:start]
-      last_day = vrp.configuration.schedule.range_indices[:end]
-      (first_day..last_day).any?{ |day|
-        s_ok = t_day == day || !service.unavailable_days.include?(day)
-        v_ok = !vehicle.unavailable_days.include?(day)
-        s_ok && v_ok
-      }
-    end
-
-    def find_vehicle(vrp, service)
-      service_timewindows = service.activity ? service.activity.timewindows : service.activities.collect(&:timewindows).flatten
-      service_lateness = service.activity&.late_multiplier&.positive?
-
-      available_vehicle = vrp.vehicles.find{ |vehicle|
-        vehicle_timewindows = vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows
-        vehicle_work_days = vehicle_timewindows.collect(&:day_index).compact.flatten
-        vehicle_work_days = [0, 1, 2, 3, 4, 5] if vehicle_work_days.empty?
-        vehicle_lateness = vehicle.cost_late_multiplier&.positive?
-
-        days = vrp.schedule? ? (vrp.configuration.schedule.range_indices[:start]..vrp.configuration.schedule.range_indices[:end]).collect{ |day| day } : [0]
-        days.any?{ |day|
-          vehicle_work_days.include?(day % 7) && !vehicle.unavailable_days.include?(day) &&
-            !service.unavailable_days.include?(day) &&
-            (service_timewindows.empty? || vehicle_timewindows.empty? ||
-              service_timewindows.any?{ |tw|
-                (tw.day_index.nil? || tw.day_index == day % 7) && (
-                  vehicle_lateness ||
-                  service_lateness ||
-                  vehicle_timewindows.any?{ |v_tw|
-                    days_compatible = !v_tw.day_index || !tw.day_index || v_tw.day_index == tw.day_index
-                    days_compatible &&
-                      (tw.end.nil? || v_tw.start < tw.end) &&
-                      (v_tw.end.nil? || v_tw.end > tw.start)
-                  }
-                )
-              })
-        }
-      }
-
-      available_vehicle
-    end
-
-    def check(vrp, dimension, unfeasible)
+    def check_unreachable(vrp, dimension, unfeasible)
       return unfeasible if vrp.matrices.any?{ |matrix| matrix[dimension].nil? || matrix[dimension].size == 1 }
 
       matrix_indices = vrp.points.map(&:matrix_index).uniq
@@ -548,37 +505,6 @@ module Wrappers
       unfeasible
     end
 
-    def compute_vehicles_shift(vehicles)
-      max_shift = vehicles.collect{ |vehicle|
-        next if vehicle&.cost_late_multiplier&.positive?
-
-        if vehicle.timewindow&.start && vehicle.timewindow&.end
-          vehicle.timewindow.end - vehicle.timewindow.start
-        elsif vehicle.sequence_timewindows.all?(&:end)
-          vehicle.sequence_timewindows.collect{ |tw| tw.end - tw.start }.max
-        end
-      }
-      max_shift.include?(nil) ? nil : max_shift.max
-    end
-
-    def compute_vehicles_capacity(vrp)
-      unit_ids = vrp.units.map(&:id)
-      capacities = Hash[unit_ids.product([-1])]
-      vrp.vehicles.each{ |vehicle|
-        limits = Hash[unit_ids.product([-1])] # We expect to detect every undefined capacity
-
-        vehicle.capacities.each{ |capacity| # Defined capacities are scanned
-          limits[capacity.unit.id] = capacity.overload_multiplier&.positive? ? nil : capacity.limit
-        }
-
-        limits.each{ |k, v| # Unfound units are tagged as infinite
-          capacities[k] = nil if v.nil? || v.negative?
-          capacities[k] = [v, capacities[k]].max unless capacities[k].nil?
-        }
-      }
-      capacities.reject{ |_k, v| v.nil? || v.negative? }
-    end
-
     def possible_days_are_consistent(vrp, service)
       return true unless vrp.schedule?
 
@@ -616,31 +542,20 @@ module Wrappers
     def detect_unfeasible_services(vrp)
       unfeasible = {}
 
-      vehicle_max_shift = compute_vehicles_shift(vrp.vehicles)
-      vehicle_max_capacities = compute_vehicles_capacity(vrp)
-
       vrp.services.each{ |service|
-        service.quantities.each{ |qty|
-          if vehicle_max_capacities[qty.unit_id] && qty.value && vehicle_max_capacities[qty.unit_id] < qty.value.abs
-            add_unassigned(unfeasible, vrp, service, 'Service quantity greater than any vehicle capacity')
-            break
-          end
-        }
+        check_timewindow_inconsistency(vrp, unfeasible, service)
 
-        activities = [service.activity, service.activities].compact.flatten
-        if activities.any?{ |a| a.timewindows.any?{ |tw| tw.start && tw.end && tw.start > tw.end } }
-          add_unassigned(unfeasible, vrp, service, 'Service timewindows are infeasible')
+        if no_vehicle_with_compatible_skills(vrp, service) # inits service.vehicle_compatibility
+          add_unassigned(unfeasible, vrp, service, 'Service has no compatible vehicle -- i.e., skills and/or sticky')
         end
 
-        if vehicle_max_shift && activities.collect(&:duration).min > vehicle_max_shift
-          add_unassigned(unfeasible, vrp, service, 'Service duration greater than any vehicle timewindow')
+        if no_compatible_vehicle_with_enough_capacity(vrp, service)
+          add_unassigned(unfeasible, vrp, service, 'Service has a quantity which is greater than the capacity of any compatible vehicle')
         end
 
-        unless find_vehicle(vrp, service)
-          add_unassigned(unfeasible, vrp, service, 'No vehicle with compatible timewindow')
+        if no_compatible_vehicle_with_compatible_tw(vrp, service)
+          add_unassigned(unfeasible, vrp, service, 'Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits')
         end
-
-        detect_inconsistent_relation_timewindows_od_service(vrp, unfeasible, service)
 
         # Planning inconsistency
         unless possible_days_are_consistent(vrp, service)
@@ -655,7 +570,12 @@ module Wrappers
       unfeasible
     end
 
-    def detect_inconsistent_relation_timewindows_od_service(vrp, unfeasible, service)
+    def check_timewindow_inconsistency(vrp, unfeasible, service)
+      s_activities = [service.activity, service.activities].compact.flatten
+      if s_activities.any?{ |a| a.timewindows.any?{ |tw| tw.start && tw.end && tw.start > tw.end } }
+        add_unassigned(unfeasible, vrp, service, 'Service timewindow is infeasible')
+      end
+
       # In a POSITION_TYPES relationship s1->s2, s2 cannot be served
       # if its timewindows end before any timewindow of s1 starts
       service.relations.each{ |relation|
@@ -666,10 +586,11 @@ module Wrappers
           next unless service_in.activity.timewindows.any?
 
           earliest_arrival = service_in.activity.timewindows.map{ |tw|
-            (tw.day_index || 0) * 86400 + (tw.start || 0)
+            tw.day_index.to_i * 86400 + tw.start
           }.min
+          activity_lateness = service_in.activity.late_multiplier&.positive?
           latest_arrival = service_in.activity.timewindows.map{ |tw|
-            tw.day_index ? tw.day_index * 86400 + (tw.end || 86399) : (tw.end || 2147483647)
+            tw.day_index.to_i * 86400 + tw.safe_end(activity_lateness)
           }.max
 
           max_earliest_arrival = [max_earliest_arrival, earliest_arrival].compact.max
@@ -681,70 +602,120 @@ module Wrappers
       }
     end
 
-    def service_reachable_by_vehicle_within_timewindows(vrp, activity, vehicle)
-      vehicle_start = vehicle.timewindow&.start || vehicle.sequence_timewindows.collect(&:start).min || 0
-      vehicle_end =
-        if vehicle.cost_late_multiplier&.positive? # vehicle lateness is allowed
-          vehicle.timewindow&.end ?
-            vehicle.timewindow.end + vehicle.timewindow.maximum_lateness :
-            vehicle.sequence_timewindows.collect{ |tw| tw.end + tw.maximum_lateness }.max
-        else # vehicle lateness is not allowed
-          vehicle.timewindow&.end || vehicle.sequence_timewindows.collect(&:end).max
-        end
+    def no_vehicle_with_compatible_skills(vrp, service)
+      service.vehicle_compatibility ||= {}
+
+      vrp.vehicles.each{ |vehicle|
+        service.vehicle_compatibility[vehicle.id] ||=
+          service.vehicle_compatibility[vehicle.id].nil? && # if it is true or false, no need to recheck
+          (service.skills.empty? || vehicle.skills.any?{ |v_skill_set| (service.skills - v_skill_set).empty? })
+      }
+
+      vrp.vehicles.none?{ |v| service.vehicle_compatibility[v.id] } # no compatible vehicles
+    end
+
+    def no_compatible_vehicle_with_enough_capacity(vrp, service)
+      no_vehicle_with_compatible_skills(vrp, service) if service.vehicle_compatibility.nil?
+
+      s_quantities = service.quantities.map{ |quantity| [quantity.unit_id, quantity.value.abs] }.to_h
+
+      vrp.vehicles.each{ |vehicle|
+        next unless service.vehicle_compatibility[vehicle.id] # already eliminated
+
+        service.vehicle_compatibility[vehicle.id] =
+          vehicle.capacities.none?{ |capacity|
+            s_quantities[capacity.unit_id] && # there is quantity
+              capacity.limit && # there is a limit
+              !capacity.overload_multiplier&.positive? && # overload not permitted
+              s_quantities[capacity.unit_id] > capacity.limit # and capacity is not enough
+          }
+      }
+
+      vrp.vehicles.none?{ |v| service.vehicle_compatibility[v.id] } # no compatible vehicle with enough capacity
+    end
+
+    def no_compatible_vehicle_with_compatible_tw(vrp, service)
+      no_vehicle_with_compatible_skills(vrp, service) if service.vehicle_compatibility.nil?
+
+      s_activities = [service.activity, service.activities].compact.flatten
+
+      implicit_timewindow = [Models::Timewindow.new(start: 0)] # need to check time feasibility
+
+      vrp.vehicles.each{ |vehicle|
+        next unless service.vehicle_compatibility[vehicle.id] # already eliminated
+
+        vehicle_timewindows = [vehicle.timewindow, vehicle.sequence_timewindows].compact.flatten
+
+        next if !vrp.schedule? && vehicle.duration.nil? && vehicle.distance.nil? &&
+                s_activities.all?{ |a| a.timewindows.none?(&:end) } && vehicle_timewindows.none?(&:end)
+
+        vehicle_timewindows = implicit_timewindow if vehicle_timewindows.empty?
+
+        service.vehicle_compatibility[vehicle.id] =
+          s_activities.any?{ |activity|
+            time_to_go, time_to_return, dist_to_go, dist_to_return = two_way_time_and_dist(vrp, vehicle, activity) || [0, 0, 0, 0]
+
+            # NOTE: There is no easy way to include the setup duration in the elimination because the
+            # setup_duration logic is based of time[point_a][point_b] == 0; so we need to check all
+            # services which are 0 distance and then find the minimum (setup_duration + duration) and
+            # use this as the setup duration in the check below if it is less than the service.setup_duration
+
+            (vehicle.distance.nil? || dist_to_go + dist_to_return <= vehicle.distance) &&
+              (
+                vehicle.duration.nil? ||
+                time_to_go + vehicle.additional_service + vehicle.coef_service * activity.duration + time_to_return <= vehicle.duration
+              ) && (
+                (activity.timewindows.empty? ? implicit_timewindow : activity.timewindows).any?{ |s_tw|
+                  vehicle_timewindows.any?{ |v_tw|
+                    # vehicle has a tw that can serve service in time (incl. travel if it exists)
+                    (s_tw.day_index.nil? || v_tw.day_index.nil? || s_tw.day_index == v_tw.day_index) &&
+                      v_tw.start + time_to_go <= s_tw.safe_end(activity.late_multiplier&.positive?) &&
+                      [s_tw.start, v_tw.start + time_to_go].max + vehicle.additional_service + vehicle.coef_service * activity.duration + time_to_return <= v_tw.safe_end(vehicle.cost_late_multiplier&.positive?) &&
+                      ( # either not schedule or there should be a day in which both vehicle and service are available
+                        !vrp.schedule? ||
+                          vrp.configuration.schedule.range_indices[:start].upto(vrp.configuration.schedule.range_indices[:end]).any?{ |day|
+                            (s_tw.day_index.nil? || day % 7 == s_tw.day_index) &&
+                              (v_tw.day_index.nil? || day % 7 == v_tw.day_index) &&
+                              service.unavailable_days.exclude?(day) &&
+                              vehicle.unavailable_days.exclude?(day)
+                          }
+                      )
+                  }
+                }
+              )
+          }
+      }
+
+      vrp.vehicles.none?{ |v| service.vehicle_compatibility[v.id] } # no compatible vehicle with compatible timewindow
+    end
+
+    def two_way_time_and_dist(vrp, vehicle, activity)
+      return unless vehicle.matrix_id
+
+      v_start_m_index = vehicle.start_point&.matrix_index
+      v_end_m_index = vehicle.end_point&.matrix_index
+
+      return unless v_start_m_index || v_end_m_index
 
       matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
 
-      time_to_go = vehicle.start_point&.matrix_index ? matrix.time[vehicle.start_point&.matrix_index][activity.point.matrix_index] : 0
-      time_back = vehicle.end_point&.matrix_index ? matrix.time[activity.point.matrix_index][vehicle.end_point&.matrix_index] : 0
-
-      earliest_arrival = vehicle_start + time_to_go
-      earliest_back = earliest_arrival + activity.duration + time_back
-
-      return false if vehicle_end && earliest_back > vehicle_end
-
-      return false if vehicle.duration && earliest_back - earliest_arrival > vehicle.duration
-
-      if activity.timewindows.any?
-        if activity.late_multiplier&.positive? # service lateness is allowed
-          return false if activity.timewindows.none?{ |tw| tw.end.nil? || earliest_arrival <= tw.end + tw.maximum_lateness }
-        else # service lateness is not allowed
-          return false if activity.timewindows.none?{ |tw| tw.end.nil? || earliest_arrival <= tw.end }
-        end
-        if vehicle_end
-          latest_arrival = vehicle_end - time_back - activity.duration
-          return false if activity.timewindows.all?{ |tw| latest_arrival < tw.start }
-        end
-      end
-
-      if vehicle.distance
-        # check distances constraints
-        dist_to_go = vehicle.start_point&.matrix_index ? matrix.distance[vehicle.start_point&.matrix_index][activity.point.matrix_index] : 0
-        dist_back = vehicle.end_point&.matrix_index ? matrix.distance[activity.point.matrix_index][vehicle.end_point&.matrix_index] : 0
-
-        return false if dist_to_go + dist_back > vehicle.distance
-      end
-
-      true
+      [
+        v_start_m_index && matrix.time ? matrix.time[v_start_m_index][activity.point.matrix_index] : 0,
+        v_end_m_index && matrix.time ? matrix.time[activity.point.matrix_index][v_end_m_index] : 0,
+        v_start_m_index && matrix.distance ? matrix.distance[v_start_m_index][activity.point.matrix_index] : 0,
+        v_end_m_index && matrix.distance ? matrix.distance[activity.point.matrix_index][v_end_m_index] : 0,
+      ]
     end
 
     def check_distances(vrp, unfeasible)
-      unfeasible = check(vrp, :time, unfeasible)
-      unfeasible = check(vrp, :distance, unfeasible)
-      unfeasible = check(vrp, :value, unfeasible)
+      unfeasible = check_unreachable(vrp, :time, unfeasible)
+      unfeasible = check_unreachable(vrp, :distance, unfeasible)
+      unfeasible = check_unreachable(vrp, :value, unfeasible)
 
       vrp.services.each{ |service|
-        no_vehicle_compatible =
-          vrp.vehicles.none?{ |vehicle|
-            (service.activity ? [service.activity] : service.activities).any?{ |activity|
-              (service.skills.empty? || vehicle.skills.any?{ |skill_set| (service.skills - skill_set).empty? }) &&
-                (service.sticky_vehicle_ids.empty? || service.sticky_vehicle_ids.include?(vehicle.id)) &&
-                service_reachable_by_vehicle_within_timewindows(vrp, activity, vehicle)
-            }
-          }
-
-        next unless no_vehicle_compatible
-
-        add_unassigned(unfeasible, vrp, service, 'No compatible vehicle can reach this service while respecting all constraints')
+        if no_compatible_vehicle_with_compatible_tw(vrp, service)
+          add_unassigned(unfeasible, vrp, service, 'No compatible vehicle can reach this service while respecting all constraints')
+        end
       }
 
       unless unfeasible.empty?
@@ -1184,7 +1155,7 @@ module Wrappers
           # insert the pause without inducing unnecessary idle time
           max_service_duration = 0
           vrp.services.each{ |service|
-            next unless (service.sticky_vehicle_ids.empty? || service.sticky_vehicle_ids == vehicle) &&
+            next unless (service.sticky_vehicle_ids.empty? || service.sticky_vehicle_ids.include?(vehicle.id)) &&
                         (service.skills - vehicle.skills).empty?
 
             service_duration = service.activity&.setup_duration.to_i +
