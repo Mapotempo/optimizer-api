@@ -36,5 +36,15 @@ module Models
 
       super(hash)
     end
+
+    def safe_end(lateness_allowed = false)
+      if self.end
+        self.end + (lateness_allowed ? self.maximum_lateness : 0)
+      elsif self.day_index
+        86399 # 24h - 1sec
+      else
+        2147483647 # 2**31 - 1
+      end
+    end
   end
 end

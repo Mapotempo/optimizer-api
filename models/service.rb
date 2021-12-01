@@ -52,6 +52,8 @@ module Models
     field :skills, default: []
     field :original_skills, default: []
 
+    field :vehicle_compatibility # vehicle_compatibility[v_id] == {true -> compatible, false -> incompatible, nil -> not checked yet}
+
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :activities, class_name: 'Models::Activity'

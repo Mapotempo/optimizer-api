@@ -139,19 +139,15 @@ module Wrappers
       routes = []
       services_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
       vrp.services.each_with_index{ |service, service_index|
-        vehicles_indices =
-          if service.skills.any? && vrp.vehicles.all?{ |vehicle| vehicle.skills.empty? } &&
-             service.unavailable_days.empty?
-            []
-          else
-            vrp.vehicles.collect.with_index{ |vehicle, index|
-              if (service.skills.empty? || vehicle.skills.any?{ |skill_set| (service.skills - skill_set).empty? }) &&
-                 check_services_compatible_days(vrp, vehicle, service) &&
-                 (service.unavailable_days.empty? || !service.unavailable_days.include?(vehicle.global_day_index))
-                index
-              end
-            }.compact
-          end
+        vehicles_indices = []
+        detect_unfeasible_services(vrp) if service.vehicle_compatibility.nil?
+        vrp.vehicles.each_with_index{ |vehicle, index|
+          next unless (service.vehicle_compatibility[vehicle.id].nil? || service.vehicle_compatibility[vehicle.id]) &&
+                      service.vehicle_compatibility[vehicle.original_id] &&
+                      check_services_compatible_days(vrp, vehicle, service)
+
+          vehicles_indices << index
+        }
 
         if service.activity
           services << OrtoolsVrp::Service.new(
@@ -352,8 +348,13 @@ module Wrappers
     end
 
     def check_services_compatible_days(vrp, vehicle, service)
-      !(vrp.schedule? && (service.minimum_lapse || service.maximum_lapse)) ||
-        vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
+      !vrp.schedule? || (
+        service.unavailable_days.exclude?(vehicle.global_day_index) &&
+        (
+          (!service.minimum_lapse && !service.maximum_lapse) ||
+          vehicle.global_day_index.between?(service.first_possible_days.first, service.last_possible_days.first)
+        )
+      )
     end
 
     def build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)

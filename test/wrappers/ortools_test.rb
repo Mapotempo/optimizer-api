@@ -2740,12 +2740,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(VRP.pud)
     result = ortools.solve(vrp, 'test')
     assert result
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
            result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
            result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
-    assert_equal 0, result[:unassigned].size
-    assert_equal 6, result[:routes][0][:activities].size
   end
 
   def test_shipments_quantities
@@ -2831,12 +2831,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
     assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
                  result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' })
     assert_equal(result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } + 1,
                  result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' })
-    assert_equal 0, result[:unassigned].size
-    assert_equal 6, result[:routes][0][:activities].size
   end
 
   def test_shipments_with_multiple_timewindows_and_lateness
@@ -2856,12 +2856,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert_equal 0, result[:cost_details][:lateness]
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
            result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
            result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
-    assert_equal 0, result[:unassigned].size
-    assert_equal 6, result[:routes][0][:activities].size
   end
 
   def test_shipments_inroute_duration
@@ -2872,6 +2872,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
     assert_equal(
       result[:routes][0][:activities].find_index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } + 1,
       result[:routes][0][:activities].find_index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
@@ -2890,8 +2892,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       :<,
       result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     )
-    assert_equal 0, result[:unassigned].size
-    assert_equal 6, result[:routes][0][:activities].size
   end
 
   def test_mixed_shipments_and_services
@@ -2967,10 +2967,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
-           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
     assert_equal 0, result[:unassigned].size
     assert_equal 5, result[:routes][0][:activities].size
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
   end
 
   def test_shipments_distance
@@ -2987,12 +2987,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.create(problem)
     result = ortools.solve(vrp, 'test')
     assert result
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
            result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
     assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
            result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
-    assert_equal 0, result[:unassigned].size
-    assert_equal 6, result[:routes][0][:activities].size
   end
 
   def test_maximum_duration_lapse_shipments
@@ -3941,8 +3941,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           point_id: 'point_1'
         }, {
           point_id: 'point_2'
-        }],
-        skills: ['skill1']
+        }]
       }],
       configuration: {
         resolution: {
