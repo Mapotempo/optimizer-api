@@ -1,3 +1,4 @@
+# TODO use anchor when supported https://github.community/t/support-for-yaml-anchors/16128/81
 name: Docker Image CI
 
 on:
@@ -39,7 +40,7 @@ jobs:
             BUNDLE_WITHOUT=production
             OPTIMIZER_ORTOOLS_VERSION=${{ secrets.OPTIMIZER_ORTOOLS_VERSION }}
             VROOM_VERSION=${{ secrets.VROOM_VERSION }}
-          tags: registry.test.com/mapotempo/optimizer-api:latest
+          tags: registry.test.com/mapotempo-ce/optimizer-api:latest
           outputs: type=docker,dest=/tmp/optimizer-api.tar
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
@@ -52,7 +53,7 @@ jobs:
           rm -rf vendor/bundle
           mkdir -p vendor/bundle
           docker load --input /tmp/optimizer-api.tar
-          docker cp "$(docker create --rm registry.test.com/mapotempo/optimizer-api:latest)":/srv/app/vendor/bundle/. vendor/bundle
+          docker cp "$(docker create --rm registry.test.com/mapotempo-ce/optimizer-api:latest)":/srv/app/vendor/bundle/. vendor/bundle
           echo $(ls -lh vendor/bundle)
       - name: Upload artifact
         uses: actions/upload-artifact@v2
