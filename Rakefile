@@ -11,6 +11,8 @@ namespace :resque do
   end
 
   task clean_working_job_ids: :prune_dead_workers do
+    next if ENV['APP_ENV'] == 'production'
+
     puts "#{Time.now} Cleaning existing jobs with #{Resque::Plugins::Status::STATUS_WORKING} status..."
 
     Resque::Plugins::Status::Hash.statuses.each{ |job|
