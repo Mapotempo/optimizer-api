@@ -42,17 +42,6 @@ gem 'google-protobuf', '>=3', require: 'google/protobuf'
 
 gem 'oj'
 
-# gems from standard library
-gem 'csv'
-gem 'date'
-gem 'fileutils'
-gem 'json'
-gem 'logger'
-gem 'open3'
-gem 'tempfile'
-gem 'tmpdir'
-gem 'zlib'
-
 group :development, :test do
   gem 'benchmark-ips' # to in-place benchmark of different implementations
   gem 'byebug'
