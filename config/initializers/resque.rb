@@ -16,6 +16,11 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
+# bundle exec resque-web -F -d config/initializers/resque.rb
+# needs the following gems to be able to launch on its own
+require 'active_support/time'
+require 'resque-status'
+
 Resque.inline = ENV['APP_ENV'] == 'test'
 Resque.redis = Redis.new(
   host: ENV['REDIS_RESQUE_HOST'] || ENV['REDIS_HOST'] || 'localhost',
