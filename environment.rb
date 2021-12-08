@@ -30,6 +30,18 @@ $VERBOSE = ORIGINAL_VERBOSITY
 require 'active_support/concern'
 require 'active_support/core_ext'
 require 'active_support/core_ext/string/conversions'
+require 'active_support/time'
+
+# gems from standard library
+require 'csv'
+require 'date'
+require 'fileutils'
+require 'json'
+require 'logger'
+require 'open3'
+require 'tempfile'
+require 'tmpdir'
+require 'zlib'
 
 require_rel 'config/environments/' + ENV['APP_ENV']
 require_all 'config/initializers'
