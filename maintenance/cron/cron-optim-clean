@@ -1,0 +1,1 @@
+0 8 * * * root /usr/local/sbin/clear-tmp-optim.sh 2>&1 | /usr/bin/logger -t mt-optimizer
